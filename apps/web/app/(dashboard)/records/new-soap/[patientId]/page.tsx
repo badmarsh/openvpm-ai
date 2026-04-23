@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { ArrowLeft, Save, ShieldAlert } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { SoapNoteEditor } from "@/components/SoapNoteEditor";
 import { toast } from "sonner";
 
 export default function NewSoapNotePage() {
@@ -102,82 +103,61 @@ export default function NewSoapNotePage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-6">
           {/* Subjective */}
           <div>
-            <label
-              htmlFor="subjective"
-              className="block text-sm font-medium mb-1.5"
-            >
+            <label className="block text-sm font-medium mb-1.5">
               Subjective
             </label>
             <p className="text-xs text-muted-foreground mb-2">
               Owner&apos;s complaint, history, and symptoms reported
             </p>
-            <textarea
-              id="subjective"
-              rows={4}
+            <SoapNoteEditor
               value={subjective}
-              onChange={(e) => setSubjective(e.target.value)}
+              onChange={setSubjective}
               placeholder="What the owner reports..."
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-y"
             />
           </div>
 
           {/* Objective */}
           <div>
-            <label
-              htmlFor="objective"
-              className="block text-sm font-medium mb-1.5"
-            >
+            <label className="block text-sm font-medium mb-1.5">
               Objective
             </label>
             <p className="text-xs text-muted-foreground mb-2">
               Physical examination findings, vitals, and test results
             </p>
-            <textarea
-              id="objective"
-              rows={4}
+            <SoapNoteEditor
               value={objective}
-              onChange={(e) => setObjective(e.target.value)}
+              onChange={setObjective}
               placeholder="Physical exam findings, vitals, lab results..."
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-y"
             />
           </div>
 
           {/* Assessment */}
           <div>
-            <label
-              htmlFor="assessment"
-              className="block text-sm font-medium mb-1.5"
-            >
+            <label className="block text-sm font-medium mb-1.5">
               Assessment
             </label>
             <p className="text-xs text-muted-foreground mb-2">
               Diagnosis or differential diagnoses
             </p>
-            <textarea
-              id="assessment"
-              rows={4}
+            <SoapNoteEditor
               value={assessment}
-              onChange={(e) => setAssessment(e.target.value)}
+              onChange={setAssessment}
               placeholder="Diagnosis, differential diagnoses..."
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-y"
             />
           </div>
 
           {/* Plan */}
           <div>
-            <label htmlFor="plan" className="block text-sm font-medium mb-1.5">
+            <label className="block text-sm font-medium mb-1.5">
               Plan
             </label>
             <p className="text-xs text-muted-foreground mb-2">
               Treatment plan, medications, follow-up instructions
             </p>
-            <textarea
-              id="plan"
-              rows={4}
+            <SoapNoteEditor
               value={plan}
-              onChange={(e) => setPlan(e.target.value)}
+              onChange={setPlan}
               placeholder="Treatment plan, medications, follow-up..."
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-y"
             />
           </div>
         </div>
