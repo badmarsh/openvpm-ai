@@ -60,16 +60,25 @@ export const webhooks = pgTable("webhooks", {
   active: boolean("active").notNull().default(true),
 });
 
-export const apiKeys = pgTable("api_keys", {
-  ...baseColumns(),
-  practiceId: uuid("practice_id")
-    .notNull()
-    .references(() => practices.id),
-  keyHash: varchar("key_hash", { length: 255 }).notNull(),
-  name: varchar("name", { length: 128 }).notNull(),
-  scopes: jsonb("scopes").notNull().default([]),
-  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-});
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    // Non-secret prefix (e.g. "ovpm_AbC123") used as a fast, indexed lookup to
+    // narrow candidates before a constant-time bcrypt compare against keyHash.
+    keyPrefix: varchar("key_prefix", { length: 16 }),
+    keyHash: varchar("key_hash", { length: 255 }).notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    scopes: jsonb("scopes").notNull().default([]),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (table) => ({
+    prefixIdx: index("api_keys_prefix_idx").on(table.keyPrefix),
+  })
+);
 
 export const auditLog = pgTable(
   "audit_log",

@@ -24,5 +24,7 @@ jobs:
 
       - run: pnpm type-check
 
+      - run: pnpm test
+
       - run: pnpm build
         # Note: next build includes linting — no separate lint step needed

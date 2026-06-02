@@ -223,6 +223,17 @@ The Docker setup includes PostgreSQL 16 with health checks, MinIO for S3-compati
 
 OpenVPM is **API-first**. Every action the UI performs goes through the same API available to third-party integrations. This is the killer feature — no other open-source PIMS has a real, well-documented, read-write API.
 
+### REST API (v1)
+
+A versioned, public REST API over the core records, authenticated with scoped API keys — built so integrators (booking, reminders, client comms, AI agents) can read clients/patients and create appointments without touching the internal client. Response shapes are owned by an explicit contract and frozen independently of the database, so internal changes never break integrations.
+
+```bash
+curl https://demo.openvpm.com/api/v1/clients \
+  -H "Authorization: Bearer ovpm_…"
+```
+
+See [docs/api](docs/api/README.md) for endpoints, scopes, rate limits, and the error format. This namespace also serves as the foundation for vendor-compatible "identical-twin" APIs (point an existing integration at OpenVPM with zero changes).
+
 ### Webhooks
 
 Subscribe to real-time events:
@@ -255,6 +266,10 @@ OpenVPM's structured data models and event streams make it the ideal foundation 
 - **Reminder systems** can query overdue vaccinations, pending follow-ups, and automate outreach
 
 The PIMS is the system of record. AI agents are first-class citizens.
+
+### OpenVPM Agent
+
+OpenVPM ships with a built-in AI agent that operates on practice data through a typed tool layer (find clients/patients, pull a clinical summary, list overdue vaccinations, calculate a weight-based drug dose, book appointments). It runs a Claude tool-use loop scoped to a single practice, gates every write behind an explicit opt-in, and degrades gracefully when no model key is set. Bring your own `ANTHROPIC_API_KEY`; the agent is open source and fully inspectable. Available in-app under **Agent** and via the `agent` tRPC router.
 
 ## Why Open Source Matters for Veterinary Medicine
 

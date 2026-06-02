@@ -19,6 +19,12 @@ import { notificationsRouter } from "./notifications";
 import { templatesRouter } from "./templates";
 import { controlledSubstancesRouter } from "./controlled-substances";
 import { insuranceRouter } from "./insurance";
+import { apiKeysRouter } from "./api-keys";
+import { dosingRouter } from "./dosing";
+import { vitalsRouter } from "./vitals";
+import { agentRouter } from "./agent";
+import { treatmentPlansRouter } from "./treatment-plans";
+import { wellnessRouter } from "./wellness";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -41,6 +47,12 @@ export const appRouter = createRouter({
   templates: templatesRouter,
   controlledSubstances: controlledSubstancesRouter,
   insurance: insuranceRouter,
+  apiKeys: apiKeysRouter,
+  dosing: dosingRouter,
+  vitals: vitalsRouter,
+  agent: agentRouter,
+  treatmentPlans: treatmentPlansRouter,
+  wellness: wellnessRouter,
 });
 
 export type AppRouter = typeof appRouter;

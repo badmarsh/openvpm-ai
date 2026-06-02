@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { eq, and, isNull, desc, sql, sum } from "drizzle-orm";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
+import { computeStockDeductions } from "@/lib/inventory/dispense";
 import {
   invoices,
   invoiceItems,
@@ -229,6 +230,28 @@ export const billingRouter = createRouter({
             itemId: item.itemId ?? null,
           }))
         );
+
+        // Dispensing: deduct product stock on a real invoice (not estimates).
+        // Stock is clamped at zero so it never goes negative.
+        if (!invoice!.isEstimate) {
+          const deductions = computeStockDeductions(input.items);
+          await Promise.all(
+            deductions.map((d) =>
+              ctx.db
+                .update(products)
+                .set({
+                  stockQuantity: sql`GREATEST(${products.stockQuantity} - ${d.quantity}, 0)`,
+                })
+                .where(
+                  and(
+                    eq(products.id, d.productId),
+                    eq(products.practiceId, ctx.practiceId),
+                    isNull(products.deletedAt)
+                  )
+                )
+            )
+          );
+        }
       }
 
       return invoice!;

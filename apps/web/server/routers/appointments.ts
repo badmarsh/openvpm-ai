@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { eq, and, isNull, gte, lte, sql, desc, not, inArray } from "drizzle-orm";
+import { eq, and, isNull, gte, lte, lt, gt, sql, desc, not, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
+import type { Database } from "@openpims/db/client";
 import {
   appointments,
   appointmentTypes,
@@ -11,6 +12,44 @@ import {
   rooms,
   recurringSeries,
 } from "@openpims/db";
+import {
+  detectConflicts,
+  conflictMessage,
+  hasConflict,
+  type ExistingBooking,
+} from "@/lib/scheduling/conflicts";
+import { findOpenSlots } from "@/lib/scheduling/availability";
+
+/** Fetch blocking appointments overlapping [start, end) for conflict checks. */
+async function fetchOverlapping(
+  db: Database,
+  practiceId: string,
+  start: Date,
+  end: Date,
+  excludeId?: string
+): Promise<ExistingBooking[]> {
+  const rows = await db
+    .select({
+      id: appointments.id,
+      startTime: appointments.startTime,
+      endTime: appointments.endTime,
+      doctorId: appointments.doctorId,
+      roomId: appointments.roomId,
+      status: appointments.status,
+    })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.practiceId, practiceId),
+        isNull(appointments.deletedAt),
+        not(inArray(appointments.status, ["cancelled", "no_show"])),
+        // Strict time overlap pre-filter; detectConflicts re-checks precisely.
+        lt(appointments.startTime, end),
+        gt(appointments.endTime, start)
+      )
+    );
+  return excludeId ? rows.filter((r) => r.id !== excludeId) : rows;
+}
 
 export const appointmentsRouter = createRouter({
   list: protectedProcedure
@@ -117,43 +156,37 @@ export const appointmentsRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check for conflicts with existing appointments for the same doctor
-      if (input.doctorId) {
-        const startTime = new Date(input.startTime);
-        const endTime = new Date(input.endTime);
+      const startTime = new Date(input.startTime);
+      const endTime = new Date(input.endTime);
+      if (endTime <= startTime) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "End time must be after start time.",
+        });
+      }
 
-        const conflicts = await ctx.db
-          .select({ id: appointments.id })
-          .from(appointments)
-          .where(
-            and(
-              eq(appointments.practiceId, ctx.practiceId),
-              eq(appointments.doctorId, input.doctorId),
-              isNull(appointments.deletedAt),
-              // Overlapping: existing.start < new.end AND existing.end > new.start
-              lte(appointments.startTime, endTime),
-              gte(appointments.endTime, startTime),
-              // Exclude cancelled/no-show
-              not(inArray(appointments.status, ["cancelled", "no_show"]))
-            )
-          )
-          .limit(1);
-
-        if (conflicts.length > 0) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "This time slot conflicts with an existing appointment for this doctor.",
-          });
-        }
+      // Conflict check across both the doctor and the room.
+      if (input.doctorId || input.roomId) {
+        const existing = await fetchOverlapping(
+          ctx.db,
+          ctx.practiceId,
+          startTime,
+          endTime
+        );
+        const result = detectConflicts(
+          { startTime, endTime, doctorId: input.doctorId, roomId: input.roomId },
+          existing
+        );
+        const message = conflictMessage(result);
+        if (message) throw new TRPCError({ code: "CONFLICT", message });
       }
 
       const [appt] = await ctx.db
         .insert(appointments)
         .values({
           ...input,
-          startTime: new Date(input.startTime),
-          endTime: new Date(input.endTime),
+          startTime,
+          endTime,
           practiceId: ctx.practiceId,
         })
         .returning();
@@ -188,6 +221,115 @@ export const appointmentsRouter = createRouter({
         )
         .returning();
       return appt!;
+    }),
+
+  reschedule: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        startTime: z.string(),
+        endTime: z.string(),
+        doctorId: z.string().uuid().nullable().optional(),
+        roomId: z.string().uuid().nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const startTime = new Date(input.startTime);
+      const endTime = new Date(input.endTime);
+      if (endTime <= startTime) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "End time must be after start time.",
+        });
+      }
+
+      const [current] = await ctx.db
+        .select({
+          id: appointments.id,
+          doctorId: appointments.doctorId,
+          roomId: appointments.roomId,
+        })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.id, input.id),
+            eq(appointments.practiceId, ctx.practiceId),
+            isNull(appointments.deletedAt)
+          )
+        )
+        .limit(1);
+      if (!current) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Appointment not found" });
+      }
+
+      // Fall back to the appointment's existing doctor/room when not changing them.
+      const doctorId =
+        input.doctorId === undefined ? current.doctorId : input.doctorId;
+      const roomId = input.roomId === undefined ? current.roomId : input.roomId;
+
+      if (doctorId || roomId) {
+        const existing = await fetchOverlapping(
+          ctx.db,
+          ctx.practiceId,
+          startTime,
+          endTime,
+          input.id // exclude the appointment being moved
+        );
+        const result = detectConflicts(
+          { startTime, endTime, doctorId, roomId, excludeId: input.id },
+          existing
+        );
+        const message = conflictMessage(result);
+        if (message) throw new TRPCError({ code: "CONFLICT", message });
+      }
+
+      const [updated] = await ctx.db
+        .update(appointments)
+        .set({ startTime, endTime, doctorId: doctorId ?? null, roomId: roomId ?? null })
+        .where(
+          and(
+            eq(appointments.id, input.id),
+            eq(appointments.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+      return updated!;
+    }),
+
+  /** Open slots on a given date for a doctor and/or room. */
+  availableSlots: protectedProcedure
+    .input(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        durationMinutes: z.number().int().min(5).max(480).default(30),
+        stepMinutes: z.number().int().min(5).max(240).optional(),
+        doctorId: z.string().uuid().optional(),
+        roomId: z.string().uuid().optional(),
+        dayStartHour: z.number().int().min(0).max(23).default(8),
+        dayEndHour: z.number().int().min(1).max(24).default(18),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const dayStart = new Date(`${input.date}T${String(input.dayStartHour).padStart(2, "0")}:00:00`);
+      const dayEnd = new Date(`${input.date}T${String(input.dayEndHour % 24 || 24).padStart(2, "0")}:00:00`);
+
+      const existing = await fetchOverlapping(ctx.db, ctx.practiceId, dayStart, dayEnd);
+      // Only the chosen doctor/room blocks availability; if neither given, any
+      // booking on the day blocks (treat the schedule as a single resource).
+      const busy = existing.filter((b) => {
+        if (input.doctorId && b.doctorId === input.doctorId) return true;
+        if (input.roomId && b.roomId === input.roomId) return true;
+        return !input.doctorId && !input.roomId;
+      });
+
+      return findOpenSlots({
+        dayStart,
+        dayEnd,
+        slotMinutes: input.durationMinutes,
+        stepMinutes: input.stepMinutes,
+        busy,
+      });
     }),
 
   listTypes: protectedProcedure.query(async ({ ctx }) => {
@@ -291,24 +433,24 @@ export const appointmentsRouter = createRouter({
         );
         const occEnd = new Date(occStart.getTime() + durationMs);
 
-        // Check for conflicts if a doctor is assigned
-        if (input.doctorId) {
-          const conflicts = await ctx.db
-            .select({ id: appointments.id })
-            .from(appointments)
-            .where(
-              and(
-                eq(appointments.practiceId, ctx.practiceId),
-                eq(appointments.doctorId, input.doctorId),
-                isNull(appointments.deletedAt),
-                lte(appointments.startTime, occEnd),
-                gte(appointments.endTime, occStart),
-                not(inArray(appointments.status, ["cancelled", "no_show"]))
-              )
-            )
-            .limit(1);
-
-          if (conflicts.length > 0) {
+        // Skip an occurrence that conflicts on either the doctor or the room.
+        if (input.doctorId || input.roomId) {
+          const existing = await fetchOverlapping(
+            ctx.db,
+            ctx.practiceId,
+            occStart,
+            occEnd
+          );
+          const result = detectConflicts(
+            {
+              startTime: occStart,
+              endTime: occEnd,
+              doctorId: input.doctorId,
+              roomId: input.roomId,
+            },
+            existing
+          );
+          if (hasConflict(result)) {
             skipped++;
             continue;
           }

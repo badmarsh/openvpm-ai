@@ -56,11 +56,12 @@ function calculateAge(dob: string | null): string {
   return `${adjustedYears}y ${adjustedMonths}m`;
 }
 
-type Tab = "overview" | "weight" | "vaccinations";
+type Tab = "overview" | "weight" | "vitals" | "vaccinations";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "weight", label: "Weight History" },
+  { id: "vitals", label: "Vitals" },
   { id: "vaccinations", label: "Vaccinations" },
 ];
 
@@ -515,10 +516,132 @@ export default function PatientDetailPage() {
           </div>
         )}
 
+        {activeTab === "vitals" && <VitalsTab patientId={patient.id} />}
+
         {activeTab === "vaccinations" && (
           <VaccinationsTab patientId={patient.id} />
         )}
       </div>
+    </div>
+  );
+}
+
+function VitalsTab({ patientId }: { patientId: string }) {
+  const utils = trpc.useUtils();
+  const { data: vitals, isLoading } = trpc.vitals.listByPatient.useQuery({ patientId });
+  const record = trpc.vitals.record.useMutation({
+    onSuccess: () => {
+      toast.success("Vitals recorded");
+      utils.vitals.listByPatient.invalidate({ patientId });
+      setForm({});
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const [form, setForm] = useState<Record<string, string>>({});
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const num = (v?: string) => {
+    if (v === undefined || v.trim() === "") return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    record.mutate({
+      patientId,
+      temperatureC: num(form.temperatureC),
+      heartRateBpm: num(form.heartRateBpm),
+      respiratoryRateBpm: num(form.respiratoryRateBpm),
+      weightKg: num(form.weightKg),
+      bodyConditionScore: num(form.bodyConditionScore),
+      painScore: num(form.painScore),
+      notes: form.notes?.trim() || undefined,
+    });
+  }
+
+  const fields: { key: string; label: string; placeholder?: string }[] = [
+    { key: "temperatureC", label: "Temp (°C)" },
+    { key: "heartRateBpm", label: "HR (bpm)" },
+    { key: "respiratoryRateBpm", label: "RR (bpm)" },
+    { key: "weightKg", label: "Weight (kg)" },
+    { key: "bodyConditionScore", label: "BCS (1-9)" },
+    { key: "painScore", label: "Pain (0-10)" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={submit} className="rounded-lg border border-border bg-card p-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {fields.map((f) => (
+            <div key={f.key}>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                {f.label}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={form[f.key] ?? ""}
+                onChange={set(f.key)}
+                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          ))}
+        </div>
+        <input
+          type="text"
+          value={form.notes ?? ""}
+          onChange={set("notes")}
+          placeholder="Notes (optional)"
+          className="mt-3 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <div className="mt-3 flex justify-end">
+          <Button type="submit" disabled={record.isPending}>
+            {record.isPending ? "Saving…" : "Record vitals"}
+          </Button>
+        </div>
+      </form>
+
+      {isLoading ? (
+        <div className="py-8 text-center text-muted-foreground">Loading...</div>
+      ) : !vitals || vitals.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center">
+          <Activity className="mx-auto h-8 w-8 text-muted-foreground/50" />
+          <p className="mt-2 text-sm text-muted-foreground">No vitals recorded yet</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
+                <th className="px-3 py-2 font-medium">Date</th>
+                <th className="px-3 py-2 font-medium">Temp</th>
+                <th className="px-3 py-2 font-medium">HR</th>
+                <th className="px-3 py-2 font-medium">RR</th>
+                <th className="px-3 py-2 font-medium">Weight</th>
+                <th className="px-3 py-2 font-medium">BCS</th>
+                <th className="px-3 py-2 font-medium">Pain</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vitals.map((v) => (
+                <tr key={v.id} className="border-b border-border last:border-0">
+                  <td className="px-3 py-2">
+                    {v.recordedAt ? new Date(v.recordedAt).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-3 py-2">{v.temperatureC ?? "—"}</td>
+                  <td className="px-3 py-2">{v.heartRateBpm ?? "—"}</td>
+                  <td className="px-3 py-2">{v.respiratoryRateBpm ?? "—"}</td>
+                  <td className="px-3 py-2">{v.weightKg ?? "—"}</td>
+                  <td className="px-3 py-2">{v.bodyConditionScore ?? "—"}</td>
+                  <td className="px-3 py-2">{v.painScore ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

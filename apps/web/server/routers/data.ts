@@ -10,6 +10,7 @@ import {
   invoiceItems,
   users,
 } from "@openpims/db";
+import { csvToClientRecords, csvToPatientRecords } from "@/lib/csv/import";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 
@@ -294,6 +295,75 @@ export const dataRouter = createRouter({
         await ctx.db.insert(patients).values(toInsert);
       }
 
+      return { imported: toInsert.length, errors };
+    }),
+
+  // ── CSV Import ──────────────────────────────────────────────
+  // Accept raw CSV (the common export format from other PIMS) so a practice
+  // can migrate without hand-building JSON. Parsing + validation is pure
+  // (lib/csv); these mutations just persist the valid rows.
+
+  importClientsCsv: adminProcedure
+    .input(z.object({ csv: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const { records, errors } = csvToClientRecords(input.csv);
+      if (records.length > 0) {
+        await ctx.db.insert(clients).values(
+          records.map((c) => ({
+            practiceId: ctx.practiceId,
+            firstName: c.firstName,
+            lastName: c.lastName,
+            email: c.email ?? null,
+            phone: c.phone ?? null,
+            address: c.address ?? null,
+            city: c.city ?? null,
+            state: c.state ?? null,
+            zip: c.zip ?? null,
+          }))
+        );
+      }
+      return { imported: records.length, errors };
+    }),
+
+  importPatientsCsv: adminProcedure
+    .input(z.object({ csv: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const { records, errors } = csvToPatientRecords(input.csv);
+
+      const clientRows = await ctx.db
+        .select({ id: clients.id, email: clients.email })
+        .from(clients)
+        .where(
+          and(eq(clients.practiceId, ctx.practiceId), isNull(clients.deletedAt))
+        );
+      const emailToClientId: Record<string, string> = {};
+      for (const c of clientRows) {
+        if (c.email) emailToClientId[c.email.toLowerCase()] = c.id;
+      }
+
+      const toInsert: (typeof patients.$inferInsert)[] = [];
+      records.forEach((p, i) => {
+        const clientId = emailToClientId[p.clientEmail.toLowerCase()];
+        if (!clientId) {
+          errors.push(`Pet "${p.name}" (row ${i + 1}): no client with email "${p.clientEmail}".`);
+          return;
+        }
+        toInsert.push({
+          practiceId: ctx.practiceId,
+          clientId,
+          name: p.name,
+          species: p.species,
+          breed: p.breed ?? null,
+          sex: p.sex ?? null,
+          dob: p.dob ?? null,
+          color: p.color ?? null,
+          microchipNumber: p.microchipNumber ?? null,
+        });
+      });
+
+      if (toInsert.length > 0) {
+        await ctx.db.insert(patients).values(toInsert);
+      }
       return { imported: toInsert.length, errors };
     }),
 });
