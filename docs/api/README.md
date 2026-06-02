@@ -40,6 +40,7 @@ practice — a key can only ever read or write its own practice's data.
 | `patients:read` | List/read patients |
 | `appointments:read` | List/read appointments *(reserved for upcoming reads)* |
 | `appointments:write` | Create appointments |
+| `agent:run` | Run the OpenVPM Agent over the API |
 | `*` | All of the above |
 
 A request missing the required scope returns `403`.
@@ -130,3 +131,17 @@ Scope `appointments:write`. Body:
 after `start_time`); all ids and `notes` are optional. Returns `201` with
 `{ data: <appointment> }` and fires the `appointment.created` webhook to any
 subscribed endpoints (see the [Webhooks](../../README.md#webhooks) section).
+
+### `POST /api/v1/agent`
+Scope `agent:run`. Run the OpenVPM Agent over the API, scoped to the key's
+practice. Body:
+
+```json
+{ "instruction": "Which patients are overdue for vaccinations?", "allow_writes": false }
+```
+
+`allow_writes` (default `false`) gates write tools such as booking. Returns
+`{ data: { text, toolCalls, iterations, stopReason } }`, where `toolCalls`
+traces every tool the agent invoked. Returns `503` if the server has no
+`ANTHROPIC_API_KEY` configured.
+

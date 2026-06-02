@@ -5,6 +5,7 @@ import {
   extractApiKey,
   hasScope,
   API_KEY_PREFIX,
+  API_SCOPES,
 } from "../api-auth";
 
 describe("generateApiKey", () => {
@@ -67,5 +68,12 @@ describe("hasScope", () => {
 
   it("denies on an empty scope list", () => {
     expect(hasScope([], "clients:read")).toBe(false);
+  });
+});
+
+describe("API_SCOPES", () => {
+  it("includes the agent:run scope and the wildcard", () => {
+    expect(API_SCOPES).toContain("agent:run");
+    expect(API_SCOPES).toContain("*");
   });
 });

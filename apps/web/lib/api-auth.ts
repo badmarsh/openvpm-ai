@@ -148,6 +148,7 @@ export const API_SCOPES = [
   "patients:read",
   "appointments:read",
   "appointments:write",
+  "agent:run",
   "*",
 ] as const;
 
