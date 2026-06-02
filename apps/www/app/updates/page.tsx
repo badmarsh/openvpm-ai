@@ -26,6 +26,22 @@ const tagStyles: Record<Update["tag"], string> = {
 // Newest first. Update this list as work ships.
 const updates: Update[] = [
   {
+    date: "June 2, 2026",
+    tag: "Platform",
+    title: "A calendar you can trust",
+    body: "Scheduling got a correctness overhaul. Back-to-back appointments no longer trip a false 'conflict' (a real bug — the old check counted touching time slots as overlaps), and the calendar now catches room double-bookings, not just doctor clashes. Appointments can be rescheduled — moved to a new time, doctor, or room — with the same conflict checks applied, so dragging an appointment can't quietly create a clash.",
+    points: [
+      "Strict overlap detection across both doctor and room.",
+      "Reschedule with automatic conflict checking, excluding the appointment being moved.",
+    ],
+  },
+  {
+    date: "June 2, 2026",
+    tag: "Clinical",
+    title: "Deeper clinical tooling: vitals, treatment plans, wellness plans",
+    body: "Closing the gap with the established systems. Per-visit vital signs now have a dedicated tab on the patient record, treatment plans link to a patient's problem list with progress tracking, and practices can offer wellness/membership plans with recurring billing schedules. Plus self-service online booking landed in the client portal.",
+  },
+  {
     date: "June 1, 2026",
     tag: "Direction",
     title: "Don't switch — connect. A second PIMS that you own.",
