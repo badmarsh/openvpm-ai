@@ -19,6 +19,7 @@ import { notificationsRouter } from "./notifications";
 import { templatesRouter } from "./templates";
 import { controlledSubstancesRouter } from "./controlled-substances";
 import { insuranceRouter } from "./insurance";
+import { apiKeysRouter } from "./api-keys";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -41,6 +42,7 @@ export const appRouter = createRouter({
   templates: templatesRouter,
   controlledSubstances: controlledSubstancesRouter,
   insurance: insuranceRouter,
+  apiKeys: apiKeysRouter,
 });
 
 export type AppRouter = typeof appRouter;
