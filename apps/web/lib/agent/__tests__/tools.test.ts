@@ -13,8 +13,8 @@ describe("agent tool registry", () => {
   });
 
   it("flags exactly the write tools as not read-only", () => {
-    const writeTools = AGENT_TOOLS.filter((t) => !t.readOnly).map((t) => t.name);
-    expect(writeTools).toEqual(["book_appointment"]);
+    const writeTools = AGENT_TOOLS.filter((t) => !t.readOnly).map((t) => t.name).sort();
+    expect(writeTools).toEqual(["book_appointment", "record_vital_signs"]);
   });
 
   it("exposes Anthropic-format defs with required fields", () => {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull, or, ilike, gte, lte, lt, desc } from "drizzle-orm";
+import { eq, and, isNull, or, ilike, gte, lte, lt, desc, asc, inArray } from "drizzle-orm";
 import type { Database } from "@openpims/db/client";
 import {
   clients,
@@ -8,9 +8,12 @@ import {
   vitalSigns,
   vaccinationRecords,
   problemList,
+  treatmentPlans,
+  treatmentPlanItems,
 } from "@openpims/db";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { calculateDose } from "@/lib/dosing";
+import { summarizePlanProgress, type PlanItemStatus } from "@/lib/treatment-plans/progress";
 
 /**
  * The agent's "hands": typed tools that operate the practice's data, always
@@ -344,6 +347,118 @@ const calculateDrugDose: AgentTool = {
   },
 };
 
+const listTreatmentPlans: AgentTool = {
+  name: "list_treatment_plans",
+  description:
+    "List a patient's treatment plans with their items and a progress summary.",
+  inputSchema: {
+    type: "object",
+    properties: { patientId: { type: "string", description: "Patient UUID" } },
+    required: ["patientId"],
+  },
+  zod: z.object({ patientId: z.string().uuid() }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const { patientId } = this.zod.parse(args) as { patientId: string };
+    const plans = await ctx.db
+      .select()
+      .from(treatmentPlans)
+      .where(
+        and(
+          eq(treatmentPlans.patientId, patientId),
+          eq(treatmentPlans.practiceId, ctx.practiceId),
+          isNull(treatmentPlans.deletedAt)
+        )
+      )
+      .orderBy(desc(treatmentPlans.createdAt));
+    if (plans.length === 0) return [];
+
+    const items = await ctx.db
+      .select()
+      .from(treatmentPlanItems)
+      .where(
+        and(
+          inArray(treatmentPlanItems.planId, plans.map((p) => p.id)),
+          isNull(treatmentPlanItems.deletedAt)
+        )
+      )
+      .orderBy(asc(treatmentPlanItems.sortOrder));
+
+    return plans.map((plan) => {
+      const planItems = items.filter((i) => i.planId === plan.id);
+      return {
+        id: plan.id,
+        title: plan.title,
+        status: plan.status,
+        items: planItems.map((i) => ({ description: i.description, status: i.status })),
+        progress: summarizePlanProgress(
+          planItems.map((i) => ({ status: i.status as PlanItemStatus }))
+        ),
+      };
+    });
+  },
+};
+
+const recordVitalSigns: AgentTool = {
+  name: "record_vital_signs",
+  description:
+    "Record a vital-signs entry for a patient. All measurements are optional; provide what was taken.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Patient UUID" },
+      temperatureC: { type: "number" },
+      heartRateBpm: { type: "number" },
+      respiratoryRateBpm: { type: "number" },
+      weightKg: { type: "number" },
+      bodyConditionScore: { type: "number", description: "1-9" },
+      painScore: { type: "number", description: "0-10" },
+      notes: { type: "string" },
+    },
+    required: ["patientId"],
+  },
+  zod: z.object({
+    patientId: z.string().uuid(),
+    temperatureC: z.number().min(20).max(45).optional(),
+    heartRateBpm: z.number().int().min(0).max(400).optional(),
+    respiratoryRateBpm: z.number().int().min(0).max(300).optional(),
+    weightKg: z.number().positive().max(200).optional(),
+    bodyConditionScore: z.number().int().min(1).max(9).optional(),
+    painScore: z.number().int().min(0).max(10).optional(),
+    notes: z.string().optional(),
+  }),
+  readOnly: false,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      temperatureC?: number;
+      heartRateBpm?: number;
+      respiratoryRateBpm?: number;
+      weightKg?: number;
+      bodyConditionScore?: number;
+      painScore?: number;
+      notes?: string;
+    };
+    const [row] = await ctx.db
+      .insert(vitalSigns)
+      .values({
+        practiceId: ctx.practiceId,
+        patientId: input.patientId,
+        // The agent is not a user row; leave recordedBy null.
+        recordedBy: null,
+        temperatureC: input.temperatureC?.toString(),
+        heartRateBpm: input.heartRateBpm,
+        respiratoryRateBpm: input.respiratoryRateBpm,
+        weightKg: input.weightKg?.toString(),
+        bodyConditionScore: input.bodyConditionScore,
+        painScore: input.painScore,
+        notes: input.notes ?? null,
+      })
+      .returning({ id: vitalSigns.id, recordedAt: vitalSigns.recordedAt });
+    return { id: row!.id, recordedAt: row!.recordedAt };
+  },
+};
+
 export const AGENT_TOOLS: AgentTool[] = [
   findClient,
   getPatientSummary,
@@ -351,6 +466,8 @@ export const AGENT_TOOLS: AgentTool[] = [
   bookAppointment,
   listOverdueVaccinations,
   calculateDrugDose,
+  listTreatmentPlans,
+  recordVitalSigns,
 ];
 
 export function getTool(name: string): AgentTool | undefined {
