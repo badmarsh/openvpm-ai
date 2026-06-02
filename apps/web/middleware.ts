@@ -16,12 +16,9 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  // Unauthenticated visitors at root get redirected to the marketing site
-  if (!token && request.nextUrl.pathname === "/") {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || "https://openvpm.com";
-    return NextResponse.redirect(wwwUrl);
-  }
-
+  // Unauthenticated visitors go to the demo login, which offers one-click
+  // demo access. (Previously the root path bounced to the marketing site,
+  // which dead-ended anyone who came straight to demo.openvpm.com to try it.)
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
