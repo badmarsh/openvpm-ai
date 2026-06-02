@@ -14,6 +14,8 @@ import {
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { calculateDose } from "@/lib/dosing";
 import { summarizePlanProgress, type PlanItemStatus } from "@/lib/treatment-plans/progress";
+import { findOpenSlots } from "@/lib/scheduling/availability";
+import { not, gt } from "drizzle-orm";
 
 /**
  * The agent's "hands": typed tools that operate the practice's data, always
@@ -459,10 +461,75 @@ const recordVitalSigns: AgentTool = {
   },
 };
 
+const findOpenSlotsTool: AgentTool = {
+  name: "find_open_slots",
+  description:
+    "Find open appointment times on a date (optionally for a specific doctor or room). Use before book_appointment to pick a free time.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD" },
+      durationMinutes: { type: "number" },
+      doctorId: { type: "string" },
+      roomId: { type: "string" },
+    },
+    required: ["date"],
+  },
+  zod: z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    durationMinutes: z.number().int().min(10).max(240).optional(),
+    doctorId: z.string().uuid().optional(),
+    roomId: z.string().uuid().optional(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      date: string;
+      durationMinutes?: number;
+      doctorId?: string;
+      roomId?: string;
+    };
+    const dayStart = new Date(`${input.date}T08:00:00`);
+    const dayEnd = new Date(`${input.date}T18:00:00`);
+
+    const rows = await ctx.db
+      .select({
+        startTime: appointments.startTime,
+        endTime: appointments.endTime,
+        doctorId: appointments.doctorId,
+        roomId: appointments.roomId,
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.practiceId, ctx.practiceId),
+          isNull(appointments.deletedAt),
+          not(inArray(appointments.status, ["cancelled", "no_show"])),
+          lt(appointments.startTime, dayEnd),
+          gt(appointments.endTime, dayStart)
+        )
+      );
+
+    const busy = rows.filter((r) => {
+      if (input.doctorId && r.doctorId === input.doctorId) return true;
+      if (input.roomId && r.roomId === input.roomId) return true;
+      return !input.doctorId && !input.roomId;
+    });
+
+    return findOpenSlots({
+      dayStart,
+      dayEnd,
+      slotMinutes: input.durationMinutes ?? 30,
+      busy,
+    }).map((s) => ({ start: s.start.toISOString(), end: s.end.toISOString() }));
+  },
+};
+
 export const AGENT_TOOLS: AgentTool[] = [
   findClient,
   getPatientSummary,
   listAppointments,
+  findOpenSlotsTool,
   bookAppointment,
   listOverdueVaccinations,
   calculateDrugDose,
