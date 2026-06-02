@@ -77,7 +77,18 @@ export default function AppointmentsPage() {
         Back to portal
       </Link>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Appointments</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
+        <Link
+          href={`/portal/${token}/book`}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Request appointment
+        </Link>
+      </div>
 
       {/* Upcoming */}
       <section className="mb-10">

@@ -15,6 +15,9 @@ import {
   communications,
 } from "@openpims/db";
 import { users } from "@openpims/db";
+import { rateLimit } from "@/lib/rate-limit";
+import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
+import { buildRequestedSlot } from "@/lib/portal/booking";
 
 async function getClientByToken(db: any, token: string) {
   const [client] = await db
@@ -213,20 +216,55 @@ export const portalRouter = createRouter({
       return rows;
     }),
 
+  /** Appointment types a client can choose from when booking. */
+  getAppointmentTypes: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const client = await getClientByToken(ctx.db, input.token);
+      return ctx.db
+        .select({
+          id: appointmentTypes.id,
+          name: appointmentTypes.name,
+          durationMinutes: appointmentTypes.durationMinutes,
+        })
+        .from(appointmentTypes)
+        .where(
+          and(
+            eq(appointmentTypes.practiceId, client.practiceId),
+            isNull(appointmentTypes.deletedAt)
+          )
+        )
+        .orderBy(appointmentTypes.name);
+    }),
+
   requestAppointment: publicProcedure
     .input(
       z.object({
         token: z.string().min(1),
         patientId: z.string().uuid(),
+        typeId: z.string().uuid().optional(),
         preferredDate: z.string(),
         preferredTime: z.string(),
-        reason: z.string().min(1),
+        reason: z.string().min(1).max(1000),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const client = await getClientByToken(ctx.db, input.token);
 
-      // Verify the patient belongs to this client
+      // Throttle public booking per portal link to deter abuse.
+      const { success } = rateLimit({
+        key: `portal-book:${input.token}`,
+        limit: 5,
+        windowMs: 60 * 60 * 1000,
+      });
+      if (!success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many requests. Please try again later or call the clinic.",
+        });
+      }
+
+      // Verify the patient belongs to this client.
       const [patient] = await ctx.db
         .select({ id: patients.id, name: patients.name })
         .from(patients)
@@ -240,13 +278,62 @@ export const portalRouter = createRouter({
         .limit(1);
 
       if (!patient) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pet not found" });
+      }
+
+      // Resolve the requested type (must belong to this practice) for duration.
+      let durationMinutes = 30;
+      let typeId: string | null = null;
+      if (input.typeId) {
+        const [type] = await ctx.db
+          .select({ id: appointmentTypes.id, durationMinutes: appointmentTypes.durationMinutes })
+          .from(appointmentTypes)
+          .where(
+            and(
+              eq(appointmentTypes.id, input.typeId),
+              eq(appointmentTypes.practiceId, client.practiceId),
+              isNull(appointmentTypes.deletedAt)
+            )
+          )
+          .limit(1);
+        if (!type) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Appointment type not found" });
+        }
+        typeId = type.id;
+        durationMinutes = type.durationMinutes;
+      }
+
+      let slot;
+      try {
+        slot = buildRequestedSlot({
+          preferredDate: input.preferredDate,
+          preferredTime: input.preferredTime,
+          durationMinutes,
+        });
+      } catch (e) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Pet not found",
+          code: "BAD_REQUEST",
+          message: e instanceof Error ? e.message : "Invalid date or time",
         });
       }
 
-      // Create a communication record for the appointment request
+      // Create the appointment as "scheduled" — staff confirm/adjust on the
+      // calendar. Notes flag it as a portal request and capture the reason.
+      const [appt] = await ctx.db
+        .insert(appointments)
+        .values({
+          practiceId: client.practiceId,
+          clientId: client.id,
+          patientId: patient.id,
+          typeId,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          status: "scheduled",
+          notes: `[Portal request] ${input.reason}`,
+        })
+        .returning();
+
+      // Mirror into the communications inbox so front desk sees it there too.
       await ctx.db.insert(communications).values({
         practiceId: client.practiceId,
         clientId: client.id,
@@ -255,15 +342,23 @@ export const portalRouter = createRouter({
         subject: `Appointment request for ${patient.name}`,
         content: [
           `Pet: ${patient.name}`,
-          `Preferred date: ${input.preferredDate}`,
-          `Preferred time: ${input.preferredTime}`,
+          `Requested: ${slot.startTime.toISOString()}`,
           `Reason: ${input.reason}`,
         ].join("\n"),
         status: "pending",
       });
 
+      await dispatchWebhookEvent(client.practiceId, "appointment.created", {
+        id: appt!.id,
+        startTime: appt!.startTime,
+        endTime: appt!.endTime,
+        status: appt!.status,
+        source: "portal",
+      });
+
       return {
         success: true,
+        appointmentId: appt!.id,
         message:
           "Your appointment request has been sent! The clinic will confirm your appointment.",
       };
