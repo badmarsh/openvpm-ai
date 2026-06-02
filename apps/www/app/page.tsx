@@ -28,6 +28,9 @@ import {
   Bot,
   Terminal,
   Server,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://demo.openvpm.com";
@@ -565,6 +568,114 @@ export default function LandingPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Connect / Own Your Data + Agent */}
+      <section id="connect" className="py-20 sm:py-28 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center mb-14">
+            <div className="inline-flex items-center gap-2 rounded-full bg-teal-50 border border-teal-200 px-3 py-1 mb-6">
+              <Database className="w-3.5 h-3.5 text-teal-600" />
+              <span className="text-xs font-semibold text-teal-700 uppercase tracking-wider">
+                Own your data
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold font-heading text-gray-900 tracking-tight mb-4">
+              Don&apos;t switch. Connect.
+            </h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              You don&apos;t have to rip out the system you already run. Connect OpenVPM
+              to your current PIMS and keep a live, open copy of your own data &mdash;
+              patients, clients, visit history &mdash; in a system you control and can
+              export any time. A second PIMS that you own.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            {[
+              {
+                icon: RefreshCw,
+                title: "Live mirror",
+                description:
+                  "Connect once. Your practice data flows into OpenVPM and stays in sync. Your records, in a system you hold the keys to.",
+              },
+              {
+                icon: Database,
+                title: "Open by default",
+                description:
+                  "Everything sits behind a documented REST API with scoped keys. Read it, build on it, export it in full — no proprietary formats, no lock-in.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Zero disruption",
+                description:
+                  "Your team keeps working in the tools they know. OpenVPM runs alongside, read-only until you decide to do more with it.",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.title}
+                  className="rounded-2xl border border-gray-100 bg-white p-6"
+                >
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-teal-50 text-teal-600 mb-5">
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-semibold font-heading text-gray-900 mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* OpenVPM Agent callout */}
+          <div className="relative rounded-3xl border border-gray-200 bg-gradient-to-br from-gray-950 to-gray-900 px-8 py-12 sm:px-12 overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3" />
+            <div className="relative max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 mb-6">
+                <Bot className="w-3.5 h-3.5 text-teal-300" />
+                <span className="text-xs font-semibold text-teal-200 uppercase tracking-wider">
+                  OpenVPM Agent
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold font-heading text-white tracking-tight mb-4">
+                An agent that runs the busywork.
+              </h3>
+              <p className="text-gray-300 text-base leading-relaxed mb-8">
+                OpenVPM ships with an AI agent that works directly on your practice
+                data through the same open API. Ask it to surface overdue vaccinations,
+                draft recall outreach, pull a patient&apos;s history, calculate a
+                weight-based dose, or book a visit. It uses real tools, not guesses, and
+                every write is gated for your review.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-8">
+                {[
+                  "Find patients & clients",
+                  "Recall lists",
+                  "Dosing reference",
+                  "Book appointments",
+                  "Daily summary",
+                ].map((chip) => (
+                  <span
+                    key={chip}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-gray-200"
+                  >
+                    <Sparkles className="w-3 h-3 text-teal-300" />
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm text-gray-400">
+                Bring your own model key. Open source, inspectable, and scoped to your
+                practice &mdash; the agent can only ever touch your own data.
+              </p>
             </div>
           </div>
         </div>
