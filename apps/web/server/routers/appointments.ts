@@ -18,6 +18,7 @@ import {
   hasConflict,
   type ExistingBooking,
 } from "@/lib/scheduling/conflicts";
+import { findOpenSlots } from "@/lib/scheduling/availability";
 
 /** Fetch blocking appointments overlapping [start, end) for conflict checks. */
 async function fetchOverlapping(
@@ -294,6 +295,41 @@ export const appointmentsRouter = createRouter({
         )
         .returning();
       return updated!;
+    }),
+
+  /** Open slots on a given date for a doctor and/or room. */
+  availableSlots: protectedProcedure
+    .input(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        durationMinutes: z.number().int().min(5).max(480).default(30),
+        stepMinutes: z.number().int().min(5).max(240).optional(),
+        doctorId: z.string().uuid().optional(),
+        roomId: z.string().uuid().optional(),
+        dayStartHour: z.number().int().min(0).max(23).default(8),
+        dayEndHour: z.number().int().min(1).max(24).default(18),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const dayStart = new Date(`${input.date}T${String(input.dayStartHour).padStart(2, "0")}:00:00`);
+      const dayEnd = new Date(`${input.date}T${String(input.dayEndHour % 24 || 24).padStart(2, "0")}:00:00`);
+
+      const existing = await fetchOverlapping(ctx.db, ctx.practiceId, dayStart, dayEnd);
+      // Only the chosen doctor/room blocks availability; if neither given, any
+      // booking on the day blocks (treat the schedule as a single resource).
+      const busy = existing.filter((b) => {
+        if (input.doctorId && b.doctorId === input.doctorId) return true;
+        if (input.roomId && b.roomId === input.roomId) return true;
+        return !input.doctorId && !input.roomId;
+      });
+
+      return findOpenSlots({
+        dayStart,
+        dayEnd,
+        slotMinutes: input.durationMinutes,
+        stepMinutes: input.stepMinutes,
+        busy,
+      });
     }),
 
   listTypes: protectedProcedure.query(async ({ ctx }) => {
