@@ -267,6 +267,10 @@ OpenVPM's structured data models and event streams make it the ideal foundation 
 
 The PIMS is the system of record. AI agents are first-class citizens.
 
+### OpenVPM Agent
+
+OpenVPM ships with a built-in AI agent that operates on practice data through a typed tool layer (find clients/patients, pull a clinical summary, list overdue vaccinations, calculate a weight-based drug dose, book appointments). It runs a Claude tool-use loop scoped to a single practice, gates every write behind an explicit opt-in, and degrades gracefully when no model key is set. Bring your own `ANTHROPIC_API_KEY`; the agent is open source and fully inspectable. Available in-app under **Agent** and via the `agent` tRPC router.
+
 ## Why Open Source Matters for Veterinary Medicine
 
 The veterinary industry is at a crossroads. AI is arriving. Data interoperability is becoming critical. And the dominant PIMS vendors are still charging hundreds per month for software that crashes, frustrates staff, and locks clinics into proprietary ecosystems.
