@@ -31,15 +31,46 @@ Thank you for your interest in contributing to OpenVPM!
 
 1. Create a feature branch from `main`
 2. Make your changes
-3. Run `pnpm build` to verify no type errors
+3. Run `pnpm test` (unit) and `pnpm build` (type-check + lint) to verify
 4. Submit a pull request
+
+## Testing
+
+- **Unit tests** (Vitest): `pnpm test`. Co-locate as `*.test.ts` next to the code
+  (e.g. `lib/compat/openvpm/__tests__/`). Pure logic — mappers, helpers — should
+  be unit-tested without a database.
+- **E2E tests** (Playwright): `pnpm test:e2e`.
 
 ## Code Style
 
 - TypeScript strict mode
 - Tailwind CSS for styling (follow existing design tokens)
-- tRPC for all API endpoints
+- tRPC for all internal API endpoints
 - Drizzle ORM for database queries
+
+## Adding a compatibility endpoint or target
+
+The public REST API ([docs/api](docs/api/README.md)) is OpenVPM's integration
+moat: integrators (and AI agents) plug into a frozen, vendor-shaped contract.
+The layout makes adding endpoints — and entire vendor-compatible "targets" —
+repeatable:
+
+- **Route handlers**: `apps/web/app/api/v1/<resource>/route.ts`. Keep them
+  **thin** — authenticate → validate → tenant-scoped Drizzle query → map →
+  respond. No business logic or shape knowledge in the handler.
+- **Auth**: call `authenticateApiKey(req, "<scope>")` from `lib/api-auth.ts`.
+  **Every** query MUST be scoped by `ctx.practiceId` and filter
+  `isNull(table.deletedAt)` — a cross-tenant read is a security bug.
+- **Mappers**: `lib/compat/<target>/mappers.ts` holds **pure** functions that
+  translate internal rows ↔ the target's shapes (enum crosswalks, date formats).
+  The target's request/response shapes live in `lib/compat/<target>/schema.ts`.
+- **A new target** (e.g. an existing PIMS's public API) is a new
+  `lib/compat/<vendor>/` module plus an `app/api/compat/<vendor>/v1/` namespace —
+  the auth, pagination, and error helpers are shared.
+
+Every endpoint ships with mapper unit tests **and** a contract test
+(`schema.parse(toApiX(row))`) so internal changes can't silently break the
+public contract.
 
 ## License
 
