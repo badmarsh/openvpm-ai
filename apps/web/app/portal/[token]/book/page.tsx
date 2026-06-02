@@ -19,6 +19,12 @@ export default function BookAppointmentPage() {
   const [preferredTime, setPreferredTime] = useState("");
   const [reason, setReason] = useState("");
 
+  // Suggested open times for the chosen date.
+  const slots = trpc.portal.availableSlots.useQuery(
+    { token, date: preferredDate, durationMinutes: 30 },
+    { enabled: !!preferredDate }
+  );
+
   const pets = client.data?.patients ?? [];
   const canSubmit =
     patientId && preferredDate && preferredTime && reason.trim() && !request.isPending;
@@ -131,6 +137,30 @@ export default function BookAppointmentPage() {
             />
           </div>
         </div>
+
+        {preferredDate && (slots.data?.length ?? 0) > 0 && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              Open times on {preferredDate} (tap to pick)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {slots.data!.map((s) => (
+                <button
+                  key={s.iso}
+                  type="button"
+                  onClick={() => setPreferredTime(s.time)}
+                  className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                    preferredTime === s.time
+                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      : "border-gray-200 text-gray-600 hover:border-teal-300"
+                  }`}
+                >
+                  {s.time}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">

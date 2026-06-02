@@ -18,6 +18,8 @@ import { users } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { buildRequestedSlot } from "@/lib/portal/booking";
+import { findOpenSlots } from "@/lib/scheduling/availability";
+import { not, inArray, lt, gt } from "drizzle-orm";
 
 async function getClientByToken(db: any, token: string) {
   const [client] = await db
@@ -235,6 +237,48 @@ export const portalRouter = createRouter({
           )
         )
         .orderBy(appointmentTypes.name);
+    }),
+
+  /** Suggested open times on a date for the booking form (practice-wide). */
+  availableSlots: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        durationMinutes: z.number().int().min(10).max(120).default(30),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const client = await getClientByToken(ctx.db, input.token);
+      const dayStart = new Date(`${input.date}T08:00:00`);
+      const dayEnd = new Date(`${input.date}T18:00:00`);
+
+      const busy = await ctx.db
+        .select({
+          startTime: appointments.startTime,
+          endTime: appointments.endTime,
+        })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.practiceId, client.practiceId),
+            isNull(appointments.deletedAt),
+            not(inArray(appointments.status, ["cancelled", "no_show"])),
+            lt(appointments.startTime, dayEnd),
+            gt(appointments.endTime, dayStart)
+          )
+        );
+
+      return findOpenSlots({
+        dayStart,
+        dayEnd,
+        slotMinutes: input.durationMinutes,
+        busy,
+      }).map((s) => ({
+        // 24h HH:MM in the server's local time, matching the booking form input.
+        time: `${String(s.start.getHours()).padStart(2, "0")}:${String(s.start.getMinutes()).padStart(2, "0")}`,
+        iso: s.start.toISOString(),
+      }));
     }),
 
   requestAppointment: publicProcedure
