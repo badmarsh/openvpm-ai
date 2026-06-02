@@ -37,6 +37,19 @@ export const noteTypeEnum = pgEnum("note_type", [
 
 export const caseStatusEnum = pgEnum("case_status", ["open", "closed"]);
 
+export const treatmentPlanStatusEnum = pgEnum("treatment_plan_status", [
+  "active",
+  "completed",
+  "discontinued",
+]);
+
+export const treatmentPlanItemStatusEnum = pgEnum("treatment_plan_item_status", [
+  "pending",
+  "in_progress",
+  "done",
+  "skipped",
+]);
+
 export const soapNotes = pgTable(
   "soap_notes",
   {
@@ -214,6 +227,41 @@ export const caseEntries = pgTable("case_entries", {
   notes: text("notes"),
 });
 
+export const treatmentPlans = pgTable(
+  "treatment_plans",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    problemId: uuid("problem_id").references(() => problemList.id),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    status: treatmentPlanStatusEnum("status").notNull().default("active"),
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    createdBy: uuid("created_by").references(() => users.id),
+  },
+  (table) => ({
+    patientIdx: index("treatment_plans_patient_idx").on(table.patientId),
+    practiceIdx: index("treatment_plans_practice_idx").on(table.practiceId, table.deletedAt),
+  })
+);
+
+export const treatmentPlanItems = pgTable("treatment_plan_items", {
+  ...baseColumns(),
+  planId: uuid("plan_id")
+    .notNull()
+    .references(() => treatmentPlans.id),
+  description: varchar("description", { length: 500 }).notNull(),
+  instructions: text("instructions"),
+  status: treatmentPlanItemStatusEnum("status").notNull().default("pending"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 // Relations
 export const soapNotesRelations = relations(soapNotes, ({ one }) => ({
   practice: one(practices, {
@@ -365,3 +413,36 @@ export const caseEntriesRelations = relations(caseEntries, ({ one }) => ({
     references: [appointments.id],
   }),
 }));
+
+export const treatmentPlansRelations = relations(
+  treatmentPlans,
+  ({ one, many }) => ({
+    practice: one(practices, {
+      fields: [treatmentPlans.practiceId],
+      references: [practices.id],
+    }),
+    patient: one(patients, {
+      fields: [treatmentPlans.patientId],
+      references: [patients.id],
+    }),
+    problem: one(problemList, {
+      fields: [treatmentPlans.problemId],
+      references: [problemList.id],
+    }),
+    createdByUser: one(users, {
+      fields: [treatmentPlans.createdBy],
+      references: [users.id],
+    }),
+    items: many(treatmentPlanItems),
+  })
+);
+
+export const treatmentPlanItemsRelations = relations(
+  treatmentPlanItems,
+  ({ one }) => ({
+    plan: one(treatmentPlans, {
+      fields: [treatmentPlanItems.planId],
+      references: [treatmentPlans.id],
+    }),
+  })
+);

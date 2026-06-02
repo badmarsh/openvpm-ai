@@ -23,6 +23,7 @@ import { apiKeysRouter } from "./api-keys";
 import { dosingRouter } from "./dosing";
 import { vitalsRouter } from "./vitals";
 import { agentRouter } from "./agent";
+import { treatmentPlansRouter } from "./treatment-plans";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -49,6 +50,7 @@ export const appRouter = createRouter({
   dosing: dosingRouter,
   vitals: vitalsRouter,
   agent: agentRouter,
+  treatmentPlans: treatmentPlansRouter,
 });
 
 export type AppRouter = typeof appRouter;
