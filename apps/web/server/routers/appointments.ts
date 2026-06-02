@@ -222,6 +222,80 @@ export const appointmentsRouter = createRouter({
       return appt!;
     }),
 
+  reschedule: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        startTime: z.string(),
+        endTime: z.string(),
+        doctorId: z.string().uuid().nullable().optional(),
+        roomId: z.string().uuid().nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const startTime = new Date(input.startTime);
+      const endTime = new Date(input.endTime);
+      if (endTime <= startTime) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "End time must be after start time.",
+        });
+      }
+
+      const [current] = await ctx.db
+        .select({
+          id: appointments.id,
+          doctorId: appointments.doctorId,
+          roomId: appointments.roomId,
+        })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.id, input.id),
+            eq(appointments.practiceId, ctx.practiceId),
+            isNull(appointments.deletedAt)
+          )
+        )
+        .limit(1);
+      if (!current) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Appointment not found" });
+      }
+
+      // Fall back to the appointment's existing doctor/room when not changing them.
+      const doctorId =
+        input.doctorId === undefined ? current.doctorId : input.doctorId;
+      const roomId = input.roomId === undefined ? current.roomId : input.roomId;
+
+      if (doctorId || roomId) {
+        const existing = await fetchOverlapping(
+          ctx.db,
+          ctx.practiceId,
+          startTime,
+          endTime,
+          input.id // exclude the appointment being moved
+        );
+        const result = detectConflicts(
+          { startTime, endTime, doctorId, roomId, excludeId: input.id },
+          existing
+        );
+        const message = conflictMessage(result);
+        if (message) throw new TRPCError({ code: "CONFLICT", message });
+      }
+
+      const [updated] = await ctx.db
+        .update(appointments)
+        .set({ startTime, endTime, doctorId: doctorId ?? null, roomId: roomId ?? null })
+        .where(
+          and(
+            eq(appointments.id, input.id),
+            eq(appointments.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+      return updated!;
+    }),
+
   listTypes: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db
       .select()
