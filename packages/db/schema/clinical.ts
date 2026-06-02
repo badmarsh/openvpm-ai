@@ -152,6 +152,39 @@ export const problemList = pgTable("problem_list", {
   resolvedDate: date("resolved_date"),
 });
 
+export const vitalSigns = pgTable(
+  "vital_signs",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    appointmentId: uuid("appointment_id").references(() => appointments.id),
+    recordedBy: uuid("recorded_by").references(() => users.id),
+    recordedAt: timestamp("recorded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    temperatureC: numeric("temperature_c", { precision: 4, scale: 1 }),
+    heartRateBpm: integer("heart_rate_bpm"),
+    respiratoryRateBpm: integer("respiratory_rate_bpm"),
+    weightKg: numeric("weight_kg", { precision: 8, scale: 3 }),
+    /** Body condition score, 1-9 scale. */
+    bodyConditionScore: integer("body_condition_score"),
+    /** Pain score, 0-10 scale. */
+    painScore: integer("pain_score"),
+    mucousMembrane: varchar("mucous_membrane", { length: 64 }),
+    capillaryRefillSec: numeric("capillary_refill_sec", { precision: 3, scale: 1 }),
+    notes: text("notes"),
+  },
+  (table) => ({
+    patientIdx: index("vital_signs_patient_idx").on(table.patientId, table.recordedAt),
+    practiceIdx: index("vital_signs_practice_idx").on(table.practiceId, table.deletedAt),
+  })
+);
+
 export const cases = pgTable("cases", {
   ...baseColumns(),
   practiceId: uuid("practice_id")
@@ -284,6 +317,25 @@ export const problemListRelations = relations(problemList, ({ one }) => ({
   patient: one(patients, {
     fields: [problemList.patientId],
     references: [patients.id],
+  }),
+}));
+
+export const vitalSignsRelations = relations(vitalSigns, ({ one }) => ({
+  practice: one(practices, {
+    fields: [vitalSigns.practiceId],
+    references: [practices.id],
+  }),
+  patient: one(patients, {
+    fields: [vitalSigns.patientId],
+    references: [patients.id],
+  }),
+  appointment: one(appointments, {
+    fields: [vitalSigns.appointmentId],
+    references: [appointments.id],
+  }),
+  recorder: one(users, {
+    fields: [vitalSigns.recordedBy],
+    references: [users.id],
   }),
 }));
 
