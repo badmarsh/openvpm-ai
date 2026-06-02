@@ -22,6 +22,7 @@ import { insuranceRouter } from "./insurance";
 import { apiKeysRouter } from "./api-keys";
 import { dosingRouter } from "./dosing";
 import { vitalsRouter } from "./vitals";
+import { agentRouter } from "./agent";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -47,6 +48,7 @@ export const appRouter = createRouter({
   apiKeys: apiKeysRouter,
   dosing: dosingRouter,
   vitals: vitalsRouter,
+  agent: agentRouter,
 });
 
 export type AppRouter = typeof appRouter;
