@@ -1,0 +1,47 @@
+import { describe, it, expect } from "vitest";
+import { parseAuditPath, redactSecrets, extractEntityId } from "../audit";
+
+const UUID = "11111111-1111-1111-1111-111111111111";
+
+describe("parseAuditPath", () => {
+  it("splits entity and action on the first dot", () => {
+    expect(parseAuditPath("clients.create")).toEqual({ entityType: "clients", action: "create" });
+    expect(parseAuditPath("treatmentPlans.updateItemStatus")).toEqual({
+      entityType: "treatmentPlans",
+      action: "updateItemStatus",
+    });
+  });
+  it("handles a path with no dot", () => {
+    expect(parseAuditPath("health")).toEqual({ entityType: "health", action: "" });
+  });
+});
+
+describe("redactSecrets", () => {
+  it("redacts secret-ish keys, keeps the rest", () => {
+    const out = redactSecrets({ name: "Rex", password: "hunter2", apiKey: "x", note: "ok" });
+    expect(out).toEqual({ name: "Rex", password: "[redacted]", apiKey: "[redacted]", note: "ok" });
+  });
+  it("redacts keyHash/secret/token variants", () => {
+    const out = redactSecrets({ keyHash: "a", secret: "b", authToken: "c" })!;
+    expect(out.keyHash).toBe("[redacted]");
+    expect(out.secret).toBe("[redacted]");
+    expect(out.authToken).toBe("[redacted]");
+  });
+  it("returns null for null/undefined", () => {
+    expect(redactSecrets(null)).toBeNull();
+    expect(redactSecrets(undefined)).toBeNull();
+  });
+});
+
+describe("extractEntityId", () => {
+  it("prefers the result row id", () => {
+    expect(extractEntityId({ id: "ignored" }, { id: UUID })).toBe(UUID);
+  });
+  it("falls back to a uuid input id", () => {
+    expect(extractEntityId({ id: UUID }, { ok: true })).toBe(UUID);
+  });
+  it("returns null when no uuid is present", () => {
+    expect(extractEntityId({ id: "not-a-uuid" }, { success: true })).toBeNull();
+    expect(extractEntityId(null, null)).toBeNull();
+  });
+});
