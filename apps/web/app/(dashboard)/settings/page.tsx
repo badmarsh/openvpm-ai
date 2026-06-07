@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import {
   Settings,
   Users,
@@ -20,6 +21,7 @@ import {
   FileSpreadsheet,
   Check,
   Layers,
+  CreditCard,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,7 @@ import { regionDefaults } from "@/lib/locale/format";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 
 // ── Types ───────────────────────────────────────────────────
-type Tab = "practice" | "staff" | "appointmentTypes" | "rooms" | "data" | "templates";
+type Tab = "practice" | "staff" | "appointmentTypes" | "rooms" | "data" | "templates" | "billing";
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "practice", label: "Practice Info", icon: Settings },
@@ -39,6 +41,7 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "data", label: "Data", icon: Database },
   { id: "templates", label: "Templates", icon: Layers },
+  { id: "billing", label: "Plan & Billing", icon: CreditCard },
 ];
 
 const TIMEZONES = [
@@ -88,8 +91,26 @@ const ROOM_TYPES = ["exam", "surgery", "treatment", "boarding"] as const;
 
 // ── Main Page ───────────────────────────────────────────────
 export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <SettingsPageInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageInner() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<Tab>("practice");
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as Tab) || "practice";
+  const [activeTab, setActiveTab] = useState<Tab>(
+    tabs.some((t) => t.id === initialTab) ? initialTab : "practice"
+  );
 
   if (session?.user?.role !== "admin") {
     return (
@@ -144,6 +165,7 @@ export default function SettingsPage() {
         {activeTab === "rooms" && <RoomsTab />}
         {activeTab === "data" && <DataTab />}
         {activeTab === "templates" && <TemplatesTab />}
+        {activeTab === "billing" && <BillingTab />}
       </div>
     </div>
   );
@@ -345,6 +367,230 @@ function PracticeInfoTab() {
         )}
         Save Changes
       </Button>
+    </div>
+  );
+}
+
+// ── Plan & Billing ──────────────────────────────────────────
+const FEATURE_LABELS: Record<string, string> = {
+  agent: "OpenVPM Agent (AI)",
+  sms: "SMS sending",
+  advancedReporting: "Advanced reporting",
+  apiAccess: "API access + webhooks",
+  multiLocation: "Multi-location",
+  integrations: "Integrations",
+};
+
+function BillingTab() {
+  const { data, isLoading } = trpc.subscription.get.useQuery();
+  const checkout = trpc.subscription.createCheckout.useMutation({
+    onSuccess: (r) => {
+      if (r.url) window.location.href = r.url;
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const portal = trpc.subscription.openBillingPortal.useMutation({
+    onSuccess: (r) => {
+      if (r.url) window.location.href = r.url;
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Self-host: nothing to buy — everything is unlocked.
+  if (!data.billingEnforced) {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <div className="rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <Check className="h-5 w-5 text-green-600" />
+            <h3 className="font-heading text-lg font-semibold">
+              Self-hosted — all features unlocked
+            </h3>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You&apos;re running OpenVPM on your own infrastructure. Every feature
+            is available and there&apos;s no subscription — free forever. Plans
+            below are how the managed OpenVPM Cloud is priced, for reference.
+          </p>
+        </div>
+        <PlanGrid plans={data.plans} currentTier={data.tier} enforced={false} onChoose={() => {}} busyTier={null} />
+      </div>
+    );
+  }
+
+  const trialEnds = data.trialEndsAt ? new Date(data.trialEndsAt) : null;
+  const daysLeft = trialEnds
+    ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 0;
+  const currentPlan = data.plans.find((p) => p.tier === data.tier);
+
+  return (
+    <div className="max-w-3xl space-y-5">
+      {/* Current status */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Current plan</p>
+            <h3 className="font-heading text-xl font-semibold">
+              {currentPlan?.name ?? data.tier}
+            </h3>
+          </div>
+          <span
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium capitalize",
+              data.billingStatus === "active" && "bg-green-100 text-green-700",
+              data.billingStatus === "trialing" && "bg-blue-100 text-blue-700",
+              data.billingStatus === "past_due" && "bg-red-100 text-red-700",
+              (data.billingStatus === "canceled" || data.billingStatus === "none") &&
+                "bg-gray-100 text-gray-600"
+            )}
+          >
+            {data.billingStatus.replace("_", " ")}
+          </span>
+        </div>
+        {data.billingStatus === "trialing" && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            You&apos;re on a free trial with full Pro access —{" "}
+            <span className="font-medium text-foreground">{daysLeft} days left</span>. Pick a plan
+            below to keep your features after it ends.
+          </p>
+        )}
+        {data.billingStatus === "past_due" && (
+          <p className="mt-3 text-sm text-red-600">
+            Your last payment failed. Update your payment method to avoid losing access.
+          </p>
+        )}
+        {data.hasBillingAccount && (
+          <Button
+            variant="outline"
+            className="mt-4"
+            disabled={portal.isPending}
+            onClick={() => portal.mutate()}
+          >
+            {portal.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CreditCard className="mr-2 h-4 w-4" />
+            )}
+            Manage billing
+          </Button>
+        )}
+      </div>
+
+      <PlanGrid
+        plans={data.plans}
+        currentTier={data.tier}
+        enforced
+        onChoose={(tier) => checkout.mutate({ tier })}
+        busyTier={checkout.isPending ? checkout.variables?.tier ?? null : null}
+      />
+    </div>
+  );
+}
+
+function PlanGrid({
+  plans,
+  currentTier,
+  enforced,
+  onChoose,
+  busyTier,
+}: {
+  plans: Array<{
+    tier: string;
+    name: string;
+    priceMonthlyUsd: number | null;
+    blurb: string;
+    features: string[];
+    seatLimit: number | null;
+    locationLimit: number | null;
+    selfServe: boolean;
+    purchasable: boolean;
+  }>;
+  currentTier: string;
+  enforced: boolean;
+  onChoose: (tier: "starter" | "pro") => void;
+  busyTier: string | null;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {plans.map((p) => {
+        const isCurrent = p.tier === currentTier;
+        const canBuy =
+          enforced && p.purchasable && (p.tier === "starter" || p.tier === "pro") && !isCurrent;
+        return (
+          <div
+            key={p.tier}
+            className={cn(
+              "flex flex-col rounded-lg border bg-card p-5",
+              isCurrent ? "border-primary ring-1 ring-primary" : "border-border"
+            )}
+          >
+            <h4 className="font-heading text-base font-semibold">{p.name}</h4>
+            <p className="mt-1 text-2xl font-bold">
+              {p.priceMonthlyUsd === null ? (
+                "Custom"
+              ) : (
+                <>
+                  ${p.priceMonthlyUsd}
+                  <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                </>
+              )}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{p.blurb}</p>
+            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+              <li>
+                {p.seatLimit === null ? "Unlimited" : p.seatLimit} staff seats
+              </li>
+              <li>
+                {p.locationLimit === null ? "Unlimited" : p.locationLimit} location
+                {p.locationLimit === 1 ? "" : "s"}
+              </li>
+              {p.features.length > 0 ? (
+                p.features.map((f) => (
+                  <li key={f} className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-green-600" />
+                    {FEATURE_LABELS[f] ?? f}
+                  </li>
+                ))
+              ) : (
+                <li>Full core PIMS</li>
+              )}
+            </ul>
+            <div className="mt-4 pt-2">
+              {isCurrent ? (
+                <span className="text-xs font-medium text-primary">Current plan</span>
+              ) : canBuy ? (
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={busyTier === p.tier}
+                  onClick={() => onChoose(p.tier as "starter" | "pro")}
+                >
+                  {busyTier === p.tier ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Choose {p.name}
+                </Button>
+              ) : !p.selfServe ? (
+                <a
+                  href="mailto:sales@openvpm.com?subject=OpenVPM%20Enterprise"
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Contact sales
+                </a>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
