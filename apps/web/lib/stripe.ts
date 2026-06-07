@@ -63,6 +63,8 @@ export async function createSubscriptionCheckoutSession(data: {
   customerEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
+  /** Billed quantity — e.g. number of locations for a per-location plan. */
+  quantity?: number;
 }): Promise<{ url: string | null } | null> {
   if (!stripe) {
     console.log("[Stripe] No API key configured, skipping subscription checkout");
@@ -70,7 +72,7 @@ export async function createSubscriptionCheckoutSession(data: {
   }
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price: data.priceId, quantity: 1 }],
+    line_items: [{ price: data.priceId, quantity: Math.max(1, data.quantity ?? 1) }],
     ...(data.customerId
       ? { customer: data.customerId }
       : { customer_email: data.customerEmail ?? undefined }),

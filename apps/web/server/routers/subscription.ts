@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
-import { practices } from "@openpims/db";
+import { practices, locations } from "@openpims/db";
+import type { Database } from "@openpims/db/client";
 import {
   createSubscriptionCheckoutSession,
   createBillingPortalSession,
@@ -12,6 +13,16 @@ import {
   PLAN_ORDER,
   billingEnforced,
 } from "@/lib/billing/plans";
+import { usageForPractice, currentPeriodMonth } from "@/lib/billing/usage";
+
+/** Count active locations for a practice (the billed quantity for Cloud). */
+async function countLocations(db: Database, practiceId: string): Promise<number> {
+  const [row] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(locations)
+    .where(and(eq(locations.practiceId, practiceId), isNull(locations.deletedAt)));
+  return Math.max(1, Number(row?.c ?? 1));
+}
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 
@@ -43,22 +54,37 @@ export const subscriptionRouter = createRouter({
       .where(eq(practices.id, ctx.practiceId))
       .limit(1);
 
+    const enforced = billingEnforced();
+    const locationCount = await countLocations(ctx.db, ctx.practiceId);
+    const period = currentPeriodMonth();
+    const [smsUsed, aiUsed] = enforced
+      ? await Promise.all([
+          usageForPractice(ctx.practiceId, "sms", period),
+          usageForPractice(ctx.practiceId, "ai_run", period),
+        ])
+      : [0, 0];
+
     return {
       tier: practice?.tier ?? "free",
       billingStatus: practice?.billingStatus ?? "none",
       trialEndsAt: practice?.trialEndsAt ?? null,
       hasBillingAccount: !!practice?.stripeCustomerId,
-      billingEnforced: billingEnforced(),
+      billingEnforced: enforced,
+      locationCount,
+      usage: { period, sms: smsUsed, aiRuns: aiUsed },
       plans: PLAN_ORDER.map((t) => {
         const p = PLANS[t];
         return {
           tier: p.tier,
           name: p.name,
           priceMonthlyUsd: p.priceMonthlyUsd,
+          pricePerLocation: p.pricePerLocation,
           blurb: p.blurb,
           features: p.features,
           seatLimit: p.seatLimit,
           locationLimit: p.locationLimit,
+          includedSmsPerMonth: p.includedSmsPerMonth,
+          includedAiRunsPerMonth: p.includedAiRunsPerMonth,
           selfServe: p.selfServe,
           purchasable: purchasable(t),
         };
@@ -90,12 +116,18 @@ export const subscriptionRouter = createRouter({
         .where(eq(practices.id, ctx.practiceId))
         .limit(1);
 
+      // Cloud is billed per location → Stripe subscription quantity.
+      const quantity = plan.pricePerLocation
+        ? await countLocations(ctx.db, ctx.practiceId)
+        : 1;
+
       const base = appBaseUrl();
       const result = await createSubscriptionCheckoutSession({
         priceId,
         practiceId: ctx.practiceId,
         customerId: practice?.stripeCustomerId ?? undefined,
         customerEmail: practice?.email ?? ctx.session.user.email,
+        quantity,
         successUrl: `${base}/settings?tab=billing&checkout=success`,
         cancelUrl: `${base}/settings?tab=billing&checkout=cancelled`,
       });

@@ -458,8 +458,8 @@ function BillingTab() {
         </div>
         {data.billingStatus === "trialing" && (
           <p className="mt-3 text-sm text-muted-foreground">
-            You&apos;re on a free trial with full Pro access —{" "}
-            <span className="font-medium text-foreground">{daysLeft} days left</span>. Pick a plan
+            You&apos;re on a free trial with full Cloud access —{" "}
+            <span className="font-medium text-foreground">{daysLeft} days left</span>. Subscribe
             below to keep your features after it ends.
           </p>
         )}
@@ -468,6 +468,34 @@ function BillingTab() {
             Your last payment failed. Update your payment method to avoid losing access.
           </p>
         )}
+        {/* Billing summary: locations × price + this month's metered usage */}
+        <div className="mt-4 grid gap-2 border-t border-border pt-4 text-sm sm:grid-cols-3">
+          <div>
+            <p className="text-muted-foreground">Locations</p>
+            <p className="font-medium">
+              {data.locationCount} × ${currentPlan?.priceMonthlyUsd ?? 99}/mo ={" "}
+              ${data.locationCount * (currentPlan?.priceMonthlyUsd ?? 99)}/mo
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">SMS this month</p>
+            <p className="font-medium">
+              {data.usage.sms}
+              {currentPlan?.includedSmsPerMonth != null
+                ? ` / ${currentPlan.includedSmsPerMonth} included`
+                : ""}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">AI runs this month</p>
+            <p className="font-medium">
+              {data.usage.aiRuns}
+              {currentPlan?.includedAiRunsPerMonth != null
+                ? ` / ${currentPlan.includedAiRunsPerMonth} included`
+                : ""}
+            </p>
+          </div>
+        </div>
         {data.hasBillingAccount && (
           <Button
             variant="outline"
@@ -507,10 +535,13 @@ function PlanGrid({
     tier: string;
     name: string;
     priceMonthlyUsd: number | null;
+    pricePerLocation: boolean;
     blurb: string;
     features: string[];
     seatLimit: number | null;
     locationLimit: number | null;
+    includedSmsPerMonth: number | null;
+    includedAiRunsPerMonth: number | null;
     selfServe: boolean;
     purchasable: boolean;
   }>;
@@ -536,22 +567,30 @@ function PlanGrid({
             <p className="mt-1 text-2xl font-bold">
               {p.priceMonthlyUsd === null ? (
                 "Custom"
+              ) : p.priceMonthlyUsd === 0 ? (
+                "Free"
               ) : (
                 <>
                   ${p.priceMonthlyUsd}
-                  <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /mo{p.pricePerLocation ? " / location" : ""}
+                  </span>
                 </>
               )}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">{p.blurb}</p>
             <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-              <li>
-                {p.seatLimit === null ? "Unlimited" : p.seatLimit} staff seats
-              </li>
+              <li>{p.seatLimit === null ? "Unlimited" : p.seatLimit} staff seats</li>
               <li>
                 {p.locationLimit === null ? "Unlimited" : p.locationLimit} location
                 {p.locationLimit === 1 ? "" : "s"}
               </li>
+              {p.includedSmsPerMonth ? (
+                <li>{p.includedSmsPerMonth} SMS/mo included</li>
+              ) : null}
+              {p.includedAiRunsPerMonth ? (
+                <li>{p.includedAiRunsPerMonth} AI runs/mo included</li>
+              ) : null}
               {p.features.length > 0 ? (
                 p.features.map((f) => (
                   <li key={f} className="flex items-center gap-1">
