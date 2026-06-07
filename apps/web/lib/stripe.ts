@@ -49,4 +49,64 @@ export async function constructWebhookEvent(
   );
 }
 
+// ── Hosted-SaaS subscriptions (separate surface from client invoicing) ──────
+
+/**
+ * Create a Checkout Session for a recurring plan subscription. The practiceId is
+ * stamped on both the session and the subscription metadata so the webhook can
+ * map the resulting subscription back to a practice.
+ */
+export async function createSubscriptionCheckoutSession(data: {
+  priceId: string;
+  practiceId: string;
+  customerId?: string | null;
+  customerEmail?: string | null;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null } | null> {
+  if (!stripe) {
+    console.log("[Stripe] No API key configured, skipping subscription checkout");
+    return null;
+  }
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [{ price: data.priceId, quantity: 1 }],
+    ...(data.customerId
+      ? { customer: data.customerId }
+      : { customer_email: data.customerEmail ?? undefined }),
+    client_reference_id: data.practiceId,
+    metadata: { practiceId: data.practiceId },
+    subscription_data: { metadata: { practiceId: data.practiceId } },
+    success_url: data.successUrl,
+    cancel_url: data.cancelUrl,
+  });
+  return { url: session.url };
+}
+
+/** Create a Stripe Billing Portal session so a practice can manage its plan. */
+export async function createBillingPortalSession(data: {
+  customerId: string;
+  returnUrl: string;
+}): Promise<{ url: string } | null> {
+  if (!stripe) return null;
+  const session = await stripe.billingPortal.sessions.create({
+    customer: data.customerId,
+    return_url: data.returnUrl,
+  });
+  return { url: session.url };
+}
+
+/** Verify a subscription-webhook signature using its dedicated endpoint secret. */
+export async function constructSubscriptionWebhookEvent(
+  body: string,
+  signature: string,
+): Promise<Stripe.Event | null> {
+  if (!stripe) return null;
+  return stripe.webhooks.constructEvent(
+    body,
+    signature,
+    process.env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET!,
+  );
+}
+
 export { stripe };

@@ -26,6 +26,7 @@ import { agentRouter } from "./agent";
 import { treatmentPlansRouter } from "./treatment-plans";
 import { wellnessRouter } from "./wellness";
 import { waitlistRouter } from "./waitlist";
+import { subscriptionRouter } from "./subscription";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -55,6 +56,7 @@ export const appRouter = createRouter({
   treatmentPlans: treatmentPlansRouter,
   wellness: wellnessRouter,
   waitlist: waitlistRouter,
+  subscription: subscriptionRouter,
 });
 
 export type AppRouter = typeof appRouter;
