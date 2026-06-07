@@ -5,6 +5,7 @@ import {
   text,
   jsonb,
   boolean,
+  numeric,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -21,6 +22,14 @@ export const practices = pgTable("practices", {
   logoUrl: varchar("logo_url", { length: 512 }),
   settings: jsonb("settings").default({}),
   subscriptionTier: varchar("subscription_tier", { length: 32 }).default("free"),
+  // Region/locale — gates currency, tax, formatting, and (later) regulatory
+  // behavior. Defaults keep existing US practices working unchanged.
+  country: varchar("country", { length: 2 }).notNull().default("US"), // ISO 3166-1 alpha-2
+  currency: varchar("currency", { length: 3 }).notNull().default("usd"), // ISO 4217, Stripe-style lowercase
+  taxRatePercent: numeric("tax_rate_percent", { precision: 5, scale: 2 })
+    .notNull()
+    .default("8.00"),
+  vatNumber: varchar("vat_number", { length: 32 }), // shown on invoices where applicable
 });
 
 export const locations = pgTable("locations", {
