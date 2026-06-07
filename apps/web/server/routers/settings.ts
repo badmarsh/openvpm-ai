@@ -8,6 +8,7 @@ import {
   appointmentTypes,
   rooms,
 } from "@openpims/db";
+import { regionDefaults } from "@/lib/locale/format";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 
@@ -32,12 +33,34 @@ export const settingsRouter = createRouter({
         email: z.string().email().optional(),
         website: z.string().optional(),
         timezone: z.string().optional(),
+        // Region/locale (Phase 2). country is ISO 3166-1 alpha-2; currency is
+        // ISO 4217 lowercase; taxRatePercent is a percent string e.g. "20.00".
+        country: z.string().length(2).optional(),
+        currency: z.string().min(3).max(3).optional(),
+        taxRatePercent: z
+          .string()
+          .regex(/^\d{1,3}(\.\d{1,2})?$/, "Tax rate must be a number like 20 or 20.00")
+          .optional(),
+        vatNumber: z.string().max(32).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // When the country changes, fill in any region fields the caller didn't
+      // explicitly set (currency/tax) with that country's sensible defaults.
+      const patch: Record<string, unknown> = { ...input };
+      if (input.country) {
+        const defaults = regionDefaults(input.country);
+        patch.country = input.country.toUpperCase();
+        if (input.currency === undefined) patch.currency = defaults.currency;
+        if (input.taxRatePercent === undefined)
+          patch.taxRatePercent = defaults.taxRatePercent;
+      }
+      if (typeof patch.currency === "string") {
+        patch.currency = (patch.currency as string).toLowerCase();
+      }
       const [updated] = await ctx.db
         .update(practices)
-        .set(input)
+        .set(patch)
         .where(eq(practices.id, ctx.practiceId))
         .returning();
       return updated!;

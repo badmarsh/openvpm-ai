@@ -62,6 +62,7 @@ export default function NewInvoicePage() {
   );
 
   const servicesQuery = trpc.billing.listServices.useQuery();
+  const taxConfigQuery = trpc.billing.getTaxConfig.useQuery();
 
   // Mutation
   const utils = trpc.useUtils();
@@ -76,19 +77,21 @@ export default function NewInvoicePage() {
     },
   });
 
-  // Calculations
+  // Calculations — preview only; the server recomputes tax authoritatively
+  // from the practice's configured (region-aware) rate.
+  const taxRate = parseFloat(taxConfigQuery.data?.taxRatePercent ?? "8.00") / 100;
   const { subtotal, tax, total } = useMemo(() => {
     const sub = items.reduce(
       (sum, item) => sum + item.quantity * parseFloat(item.unitPrice || "0"),
       0
     );
-    const t = Math.round(sub * 0.08 * 100) / 100;
+    const t = Math.round(sub * taxRate * 100) / 100;
     return {
       subtotal: sub,
       tax: t,
       total: Math.round((sub + t) * 100) / 100,
     };
-  }, [items]);
+  }, [items, taxRate]);
 
   function handleServiceSelect(serviceId: string) {
     setSelectedServiceId(serviceId);
