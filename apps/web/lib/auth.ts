@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import { db } from "@openpims/db/client";
 import { users } from "@openpims/db";
 import { eq } from "drizzle-orm";
+import { withSystem } from "@/lib/tenant-db";
 
 declare module "next-auth" {
   interface Session {
@@ -45,11 +46,14 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email))
-          .limit(1);
+        // Login looks up by email with no tenant context yet → system context.
+        const [user] = await withSystem(db, (tx) =>
+          tx
+            .select()
+            .from(users)
+            .where(eq(users.email, credentials.email))
+            .limit(1)
+        );
 
         if (!user) return null;
 

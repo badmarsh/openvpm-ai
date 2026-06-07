@@ -69,7 +69,17 @@ const t = initTRPC.context<TRPCContext>().create({
 });
 
 export const createRouter = t.router;
-export const publicProcedure = t.procedure;
+
+/**
+ * Public / pre-auth endpoints (registration, the token-based client portal).
+ * They have no tenant session and do their own scoping (tokens, email, rate
+ * limits), so they run in a system DB context that bypasses tenant RLS.
+ */
+export const publicProcedure = t.procedure.use(async ({ ctx, next }) => {
+  return withSystem(ctx.db, (tx) =>
+    next({ ctx: { ...ctx, db: tx } })
+  );
+});
 
 /** Requires an authenticated session */
 export const protectedProcedure = t.procedure.use(

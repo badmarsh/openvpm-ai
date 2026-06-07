@@ -1,9 +1,11 @@
-import { eq, isNull, sql, desc } from "drizzle-orm";
+import { isNull, sql, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure } from "../trpc";
+import { db } from "@openpims/db/client";
 import { practices, users, clients, patients } from "@openpims/db";
 import { isPlatformAdmin } from "@/lib/platform-admin";
 import { getPlan, type PlanTier } from "@/lib/billing/plans";
+import { withSystem } from "@/lib/tenant-db";
 
 /**
  * Platform-operator only. Crosses tenant boundaries deliberately, so it is
@@ -23,8 +25,10 @@ export const adminRouter = createRouter({
   }),
 
   /** Cross-tenant operations overview: practices, plans, status, usage, MRR. */
-  overview: platformAdminProcedure.query(async ({ ctx }) => {
-    const rows = await ctx.db
+  overview: platformAdminProcedure.query(async () =>
+    // Bypass tenant RLS — this view legitimately spans all practices.
+    withSystem(db, async (tx) => {
+    const rows = await tx
       .select({
         id: practices.id,
         name: practices.name,
@@ -41,7 +45,7 @@ export const adminRouter = createRouter({
     const countBy = async (
       table: typeof users | typeof clients | typeof patients
     ) => {
-      const res = await ctx.db
+      const res = await tx
         .select({
           practiceId: table.practiceId,
           c: sql<number>`count(*)::int`,
@@ -92,5 +96,6 @@ export const adminRouter = createRouter({
         pastDue: practiceRows.filter((p) => p.billingStatus === "past_due").length,
       },
     };
-  }),
+    })
+  ),
 });
