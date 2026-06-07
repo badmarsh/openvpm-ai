@@ -11,6 +11,7 @@ import {
   users,
 } from "@openpims/db";
 import { csvToClientRecords, csvToPatientRecords } from "@/lib/csv/import";
+import { planClientImport, planPatientImport } from "@/lib/import/plan";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 
@@ -304,9 +305,20 @@ export const dataRouter = createRouter({
   // (lib/csv); these mutations just persist the valid rows.
 
   importClientsCsv: adminProcedure
-    .input(z.object({ csv: z.string().min(1) }))
+    .input(z.object({ csv: z.string().min(1), dryRun: z.boolean().optional().default(false) }))
     .mutation(async ({ ctx, input }) => {
       const { records, errors } = csvToClientRecords(input.csv);
+
+      if (input.dryRun) {
+        const existing = await ctx.db
+          .select({ email: clients.email })
+          .from(clients)
+          .where(and(eq(clients.practiceId, ctx.practiceId), isNull(clients.deletedAt)));
+        const emails = new Set(existing.map((c) => c.email).filter((e): e is string => !!e));
+        const plan = planClientImport(records, emails);
+        return { dryRun: true as const, ...plan, errors };
+      }
+
       if (records.length > 0) {
         await ctx.db.insert(clients).values(
           records.map((c) => ({
@@ -326,7 +338,7 @@ export const dataRouter = createRouter({
     }),
 
   importPatientsCsv: adminProcedure
-    .input(z.object({ csv: z.string().min(1) }))
+    .input(z.object({ csv: z.string().min(1), dryRun: z.boolean().optional().default(false) }))
     .mutation(async ({ ctx, input }) => {
       const { records, errors } = csvToPatientRecords(input.csv);
 
@@ -339,6 +351,11 @@ export const dataRouter = createRouter({
       const emailToClientId: Record<string, string> = {};
       for (const c of clientRows) {
         if (c.email) emailToClientId[c.email.toLowerCase()] = c.id;
+      }
+
+      if (input.dryRun) {
+        const plan = planPatientImport(records, new Set(Object.keys(emailToClientId)));
+        return { dryRun: true as const, ...plan, errors };
       }
 
       const toInsert: (typeof patients.$inferInsert)[] = [];
