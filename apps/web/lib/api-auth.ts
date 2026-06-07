@@ -3,8 +3,9 @@ import bcrypt from "bcryptjs";
 import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@openpims/db/client";
-import { apiKeys } from "@openpims/db";
+import { apiKeys, practices } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { billingEnforced, isEntitled } from "@/lib/billing/plans";
 
 /** Public prefix for every issued key. Also used as the human-visible label. */
 export const API_KEY_PREFIX = "ovpm_";
@@ -105,6 +106,18 @@ export async function authenticateApiKey(
   const scopes = Array.isArray(matched.scopes) ? (matched.scopes as string[]) : [];
   if (!hasScope(scopes, requiredScope)) {
     return err(`API key missing required scope: ${requiredScope}`, 403);
+  }
+
+  // Public API access is a Pro feature on the hosted service (no-op on self-host).
+  if (billingEnforced()) {
+    const [practice] = await db
+      .select({ tier: practices.subscriptionTier })
+      .from(practices)
+      .where(eq(practices.id, matched.practiceId))
+      .limit(1);
+    if (!isEntitled(practice?.tier, "apiAccess", true)) {
+      return err("API access is not included in your plan. Upgrade to Pro to use the API.", 403);
+    }
   }
 
   const { success, remaining } = rateLimit({

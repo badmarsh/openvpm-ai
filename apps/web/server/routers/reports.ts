@@ -1,5 +1,5 @@
 import { eq, and, gte, lte, isNull, sql, desc } from "drizzle-orm";
-import { createRouter, protectedProcedure } from "../trpc";
+import { createRouter, protectedProcedure, requireFeature } from "../trpc";
 import {
   invoices,
   invoiceItems,
@@ -9,8 +9,11 @@ import {
   users,
 } from "@openpims/db";
 
+// Advanced reporting is a Pro feature on hosted; unrestricted on self-host.
+const reportProcedure = protectedProcedure.use(requireFeature("advancedReporting"));
+
 export const reportsRouter = createRouter({
-  revenue: protectedProcedure.query(async ({ ctx }) => {
+  revenue: reportProcedure.query(async ({ ctx }) => {
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -70,7 +73,7 @@ export const reportsRouter = createRouter({
     };
   }),
 
-  appointments: protectedProcedure.query(async ({ ctx }) => {
+  appointments: reportProcedure.query(async ({ ctx }) => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -136,7 +139,7 @@ export const reportsRouter = createRouter({
     };
   }),
 
-  topServices: protectedProcedure.query(async ({ ctx }) => {
+  topServices: reportProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db
       .select({
         name: sql<string>`coalesce(${services.name}, ${invoiceItems.description})`,
@@ -170,7 +173,7 @@ export const reportsRouter = createRouter({
     }));
   }),
 
-  inventoryAlerts: protectedProcedure.query(async ({ ctx }) => {
+  inventoryAlerts: reportProcedure.query(async ({ ctx }) => {
     const now = new Date();
     const ninetyDaysFromNow = new Date(now);
     ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);

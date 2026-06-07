@@ -3,10 +3,13 @@ import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { eq } from "drizzle-orm";
 import { authOptions } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/audit";
 import { db } from "@openpims/db/client";
 import type { Database } from "@openpims/db/client";
+import { practices } from "@openpims/db";
+import { billingEnforced, isEntitled, type Feature } from "@/lib/billing/plans";
 
 type UserRole =
   | "admin"
@@ -99,6 +102,41 @@ export const protectedProcedure = t.procedure.use(
     return result;
   }
 );
+
+/**
+ * Requires the practice's plan to include a premium feature.
+ *
+ * No-op on self-host: when HOSTED_BILLING_ENABLED is unset, billingEnforced()
+ * is false and this allows everything (and skips the DB lookup entirely), so
+ * the OSS edition is never gated. Only the managed hosted service enforces it.
+ */
+export function requireFeature(feature: Feature) {
+  return t.middleware(async ({ ctx, next }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (billingEnforced()) {
+      const [practice] = await ctx.db
+        .select({ tier: practices.subscriptionTier })
+        .from(practices)
+        .where(eq(practices.id, ctx.session.user.practiceId))
+        .limit(1);
+      if (!isEntitled(practice?.tier, feature, true)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Your plan doesn't include this feature. Upgrade to unlock it.`,
+        });
+      }
+    }
+    return next({
+      ctx: {
+        session: ctx.session,
+        user: ctx.session.user,
+        practiceId: ctx.session.user.practiceId,
+      },
+    });
+  });
+}
 
 /** Requires specific roles */
 export function requireRole(...roles: UserRole[]) {
