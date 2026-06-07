@@ -134,6 +134,33 @@ export function planHasFeature(tier: string | null | undefined, feature: Feature
   return getPlan(tier).features.includes(feature);
 }
 
+/** Length of the new-practice free trial on the hosted service. */
+export const TRIAL_DAYS = 14;
+
+/** Whether a practice is in an unexpired trial window. */
+export function isTrialActive(
+  billingStatus: string | null | undefined,
+  trialEndsAt: Date | string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  if (billingStatus !== "trialing" || !trialEndsAt) return false;
+  return new Date(trialEndsAt).getTime() > now.getTime();
+}
+
+/**
+ * The tier whose entitlements actually apply right now. An active trial grants
+ * full (Pro) access; once it lapses we fall back to the stored tier.
+ */
+export function effectiveTier(
+  tier: string | null | undefined,
+  billingStatus: string | null | undefined,
+  trialEndsAt: Date | string | null | undefined,
+  now: Date = new Date()
+): PlanTier {
+  if (isTrialActive(billingStatus, trialEndsAt, now)) return "pro";
+  return (tier ?? "free") as PlanTier;
+}
+
 /**
  * Whether hosted billing is enforced (i.e. we're the managed service). Off by
  * default so self-host / OSS runs with everything unlocked.

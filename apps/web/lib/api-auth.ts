@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { db } from "@openpims/db/client";
 import { apiKeys, practices } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { billingEnforced, isEntitled } from "@/lib/billing/plans";
+import { billingEnforced, isEntitled, effectiveTier } from "@/lib/billing/plans";
 
 /** Public prefix for every issued key. Also used as the human-visible label. */
 export const API_KEY_PREFIX = "ovpm_";
@@ -111,11 +111,20 @@ export async function authenticateApiKey(
   // Public API access is a Pro feature on the hosted service (no-op on self-host).
   if (billingEnforced()) {
     const [practice] = await db
-      .select({ tier: practices.subscriptionTier })
+      .select({
+        tier: practices.subscriptionTier,
+        billingStatus: practices.billingStatus,
+        trialEndsAt: practices.trialEndsAt,
+      })
       .from(practices)
       .where(eq(practices.id, matched.practiceId))
       .limit(1);
-    if (!isEntitled(practice?.tier, "apiAccess", true)) {
+    const tier = effectiveTier(
+      practice?.tier,
+      practice?.billingStatus,
+      practice?.trialEndsAt
+    );
+    if (!isEntitled(tier, "apiAccess", true)) {
       return err("API access is not included in your plan. Upgrade to Pro to use the API.", 403);
     }
   }

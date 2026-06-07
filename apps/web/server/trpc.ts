@@ -9,7 +9,12 @@ import { recordAuditLog } from "@/lib/audit";
 import { db } from "@openpims/db/client";
 import type { Database } from "@openpims/db/client";
 import { practices } from "@openpims/db";
-import { billingEnforced, isEntitled, type Feature } from "@/lib/billing/plans";
+import {
+  billingEnforced,
+  isEntitled,
+  effectiveTier,
+  type Feature,
+} from "@/lib/billing/plans";
 
 type UserRole =
   | "admin"
@@ -117,11 +122,20 @@ export function requireFeature(feature: Feature) {
     }
     if (billingEnforced()) {
       const [practice] = await ctx.db
-        .select({ tier: practices.subscriptionTier })
+        .select({
+          tier: practices.subscriptionTier,
+          billingStatus: practices.billingStatus,
+          trialEndsAt: practices.trialEndsAt,
+        })
         .from(practices)
         .where(eq(practices.id, ctx.session.user.practiceId))
         .limit(1);
-      if (!isEntitled(practice?.tier, feature, true)) {
+      const tier = effectiveTier(
+        practice?.tier,
+        practice?.billingStatus,
+        practice?.trialEndsAt
+      );
+      if (!isEntitled(tier, feature, true)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: `Your plan doesn't include this feature. Upgrade to unlock it.`,

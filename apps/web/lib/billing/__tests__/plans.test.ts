@@ -6,6 +6,8 @@ import {
   isEntitled,
   withinSeatLimit,
   withinLocationLimit,
+  isTrialActive,
+  effectiveTier,
   ALL_FEATURES,
 } from "../plans";
 
@@ -54,6 +56,30 @@ describe("seat + location limits", () => {
   });
   it("enterprise/unlimited seats always pass", () => {
     expect(withinSeatLimit("enterprise", 100000, true)).toBe(true);
+  });
+});
+
+describe("trials", () => {
+  const now = new Date("2026-06-07T00:00:00Z");
+  const future = new Date("2026-06-20T00:00:00Z");
+  const past = new Date("2026-06-01T00:00:00Z");
+
+  it("isTrialActive only when status=trialing and not expired", () => {
+    expect(isTrialActive("trialing", future, now)).toBe(true);
+    expect(isTrialActive("trialing", past, now)).toBe(false);
+    expect(isTrialActive("active", future, now)).toBe(false);
+    expect(isTrialActive("trialing", null, now)).toBe(false);
+  });
+
+  it("effectiveTier grants pro during an active trial, then reverts", () => {
+    expect(effectiveTier("free", "trialing", future, now)).toBe("pro");
+    expect(effectiveTier("free", "trialing", past, now)).toBe("free");
+    expect(effectiveTier("starter", "active", future, now)).toBe("starter");
+  });
+
+  it("an active trial unlocks gated features even on the free tier", () => {
+    const tier = effectiveTier("free", "trialing", future, now);
+    expect(isEntitled(tier, "agent", true)).toBe(true);
   });
 });
 

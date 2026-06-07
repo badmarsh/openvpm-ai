@@ -6,6 +6,7 @@ import { createRouter, publicProcedure, protectedProcedure } from "../trpc";
 import { users, practices, locations } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedPractice } from "@/lib/onboarding/defaults";
+import { billingEnforced, TRIAL_DAYS } from "@/lib/billing/plans";
 
 export const authRouter = createRouter({
   register: publicProcedure
@@ -45,11 +46,21 @@ export const authRouter = createRouter({
 
       const passwordHash = await hash(input.password, 10);
 
+      // On the hosted service, start a full-featured trial so the new practice
+      // is immediately usable before entering payment. Self-host ignores this.
+      const trial = billingEnforced()
+        ? {
+            billingStatus: "trialing" as const,
+            trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
+          }
+        : {};
+
       // Create practice
       const [practice] = await ctx.db
         .insert(practices)
         .values({
           name: input.practiceName,
+          ...trial,
         })
         .returning();
 
