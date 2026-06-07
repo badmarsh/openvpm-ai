@@ -1,0 +1,140 @@
+"use client";
+
+import { ShieldAlert, Loader2, Building2, DollarSign, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+
+function formatUsd(n: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function formatDate(d: Date | string | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+const statusStyles: Record<string, string> = {
+  active: "bg-green-100 text-green-700",
+  trialing: "bg-blue-100 text-blue-700",
+  past_due: "bg-red-100 text-red-700",
+  canceled: "bg-gray-100 text-gray-500",
+  none: "bg-gray-100 text-gray-500",
+};
+
+export default function AdminPage() {
+  const { data, isLoading, error } = trpc.admin.overview.useQuery(undefined, {
+    retry: false,
+  });
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+        <h2 className="font-heading text-xl font-semibold">Access Denied</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          This area is for OpenVPM platform operators only.
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const kpis = [
+    { label: "Practices", value: String(data.totals.practices), icon: Building2 },
+    { label: "Est. MRR", value: formatUsd(data.totals.estimatedMrr), icon: DollarSign },
+    { label: "On trial", value: String(data.totals.trialing), icon: Clock },
+    { label: "Active", value: String(data.totals.active), icon: CheckCircle },
+    { label: "Past due", value: String(data.totals.pastDue), icon: AlertTriangle },
+  ];
+
+  return (
+    <div>
+      <div>
+        <h2 className="font-heading text-xl font-semibold">Platform Admin</h2>
+        <p className="text-sm text-muted-foreground">
+          Cross-tenant operations overview
+        </p>
+      </div>
+
+      {/* KPIs */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {kpis.map((k) => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="rounded-lg border border-border bg-card p-5">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Icon className="h-4 w-4" />
+                <span className="text-sm">{k.label}</span>
+              </div>
+              <p className="mt-2 font-heading text-2xl font-bold">{k.value}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Practices table */}
+      <div className="mt-8 overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
+              <th className="px-4 py-2.5 font-medium">Practice</th>
+              <th className="px-4 py-2.5 font-medium">Plan</th>
+              <th className="px-4 py-2.5 font-medium">Status</th>
+              <th className="px-4 py-2.5 font-medium">Trial ends</th>
+              <th className="px-4 py-2.5 font-medium text-right">Staff</th>
+              <th className="px-4 py-2.5 font-medium text-right">Clients</th>
+              <th className="px-4 py-2.5 font-medium text-right">Patients</th>
+              <th className="px-4 py-2.5 font-medium">Country</th>
+              <th className="px-4 py-2.5 font-medium">Joined</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {data.practices.map((p) => (
+              <tr key={p.id} className="hover:bg-muted/20">
+                <td className="px-4 py-2.5 font-medium">{p.name}</td>
+                <td className="px-4 py-2.5 capitalize">{p.tier}</td>
+                <td className="px-4 py-2.5">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                      statusStyles[p.billingStatus] || "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {p.billingStatus.replace("_", " ")}
+                  </span>
+                </td>
+                <td className="px-4 py-2.5 text-muted-foreground">{formatDate(p.trialEndsAt)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{p.userCount}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{p.clientCount}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{p.patientCount}</td>
+                <td className="px-4 py-2.5 text-muted-foreground">{p.country}</td>
+                <td className="px-4 py-2.5 text-muted-foreground">{formatDate(p.createdAt)}</td>
+              </tr>
+            ))}
+            {data.practices.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                  No practices yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
