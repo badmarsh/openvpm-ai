@@ -16,16 +16,23 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [verifySent, setVerifySent] = useState(false);
+
   const registerMutation = trpc.auth.register.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      // Hosted: email verification required → show a "check your inbox" notice.
+      if (data?.verificationRequired) {
+        setVerifySent(true);
+        setLoading(false);
+        return;
+      }
+      // Self-host: auto-sign in after registration.
       toast.success("Account created! Redirecting...");
-      // Auto-sign in after registration
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
-
       if (result?.ok) {
         router.push("/");
         router.refresh();
@@ -37,6 +44,23 @@ export default function RegisterPage() {
       setLoading(false);
     },
   });
+
+  if (verifySent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 text-center">
+          <h1 className="font-heading text-2xl font-bold text-foreground">Check your email</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            We sent a verification link to <strong>{email}</strong>. Click it to activate
+            your account and start your 14-day free trial.
+          </p>
+          <Link href="/login" className="mt-6 inline-block text-sm text-primary hover:underline">
+            Back to sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +78,9 @@ export default function RegisterPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Register your practice
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            14-day free trial · no credit card required
           </p>
         </div>
 

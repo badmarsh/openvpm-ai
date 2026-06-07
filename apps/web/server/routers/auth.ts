@@ -7,6 +7,16 @@ import { users, practices, locations } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedPractice } from "@/lib/onboarding/defaults";
 import { billingEnforced, TRIAL_DAYS } from "@/lib/billing/plans";
+import { createAuthToken, consumeAuthToken } from "@/lib/auth-tokens";
+import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
+
+function appBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXTAUTH_URL ??
+    "http://localhost:3000"
+  );
+}
 
 export const authRouter = createRouter({
   register: publicProcedure
@@ -98,7 +108,113 @@ export const authRouter = createRouter({
         console.error("[register] practice seeding failed:", err);
       }
 
-      return { id: user!.id, email: user!.email };
+      // On the hosted service, require email verification before login. Issue a
+      // token + send the email. Non-fatal: signup still succeeds. Self-host
+      // skips this (frictionless).
+      let verificationRequired = false;
+      if (billingEnforced()) {
+        verificationRequired = true;
+        try {
+          const token = await createAuthToken({
+            userId: user!.id,
+            email: user!.email,
+            type: "email_verify",
+          });
+          await sendVerificationEmail({
+            to: user!.email,
+            name: user!.name,
+            verifyUrl: `${appBaseUrl()}/verify-email?token=${token}`,
+          });
+        } catch (err) {
+          console.error("[register] verification email failed:", err);
+        }
+      }
+
+      return { id: user!.id, email: user!.email, verificationRequired };
+    }),
+
+  /** Confirm an email-verification token (hosted). */
+  verifyEmail: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await consumeAuthToken(input.token, "email_verify");
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This verification link is invalid or has expired.",
+        });
+      }
+      await ctx.db
+        .update(users)
+        .set({ emailVerifiedAt: new Date() })
+        .where(eq(users.id, result.userId));
+      return { ok: true };
+    }),
+
+  /** Request a password-reset email. Always succeeds (no account enumeration). */
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ ctx, input }) => {
+      const { success } = rateLimit({
+        key: `pwreset:${input.email}`,
+        limit: 5,
+        windowMs: 3600000,
+      });
+      if (!success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many requests. Please try again later.",
+        });
+      }
+
+      const [user] = await ctx.db
+        .select({ id: users.id, email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1);
+
+      if (user) {
+        try {
+          const token = await createAuthToken({
+            userId: user.id,
+            email: user.email,
+            type: "password_reset",
+          });
+          await sendPasswordResetEmail({
+            to: user.email,
+            name: user.name,
+            resetUrl: `${appBaseUrl()}/reset-password?token=${token}`,
+          });
+        } catch (err) {
+          console.error("[requestPasswordReset] email failed:", err);
+        }
+      }
+      // Generic response regardless of whether the email exists.
+      return { ok: true };
+    }),
+
+  /** Complete a password reset with a valid token. */
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+        password: z.string().min(8),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await consumeAuthToken(input.token, "password_reset");
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This reset link is invalid or has expired.",
+        });
+      }
+      const passwordHash = await hash(input.password, 10);
+      await ctx.db
+        .update(users)
+        .set({ passwordHash })
+        .where(eq(users.id, result.userId));
+      return { ok: true };
     }),
 
   me: protectedProcedure.query(async ({ ctx }) => {
