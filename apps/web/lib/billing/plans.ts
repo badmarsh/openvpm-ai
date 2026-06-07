@@ -101,6 +101,34 @@ export function getPlan(tier?: string | null): PlanDefinition {
   return PLANS[t] ?? PLANS.free;
 }
 
+/** Map a Stripe Price ID back to a plan tier (via the configured env vars). */
+export function tierForStripePrice(priceId: string | null | undefined): PlanTier | null {
+  if (!priceId) return null;
+  for (const t of PLAN_ORDER) {
+    const env = PLANS[t].stripePriceEnv;
+    if (env && process.env[env] === priceId) return t;
+  }
+  return null;
+}
+
+/** Normalize a Stripe subscription status to our billingStatus values. */
+export function normalizeBillingStatus(status: string | null | undefined): string {
+  switch (status) {
+    case "trialing":
+      return "trialing";
+    case "active":
+      return "active";
+    case "past_due":
+    case "unpaid":
+      return "past_due";
+    case "canceled":
+    case "incomplete_expired":
+      return "canceled";
+    default:
+      return status ?? "none";
+  }
+}
+
 /** Pure: does this tier include this premium feature? */
 export function planHasFeature(tier: string | null | undefined, feature: Feature): boolean {
   return getPlan(tier).features.includes(feature);
