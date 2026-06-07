@@ -42,9 +42,15 @@ function PawMark({ className }: { className?: string }) {
   );
 }
 
-type UserRole = "admin" | "veterinarian" | "technician" | "front_desk";
+type UserRole = "admin" | "veterinarian" | "technician" | "front_desk" | "viewer";
 
-const allRoles: UserRole[] = ["admin", "veterinarian", "technician", "front_desk"];
+const allRoles: UserRole[] = [
+  "admin",
+  "veterinarian",
+  "technician",
+  "front_desk",
+  "viewer",
+];
 
 const navItems: {
   href: string;

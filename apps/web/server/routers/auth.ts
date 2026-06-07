@@ -5,6 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure, protectedProcedure } from "../trpc";
 import { users, practices, locations } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { seedPractice } from "@/lib/onboarding/defaults";
 
 export const authRouter = createRouter({
   register: publicProcedure
@@ -53,11 +54,14 @@ export const authRouter = createRouter({
         .returning();
 
       // Create default location
-      await ctx.db.insert(locations).values({
-        practiceId: practice!.id,
-        name: "Main Location",
-        isPrimary: true,
-      });
+      const [location] = await ctx.db
+        .insert(locations)
+        .values({
+          practiceId: practice!.id,
+          name: "Main Location",
+          isPrimary: true,
+        })
+        .returning();
 
       // Create admin user
       const [user] = await ctx.db
@@ -70,6 +74,18 @@ export const authRouter = createRouter({
           practiceId: practice!.id,
         })
         .returning();
+
+      // Seed sensible defaults (appointment types, rooms, starter services) so
+      // the new practice is usable immediately. Non-fatal: a seed hiccup must
+      // not block signup — the practice still works, just emptier.
+      try {
+        await seedPractice(ctx.db, {
+          practiceId: practice!.id,
+          locationId: location?.id ?? null,
+        });
+      } catch (err) {
+        console.error("[register] practice seeding failed:", err);
+      }
 
       return { id: user!.id, email: user!.email };
     }),

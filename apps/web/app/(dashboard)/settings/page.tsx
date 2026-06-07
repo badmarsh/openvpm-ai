@@ -297,7 +297,12 @@ function StaffTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
-    role: "front_desk" as "admin" | "veterinarian" | "technician" | "front_desk",
+    role: "front_desk" as
+      | "admin"
+      | "veterinarian"
+      | "technician"
+      | "front_desk"
+      | "viewer",
     phone: "",
     licenseNumber: "",
   });
@@ -374,6 +379,7 @@ function StaffTab() {
               }
             >
               <option value="front_desk">Front Desk</option>
+              <option value="viewer">Viewer (read-only)</option>
               <option value="technician">Technician</option>
               <option value="veterinarian">Veterinarian</option>
               <option value="admin">Admin</option>
@@ -472,6 +478,7 @@ function StaffTab() {
                         }
                       >
                         <option value="front_desk">Front Desk</option>
+              <option value="viewer">Viewer (read-only)</option>
                         <option value="technician">Technician</option>
                         <option value="veterinarian">Veterinarian</option>
                         <option value="admin">Admin</option>

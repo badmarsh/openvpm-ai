@@ -11,7 +11,7 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      role: "admin" | "veterinarian" | "technician" | "front_desk";
+      role: "admin" | "veterinarian" | "technician" | "front_desk" | "viewer";
       practiceId: string;
     };
   }
@@ -19,7 +19,7 @@ declare module "next-auth" {
     id: string;
     email: string;
     name: string;
-    role: "admin" | "veterinarian" | "technician" | "front_desk";
+    role: "admin" | "veterinarian" | "technician" | "front_desk" | "viewer";
     practiceId: string;
   }
 }
@@ -27,7 +27,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: "admin" | "veterinarian" | "technician" | "front_desk";
+    role: "admin" | "veterinarian" | "technician" | "front_desk" | "viewer";
     practiceId: string;
   }
 }
