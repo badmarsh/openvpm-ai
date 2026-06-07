@@ -60,21 +60,22 @@ nothing, and the system bypass sees everything.
    dev placeholder).
 3. Point the hosted `DATABASE_URL` at `openpims_app`.
 
-### Before switching the role: finish wiring these entrypoints
+### Entrypoint coverage (all wired)
 
-Everything that runs through tRPC is already tenant/system-scoped
-(`protectedProcedure` → `withTenant`; `publicProcedure` and login → `withSystem`;
-platform admin → `withSystem`; API-key auth lookup → `withSystem`). Still using
-the global connection and therefore needing a `withTenant`/`withSystem` wrapper
-before running under `openpims_app`:
+Every DB access path now sets a tenant or system context, so the app runs
+correctly under the enforcing `openpims_app` role:
 
-- `app/api/v1/*` data queries → `withTenant(auth.ctx.practiceId, ...)`
-- `app/api/cron/*` (reminders, backup) → `withSystem`
-- `app/api/webhooks/*` (and `lib/webhook-dispatcher.ts`) → `withSystem`
-- `app/api/upload/route.ts` → `withTenant(session.practiceId, ...)`
-- `app/api/portal/checkout/route.ts` → `withSystem`
-- shared helpers they call (`lib/backup/export.ts`, email senders) thread the
-  same transaction handle.
+- tRPC `protectedProcedure` → `withTenant`; `publicProcedure` + login → `withSystem`;
+  platform admin → `withSystem`; API-key auth lookup → `withSystem`.
+- `app/api/v1/*` data queries → `withTenant(auth.ctx.practiceId, ...)`.
+- `app/api/cron/*` (reminders, backup) → broad reads in `withSystem`, per-practice
+  writes/exports in `withTenant`.
+- `app/api/webhooks/*` (client + subscription) and `lib/webhook-dispatcher.ts` →
+  `withSystem` / `withTenant(practiceId)`.
+- `app/api/upload` → `withTenant(session.practiceId, ...)`;
+  `app/api/portal/checkout` → `withSystem`.
 
-Until these are wired, keep the app on the owner connection (the default), where
-RLS is a verified, ready safety net that does not yet gate these paths.
+These are no-ops on the owner connection (dev/self-host). To activate enforcement
+in production: run `pnpm db:rls`, set a real `openpims_app` password, and point
+`DATABASE_URL` at that role (Phase 5 infra). Re-run `pnpm db:rls:test` against
+staging to confirm isolation under the restricted role.

@@ -10,6 +10,7 @@ import {
 } from "@openpims/db";
 import { sendAppointmentReminder } from "@/lib/email";
 import { alertOps } from "@/lib/alerts";
+import { withSystem, withTenant } from "@/lib/tenant-db";
 
 export async function GET(request: Request) {
   // Validate the cron secret to prevent unauthorized access
@@ -22,8 +23,9 @@ export async function GET(request: Request) {
     const now = new Date();
     const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    // Find all upcoming appointments across all practices that are eligible for reminders
-    const upcomingAppointments = await db
+    // Cross-tenant sweep across all practices → system context (RLS bypass).
+    const upcomingAppointments = await withSystem(db, (tx) =>
+      tx
       .select({
         id: appointments.id,
         startTime: appointments.startTime,
@@ -48,7 +50,8 @@ export async function GET(request: Request) {
           inArray(appointments.status, ["scheduled", "confirmed"]),
         ),
       )
-      .orderBy(appointments.startTime);
+      .orderBy(appointments.startTime)
+    );
 
     let sent = 0;
     let failed = 0;
@@ -78,15 +81,17 @@ export async function GET(request: Request) {
           practiceName: "",
         });
 
-        await db.insert(communications).values({
-          practiceId: appt.practiceId,
-          clientId: appt.clientId,
-          channel: "email",
-          direction: "outbound",
-          subject: "Appointment Reminder",
-          content: `Automated appointment reminder sent for ${appt.patientName} on ${appt.startTime.toISOString()}`,
-          status: "sent",
-        });
+        await withTenant(db, appt.practiceId, (tx) =>
+          tx.insert(communications).values({
+            practiceId: appt.practiceId,
+            clientId: appt.clientId!,
+            channel: "email",
+            direction: "outbound",
+            subject: "Appointment Reminder",
+            content: `Automated appointment reminder sent for ${appt.patientName} on ${appt.startTime.toISOString()}`,
+            status: "sent",
+          })
+        );
 
         sent++;
       } catch (error) {

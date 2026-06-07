@@ -6,6 +6,7 @@ import { practices } from "@openpims/db";
 import { constructSubscriptionWebhookEvent } from "@/lib/stripe";
 import { tierForStripePrice, normalizeBillingStatus } from "@/lib/billing/plans";
 import { alertOps } from "@/lib/alerts";
+import { withSystem } from "@/lib/tenant-db";
 
 /**
  * Stripe webhook for hosted-SaaS subscriptions — a SEPARATE endpoint from the
@@ -39,17 +40,19 @@ export async function POST(req: NextRequest) {
         const s = event.data.object as Stripe.Checkout.Session;
         const practiceId = s.client_reference_id ?? s.metadata?.practiceId ?? null;
         if (practiceId && s.customer) {
-          await db
-            .update(practices)
-            .set({
-              stripeCustomerId:
-                typeof s.customer === "string" ? s.customer : s.customer.id,
-              stripeSubscriptionId:
-                typeof s.subscription === "string"
-                  ? s.subscription
-                  : (s.subscription?.id ?? null),
-            })
-            .where(eq(practices.id, practiceId));
+          await withSystem(db, (tx) =>
+            tx
+              .update(practices)
+              .set({
+                stripeCustomerId:
+                  typeof s.customer === "string" ? s.customer : s.customer!.id,
+                stripeSubscriptionId:
+                  typeof s.subscription === "string"
+                    ? s.subscription
+                    : (s.subscription?.id ?? null),
+              })
+              .where(eq(practices.id, practiceId))
+          );
         }
         break;
       }
@@ -64,14 +67,16 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription;
         const practiceId = sub.metadata?.practiceId;
         if (practiceId) {
-          await db
-            .update(practices)
-            .set({
-              subscriptionTier: "free",
-              billingStatus: "canceled",
-              stripeSubscriptionId: null,
-            })
-            .where(eq(practices.id, practiceId));
+          await withSystem(db, (tx) =>
+            tx
+              .update(practices)
+              .set({
+                subscriptionTier: "free",
+                billingStatus: "canceled",
+                stripeSubscriptionId: null,
+              })
+              .where(eq(practices.id, practiceId))
+          );
         }
         break;
       }
@@ -81,10 +86,12 @@ export async function POST(req: NextRequest) {
         const customerId =
           typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
         if (customerId) {
-          await db
-            .update(practices)
-            .set({ billingStatus: "past_due" })
-            .where(eq(practices.stripeCustomerId, customerId));
+          await withSystem(db, (tx) =>
+            tx
+              .update(practices)
+              .set({ billingStatus: "past_due" })
+              .where(eq(practices.stripeCustomerId, customerId))
+          );
           await alertOps(
             "Subscription payment failed",
             `Stripe customer ${customerId} had a failed subscription payment; marked past_due.`,
@@ -120,14 +127,16 @@ async function applySubscription(sub: Stripe.Subscription) {
   const tier = tierForStripePrice(priceId);
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
 
-  await db
-    .update(practices)
-    .set({
-      ...(tier ? { subscriptionTier: tier } : {}),
-      billingStatus: normalizeBillingStatus(sub.status),
-      stripeSubscriptionId: sub.id,
-      ...(customerId ? { stripeCustomerId: customerId } : {}),
-      trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
-    })
-    .where(eq(practices.id, practiceId));
+  await withSystem(db, (tx) =>
+    tx
+      .update(practices)
+      .set({
+        ...(tier ? { subscriptionTier: tier } : {}),
+        billingStatus: normalizeBillingStatus(sub.status),
+        stripeSubscriptionId: sub.id,
+        ...(customerId ? { stripeCustomerId: customerId } : {}),
+        trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      })
+      .where(eq(practices.id, practiceId))
+  );
 }

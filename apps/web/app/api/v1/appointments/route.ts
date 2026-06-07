@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@openpims/db/client";
 import { appointments } from "@openpims/db";
 import { authenticateApiKey } from "@/lib/api-auth";
+import { withTenant } from "@/lib/tenant-db";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { withErrorHandling, apiError, validationError } from "@/lib/compat/shared/errors";
 import {
@@ -28,15 +29,18 @@ export async function POST(req: Request) {
     const parsed = AppointmentCreateSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
-    const [created] = await db
-      .insert(appointments)
-      .values({
-        ...fromApiAppointmentCreate(parsed.data),
-        practiceId: auth.ctx.practiceId,
-      })
-      .returning();
+    const created = await withTenant(db, auth.ctx.practiceId, async (tx) => {
+      const [row] = await tx
+        .insert(appointments)
+        .values({
+          ...fromApiAppointmentCreate(parsed.data),
+          practiceId: auth.ctx.practiceId,
+        })
+        .returning();
+      return row!;
+    });
 
-    const apiAppointment = toApiAppointment(created!);
+    const apiAppointment = toApiAppointment(created);
 
     // Fire the (previously never-triggered) webhook for this practice.
     await dispatchWebhookEvent(
