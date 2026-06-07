@@ -9,6 +9,7 @@ import {
   communications,
 } from "@openpims/db";
 import { sendAppointmentReminder } from "@/lib/email";
+import { alertOps } from "@/lib/alerts";
 
 export async function GET(request: Request) {
   // Validate the cron secret to prevent unauthorized access
@@ -101,8 +102,19 @@ export async function GET(request: Request) {
       `Cron reminders completed: ${sent} sent, ${failed} failed out of ${upcomingAppointments.length} total`,
     );
 
+    if (failed > 0) {
+      void alertOps(
+        "Appointment reminders had failures",
+        `${failed} of ${upcomingAppointments.length} reminders failed to send (${sent} sent).`,
+      );
+    }
+
     return NextResponse.json({ sent, failed });
   } catch (error) {
+    void alertOps(
+      "Reminder cron job crashed",
+      error instanceof Error ? error.message : String(error),
+    );
     console.error("Cron reminder job failed:", error);
     return NextResponse.json(
       { error: "Internal server error" },

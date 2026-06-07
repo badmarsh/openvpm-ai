@@ -2,6 +2,7 @@ import { createHmac } from "crypto";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
 import { webhooks } from "@openpims/db";
+import { alertOps } from "@/lib/alerts";
 
 export async function dispatchWebhookEvent(
   practiceId: string,
@@ -45,7 +46,7 @@ export async function dispatchWebhookEvent(
         .update(body)
         .digest("hex");
 
-      await fetch(wh.url, {
+      const res = await fetch(wh.url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,16 +55,33 @@ export async function dispatchWebhookEvent(
         },
         body,
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return true;
     } catch (err) {
       console.error(
         `[WebhookDispatcher] Failed to deliver ${event} to ${wh.url}:`,
         err,
       );
+      return false;
     }
   });
 
-  // Fire all requests in parallel (don't block on responses)
-  Promise.allSettled(requests).catch(() => {
-    // Intentionally swallowed - individual errors are logged above
-  });
+  // Fire all requests in parallel (don't block on responses). Alert ops once
+  // per batch if any deliveries failed — a silently dead webhook means an
+  // integration stops receiving events with no signal.
+  Promise.allSettled(requests)
+    .then((results) => {
+      const failed = results.filter(
+        (r) => r.status === "rejected" || r.value === false,
+      ).length;
+      if (failed > 0) {
+        void alertOps(
+          "Webhook delivery failed",
+          `${failed} of ${matching.length} '${event}' webhook deliveries failed for practice ${practiceId}.`,
+        );
+      }
+    })
+    .catch(() => {
+      // Intentionally swallowed - individual errors are logged above
+    });
 }
