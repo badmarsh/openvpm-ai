@@ -1,4 +1,5 @@
 import Twilio from "twilio";
+import { recordUsage } from "@/lib/billing/usage";
 
 // ---------------------------------------------------------------------------
 // Twilio client – initialised lazily so the module can be imported even when
@@ -27,6 +28,8 @@ function getFromNumber(): string {
 export async function sendSms(options: {
   to: string;
   body: string;
+  /** When set (and a real send occurs), meters the SMS for hosted billing. */
+  practiceId?: string;
 }): Promise<{ success: boolean; sid?: string; error?: string }> {
   const client = getTwilio();
 
@@ -46,6 +49,11 @@ export async function sendSms(options: {
       from: getFromNumber(),
       body: options.body,
     });
+
+    // Meter the real send for hosted billing (no-op on self-host).
+    if (options.practiceId) {
+      void recordUsage({ practiceId: options.practiceId, kind: "sms" });
+    }
 
     return { success: true, sid: message.sid };
   } catch (err) {
