@@ -7,7 +7,12 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@openpims/db/client";
 import type { Database } from "@openpims/db/client";
 
-type UserRole = "admin" | "veterinarian" | "technician" | "front_desk";
+type UserRole =
+  | "admin"
+  | "veterinarian"
+  | "technician"
+  | "front_desk"
+  | "viewer";
 
 interface AppSession extends Session {
   user: {
@@ -47,9 +52,17 @@ export const createRouter = t.router;
 export const publicProcedure = t.procedure;
 
 /** Requires an authenticated session */
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(async ({ ctx, next, type }) => {
   if (!ctx.session?.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  // Global read-only guard: viewers can run any query but no mutation. This
+  // makes the role enforceable everywhere without touching each router.
+  if (type === "mutation" && ctx.session.user.role === "viewer") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Your account has read-only (viewer) access.",
+    });
   }
   return next({
     ctx: {

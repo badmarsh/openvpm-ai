@@ -69,7 +69,7 @@ export const settingsRouter = createRouter({
         name: z.string().min(1),
         email: z.string().email(),
         password: z.string().min(6),
-        role: z.enum(["admin", "veterinarian", "technician", "front_desk"]),
+        role: z.enum(["admin", "veterinarian", "technician", "front_desk", "viewer"]),
         phone: z.string().optional(),
         licenseNumber: z.string().optional(),
       })
@@ -99,7 +99,7 @@ export const settingsRouter = createRouter({
         id: z.string().uuid(),
         name: z.string().min(1).optional(),
         role: z
-          .enum(["admin", "veterinarian", "technician", "front_desk"])
+          .enum(["admin", "veterinarian", "technician", "front_desk", "viewer"])
           .optional(),
         phone: z.string().optional(),
         licenseNumber: z.string().optional(),

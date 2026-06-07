@@ -16,6 +16,9 @@ export const userRoleEnum = pgEnum("user_role", [
   "veterinarian",
   "technician",
   "front_desk",
+  // Read-only access — can view everything in their practice but cannot
+  // mutate. Useful for running OpenVPM as a parallel backup/secondary.
+  "viewer",
 ]);
 
 export const users = pgTable("users", {
