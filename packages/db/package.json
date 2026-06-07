@@ -13,6 +13,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx seed.ts",
     "db:reset": "tsx reset.ts",
+    "db:rls": "tsx apply-rls.ts",
+    "db:rls:test": "tsx test-rls.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
