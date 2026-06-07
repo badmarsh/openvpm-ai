@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure, protectedProcedure } from "../trpc";
 import { users, practices, locations } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { seedPractice } from "@/lib/onboarding/defaults";
+import { seedPractice, seedDemoData } from "@/lib/onboarding/defaults";
 import { billingEnforced, TRIAL_DAYS } from "@/lib/billing/plans";
 import { createAuthToken, consumeAuthToken } from "@/lib/auth-tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
@@ -106,6 +106,22 @@ export const authRouter = createRouter({
         });
       } catch (err) {
         console.error("[register] practice seeding failed:", err);
+      }
+
+      // On the hosted service, seed demo data + start onboarding so the trial
+      // lands on a lively dashboard. Non-fatal. Self-host skips this.
+      if (billingEnforced()) {
+        try {
+          const demoData = await seedDemoData(ctx.db, { practiceId: practice!.id });
+          await ctx.db
+            .update(practices)
+            .set({
+              settings: { demoData, onboardingCompletedAt: null },
+            })
+            .where(eq(practices.id, practice!.id));
+        } catch (err) {
+          console.error("[register] demo seeding failed:", err);
+        }
       }
 
       // On the hosted service, require email verification before login. Issue a

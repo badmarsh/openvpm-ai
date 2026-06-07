@@ -1,5 +1,12 @@
 import type { Database } from "@openpims/db/client";
-import { appointmentTypes, rooms, services } from "@openpims/db";
+import {
+  appointmentTypes,
+  rooms,
+  services,
+  clients,
+  patients,
+  appointments,
+} from "@openpims/db";
 
 /**
  * Sensible defaults seeded for a brand-new practice so it's usable immediately
@@ -95,4 +102,62 @@ export async function seedPractice(
       taxable: s.taxable,
     }))
   );
+}
+
+export interface DemoDataIds {
+  clientIds: string[];
+  patientIds: string[];
+  appointmentIds: string[];
+}
+
+/**
+ * Seed a small set of demo clients/patients/appointments so a hosted trial
+ * lands on a lively dashboard instead of empty states. The returned IDs are
+ * stored on the practice so the onboarding wizard can clear them with one click.
+ * Call only on hosted trials; non-fatal.
+ */
+export async function seedDemoData(
+  db: Database,
+  opts: { practiceId: string }
+): Promise<DemoDataIds> {
+  const insertedClients = await db
+    .insert(clients)
+    .values([
+      { practiceId: opts.practiceId, firstName: "Jordan", lastName: "Avery", email: "jordan.avery@example.com", phone: "(555) 200-1001" },
+      { practiceId: opts.practiceId, firstName: "Sam", lastName: "Rivera", email: "sam.rivera@example.com", phone: "(555) 200-1002" },
+      { practiceId: opts.practiceId, firstName: "Taylor", lastName: "Brooks", email: "taylor.brooks@example.com", phone: "(555) 200-1003" },
+    ])
+    .returning({ id: clients.id });
+
+  const insertedPatients = await db
+    .insert(patients)
+    .values([
+      { practiceId: opts.practiceId, clientId: insertedClients[0]!.id, name: "Biscuit", species: "canine" as const, sex: "male_neutered" as const, breed: "Golden Retriever" },
+      { practiceId: opts.practiceId, clientId: insertedClients[1]!.id, name: "Luna", species: "feline" as const, sex: "female_spayed" as const, breed: "Domestic Shorthair" },
+      { practiceId: opts.practiceId, clientId: insertedClients[2]!.id, name: "Mango", species: "avian" as const, breed: "Sun Conure" },
+    ])
+    .returning({ id: patients.id });
+
+  const now = Date.now();
+  const mkAppt = (clientIdx: number, patientIdx: number, offsetHours: number) => {
+    const start = new Date(now + offsetHours * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    return {
+      practiceId: opts.practiceId,
+      clientId: insertedClients[clientIdx]!.id,
+      patientId: insertedPatients[patientIdx]!.id,
+      startTime: start,
+      endTime: end,
+    };
+  };
+  const insertedAppts = await db
+    .insert(appointments)
+    .values([mkAppt(0, 0, 26), mkAppt(1, 1, 50)])
+    .returning({ id: appointments.id });
+
+  return {
+    clientIds: insertedClients.map((c) => c.id),
+    patientIds: insertedPatients.map((p) => p.id),
+    appointmentIds: insertedAppts.map((a) => a.id),
+  };
 }

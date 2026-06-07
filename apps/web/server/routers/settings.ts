@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
 import {
@@ -7,10 +7,19 @@ import {
   users,
   appointmentTypes,
   rooms,
+  clients,
+  patients,
+  appointments,
 } from "@openpims/db";
 import { regionDefaults } from "@/lib/locale/format";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
+
+interface PracticeSettings {
+  onboardingCompletedAt?: string | null;
+  demoData?: { clientIds: string[]; patientIds: string[]; appointmentIds: string[] };
+  [k: string]: unknown;
+}
 
 export const settingsRouter = createRouter({
   // ── Practice ──────────────────────────────────────────────
@@ -65,6 +74,90 @@ export const settingsRouter = createRouter({
         .returning();
       return updated!;
     }),
+
+  // ── Onboarding ────────────────────────────────────────────
+
+  /** Onboarding state for the first-run wizard / dashboard banner. */
+  onboardingStatus: adminProcedure.query(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({ settings: practices.settings })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    return {
+      completedAt: settings.onboardingCompletedAt ?? null,
+      hasDemoData: !!settings.demoData,
+    };
+  }),
+
+  /** Mark onboarding complete. */
+  completeOnboarding: adminProcedure.mutation(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({ settings: practices.settings })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    await ctx.db
+      .update(practices)
+      .set({ settings: { ...settings, onboardingCompletedAt: new Date().toISOString() } })
+      .where(eq(practices.id, ctx.practiceId));
+    return { ok: true };
+  }),
+
+  /** Remove the seeded demo clients/patients/appointments (soft delete). */
+  clearDemoData: adminProcedure.mutation(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({ settings: practices.settings })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    const demo = settings.demoData;
+    if (demo) {
+      const now = new Date();
+      if (demo.appointmentIds?.length) {
+        await ctx.db
+          .update(appointments)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(appointments.practiceId, ctx.practiceId),
+              inArray(appointments.id, demo.appointmentIds)
+            )
+          );
+      }
+      if (demo.patientIds?.length) {
+        await ctx.db
+          .update(patients)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(patients.practiceId, ctx.practiceId),
+              inArray(patients.id, demo.patientIds)
+            )
+          );
+      }
+      if (demo.clientIds?.length) {
+        await ctx.db
+          .update(clients)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(clients.practiceId, ctx.practiceId),
+              inArray(clients.id, demo.clientIds)
+            )
+          );
+      }
+    }
+    const { demoData: _omit, ...rest } = settings;
+    await ctx.db
+      .update(practices)
+      .set({ settings: rest })
+      .where(eq(practices.id, ctx.practiceId));
+    return { ok: true };
+  }),
 
   // ── Staff / Users ─────────────────────────────────────────
 
