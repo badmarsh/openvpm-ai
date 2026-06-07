@@ -8,6 +8,7 @@ import { authOptions } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/audit";
 import { db } from "@openpims/db/client";
 import type { Database } from "@openpims/db/client";
+import { withTenant, withSystem } from "@/lib/tenant-db";
 import { practices } from "@openpims/db";
 import {
   billingEnforced,
@@ -86,25 +87,32 @@ export const protectedProcedure = t.procedure.use(
     }
 
     const user = ctx.session.user;
-    const result = await next({
-      ctx: { session: ctx.session, user, practiceId: user.practiceId },
-    });
-
-    // Audit every successful mutation: who changed what, when, from where.
-    // Fire-and-forget — never block or fail the request on the audit write.
-    if (type === "mutation" && result.ok) {
-      const rawInput = await getRawInput().catch(() => undefined);
-      void recordAuditLog(ctx.db, {
-        practiceId: user.practiceId,
-        userId: user.id,
-        ip: ctx.ip,
-        path,
-        rawInput,
-        resultData: (result as { data?: unknown }).data,
+    // Run the whole request in a tenant DB context so Postgres RLS scopes every
+    // query to this practice (defense-in-depth behind the app-layer filters).
+    return withTenant(ctx.db, user.practiceId, async (tx) => {
+      const result = await next({
+        ctx: { session: ctx.session, user, practiceId: user.practiceId, db: tx },
       });
-    }
 
-    return result;
+      // Audit every successful mutation: who changed what, when, from where.
+      // Runs in its own system-context tx so it's independent of this request's
+      // transaction lifecycle and never blocks or fails the request.
+      if (type === "mutation" && result.ok) {
+        const rawInput = await getRawInput().catch(() => undefined);
+        void withSystem(db, (sysTx) =>
+          recordAuditLog(sysTx, {
+            practiceId: user.practiceId,
+            userId: user.id,
+            ip: ctx.ip,
+            path,
+            rawInput,
+            resultData: (result as { data?: unknown }).data,
+          })
+        ).catch(() => {});
+      }
+
+      return result;
+    });
   }
 );
 

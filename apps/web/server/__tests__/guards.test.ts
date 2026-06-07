@@ -15,7 +15,15 @@ function callerFor(role: string) {
       practiceId: "00000000-0000-0000-0000-0000000000aa",
     },
   };
-  return appRouter.createCaller({ db: {} as never, session } as never);
+  // Minimal db mock: transaction() runs its callback with the same object and
+  // execute() is a no-op (for the RLS set_config call). Any real table access
+  // (.select/.insert/...) is undefined → throws, so a db-free resolver passing
+  // proves the guard let it through, and FORBIDDEN proves it short-circuited.
+  const db: Record<string, unknown> = {
+    transaction: async (fn: (tx: unknown) => unknown) => fn(db),
+    execute: async () => undefined,
+  };
+  return appRouter.createCaller({ db, session } as never);
 }
 
 describe("viewer read-only guard", () => {
