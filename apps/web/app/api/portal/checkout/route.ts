@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
-import { clients, invoices, patients } from "@openpims/db";
+import { clients, invoices, patients, practices } from "@openpims/db";
 import { createCheckoutSession } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
         status: invoices.status,
         clientId: invoices.clientId,
         patientId: invoices.patientId,
+        practiceId: invoices.practiceId,
       })
       .from(invoices)
       .where(
@@ -89,6 +90,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Charge in the practice's configured currency (region-aware).
+    const [practice] = await db
+      .select({ currency: practices.currency })
+      .from(practices)
+      .where(eq(practices.id, invoice.practiceId))
+      .limit(1);
+
     const origin = req.nextUrl.origin;
     const result = await createCheckoutSession({
       invoiceId: invoice.id,
@@ -96,6 +104,7 @@ export async function POST(req: NextRequest) {
       clientEmail: client.email ?? "",
       clientName: `${client.firstName} ${client.lastName}`,
       description,
+      currency: practice?.currency ?? "usd",
       successUrl: `${origin}/portal/${token}?payment=success`,
       cancelUrl: `${origin}/portal/${token}?payment=cancelled`,
     });

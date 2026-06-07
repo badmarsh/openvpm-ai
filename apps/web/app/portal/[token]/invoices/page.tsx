@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
+import {
+  formatCurrency as formatCurrencyBase,
+  localeForCountry,
+} from "@/lib/locale/format";
 
 const statusStyles: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -13,21 +17,21 @@ const statusStyles: Record<string, string> = {
   void: "bg-gray-100 text-gray-400",
 };
 
-function formatDate(d: string | Date | null): string {
+function formatDate(d: string | Date | null, country?: string | null): string {
   if (!d) return "N/A";
-  return new Date(d).toLocaleDateString("en-US", {
+  return new Date(d).toLocaleDateString(localeForCountry(country), {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-function formatCurrency(amount: string | number | null): string {
-  const n = typeof amount === "string" ? parseFloat(amount) : amount ?? 0;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(n);
+function formatCurrency(
+  amount: string | number | null,
+  currency: string = "usd",
+  country?: string | null
+): string {
+  return formatCurrencyBase(amount, currency, country);
 }
 
 function PayButton({ token, invoiceId }: { token: string; invoiceId: string }) {
@@ -109,8 +113,8 @@ export default function InvoicesPage() {
                 <div key={inv.id} className="rounded-xl border border-gray-200 p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-medium text-gray-900">{formatCurrency(inv.total)}</p>
-                      <p className="text-sm text-gray-500">{formatDate(inv.createdAt)}</p>
+                      <p className="font-medium text-gray-900">{formatCurrency(inv.total, inv.currency, inv.country)}</p>
+                      <p className="text-sm text-gray-500">{formatDate(inv.createdAt, inv.country)}</p>
                     </div>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
@@ -125,16 +129,16 @@ export default function InvoicesPage() {
                   )}
                   <div className="flex justify-between mt-2 text-sm">
                     <span className="text-gray-400">
-                      Paid: {formatCurrency(inv.paidAmount)}
+                      Paid: {formatCurrency(inv.paidAmount, inv.currency, inv.country)}
                     </span>
                     {balance > 0 && (
                       <span className="font-medium text-red-600">
-                        Balance: {formatCurrency(balance)}
+                        Balance: {formatCurrency(balance, inv.currency, inv.country)}
                       </span>
                     )}
                   </div>
                   {inv.dueDate && (
-                    <p className="text-xs text-gray-400 mt-1">Due: {formatDate(inv.dueDate)}</p>
+                    <p className="text-xs text-gray-400 mt-1">Due: {formatDate(inv.dueDate, inv.country)}</p>
                   )}
                   {balance > 0 && inv.status !== "void" && (
                     <div className="mt-3">
@@ -167,16 +171,16 @@ export default function InvoicesPage() {
                     parseFloat(String(inv.total)) - parseFloat(String(inv.paidAmount));
                   return (
                     <tr key={inv.id}>
-                      <td className="py-3 text-gray-600">{formatDate(inv.createdAt)}</td>
+                      <td className="py-3 text-gray-600">{formatDate(inv.createdAt, inv.country)}</td>
                       <td className="py-3 text-gray-900">{inv.patientName || "-"}</td>
                       <td className="py-3 text-right font-medium text-gray-900">
-                        {formatCurrency(inv.total)}
+                        {formatCurrency(inv.total, inv.currency, inv.country)}
                       </td>
                       <td className="py-3 text-right text-gray-600">
-                        {formatCurrency(inv.paidAmount)}
+                        {formatCurrency(inv.paidAmount, inv.currency, inv.country)}
                       </td>
                       <td className={`py-3 text-right font-medium ${balance > 0 ? "text-red-600" : "text-green-600"}`}>
-                        {formatCurrency(balance)}
+                        {formatCurrency(balance, inv.currency, inv.country)}
                       </td>
                       <td className="py-3">
                         <span

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,11 +50,6 @@ const PAYMENT_METHODS = [
   { label: "Online", value: "online" },
   { label: "Other", value: "other" },
 ] as const;
-
-function formatCurrency(value: string | number | null | undefined): string {
-  const num = Number(value ?? 0);
-  return `$${num.toFixed(2)}`;
-}
 
 function getDisplayStatus(invoice: {
   status: string;
@@ -303,6 +299,7 @@ function InvoiceRow({
   onConvertEstimate: (e: React.MouseEvent, id: string) => void;
   isMutating: boolean;
 }) {
+  const formatCurrency = useCurrencyFormatter();
   const detail = trpc.billing.getInvoice.useQuery(
     { id: invoice.id },
     { enabled: isExpanded }
@@ -455,6 +452,10 @@ function InvoiceRow({
                             tax: formatCurrency(d.tax),
                             total: formatCurrency(d.total),
                             paidAmount: formatCurrency(d.paidAmount),
+                            balanceDue: formatCurrency(
+                              parseFloat(String(d.total)) -
+                                parseFloat(String(d.paidAmount))
+                            ),
                           }).save(`estimate-${clientName || "unknown"}.pdf`);
                         }}
                       >
@@ -615,6 +616,10 @@ function InvoiceRow({
                             tax: formatCurrency(d.tax),
                             total: formatCurrency(d.total),
                             paidAmount: formatCurrency(d.paidAmount),
+                            balanceDue: formatCurrency(
+                              parseFloat(String(d.total)) -
+                                parseFloat(String(d.paidAmount))
+                            ),
                           }).save(`invoice-${clientName || "unknown"}.pdf`);
                         }}
                       >
@@ -689,6 +694,7 @@ function PaymentSection({
   invoicePaidAmount: string | null;
   invoiceStatus: string;
 }) {
+  const formatCurrency = useCurrencyFormatter();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");

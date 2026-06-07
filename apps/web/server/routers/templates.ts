@@ -7,6 +7,7 @@ import {
   treatmentTemplateItems,
   invoices,
   invoiceItems,
+  practices,
 } from "@openpims/db";
 
 export const templatesRouter = createRouter({
@@ -358,7 +359,14 @@ export const templatesRouter = createRouter({
       const subtotal = allItems.reduce((sum, row) => {
         return sum + row.quantity * parseFloat(row.unitPrice);
       }, 0);
-      const tax = Math.round(subtotal * 0.08 * 100) / 100;
+      // Tax rate is configured per practice (region-aware), not hardcoded.
+      const [practice] = await ctx.db
+        .select({ taxRatePercent: practices.taxRatePercent })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+      const taxRate = parseFloat(practice?.taxRatePercent ?? "8.00") / 100;
+      const tax = Math.round(subtotal * taxRate * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
 
       const [updatedInvoice] = await ctx.db

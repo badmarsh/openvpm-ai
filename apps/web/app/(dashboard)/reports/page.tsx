@@ -27,6 +27,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 
 type Tab = "revenue" | "appointments" | "services" | "inventory";
 
@@ -36,15 +37,6 @@ const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "services", label: "Services", icon: BarChart3 },
   { key: "inventory", label: "Inventory", icon: Package },
 ];
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function KpiCard({
   title,
@@ -99,6 +91,7 @@ function LoadingSkeleton() {
 }
 
 function RevenueTab() {
+  const formatCurrency = useCurrencyFormatter();
   const { data, isLoading } = trpc.reports.revenue.useQuery();
 
   if (isLoading || !data) return <LoadingSkeleton />;
@@ -252,6 +245,7 @@ function AppointmentsTab() {
 }
 
 function ServicesTab() {
+  const formatCurrency = useCurrencyFormatter();
   const { data, isLoading } = trpc.reports.topServices.useQuery();
 
   if (isLoading || !data) return <LoadingSkeleton />;

@@ -11,9 +11,29 @@ import {
   patients,
   payments,
   users,
+  practices,
 } from "@openpims/db";
 
 export const billingRouter = createRouter({
+  // Region-aware billing config for the practice (tax rate + currency).
+  // Available to any authenticated user so invoice forms can preview totals.
+  getTaxConfig: protectedProcedure.query(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({
+        taxRatePercent: practices.taxRatePercent,
+        currency: practices.currency,
+        country: practices.country,
+      })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    return {
+      taxRatePercent: practice?.taxRatePercent ?? "8.00",
+      currency: practice?.currency ?? "usd",
+      country: practice?.country ?? "US",
+    };
+  }),
+
   listInvoices: protectedProcedure
     .input(
       z.object({
@@ -199,7 +219,14 @@ export const billingRouter = createRouter({
       const subtotal = input.items.reduce((sum, item) => {
         return sum + item.quantity * parseFloat(item.unitPrice);
       }, 0);
-      const tax = Math.round(subtotal * 0.08 * 100) / 100;
+      // Tax rate is configured per practice (region-aware), not hardcoded.
+      const [practice] = await ctx.db
+        .select({ taxRatePercent: practices.taxRatePercent })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+      const taxRate = parseFloat(practice?.taxRatePercent ?? "8.00") / 100;
+      const tax = Math.round(subtotal * taxRate * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
 
       const [invoice] = await ctx.db

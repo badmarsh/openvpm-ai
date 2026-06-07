@@ -12,6 +12,7 @@ export async function createCheckoutSession(data: {
   description: string;
   successUrl: string;
   cancelUrl: string;
+  currency?: string; // ISO 4217 (lowercase), per the practice's region. Defaults to USD.
 }): Promise<{ url: string | null } | null> {
   if (!stripe) {
     console.log("[Stripe] No API key configured, skipping checkout session", data);
@@ -23,7 +24,7 @@ export async function createCheckoutSession(data: {
     customer_email: data.clientEmail,
     line_items: [{
       price_data: {
-        currency: "usd",
+        currency: (data.currency ?? "usd").toLowerCase(),
         product_data: { name: data.description },
         unit_amount: data.amount,
       },
