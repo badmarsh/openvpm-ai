@@ -13,18 +13,22 @@ import {
 
 describe("getPlan", () => {
   it("returns the matching plan and falls back to free", () => {
-    expect(getPlan("pro").tier).toBe("pro");
+    expect(getPlan("cloud").tier).toBe("cloud");
     expect(getPlan(null).tier).toBe("free");
     expect(getPlan("nonsense").tier).toBe("free");
   });
+  it("maps legacy starter/pro tiers onto cloud", () => {
+    expect(getPlan("starter").tier).toBe("cloud");
+    expect(getPlan("pro").tier).toBe("cloud");
+  });
 });
 
-describe("planHasFeature", () => {
-  it("pro includes all premium features; starter and free include none", () => {
+describe("planHasFeature (parity)", () => {
+  it("cloud and enterprise include every feature; free (lapsed/unpaid) includes none", () => {
     for (const f of ALL_FEATURES) {
-      expect(planHasFeature("pro", f)).toBe(true);
+      expect(planHasFeature("cloud", f)).toBe(true);
       expect(planHasFeature("enterprise", f)).toBe(true);
-      expect(planHasFeature("starter", f)).toBe(false);
+      expect(planHasFeature("pro", f)).toBe(true); // legacy → cloud
       expect(planHasFeature("free", f)).toBe(false);
     }
   });
@@ -35,10 +39,9 @@ describe("isEntitled", () => {
     expect(isEntitled("free", "agent", false)).toBe(true);
     expect(isEntitled(null, "sms", false)).toBe(true);
   });
-  it("hosted (enforced) gates by tier", () => {
+  it("hosted (enforced) gates free/lapsed but allows cloud + enterprise", () => {
     expect(isEntitled("free", "agent", true)).toBe(false);
-    expect(isEntitled("starter", "agent", true)).toBe(false);
-    expect(isEntitled("pro", "agent", true)).toBe(true);
+    expect(isEntitled("cloud", "agent", true)).toBe(true);
     expect(isEntitled("enterprise", "apiAccess", true)).toBe(true);
   });
 });
@@ -46,16 +49,11 @@ describe("isEntitled", () => {
 describe("seat + location limits", () => {
   it("not enforced always passes", () => {
     expect(withinSeatLimit("free", 999, false)).toBe(true);
-    expect(withinLocationLimit("starter", 999, false)).toBe(true);
+    expect(withinLocationLimit("cloud", 999, false)).toBe(true);
   });
-  it("enforced respects the tier limit (current < limit to add another)", () => {
-    expect(withinSeatLimit("starter", 4, true)).toBe(true); // 4 < 5
-    expect(withinSeatLimit("starter", 5, true)).toBe(false); // at limit
-    expect(withinLocationLimit("starter", 1, true)).toBe(false); // limit 1
-    expect(withinLocationLimit("pro", 50, true)).toBe(true); // pro locations unlimited
-  });
-  it("enterprise/unlimited seats always pass", () => {
-    expect(withinSeatLimit("enterprise", 100000, true)).toBe(true);
+  it("cloud has unlimited seats + locations (billed by quantity)", () => {
+    expect(withinSeatLimit("cloud", 100000, true)).toBe(true);
+    expect(withinLocationLimit("cloud", 50, true)).toBe(true);
   });
 });
 
@@ -71,10 +69,11 @@ describe("trials", () => {
     expect(isTrialActive("trialing", null, now)).toBe(false);
   });
 
-  it("effectiveTier grants pro during an active trial, then reverts", () => {
-    expect(effectiveTier("free", "trialing", future, now)).toBe("pro");
+  it("effectiveTier grants cloud during an active trial, then reverts to stored tier", () => {
+    expect(effectiveTier("free", "trialing", future, now)).toBe("cloud");
     expect(effectiveTier("free", "trialing", past, now)).toBe("free");
-    expect(effectiveTier("starter", "active", future, now)).toBe("starter");
+    expect(effectiveTier("cloud", "active", future, now)).toBe("cloud");
+    expect(effectiveTier("pro", "active", future, now)).toBe("cloud"); // legacy → cloud
   });
 
   it("an active trial unlocks gated features even on the free tier", () => {
@@ -84,10 +83,10 @@ describe("trials", () => {
 });
 
 describe("PLANS pricing", () => {
-  it("matches the agreed value tiers", () => {
+  it("is one simple Cloud tier at $99/location, free self-host, enterprise custom", () => {
     expect(PLANS.free.priceMonthlyUsd).toBe(0);
-    expect(PLANS.starter.priceMonthlyUsd).toBe(29);
-    expect(PLANS.pro.priceMonthlyUsd).toBe(99);
+    expect(PLANS.cloud.priceMonthlyUsd).toBe(99);
+    expect(PLANS.cloud.pricePerLocation).toBe(true);
     expect(PLANS.enterprise.priceMonthlyUsd).toBeNull();
   });
 });

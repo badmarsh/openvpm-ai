@@ -1,16 +1,25 @@
 /**
- * Hosted plan tiers + feature entitlements.
+ * Hosted plan model + entitlements.
  *
- * IMPORTANT — open-source posture: the OSS / self-host edition is NEVER
- * crippled. Feature gating only applies to our managed hosted service, and is
- * OFF by default (`HOSTED_BILLING_ENABLED` unset). When billing is not
- * enforced, every feature is entitled — self-host gets the full product. We
- * monetize hosting, support, and usage, not by locking the open core.
+ * Open-source posture: the OSS / self-host edition is NEVER crippled. Billing is
+ * OFF by default (`HOSTED_BILLING_ENABLED` unset) — self-host gets the full
+ * product. We monetize hosting + scale (locations) + heavy usage, not by locking
+ * the open core.
+ *
+ * Pricing (managed Cloud): ONE simple self-serve tier — $99/mo per location,
+ * ALL features included (feature parity with self-host), with metered overage
+ * for SMS / AI usage beyond generous monthly allowances. Enterprise = custom.
  */
 
-export type PlanTier = "free" | "starter" | "pro" | "enterprise";
+export type PlanTier = "free" | "cloud" | "enterprise";
 
-/** Premium capabilities that the hosted tiers gate. */
+/**
+ * Legacy tier strings (from the earlier starter/pro model) map onto `cloud`, so
+ * existing practice rows and any old Stripe prices keep resolving cleanly.
+ */
+const LEGACY_CLOUD_TIERS = new Set(["starter", "pro"]);
+
+/** Capabilities. With feature parity these are unlocked on every paid tier. */
 export type Feature =
   | "agent" // OpenVPM Agent (AI)
   | "sms" // SMS sending
@@ -28,18 +37,28 @@ export const ALL_FEATURES: Feature[] = [
   "integrations",
 ];
 
+/** Env vars holding Stripe Price IDs for metered overage (hosted only, PRIVATE). */
+export const STRIPE_PRICE_SMS_OVERAGE_ENV = "STRIPE_PRICE_SMS_OVERAGE";
+export const STRIPE_PRICE_AI_OVERAGE_ENV = "STRIPE_PRICE_AI_OVERAGE";
+
 export interface PlanDefinition {
   tier: PlanTier;
   name: string;
-  /** Monthly price in USD. null = custom / contact sales. */
+  /** Monthly price in USD (per location for `cloud`). null = custom / contact sales. */
   priceMonthlyUsd: number | null;
+  /** Whether the monthly price is charged per location (Stripe subscription quantity). */
+  pricePerLocation: boolean;
   blurb: string;
   /** Max staff seats. null = unlimited. */
   seatLimit: number | null;
-  /** Max locations. null = unlimited. */
+  /** Max locations. null = unlimited (billed by quantity). */
   locationLimit: number | null;
   /** Premium features included in this tier. */
   features: Feature[];
+  /** Included monthly SMS before metered overage. null = unlimited/custom. */
+  includedSmsPerMonth: number | null;
+  /** Included monthly AI agent runs before metered overage. null = unlimited/custom. */
+  includedAiRunsPerMonth: number | null;
   /** Env var holding the Stripe Price ID for this tier (hosted only). */
   stripePriceEnv?: string;
   /** Whether this tier is self-serve purchasable (vs. contact sales). */
@@ -48,57 +67,58 @@ export interface PlanDefinition {
 
 export const PLANS: Record<PlanTier, PlanDefinition> = {
   free: {
+    // Self-host (free, full product) gets everything via billingEnforced()=false,
+    // NOT via this feature list. On hosted, `free` is also the lapsed/unpaid
+    // fallback tier — so its entitlements MUST be empty to gate non-payers.
     tier: "free",
-    name: "Free",
+    name: "Free (self-host)",
     priceMonthlyUsd: 0,
-    blurb: "Core PIMS for trying it out. Self-host is free forever.",
-    seatLimit: 2,
-    locationLimit: 1,
-    features: [],
-    selfServe: true,
-  },
-  starter: {
-    tier: "starter",
-    name: "Starter",
-    priceMonthlyUsd: 29,
-    blurb:
-      "Managed hosting, the full PIMS, email reminders, client portal, and data export.",
-    seatLimit: 5,
-    locationLimit: 1,
-    features: [],
-    stripePriceEnv: "STRIPE_PRICE_STARTER",
-    selfServe: true,
-  },
-  pro: {
-    tier: "pro",
-    name: "Pro",
-    priceMonthlyUsd: 99,
-    blurb:
-      "Adds the OpenVPM Agent, SMS, advanced reporting, API access + webhooks, multi-location, and integrations.",
-    seatLimit: 25,
+    pricePerLocation: false,
+    blurb: "The full product, on your own infrastructure. Free forever, no lock-in.",
+    seatLimit: null,
     locationLimit: null,
+    features: [],
+    includedSmsPerMonth: 0,
+    includedAiRunsPerMonth: 0,
+    selfServe: true,
+  },
+  cloud: {
+    tier: "cloud",
+    name: "Cloud",
+    priceMonthlyUsd: 99,
+    pricePerLocation: true,
+    blurb:
+      "We host it: the full PIMS, managed, with every feature — agent, SMS, reporting, API, multi-location, integrations. $99/mo per location.",
+    seatLimit: null, // unlimited staff included
+    locationLimit: null, // billed by quantity, not capped
     features: [...ALL_FEATURES],
-    stripePriceEnv: "STRIPE_PRICE_PRO",
+    includedSmsPerMonth: 500,
+    includedAiRunsPerMonth: 200,
+    stripePriceEnv: "STRIPE_PRICE_CLOUD",
     selfServe: true,
   },
   enterprise: {
     tier: "enterprise",
     name: "Enterprise",
     priceMonthlyUsd: null,
+    pricePerLocation: false,
     blurb:
-      "Single-tenant or in-region dedicated instance, SSO, DPA/compliance, and priority support.",
+      "Dedicated or in-region instance, SSO, BAA/DPA compliance, white-glove migration, and priority support.",
     seatLimit: null,
     locationLimit: null,
     features: [...ALL_FEATURES],
+    includedSmsPerMonth: null,
+    includedAiRunsPerMonth: null,
     selfServe: false,
   },
 };
 
-export const PLAN_ORDER: PlanTier[] = ["free", "starter", "pro", "enterprise"];
+export const PLAN_ORDER: PlanTier[] = ["free", "cloud", "enterprise"];
 
 export function getPlan(tier?: string | null): PlanDefinition {
-  const t = (tier ?? "free") as PlanTier;
-  return PLANS[t] ?? PLANS.free;
+  const t = tier ?? "free";
+  if (LEGACY_CLOUD_TIERS.has(t)) return PLANS.cloud;
+  return PLANS[t as PlanTier] ?? PLANS.free;
 }
 
 /** Map a Stripe Price ID back to a plan tier (via the configured env vars). */
@@ -129,7 +149,7 @@ export function normalizeBillingStatus(status: string | null | undefined): strin
   }
 }
 
-/** Pure: does this tier include this premium feature? */
+/** Pure: does this tier include this feature? (With parity, every paid tier does.) */
 export function planHasFeature(tier: string | null | undefined, feature: Feature): boolean {
   return getPlan(tier).features.includes(feature);
 }
@@ -149,7 +169,7 @@ export function isTrialActive(
 
 /**
  * The tier whose entitlements actually apply right now. An active trial grants
- * full (Pro) access; once it lapses we fall back to the stored tier.
+ * full Cloud access; once it lapses we fall back to the stored tier.
  */
 export function effectiveTier(
   tier: string | null | undefined,
@@ -157,8 +177,10 @@ export function effectiveTier(
   trialEndsAt: Date | string | null | undefined,
   now: Date = new Date()
 ): PlanTier {
-  if (isTrialActive(billingStatus, trialEndsAt, now)) return "pro";
-  return (tier ?? "free") as PlanTier;
+  if (isTrialActive(billingStatus, trialEndsAt, now)) return "cloud";
+  const t = tier ?? "free";
+  if (LEGACY_CLOUD_TIERS.has(t)) return "cloud";
+  return (PLANS[t as PlanTier] ? (t as PlanTier) : "free");
 }
 
 /**

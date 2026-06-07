@@ -66,9 +66,9 @@ export const subscriptionRouter = createRouter({
     };
   }),
 
-  /** Start a Stripe Checkout for a self-serve plan (Starter/Pro). */
+  /** Start a Stripe Checkout for the self-serve Cloud plan. */
   createCheckout: adminProcedure
-    .input(z.object({ tier: z.enum(["starter", "pro"]) }))
+    .input(z.object({ tier: z.enum(["cloud"]).default("cloud") }))
     .mutation(async ({ ctx, input }) => {
       const plan = PLANS[input.tier];
       const priceId = plan.stripePriceEnv

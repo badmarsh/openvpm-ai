@@ -76,8 +76,7 @@ export const adminRouter = createRouter({
 
     const byTier: Record<PlanTier, number> = {
       free: 0,
-      starter: 0,
-      pro: 0,
+      cloud: 0,
       enterprise: 0,
     };
     for (const p of practiceRows) {

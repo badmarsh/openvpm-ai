@@ -516,15 +516,14 @@ function PlanGrid({
   }>;
   currentTier: string;
   enforced: boolean;
-  onChoose: (tier: "starter" | "pro") => void;
+  onChoose: (tier: "cloud") => void;
   busyTier: string | null;
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-3">
       {plans.map((p) => {
         const isCurrent = p.tier === currentTier;
-        const canBuy =
-          enforced && p.purchasable && (p.tier === "starter" || p.tier === "pro") && !isCurrent;
+        const canBuy = enforced && p.purchasable && p.tier === "cloud" && !isCurrent;
         return (
           <div
             key={p.tier}
@@ -572,7 +571,7 @@ function PlanGrid({
                   size="sm"
                   className="w-full"
                   disabled={busyTier === p.tier}
-                  onClick={() => onChoose(p.tier as "starter" | "pro")}
+                  onClick={() => onChoose(p.tier as "cloud")}
                 >
                   {busyTier === p.tier ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
