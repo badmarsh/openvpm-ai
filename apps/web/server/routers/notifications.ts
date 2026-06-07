@@ -10,12 +10,14 @@ import {
   communications,
   invoices,
   vaccinationRecords,
+  practices,
 } from "@openpims/db";
 import {
   sendAppointmentReminder,
   sendInvoiceEmail,
   sendVaccinationReminder,
 } from "@/lib/email";
+import { formatCurrency } from "@/lib/locale/format";
 
 function formatDate(d: Date | string): string {
   return new Date(d).toLocaleDateString("en-US", {
@@ -121,10 +123,22 @@ export const notificationsRouter = createRouter({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Client does not have an email address on file" });
       }
 
+      // Format the total in the practice's region currency.
+      const [practice] = await ctx.db
+        .select({ currency: practices.currency, country: practices.country })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+      const totalFormatted = formatCurrency(
+        invoice.total ?? 0,
+        practice?.currency ?? "usd",
+        practice?.country ?? "US"
+      );
+
       await sendInvoiceEmail({
         to: invoice.clientEmail,
         clientName: `${invoice.clientFirstName} ${invoice.clientLastName}`,
-        invoiceTotal: `$${Number(invoice.total ?? 0).toFixed(2)}`,
+        invoiceTotal: totalFormatted,
         dueDate: invoice.dueDate ?? undefined,
         practiceName: "",
       });
@@ -135,7 +149,7 @@ export const notificationsRouter = createRouter({
         channel: "email",
         direction: "outbound",
         subject: "Invoice",
-        content: `Invoice sent — total: $${Number(invoice.total ?? 0).toFixed(2)}`,
+        content: `Invoice sent — total: ${totalFormatted}`,
         status: "sent",
       });
 
