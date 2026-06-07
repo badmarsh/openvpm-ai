@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { regionDefaults } from "@/lib/locale/format";
+import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 
 // ── Types ───────────────────────────────────────────────────
 type Tab = "practice" | "staff" | "appointmentTypes" | "rooms" | "data" | "templates";
@@ -1611,6 +1612,7 @@ interface TemplateItem {
 }
 
 function TemplatesTab() {
+  const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const { data: templateList, isLoading } = trpc.templates.list.useQuery();
   const createMutation = trpc.templates.create.useMutation({
@@ -1759,7 +1761,7 @@ function TemplatesTab() {
                     {item.defaultQuantity}
                   </td>
                   <td className="px-4 py-3 text-right text-muted-foreground">
-                    ${Number(item.defaultUnitPrice).toFixed(2)}
+                    {formatCurrency(item.defaultUnitPrice)}
                   </td>
                 </tr>
               ))}

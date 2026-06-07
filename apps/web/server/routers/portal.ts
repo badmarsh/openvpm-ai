@@ -13,6 +13,7 @@ import {
   appointmentTypes,
   invoices,
   communications,
+  practices,
 } from "@openpims/db";
 import { users } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
@@ -198,6 +199,15 @@ export const portalRouter = createRouter({
     .query(async ({ ctx, input }) => {
       const client = await getClientByToken(ctx.db, input.token);
 
+      // Practice currency so the portal renders amounts in the right currency.
+      const [practice] = await ctx.db
+        .select({ currency: practices.currency, country: practices.country })
+        .from(practices)
+        .where(eq(practices.id, client.practiceId))
+        .limit(1);
+      const currency = practice?.currency ?? "usd";
+      const country = practice?.country ?? "US";
+
       const rows = await ctx.db
         .select({
           id: invoices.id,
@@ -215,7 +225,7 @@ export const portalRouter = createRouter({
         .where(and(eq(invoices.clientId, client.id), isNull(invoices.deletedAt)))
         .orderBy(desc(invoices.createdAt));
 
-      return rows;
+      return rows.map((r) => ({ ...r, currency, country }));
     }),
 
   /** Appointment types a client can choose from when booking. */

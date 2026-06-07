@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/locale/format";
 
 interface LineItem {
   id: string;
@@ -79,7 +80,12 @@ export default function NewInvoicePage() {
 
   // Calculations — preview only; the server recomputes tax authoritatively
   // from the practice's configured (region-aware) rate.
-  const taxRate = parseFloat(taxConfigQuery.data?.taxRatePercent ?? "8.00") / 100;
+  const taxPercent = taxConfigQuery.data?.taxRatePercent ?? "8.00";
+  const taxRate = parseFloat(taxPercent) / 100;
+  const currency = taxConfigQuery.data?.currency ?? "usd";
+  const country = taxConfigQuery.data?.country ?? "US";
+  const fmt = (v: number | string | null | undefined) =>
+    formatCurrency(v, currency, country);
   const { subtotal, tax, total } = useMemo(() => {
     const sub = items.reduce(
       (sum, item) => sum + item.quantity * parseFloat(item.unitPrice || "0"),
@@ -358,13 +364,10 @@ export default function NewInvoicePage() {
                         {item.quantity}
                       </td>
                       <td className="py-2 text-right tabular-nums">
-                        ${parseFloat(item.unitPrice).toFixed(2)}
+                        {fmt(item.unitPrice)}
                       </td>
                       <td className="py-2 text-right tabular-nums">
-                        $
-                        {(
-                          item.quantity * parseFloat(item.unitPrice)
-                        ).toFixed(2)}
+                        {fmt(item.quantity * parseFloat(item.unitPrice))}
                       </td>
                       <td className="py-2 text-right">
                         <button
@@ -388,15 +391,15 @@ export default function NewInvoicePage() {
           <div className="rounded-lg border border-border p-4 space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="tabular-nums">${subtotal.toFixed(2)}</span>
+              <span className="tabular-nums">{fmt(subtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Tax (8%)</span>
-              <span className="tabular-nums">${tax.toFixed(2)}</span>
+              <span className="text-muted-foreground">Tax ({taxPercent}%)</span>
+              <span className="tabular-nums">{fmt(tax)}</span>
             </div>
             <div className="flex justify-between font-semibold border-t border-border pt-1">
               <span>Total</span>
-              <span className="tabular-nums">${total.toFixed(2)}</span>
+              <span className="tabular-nums">{fmt(total)}</span>
             </div>
           </div>
         )}

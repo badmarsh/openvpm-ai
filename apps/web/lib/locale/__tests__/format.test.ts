@@ -21,6 +21,16 @@ describe("formatCurrency", () => {
   it("formats EUR", () => {
     expect(formatCurrency(40, "eur", "IE")).toContain("€");
   });
+  it("accepts string amounts from the DB and coerces them", () => {
+    const s = formatCurrency("65.00", "gbp", "GB");
+    expect(s).toContain("£");
+    expect(s).toContain("65");
+  });
+  it("treats null/undefined/non-numeric as zero", () => {
+    expect(formatCurrency(null)).toContain("0");
+    expect(formatCurrency(undefined)).toContain("0");
+    expect(formatCurrency("not-a-number")).toContain("0");
+  });
 });
 
 describe("formatDate", () => {

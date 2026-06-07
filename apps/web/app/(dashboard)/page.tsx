@@ -3,6 +3,7 @@
 import { Calendar, PawPrint, DollarSign, FileText, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
+import { formatCurrency, localeForCountry } from "@/lib/locale/format";
 import {
   BarChart,
   Bar,
@@ -19,13 +20,6 @@ import {
   Line,
 } from "recharts";
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
-
 function formatTime(date: Date | string) {
   return new Date(date).toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -39,28 +33,28 @@ const kpiConfig = [
     label: "Today's Appointments",
     description: "Scheduled for today",
     icon: Calendar,
-    format: (v: number) => String(v),
+    isCurrency: false,
   },
   {
     key: "patientsSeen" as const,
     label: "Patients Seen Today",
     description: "Checked out today",
     icon: PawPrint,
-    format: (v: number) => String(v),
+    isCurrency: false,
   },
   {
     key: "revenueMtd" as const,
     label: "Revenue (MTD)",
     description: "Paid invoices this month",
     icon: DollarSign,
-    format: (v: number) => formatCurrency(v),
+    isCurrency: true,
   },
   {
     key: "pendingInvoices" as const,
     label: "Pending Invoices",
     description: "Sent or overdue",
     icon: FileText,
-    format: (v: number) => String(v),
+    isCurrency: false,
   },
 ];
 
@@ -147,6 +141,12 @@ function PieLabel({
 export default function DashboardPage() {
   const stats = trpc.dashboard.getStats.useQuery();
   const charts = trpc.dashboard.getCharts.useQuery();
+  const taxConfig = trpc.billing.getTaxConfig.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+  const currency = taxConfig.data?.currency ?? "usd";
+  const country = taxConfig.data?.country ?? "US";
+  const fmtMoney = (v: number) => formatCurrency(v, currency, country);
 
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
@@ -195,7 +195,7 @@ export default function DashboardPage() {
                         {kpi.label}
                       </p>
                       <p className="font-heading text-2xl font-bold">
-                        {kpi.format(value)}
+                        {kpi.isCurrency ? fmtMoney(value) : String(value)}
                       </p>
                     </div>
                   </div>
@@ -385,9 +385,9 @@ export default function DashboardPage() {
                   className="text-xs fill-muted-foreground"
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: number) =>
-                    new Intl.NumberFormat("en-US", {
+                    new Intl.NumberFormat(localeForCountry(country), {
                       style: "currency",
-                      currency: "USD",
+                      currency: currency.toUpperCase(),
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 0,
                     }).format(value)
@@ -400,7 +400,7 @@ export default function DashboardPage() {
                     borderRadius: "0.5rem",
                     fontSize: "0.875rem",
                   }}
-                  formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                  formatter={(value: number) => [fmtMoney(value), "Revenue"]}
                 />
                 <Line
                   type="monotone"

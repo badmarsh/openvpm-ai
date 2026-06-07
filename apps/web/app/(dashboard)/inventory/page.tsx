@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,11 +26,6 @@ const CATEGORIES = [
   { label: "Food", value: "food" },
   { label: "Supply", value: "supply" },
 ] as const;
-
-function formatCurrency(value: string | number | null | undefined): string {
-  const num = Number(value ?? 0);
-  return `$${num.toFixed(2)}`;
-}
 
 function isExpiringSoon(expirationDate: string | null | undefined): boolean {
   if (!expirationDate) return false;
@@ -490,6 +486,7 @@ function AddSupplierForm({ onClose }: { onClose: () => void }) {
 // --- Main Page ---
 
 export default function InventoryPage() {
+  const formatCurrency = useCurrencyFormatter();
   const [tab, setTab] = useState<"products" | "suppliers">("products");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");

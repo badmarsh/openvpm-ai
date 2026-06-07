@@ -77,6 +77,8 @@ export interface InvoiceData {
   tax: string;
   total: string;
   paidAmount: string;
+  /** Pre-formatted balance due (region-aware currency). Falls back to total − paid. */
+  balanceDue?: string;
 }
 
 export function generateInvoicePdf(data: InvoiceData): jsPDF {
@@ -248,15 +250,17 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   doc.text(data.paidAmount, totalsValX, y, { align: "right" });
   y += 6;
 
-  // Balance due
+  // Balance due — prefer the caller's region-formatted value; otherwise derive
+  // it from total − paid (legacy callers without a currency context).
   const balanceParts = [data.total, data.paidAmount].map((v) =>
     parseFloat(v.replace(/[^0-9.-]/g, ""))
   );
-  const balance = (balanceParts[0]! - balanceParts[1]!).toFixed(2);
+  const balance =
+    data.balanceDue ?? `$${(balanceParts[0]! - balanceParts[1]!).toFixed(2)}`;
   doc.setFont(FONT, "bold");
   setColor(doc, COLOR_TEAL);
   doc.text("Balance Due:", totalsX, y);
-  doc.text(`$${balance}`, totalsValX, y, { align: "right" });
+  doc.text(balance, totalsValX, y, { align: "right" });
 
   // --- Footer ----------------------------------------------------------------
   const pageHeight = doc.internal.pageSize.getHeight();
