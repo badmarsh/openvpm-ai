@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { regionDefaults } from "@/lib/locale/format";
 
 // ── Types ───────────────────────────────────────────────────
 type Tab = "practice" | "staff" | "appointmentTypes" | "rooms" | "data" | "templates";
@@ -47,7 +48,22 @@ const TIMEZONES = [
   "America/Phoenix",
   "America/Anchorage",
   "Pacific/Honolulu",
+  "America/Toronto",
+  "Europe/London",
+  "Europe/Dublin",
+  "Australia/Sydney",
 ];
+
+// Supported regions (ISO 3166-1 alpha-2). US-first; others are UK-ready.
+const COUNTRIES: { code: string; label: string }[] = [
+  { code: "US", label: "United States" },
+  { code: "GB", label: "United Kingdom" },
+  { code: "IE", label: "Ireland" },
+  { code: "CA", label: "Canada" },
+  { code: "AU", label: "Australia" },
+];
+
+const CURRENCIES = ["usd", "gbp", "eur", "cad", "aud"];
 
 const PRESET_COLORS = [
   "#0d9488",
@@ -153,6 +169,10 @@ function PracticeInfoTab() {
     email: string;
     website: string;
     timezone: string;
+    country: string;
+    currency: string;
+    taxRatePercent: string;
+    vatNumber: string;
   } | null>(null);
 
   // Initialize form when data loads
@@ -163,6 +183,10 @@ function PracticeInfoTab() {
     email: practice?.email ?? "",
     website: practice?.website ?? "",
     timezone: practice?.timezone ?? "America/New_York",
+    country: practice?.country ?? "US",
+    currency: practice?.currency ?? "usd",
+    taxRatePercent: practice?.taxRatePercent ?? "8.00",
+    vatNumber: practice?.vatNumber ?? "",
   };
 
   if (isLoading) {
@@ -175,6 +199,19 @@ function PracticeInfoTab() {
 
   const handleChange = (field: string, value: string) => {
     setForm({ ...current, [field]: value });
+  };
+
+  // Changing country prefills sensible currency/tax/timezone defaults for that
+  // region; the admin can still override any of them before saving.
+  const handleCountryChange = (country: string) => {
+    const d = regionDefaults(country);
+    setForm({
+      ...current,
+      country,
+      currency: d.currency,
+      taxRatePercent: d.taxRatePercent,
+      timezone: d.timezone,
+    });
   };
 
   return (
@@ -232,6 +269,67 @@ function PracticeInfoTab() {
             ))}
           </select>
         </label>
+      </div>
+
+      {/* ── Region & Tax ── */}
+      <div className="space-y-1 border-t border-border pt-6">
+        <h3 className="text-sm font-semibold">Region &amp; Tax</h3>
+        <p className="text-xs text-muted-foreground">
+          Controls invoice currency, tax rate, and date formatting. Choosing a
+          country prefills the usual defaults — adjust as needed.
+        </p>
+      </div>
+      <div className="grid gap-4">
+        <div className="grid grid-cols-2 gap-4">
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium">Country</span>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={current.country}
+              onChange={(e) => handleCountryChange(e.target.value)}
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium">Currency</span>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={current.currency}
+              onChange={(e) => handleChange("currency", e.target.value)}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium">Tax / VAT rate (%)</span>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={current.taxRatePercent}
+              onChange={(e) => handleChange("taxRatePercent", e.target.value)}
+            />
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium">VAT number (optional)</span>
+            <Input
+              value={current.vatNumber}
+              onChange={(e) => handleChange("vatNumber", e.target.value)}
+            />
+          </label>
+        </div>
       </div>
       <Button
         onClick={() => {
