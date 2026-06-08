@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createRouter, protectedProcedure, requireRole } from "../trpc";
+import { createRouter, protectedProcedure, requireRole, requireFeature } from "../trpc";
 import {
   runAgent,
   isAgentConfigured,
@@ -8,9 +8,10 @@ import {
   AgentNotConfiguredError,
 } from "@/lib/agent";
 
-const agentProcedure = protectedProcedure.use(
-  requireRole("admin", "veterinarian")
-);
+// The OpenVPM Agent is a Pro feature on hosted; unrestricted on self-host.
+const agentProcedure = protectedProcedure
+  .use(requireRole("admin", "veterinarian"))
+  .use(requireFeature("agent"));
 
 export const agentRouter = createRouter({
   /** Whether the agent is enabled (API key present) and what it can do. */

@@ -49,3 +49,6 @@ docs/screenshots/audit/
 test-results/
 CAVSG_AI_Innovator_Survey_COMPLETED.docx
 package-lock.json
+
+# Local MCP server config (not for the public repo)
+.mcp.json

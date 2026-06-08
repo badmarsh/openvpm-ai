@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { uploadFile } from "@/lib/s3";
 import { db } from "@openpims/db/client";
 import { files } from "@openpims/db";
+import { withTenant } from "@/lib/tenant-db";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -92,17 +93,19 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const url = await uploadFile(key, buffer, mimeType);
 
-    // Persist metadata in the database
-    await db.insert(files).values({
-      practiceId,
-      uploadedBy: session.user.id,
-      fileName: file.name,
-      fileKey: key,
-      fileUrl: url,
-      mimeType,
-      fileSizeBytes: file.size,
-      category,
-    });
+    // Persist metadata in the database (tenant-scoped for RLS).
+    await withTenant(db, practiceId, (tx) =>
+      tx.insert(files).values({
+        practiceId,
+        uploadedBy: session.user.id,
+        fileName: file.name,
+        fileKey: key,
+        fileUrl: url,
+        mimeType,
+        fileSizeBytes: file.size,
+        category,
+      })
+    );
 
     return NextResponse.json({ url, key }, { status: 201 });
   } catch (err) {

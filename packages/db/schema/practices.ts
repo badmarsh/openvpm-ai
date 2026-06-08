@@ -21,7 +21,14 @@ export const practices = pgTable("practices", {
   timezone: varchar("timezone", { length: 64 }).notNull().default("America/New_York"),
   logoUrl: varchar("logo_url", { length: 512 }),
   settings: jsonb("settings").default({}),
-  subscriptionTier: varchar("subscription_tier", { length: 32 }).default("free"),
+  // Hosted-SaaS subscription (ignored by self-host unless HOSTED_BILLING_ENABLED).
+  // subscriptionTier is the canonical plan tier: free | starter | pro | enterprise.
+  subscriptionTier: varchar("subscription_tier", { length: 32 }).notNull().default("free"),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 64 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 64 }),
+  // Stripe-style billing lifecycle: none | trialing | active | past_due | canceled.
+  billingStatus: varchar("billing_status", { length: 24 }).notNull().default("none"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   // Region/locale — gates currency, tax, formatting, and (later) regulatory
   // behavior. Defaults keep existing US practices working unchanged.
   country: varchar("country", { length: 2 }).notNull().default("US"), // ISO 3166-1 alpha-2

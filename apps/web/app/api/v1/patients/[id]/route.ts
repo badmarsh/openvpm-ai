@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@openpims/db/client";
 import { patients } from "@openpims/db";
 import { authenticateApiKey } from "@/lib/api-auth";
+import { withTenant } from "@/lib/tenant-db";
 import { withErrorHandling, notFound } from "@/lib/compat/shared/errors";
 import { toApiPatient } from "@/lib/compat/openvpm";
 
@@ -16,20 +17,22 @@ export async function GET(
   const auth = await authenticateApiKey(req, "patients:read");
   if (!auth.ok) return auth.response;
 
-  return withErrorHandling(async () => {
-    const [row] = await db
-      .select()
-      .from(patients)
-      .where(
-        and(
-          eq(patients.id, params.id),
-          eq(patients.practiceId, auth.ctx.practiceId),
-          isNull(patients.deletedAt)
+  return withErrorHandling(() =>
+    withTenant(db, auth.ctx.practiceId, async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(patients)
+        .where(
+          and(
+            eq(patients.id, params.id),
+            eq(patients.practiceId, auth.ctx.practiceId),
+            isNull(patients.deletedAt)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (!row) return notFound("Patient");
-    return NextResponse.json({ data: toApiPatient(row) });
-  });
+      if (!row) return notFound("Patient");
+      return NextResponse.json({ data: toApiPatient(row) });
+    })
+  );
 }

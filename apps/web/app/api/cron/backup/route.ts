@@ -5,6 +5,7 @@ import { practices } from "@openpims/db";
 import { exportPracticeData, backupKey } from "@/lib/backup/export";
 import { uploadFile } from "@/lib/s3";
 import { alertOps } from "@/lib/alerts";
+import { withSystem, withTenant } from "@/lib/tenant-db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -22,14 +23,20 @@ export async function GET(request: Request) {
   let failed = 0;
 
   try {
-    const allPractices = await db
-      .select({ id: practices.id })
-      .from(practices)
-      .where(isNull(practices.deletedAt));
+    // Cross-tenant sweep → system context (RLS bypass).
+    const allPractices = await withSystem(db, (tx) =>
+      tx
+        .select({ id: practices.id })
+        .from(practices)
+        .where(isNull(practices.deletedAt))
+    );
 
     for (const p of allPractices) {
       try {
-        const data = await exportPracticeData(db, p.id, new Date().toISOString());
+        // Export each practice in its own tenant context (RLS-scoped).
+        const data = await withTenant(db, p.id, (tx) =>
+          exportPracticeData(tx, p.id, new Date().toISOString())
+        );
         const key = backupKey(p.id, today);
         await uploadFile(key, Buffer.from(JSON.stringify(data)), "application/json");
         ok++;

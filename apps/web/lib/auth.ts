@@ -4,6 +4,8 @@ import { compare } from "bcryptjs";
 import { db } from "@openpims/db/client";
 import { users } from "@openpims/db";
 import { eq } from "drizzle-orm";
+import { withSystem } from "@/lib/tenant-db";
+import { billingEnforced } from "@/lib/billing/plans";
 
 declare module "next-auth" {
   interface Session {
@@ -45,16 +47,24 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email))
-          .limit(1);
+        // Login looks up by email with no tenant context yet → system context.
+        const [user] = await withSystem(db, (tx) =>
+          tx
+            .select()
+            .from(users)
+            .where(eq(users.email, credentials.email))
+            .limit(1)
+        );
 
         if (!user) return null;
 
         const isValid = await compare(credentials.password, user.passwordHash);
         if (!isValid) return null;
+
+        // On the hosted service, require a verified email before login.
+        if (billingEnforced() && !user.emailVerifiedAt) {
+          throw new Error("Please verify your email before signing in.");
+        }
 
         return {
           id: user.id,

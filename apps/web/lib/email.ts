@@ -271,3 +271,47 @@ export async function sendInvoiceEmail(data: {
 
   return { success: result.success };
 }
+
+// ---------------------------------------------------------------------------
+// Account: email verification + password reset (hosted auth)
+// ---------------------------------------------------------------------------
+
+export async function sendVerificationEmail(data: {
+  to: string;
+  name: string;
+  verifyUrl: string;
+}): Promise<{ success: boolean }> {
+  const body = `
+    <p style="margin:0 0 16px;color:#111827;font-size:15px;line-height:1.6;">Hi ${data.name},</p>
+    <p style="margin:0 0 8px;color:#111827;font-size:15px;line-height:1.6;">Welcome to OpenVPM! Please confirm your email address to activate your account and start your free trial.</p>
+    ${ctaButton("Verify my email", data.verifyUrl)}
+    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.5;">This link expires in 24 hours. If you didn't create an OpenVPM account, you can ignore this email.</p>
+  `;
+  const html = emailLayout("OpenVPM", body);
+  const result = await sendEmail({
+    to: data.to,
+    subject: "Verify your OpenVPM email",
+    html,
+  });
+  return { success: result.success };
+}
+
+export async function sendPasswordResetEmail(data: {
+  to: string;
+  name: string;
+  resetUrl: string;
+}): Promise<{ success: boolean }> {
+  const body = `
+    <p style="margin:0 0 16px;color:#111827;font-size:15px;line-height:1.6;">Hi ${data.name},</p>
+    <p style="margin:0 0 8px;color:#111827;font-size:15px;line-height:1.6;">We received a request to reset your OpenVPM password. Click below to choose a new one.</p>
+    ${ctaButton("Reset my password", data.resetUrl)}
+    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.5;">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email — your password won't change.</p>
+  `;
+  const html = emailLayout("OpenVPM", body);
+  const result = await sendEmail({
+    to: data.to,
+    subject: "Reset your OpenVPM password",
+    html,
+  });
+  return { success: result.success };
+}

@@ -5,6 +5,7 @@ import {
   getTool,
   type AgentToolContext,
 } from "./tools";
+import { recordUsage } from "@/lib/billing/usage";
 
 const DEFAULT_MODEL = process.env.AGENT_MODEL || "claude-sonnet-4-6";
 const MAX_ITERATIONS = 8;
@@ -62,6 +63,9 @@ export async function runAgent(opts: {
 
   const client = new Anthropic({ apiKey });
   const allowWrites = opts.allowWrites ?? false;
+
+  // Meter the agent run for hosted billing (no-op on self-host).
+  void recordUsage({ practiceId: opts.context.practiceId, kind: "ai_run" });
 
   // Prompt caching: cache the (static) system prompt and tool defs across the
   // loop's turns so only the growing message tail is re-billed at full rate.

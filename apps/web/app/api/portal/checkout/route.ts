@@ -3,6 +3,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
 import { clients, invoices, patients, practices } from "@openpims/db";
 import { createCheckoutSession } from "@/lib/stripe";
+import { withSystem } from "@/lib/tenant-db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +16,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Public token flow → run cross-tenant lookups in system context (RLS bypass).
+    return await withSystem(db, async (tx) => {
     // Validate client token (same pattern as portal router)
-    const [client] = await db
+    const [client] = await tx
       .select()
       .from(clients)
       .where(and(eq(clients.accessToken, token), isNull(clients.deletedAt)))
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch invoice and verify it belongs to this client
-    const [invoice] = await db
+    const [invoice] = await tx
       .select({
         id: invoices.id,
         total: invoices.total,
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
     // Build description
     let description = `Invoice payment`;
     if (invoice.patientId) {
-      const [patient] = await db
+      const [patient] = await tx
         .select({ name: patients.name })
         .from(patients)
         .where(eq(patients.id, invoice.patientId))
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Charge in the practice's configured currency (region-aware).
-    const [practice] = await db
+    const [practice] = await tx
       .select({ currency: practices.currency })
       .from(practices)
       .where(eq(practices.id, invoice.practiceId))
@@ -117,6 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ url: result.url });
+    });
   } catch (err) {
     console.error("[Portal Checkout] Error:", err);
     return NextResponse.json(

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { db } from "@openpims/db/client";
 import { authenticateApiKey } from "@/lib/api-auth";
+import { withTenant } from "@/lib/tenant-db";
 import { withErrorHandling, apiError, validationError } from "@/lib/compat/shared/errors";
 import { runAgent, AgentNotConfiguredError } from "@/lib/agent";
 
@@ -31,16 +32,18 @@ export async function POST(req: Request) {
     if (!parsed.success) return validationError(parsed.error);
 
     try {
-      const result = await runAgent({
-        instruction: parsed.data.instruction,
-        allowWrites: parsed.data.allow_writes,
-        context: {
-          db,
-          practiceId: auth.ctx.practiceId,
-          // No human user on an API call; identify the actor by key.
-          userId: `apikey:${auth.ctx.apiKeyId}`,
-        },
-      });
+      const result = await withTenant(db, auth.ctx.practiceId, (tx) =>
+        runAgent({
+          instruction: parsed.data.instruction,
+          allowWrites: parsed.data.allow_writes,
+          context: {
+            db: tx,
+            practiceId: auth.ctx.practiceId,
+            // No human user on an API call; identify the actor by key.
+            userId: `apikey:${auth.ctx.apiKeyId}`,
+          },
+        })
+      );
       return NextResponse.json({ data: result });
     } catch (e) {
       if (e instanceof AgentNotConfiguredError) {

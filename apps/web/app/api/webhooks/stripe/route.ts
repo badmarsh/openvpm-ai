@@ -3,6 +3,7 @@ import { eq, and, isNull, sum } from "drizzle-orm";
 import { db } from "@openpims/db/client";
 import { invoices, payments } from "@openpims/db";
 import { constructWebhookEvent } from "@/lib/stripe";
+import { withSystem } from "@/lib/tenant-db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,44 +42,47 @@ export async function POST(req: NextRequest) {
       const amountCents = session.amount_total ?? 0;
       const amountDollars = (amountCents / 100).toFixed(2);
 
-      // Record the payment
-      await db.insert(payments).values({
-        invoiceId,
-        amount: amountDollars,
-        method: "online",
-        notes: "Paid via Stripe Checkout",
-      });
+      // Webhook has no tenant session and only the invoiceId → system context.
+      await withSystem(db, async (tx) => {
+        // Record the payment
+        await tx.insert(payments).values({
+          invoiceId,
+          amount: amountDollars,
+          method: "online",
+          notes: "Paid via Stripe Checkout",
+        });
 
-      // Sum all payments for this invoice
-      const [result] = await db
-        .select({ total: sum(payments.amount) })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.invoiceId, invoiceId),
-            isNull(payments.deletedAt),
-          ),
-        );
+        // Sum all payments for this invoice
+        const [result] = await tx
+          .select({ total: sum(payments.amount) })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.invoiceId, invoiceId),
+              isNull(payments.deletedAt),
+            ),
+          );
 
-      const paidAmount = result?.total ?? "0";
+        const paidAmount = result?.total ?? "0";
 
-      // Get invoice total to check if fully paid
-      const [invoice] = await db
-        .select({ total: invoices.total })
-        .from(invoices)
-        .where(eq(invoices.id, invoiceId));
-
-      if (invoice) {
-        const updates: Record<string, any> = { paidAmount };
-        if (parseFloat(paidAmount) >= parseFloat(invoice.total)) {
-          updates.status = "paid";
-        }
-
-        await db
-          .update(invoices)
-          .set(updates)
+        // Get invoice total to check if fully paid
+        const [invoice] = await tx
+          .select({ total: invoices.total })
+          .from(invoices)
           .where(eq(invoices.id, invoiceId));
-      }
+
+        if (invoice) {
+          const updates: Record<string, any> = { paidAmount };
+          if (parseFloat(paidAmount) >= parseFloat(invoice.total)) {
+            updates.status = "paid";
+          }
+
+          await tx
+            .update(invoices)
+            .set(updates)
+            .where(eq(invoices.id, invoiceId));
+        }
+      });
     }
 
     return NextResponse.json({ received: true });

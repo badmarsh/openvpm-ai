@@ -3,6 +3,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
 import { webhooks } from "@openpims/db";
 import { alertOps } from "@/lib/alerts";
+import { withTenant } from "@/lib/tenant-db";
 
 export async function dispatchWebhookEvent(
   practiceId: string,
@@ -11,16 +12,19 @@ export async function dispatchWebhookEvent(
 ): Promise<void> {
   let activeWebhooks;
   try {
-    activeWebhooks = await db
-      .select()
-      .from(webhooks)
-      .where(
-        and(
-          eq(webhooks.practiceId, practiceId),
-          eq(webhooks.active, true),
-          isNull(webhooks.deletedAt),
+    // Tenant-scoped read (works under RLS regardless of the caller's context).
+    activeWebhooks = await withTenant(db, practiceId, (tx) =>
+      tx
+        .select()
+        .from(webhooks)
+        .where(
+          and(
+            eq(webhooks.practiceId, practiceId),
+            eq(webhooks.active, true),
+            isNull(webhooks.deletedAt),
+          ),
         ),
-      );
+    );
   } catch (err) {
     console.error("[WebhookDispatcher] Failed to query webhooks:", err);
     return;

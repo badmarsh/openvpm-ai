@@ -3,10 +3,19 @@ import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { eq } from "drizzle-orm";
 import { authOptions } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/audit";
 import { db } from "@openpims/db/client";
 import type { Database } from "@openpims/db/client";
+import { withTenant, withSystem } from "@/lib/tenant-db";
+import { practices } from "@openpims/db";
+import {
+  billingEnforced,
+  isEntitled,
+  effectiveTier,
+  type Feature,
+} from "@/lib/billing/plans";
 
 type UserRole =
   | "admin"
@@ -60,7 +69,17 @@ const t = initTRPC.context<TRPCContext>().create({
 });
 
 export const createRouter = t.router;
-export const publicProcedure = t.procedure;
+
+/**
+ * Public / pre-auth endpoints (registration, the token-based client portal).
+ * They have no tenant session and do their own scoping (tokens, email, rate
+ * limits), so they run in a system DB context that bypasses tenant RLS.
+ */
+export const publicProcedure = t.procedure.use(async ({ ctx, next }) => {
+  return withSystem(ctx.db, (tx) =>
+    next({ ctx: { ...ctx, db: tx } })
+  );
+});
 
 /** Requires an authenticated session */
 export const protectedProcedure = t.procedure.use(
@@ -78,27 +97,78 @@ export const protectedProcedure = t.procedure.use(
     }
 
     const user = ctx.session.user;
-    const result = await next({
-      ctx: { session: ctx.session, user, practiceId: user.practiceId },
-    });
-
-    // Audit every successful mutation: who changed what, when, from where.
-    // Fire-and-forget — never block or fail the request on the audit write.
-    if (type === "mutation" && result.ok) {
-      const rawInput = await getRawInput().catch(() => undefined);
-      void recordAuditLog(ctx.db, {
-        practiceId: user.practiceId,
-        userId: user.id,
-        ip: ctx.ip,
-        path,
-        rawInput,
-        resultData: (result as { data?: unknown }).data,
+    // Run the whole request in a tenant DB context so Postgres RLS scopes every
+    // query to this practice (defense-in-depth behind the app-layer filters).
+    return withTenant(ctx.db, user.practiceId, async (tx) => {
+      const result = await next({
+        ctx: { session: ctx.session, user, practiceId: user.practiceId, db: tx },
       });
-    }
 
-    return result;
+      // Audit every successful mutation: who changed what, when, from where.
+      // Runs in its own system-context tx so it's independent of this request's
+      // transaction lifecycle and never blocks or fails the request.
+      if (type === "mutation" && result.ok) {
+        const rawInput = await getRawInput().catch(() => undefined);
+        void withSystem(db, (sysTx) =>
+          recordAuditLog(sysTx, {
+            practiceId: user.practiceId,
+            userId: user.id,
+            ip: ctx.ip,
+            path,
+            rawInput,
+            resultData: (result as { data?: unknown }).data,
+          })
+        ).catch(() => {});
+      }
+
+      return result;
+    });
   }
 );
+
+/**
+ * Requires the practice's plan to include a premium feature.
+ *
+ * No-op on self-host: when HOSTED_BILLING_ENABLED is unset, billingEnforced()
+ * is false and this allows everything (and skips the DB lookup entirely), so
+ * the OSS edition is never gated. Only the managed hosted service enforces it.
+ */
+export function requireFeature(feature: Feature) {
+  return t.middleware(async ({ ctx, next }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (billingEnforced()) {
+      const [practice] = await ctx.db
+        .select({
+          tier: practices.subscriptionTier,
+          billingStatus: practices.billingStatus,
+          trialEndsAt: practices.trialEndsAt,
+        })
+        .from(practices)
+        .where(eq(practices.id, ctx.session.user.practiceId))
+        .limit(1);
+      const tier = effectiveTier(
+        practice?.tier,
+        practice?.billingStatus,
+        practice?.trialEndsAt
+      );
+      if (!isEntitled(tier, feature, true)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Your plan doesn't include this feature. Upgrade to unlock it.`,
+        });
+      }
+    }
+    return next({
+      ctx: {
+        session: ctx.session,
+        user: ctx.session.user,
+        practiceId: ctx.session.user.practiceId,
+      },
+    });
+  });
+}
 
 /** Requires specific roles */
 export function requireRole(...roles: UserRole[]) {

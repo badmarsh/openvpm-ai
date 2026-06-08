@@ -1,0 +1,89 @@
+/**
+ * Live Row-Level Security verification. Connects as the least-privilege
+ * `openpims_app` role and proves tenant isolation against a real database.
+ *
+ * Run with: pnpm db:rls:test   (requires the DB up + pnpm db:rls applied)
+ */
+import { config } from "dotenv";
+config({ path: "../../.env" });
+
+import postgres from "postgres";
+import { randomUUID } from "crypto";
+
+const ownerUrl = process.env.DATABASE_URL;
+if (!ownerUrl) {
+  console.error("DATABASE_URL not set");
+  process.exit(1);
+}
+// Derive the restricted-role URL by swapping the credentials.
+const appUrl = ownerUrl.replace(/\/\/[^:]+:[^@]+@/, "//openpims_app:openpims_app@");
+
+const owner = postgres(ownerUrl, { max: 1 });
+const app = postgres(appUrl, { max: 1 });
+
+const aId = randomUUID();
+const bId = randomUUID();
+let failures = 0;
+function check(name: string, ok: boolean) {
+  console.log(`  ${ok ? "✓" : "✗"} ${name}`);
+  if (!ok) failures++;
+}
+
+try {
+  // Arrange (as owner — bypasses RLS).
+  await owner`insert into practices (id, name) values (${aId}, 'RLS Test A'), (${bId}, 'RLS Test B')`;
+  await owner`insert into clients (practice_id, first_name, last_name) values
+    (${aId}, 'Alice', 'A'), (${bId}, 'Bob', 'B')`;
+
+  // Tenant A context sees only A's rows.
+  const aRows = await app.begin(async (tx) => {
+    await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+    return tx`select practice_id from clients where practice_id in (${aId}, ${bId})`;
+  });
+  check("tenant A sees only A's clients", aRows.length === 1 && aRows[0]!.practice_id === aId);
+
+  // Tenant B context sees only B's rows.
+  const bRows = await app.begin(async (tx) => {
+    await tx`select set_config('app.current_practice_id', ${bId}, true)`;
+    return tx`select practice_id from clients where practice_id in (${aId}, ${bId})`;
+  });
+  check("tenant B sees only B's clients", bRows.length === 1 && bRows[0]!.practice_id === bId);
+
+  // Cross-tenant WRITE is rejected by the WITH CHECK clause.
+  let writeBlocked = false;
+  try {
+    await app.begin(async (tx) => {
+      await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+      await tx`insert into clients (practice_id, first_name, last_name) values (${bId}, 'Evil', 'X')`;
+    });
+  } catch {
+    writeBlocked = true;
+  }
+  check("cross-tenant INSERT is blocked", writeBlocked);
+
+  // No tenant context → deny by default.
+  const noneRows = await app`select practice_id from clients where practice_id in (${aId}, ${bId})`;
+  check("no tenant context → zero rows", noneRows.length === 0);
+
+  // System bypass sees both (for cron / platform admin).
+  const allRows = await app.begin(async (tx) => {
+    await tx`select set_config('app.rls_bypass', 'on', true)`;
+    return tx`select practice_id from clients where practice_id in (${aId}, ${bId})`;
+  });
+  check("system bypass sees both practices", allRows.length === 2);
+} catch (err) {
+  console.error("Unexpected error:", err);
+  failures++;
+} finally {
+  // Cleanup (as owner).
+  await owner`delete from clients where practice_id in (${aId}, ${bId})`;
+  await owner`delete from practices where id in (${aId}, ${bId})`;
+  await owner.end();
+  await app.end();
+}
+
+if (failures > 0) {
+  console.error(`\n✗ ${failures} RLS check(s) FAILED`);
+  process.exit(1);
+}
+console.log("\n✓ All RLS isolation checks passed.");
