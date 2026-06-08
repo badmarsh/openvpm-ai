@@ -183,7 +183,7 @@ export default function LandingPage() {
             >
               <CheckCircle2 className="w-4 h-4 text-teal-600" />
               <span className="text-sm font-medium text-teal-700">
-                Free and open source &mdash; MIT licensed, forever
+                Free and open source &mdash; AGPLv3, forever
               </span>
             </div>
             <h1

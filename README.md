@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/evangauer/openvpm/actions"><img src="https://github.com/evangauer/openvpm/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL_v3-blue.svg" alt="AGPL v3 License" /></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" /></a>
   <a href="https://github.com/evangauer/openvpm/discussions"><img src="https://img.shields.io/badge/Discussions-join-blue.svg" alt="Discussions" /></a>
   <a href="https://github.com/evangauer/openvpm/stargazers"><img src="https://img.shields.io/github/stars/evangauer/openvpm?style=social" alt="GitHub Stars" /></a>
@@ -52,7 +52,7 @@ OpenVPM is a modern, cloud-native veterinary practice information management sys
 - **Beautiful and intuitive** — Practice managers and front desk staff should be productive within a single shift, not a multi-week training program
 - **API-first** — Every feature accessible via a documented REST + WebSocket API so AI tools, voice agents, and integrations can read AND write
 - **Cloud-native but self-hostable** — Run it on our cloud or deploy it on your own infrastructure
-- **Free and open source** — MIT licensed, forever. No per-provider pricing. No vendor lock-in. Your data is yours.
+- **Free and open source** — AGPLv3, forever. No per-provider pricing. No vendor lock-in. Your data is yours.
 
 > *"I would need to see the product benefit us by reducing our staff hours."*
 > — A practice manager we interviewed during research
@@ -344,9 +344,11 @@ See **[ROADMAP.md](ROADMAP.md)** for what's shipping now, next, and later — an
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+**GNU AGPLv3** — see [LICENSE](LICENSE) for the full text.
 
-Free to use, modify, and distribute. Build on it. Sell services around it. Make veterinary medicine better.
+Free to use, run, self-host, modify, and share. Your clinic owns its data and can export it any time — no lock-in, ever. The only obligation: if you run a **modified** version as a network service, share your changes under the same license (the AGPL "network use" clause).
+
+Need different terms — e.g. to embed OpenVPM in a closed-source product or offer a modified hosted service without the AGPL obligations? A **commercial license** is available. Reach out.
 
 ---
 

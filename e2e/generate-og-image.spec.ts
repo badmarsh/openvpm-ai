@@ -52,7 +52,7 @@ const OG_HTML = `<!doctype html>
   </div>
 
   <div>
-    <span class="tag">Open source · MIT licensed</span>
+    <span class="tag">Open source · AGPLv3</span>
     <h1>The open-source veterinary PIMS the industry has been waiting for.</h1>
     <p class="sub" style="margin-top: 24px;">
       API-first. Self-hostable. Free, forever. Built for clinics and AI builders.
