@@ -73,7 +73,7 @@ export function MarketingFooter() {
             Built with <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" /> for the veterinary community
           </p>
           <p className="text-sm text-gray-400">
-            &copy; 2026 OpenVPM. MIT Licensed.
+            &copy; 2026 OpenVPM. AGPLv3.
           </p>
         </div>
       </div>

@@ -94,4 +94,4 @@ Want to help but unsure where to start? Open a
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the GNU AGPLv3.
