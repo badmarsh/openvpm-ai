@@ -17,6 +17,27 @@ const sqlText = readFileSync(join(here, "rls", "enable-rls.sql"), "utf8");
 
 const sql = postgres(url, { max: 1 });
 try {
+  // Ensure the least-privilege app role exists BEFORE the grants run. No
+  // credential is committed: the password comes from OPENPIMS_APP_DB_PASSWORD.
+  const [exists] = await sql`select 1 from pg_roles where rolname = 'openpims_app'`;
+  const appPw = process.env.OPENPIMS_APP_DB_PASSWORD;
+  if (!exists) {
+    if (!appPw) {
+      console.error(
+        "openpims_app role does not exist. Create it with a strong password, " +
+          "or set OPENPIMS_APP_DB_PASSWORD and re-run `pnpm db:rls`."
+      );
+      process.exit(1);
+    }
+    const q = appPw.replace(/'/g, "''"); // escape single quotes
+    await sql.unsafe(`CREATE ROLE openpims_app LOGIN PASSWORD '${q}'`);
+    console.log("✓ created openpims_app role");
+  } else if (appPw) {
+    const q = appPw.replace(/'/g, "''");
+    await sql.unsafe(`ALTER ROLE openpims_app PASSWORD '${q}'`);
+    console.log("✓ rotated openpims_app password");
+  }
+
   // Simple protocol so the multi-statement / DO-block migration runs as one.
   await sql.unsafe(sqlText).simple();
   console.log("✓ RLS policies applied (run as the DB owner).");

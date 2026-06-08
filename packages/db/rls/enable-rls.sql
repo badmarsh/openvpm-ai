@@ -7,21 +7,17 @@
 -- The table OWNER bypasses RLS (we do NOT use FORCE), so:
 --   • Migrations + dev/self-host on the owner connection are unaffected.
 --   • Enforcement activates when the app connects as the least-privilege role
---     `openpims_app` created below.
+--     `openpims_app`, which you point the hosted DATABASE_URL at.
 --
 -- Apply with: pnpm db:rls   (idempotent — safe to re-run after schema changes)
+--
+-- ROLE CREATION: this file contains NO credentials. The `openpims_app` role is
+-- created/managed by the apply script (packages/db/apply-rls.ts) using the
+-- OPENPIMS_APP_DB_PASSWORD env var, or you create the role yourself beforehand.
+-- The grants below assume the role already exists.
 -- ============================================================================
 
--- 1) Least-privilege application role. CHANGE THE PASSWORD IN PRODUCTION
---    (e.g. ALTER ROLE openpims_app PASSWORD '...'), then point the hosted
---    DATABASE_URL at this role to turn RLS enforcement on.
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openpims_app') THEN
-    CREATE ROLE openpims_app LOGIN PASSWORD 'openpims_app';
-  END IF;
-END$$;
-
+-- 1) Grants for the least-privilege application role (must already exist).
 GRANT USAGE ON SCHEMA public TO openpims_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO openpims_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO openpims_app;

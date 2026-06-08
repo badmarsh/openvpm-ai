@@ -45,7 +45,9 @@ without any risk to the default configuration.
 ## Applying it
 
 ```bash
-pnpm db:rls        # apply policies + create the openpims_app role (run as owner)
+# Set a strong password for the app role; the script creates the role if missing
+# (no credential is stored in the repo) and applies the policies + grants.
+OPENPIMS_APP_DB_PASSWORD='<strong-password>' pnpm db:rls   # run as the DB owner
 pnpm db:rls:test   # live verification: proves cross-tenant isolation
 ```
 
@@ -55,10 +57,10 @@ nothing, and the system bypass sees everything.
 
 ## Activating enforcement in production
 
-1. `pnpm db:rls` against the production database.
-2. `ALTER ROLE openpims_app PASSWORD '<strong-password>';` (the migration sets a
-   dev placeholder).
-3. Point the hosted `DATABASE_URL` at `openpims_app`.
+1. `OPENPIMS_APP_DB_PASSWORD='<strong>' pnpm db:rls` against the production database
+   (creates the `openpims_app` role with that password — or rotates it if it
+   already exists — then applies policies + grants).
+2. Point the hosted `DATABASE_URL` at the `openpims_app` role.
 
 ### Entrypoint coverage (all wired)
 
@@ -76,6 +78,6 @@ correctly under the enforcing `openpims_app` role:
   `app/api/portal/checkout` → `withSystem`.
 
 These are no-ops on the owner connection (dev/self-host). To activate enforcement
-in production: run `pnpm db:rls`, set a real `openpims_app` password, and point
-`DATABASE_URL` at that role (Phase 5 infra). Re-run `pnpm db:rls:test` against
+in production: run `OPENPIMS_APP_DB_PASSWORD='<strong>' pnpm db:rls` and point
+`DATABASE_URL` at the `openpims_app` role (Phase 5 infra). Re-run `pnpm db:rls:test` against
 staging to confirm isolation under the restricted role.
