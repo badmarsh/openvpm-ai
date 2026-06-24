@@ -12,6 +12,11 @@ import {
   clients,
   patients,
   appointments,
+  soapNotes,
+  vaccinationRecords,
+  problemList,
+  invoices,
+  invoiceItems,
 } from "@openpims/db";
 import { regionDefaults } from "@/lib/locale/format";
 import { alertOps } from "@/lib/alerts";
@@ -39,7 +44,16 @@ async function syncBillingAfterStaffChange(
 
 interface PracticeSettings {
   onboardingCompletedAt?: string | null;
-  demoData?: { clientIds: string[]; patientIds: string[]; appointmentIds: string[] };
+  demoData?: {
+    clientIds: string[];
+    patientIds: string[];
+    appointmentIds: string[];
+    soapNoteIds?: string[];
+    vaccinationIds?: string[];
+    problemIds?: string[];
+    invoiceIds?: string[];
+    invoiceItemIds?: string[];
+  };
   onboardingDraft?: {
     logoName?: string;
     brandColor?: string;
@@ -257,6 +271,58 @@ export const settingsRouter = createRouter({
     const demo = settings.demoData;
     if (demo) {
       const now = new Date();
+      // Soft-delete the clinical and billing records first, then the
+      // appointments/patients/clients they hang off of.
+      if (demo.invoiceItemIds?.length) {
+        await ctx.db
+          .update(invoiceItems)
+          .set({ deletedAt: now })
+          .where(inArray(invoiceItems.id, demo.invoiceItemIds));
+      }
+      if (demo.invoiceIds?.length) {
+        await ctx.db
+          .update(invoices)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(invoices.practiceId, ctx.practiceId),
+              inArray(invoices.id, demo.invoiceIds)
+            )
+          );
+      }
+      if (demo.problemIds?.length) {
+        await ctx.db
+          .update(problemList)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(problemList.practiceId, ctx.practiceId),
+              inArray(problemList.id, demo.problemIds)
+            )
+          );
+      }
+      if (demo.vaccinationIds?.length) {
+        await ctx.db
+          .update(vaccinationRecords)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(vaccinationRecords.practiceId, ctx.practiceId),
+              inArray(vaccinationRecords.id, demo.vaccinationIds)
+            )
+          );
+      }
+      if (demo.soapNoteIds?.length) {
+        await ctx.db
+          .update(soapNotes)
+          .set({ deletedAt: now })
+          .where(
+            and(
+              eq(soapNotes.practiceId, ctx.practiceId),
+              inArray(soapNotes.id, demo.soapNoteIds)
+            )
+          );
+      }
       if (demo.appointmentIds?.length) {
         await ctx.db
           .update(appointments)

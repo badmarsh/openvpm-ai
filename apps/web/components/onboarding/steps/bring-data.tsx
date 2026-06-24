@@ -26,6 +26,19 @@ const PET_COLUMNS =
 const textareaClass =
   "w-full resize-y rounded-md border border-input bg-background p-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+const fileInputClass =
+  "block w-full text-xs text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-emerald-700";
+
+// Read a chosen file to text so we can pass the CSV string to the import calls.
+function readFileText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("Could not read the file"));
+    reader.readAsText(file);
+  });
+}
+
 /**
  * Step 4: choose how real data gets in. Import from a file now, connect by API
  * later, or keep the sample data for now (the default and the skip behavior).
@@ -41,11 +54,30 @@ export function BringDataStep({
   const [choice, setChoice] = useState<Choice>("keep");
   const [clientsCsv, setClientsCsv] = useState("");
   const [petsCsv, setPetsCsv] = useState("");
+  const [clientsFileName, setClientsFileName] = useState("");
+  const [petsFileName, setPetsFileName] = useState("");
   const [result, setResult] = useState<{
     clients: number;
     pets: number;
     errors: string[];
   } | null>(null);
+
+  async function onPickFile(
+    e: React.ChangeEvent<HTMLInputElement>,
+    setCsv: (v: string) => void,
+    which: "clients" | "pets"
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await readFileText(file);
+      setCsv(text);
+      if (which === "clients") setClientsFileName(file.name);
+      else setPetsFileName(file.name);
+    } catch {
+      toast.error("Could not read that file. Try again.");
+    }
+  }
 
   // Picking a choice updates the shared state so finish knows whether to clear
   // the sample data. Only an actual file import (with real rows pasted in)
@@ -106,6 +138,10 @@ export function BringDataStep({
         />
         {choice === "import" ? (
           <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+            <p className="text-xs text-slate-500">
+              Pick a CSV file for each one, or paste the rows below. The file
+              picker is the easy way.
+            </p>
             <div className="space-y-1.5">
               <span className="text-sm font-medium text-slate-700">
                 Clients
@@ -113,6 +149,18 @@ export function BringDataStep({
               <p className="text-xs text-slate-500">
                 Columns: {CLIENT_COLUMNS}
               </p>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => onPickFile(e, setClientsCsv, "clients")}
+                className={fileInputClass}
+                aria-label="Choose a clients CSV file"
+              />
+              {clientsFileName ? (
+                <p className="text-xs text-emerald-700">
+                  Loaded {clientsFileName}
+                </p>
+              ) : null}
               <textarea
                 rows={4}
                 className={textareaClass}
@@ -124,6 +172,16 @@ export function BringDataStep({
             <div className="space-y-1.5">
               <span className="text-sm font-medium text-slate-700">Pets</span>
               <p className="text-xs text-slate-500">Columns: {PET_COLUMNS}</p>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => onPickFile(e, setPetsCsv, "pets")}
+                className={fileInputClass}
+                aria-label="Choose a pets CSV file"
+              />
+              {petsFileName ? (
+                <p className="text-xs text-emerald-700">Loaded {petsFileName}</p>
+              ) : null}
               <textarea
                 rows={4}
                 className={textareaClass}
