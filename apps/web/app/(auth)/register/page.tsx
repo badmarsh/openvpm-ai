@@ -4,15 +4,13 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Calendar, CheckCircle2, Loader2, PawPrint } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, PawPrint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { isValidEmail, initials } from "@/lib/utils";
+import { cn, isValidEmail } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-
-const BRAND = "#0d9488";
 
 export default function RegisterPage() {
   return (
@@ -182,8 +180,8 @@ function RegisterPageInner() {
         </div>
       </div>
 
-      {/* Right pane: gradient with the product, aligned bottom-right */}
-      <div className="relative hidden overflow-hidden bg-[linear-gradient(135deg,#fff7ed_0%,#fdf2f8_45%,#ecfdf5_100%)] lg:block">
+      {/* Right pane: gradient with a clean platform preview */}
+      <div className="relative hidden overflow-hidden bg-[linear-gradient(135deg,#fff7ed_0%,#fdf2f8_45%,#ecfdf5_100%)] lg:flex lg:flex-col">
         <div className="px-12 pt-16">
           <h2 className="max-w-md font-heading text-3xl font-bold tracking-tight text-slate-950">
             The practice system you own.
@@ -194,71 +192,121 @@ function RegisterPageInner() {
           </p>
         </div>
 
-        <div className="absolute bottom-10 right-0 w-[560px] max-w-[calc(100%-2rem)] translate-x-8">
-          <DemoMock practiceName={practiceName} />
+        <div className="flex flex-1 items-end justify-center px-10 pt-10">
+          <PlatformPreview />
         </div>
       </div>
     </div>
   );
 }
 
-function DemoMock({ practiceName }: { practiceName: string }) {
-  const name = practiceName.trim() || "Neighborhood Veterinary";
-  return (
-    <div className="rounded-tl-2xl border border-white/80 bg-white p-4 shadow-2xl shadow-rose-200/40">
-      <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-md text-sm font-semibold text-white"
-          style={{ backgroundColor: BRAND }}
-        >
-          {initials(name)}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-950">{name}</p>
-          <p className="text-xs text-slate-500">Today</p>
-        </div>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          Live
-        </span>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {[
-          ["Today's visits", "8"],
-          ["Messages", "3"],
-          ["Open bills", "$1.2k"],
-        ].map(([label, value]) => (
-          <div
-            key={label}
-            className="rounded-lg border border-slate-100 bg-slate-50 p-3"
-          >
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-              {label}
-            </p>
-            <p className="mt-1 text-lg font-semibold text-slate-950">{value}</p>
-          </div>
-        ))}
-      </div>
+const NAV = [
+  "Dashboard",
+  "Patients",
+  "Schedule",
+  "Records",
+  "Billing",
+  "Inventory",
+];
 
-      <div className="mt-4 space-y-2">
-        {[
-          ["9:00", "Wellness exam", "Biscuit"],
-          ["11:30", "Vaccines", "Luna"],
-          ["2:00", "Recheck", "Mango"],
-          ["3:30", "Dental estimate", "Olive"],
-        ].map(([t, title, pet]) => (
-          <div
-            key={t}
-            className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/80 px-3 py-2"
-          >
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
-              <Calendar className="h-3.5 w-3.5" />
-              {t}
+const KPIS = [
+  ["Today's visits", "8"],
+  ["New patients", "3"],
+  ["Revenue", "$1.2k"],
+];
+
+const TODAY = [
+  ["9:00", "Wellness exam", "Biscuit"],
+  ["11:30", "Vaccines", "Luna"],
+  ["2:00", "Recheck", "Mango"],
+];
+
+/** A clean, value-first snapshot of the real app: sidebar plus the dashboard. */
+function PlatformPreview() {
+  return (
+    <div className="w-full max-w-xl overflow-hidden rounded-t-2xl border border-white/80 bg-white shadow-2xl shadow-rose-200/40">
+      <div className="flex h-[440px]">
+        {/* Sidebar */}
+        <aside className="w-40 shrink-0 border-r border-slate-100 bg-slate-50/70 p-3">
+          <div className="flex items-center gap-2 px-1 pb-4">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <PawPrint className="h-3.5 w-3.5" />
             </span>
-            <span className="text-sm font-medium text-slate-900">{title}</span>
-            <span className="ml-auto text-xs text-slate-500">{pet}</span>
+            <span className="font-heading text-sm font-semibold text-slate-900">
+              OpenVPM
+            </span>
           </div>
-        ))}
+          <nav className="space-y-1">
+            {NAV.map((label, i) => (
+              <div
+                key={label}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium",
+                  i === 0 ? "bg-primary/10 text-primary" : "text-slate-500"
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-sm",
+                    i === 0 ? "bg-primary" : "bg-slate-300"
+                  )}
+                />
+                {label}
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        {/* Main */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <p className="font-heading text-sm font-semibold text-slate-900">
+              Dashboard
+            </p>
+            <span className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground">
+              New
+            </span>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-3 gap-3">
+              {KPIS.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-slate-100 bg-white p-3"
+                >
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                    {label}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-950">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 rounded-lg border border-slate-100 bg-white p-3">
+              <p className="text-xs font-semibold text-slate-900">Today</p>
+              <div className="mt-2 space-y-1.5">
+                {TODAY.map(([t, title, pet]) => (
+                  <div
+                    key={t}
+                    className="flex items-center gap-3 rounded-md bg-slate-50/80 px-2.5 py-1.5"
+                  >
+                    <span className="text-[11px] font-medium text-slate-500">
+                      {t}
+                    </span>
+                    <span className="text-xs font-medium text-slate-900">
+                      {title}
+                    </span>
+                    <span className="ml-auto text-[11px] text-slate-500">
+                      {pet}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
