@@ -194,7 +194,7 @@ function RegisterPageInner() {
           </p>
         </div>
 
-        <div className="absolute bottom-0 right-0 w-[460px] translate-x-10 translate-y-10">
+        <div className="absolute bottom-10 right-0 w-[560px] max-w-[calc(100%-2rem)] translate-x-8">
           <DemoMock practiceName={practiceName} />
         </div>
       </div>
@@ -222,11 +222,30 @@ function DemoMock({ practiceName }: { practiceName: string }) {
           Live
         </span>
       </div>
-      <div className="mt-3 space-y-2">
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {[
+          ["Today's visits", "8"],
+          ["Messages", "3"],
+          ["Open bills", "$1.2k"],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="rounded-lg border border-slate-100 bg-slate-50 p-3"
+          >
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              {label}
+            </p>
+            <p className="mt-1 text-lg font-semibold text-slate-950">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 space-y-2">
         {[
           ["9:00", "Wellness exam", "Biscuit"],
           ["11:30", "Vaccines", "Luna"],
           ["2:00", "Recheck", "Mango"],
+          ["3:30", "Dental estimate", "Olive"],
         ].map(([t, title, pet]) => (
           <div
             key={t}
