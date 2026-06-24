@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { Calendar, PawPrint, DollarSign, FileText, Clock, Rocket } from "lucide-react";
+import { Calendar, PawPrint, DollarSign, FileText, Clock } from "lucide-react";
+import { FinishSetupCard } from "@/components/dashboard/finish-setup-card";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { formatCurrency, localeForCountry } from "@/lib/locale/format";
@@ -139,30 +139,6 @@ function PieLabel({
   );
 }
 
-function OnboardingBanner() {
-  // Admin-only; non-admins get FORBIDDEN → no banner.
-  const { data } = trpc.settings.onboardingStatus.useQuery(undefined, {
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-  });
-  if (!data || data.completedAt) return null;
-  return (
-    <Link
-      href="/onboarding"
-      className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
-    >
-      <Rocket className="h-5 w-5 text-primary" />
-      <div className="flex-1">
-        <p className="text-sm font-medium">Finish setting up your practice</p>
-        <p className="text-xs text-muted-foreground">
-          Confirm details, invite your team, explore demo data, then review billing when ready.
-        </p>
-      </div>
-      <span className="text-sm font-medium text-primary">Continue setup</span>
-    </Link>
-  );
-}
-
 export default function DashboardPage() {
   const stats = trpc.dashboard.getStats.useQuery();
   const charts = trpc.dashboard.getCharts.useQuery();
@@ -199,7 +175,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <OnboardingBanner />
+      <FinishSetupCard />
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.isLoading
