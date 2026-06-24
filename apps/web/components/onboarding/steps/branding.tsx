@@ -144,6 +144,20 @@ export function BrandingStep({ register }: { register: (h: StepHandle) => void }
             );
           })}
         </div>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-xs text-slate-500">Or paste a hex code</span>
+          <input
+            type="text"
+            defaultValue={savedColor ?? "#0d9488"}
+            placeholder="#0d9488"
+            maxLength={7}
+            onChange={(e) => {
+              const v = e.target.value.trim();
+              if (/^#[0-9a-fA-F]{6}$/.test(v)) pickColor(v);
+            }}
+            className="h-9 w-28 rounded-md border border-input bg-white px-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
       </div>
     </div>
   );

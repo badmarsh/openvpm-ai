@@ -7,6 +7,7 @@ import { CommandSearch } from "@/components/common/command-search";
 import { ErrorBoundary } from "@/components/common/error-boundary";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { OnboardingJourney } from "@/components/onboarding/journey-overlay";
+import { BrandTheme } from "@/components/brand/brand-theme";
 
 export default function DashboardLayout({
   children,
@@ -46,6 +47,7 @@ export default function DashboardLayout({
         />
       </div>
       <OnboardingJourney />
+      <BrandTheme />
     </TourProvider>
   );
 }
