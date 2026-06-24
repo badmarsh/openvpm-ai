@@ -40,10 +40,10 @@ function VerifyEmailInner() {
               Your email is verified. You can now sign in and start your free trial.
             </p>
             <Link
-              href="/login?next=/onboarding"
+              href="/login?next=/"
               className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              Sign in and continue setup
+              Sign in and continue
             </Link>
           </>
         )}

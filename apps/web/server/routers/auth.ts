@@ -25,6 +25,18 @@ function exposeAuthLinksForPreview(): boolean {
   );
 }
 
+/** Display name from explicit input, else derived from the email local-part. */
+function deriveName(name: string | undefined, email: string): string {
+  const trimmed = name?.trim();
+  if (trimmed) return trimmed;
+  const local = email.split("@")[0] ?? "";
+  const words = local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((w) => w[0]!.toUpperCase() + w.slice(1));
+  return words.join(" ") || "Practice Owner";
+}
+
 const onboardingTeamMemberSchema = z.object({
   name: z.string().min(1).max(80),
   email: z.string().email().max(255),
@@ -61,7 +73,9 @@ export const authRouter = createRouter({
   register: publicProcedure
     .input(
       z.object({
-        name: z.string().min(2),
+        // Lean signup collects only practice + email + password. `name` is
+        // optional and derived from the email when omitted.
+        name: z.string().min(2).optional(),
         email: z.string().email(),
         password: z.string().min(8),
         practiceName: z.string().min(2),
@@ -133,7 +147,7 @@ export const authRouter = createRouter({
         .values({
           email: input.email.trim().toLowerCase(),
           passwordHash,
-          name: input.name.trim(),
+          name: deriveName(input.name, input.email),
           role: "admin",
           practiceId: practice!.id,
         })

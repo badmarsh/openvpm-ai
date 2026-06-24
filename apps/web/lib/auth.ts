@@ -5,7 +5,6 @@ import { db } from "@openpims/db/client";
 import { users } from "@openpims/db";
 import { eq } from "drizzle-orm";
 import { withSystem } from "@/lib/tenant-db";
-import { billingEnforced } from "@/lib/billing/plans";
 
 declare module "next-auth" {
   interface Session {
@@ -61,11 +60,9 @@ export const authOptions: NextAuthOptions = {
         const isValid = await compare(credentials.password, user.passwordHash);
         if (!isValid) return null;
 
-        // On the hosted service, require a verified email before login.
-        if (billingEnforced() && !user.emailVerifiedAt) {
-          throw new Error("Please verify your email before signing in.");
-        }
-
+        // Email verification is a SOFT requirement on hosted: new users sign in
+        // immediately after signup (so onboarding + the value tour aren't blocked
+        // by an email round-trip) and are nudged to confirm via an in-app banner.
         return {
           id: user.id,
           email: user.email,
