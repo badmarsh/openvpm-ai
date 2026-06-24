@@ -28,11 +28,15 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 
 -- 2) Context helpers (NULL/false when the GUC is unset → deny by default).
 CREATE OR REPLACE FUNCTION app_current_practice_id() RETURNS uuid
-  LANGUAGE sql STABLE AS
+  LANGUAGE sql STABLE
+  SET search_path = ''
+  AS
 $fn$ SELECT nullif(current_setting('app.current_practice_id', true), '')::uuid $fn$;
 
 CREATE OR REPLACE FUNCTION app_rls_bypass() RETURNS boolean
-  LANGUAGE sql STABLE AS
+  LANGUAGE sql STABLE
+  SET search_path = ''
+  AS
 $fn$ SELECT coalesce(current_setting('app.rls_bypass', true), '') = 'on' $fn$;
 
 -- 3) The practices root table is keyed on its own id.
