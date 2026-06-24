@@ -6,6 +6,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { CommandSearch } from "@/components/common/command-search";
 import { ErrorBoundary } from "@/components/common/error-boundary";
 import { TourProvider } from "@/components/tour/tour-provider";
+import { OnboardingJourney } from "@/components/onboarding/journey-overlay";
 
 export default function DashboardLayout({
   children,
@@ -44,6 +45,7 @@ export default function DashboardLayout({
           onClose={() => setSearchOpen(false)}
         />
       </div>
+      <OnboardingJourney />
     </TourProvider>
   );
 }

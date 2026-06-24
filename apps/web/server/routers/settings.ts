@@ -16,6 +16,7 @@ import {
 import { regionDefaults } from "@/lib/locale/format";
 import { alertOps } from "@/lib/alerts";
 import { syncPracticeSubscriptionQuantities } from "@/lib/billing/subscription-sync";
+import { seedDemoData } from "@/lib/onboarding/defaults";
 import { createAuthToken } from "@/lib/auth-tokens";
 import { sendStaffInviteEmail } from "@/lib/email";
 import { appBaseUrl, exposeAuthLinksForPreview } from "@/lib/app-url";
@@ -296,6 +297,23 @@ export const settingsRouter = createRouter({
       .set({ settings: rest })
       .where(eq(practices.id, ctx.practiceId));
     return { ok: true };
+  }),
+
+  /** Add the sample clients, pets, and visits back. No-op if already present. */
+  reseedDemoData: adminProcedure.mutation(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({ settings: practices.settings })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    if (settings.demoData) return { ok: true, alreadyPresent: true };
+    const demoData = await seedDemoData(ctx.db, { practiceId: ctx.practiceId });
+    await ctx.db
+      .update(practices)
+      .set({ settings: { ...settings, demoData } })
+      .where(eq(practices.id, ctx.practiceId));
+    return { ok: true, alreadyPresent: false };
   }),
 
   // ── Staff / Users ─────────────────────────────────────────

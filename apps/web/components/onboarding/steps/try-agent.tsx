@@ -1,0 +1,109 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Bot, Loader2, Send, Sparkles } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import type { StepHandle } from "../journey-types";
+
+const DEFAULT_QUESTION = "Which pets are overdue for vaccines?";
+
+/**
+ * Step 5: let the user try the built-in AI helper. If no key is set yet, show a
+ * friendly note instead. Continue never blocks here.
+ */
+export function TryAgentStep({ register }: { register: (h: StepHandle) => void }) {
+  const status = trpc.agent.status.useQuery();
+  const run = trpc.agent.run.useMutation();
+  const [question, setQuestion] = useState(DEFAULT_QUESTION);
+
+  useEffect(() => {
+    register({ onContinue: async () => true });
+  }, [register]);
+
+  const configured = status.data?.configured ?? false;
+
+  function ask() {
+    const q = question.trim();
+    if (!q || run.isPending) return;
+    run.mutate({ instruction: q });
+  }
+
+  if (status.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!configured) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm leading-6 text-slate-600">
+          AI is built right into OpenVPM. It can answer questions about your
+          clinic in plain words.
+        </p>
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Your AI helper turns on once your AI key is set. You can try it any
+            time from the Agent page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm leading-6 text-slate-600">
+        AI is built right in. Ask a question about your clinic and see what comes
+        back.
+      </p>
+
+      <div className="flex gap-2">
+        <Input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") ask();
+          }}
+          placeholder="Ask your AI helper something"
+          aria-label="Ask your AI helper"
+        />
+        <Button
+          type="button"
+          onClick={ask}
+          disabled={!question.trim() || run.isPending}
+        >
+          {run.isPending ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-1.5 h-4 w-4" />
+          )}
+          Ask
+        </Button>
+      </div>
+
+      {run.error ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {run.error.message}
+        </div>
+      ) : null}
+
+      {run.data ? (
+        <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4">
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-700">
+            <Bot className="h-3.5 w-3.5" />
+            Your AI helper
+          </div>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+            {run.data.text}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

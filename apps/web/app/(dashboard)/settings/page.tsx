@@ -1705,6 +1705,24 @@ function DataTab() {
     },
   });
 
+  const utils = trpc.useUtils();
+  const onboarding = trpc.settings.onboardingStatus.useQuery();
+  const hasDemo = onboarding.data?.hasDemoData ?? false;
+  const clearDemo = trpc.settings.clearDemoData.useMutation({
+    onSuccess: () => {
+      utils.settings.onboardingStatus.invalidate();
+      toast.success("Sample data removed");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const reseedDemo = trpc.settings.reseedDemoData.useMutation({
+    onSuccess: () => {
+      utils.settings.onboardingStatus.invalidate();
+      toast.success("Sample data added");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const handleExport = useCallback(
     async (type: "clients" | "patients" | "appointments" | "invoices") => {
       setExportingType(type);
@@ -1800,6 +1818,24 @@ function DataTab() {
 
   return (
     <div className="space-y-8">
+      {/* Sample data */}
+      <div>
+        <h3 className="text-sm font-semibold mb-1">Sample data</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          A practice full of made up clients and pets so you can explore. Add it
+          any time, and remove it when you are ready to work for real.
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => (hasDemo ? clearDemo.mutate() : reseedDemo.mutate())}
+          disabled={
+            onboarding.isLoading || clearDemo.isPending || reseedDemo.isPending
+          }
+        >
+          {hasDemo ? "Remove sample data" : "Add sample data"}
+        </Button>
+      </div>
+
       {/* Export Section */}
       <div>
         <h3 className="text-sm font-semibold mb-1">Export Data</h3>
