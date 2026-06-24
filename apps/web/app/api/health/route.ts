@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@openpims/db/client";
 import {
-  STRIPE_PRICE_AI_OVERAGE_ENV,
   STRIPE_PRICE_CLOUD_LOCATION_ENV,
   STRIPE_PRICE_CLOUD_USER_ENV,
-  STRIPE_PRICE_SMS_OVERAGE_ENV,
   billingEnforced,
 } from "@/lib/billing/plans";
 
@@ -15,13 +13,14 @@ function configured(name: string): boolean {
   return Boolean(process.env[name]);
 }
 
+// Overage price envs (STRIPE_PRICE_SMS_OVERAGE / STRIPE_PRICE_AI_OVERAGE) are
+// intentionally NOT required: launch billing is generous-unmetered, so Stripe
+// usage metering is not wired and those prices are unused. See lib/billing/usage.ts.
 const HOSTED_BILLING_ENV_NAMES = [
   "STRIPE_SECRET_KEY",
   "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
   STRIPE_PRICE_CLOUD_LOCATION_ENV,
   STRIPE_PRICE_CLOUD_USER_ENV,
-  STRIPE_PRICE_SMS_OVERAGE_ENV,
-  STRIPE_PRICE_AI_OVERAGE_ENV,
 ];
 
 const HOSTED_CORE_ENV_NAMES = [
