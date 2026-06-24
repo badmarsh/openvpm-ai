@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { cn, isValidEmail } from "@/lib/utils";
+import { cn, initials, isValidEmail } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -203,8 +203,8 @@ function RegisterPageInner() {
           </p>
         </div>
 
-        <div className="absolute bottom-0 right-0 left-10 top-44">
-          <PlatformPreview />
+        <div className="absolute bottom-0 right-0 left-16 top-52">
+          <PlatformPreview practiceName={practiceName} />
         </div>
       </div>
     </div>
@@ -239,18 +239,19 @@ const APPTS = [
  * dashboard value cards, the day's schedule with appointment colors, and an
  * Ask AI card. Rendered flush to the bottom-right edge of the pane.
  */
-function PlatformPreview() {
+function PlatformPreview({ practiceName }: { practiceName: string }) {
+  const clinic = practiceName.trim() || "Neighborhood Veterinary";
   return (
     <div className="h-full w-full overflow-hidden rounded-tl-2xl border-l border-t border-white/80 bg-white shadow-2xl shadow-rose-200/40">
       <div className="flex h-full">
         {/* Side nav */}
         <aside className="flex w-[150px] shrink-0 flex-col border-r border-slate-100 bg-slate-50/70 p-3">
           <div className="flex items-center gap-2 px-1 pb-4">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <PawPrint className="h-3.5 w-3.5" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-semibold text-primary-foreground">
+              {initials(clinic)}
             </span>
-            <span className="font-heading text-sm font-semibold text-slate-900">
-              OpenVPM
+            <span className="truncate font-heading text-sm font-semibold text-slate-900">
+              {clinic}
             </span>
           </div>
           <nav className="space-y-1">
@@ -316,12 +317,16 @@ function PlatformPreview() {
                 {APPTS.map((a) => (
                   <div
                     key={a.time}
-                    className="flex items-center gap-3 rounded-md bg-slate-50/80 py-1.5 pl-2.5 pr-2.5"
-                    style={{ borderLeft: `3px solid ${a.color}` }}
+                    className="flex items-center gap-3 rounded-md px-2.5 py-1.5"
+                    style={{ backgroundColor: `${a.color}14` }}
                   >
                     <span className="w-10 text-[11px] font-medium text-slate-500">
                       {a.time}
                     </span>
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: a.color }}
+                    />
                     <span className="text-xs font-medium text-slate-900">
                       {a.title}
                     </span>
