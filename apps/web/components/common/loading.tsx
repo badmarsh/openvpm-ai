@@ -1,6 +1,8 @@
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const TABLE_SKELETON_WIDTHS = ["w-16", "w-20", "w-24", "w-28", "w-32"];
+
 export function PageLoading({ className }: { className?: string }) {
   return (
     <div
@@ -41,8 +43,10 @@ export function TableSkeleton({
           {Array.from({ length: cols }).map((_, j) => (
             <div
               key={j}
-              className="h-4 rounded bg-muted"
-              style={{ width: `${60 + Math.random() * 60}px` }}
+              className={cn(
+                "h-4 rounded bg-muted",
+                TABLE_SKELETON_WIDTHS[(i + j) % TABLE_SKELETON_WIDTHS.length]
+              )}
             />
           ))}
         </div>

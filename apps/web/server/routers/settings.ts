@@ -12,12 +12,37 @@ import {
   appointments,
 } from "@openpims/db";
 import { regionDefaults } from "@/lib/locale/format";
+import { alertOps } from "@/lib/alerts";
+import { syncPracticeSubscriptionQuantities } from "@/lib/billing/subscription-sync";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
+
+async function syncBillingAfterStaffChange(
+  db: Parameters<typeof syncPracticeSubscriptionQuantities>[0]["db"],
+  practiceId: string
+): Promise<void> {
+  try {
+    await syncPracticeSubscriptionQuantities({ db, practiceId });
+  } catch (err) {
+    await alertOps(
+      "Staff billing sync crashed",
+      `practice=${practiceId}: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
 
 interface PracticeSettings {
   onboardingCompletedAt?: string | null;
   demoData?: { clientIds: string[]; patientIds: string[]; appointmentIds: string[] };
+  onboardingDraft?: {
+    logoName?: string;
+    brandColor?: string;
+    teamMembers?: Array<{
+      name: string;
+      email: string;
+      role: "veterinarian" | "technician" | "front_desk" | "viewer";
+    }>;
+  };
   [k: string]: unknown;
 }
 
@@ -88,6 +113,7 @@ export const settingsRouter = createRouter({
     return {
       completedAt: settings.onboardingCompletedAt ?? null,
       hasDemoData: !!settings.demoData,
+      onboardingDraft: settings.onboardingDraft ?? null,
     };
   }),
 
@@ -206,6 +232,7 @@ export const settingsRouter = createRouter({
           email: users.email,
           role: users.role,
         });
+      await syncBillingAfterStaffChange(ctx.db, ctx.practiceId);
       return user!;
     }),
 
@@ -245,6 +272,18 @@ export const settingsRouter = createRouter({
             eq(users.practiceId, ctx.practiceId)
           )
         );
+      await syncBillingAfterStaffChange(ctx.db, ctx.practiceId);
+      return { success: true };
+    }),
+
+  restoreUser: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(users)
+        .set({ deletedAt: null })
+        .where(and(eq(users.id, input.id), eq(users.practiceId, ctx.practiceId)));
+      await syncBillingAfterStaffChange(ctx.db, ctx.practiceId);
       return { success: true };
     }),
 

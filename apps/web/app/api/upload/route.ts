@@ -4,8 +4,10 @@ import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/auth";
 import { uploadFile } from "@/lib/s3";
 import { db } from "@openpims/db/client";
-import { files } from "@openpims/db";
-import { withTenant } from "@/lib/tenant-db";
+import { files, practices } from "@openpims/db";
+import { eq } from "drizzle-orm";
+import { withSystem, withTenant } from "@/lib/tenant-db";
+import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -27,6 +29,34 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (billingEnforced()) {
+    const [practice] = await withSystem(db, (tx) =>
+      tx
+        .select({
+          tier: practices.subscriptionTier,
+          billingStatus: practices.billingStatus,
+          trialEndsAt: practices.trialEndsAt,
+        })
+        .from(practices)
+        .where(eq(practices.id, session.user.practiceId))
+        .limit(1)
+    );
+    if (
+      !hasHostedFullAccess(
+        practice?.tier,
+        practice?.billingStatus,
+        practice?.trialEndsAt
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "OpenVPM Cloud is read-only until your trial or subscription is active.",
+        },
+        { status: 403 }
+      );
+    }
   }
 
   // ---------- Parse multipart form data ----------

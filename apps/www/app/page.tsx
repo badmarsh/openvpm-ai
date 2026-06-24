@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { WaitlistForm } from "@/components/waitlist-form";
 import {
   Calendar,
   FileText,
@@ -32,8 +31,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://demo.openvpm.com";
+import { cloudSignupUrl, demoLoginUrl } from "@/lib/urls";
 
 const features = [
   {
@@ -209,11 +207,17 @@ export default function LandingPage() {
               style={{ animationDelay: "300ms" }}
             >
               <a
-                href={`${appUrl}/login`}
+                href={cloudSignupUrl}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-teal-600/25 hover:bg-teal-700 hover:shadow-teal-600/30 transition-all w-full sm:w-auto"
               >
-                Try the Live Demo
+                Start Cloud Trial
                 <ArrowRight className="w-4 h-4" />
+              </a>
+              <a
+                href={demoLoginUrl}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-teal-100 bg-white px-8 py-3.5 text-base font-semibold text-teal-700 hover:border-teal-200 hover:bg-teal-50 transition-all w-full sm:w-auto"
+              >
+                Try the Live Demo
               </a>
               <a
                 href="https://github.com/evangauer/openvpm"
@@ -784,46 +788,130 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Managed Hosting Waitlist */}
-      <section id="waitlist" className="py-16 sm:py-20 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-teal-100 bg-teal-50/30 p-8 sm:p-12 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold font-heading text-gray-900 tracking-tight mb-4">
-              Don&apos;t want to self-host?
+      {/* Pricing */}
+      <section id="pricing" className="py-20 sm:py-28 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold font-heading text-gray-900 tracking-tight mb-4">
+              Use OpenVPM your way.
             </h2>
-            <p className="text-gray-600 max-w-lg mx-auto mb-8 leading-relaxed">
-              We&apos;re working on managed hosting so your practice can use OpenVPM
-              for a fraction of what you&apos;re paying today &mdash; no terminal, no devops, just software that works.
+            <p className="text-lg text-gray-600">
+              The open-source PIMS stays fully unlocked when you self-host. Cloud is the
+              managed service for clinics that want us to run it.
             </p>
+          </div>
 
-            <WaitlistForm />
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-10 max-w-lg mx-auto text-left">
-              {[
-                "Full data transfer",
-                "Managed hosting",
-                "Fully secure",
-                "You own your data",
-              ].map((item) => (
-                <div key={item} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span className="text-xs text-gray-600">{item}</span>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
+              <h3 className="font-heading text-xl font-semibold text-gray-900">
+                Self-host
+              </h3>
+              <p className="mt-2 text-sm text-gray-500">
+                Run OpenVPM on your own infrastructure. No billing gates, no feature
+                limits, no hosted metering.
+              </p>
+              <div className="mt-6 text-4xl font-bold font-heading text-gray-900">
+                Free
+              </div>
+              <ul className="mt-6 space-y-3 text-sm text-gray-600">
+                {[
+                  "Full source code under MIT license",
+                  "All PIMS modules and API access",
+                  "Docker/Vercel deployment paths",
+                  "Bring your own database, storage, email, SMS, and AI keys",
+                ].map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/install"
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 hover:border-teal-200 hover:text-teal-700 transition-colors"
+              >
+                Self-host OpenVPM
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
 
-            <p className="mt-8 text-xs text-gray-400">
-              Built by the team at{" "}
+            <div className="relative rounded-2xl border-2 border-teal-500 bg-teal-50/30 p-6 sm:p-8 shadow-xl shadow-teal-100/70">
+              <div className="absolute right-5 top-5 rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white">
+                14-day trial
+              </div>
+              <h3 className="font-heading text-xl font-semibold text-gray-900">
+                OpenVPM Cloud
+              </h3>
+              <p className="mt-2 max-w-sm text-sm text-gray-600">
+                We host, update, monitor, and back up the PIMS so your team can just use it.
+              </p>
+              <div className="mt-6">
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold font-heading text-gray-900">$49</span>
+                  <span className="pb-1 text-sm text-gray-500">/ active location / mo</span>
+                </div>
+                <div className="mt-1 text-sm font-medium text-gray-700">
+                  + $10 / active staff user / mo
+                </div>
+              </div>
+              <ul className="mt-6 space-y-3 text-sm text-gray-700">
+                {[
+                  "No-card full-feature trial",
+                  "All roles and all PIMS modules included",
+                  "Managed database, storage, backups, and updates",
+                  "Included SMS and AI allowance with metered overages",
+                  "Read-only safety mode if billing lapses, with data export preserved",
+                ].map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
               <a
-                href="https://gettalky.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-500 hover:text-teal-600 underline underline-offset-2"
+                href={cloudSignupUrl}
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 hover:bg-teal-700 transition-colors"
               >
-                Get Talky
+                Start Cloud Trial
+                <ArrowRight className="h-4 w-4" />
               </a>
-              {" "}&mdash; we&apos;ve been building AI tools for veterinary practices since 2023.
-            </p>
+              <p className="mt-3 text-center text-xs text-gray-500">
+                Create your practice, verify email, and start working in minutes.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
+              <h3 className="font-heading text-xl font-semibold text-gray-900">
+                Enterprise
+              </h3>
+              <p className="mt-2 text-sm text-gray-500">
+                For groups that need dedicated infrastructure, procurement support,
+                custom data migration, or regional requirements.
+              </p>
+              <div className="mt-6 text-4xl font-bold font-heading text-gray-900">
+                Custom
+              </div>
+              <ul className="mt-6 space-y-3 text-sm text-gray-600">
+                {[
+                  "Dedicated or in-region instance",
+                  "Migration planning and data import support",
+                  "Priority support and implementation help",
+                  "Custom security, legal, and compliance review",
+                ].map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="mailto:sales@openvpm.com?subject=OpenVPM%20Enterprise"
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 hover:border-teal-200 hover:text-teal-700 transition-colors"
+              >
+                Contact Sales
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -845,7 +933,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href={`${appUrl}/login`}
+                  href={demoLoginUrl}
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-teal-700 shadow-lg hover:bg-teal-50 transition-all"
                 >
                   Try the Live Demo

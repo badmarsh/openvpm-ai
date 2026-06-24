@@ -18,6 +18,45 @@ function appBaseUrl(): string {
   );
 }
 
+function exposeAuthLinksForPreview(): boolean {
+  return (
+    process.env.OPENVPM_EXPOSE_AUTH_LINKS === "true" ||
+    process.env.NODE_ENV !== "production"
+  );
+}
+
+const onboardingTeamMemberSchema = z.object({
+  name: z.string().min(1).max(80),
+  email: z.string().email().max(255),
+  role: z.enum(["veterinarian", "technician", "front_desk", "viewer"]),
+});
+
+const onboardingDraftSchema = z.object({
+  logoName: z.string().min(1).max(120).optional(),
+  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  teamMembers: z.array(onboardingTeamMemberSchema).max(8).optional(),
+});
+
+function cleanOnboardingDraft(
+  draft: z.infer<typeof onboardingDraftSchema> | undefined
+): Record<string, unknown> | undefined {
+  if (!draft) return undefined;
+
+  const clean: Record<string, unknown> = {};
+  if (draft.logoName?.trim()) clean.logoName = draft.logoName.trim();
+  if (draft.brandColor) clean.brandColor = draft.brandColor.toLowerCase();
+  const teamMembers = draft.teamMembers
+    ?.map((member) => ({
+      name: member.name.trim(),
+      email: member.email.trim().toLowerCase(),
+      role: member.role,
+    }))
+    .filter((member) => member.name && member.email);
+  if (teamMembers?.length) clean.teamMembers = teamMembers;
+
+  return Object.keys(clean).length ? clean : undefined;
+}
+
 export const authRouter = createRouter({
   register: publicProcedure
     .input(
@@ -26,6 +65,8 @@ export const authRouter = createRouter({
         email: z.string().email(),
         password: z.string().min(8),
         practiceName: z.string().min(2),
+        locationName: z.string().min(2).max(255).optional(),
+        onboardingDraft: onboardingDraftSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -55,6 +96,7 @@ export const authRouter = createRouter({
       }
 
       const passwordHash = await hash(input.password, 10);
+      const onboardingDraft = cleanOnboardingDraft(input.onboardingDraft);
 
       // On the hosted service, start a full-featured trial so the new practice
       // is immediately usable before entering payment. Self-host ignores this.
@@ -69,7 +111,8 @@ export const authRouter = createRouter({
       const [practice] = await ctx.db
         .insert(practices)
         .values({
-          name: input.practiceName,
+          name: input.practiceName.trim(),
+          email: input.email.trim().toLowerCase(),
           ...trial,
         })
         .returning();
@@ -79,7 +122,7 @@ export const authRouter = createRouter({
         .insert(locations)
         .values({
           practiceId: practice!.id,
-          name: "Main Location",
+          name: input.locationName?.trim() || "Main Location",
           isPrimary: true,
         })
         .returning();
@@ -88,9 +131,9 @@ export const authRouter = createRouter({
       const [user] = await ctx.db
         .insert(users)
         .values({
-          email: input.email,
+          email: input.email.trim().toLowerCase(),
           passwordHash,
-          name: input.name,
+          name: input.name.trim(),
           role: "admin",
           practiceId: practice!.id,
         })
@@ -110,24 +153,32 @@ export const authRouter = createRouter({
 
       // On the hosted service, seed demo data + start onboarding so the trial
       // lands on a lively dashboard. Non-fatal. Self-host skips this.
+      const practiceSettings: Record<string, unknown> = {};
+      if (onboardingDraft) {
+        practiceSettings.onboardingDraft = onboardingDraft;
+      }
       if (billingEnforced()) {
+        practiceSettings.onboardingCompletedAt = null;
         try {
           const demoData = await seedDemoData(ctx.db, { practiceId: practice!.id });
-          await ctx.db
-            .update(practices)
-            .set({
-              settings: { demoData, onboardingCompletedAt: null },
-            })
-            .where(eq(practices.id, practice!.id));
+          practiceSettings.demoData = demoData;
         } catch (err) {
           console.error("[register] demo seeding failed:", err);
         }
+      }
+      if (Object.keys(practiceSettings).length) {
+        await ctx.db
+          .update(practices)
+          .set({ settings: practiceSettings })
+          .where(eq(practices.id, practice!.id));
       }
 
       // On the hosted service, require email verification before login. Issue a
       // token + send the email. Non-fatal: signup still succeeds. Self-host
       // skips this (frictionless).
       let verificationRequired = false;
+      let verificationUrl: string | undefined;
+      let verificationEmailSent: boolean | undefined;
       if (billingEnforced()) {
         verificationRequired = true;
         try {
@@ -135,18 +186,28 @@ export const authRouter = createRouter({
             userId: user!.id,
             email: user!.email,
             type: "email_verify",
+            db: ctx.db,
           });
-          await sendVerificationEmail({
+          verificationUrl = `${appBaseUrl()}/verify-email?token=${token}`;
+          const result = await sendVerificationEmail({
             to: user!.email,
             name: user!.name,
-            verifyUrl: `${appBaseUrl()}/verify-email?token=${token}`,
+            verifyUrl: verificationUrl,
           });
+          verificationEmailSent = result.success;
         } catch (err) {
           console.error("[register] verification email failed:", err);
+          verificationEmailSent = false;
         }
       }
 
-      return { id: user!.id, email: user!.email, verificationRequired };
+      return {
+        id: user!.id,
+        email: user!.email,
+        verificationRequired,
+        verificationEmailSent,
+        verificationUrl: exposeAuthLinksForPreview() ? verificationUrl : undefined,
+      };
     }),
 
   /** Confirm an email-verification token (hosted). */

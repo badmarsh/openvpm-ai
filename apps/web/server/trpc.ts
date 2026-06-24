@@ -12,6 +12,7 @@ import { withTenant, withSystem } from "@/lib/tenant-db";
 import { practices } from "@openpims/db";
 import {
   billingEnforced,
+  hasHostedFullAccess,
   isEntitled,
   effectiveTier,
   type Feature,
@@ -70,6 +71,11 @@ const t = initTRPC.context<TRPCContext>().create({
 
 export const createRouter = t.router;
 
+const HOSTED_READ_ONLY_MUTATION_ALLOWLIST = new Set([
+  "subscription.createCheckout",
+  "subscription.openBillingPortal",
+]);
+
 /**
  * Public / pre-auth endpoints (registration, the token-based client portal).
  * They have no tenant session and do their own scoping (tokens, email, rate
@@ -94,6 +100,34 @@ export const protectedProcedure = t.procedure.use(
         code: "FORBIDDEN",
         message: "Your account has read-only (viewer) access.",
       });
+    }
+    if (
+      type === "mutation" &&
+      billingEnforced() &&
+      !HOSTED_READ_ONLY_MUTATION_ALLOWLIST.has(path)
+    ) {
+      const [practice] = await ctx.db
+        .select({
+          tier: practices.subscriptionTier,
+          billingStatus: practices.billingStatus,
+          trialEndsAt: practices.trialEndsAt,
+        })
+        .from(practices)
+        .where(eq(practices.id, ctx.session.user.practiceId))
+        .limit(1);
+      if (
+        !hasHostedFullAccess(
+          practice?.tier,
+          practice?.billingStatus,
+          practice?.trialEndsAt
+        )
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "OpenVPM Cloud is read-only until your trial or subscription is active. You can still manage billing and export your data.",
+        });
+      }
     }
 
     const user = ctx.session.user;

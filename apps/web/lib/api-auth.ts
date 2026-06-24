@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { db } from "@openpims/db/client";
 import { apiKeys, practices } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { billingEnforced, isEntitled, effectiveTier } from "@/lib/billing/plans";
+import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 import { withSystem } from "@/lib/tenant-db";
 
 /** Public prefix for every issued key. Also used as the human-visible label. */
@@ -112,7 +112,8 @@ export async function authenticateApiKey(
     return err(`API key missing required scope: ${requiredScope}`, 403);
   }
 
-  // Public API access is a Pro feature on the hosted service (no-op on self-host).
+  // Hosted read-only mode still allows read scopes. Write scopes and agent runs
+  // require an active trial/subscription. Self-host skips this entirely.
   if (billingEnforced()) {
     const [practice] = await withSystem(db, (tx) =>
       tx
@@ -125,13 +126,17 @@ export async function authenticateApiKey(
         .where(eq(practices.id, matched.practiceId))
         .limit(1)
     );
-    const tier = effectiveTier(
+    const writeLikeScope =
+      requiredScope.endsWith(":write") || requiredScope === "agent:run";
+    if (writeLikeScope && !hasHostedFullAccess(
       practice?.tier,
       practice?.billingStatus,
       practice?.trialEndsAt
-    );
-    if (!isEntitled(tier, "apiAccess", true)) {
-      return err("API access is not included in your plan. Upgrade to Pro to use the API.", 403);
+    )) {
+      return err(
+        "OpenVPM Cloud is read-only until your trial or subscription is active.",
+        403
+      );
     }
   }
 

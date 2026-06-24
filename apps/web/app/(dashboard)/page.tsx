@@ -155,10 +155,10 @@ function OnboardingBanner() {
       <div className="flex-1">
         <p className="text-sm font-medium">Finish setting up your practice</p>
         <p className="text-xs text-muted-foreground">
-          Confirm your details, invite your team, and clear the demo data when you&apos;re ready.
+          Confirm details, invite your team, explore demo data, then review billing when ready.
         </p>
       </div>
-      <span className="text-sm font-medium text-primary">Continue →</span>
+      <span className="text-sm font-medium text-primary">Continue setup</span>
     </Link>
   );
 }

@@ -16,8 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
-
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://demo.openvpm.com";
+import { cloudSignupUrl, demoLoginUrl } from "@/lib/urls";
 
 type TabId = "demo" | "self-host" | "cloud";
 
@@ -128,7 +127,7 @@ export function InstallContent() {
   const tabs: { id: TabId; label: string; icon: typeof Play }[] = [
     { id: "demo", label: "Try the Demo", icon: Play },
     { id: "self-host", label: "Self-Host", icon: Terminal },
-    { id: "cloud", label: "Deploy to Cloud", icon: Cloud },
+    { id: "cloud", label: "OpenVPM Cloud", icon: Cloud },
   ];
 
   return (
@@ -173,7 +172,7 @@ export function InstallContent() {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
                   <a
-                    href={`${appUrl}/register`}
+                    href={demoLoginUrl}
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-teal-600/25 hover:bg-teal-700 transition-all"
                   >
                     Open the Demo
@@ -257,7 +256,7 @@ export function InstallContent() {
             </div>
           )}
 
-          {/* Cloud Deploy */}
+          {/* OpenVPM Cloud */}
           {activeTab === "cloud" && (
             <div className="space-y-8">
               <div className="rounded-2xl border border-gray-200 bg-white p-8 sm:p-10 text-center">
@@ -265,28 +264,28 @@ export function InstallContent() {
                   <Cloud className="w-8 h-8" />
                 </div>
                 <h2 className="text-2xl font-bold font-heading text-gray-900 mb-3">
-                  Deploy to Vercel in one click.
+                  Start OpenVPM Cloud.
                 </h2>
                 <p className="text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">
-                  The fastest way to get OpenVPM running in production. Vercel handles the hosting — you just need a PostgreSQL database (Neon, Supabase, or Railway all work great).
+                  We host the database, file storage, backups, updates, and production
+                  app. You get a full-featured 14-day trial with no card required, then
+                  simple pricing by active location and staff user.
                 </p>
                 <a
-                  href="https://vercel.com/new/clone?repository-url=https://github.com/evangauer/openvpm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-8 py-3.5 text-base font-semibold text-white hover:bg-gray-800 transition-all shadow-lg"
+                  href={cloudSignupUrl}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-8 py-3.5 text-base font-semibold text-white hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20"
                 >
-                  Deploy to Vercel
-                  <ExternalLink className="w-4 h-4" />
+                  Start Cloud Trial
+                  <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold text-gray-900">What you&apos;ll need</h3>
+                <h3 className="text-base font-semibold text-gray-900">How Cloud starts</h3>
                 {[
-                  { step: "1", title: "A Vercel account", desc: "Free tier works for testing. Pro plan recommended for production." },
-                  { step: "2", title: "A PostgreSQL database", desc: "Neon, Supabase, and Railway all offer free tiers. Grab the connection string." },
-                  { step: "3", title: "Set your environment variables", desc: "DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL, and your storage config (S3-compatible)." },
+                  { step: "1", title: "Create your practice", desc: "Register the owner account and practice name. Hosted trials start immediately." },
+                  { step: "2", title: "Verify your email", desc: "Hosted Cloud requires verified email before login." },
+                  { step: "3", title: "Work from seeded demo data", desc: "Invite staff, configure settings, then clear demo data when you are ready for production." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-4">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white text-sm font-bold shrink-0">
@@ -302,7 +301,8 @@ export function InstallContent() {
 
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">
                 <p>
-                  <span className="font-medium text-gray-800">Need help?</span> The repo has a{" "}
+                  <span className="font-medium text-gray-800">Prefer to own the stack?</span>{" "}
+                  You can still self-host OpenVPM on Vercel or your own infrastructure. The repo has a{" "}
                   <a
                     href="https://github.com/evangauer/openvpm"
                     target="_blank"
@@ -316,11 +316,11 @@ export function InstallContent() {
               </div>
 
               <div className="rounded-xl border border-teal-100 bg-teal-50/30 p-5 text-sm text-center">
-                <p className="font-medium text-gray-800 mb-1">Not technical? We&apos;ll handle it.</p>
+                <p className="font-medium text-gray-800 mb-1">Cloud pricing</p>
                 <p className="text-gray-600">
-                  We&apos;re building a managed hosting option.{" "}
-                  <a href="/#waitlist" className="text-teal-600 font-medium hover:underline">
-                    Join the waitlist &rarr;
+                  $49/month per active location + $10/month per active staff user.{" "}
+                  <a href="/#pricing" className="text-teal-600 font-medium hover:underline">
+                    View pricing &rarr;
                   </a>
                 </p>
               </div>

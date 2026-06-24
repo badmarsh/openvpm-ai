@@ -1,5 +1,10 @@
 import Twilio from "twilio";
 import { recordUsage } from "@/lib/billing/usage";
+import { db } from "@openpims/db/client";
+import { practices } from "@openpims/db";
+import { eq } from "drizzle-orm";
+import { withSystem } from "@/lib/tenant-db";
+import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Twilio client – initialised lazily so the module can be imported even when
@@ -31,6 +36,33 @@ export async function sendSms(options: {
   /** When set (and a real send occurs), meters the SMS for hosted billing. */
   practiceId?: string;
 }): Promise<{ success: boolean; sid?: string; error?: string }> {
+  if (options.practiceId && billingEnforced()) {
+    const [practice] = await withSystem(db, (tx) =>
+      tx
+        .select({
+          tier: practices.subscriptionTier,
+          billingStatus: practices.billingStatus,
+          trialEndsAt: practices.trialEndsAt,
+        })
+        .from(practices)
+        .where(eq(practices.id, options.practiceId!))
+        .limit(1)
+    );
+    if (
+      !hasHostedFullAccess(
+        practice?.tier,
+        practice?.billingStatus,
+        practice?.trialEndsAt
+      )
+    ) {
+      return {
+        success: false,
+        error:
+          "OpenVPM Cloud is read-only until your trial or subscription is active.",
+      };
+    }
+  }
+
   const client = getTwilio();
 
   if (!client) {
@@ -74,6 +106,7 @@ export async function sendAppointmentReminderSms(data: {
   appointmentTime: string;
   practiceName: string;
   practicePhone?: string;
+  practiceId?: string;
 }): Promise<{ success: boolean }> {
   const phoneInfo = data.practicePhone
     ? `Call ${data.practicePhone} to reschedule.`
@@ -81,7 +114,7 @@ export async function sendAppointmentReminderSms(data: {
 
   const body = `Hi! Reminder: ${data.patientName} has an appointment on ${data.appointmentDate} at ${data.appointmentTime}. ${phoneInfo} - ${data.practiceName}`;
 
-  const result = await sendSms({ to: data.to, body });
+  const result = await sendSms({ to: data.to, body, practiceId: data.practiceId });
   return { success: result.success };
 }
 
@@ -95,6 +128,7 @@ export async function sendVaccinationReminderSms(data: {
   vaccineName: string;
   practiceName: string;
   practicePhone?: string;
+  practiceId?: string;
 }): Promise<{ success: boolean }> {
   const phoneInfo = data.practicePhone
     ? `Call ${data.practicePhone} to schedule.`
@@ -102,6 +136,6 @@ export async function sendVaccinationReminderSms(data: {
 
   const body = `Hi! ${data.patientName} is due for their ${data.vaccineName} vaccination. ${phoneInfo} - ${data.practiceName}`;
 
-  const result = await sendSms({ to: data.to, body });
+  const result = await sendSms({ to: data.to, body, practiceId: data.practiceId });
   return { success: result.success };
 }

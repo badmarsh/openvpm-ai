@@ -96,7 +96,9 @@ export default function AdminPage() {
               <th className="px-4 py-2.5 font-medium">Plan</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium">Trial ends</th>
+              <th className="px-4 py-2.5 font-medium text-right">Locations</th>
               <th className="px-4 py-2.5 font-medium text-right">Staff</th>
+              <th className="px-4 py-2.5 font-medium text-right">Base MRR</th>
               <th className="px-4 py-2.5 font-medium text-right">Clients</th>
               <th className="px-4 py-2.5 font-medium text-right">Patients</th>
               <th className="px-4 py-2.5 font-medium">Country</th>
@@ -118,7 +120,9 @@ export default function AdminPage() {
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-muted-foreground">{formatDate(p.trialEndsAt)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{p.locationCount}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{p.userCount}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{formatUsd(p.estimatedMrr)}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{p.clientCount}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{p.patientCount}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{p.country}</td>
@@ -127,7 +131,7 @@ export default function AdminPage() {
             ))}
             {data.practices.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">
                   No practices yet.
                 </td>
               </tr>

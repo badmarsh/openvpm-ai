@@ -20,6 +20,7 @@ import {
   Upload,
   FileSpreadsheet,
   Check,
+  AlertTriangle,
   Layers,
   CreditCard,
 } from "lucide-react";
@@ -85,6 +86,7 @@ const ROLE_BADGE: Record<string, string> = {
   veterinarian: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
   technician: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   front_desk: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+  viewer: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
 };
 
 const ROOM_TYPES = ["exam", "surgery", "treatment", "boarding"] as const;
@@ -431,6 +433,7 @@ function BillingTab() {
     ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : 0;
   const currentPlan = data.plans.find((p) => p.tier === data.tier);
+  const showReadOnlyNotice = !data.hasFullAccess;
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -456,6 +459,15 @@ function BillingTab() {
             {data.billingStatus.replace("_", " ")}
           </span>
         </div>
+        {showReadOnlyNotice && (
+          <div className="mt-4 flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Cloud is in read-only mode. You can view records, manage billing,
+              and export data; writes resume when your trial or subscription is active.
+            </p>
+          </div>
+        )}
         {data.billingStatus === "trialing" && (
           <p className="mt-3 text-sm text-muted-foreground">
             You&apos;re on a free trial with full Cloud access —{" "}
@@ -465,17 +477,26 @@ function BillingTab() {
         )}
         {data.billingStatus === "past_due" && (
           <p className="mt-3 text-sm text-red-600">
-            Your last payment failed. Update your payment method to avoid losing access.
+            Your last payment failed. Update your payment method to restore write access.
           </p>
         )}
-        {/* Billing summary: locations × price + this month's metered usage */}
-        <div className="mt-4 grid gap-2 border-t border-border pt-4 text-sm sm:grid-cols-3">
+        {/* Billing summary: locations + seats + this month's metered usage */}
+        <div className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-muted-foreground">Locations</p>
             <p className="font-medium">
-              {data.locationCount} × ${currentPlan?.priceMonthlyUsd ?? 99}/mo ={" "}
-              ${data.locationCount * (currentPlan?.priceMonthlyUsd ?? 99)}/mo
+              {data.locationCount} x ${data.locationUnitPriceMonthlyUsd}/mo
             </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Billable staff</p>
+            <p className="font-medium">
+              {data.billableSeatCount} x ${data.seatUnitPriceMonthlyUsd}/mo
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Base estimate</p>
+            <p className="font-medium">${data.estimatedMonthlyBase}/mo</p>
           </div>
           <div>
             <p className="text-muted-foreground">SMS this month</p>
@@ -496,6 +517,21 @@ function BillingTab() {
             </p>
           </div>
         </div>
+        {data.billingSyncStatus && (
+          <div
+            className={cn(
+              "mt-4 rounded-md border p-3 text-xs",
+              data.billingSyncStatus.status === "error"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : data.billingSyncStatus.status === "legacy"
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : "border-border bg-muted/30 text-muted-foreground"
+            )}
+          >
+            <span className="font-medium">Billing sync: </span>
+            {data.billingSyncStatus.message}
+          </div>
+        )}
         {data.hasBillingAccount && (
           <Button
             variant="outline"
@@ -534,8 +570,8 @@ function PlanGrid({
   plans: Array<{
     tier: string;
     name: string;
-    priceMonthlyUsd: number | null;
-    pricePerLocation: boolean;
+    locationUnitPriceMonthlyUsd: number | null;
+    seatUnitPriceMonthlyUsd: number | null;
     blurb: string;
     features: string[];
     seatLimit: number | null;
@@ -565,22 +601,23 @@ function PlanGrid({
           >
             <h4 className="font-heading text-base font-semibold">{p.name}</h4>
             <p className="mt-1 text-2xl font-bold">
-              {p.priceMonthlyUsd === null ? (
+              {p.locationUnitPriceMonthlyUsd === null || p.seatUnitPriceMonthlyUsd === null ? (
                 "Custom"
-              ) : p.priceMonthlyUsd === 0 ? (
+              ) : p.locationUnitPriceMonthlyUsd === 0 && p.seatUnitPriceMonthlyUsd === 0 ? (
                 "Free"
               ) : (
                 <>
-                  ${p.priceMonthlyUsd}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    /mo{p.pricePerLocation ? " / location" : ""}
+                  ${p.locationUnitPriceMonthlyUsd}
+                  <span className="text-sm font-normal text-muted-foreground">/location</span>
+                  <span className="block text-sm font-normal text-muted-foreground">
+                    + ${p.seatUnitPriceMonthlyUsd}/staff/mo
                   </span>
                 </>
               )}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">{p.blurb}</p>
             <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-              <li>{p.seatLimit === null ? "Unlimited" : p.seatLimit} staff seats</li>
+              <li>{p.seatLimit === null ? "All" : p.seatLimit} staff roles included</li>
               <li>
                 {p.locationLimit === null ? "Unlimited" : p.locationLimit} location
                 {p.locationLimit === 1 ? "" : "s"}

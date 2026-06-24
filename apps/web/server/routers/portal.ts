@@ -20,6 +20,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { buildRequestedSlot } from "@/lib/portal/booking";
 import { findOpenSlots } from "@/lib/scheduling/availability";
+import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 import { not, inArray, lt, gt } from "drizzle-orm";
 
 async function getClientByToken(db: any, token: string) {
@@ -37,6 +38,32 @@ async function getClientByToken(db: any, token: string) {
   }
 
   return client;
+}
+
+async function assertPortalWriteAccess(db: any, practiceId: string) {
+  if (!billingEnforced()) return;
+  const [practice] = await db
+    .select({
+      tier: practices.subscriptionTier,
+      billingStatus: practices.billingStatus,
+      trialEndsAt: practices.trialEndsAt,
+    })
+    .from(practices)
+    .where(eq(practices.id, practiceId))
+    .limit(1);
+  if (
+    !hasHostedFullAccess(
+      practice?.tier,
+      practice?.billingStatus,
+      practice?.trialEndsAt
+    )
+  ) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message:
+        "Online booking is unavailable until this practice's Cloud subscription is active.",
+    });
+  }
 }
 
 export const portalRouter = createRouter({
@@ -304,6 +331,7 @@ export const portalRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const client = await getClientByToken(ctx.db, input.token);
+      await assertPortalWriteAccess(ctx.db, client.practiceId);
 
       // Throttle public booking per portal link to deter abuse.
       const { success } = rateLimit({

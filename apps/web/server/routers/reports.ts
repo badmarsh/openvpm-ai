@@ -9,7 +9,7 @@ import {
   users,
 } from "@openpims/db";
 
-// Advanced reporting is a Pro feature on hosted; unrestricted on self-host.
+// Advanced reporting is a Cloud feature on hosted; unrestricted on self-host.
 const reportProcedure = protectedProcedure.use(requireFeature("advancedReporting"));
 
 export const reportsRouter = createRouter({

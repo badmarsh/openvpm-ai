@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from "crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
+import type { Database } from "@openpims/db/client";
 import { authTokens } from "@openpims/db";
 import { withSystem } from "@/lib/tenant-db";
 
@@ -24,18 +25,24 @@ export async function createAuthToken(opts: {
   email: string;
   type: AuthTokenType;
   now?: Date;
+  db?: Database;
 }): Promise<string> {
   const raw = randomBytes(32).toString("hex");
   const now = opts.now ?? new Date();
-  await withSystem(db, (tx) =>
+  const insertToken = (tx: Database) =>
     tx.insert(authTokens).values({
       userId: opts.userId,
       email: opts.email.toLowerCase(),
       tokenHash: hashToken(raw),
       type: opts.type,
       expiresAt: new Date(now.getTime() + TTL_MS[opts.type]),
-    })
-  );
+    });
+
+  if (opts.db) {
+    await insertToken(opts.db);
+  } else {
+    await withSystem(db, insertToken);
+  }
   return raw;
 }
 

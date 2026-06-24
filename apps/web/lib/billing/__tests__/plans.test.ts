@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   PLANS,
   getPlan,
@@ -8,8 +8,20 @@ import {
   withinLocationLimit,
   isTrialActive,
   effectiveTier,
+  hasHostedFullAccess,
+  estimatedCloudBaseMonthlyUsd,
+  tierForStripePrice,
+  STRIPE_PRICE_CLOUD_LOCATION_ENV,
+  STRIPE_PRICE_CLOUD_USER_ENV,
+  STRIPE_PRICE_CLOUD_LEGACY_ENV,
+  CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
+  CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
   ALL_FEATURES,
 } from "../plans";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("getPlan", () => {
   it("returns the matching plan and falls back to free", () => {
@@ -83,10 +95,56 @@ describe("trials", () => {
 });
 
 describe("PLANS pricing", () => {
-  it("is one simple Cloud tier at $99/location, free self-host, enterprise custom", () => {
-    expect(PLANS.free.priceMonthlyUsd).toBe(0);
-    expect(PLANS.cloud.priceMonthlyUsd).toBe(99);
-    expect(PLANS.cloud.pricePerLocation).toBe(true);
-    expect(PLANS.enterprise.priceMonthlyUsd).toBeNull();
+  it("uses hybrid Cloud pricing, free self-host, and custom enterprise", () => {
+    expect(PLANS.free.locationUnitPriceMonthlyUsd).toBe(0);
+    expect(PLANS.free.seatUnitPriceMonthlyUsd).toBe(0);
+    expect(PLANS.cloud.locationUnitPriceMonthlyUsd).toBe(
+      CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD
+    );
+    expect(PLANS.cloud.seatUnitPriceMonthlyUsd).toBe(
+      CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD
+    );
+    expect(PLANS.enterprise.locationUnitPriceMonthlyUsd).toBeNull();
+    expect(PLANS.enterprise.seatUnitPriceMonthlyUsd).toBeNull();
+  });
+
+  it("estimates base Cloud subscription from locations and billable staff", () => {
+    expect(estimatedCloudBaseMonthlyUsd(2, 5)).toBe(148);
+    expect(estimatedCloudBaseMonthlyUsd(0, 0)).toBe(49);
+  });
+});
+
+describe("hosted full access", () => {
+  const now = new Date("2026-06-07T00:00:00Z");
+  const future = new Date("2026-06-20T00:00:00Z");
+  const past = new Date("2026-06-01T00:00:00Z");
+
+  it("self-host is fully writable regardless of billing state", () => {
+    expect(hasHostedFullAccess("free", "none", null, now, false)).toBe(true);
+  });
+
+  it("allows active trial and active paid subscription", () => {
+    expect(hasHostedFullAccess("free", "trialing", future, now, true)).toBe(true);
+    expect(hasHostedFullAccess("cloud", "active", past, now, true)).toBe(true);
+  });
+
+  it("blocks expired trials, canceled, past due, and no subscription on hosted", () => {
+    expect(hasHostedFullAccess("free", "trialing", past, now, true)).toBe(false);
+    expect(hasHostedFullAccess("cloud", "past_due", future, now, true)).toBe(false);
+    expect(hasHostedFullAccess("cloud", "canceled", future, now, true)).toBe(false);
+    expect(hasHostedFullAccess("free", "none", null, now, true)).toBe(false);
+  });
+});
+
+describe("Stripe price mapping", () => {
+  it("maps split Cloud prices and legacy Cloud price to the cloud tier", () => {
+    vi.stubEnv(STRIPE_PRICE_CLOUD_LOCATION_ENV, "price_location");
+    vi.stubEnv(STRIPE_PRICE_CLOUD_USER_ENV, "price_user");
+    vi.stubEnv(STRIPE_PRICE_CLOUD_LEGACY_ENV, "price_legacy");
+
+    expect(tierForStripePrice("price_location")).toBe("cloud");
+    expect(tierForStripePrice("price_user")).toBe("cloud");
+    expect(tierForStripePrice("price_legacy")).toBe("cloud");
+    expect(tierForStripePrice("price_other")).toBeNull();
   });
 });
