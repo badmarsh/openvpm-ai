@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -78,6 +79,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user?.role ?? "front_desk") as UserRole;
+  const { data: branding } = trpc.settings.getBranding.useQuery();
 
   const visibleNavItems = navItems.filter((item) => item.roles.includes(role));
 
@@ -91,9 +93,18 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-14 items-center border-b border-border px-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <PawMark className="h-4 w-4 text-primary-foreground" />
-          </div>
+          {branding?.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={branding.logoUrl}
+              alt={branding.name ?? "Practice logo"}
+              className="h-8 w-8 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <PawMark className="h-4 w-4 text-primary-foreground" />
+            </div>
+          )}
           {!collapsed && (
             <span className="font-heading text-lg font-semibold">
               OpenVPM
@@ -115,6 +126,7 @@ export function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  data-tour={`nav-${item.href}`}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",

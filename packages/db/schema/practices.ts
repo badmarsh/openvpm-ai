@@ -22,7 +22,7 @@ export const practices = pgTable("practices", {
   logoUrl: varchar("logo_url", { length: 512 }),
   settings: jsonb("settings").default({}),
   // Hosted-SaaS subscription (ignored by self-host unless HOSTED_BILLING_ENABLED).
-  // subscriptionTier is the canonical plan tier: free | starter | pro | enterprise.
+  // subscriptionTier is the canonical plan tier: free | cloud | enterprise.
   subscriptionTier: varchar("subscription_tier", { length: 32 }).notNull().default("free"),
   stripeCustomerId: varchar("stripe_customer_id", { length: 64 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 64 }),

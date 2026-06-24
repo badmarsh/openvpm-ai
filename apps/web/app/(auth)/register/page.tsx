@@ -1,41 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import {
+  ArrowRight,
+  Bot,
+  Calendar,
+  CheckCircle2,
+  FileText,
+  LayoutDashboard,
+  Loader2,
+  Package,
+  PawPrint,
+  Receipt,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
+import { cn, initials, isValidEmail } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-white">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterPageInner() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const searchParams = useSearchParams();
+  const cloudIntent = searchParams.get("intent") === "cloud";
+  const [practiceName, setPracticeName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [practiceName, setPracticeName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [verifySent, setVerifySent] = useState(false);
-
   const registerMutation = trpc.auth.register.useMutation({
-    onSuccess: async (data) => {
-      // Hosted: email verification required → show a "check your inbox" notice.
-      if (data?.verificationRequired) {
-        setVerifySent(true);
-        setLoading(false);
-        return;
-      }
-      // Self-host: auto-sign in after registration.
-      toast.success("Account created! Redirecting...");
+    onSuccess: async () => {
       const result = await signIn("credentials", {
-        email,
+        email: email.trim().toLowerCase(),
         password,
         redirect: false,
       });
       if (result?.ok) {
-        router.push("/");
+        router.push("/?tour=start");
         router.refresh();
+      } else {
+        toast.success("Account created. Please sign in.");
+        router.push("/login");
       }
     },
     onError: (err) => {
@@ -45,140 +69,294 @@ export default function RegisterPage() {
     },
   });
 
-  if (verifySent) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 text-center">
-          <h1 className="font-heading text-2xl font-bold text-foreground">Check your email</h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            We sent a verification link to <strong>{email}</strong>. Click it to activate
-            your account and start your 14-day free trial.
-          </p>
-          <Link href="/login" className="mt-6 inline-block text-sm text-primary hover:underline">
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    );
+  function validate(): string | null {
+    if (practiceName.trim().length < 2)
+      return "Add your practice name to continue.";
+    if (!isValidEmail(email)) return "Add a valid work email.";
+    if (password.length < 8)
+      return "Use at least 8 characters for the password.";
+    return null;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const message = validate();
+    if (message) {
+      setError(message);
+      return;
+    }
     setError("");
     setLoading(true);
-    registerMutation.mutate({ name, email, password, practiceName });
+    registerMutation.mutate({
+      email: email.trim().toLowerCase(),
+      password,
+      practiceName: practiceName.trim(),
+    });
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8">
-        <div className="mb-6 text-center">
-          <h1 className="font-heading text-2xl font-bold text-foreground">
-            OpenVPM
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Left pane: the form, on clean white */}
+      <div className="flex items-center justify-center bg-white px-6 py-10 sm:px-10">
+        <div className="w-full max-w-md">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <PawPrint className="h-4 w-4" />
+            </span>
+            OpenVPM {cloudIntent ? "Cloud" : ""}
+          </Link>
+
+          <h1 className="mt-8 font-heading text-3xl font-bold tracking-tight text-slate-950">
+            Create your workspace
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Register your practice
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Start using OpenVPM in about a minute. You own your data, and smart
+            AI tools are built in.
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            14-day free trial · no credit card required
+
+          <form onSubmit={handleSubmit} className="mt-8 grid gap-4">
+            {error ? (
+              <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            ) : null}
+
+            <FormField label="Practice name" htmlFor="practiceName">
+              <Input
+                id="practiceName"
+                value={practiceName}
+                onChange={(e) => setPracticeName(e.target.value)}
+                placeholder="Neighborhood Veterinary"
+                autoFocus
+                required
+              />
+            </FormField>
+
+            <FormField label="Work email" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@clinic.com"
+                required
+              />
+            </FormField>
+
+            <FormField
+              label="Password"
+              htmlFor="password"
+              description="At least 8 characters."
+            >
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
+                minLength={8}
+                required
+              />
+            </FormField>
+
+            <Button type="submit" disabled={loading} className="mt-1 w-full">
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating your workspace
+                </>
+              ) : (
+                <>
+                  Create workspace
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+
+            <p className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              Free for 14 days. No card needed.
+            </p>
+          </form>
+
+          <p className="mt-8 text-center text-sm text-slate-500">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Right pane: gradient, with the platform flush to the bottom-right edge */}
+      <div className="relative hidden overflow-hidden bg-[linear-gradient(135deg,#fff7ed_0%,#fdf2f8_45%,#ecfdf5_100%)] lg:block">
+        <div className="relative z-10 px-12 pt-16">
+          <h2 className="max-w-md font-heading text-3xl font-bold tracking-tight text-slate-950">
+            The practice system you own.
+          </h2>
+          <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
+            Run your day, keep clean records, and send bills. Smart AI tools are
+            built in, and your data stays yours to export any time.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
+        <div className="absolute bottom-0 right-0 left-16 top-52">
+          <PlatformPreview practiceName={practiceName} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const NAV = [
+  { label: "Dashboard", icon: LayoutDashboard },
+  { label: "Patients", icon: PawPrint },
+  { label: "Schedule", icon: Calendar },
+  { label: "Records", icon: FileText },
+  { label: "Billing", icon: Receipt },
+  { label: "Inventory", icon: Package },
+];
+
+const KPIS = [
+  { label: "Today's visits", value: "8", icon: Calendar },
+  { label: "New patients", value: "3", icon: PawPrint },
+  { label: "Revenue", value: "$1,240", icon: Receipt },
+];
+
+// Appointment colors mirror the real schedule.
+const APPTS = [
+  { time: "9:00", title: "Wellness exam", pet: "Biscuit", color: "#0d9488" },
+  { time: "10:30", title: "Vaccination", pet: "Luna", color: "#2563eb" },
+  { time: "1:15", title: "Dental cleaning", pet: "Mango", color: "#0891b2" },
+  { time: "3:00", title: "Sick visit", pet: "Olive", color: "#dc2626" },
+];
+
+/**
+ * A clean, value-first snapshot of the real app: the icon side nav, the
+ * dashboard value cards, the day's schedule with appointment colors, and an
+ * Ask AI card. Rendered flush to the bottom-right edge of the pane.
+ */
+function PlatformPreview({ practiceName }: { practiceName: string }) {
+  const clinic = practiceName.trim() || "Neighborhood Veterinary";
+  return (
+    <div className="h-full w-full overflow-hidden rounded-tl-2xl border-l border-t border-white/80 bg-white shadow-2xl shadow-rose-200/40">
+      <div className="flex h-full">
+        {/* Side nav */}
+        <aside className="flex w-[150px] shrink-0 flex-col border-r border-slate-100 bg-slate-50/70 p-3">
+          <div className="flex items-center gap-2 px-1 pb-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-semibold text-primary-foreground">
+              {initials(clinic)}
+            </span>
+            <span className="truncate font-heading text-sm font-semibold text-slate-900">
+              {clinic}
+            </span>
+          </div>
+          <nav className="space-y-1">
+            {NAV.map(({ label, icon: Icon }, i) => (
+              <div
+                key={label}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-xs font-medium",
+                  i === 0 ? "bg-primary/10 text-primary" : "text-slate-500"
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
+              </div>
+            ))}
+          </nav>
+          <div className="mt-auto flex items-center gap-2 px-1 pt-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+              DV
+            </span>
+            <span className="truncate text-[11px] text-slate-500">Dr. Vet</span>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <p className="font-heading text-sm font-semibold text-slate-900">
+              Dashboard
+            </p>
+            <span className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground">
+              New
+            </span>
+          </div>
+
+          <div className="flex-1 space-y-3 p-4">
+            {/* Value cards */}
+            <div className="grid grid-cols-3 gap-3">
+              {KPIS.map(({ label, value, icon: Icon }) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-slate-100 bg-white p-3"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                    {label}
+                  </p>
+                  <p className="text-base font-semibold text-slate-950">
+                    {value}
+                  </p>
+                </div>
+              ))}
             </div>
-          )}
 
-          <div>
-            <label
-              htmlFor="practiceName"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Practice Name
-            </label>
-            <input
-              id="practiceName"
-              type="text"
-              value={practiceName}
-              onChange={(e) => setPracticeName(e.target.value)}
-              required
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Neighborhood Veterinary"
-            />
+            {/* Today's schedule with appointment colors */}
+            <div className="rounded-lg border border-slate-100 p-3">
+              <p className="text-xs font-semibold text-slate-900">
+                Today's schedule
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {APPTS.map((a) => (
+                  <div
+                    key={a.time}
+                    className="flex items-center gap-3 rounded-md px-2.5 py-1.5"
+                    style={{ backgroundColor: `${a.color}14` }}
+                  >
+                    <span className="w-10 text-[11px] font-medium text-slate-500">
+                      {a.time}
+                    </span>
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: a.color }}
+                    />
+                    <span className="text-xs font-medium text-slate-900">
+                      {a.title}
+                    </span>
+                    <span className="ml-auto text-[11px] text-slate-500">
+                      {a.pet}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Ask AI */}
+            <div className="rounded-lg border border-slate-100 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Bot className="h-3.5 w-3.5" />
+                </span>
+                <p className="text-xs font-semibold text-slate-900">Ask AI</p>
+              </div>
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
+                <span className="truncate text-[11px] text-slate-500">
+                  Which pets are due for vaccines?
+                </span>
+                <span className="ml-auto rounded bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                  Ask
+                </span>
+              </div>
+            </div>
           </div>
-
-          <div>
-            <label
-              htmlFor="name"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Your Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Dr. Jane Smith"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="you@clinic.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="At least 8 characters"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
-            {loading ? "Creating practice..." : "Create Practice"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

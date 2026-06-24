@@ -1,11 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { appRouter } from "../routers/_app";
 
 // Build a tRPC caller with a fake session. The db is a throwing proxy: any
 // resolver that reaches the database fails loudly — so a passing query proves
 // the guard let it through to a db-free path, and a FORBIDDEN proves the guard
 // short-circuited before the resolver.
-function callerFor(role: string) {
+function callerFor(role: string, dbOverride?: Record<string, unknown>) {
   const session = {
     user: {
       id: "00000000-0000-0000-0000-000000000001",
@@ -19,12 +19,16 @@ function callerFor(role: string) {
   // execute() is a no-op (for the RLS set_config call). Any real table access
   // (.select/.insert/...) is undefined → throws, so a db-free resolver passing
   // proves the guard let it through, and FORBIDDEN proves it short-circuited.
-  const db: Record<string, unknown> = {
+  const db: Record<string, unknown> = dbOverride ?? {
     transaction: async (fn: (tx: unknown) => unknown) => fn(db),
     execute: async () => undefined,
   };
   return appRouter.createCaller({ db, session } as never);
 }
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("viewer read-only guard", () => {
   it("allows queries for a viewer", async () => {
@@ -45,5 +49,28 @@ describe("viewer read-only guard", () => {
     const caller = callerFor("front_desk");
     const res = await caller.dosing.formulary();
     expect(res.drugs.length).toBeGreaterThan(0);
+  });
+
+  it("blocks hosted lapsed accounts from protected mutations before resolver writes", async () => {
+    vi.stubEnv("HOSTED_BILLING_ENABLED", "true");
+    const db: Record<string, unknown> = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [
+              {
+                tier: "cloud",
+                billingStatus: "past_due",
+                trialEndsAt: null,
+              },
+            ],
+          }),
+        }),
+      }),
+    };
+    const caller = callerFor("front_desk", db);
+    await expect(
+      caller.clients.create({ firstName: "A", lastName: "B" })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

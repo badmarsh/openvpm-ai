@@ -2,9 +2,14 @@ import { isNull, sql, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure } from "../trpc";
 import { db } from "@openpims/db/client";
-import { practices, users, clients, patients } from "@openpims/db";
+import { practices, users, clients, patients, locations } from "@openpims/db";
 import { isPlatformAdmin } from "@/lib/platform-admin";
-import { getPlan, type PlanTier } from "@/lib/billing/plans";
+import {
+  CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
+  CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
+  getPlan,
+  type PlanTier,
+} from "@/lib/billing/plans";
 import { withSystem } from "@/lib/tenant-db";
 
 /**
@@ -43,7 +48,7 @@ export const adminRouter = createRouter({
       .orderBy(desc(practices.createdAt));
 
     const countBy = async (
-      table: typeof users | typeof clients | typeof patients
+      table: typeof users | typeof clients | typeof patients | typeof locations
     ) => {
       const res = await tx
         .select({
@@ -56,23 +61,38 @@ export const adminRouter = createRouter({
       return new Map(res.map((r) => [r.practiceId, Number(r.c)]));
     };
 
-    const [userCounts, clientCounts, patientCounts] = await Promise.all([
-      countBy(users),
-      countBy(clients),
-      countBy(patients),
-    ]);
+    const [userCounts, clientCounts, patientCounts, locationCounts] =
+      await Promise.all([
+        countBy(users),
+        countBy(clients),
+        countBy(patients),
+        countBy(locations),
+      ]);
 
-    const practiceRows = rows.map((p) => ({
-      ...p,
-      userCount: userCounts.get(p.id) ?? 0,
-      clientCount: clientCounts.get(p.id) ?? 0,
-      patientCount: patientCounts.get(p.id) ?? 0,
-    }));
+    const practiceRows = rows.map((p) => {
+      const userCount = userCounts.get(p.id) ?? 0;
+      const locationCount = Math.max(1, locationCounts.get(p.id) ?? 0);
+      const estimatedMrr =
+        p.billingStatus === "active" && getPlan(p.tier).tier === "cloud"
+          ? locationCount * CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD +
+            userCount * CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD
+          : 0;
+      return {
+        ...p,
+        userCount,
+        locationCount,
+        estimatedMrr,
+        clientCount: clientCounts.get(p.id) ?? 0,
+        patientCount: patientCounts.get(p.id) ?? 0,
+      };
+    });
 
-    // MRR: sum list price of practices on a paid, active subscription.
+    // MRR: active hosted Cloud subscriptions use hybrid location + staff pricing.
     const estimatedMrr = practiceRows
-      .filter((p) => p.billingStatus === "active")
-      .reduce((sum, p) => sum + (getPlan(p.tier).priceMonthlyUsd ?? 0), 0);
+      .filter(
+        (p) => p.billingStatus === "active" && getPlan(p.tier).tier === "cloud"
+      )
+      .reduce((sum, p) => sum + p.estimatedMrr, 0);
 
     const byTier: Record<PlanTier, number> = {
       free: 0,

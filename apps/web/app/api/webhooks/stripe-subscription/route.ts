@@ -5,6 +5,7 @@ import { db } from "@openpims/db/client";
 import { practices } from "@openpims/db";
 import { constructSubscriptionWebhookEvent } from "@/lib/stripe";
 import { tierForStripePrice, normalizeBillingStatus } from "@/lib/billing/plans";
+import { syncPracticeSubscriptionQuantities } from "@/lib/billing/subscription-sync";
 import { alertOps } from "@/lib/alerts";
 import { withSystem } from "@/lib/tenant-db";
 
@@ -39,6 +40,10 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
         const practiceId = s.client_reference_id ?? s.metadata?.practiceId ?? null;
+        const subscriptionId =
+          typeof s.subscription === "string"
+            ? s.subscription
+            : (s.subscription?.id ?? null);
         if (practiceId && s.customer) {
           await withSystem(db, (tx) =>
             tx
@@ -46,12 +51,18 @@ export async function POST(req: NextRequest) {
               .set({
                 stripeCustomerId:
                   typeof s.customer === "string" ? s.customer : s.customer!.id,
-                stripeSubscriptionId:
-                  typeof s.subscription === "string"
-                    ? s.subscription
-                    : (s.subscription?.id ?? null),
+                stripeSubscriptionId: subscriptionId,
               })
               .where(eq(practices.id, practiceId))
+          );
+        }
+        if (practiceId && subscriptionId) {
+          await withSystem(db, (tx) =>
+            syncPracticeSubscriptionQuantities({
+              db: tx,
+              practiceId,
+              subscriptionId,
+            })
           );
         }
         break;
@@ -123,8 +134,10 @@ async function applySubscription(sub: Stripe.Subscription) {
     console.warn("[Stripe Subscription Webhook] subscription without practiceId metadata:", sub.id);
     return;
   }
-  const priceId = sub.items?.data?.[0]?.price?.id ?? null;
-  const tier = tierForStripePrice(priceId);
+  const tier =
+    sub.items?.data
+      ?.map((item) => tierForStripePrice(item.price?.id))
+      .find(Boolean) ?? null;
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
 
   await withSystem(db, (tx) =>
@@ -138,5 +151,12 @@ async function applySubscription(sub: Stripe.Subscription) {
         trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
       })
       .where(eq(practices.id, practiceId))
+  );
+  await withSystem(db, (tx) =>
+    syncPracticeSubscriptionQuantities({
+      db: tx,
+      practiceId,
+      subscriptionId: sub.id,
+    })
   );
 }

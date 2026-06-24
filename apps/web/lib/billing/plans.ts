@@ -6,9 +6,10 @@
  * product. We monetize hosting + scale (locations) + heavy usage, not by locking
  * the open core.
  *
- * Pricing (managed Cloud): ONE simple self-serve tier — $99/mo per location,
- * ALL features included (feature parity with self-host), with metered overage
- * for SMS / AI usage beyond generous monthly allowances. Enterprise = custom.
+ * Pricing (managed Cloud): ONE simple self-serve tier with hybrid billing:
+ * $49/mo per active location + $10/mo per active staff user. ALL features are
+ * included while trialing/active, with metered overage for SMS / AI usage
+ * beyond included monthly allowances. Enterprise = custom.
  */
 
 export type PlanTier = "free" | "cloud" | "enterprise";
@@ -17,7 +18,7 @@ export type PlanTier = "free" | "cloud" | "enterprise";
  * Legacy tier strings (from the earlier starter/pro model) map onto `cloud`, so
  * existing practice rows and any old Stripe prices keep resolving cleanly.
  */
-const LEGACY_CLOUD_TIERS = new Set(["starter", "pro"]);
+const LEGACY_CLOUD_TIERS = new Set(["starter", "pro", "professional"]);
 
 /** Capabilities. With feature parity these are unlocked on every paid tier. */
 export type Feature =
@@ -37,17 +38,25 @@ export const ALL_FEATURES: Feature[] = [
   "integrations",
 ];
 
-/** Env vars holding Stripe Price IDs for metered overage (hosted only, PRIVATE). */
+/** Managed Cloud list prices. */
+export const CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD = 49;
+export const CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD = 10;
+
+/** Env vars holding Stripe Price IDs for hosted billing (PRIVATE). */
+export const STRIPE_PRICE_CLOUD_LOCATION_ENV = "STRIPE_PRICE_CLOUD_LOCATION";
+export const STRIPE_PRICE_CLOUD_USER_ENV = "STRIPE_PRICE_CLOUD_USER";
+/** Legacy one-price Cloud env. Kept only for old subscription/webhook mapping. */
+export const STRIPE_PRICE_CLOUD_LEGACY_ENV = "STRIPE_PRICE_CLOUD";
 export const STRIPE_PRICE_SMS_OVERAGE_ENV = "STRIPE_PRICE_SMS_OVERAGE";
 export const STRIPE_PRICE_AI_OVERAGE_ENV = "STRIPE_PRICE_AI_OVERAGE";
 
 export interface PlanDefinition {
   tier: PlanTier;
   name: string;
-  /** Monthly price in USD (per location for `cloud`). null = custom / contact sales. */
-  priceMonthlyUsd: number | null;
-  /** Whether the monthly price is charged per location (Stripe subscription quantity). */
-  pricePerLocation: boolean;
+  /** Monthly location unit price in USD. null = custom / contact sales. */
+  locationUnitPriceMonthlyUsd: number | null;
+  /** Monthly staff-seat unit price in USD. null = custom / contact sales. */
+  seatUnitPriceMonthlyUsd: number | null;
   blurb: string;
   /** Max staff seats. null = unlimited. */
   seatLimit: number | null;
@@ -59,8 +68,10 @@ export interface PlanDefinition {
   includedSmsPerMonth: number | null;
   /** Included monthly AI agent runs before metered overage. null = unlimited/custom. */
   includedAiRunsPerMonth: number | null;
-  /** Env var holding the Stripe Price ID for this tier (hosted only). */
-  stripePriceEnv?: string;
+  /** Env var holding the recurring location Stripe Price ID for this tier. */
+  stripeLocationPriceEnv?: string;
+  /** Env var holding the recurring staff-user Stripe Price ID for this tier. */
+  stripeSeatPriceEnv?: string;
   /** Whether this tier is self-serve purchasable (vs. contact sales). */
   selfServe: boolean;
 }
@@ -72,8 +83,8 @@ export const PLANS: Record<PlanTier, PlanDefinition> = {
     // fallback tier — so its entitlements MUST be empty to gate non-payers.
     tier: "free",
     name: "Free (self-host)",
-    priceMonthlyUsd: 0,
-    pricePerLocation: false,
+    locationUnitPriceMonthlyUsd: 0,
+    seatUnitPriceMonthlyUsd: 0,
     blurb: "The full product, on your own infrastructure. Free forever, no lock-in.",
     seatLimit: null,
     locationLimit: null,
@@ -85,23 +96,24 @@ export const PLANS: Record<PlanTier, PlanDefinition> = {
   cloud: {
     tier: "cloud",
     name: "Cloud",
-    priceMonthlyUsd: 99,
-    pricePerLocation: true,
+    locationUnitPriceMonthlyUsd: CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
+    seatUnitPriceMonthlyUsd: CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
     blurb:
-      "We host it: the full PIMS, managed, with every feature — agent, SMS, reporting, API, multi-location, integrations. $99/mo per location.",
-    seatLimit: null, // unlimited staff included
+      "We host it: the full PIMS, managed, with every feature - agent, SMS, reporting, API, multi-location, integrations. $49/mo per location + $10/mo per staff user.",
+    seatLimit: null, // billed by quantity, not capped
     locationLimit: null, // billed by quantity, not capped
     features: [...ALL_FEATURES],
     includedSmsPerMonth: 500,
     includedAiRunsPerMonth: 200,
-    stripePriceEnv: "STRIPE_PRICE_CLOUD",
+    stripeLocationPriceEnv: STRIPE_PRICE_CLOUD_LOCATION_ENV,
+    stripeSeatPriceEnv: STRIPE_PRICE_CLOUD_USER_ENV,
     selfServe: true,
   },
   enterprise: {
     tier: "enterprise",
     name: "Enterprise",
-    priceMonthlyUsd: null,
-    pricePerLocation: false,
+    locationUnitPriceMonthlyUsd: null,
+    seatUnitPriceMonthlyUsd: null,
     blurb:
       "Dedicated or in-region instance, SSO, BAA/DPA compliance, white-glove migration, and priority support.",
     seatLimit: null,
@@ -124,11 +136,35 @@ export function getPlan(tier?: string | null): PlanDefinition {
 /** Map a Stripe Price ID back to a plan tier (via the configured env vars). */
 export function tierForStripePrice(priceId: string | null | undefined): PlanTier | null {
   if (!priceId) return null;
-  for (const t of PLAN_ORDER) {
-    const env = PLANS[t].stripePriceEnv;
-    if (env && process.env[env] === priceId) return t;
+  const cloudPriceEnvs = [
+    STRIPE_PRICE_CLOUD_LOCATION_ENV,
+    STRIPE_PRICE_CLOUD_USER_ENV,
+    STRIPE_PRICE_CLOUD_LEGACY_ENV,
+  ];
+  for (const env of cloudPriceEnvs) {
+    if (process.env[env] === priceId) return "cloud";
   }
   return null;
+}
+
+export function cloudCheckoutPriceIds(): {
+  locationPriceId?: string;
+  seatPriceId?: string;
+} {
+  return {
+    locationPriceId: process.env[STRIPE_PRICE_CLOUD_LOCATION_ENV],
+    seatPriceId: process.env[STRIPE_PRICE_CLOUD_USER_ENV],
+  };
+}
+
+export function estimatedCloudBaseMonthlyUsd(
+  locationCount: number,
+  billableSeatCount: number
+): number {
+  return (
+    Math.max(1, locationCount) * CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD +
+    Math.max(0, billableSeatCount) * CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD
+  );
 }
 
 /** Normalize a Stripe subscription status to our billingStatus values. */
@@ -165,6 +201,20 @@ export function isTrialActive(
 ): boolean {
   if (billingStatus !== "trialing" || !trialEndsAt) return false;
   return new Date(trialEndsAt).getTime() > now.getTime();
+}
+
+/** Hosted write access: active trial or active paid/custom subscription only. */
+export function hasHostedFullAccess(
+  tier: string | null | undefined,
+  billingStatus: string | null | undefined,
+  trialEndsAt: Date | string | null | undefined,
+  now: Date = new Date(),
+  enforced: boolean = billingEnforced()
+): boolean {
+  if (!enforced) return true;
+  if (isTrialActive(billingStatus, trialEndsAt, now)) return true;
+  if (billingStatus !== "active") return false;
+  return getPlan(tier).tier !== "free";
 }
 
 /**

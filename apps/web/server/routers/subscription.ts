@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
-import { practices, locations } from "@openpims/db";
-import type { Database } from "@openpims/db/client";
+import { practices } from "@openpims/db";
 import {
   createSubscriptionCheckoutSession,
   createBillingPortalSession,
@@ -12,17 +11,20 @@ import {
   PLANS,
   PLAN_ORDER,
   billingEnforced,
+  cloudCheckoutPriceIds,
+  estimatedCloudBaseMonthlyUsd,
+  CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
+  CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
+  TRIAL_DAYS,
+  hasHostedFullAccess,
 } from "@/lib/billing/plans";
 import { usageForPractice, currentPeriodMonth } from "@/lib/billing/usage";
-
-/** Count active locations for a practice (the billed quantity for Cloud). */
-async function countLocations(db: Database, practiceId: string): Promise<number> {
-  const [row] = await db
-    .select({ c: sql<number>`count(*)::int` })
-    .from(locations)
-    .where(and(eq(locations.practiceId, practiceId), isNull(locations.deletedAt)));
-  return Math.max(1, Number(row?.c ?? 1));
-}
+import {
+  countBillableLocationsAndSeats,
+  readBillingSyncState,
+  syncPracticeSubscriptionQuantities,
+  type BillingSyncState,
+} from "@/lib/billing/subscription-sync";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 
@@ -36,8 +38,9 @@ function appBaseUrl(): string {
 
 /** Whether a tier can be bought self-serve (Stripe price configured). */
 function purchasable(tier: keyof typeof PLANS): boolean {
-  const env = PLANS[tier].stripePriceEnv;
-  return !!(env && process.env[env]);
+  if (tier !== "cloud") return false;
+  const { locationPriceId, seatPriceId } = cloudCheckoutPriceIds();
+  return !!(locationPriceId && seatPriceId);
 }
 
 export const subscriptionRouter = createRouter({
@@ -49,13 +52,30 @@ export const subscriptionRouter = createRouter({
         billingStatus: practices.billingStatus,
         trialEndsAt: practices.trialEndsAt,
         stripeCustomerId: practices.stripeCustomerId,
+        stripeSubscriptionId: practices.stripeSubscriptionId,
       })
       .from(practices)
       .where(eq(practices.id, ctx.practiceId))
       .limit(1);
 
     const enforced = billingEnforced();
-    const locationCount = await countLocations(ctx.db, ctx.practiceId);
+    let counts = await countBillableLocationsAndSeats(ctx.db, ctx.practiceId);
+    let billingSync: BillingSyncState | null = await readBillingSyncState(
+      ctx.db,
+      ctx.practiceId
+    );
+    if (enforced && practice?.stripeSubscriptionId) {
+      billingSync = await syncPracticeSubscriptionQuantities({
+        db: ctx.db,
+        practiceId: ctx.practiceId,
+        subscriptionId: practice.stripeSubscriptionId,
+        alertOnError: false,
+      });
+      counts = {
+        locationCount: billingSync.locationCount,
+        billableSeatCount: billingSync.billableSeatCount,
+      };
+    }
     const period = currentPeriodMonth();
     const [smsUsed, aiUsed] = enforced
       ? await Promise.all([
@@ -70,15 +90,28 @@ export const subscriptionRouter = createRouter({
       trialEndsAt: practice?.trialEndsAt ?? null,
       hasBillingAccount: !!practice?.stripeCustomerId,
       billingEnforced: enforced,
-      locationCount,
+      hasFullAccess: hasHostedFullAccess(
+        practice?.tier,
+        practice?.billingStatus,
+        practice?.trialEndsAt
+      ),
+      locationCount: counts.locationCount,
+      billableSeatCount: counts.billableSeatCount,
+      locationUnitPriceMonthlyUsd: CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
+      seatUnitPriceMonthlyUsd: CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
+      estimatedMonthlyBase: estimatedCloudBaseMonthlyUsd(
+        counts.locationCount,
+        counts.billableSeatCount
+      ),
+      billingSyncStatus: billingSync,
       usage: { period, sms: smsUsed, aiRuns: aiUsed },
       plans: PLAN_ORDER.map((t) => {
         const p = PLANS[t];
         return {
           tier: p.tier,
           name: p.name,
-          priceMonthlyUsd: p.priceMonthlyUsd,
-          pricePerLocation: p.pricePerLocation,
+          locationUnitPriceMonthlyUsd: p.locationUnitPriceMonthlyUsd,
+          seatUnitPriceMonthlyUsd: p.seatUnitPriceMonthlyUsd,
           blurb: p.blurb,
           features: p.features,
           seatLimit: p.seatLimit,
@@ -97,10 +130,8 @@ export const subscriptionRouter = createRouter({
     .input(z.object({ tier: z.enum(["cloud"]).default("cloud") }))
     .mutation(async ({ ctx, input }) => {
       const plan = PLANS[input.tier];
-      const priceId = plan.stripePriceEnv
-        ? process.env[plan.stripePriceEnv]
-        : undefined;
-      if (!priceId) {
+      const { locationPriceId, seatPriceId } = cloudCheckoutPriceIds();
+      if (!plan.selfServe || !locationPriceId || !seatPriceId) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "This plan isn't available for checkout yet.",
@@ -111,23 +142,32 @@ export const subscriptionRouter = createRouter({
         .select({
           stripeCustomerId: practices.stripeCustomerId,
           email: practices.email,
+          billingStatus: practices.billingStatus,
+          trialEndsAt: practices.trialEndsAt,
         })
         .from(practices)
         .where(eq(practices.id, ctx.practiceId))
         .limit(1);
 
-      // Cloud is billed per location → Stripe subscription quantity.
-      const quantity = plan.pricePerLocation
-        ? await countLocations(ctx.db, ctx.practiceId)
-        : 1;
+      const counts = await countBillableLocationsAndSeats(ctx.db, ctx.practiceId);
 
       const base = appBaseUrl();
+      const activeTrialEnd =
+        practice?.billingStatus === "trialing" &&
+        practice.trialEndsAt &&
+        new Date(practice.trialEndsAt).getTime() > Date.now()
+          ? practice.trialEndsAt
+          : null;
       const result = await createSubscriptionCheckoutSession({
-        priceId,
+        lineItems: [
+          { priceId: locationPriceId, quantity: counts.locationCount },
+          { priceId: seatPriceId, quantity: counts.billableSeatCount },
+        ],
         practiceId: ctx.practiceId,
         customerId: practice?.stripeCustomerId ?? undefined,
         customerEmail: practice?.email ?? ctx.session.user.email,
-        quantity,
+        trialEnd: activeTrialEnd,
+        trialPeriodDays: activeTrialEnd || practice?.trialEndsAt ? undefined : TRIAL_DAYS,
         successUrl: `${base}/settings?tab=billing&checkout=success`,
         cancelUrl: `${base}/settings?tab=billing&checkout=cancelled`,
       });

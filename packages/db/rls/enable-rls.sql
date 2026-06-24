@@ -28,11 +28,15 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 
 -- 2) Context helpers (NULL/false when the GUC is unset → deny by default).
 CREATE OR REPLACE FUNCTION app_current_practice_id() RETURNS uuid
-  LANGUAGE sql STABLE AS
+  LANGUAGE sql STABLE
+  SET search_path = ''
+  AS
 $fn$ SELECT nullif(current_setting('app.current_practice_id', true), '')::uuid $fn$;
 
 CREATE OR REPLACE FUNCTION app_rls_bypass() RETURNS boolean
-  LANGUAGE sql STABLE AS
+  LANGUAGE sql STABLE
+  SET search_path = ''
+  AS
 $fn$ SELECT coalesce(current_setting('app.rls_bypass', true), '') = 'on' $fn$;
 
 -- 3) The practices root table is keyed on its own id.
@@ -67,3 +71,49 @@ BEGIN
     );
   END LOOP;
 END$$;
+
+-- 5) Child tables without their own practice_id are isolated by joining to the
+--    parent row, which carries practice_id and its own tenant RLS.
+DO $$
+DECLARE
+  i int;
+  child_tbls text[][] := array[
+    ['patient_allergies','patient_id','patients'],
+    ['patient_weights','patient_id','patients'],
+    ['case_entries','case_id','cases'],
+    ['treatment_plan_items','plan_id','treatment_plans'],
+    ['treatment_template_items','template_id','treatment_templates'],
+    ['invoice_items','invoice_id','invoices'],
+    ['payments','invoice_id','invoices']
+  ];
+BEGIN
+  FOR i IN 1 .. array_length(child_tbls, 1) LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', child_tbls[i][1]);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', child_tbls[i][1]);
+    EXECUTE format(
+      'CREATE POLICY tenant_isolation ON %1$I '
+      'USING (app_rls_bypass() OR EXISTS (SELECT 1 FROM %3$I p WHERE p.id = %1$I.%2$I AND p.practice_id = app_current_practice_id())) '
+      'WITH CHECK (app_rls_bypass() OR EXISTS (SELECT 1 FROM %3$I p WHERE p.id = %1$I.%2$I AND p.practice_id = app_current_practice_id()))',
+      child_tbls[i][1], child_tbls[i][2], child_tbls[i][3]
+    );
+  END LOOP;
+END$$;
+
+-- 6) Global reference data (no tenant): readable by every app role, writable
+--    only by the owner / system bypass.
+ALTER TABLE drug_interactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS reference_read ON drug_interactions;
+CREATE POLICY reference_read ON drug_interactions FOR SELECT USING (true);
+DROP POLICY IF EXISTS reference_insert ON drug_interactions;
+CREATE POLICY reference_insert ON drug_interactions FOR INSERT WITH CHECK (app_rls_bypass());
+DROP POLICY IF EXISTS reference_update ON drug_interactions;
+CREATE POLICY reference_update ON drug_interactions FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
+DROP POLICY IF EXISTS reference_delete ON drug_interactions;
+CREATE POLICY reference_delete ON drug_interactions FOR DELETE USING (app_rls_bypass());
+
+-- 7) Auth-infra tables are NOT tenant-scoped (tokens are used pre-login; the
+--    NextAuth session/verification tables are unused under the JWT strategy). We
+--    don't put tenant RLS on them; instead we revoke the Supabase data-API roles
+--    so they're unreachable that way. The app connects via a direct Postgres
+--    role, never anon/authenticated.
+REVOKE ALL ON auth_tokens, sessions, verification_tokens FROM anon, authenticated;

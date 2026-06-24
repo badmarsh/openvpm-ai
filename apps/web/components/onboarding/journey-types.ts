@@ -1,0 +1,23 @@
+/** Shared collected state and the per-step contract for the onboarding journey. */
+
+export interface JourneyState {
+  /** When true, the seeded sample data stays put instead of being cleared at finish. */
+  keepSampleData: boolean;
+}
+
+export interface StepHandle {
+  /**
+   * Runs when the user presses Continue (or Finish). Do the step's own server
+   * work here and return true to advance. Returning false (or throwing) keeps
+   * the user on the step; the overlay surfaces the error via a toast.
+   */
+  onContinue: () => Promise<boolean>;
+}
+
+export interface StepProps {
+  /** Register this step's Continue handler with the overlay. */
+  register: (handle: StepHandle) => void;
+  /** Read + update the small bag of state shared across steps. */
+  state: JourneyState;
+  setState: (patch: Partial<JourneyState>) => void;
+}

@@ -12,8 +12,7 @@ import {
   CheckCircle2,
   Heart,
 } from "lucide-react";
-
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://demo.openvpm.com";
+import { demoLoginUrl } from "@/lib/urls";
 
 export const metadata = {
   title: "Why OpenVPM — OpenVPM",
@@ -234,7 +233,7 @@ export default function WhyPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href={`${appUrl}/login`}
+                  href={demoLoginUrl}
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-8 py-3.5 text-base font-semibold text-teal-700 shadow-lg hover:bg-teal-50 transition-all"
                 >
                   Try the Live Demo

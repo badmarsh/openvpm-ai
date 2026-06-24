@@ -1,14 +1,16 @@
 import { randomBytes, createHash } from "crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
+import type { Database } from "@openpims/db/client";
 import { authTokens } from "@openpims/db";
 import { withSystem } from "@/lib/tenant-db";
 
-export type AuthTokenType = "email_verify" | "password_reset";
+export type AuthTokenType = "email_verify" | "password_reset" | "invite";
 
 const TTL_MS: Record<AuthTokenType, number> = {
   email_verify: 24 * 60 * 60 * 1000, // 24h
   password_reset: 60 * 60 * 1000, // 1h
+  invite: 72 * 60 * 60 * 1000, // 72h
 };
 
 function hashToken(raw: string): string {
@@ -24,18 +26,24 @@ export async function createAuthToken(opts: {
   email: string;
   type: AuthTokenType;
   now?: Date;
+  db?: Database;
 }): Promise<string> {
   const raw = randomBytes(32).toString("hex");
   const now = opts.now ?? new Date();
-  await withSystem(db, (tx) =>
+  const insertToken = (tx: Database) =>
     tx.insert(authTokens).values({
       userId: opts.userId,
       email: opts.email.toLowerCase(),
       tokenHash: hashToken(raw),
       type: opts.type,
       expiresAt: new Date(now.getTime() + TTL_MS[opts.type]),
-    })
-  );
+    });
+
+  if (opts.db) {
+    await insertToken(opts.db);
+  } else {
+    await withSystem(db, insertToken);
+  }
   return raw;
 }
 

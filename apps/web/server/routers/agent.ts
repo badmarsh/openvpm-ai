@@ -8,7 +8,7 @@ import {
   AgentNotConfiguredError,
 } from "@/lib/agent";
 
-// The OpenVPM Agent is a Pro feature on hosted; unrestricted on self-host.
+// The OpenVPM Agent is a Cloud feature on hosted; unrestricted on self-host.
 const agentProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian"))
   .use(requireFeature("agent"));

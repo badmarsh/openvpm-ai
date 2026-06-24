@@ -127,17 +127,17 @@ export default function UpdatesPage() {
 
         <div className="mt-14 rounded-2xl border border-teal-100 bg-teal-50/40 p-8 text-center">
           <h2 className="text-xl font-semibold font-heading text-gray-900 mb-2">
-            Want these in your inbox?
+            Want to try what shipped?
           </h2>
           <p className="text-gray-600 mb-6">
-            Follow along as we build. Join the list and we&apos;ll send the big ones.
+            Open the live demo, start Cloud, or follow the repo as the platform moves.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/#waitlist"
+              href="/#pricing"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 py-3 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"
             >
-              Join the list
+              View pricing
               <ArrowRight className="w-4 h-4" />
             </Link>
             <a

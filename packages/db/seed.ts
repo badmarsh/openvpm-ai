@@ -90,7 +90,7 @@ async function seed() {
       email: "hello@neighborhoodvet.example.com",
       website: "https://neighborhoodvet.example.com",
       timezone: "America/New_York",
-      subscriptionTier: "professional",
+      subscriptionTier: "cloud",
     })
     .returning();
   console.log(`Practice: ${practice!.name} (${practice!.id})`);

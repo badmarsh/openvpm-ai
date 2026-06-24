@@ -279,6 +279,21 @@ The PIMS is the system of record. AI agents are first-class citizens.
 
 OpenVPM ships with a built-in AI agent that operates on practice data through a typed tool layer (find clients/patients, pull a clinical summary, list overdue vaccinations, calculate a weight-based drug dose, book appointments). It runs a Claude tool-use loop scoped to a single practice, gates every write behind an explicit opt-in, and degrades gracefully when no model key is set. Bring your own `ANTHROPIC_API_KEY`; the agent is open source and fully inspectable. Available in-app under **Agent** and via the `agent` tRPC router.
 
+## OpenVPM Cloud
+
+Self-hosting stays fully unlocked and free. Leave `HOSTED_BILLING_ENABLED` unset and OpenVPM runs without Stripe gates, hosted metering, or paid-plan limits.
+
+OpenVPM Cloud is the hosted service for clinics that do not want to run infrastructure. It includes a 14-day no-card trial with all features enabled, then bills one simple plan:
+
+- $49/month per active, non-deleted location
+- $10/month per active, non-deleted staff user, all roles included
+- Included monthly SMS and AI allowances, with Stripe-metered overages
+- Enterprise deployments are custom/contact-sales
+
+Hosted Stripe setup uses separate recurring prices for `STRIPE_PRICE_CLOUD_LOCATION` and `STRIPE_PRICE_CLOUD_USER`. `STRIPE_PRICE_CLOUD` is legacy-only for existing subscriptions and is not used for new checkout.
+
+For hosted deployment details, see [docs/hosted-cloud-production.md](docs/hosted-cloud-production.md).
+
 ## Why Open Source Matters for Veterinary Medicine
 
 The veterinary industry is at a crossroads. AI is arriving. Data interoperability is becoming critical. And the dominant PIMS vendors are still charging hundreds per month for software that crashes, frustrates staff, and locks clinics into proprietary ecosystems.

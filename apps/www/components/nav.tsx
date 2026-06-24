@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Github, Menu, X } from "lucide-react";
+import { appLoginUrl, cloudSignupUrl } from "@/lib/urls";
 
 function PawMark({ className }: { className?: string }) {
   return (
@@ -23,14 +24,12 @@ function PawMark({ className }: { className?: string }) {
   );
 }
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://demo.openvpm.com";
-
 const navLinks = [
   { label: "Features", href: "/features" },
+  { label: "Pricing", href: "/#pricing" },
   { label: "Install", href: "/install" },
   { label: "Why Open Source", href: "/why" },
   { label: "Updates", href: "/updates" },
-  { label: "Feedback", href: "/feedback" },
 ];
 
 export function MarketingNav() {
@@ -80,16 +79,16 @@ export function MarketingNav() {
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
             <a
-              href={`${appUrl}/login`}
+              href={appLoginUrl}
               className="text-sm font-medium text-gray-700 hover:text-teal-600 transition-colors"
             >
               Sign In
             </a>
             <a
-              href={`${appUrl}/register`}
+              href={cloudSignupUrl}
               className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700 transition-colors"
             >
-              Try the Demo
+              Start Cloud Trial
             </a>
           </div>
 
@@ -133,16 +132,16 @@ export function MarketingNav() {
             </a>
             <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
               <a
-                href={`${appUrl}/login`}
+                href={appLoginUrl}
                 className="block px-3 py-2 text-sm font-medium text-gray-700 hover:text-teal-600 transition-colors"
               >
                 Sign In
               </a>
               <a
-                href={`${appUrl}/register`}
+                href={cloudSignupUrl}
                 className="block text-center rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
               >
-                Try the Demo
+                Start Cloud Trial
               </a>
             </div>
           </div>

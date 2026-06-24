@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Search, Plus, Users, PawPrint, Calendar, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TrialBadge } from "@/components/layout/trial-badge";
 
 const routeLabels: Record<string, string> = {
   "/": "Dashboard",
@@ -62,6 +63,7 @@ export function TopBar({
       <h1 className="font-heading text-lg font-semibold">{label}</h1>
 
       <div className="flex items-center gap-2">
+        <TrialBadge />
         <button
           onClick={onSearchOpen}
           className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent"

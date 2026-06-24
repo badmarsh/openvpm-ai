@@ -57,32 +57,62 @@ export async function constructWebhookEvent(
  * map the resulting subscription back to a practice.
  */
 export async function createSubscriptionCheckoutSession(data: {
-  priceId: string;
+  lineItems: Array<{ priceId: string; quantity: number }>;
   practiceId: string;
   customerId?: string | null;
   customerEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
-  /** Billed quantity — e.g. number of locations for a per-location plan. */
-  quantity?: number;
+  trialEnd?: Date | string | null;
+  trialPeriodDays?: number;
 }): Promise<{ url: string | null } | null> {
   if (!stripe) {
     console.log("[Stripe] No API key configured, skipping subscription checkout");
     return null;
   }
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripe.checkout.sessions.create(
+    buildSubscriptionCheckoutSessionParams(data)
+  );
+  return { url: session.url };
+}
+
+export function buildSubscriptionCheckoutSessionParams(data: {
+  lineItems: Array<{ priceId: string; quantity: number }>;
+  practiceId: string;
+  customerId?: string | null;
+  customerEmail?: string | null;
+  successUrl: string;
+  cancelUrl: string;
+  trialEnd?: Date | string | null;
+  trialPeriodDays?: number;
+}): Stripe.Checkout.SessionCreateParams {
+  const trialEnd = data.trialEnd
+    ? Math.floor(new Date(data.trialEnd).getTime() / 1000)
+    : undefined;
+  const hasTrial = !!trialEnd || !!data.trialPeriodDays;
+  return {
     mode: "subscription",
-    line_items: [{ price: data.priceId, quantity: Math.max(1, data.quantity ?? 1) }],
+    payment_method_collection: hasTrial ? "if_required" : "always",
+    line_items: data.lineItems.map((item) => ({
+      price: item.priceId,
+      quantity: Math.max(0, item.quantity),
+    })),
     ...(data.customerId
       ? { customer: data.customerId }
       : { customer_email: data.customerEmail ?? undefined }),
     client_reference_id: data.practiceId,
     metadata: { practiceId: data.practiceId },
-    subscription_data: { metadata: { practiceId: data.practiceId } },
+    subscription_data: {
+      metadata: { practiceId: data.practiceId },
+      ...(trialEnd
+        ? { trial_end: trialEnd }
+        : data.trialPeriodDays
+          ? { trial_period_days: data.trialPeriodDays }
+          : {}),
+    },
     success_url: data.successUrl,
     cancel_url: data.cancelUrl,
-  });
-  return { url: session.url };
+  };
 }
 
 /** Create a Stripe Billing Portal session so a practice can manage its plan. */
