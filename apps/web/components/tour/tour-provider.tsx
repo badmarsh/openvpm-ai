@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -36,6 +37,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const isAdmin =
     status === "authenticated" && session?.user?.role === "admin";
 
+  const utils = trpc.useUtils();
   const stateQuery = trpc.settings.getOnboardingState.useQuery(undefined, {
     enabled: isAdmin,
   });
@@ -43,12 +45,21 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   // null = tour inactive; otherwise the active step index.
   const [index, setIndex] = useState<number | null>(null);
+  // Auto-start runs at most once per mount, so finishing/skipping never relaunches.
+  const autoStarted = useRef(false);
 
   const persist = useCallback(
     (status: "in_progress" | "completed" | "skipped", stepId?: string) => {
+      // Keep the cached onboarding state in sync so the auto-start effect never
+      // re-reads a stale "not_started" after a terminal status.
+      utils.settings.getOnboardingState.setData(undefined, (prev) => ({
+        tourStatus: status,
+        lastStepId: stepId ?? prev?.lastStepId ?? null,
+        setupDismissed: prev?.setupDismissed ?? false,
+      }));
       setTourStatus.mutate({ status, lastStepId: stepId ?? null });
     },
-    [setTourStatus]
+    [setTourStatus, utils]
   );
 
   const start = useCallback(() => {
@@ -56,19 +67,26 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     persist("in_progress", TOUR_STEPS[0]!.id);
   }, [persist]);
 
-  // Auto-start: explicit ?tour=start (fresh signup) or a not-yet-started admin
-  // workspace. Skipped/completed/in-progress states do not auto-launch.
+  // Auto-start once per mount: explicit ?tour=start (fresh signup) or a
+  // not-yet-started admin workspace. Terminal states never relaunch.
   useEffect(() => {
-    if (index !== null || !isAdmin) return;
+    if (autoStarted.current || index !== null || !isAdmin) return;
+    const status = stateQuery.data?.tourStatus;
+    if (status === "completed" || status === "skipped") {
+      autoStarted.current = true;
+      return;
+    }
     const wantStart =
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).get("tour") === "start";
     if (wantStart) {
+      autoStarted.current = true;
       router.replace(pathname); // strip the param so a refresh won't relaunch
       start();
       return;
     }
-    if (stateQuery.data?.tourStatus === "not_started") {
+    if (status === "not_started") {
+      autoStarted.current = true;
       start();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

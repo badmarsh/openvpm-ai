@@ -1,8 +1,11 @@
 /**
- * Ordered steps for the in-app value tour. Each step optionally navigates to a
- * route and anchors a coachmark to an element marked `data-tour="<anchor>"`.
- * Anchoring the sidebar nav links keeps anchors stable across route changes and
- * page data loading; steps without an anchor render as a centered card.
+ * Ordered steps for the value walk. Each step optionally navigates to a route
+ * and anchors a coachmark to an element marked `data-tour="<anchor>"`. Anchoring
+ * the sidebar nav links keeps anchors stable across route changes; steps without
+ * an anchor render as a centered card.
+ *
+ * Voice: simple, fourth-grade, warm, no em dashes. Lead with the value: you own
+ * your data and real AI tools are built in.
  */
 export interface TourStep {
   id: string;
@@ -18,41 +21,47 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: "welcome",
     route: "/",
-    title: "Welcome to OpenVPM 🐾",
-    body: "Your practice is live with sample patients and a working schedule. Take a 60-second tour of the essentials — then explore on your own.",
+    title: "Welcome to OpenVPM",
+    body: "This is your practice. We added a few sample pets so it feels real while you look around.",
   },
   {
     id: "schedule",
     route: "/schedule",
     anchor: "nav-/schedule",
-    title: "Run your day from the schedule",
-    body: "Book, drag, and check patients in. Your trial is pre-loaded with today's appointments so it feels real from minute one.",
+    title: "Your day, at a glance",
+    body: "Book visits and check pets in from one simple calendar.",
   },
   {
     id: "records",
     route: "/records",
     anchor: "nav-/records",
-    title: "Complete medical records",
-    body: "SOAP notes, vaccines, prescriptions, labs, and problems — every patient's history in one place, ready to chart.",
+    title: "Every pet's full story",
+    body: "Notes, shots, meds, and labs all live in one place.",
   },
   {
     id: "billing",
     route: "/billing",
     anchor: "nav-/billing",
-    title: "Invoice in a click",
-    body: "Turn any visit into an itemized invoice or estimate from your service catalog, and take payment online.",
+    title: "Bill in one click",
+    body: "Turn a visit into a bill and take payment online.",
   },
   {
     id: "agent",
     route: "/agent",
     anchor: "nav-/agent",
-    title: "Your built-in AI assistant",
-    body: "Ask plain-English questions about your practice data. The agent uses real tools and never invents records.",
+    title: "Your AI helper",
+    body: "Ask it about your pets and your data and it does the work. You will get to try it in a minute.",
+  },
+  {
+    id: "ownership",
+    route: "/",
+    title: "Your data is yours",
+    body: "You own everything here. Export it any time, and connect by API when you are ready.",
   },
   {
     id: "finish",
     route: "/",
-    title: "You're ready to go 🎉",
-    body: "That's the tour. Explore freely during your trial — and when you're ready to keep your data, add billing from Settings.",
+    title: "Now let us make it yours",
+    body: "That was the quick look. Next we will set up your clinic in a few easy steps.",
   },
 ];
