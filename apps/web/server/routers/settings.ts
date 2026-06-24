@@ -43,6 +43,14 @@ interface PracticeSettings {
       role: "veterinarian" | "technician" | "front_desk" | "viewer";
     }>;
   };
+  /** Live brand accent color (set in settings; logo lives in practices.logoUrl). */
+  brandColor?: string;
+  /** In-app value tour + finish-setup card progress. */
+  onboardingState?: {
+    tourStatus?: "not_started" | "in_progress" | "completed" | "skipped";
+    lastStepId?: string | null;
+    setupDismissed?: boolean;
+  };
   [k: string]: unknown;
 }
 
@@ -128,6 +136,70 @@ export const settingsRouter = createRouter({
     await ctx.db
       .update(practices)
       .set({ settings: { ...settings, onboardingCompletedAt: new Date().toISOString() } })
+      .where(eq(practices.id, ctx.practiceId));
+    return { ok: true };
+  }),
+
+  /** Read the in-app value-tour + finish-setup progress. */
+  getOnboardingState: adminProcedure.query(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({ settings: practices.settings })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    return (
+      settings.onboardingState ?? {
+        tourStatus: "not_started" as const,
+        lastStepId: null,
+        setupDismissed: false,
+      }
+    );
+  }),
+
+  /** Persist tour progress (resume / skip / complete). */
+  setTourStatus: adminProcedure
+    .input(
+      z.object({
+        status: z.enum(["not_started", "in_progress", "completed", "skipped"]),
+        lastStepId: z.string().nullish(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ settings: practices.settings })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+      const settings = (practice?.settings ?? {}) as PracticeSettings;
+      const onboardingState = {
+        ...(settings.onboardingState ?? {}),
+        tourStatus: input.status,
+        lastStepId:
+          input.lastStepId ?? settings.onboardingState?.lastStepId ?? null,
+      };
+      await ctx.db
+        .update(practices)
+        .set({ settings: { ...settings, onboardingState } })
+        .where(eq(practices.id, ctx.practiceId));
+      return { ok: true };
+    }),
+
+  /** Dismiss the dashboard "finish setup" card. */
+  dismissSetup: adminProcedure.mutation(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({ settings: practices.settings })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    const onboardingState = {
+      ...(settings.onboardingState ?? {}),
+      setupDismissed: true,
+    };
+    await ctx.db
+      .update(practices)
+      .set({ settings: { ...settings, onboardingState } })
       .where(eq(practices.id, ctx.practiceId));
     return { ok: true };
   }),
