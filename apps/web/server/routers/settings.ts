@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { eq, and, isNull, inArray } from "drizzle-orm";
 import { hash } from "bcryptjs";
+import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
 import {
   practices,
@@ -14,6 +16,9 @@ import {
 import { regionDefaults } from "@/lib/locale/format";
 import { alertOps } from "@/lib/alerts";
 import { syncPracticeSubscriptionQuantities } from "@/lib/billing/subscription-sync";
+import { createAuthToken } from "@/lib/auth-tokens";
+import { sendStaffInviteEmail } from "@/lib/email";
+import { appBaseUrl, exposeAuthLinksForPreview } from "@/lib/app-url";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 
@@ -84,12 +89,18 @@ export const settingsRouter = createRouter({
           .regex(/^\d{1,3}(\.\d{1,2})?$/, "Tax rate must be a number like 20 or 20.00")
           .optional(),
         vatNumber: z.string().max(32).optional(),
+        // Branding. logoUrl is a real column; brandColor lives in settings.
+        logoUrl: z.string().optional(),
+        brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // brandColor isn't a column — merge it into practices.settings without
+      // clobbering other keys.
+      const { brandColor, ...columns } = input;
+      const patch: Record<string, unknown> = { ...columns };
       // When the country changes, fill in any region fields the caller didn't
       // explicitly set (currency/tax) with that country's sensible defaults.
-      const patch: Record<string, unknown> = { ...input };
       if (input.country) {
         const defaults = regionDefaults(input.country);
         patch.country = input.country.toUpperCase();
@@ -100,6 +111,15 @@ export const settingsRouter = createRouter({
       if (typeof patch.currency === "string") {
         patch.currency = (patch.currency as string).toLowerCase();
       }
+      if (brandColor !== undefined) {
+        const [practice] = await ctx.db
+          .select({ settings: practices.settings })
+          .from(practices)
+          .where(eq(practices.id, ctx.practiceId))
+          .limit(1);
+        const settings = (practice?.settings ?? {}) as PracticeSettings;
+        patch.settings = { ...settings, brandColor: brandColor.toLowerCase() };
+      }
       const [updated] = await ctx.db
         .update(practices)
         .set(patch)
@@ -107,6 +127,27 @@ export const settingsRouter = createRouter({
         .returning();
       return updated!;
     }),
+
+  // ── Branding ──────────────────────────────────────────────
+
+  /** Practice name, logo, and accent color — readable by any authenticated role. */
+  getBranding: protectedProcedure.query(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({
+        name: practices.name,
+        logoUrl: practices.logoUrl,
+        settings: practices.settings,
+      })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+    const settings = (practice?.settings ?? {}) as PracticeSettings;
+    return {
+      name: practice?.name ?? null,
+      logoUrl: practice?.logoUrl ?? null,
+      brandColor: settings.brandColor ?? null,
+    };
+  }),
 
   // ── Onboarding ────────────────────────────────────────────
 
@@ -306,6 +347,105 @@ export const settingsRouter = createRouter({
         });
       await syncBillingAfterStaffChange(ctx.db, ctx.practiceId);
       return user!;
+    }),
+
+  /**
+   * Invite a staff member by email. Creates the user with an unguessable
+   * placeholder password (passwordHash is NOT NULL) and an unverified email,
+   * then emails an "invite" link to set their password via /accept-invite.
+   */
+  inviteStaff: adminProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        name: z.string().optional(),
+        role: z.enum([
+          "admin",
+          "veterinarian",
+          "technician",
+          "front_desk",
+          "viewer",
+        ]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const email = input.email.trim().toLowerCase();
+
+      const [existing] = await ctx.db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      if (existing) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A user with that email already exists.",
+        });
+      }
+
+      // Derive a display name from the email local-part when not provided.
+      const name =
+        input.name?.trim() ||
+        (() => {
+          const local = email.split("@")[0] ?? "";
+          const words = local
+            .split(/[._-]+/)
+            .filter(Boolean)
+            .map((w) => w[0]!.toUpperCase() + w.slice(1));
+          return words.join(" ") || "Team Member";
+        })();
+
+      // Unguessable placeholder — replaced when the invite is accepted.
+      const passwordHash = await hash(`invite:${randomUUID()}:${randomUUID()}`, 10);
+
+      const [user] = await ctx.db
+        .insert(users)
+        .values({
+          email,
+          name,
+          role: input.role,
+          passwordHash,
+          emailVerifiedAt: null,
+          practiceId: ctx.practiceId,
+        })
+        .returning({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        });
+
+      const token = await createAuthToken({
+        userId: user!.id,
+        email: user!.email,
+        type: "invite",
+        db: ctx.db,
+      });
+      const inviteUrl = `${appBaseUrl()}/accept-invite?token=${token}`;
+
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      try {
+        await sendStaffInviteEmail({
+          to: user!.email,
+          inviterName: ctx.user.name,
+          practiceName: practice?.name ?? "OpenVPM",
+          inviteUrl,
+        });
+      } catch (err) {
+        console.error("[inviteStaff] email failed:", err);
+      }
+
+      await syncBillingAfterStaffChange(ctx.db, ctx.practiceId);
+
+      return {
+        ok: true,
+        inviteUrl: exposeAuthLinksForPreview() ? inviteUrl : undefined,
+      };
     }),
 
   updateUser: adminProcedure

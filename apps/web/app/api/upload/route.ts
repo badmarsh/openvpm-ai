@@ -15,6 +15,7 @@ const ALLOWED_CATEGORIES = [
   "patient-photos",
   "documents",
   "lab-results",
+  "branding",
 ] as const;
 
 const ALLOWED_MIME_TYPES: Record<string, string> = {

@@ -23,11 +23,14 @@ import {
   AlertTriangle,
   Layers,
   CreditCard,
+  ImageIcon,
+  Mail,
+  Copy,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, isValidEmail } from "@/lib/utils";
 import { toast } from "sonner";
 import { regionDefaults } from "@/lib/locale/format";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
@@ -80,6 +83,9 @@ const PRESET_COLORS = [
   "#f59e0b",
   "#6b7280",
 ];
+
+// Brand accent swatches offered in the Branding section.
+const BRAND_COLORS = ["#0d9488", "#16a34a", "#f97316", "#db2777"];
 
 const ROLE_BADGE: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
@@ -186,6 +192,44 @@ function PracticeInfoTab() {
       toast.error(err.message);
     },
   });
+
+  // Branding mutation invalidates getBranding too so the sidebar logo/accent
+  // refresh without a reload.
+  const brandingMutation = trpc.settings.updatePractice.useMutation({
+    onSuccess: () => {
+      utils.settings.getPractice.invalidate();
+      utils.settings.getBranding.invalidate();
+      toast.success("Branding updated");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("category", "branding");
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error ?? "Upload failed");
+      }
+      brandingMutation.mutate({ logoUrl: json.url });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const currentBrandColor =
+    (practice?.settings as { brandColor?: string } | null)?.brandColor ?? null;
 
   const [form, setForm] = useState<{
     name: string;
@@ -356,6 +400,88 @@ function PracticeInfoTab() {
           </label>
         </div>
       </div>
+
+      {/* ── Branding ── */}
+      <div className="space-y-1 border-t border-border pt-6">
+        <h3 className="text-sm font-semibold">Branding</h3>
+        <p className="text-xs text-muted-foreground">
+          Your logo and accent color appear across OpenVPM. Changes save
+          immediately.
+        </p>
+      </div>
+      <div className="grid gap-5">
+        {/* Logo */}
+        <div className="space-y-2">
+          <span className="text-sm font-medium">Logo</span>
+          <div className="flex items-center gap-4">
+            {practice?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={practice.logoUrl}
+                alt="Practice logo"
+                className="h-14 w-14 rounded-lg border border-border object-cover"
+              />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-border text-muted-foreground">
+                <ImageIcon className="h-5 w-5" />
+              </div>
+            )}
+            <div>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleLogoUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={uploadingLogo || brandingMutation.isPending}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {uploadingLogo ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                {practice?.logoUrl ? "Replace logo" : "Upload logo"}
+              </Button>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                PNG, JPG, or WebP. Square images work best.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Accent color */}
+        <div className="space-y-2">
+          <span className="text-sm font-medium">Accent color</span>
+          <div className="flex gap-2">
+            {BRAND_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Set accent color ${c}`}
+                disabled={brandingMutation.isPending}
+                className={cn(
+                  "h-9 w-9 rounded-full border-2 transition-transform disabled:opacity-50",
+                  (currentBrandColor ?? "").toLowerCase() === c
+                    ? "border-foreground scale-110"
+                    : "border-transparent"
+                )}
+                style={{ backgroundColor: c }}
+                onClick={() => brandingMutation.mutate({ brandColor: c })}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       <Button
         onClick={() => {
           updateMutation.mutate(current);
@@ -704,6 +830,30 @@ function StaffTab() {
       toast.error(err.message);
     },
   });
+  const inviteMutation = trpc.settings.inviteStaff.useMutation({
+    onSuccess: (res) => {
+      utils.settings.listUsers.invalidate();
+      setInviteForm({ email: "", name: "", role: "front_desk" });
+      setInviteUrl(res.inviteUrl ?? null);
+      toast.success("Invite sent");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    email: "",
+    name: "",
+    role: "front_desk" as
+      | "admin"
+      | "veterinarian"
+      | "technician"
+      | "front_desk"
+      | "viewer",
+  });
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -748,10 +898,23 @@ function StaffTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          onClick={() => {
+            setShowInvite(!showInvite);
+            setShowAdd(false);
+            setInviteUrl(null);
+          }}
+          size="sm"
+          variant="outline"
+        >
+          <Mail className="mr-2 h-4 w-4" />
+          Invite by email
+        </Button>
         <Button
           onClick={() => {
             setShowAdd(!showAdd);
+            setShowInvite(false);
             resetAddForm();
           }}
           size="sm"
@@ -760,6 +923,97 @@ function StaffTab() {
           Add Staff
         </Button>
       </div>
+
+      {showInvite && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <h3 className="text-sm font-semibold">Invite a teammate</h3>
+          <p className="text-xs text-muted-foreground">
+            They&apos;ll get an email to set their own password and activate
+            their account.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              placeholder="Email"
+              type="email"
+              value={inviteForm.email}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, email: e.target.value })
+              }
+            />
+            <Input
+              placeholder="Name (optional)"
+              value={inviteForm.name}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, name: e.target.value })
+              }
+            />
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={inviteForm.role}
+              onChange={(e) =>
+                setInviteForm({
+                  ...inviteForm,
+                  role: e.target.value as typeof inviteForm.role,
+                })
+              }
+            >
+              <option value="front_desk">Front Desk</option>
+              <option value="viewer">Viewer (read-only)</option>
+              <option value="technician">Technician</option>
+              <option value="veterinarian">Veterinarian</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={!isValidEmail(inviteForm.email) || inviteMutation.isPending}
+              onClick={() =>
+                inviteMutation.mutate({
+                  email: inviteForm.email,
+                  name: inviteForm.name || undefined,
+                  role: inviteForm.role,
+                })
+              }
+            >
+              {inviteMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Send invite
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowInvite(false)}>
+              Cancel
+            </Button>
+          </div>
+          {inviteUrl && (
+            <div className="space-y-1.5 rounded-md border border-border bg-muted/30 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Invite link (shown in dev/preview so you can test the flow):
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded bg-background px-2 py-1 text-xs">
+                  {inviteUrl}
+                </code>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteUrl);
+                    toast.success("Copied");
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          {inviteMutation.error && (
+            <p className="text-sm text-destructive">
+              {inviteMutation.error.message}
+            </p>
+          )}
+        </div>
+      )}
 
       {showAdd && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">

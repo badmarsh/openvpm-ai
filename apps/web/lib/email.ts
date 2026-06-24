@@ -315,3 +315,24 @@ export async function sendPasswordResetEmail(data: {
   });
   return { success: result.success };
 }
+
+export async function sendStaffInviteEmail(data: {
+  to: string;
+  inviterName: string;
+  practiceName: string;
+  inviteUrl: string;
+}): Promise<{ success: boolean }> {
+  const body = `
+    <p style="margin:0 0 8px;color:#111827;font-size:15px;line-height:1.6;"><strong>${data.inviterName}</strong> has invited you to join <strong>${data.practiceName}</strong> on OpenVPM.</p>
+    <p style="margin:0 0 8px;color:#111827;font-size:15px;line-height:1.6;">Accept the invite below to set your password and activate your account.</p>
+    ${ctaButton("Accept invite", data.inviteUrl)}
+    <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.5;">This link expires in 72 hours. If you weren't expecting this invitation, you can safely ignore this email.</p>
+  `;
+  const html = emailLayout(data.practiceName, body);
+  const result = await sendEmail({
+    to: data.to,
+    subject: `You're invited to join ${data.practiceName} on OpenVPM`,
+    html,
+  });
+  return { success: result.success };
+}

@@ -9,21 +9,7 @@ import { seedPractice, seedDemoData } from "@/lib/onboarding/defaults";
 import { billingEnforced, TRIAL_DAYS } from "@/lib/billing/plans";
 import { createAuthToken, consumeAuthToken } from "@/lib/auth-tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
-
-function appBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.NEXTAUTH_URL ??
-    "http://localhost:3000"
-  );
-}
-
-function exposeAuthLinksForPreview(): boolean {
-  return (
-    process.env.OPENVPM_EXPOSE_AUTH_LINKS === "true" ||
-    process.env.NODE_ENV !== "production"
-  );
-}
+import { appBaseUrl, exposeAuthLinksForPreview } from "@/lib/app-url";
 
 /** Display name from explicit input, else derived from the email local-part. */
 function deriveName(name: string | undefined, email: string): string {
@@ -304,6 +290,30 @@ export const authRouter = createRouter({
       await ctx.db
         .update(users)
         .set({ passwordHash })
+        .where(eq(users.id, result.userId));
+      return { ok: true };
+    }),
+
+  /** Accept a staff invite: set the user's password + verify their email. */
+  acceptInvite: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+        password: z.string().min(8),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await consumeAuthToken(input.token, "invite");
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This invite link is invalid or has expired.",
+        });
+      }
+      const passwordHash = await hash(input.password, 10);
+      await ctx.db
+        .update(users)
+        .set({ passwordHash, emailVerifiedAt: new Date() })
         .where(eq(users.id, result.userId));
       return { ok: true };
     }),
