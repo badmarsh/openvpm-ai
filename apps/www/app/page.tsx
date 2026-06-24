@@ -94,7 +94,7 @@ const stats = [
   { value: "21", label: "API Modules" },
   { value: "150+", label: "Endpoints" },
   { value: "16", label: "Schema Files" },
-  { value: "MIT", label: "License" },
+  { value: "AGPLv3", label: "License" },
 ];
 
 const painPoints = [
@@ -815,7 +815,7 @@ export default function LandingPage() {
               </div>
               <ul className="mt-6 space-y-3 text-sm text-gray-600">
                 {[
-                  "Full source code under MIT license",
+                  "Full source code under the AGPLv3 license",
                   "All PIMS modules and API access",
                   "Docker/Vercel deployment paths",
                   "Bring your own database, storage, email, SMS, and AI keys",
