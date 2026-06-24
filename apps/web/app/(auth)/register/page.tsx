@@ -4,7 +4,18 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Loader2, PawPrint } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  Calendar,
+  CheckCircle2,
+  FileText,
+  LayoutDashboard,
+  Loader2,
+  Package,
+  PawPrint,
+  Receipt,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
@@ -180,9 +191,9 @@ function RegisterPageInner() {
         </div>
       </div>
 
-      {/* Right pane: gradient with a clean platform preview */}
-      <div className="relative hidden overflow-hidden bg-[linear-gradient(135deg,#fff7ed_0%,#fdf2f8_45%,#ecfdf5_100%)] lg:flex lg:flex-col">
-        <div className="px-12 pt-16">
+      {/* Right pane: gradient, with the platform flush to the bottom-right edge */}
+      <div className="relative hidden overflow-hidden bg-[linear-gradient(135deg,#fff7ed_0%,#fdf2f8_45%,#ecfdf5_100%)] lg:block">
+        <div className="relative z-10 px-12 pt-16">
           <h2 className="max-w-md font-heading text-3xl font-bold tracking-tight text-slate-950">
             The practice system you own.
           </h2>
@@ -192,7 +203,7 @@ function RegisterPageInner() {
           </p>
         </div>
 
-        <div className="flex flex-1 items-end justify-center px-10 pt-10">
+        <div className="absolute bottom-0 right-0 left-10 top-44">
           <PlatformPreview />
         </div>
       </div>
@@ -201,33 +212,39 @@ function RegisterPageInner() {
 }
 
 const NAV = [
-  "Dashboard",
-  "Patients",
-  "Schedule",
-  "Records",
-  "Billing",
-  "Inventory",
+  { label: "Dashboard", icon: LayoutDashboard },
+  { label: "Patients", icon: PawPrint },
+  { label: "Schedule", icon: Calendar },
+  { label: "Records", icon: FileText },
+  { label: "Billing", icon: Receipt },
+  { label: "Inventory", icon: Package },
 ];
 
 const KPIS = [
-  ["Today's visits", "8"],
-  ["New patients", "3"],
-  ["Revenue", "$1.2k"],
+  { label: "Today's visits", value: "8", icon: Calendar },
+  { label: "New patients", value: "3", icon: PawPrint },
+  { label: "Revenue", value: "$1,240", icon: Receipt },
 ];
 
-const TODAY = [
-  ["9:00", "Wellness exam", "Biscuit"],
-  ["11:30", "Vaccines", "Luna"],
-  ["2:00", "Recheck", "Mango"],
+// Appointment colors mirror the real schedule.
+const APPTS = [
+  { time: "9:00", title: "Wellness exam", pet: "Biscuit", color: "#0d9488" },
+  { time: "10:30", title: "Vaccination", pet: "Luna", color: "#2563eb" },
+  { time: "1:15", title: "Dental cleaning", pet: "Mango", color: "#0891b2" },
+  { time: "3:00", title: "Sick visit", pet: "Olive", color: "#dc2626" },
 ];
 
-/** A clean, value-first snapshot of the real app: sidebar plus the dashboard. */
+/**
+ * A clean, value-first snapshot of the real app: the icon side nav, the
+ * dashboard value cards, the day's schedule with appointment colors, and an
+ * Ask AI card. Rendered flush to the bottom-right edge of the pane.
+ */
 function PlatformPreview() {
   return (
-    <div className="w-full max-w-xl overflow-hidden rounded-t-2xl border border-white/80 bg-white shadow-2xl shadow-rose-200/40">
-      <div className="flex h-[440px]">
-        {/* Sidebar */}
-        <aside className="w-40 shrink-0 border-r border-slate-100 bg-slate-50/70 p-3">
+    <div className="h-full w-full overflow-hidden rounded-tl-2xl border-l border-t border-white/80 bg-white shadow-2xl shadow-rose-200/40">
+      <div className="flex h-full">
+        {/* Side nav */}
+        <aside className="flex w-[150px] shrink-0 flex-col border-r border-slate-100 bg-slate-50/70 p-3">
           <div className="flex items-center gap-2 px-1 pb-4">
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <PawPrint className="h-3.5 w-3.5" />
@@ -237,28 +254,29 @@ function PlatformPreview() {
             </span>
           </div>
           <nav className="space-y-1">
-            {NAV.map((label, i) => (
+            {NAV.map(({ label, icon: Icon }, i) => (
               <div
                 key={label}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium",
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-xs font-medium",
                   i === 0 ? "bg-primary/10 text-primary" : "text-slate-500"
                 )}
               >
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-sm",
-                    i === 0 ? "bg-primary" : "bg-slate-300"
-                  )}
-                />
+                <Icon className="h-4 w-4 shrink-0" />
                 {label}
               </div>
             ))}
           </nav>
+          <div className="mt-auto flex items-center gap-2 px-1 pt-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+              DV
+            </span>
+            <span className="truncate text-[11px] text-slate-500">Dr. Vet</span>
+          </div>
         </aside>
 
         {/* Main */}
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <p className="font-heading text-sm font-semibold text-slate-900">
               Dashboard
@@ -267,42 +285,69 @@ function PlatformPreview() {
               New
             </span>
           </div>
-          <div className="p-4">
+
+          <div className="flex-1 space-y-3 p-4">
+            {/* Value cards */}
             <div className="grid grid-cols-3 gap-3">
-              {KPIS.map(([label, value]) => (
+              {KPIS.map(({ label, value, icon: Icon }) => (
                 <div
                   key={label}
                   className="rounded-lg border border-slate-100 bg-white p-3"
                 >
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
                     {label}
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-slate-950">
+                  <p className="text-base font-semibold text-slate-950">
                     {value}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 rounded-lg border border-slate-100 bg-white p-3">
-              <p className="text-xs font-semibold text-slate-900">Today</p>
+            {/* Today's schedule with appointment colors */}
+            <div className="rounded-lg border border-slate-100 p-3">
+              <p className="text-xs font-semibold text-slate-900">
+                Today's schedule
+              </p>
               <div className="mt-2 space-y-1.5">
-                {TODAY.map(([t, title, pet]) => (
+                {APPTS.map((a) => (
                   <div
-                    key={t}
-                    className="flex items-center gap-3 rounded-md bg-slate-50/80 px-2.5 py-1.5"
+                    key={a.time}
+                    className="flex items-center gap-3 rounded-md bg-slate-50/80 py-1.5 pl-2.5 pr-2.5"
+                    style={{ borderLeft: `3px solid ${a.color}` }}
                   >
-                    <span className="text-[11px] font-medium text-slate-500">
-                      {t}
+                    <span className="w-10 text-[11px] font-medium text-slate-500">
+                      {a.time}
                     </span>
                     <span className="text-xs font-medium text-slate-900">
-                      {title}
+                      {a.title}
                     </span>
                     <span className="ml-auto text-[11px] text-slate-500">
-                      {pet}
+                      {a.pet}
                     </span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Ask AI */}
+            <div className="rounded-lg border border-slate-100 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Bot className="h-3.5 w-3.5" />
+                </span>
+                <p className="text-xs font-semibold text-slate-900">Ask AI</p>
+              </div>
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
+                <span className="truncate text-[11px] text-slate-500">
+                  Which pets are due for vaccines?
+                </span>
+                <span className="ml-auto rounded bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                  Ask
+                </span>
               </div>
             </div>
           </div>
