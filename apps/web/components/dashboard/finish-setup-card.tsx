@@ -28,11 +28,15 @@ export function FinishSetupCard() {
     refetchOnWindowFocus: false,
   } as const;
   const state = trpc.settings.getOnboardingState.useQuery(undefined, opts);
+  const onboarding = trpc.settings.onboardingStatus.useQuery(undefined, opts);
   const practice = trpc.settings.getPractice.useQuery(undefined, opts);
   const sub = trpc.subscription.get.useQuery(undefined, opts);
   const dismiss = trpc.settings.dismissSetup.useMutation();
 
   if (!state.data || hidden || state.data.setupDismissed) return null;
+  // The first-run journey owns setup until it finishes. Only show this gentle
+  // reminder afterward (for anything that was skipped).
+  if (!onboarding.data?.completedAt) return null;
 
   const enforced = sub.data?.billingEnforced ?? false;
   const tasks = [

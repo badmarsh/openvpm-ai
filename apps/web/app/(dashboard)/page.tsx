@@ -1,6 +1,7 @@
 "use client";
 
-import { Calendar, PawPrint, DollarSign, FileText, Clock } from "lucide-react";
+import Link from "next/link";
+import { Calendar, PawPrint, DollarSign, FileText, Clock, TrendingUp } from "lucide-react";
 import { FinishSetupCard } from "@/components/dashboard/finish-setup-card";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -173,6 +174,17 @@ export default function DashboardPage() {
     )
     .slice(0, 5);
 
+  // A brand-new practice has no real activity yet. Hide the charts until there
+  // is something to show so the page feels calm instead of abandoned.
+  const cd = charts.data;
+  const hasChartData =
+    !!cd &&
+    (cd.speciesDistribution.length > 0 ||
+      cd.appointmentsByDay.some(
+        (d) => d.completed + d.scheduled + d.cancelled > 0
+      ) ||
+      cd.revenueByDay.some((d) => d.revenue > 0));
+
   return (
     <div className="space-y-8">
       <FinishSetupCard />
@@ -222,9 +234,23 @@ export default function DashboardPage() {
               <AppointmentRowSkeleton key={i} />
             ))
           ) : upcomingAppointments.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              No upcoming appointments today.
-            </p>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">No visits booked yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Book your first visit and it shows up here.
+                </p>
+              </div>
+              <Link
+                href="/schedule"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Book your first visit
+              </Link>
+            </div>
           ) : (
             upcomingAppointments.map((appt) => (
               <div
@@ -280,6 +306,19 @@ export default function DashboardPage() {
           </div>
           <ChartSkeleton />
         </>
+      ) : !hasChartData ? (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-card p-12 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <TrendingUp className="h-5 w-5" />
+          </div>
+          <p className="font-heading text-base font-semibold">
+            Your charts show up once you start
+          </p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            As you book visits and send bills, your trends and totals fill in
+            here.
+          </p>
+        </div>
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-2">
