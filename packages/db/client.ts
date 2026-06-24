@@ -12,10 +12,22 @@ function getConnectionString() {
   return url;
 }
 
+// Supabase's transaction pooler (PgBouncer, port 6543) does not support the
+// prepared statements postgres-js uses by default, so disable them for pooled
+// connections. Direct/local connections keep prepares on for performance.
+function isPooledConnection(url: string): boolean {
+  return (
+    url.includes("pooler.supabase.com") ||
+    url.includes(":6543") ||
+    url.includes("pgbouncer=true")
+  );
+}
+
 export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
   get(_target, prop) {
     if (!_db) {
-      const client = postgres(getConnectionString());
+      const url = getConnectionString();
+      const client = postgres(url, isPooledConnection(url) ? { prepare: false } : {});
       _db = drizzle(client, { schema });
     }
     return (_db as any)[prop];
