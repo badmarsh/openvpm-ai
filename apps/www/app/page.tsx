@@ -181,7 +181,7 @@ export default function LandingPage() {
             >
               <CheckCircle2 className="w-4 h-4 text-teal-600" />
               <span className="text-sm font-medium text-teal-700">
-                Free and open source &mdash; AGPLv3, forever
+                Free and open source &middot; AGPLv3, forever
               </span>
             </div>
             <h1
@@ -207,17 +207,17 @@ export default function LandingPage() {
               style={{ animationDelay: "300ms" }}
             >
               <a
-                href={cloudSignupUrl}
+                href={demoLoginUrl}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-teal-600/25 hover:bg-teal-700 hover:shadow-teal-600/30 transition-all w-full sm:w-auto"
               >
-                Start Cloud Trial
+                Try the Live Demo
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a
-                href={demoLoginUrl}
+                href={cloudSignupUrl}
                 className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-teal-100 bg-white px-8 py-3.5 text-base font-semibold text-teal-700 hover:border-teal-200 hover:bg-teal-50 transition-all w-full sm:w-auto"
               >
-                Try the Live Demo
+                Start Cloud Trial
               </a>
               <a
                 href="https://github.com/evangauer/openvpm"
