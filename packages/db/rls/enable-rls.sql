@@ -116,4 +116,16 @@ CREATE POLICY reference_delete ON drug_interactions FOR DELETE USING (app_rls_by
 --    don't put tenant RLS on them; instead we revoke the Supabase data-API roles
 --    so they're unreachable that way. The app connects via a direct Postgres
 --    role, never anon/authenticated.
-REVOKE ALL ON auth_tokens, sessions, verification_tokens FROM anon, authenticated;
+--    Guarded so the migration stays portable: anon/authenticated only exist on
+--    Supabase, so on vanilla Postgres (local / CI) this is a no-op.
+DO $$
+DECLARE r text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      EXECUTE format(
+        'REVOKE ALL ON auth_tokens, sessions, verification_tokens FROM %I', r
+      );
+    END IF;
+  END LOOP;
+END $$;
