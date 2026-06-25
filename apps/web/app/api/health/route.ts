@@ -46,7 +46,13 @@ const HOSTED_SMS_ENV_NAMES = [
   "TWILIO_PHONE_NUMBER",
 ];
 
-const HOSTED_AI_ENV_NAMES = ["ANTHROPIC_API_KEY"];
+// AI is provider-agnostic: the model is chosen by AI_MODEL and the provider is
+// inferred from the id, so require the matching API key (Gemini vs Claude).
+function requiredAiEnvNames(): string[] {
+  const model = process.env.AI_MODEL || process.env.AGENT_MODEL || "claude-sonnet-4-6";
+  const isGemini = /^(google\/|models\/)?gemini/i.test(model);
+  return [isGemini ? "GOOGLE_API_KEY" : "ANTHROPIC_API_KEY"];
+}
 
 const HOSTED_OPS_ENV_NAMES = [
   "OPS_ALERT_WEBHOOK_URL",
@@ -104,7 +110,7 @@ export async function GET() {
       "Hosted SMS envs present"
     );
     checks.hostedAi = hostedEnvCheck(
-      HOSTED_AI_ENV_NAMES,
+      requiredAiEnvNames(),
       "Hosted AI envs present"
     );
     checks.hostedOps = hostedEnvCheck(

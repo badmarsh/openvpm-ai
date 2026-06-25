@@ -46,8 +46,9 @@ export default function AgentPage() {
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            The agent is not configured yet. Set <code className="font-mono">ANTHROPIC_API_KEY</code>{" "}
-            in your environment to enable agent runs.
+            The agent is not configured yet. Set <code className="font-mono">GOOGLE_API_KEY</code>{" "}
+            (for Gemini) or <code className="font-mono">ANTHROPIC_API_KEY</code> (for Claude) in
+            your environment to enable agent runs.
           </div>
         </div>
       )}
