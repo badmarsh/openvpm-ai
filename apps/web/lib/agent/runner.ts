@@ -1,14 +1,19 @@
-import Anthropic from "@anthropic-ai/sdk";
-import {
-  AGENT_TOOLS,
-  anthropicToolDefs,
-  getTool,
-  type AgentToolContext,
-} from "./tools";
+import { generateText, stepCountIs, tool, type ToolSet } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { AGENT_TOOLS, type AgentToolContext } from "./tools";
 import { recordUsage } from "@/lib/billing/usage";
 
-const DEFAULT_MODEL = process.env.AGENT_MODEL || "claude-sonnet-4-6";
+/**
+ * Provider-agnostic agent runner (Vercel AI SDK). The active model is chosen by
+ * `AI_MODEL` (falling back to the legacy `AGENT_MODEL`); the provider is inferred
+ * from the model id, so the same code runs on Gemini or Claude with only an env
+ * change. Each tool already carries a Zod schema, which the AI SDK consumes
+ * directly, and the SDK runs the tool-use loop for us up to MAX_ITERATIONS.
+ */
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 const MAX_ITERATIONS = 8;
+const MAX_OUTPUT_TOKENS = 1024;
 
 const SYSTEM_PROMPT = `You are the OpenVPM Agent, an operations assistant embedded in an open-source veterinary practice management system.
 
@@ -36,21 +41,81 @@ export interface AgentRunResult {
 export class AgentNotConfiguredError extends Error {
   constructor() {
     super(
-      "OpenVPM Agent is not configured. Set ANTHROPIC_API_KEY to enable agent runs."
+      "OpenVPM Agent is not configured. Set an AI key (GOOGLE_API_KEY for Gemini, or ANTHROPIC_API_KEY for Claude) to enable agent runs."
     );
     this.name = "AgentNotConfiguredError";
   }
 }
 
+/** Resolve the model id from request override → AI_MODEL → legacy AGENT_MODEL → default. */
+function activeModelId(override?: string): string {
+  return override || process.env.AI_MODEL || process.env.AGENT_MODEL || DEFAULT_MODEL;
+}
+
+/** Google (Gemini) vs Anthropic (Claude) inferred from the model id. */
+function isGoogleModel(modelId: string): boolean {
+  return /^(google\/|models\/)?gemini/i.test(modelId);
+}
+
+function googleApiKey(): string | undefined {
+  return process.env.GOOGLE_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+}
+
+/** Whether the configured provider has its API key set. */
 export function isAgentConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isGoogleModel(activeModelId())
+    ? Boolean(googleApiKey())
+    : Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
+/** Build an AI SDK model instance for the given model id. */
+function resolveModel(modelId: string) {
+  if (isGoogleModel(modelId)) {
+    const google = createGoogleGenerativeAI({ apiKey: googleApiKey() });
+    return google(modelId.replace(/^google\//, ""));
+  }
+  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return anthropic(modelId.replace(/^anthropic\//, ""));
+}
+
+/**
+ * Build the AI SDK tool set from AGENT_TOOLS. Write tools are gated behind
+ * `allowWrites`; every call (and any error) is captured into `sink` so the
+ * caller can report exactly what the agent did, mirroring the prior runner.
+ */
+function buildToolSet(
+  ctx: AgentToolContext,
+  allowWrites: boolean,
+  sink: AgentToolCall[]
+): ToolSet {
+  const entries = AGENT_TOOLS.map((t) => [
+    t.name,
+    tool({
+      description: t.description,
+      inputSchema: t.zod,
+      execute: async (args: unknown) => {
+        const call: AgentToolCall = { name: t.name, input: args };
+        try {
+          if (!t.readOnly && !allowWrites) {
+            call.error = "Write tools are disabled for this run.";
+          } else {
+            call.result = await t.execute(args, ctx);
+          }
+        } catch (e) {
+          call.error = e instanceof Error ? e.message : "Tool execution failed";
+        }
+        sink.push(call);
+        return call.error ? { error: call.error } : call.result;
+      },
+    }),
+  ] as const);
+  return Object.fromEntries(entries) as ToolSet;
 }
 
 /**
  * Run the OpenVPM Agent against a natural-language instruction. Executes a
- * tool-use loop with Claude, scoped to the caller's practice. Write tools are
- * gated behind `allowWrites` (default false) so a read-only run can never
- * mutate data.
+ * tool-use loop scoped to the caller's practice. Write tools are gated behind
+ * `allowWrites` (default false) so a read-only run can never mutate data.
  */
 export async function runAgent(opts: {
   instruction: string;
@@ -58,91 +123,32 @@ export async function runAgent(opts: {
   allowWrites?: boolean;
   model?: string;
 }): Promise<AgentRunResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new AgentNotConfiguredError();
+  const modelId = activeModelId(opts.model);
+  const hasKey = isGoogleModel(modelId)
+    ? Boolean(googleApiKey())
+    : Boolean(process.env.ANTHROPIC_API_KEY);
+  if (!hasKey) throw new AgentNotConfiguredError();
 
-  const client = new Anthropic({ apiKey });
   const allowWrites = opts.allowWrites ?? false;
 
   // Meter the agent run for hosted billing (no-op on self-host).
   void recordUsage({ practiceId: opts.context.practiceId, kind: "ai_run" });
 
-  // Prompt caching: cache the (static) system prompt and tool defs across the
-  // loop's turns so only the growing message tail is re-billed at full rate.
-  const system: Anthropic.TextBlockParam[] = [
-    { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-  ];
-  const toolDefs = anthropicToolDefs() as Anthropic.Tool[];
-  if (toolDefs.length > 0) {
-    toolDefs[toolDefs.length - 1]!.cache_control = { type: "ephemeral" };
-  }
-
-  const messages: Anthropic.MessageParam[] = [
-    { role: "user", content: opts.instruction },
-  ];
-
   const toolCalls: AgentToolCall[] = [];
-  let stopReason: string | null = null;
-
-  for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
-    const response = await client.messages.create({
-      model: opts.model || DEFAULT_MODEL,
-      max_tokens: 1024,
-      system,
-      tools: toolDefs,
-      messages,
-    });
-    stopReason = response.stop_reason;
-
-    messages.push({ role: "assistant", content: response.content });
-
-    if (response.stop_reason !== "tool_use") {
-      const text = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("\n")
-        .trim();
-      return { text, toolCalls, iterations: iteration, stopReason };
-    }
-
-    const toolUses = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
-    );
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
-    for (const use of toolUses) {
-      const tool = getTool(use.name);
-      const call: AgentToolCall = { name: use.name, input: use.input };
-
-      if (!tool) {
-        call.error = `Unknown tool: ${use.name}`;
-      } else if (!tool.readOnly && !allowWrites) {
-        call.error = "Write tools are disabled for this run.";
-      } else {
-        try {
-          call.result = await tool.execute(use.input, opts.context);
-        } catch (e) {
-          call.error = e instanceof Error ? e.message : "Tool execution failed";
-        }
-      }
-
-      toolCalls.push(call);
-      toolResults.push({
-        type: "tool_result",
-        tool_use_id: use.id,
-        content: JSON.stringify(call.error ? { error: call.error } : call.result),
-        is_error: Boolean(call.error),
-      });
-    }
-
-    messages.push({ role: "user", content: toolResults });
-  }
+  const result = await generateText({
+    model: resolveModel(modelId),
+    system: SYSTEM_PROMPT,
+    prompt: opts.instruction,
+    tools: buildToolSet(opts.context, allowWrites, toolCalls),
+    stopWhen: stepCountIs(MAX_ITERATIONS),
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+  });
 
   return {
-    text: "Agent reached the maximum number of steps without finishing.",
+    text: result.text.trim(),
     toolCalls,
-    iterations: MAX_ITERATIONS,
-    stopReason,
+    iterations: result.steps.length,
+    stopReason: result.finishReason ?? null,
   };
 }
 
