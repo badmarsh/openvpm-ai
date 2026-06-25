@@ -354,7 +354,7 @@ See **[ROADMAP.md](ROADMAP.md)** for what's shipping now, next, and later — an
 
 - **Website:** [openvpm.com](https://openvpm.com)
 - **GitHub Discussions:** [Join the conversation](https://github.com/evangauer/openvpm/discussions)
-- **Email:** evan@gettalky.ai
+- **Email:** hello@openvpm.com
 
 ## License
 
