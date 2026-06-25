@@ -61,10 +61,10 @@ export function MarketingFooter() {
               GitHub
             </a>
             <a
-              href="mailto:evan@gettalky.ai"
+              href="mailto:hello@openvpm.com"
               className="text-sm text-gray-500 hover:text-teal-600 transition-colors"
             >
-              evan@gettalky.ai
+              hello@openvpm.com
             </a>
           </div>
         </div>
