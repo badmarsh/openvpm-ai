@@ -203,11 +203,9 @@ export default function OnboardingPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">
-                {subscription.data?.billableSeatCount ?? 1} active staff user
+                {subscription.data?.billableSeatCount ?? 1} staff
               </span>
-              <span className="font-medium">
-                {money(subscription.data?.seatUnitPriceMonthlyUsd)}/mo each
-              </span>
+              <span className="font-medium">unlimited, included</span>
             </div>
             <div className="border-t border-border pt-3">
               <div className="flex items-end justify-between">

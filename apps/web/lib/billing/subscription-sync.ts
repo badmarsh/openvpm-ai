@@ -131,10 +131,10 @@ export async function syncPracticeSubscriptionQuantities(opts: {
 
   const locationPriceId = process.env[STRIPE_PRICE_CLOUD_LOCATION_ENV];
   const seatPriceId = process.env[STRIPE_PRICE_CLOUD_USER_ENV];
-  if (!locationPriceId || !seatPriceId) {
+  if (!locationPriceId) {
     const state = buildState(
       "error",
-      "Stripe Cloud location/user price IDs are not configured.",
+      "Stripe Cloud location price ID is not configured.",
       counts
     );
     await writeBillingSyncState(db, practiceId, state);
@@ -151,17 +151,21 @@ export async function syncPracticeSubscriptionQuantities(opts: {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const items = subscription.items.data;
     const locationItem = items.find((item) => item.price?.id === locationPriceId);
-    const seatItem = items.find((item) => item.price?.id === seatPriceId);
+    // Flat model bills locations only; legacy subscriptions may also carry a
+    // per-seat item, which we keep in sync for back-compat when present.
+    const seatItem = seatPriceId
+      ? items.find((item) => item.price?.id === seatPriceId)
+      : undefined;
     const legacyPriceId = process.env[STRIPE_PRICE_CLOUD_LEGACY_ENV];
     const hasLegacyItem =
       !!legacyPriceId && items.some((item) => item.price?.id === legacyPriceId);
 
-    if (!locationItem || !seatItem) {
+    if (!locationItem) {
       const state = buildState(
         hasLegacyItem ? "legacy" : "error",
         hasLegacyItem
-          ? "Legacy Cloud subscription detected; split quantity sync skipped."
-          : "Stripe subscription is missing the Cloud location or staff-user item.",
+          ? "Legacy Cloud subscription detected; quantity sync skipped."
+          : "Stripe subscription is missing the Cloud location item.",
         counts
       );
       await writeBillingSyncState(db, practiceId, state);
@@ -174,18 +178,25 @@ export async function syncPracticeSubscriptionQuantities(opts: {
       return state;
     }
 
-    await Promise.all([
+    const updates = [
       stripe.subscriptionItems.update(locationItem.id, {
         quantity: counts.locationCount,
       }),
-      stripe.subscriptionItems.update(seatItem.id, {
-        quantity: counts.billableSeatCount,
-      }),
-    ]);
+    ];
+    if (seatItem) {
+      updates.push(
+        stripe.subscriptionItems.update(seatItem.id, {
+          quantity: counts.billableSeatCount,
+        })
+      );
+    }
+    await Promise.all(updates);
 
     const state = buildState(
       "ok",
-      `Synced ${counts.locationCount} location(s) and ${counts.billableSeatCount} staff seat(s). Estimated base ${estimatedCloudBaseMonthlyUsd(counts.locationCount, counts.billableSeatCount)} USD/mo.`,
+      `Synced ${counts.locationCount} location(s)${
+        seatItem ? ` and ${counts.billableSeatCount} staff seat(s)` : ", unlimited staff"
+      }. Estimated base ${estimatedCloudBaseMonthlyUsd(counts.locationCount, counts.billableSeatCount)} USD/mo.`,
       counts
     );
     await writeBillingSyncState(db, practiceId, state);

@@ -95,7 +95,7 @@ describe("trials", () => {
 });
 
 describe("PLANS pricing", () => {
-  it("uses hybrid Cloud pricing, free self-host, and custom enterprise", () => {
+  it("uses flat per-location Cloud pricing, free self-host, and custom enterprise", () => {
     expect(PLANS.free.locationUnitPriceMonthlyUsd).toBe(0);
     expect(PLANS.free.seatUnitPriceMonthlyUsd).toBe(0);
     expect(PLANS.cloud.locationUnitPriceMonthlyUsd).toBe(
@@ -108,9 +108,10 @@ describe("PLANS pricing", () => {
     expect(PLANS.enterprise.seatUnitPriceMonthlyUsd).toBeNull();
   });
 
-  it("estimates base Cloud subscription from locations and billable staff", () => {
-    expect(estimatedCloudBaseMonthlyUsd(2, 5)).toBe(148);
-    expect(estimatedCloudBaseMonthlyUsd(0, 0)).toBe(49);
+  it("estimates base Cloud subscription from locations (flat, unlimited staff)", () => {
+    // Flat per-location model: staff count does not affect the base.
+    expect(estimatedCloudBaseMonthlyUsd(2, 5)).toBe(198);
+    expect(estimatedCloudBaseMonthlyUsd(0, 0)).toBe(99);
   });
 });
 
