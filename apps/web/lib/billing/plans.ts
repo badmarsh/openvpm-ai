@@ -6,10 +6,10 @@
  * product. We monetize hosting + scale (locations) + heavy usage, not by locking
  * the open core.
  *
- * Pricing (managed Cloud): ONE simple self-serve tier with hybrid billing:
- * $49/mo per active location + $10/mo per active staff user. ALL features are
- * included while trialing/active, with metered overage for SMS / AI usage
- * beyond included monthly allowances. Enterprise = custom.
+ * Pricing (managed Cloud): ONE simple self-serve tier — flat $99/mo per active
+ * location, unlimited staff. ALL features are included while trialing/active,
+ * with generous included SMS / AI allowances and metered overage beyond.
+ * Enterprise = custom.
  */
 
 export type PlanTier = "free" | "cloud" | "enterprise";
@@ -38,9 +38,10 @@ export const ALL_FEATURES: Feature[] = [
   "integrations",
 ];
 
-/** Managed Cloud list prices. */
-export const CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD = 49;
-export const CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD = 10;
+/** Managed Cloud list price: flat per active location, unlimited staff. */
+export const CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD = 99;
+/** No per-seat charge under the flat model (kept at 0 for type/back-compat). */
+export const CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD = 0;
 
 /** Env vars holding Stripe Price IDs for hosted billing (PRIVATE). */
 export const STRIPE_PRICE_CLOUD_LOCATION_ENV = "STRIPE_PRICE_CLOUD_LOCATION";
@@ -99,12 +100,12 @@ export const PLANS: Record<PlanTier, PlanDefinition> = {
     locationUnitPriceMonthlyUsd: CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
     seatUnitPriceMonthlyUsd: CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
     blurb:
-      "We host it: the full PIMS, managed, with every feature - agent, SMS, reporting, API, multi-location, integrations. $49/mo per location + $10/mo per staff user.",
-    seatLimit: null, // billed by quantity, not capped
-    locationLimit: null, // billed by quantity, not capped
+      "We host it: the full PIMS, managed, with every feature - agent, SMS, reporting, API, multi-location, integrations. $99/mo per location, unlimited staff.",
+    seatLimit: null, // unlimited staff under the flat model
+    locationLimit: null, // billed by location quantity, not capped
     features: [...ALL_FEATURES],
-    includedSmsPerMonth: 500,
-    includedAiRunsPerMonth: 200,
+    includedSmsPerMonth: 1000,
+    includedAiRunsPerMonth: 1000,
     stripeLocationPriceEnv: STRIPE_PRICE_CLOUD_LOCATION_ENV,
     stripeSeatPriceEnv: STRIPE_PRICE_CLOUD_USER_ENV,
     selfServe: true,

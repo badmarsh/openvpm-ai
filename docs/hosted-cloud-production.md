@@ -87,12 +87,13 @@ For local or staging signup tests without real email delivery, set `OPENVPM_EXPO
 
 Create one Stripe product for OpenVPM Cloud with recurring monthly prices:
 
-- Cloud location: `$49/month`, env `STRIPE_PRICE_CLOUD_LOCATION`
-- Cloud staff user: `$10/month`, env `STRIPE_PRICE_CLOUD_USER`
+- Cloud location: `$99/month`, env `STRIPE_PRICE_CLOUD_LOCATION` (flat per active location, unlimited staff)
 - SMS overage metered price, env `STRIPE_PRICE_SMS_OVERAGE`
 - AI overage metered price, env `STRIPE_PRICE_AI_OVERAGE`
 
-The app creates one subscription with two recurring line items. Quantity sync updates active non-deleted locations and active non-deleted staff users.
+`STRIPE_PRICE_CLOUD_USER` (legacy per-seat) and `STRIPE_PRICE_CLOUD` (legacy single price) are only kept for mapping existing subscriptions; new checkout uses the per-location price only.
+
+The app creates one subscription with a single recurring per-location line item. Quantity sync updates the active non-deleted location count.
 
 Webhook endpoint:
 

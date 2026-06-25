@@ -318,7 +318,7 @@ export function InstallContent() {
               <div className="rounded-xl border border-teal-100 bg-teal-50/30 p-5 text-sm text-center">
                 <p className="font-medium text-gray-800 mb-1">Cloud pricing</p>
                 <p className="text-gray-600">
-                  $49/month per active location + $10/month per active staff user.{" "}
+                  $99/month per active location, unlimited staff.{" "}
                   <a href="/#pricing" className="text-teal-600 font-medium hover:underline">
                     View pricing &rarr;
                   </a>

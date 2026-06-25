@@ -130,8 +130,8 @@ export const subscriptionRouter = createRouter({
     .input(z.object({ tier: z.enum(["cloud"]).default("cloud") }))
     .mutation(async ({ ctx, input }) => {
       const plan = PLANS[input.tier];
-      const { locationPriceId, seatPriceId } = cloudCheckoutPriceIds();
-      if (!plan.selfServe || !locationPriceId || !seatPriceId) {
+      const { locationPriceId } = cloudCheckoutPriceIds();
+      if (!plan.selfServe || !locationPriceId) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "This plan isn't available for checkout yet.",
@@ -161,7 +161,6 @@ export const subscriptionRouter = createRouter({
       const result = await createSubscriptionCheckoutSession({
         lineItems: [
           { priceId: locationPriceId, quantity: counts.locationCount },
-          { priceId: seatPriceId, quantity: counts.billableSeatCount },
         ],
         practiceId: ctx.practiceId,
         customerId: practice?.stripeCustomerId ?? undefined,

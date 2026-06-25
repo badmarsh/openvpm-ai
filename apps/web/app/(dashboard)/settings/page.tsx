@@ -615,9 +615,12 @@ function BillingTab() {
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Billable staff</p>
+            <p className="text-muted-foreground">Staff</p>
             <p className="font-medium">
-              {data.billableSeatCount} x ${data.seatUnitPriceMonthlyUsd}/mo
+              {data.billableSeatCount}
+              {data.seatUnitPriceMonthlyUsd > 0
+                ? ` x $${data.seatUnitPriceMonthlyUsd}/mo`
+                : " (unlimited, included)"}
             </p>
           </div>
           <div>
@@ -727,16 +730,18 @@ function PlanGrid({
           >
             <h4 className="font-heading text-base font-semibold">{p.name}</h4>
             <p className="mt-1 text-2xl font-bold">
-              {p.locationUnitPriceMonthlyUsd === null || p.seatUnitPriceMonthlyUsd === null ? (
+              {p.locationUnitPriceMonthlyUsd === null ? (
                 "Custom"
-              ) : p.locationUnitPriceMonthlyUsd === 0 && p.seatUnitPriceMonthlyUsd === 0 ? (
+              ) : p.locationUnitPriceMonthlyUsd === 0 ? (
                 "Free"
               ) : (
                 <>
                   ${p.locationUnitPriceMonthlyUsd}
                   <span className="text-sm font-normal text-muted-foreground">/location</span>
                   <span className="block text-sm font-normal text-muted-foreground">
-                    + ${p.seatUnitPriceMonthlyUsd}/staff/mo
+                    {p.seatUnitPriceMonthlyUsd && p.seatUnitPriceMonthlyUsd > 0
+                      ? `+ $${p.seatUnitPriceMonthlyUsd}/staff/mo`
+                      : "unlimited staff"}
                   </span>
                 </>
               )}

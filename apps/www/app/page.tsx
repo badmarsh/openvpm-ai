@@ -847,11 +847,11 @@ export default function LandingPage() {
               </p>
               <div className="mt-6">
                 <div className="flex items-end gap-2">
-                  <span className="text-4xl font-bold font-heading text-gray-900">$49</span>
+                  <span className="text-4xl font-bold font-heading text-gray-900">$99</span>
                   <span className="pb-1 text-sm text-gray-500">/ active location / mo</span>
                 </div>
                 <div className="mt-1 text-sm font-medium text-gray-700">
-                  + $10 / active staff user / mo
+                  Unlimited staff. No per-user fees.
                 </div>
               </div>
               <ul className="mt-6 space-y-3 text-sm text-gray-700">
