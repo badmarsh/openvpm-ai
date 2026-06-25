@@ -28,3 +28,43 @@ jobs:
 
       - run: pnpm build
         # Note: next build includes linting — no separate lint step needed
+
+  rls:
+    name: RLS tenant isolation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openpims
+          POSTGRES_PASSWORD: openpims
+          POSTGRES_DB: openpims
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U openpims"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://openpims:openpims@localhost:5432/openpims
+      OPENPIMS_APP_DB_PASSWORD: openpims_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      # Create the schema, apply RLS (+ least-priv role), then prove tenant
+      # isolation against a real Postgres on every PR.
+      - run: pnpm --filter @openpims/db exec drizzle-kit push --force
+
+      - run: pnpm --filter @openpims/db db:rls
+
+      - run: pnpm --filter @openpims/db db:rls:test
