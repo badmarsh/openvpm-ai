@@ -14,7 +14,7 @@ function getResend(): Resend | null {
   return resend;
 }
 
-const DEFAULT_FROM = "noreply@openpims.dev";
+const DEFAULT_FROM = process.env.EMAIL_FROM || "OpenVPM <noreply@mail.openvpm.com>";
 
 // ---------------------------------------------------------------------------
 // Shared layout helpers
