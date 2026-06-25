@@ -952,10 +952,10 @@ export default function LandingPage() {
               <p className="mt-8 text-teal-200 text-sm">
                 Questions? Reach out at{" "}
                 <a
-                  href="mailto:evan@gettalky.ai"
+                  href="mailto:hello@openvpm.com"
                   className="text-white underline underline-offset-2 hover:text-teal-100"
                 >
-                  evan@gettalky.ai
+                  hello@openvpm.com
                 </a>
               </p>
             </div>

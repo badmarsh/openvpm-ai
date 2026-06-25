@@ -25,16 +25,9 @@ import {
   syncPracticeSubscriptionQuantities,
   type BillingSyncState,
 } from "@/lib/billing/subscription-sync";
+import { appBaseUrl } from "@/lib/app-url";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
-
-function appBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.NEXTAUTH_URL ??
-    "http://localhost:3000"
-  );
-}
 
 /** Whether a tier can be bought self-serve (Stripe price configured). */
 function purchasable(tier: keyof typeof PLANS): boolean {
