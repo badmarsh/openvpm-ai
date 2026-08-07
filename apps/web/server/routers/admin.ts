@@ -13,6 +13,10 @@ import {
   type PlanTier,
 } from "@/lib/billing/plans";
 import { withSystem } from "@/lib/tenant-db";
+import {
+  onboardingIntentLabel,
+  type OnboardingIntent,
+} from "@/lib/onboarding/intent";
 
 /**
  * Platform-operator only. Crosses tenant boundaries deliberately, so it is
@@ -27,14 +31,17 @@ const platformAdminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
 type AdminPracticeSettings = {
   acquisition?: { source?: string; campaign?: string };
+  analyticsExcluded?: boolean;
   onboardingCompletedAt?: string | null;
   onboardingState?: {
+    onboardingIntent?: OnboardingIntent;
     journeyStepId?: string | null;
     journeyDismissed?: boolean;
   };
 };
 
 const setupStepLabels: Record<string, string> = {
+  intent: "Starting path",
   basics: "Clinic basics",
   branding: "Branding",
   team: "Team",
@@ -51,20 +58,34 @@ function conversionContext(value: unknown) {
   const acquisitionSource =
     [acquisition?.source, acquisition?.campaign].filter(Boolean).join(" · ") ||
     "Unknown";
+  const state = settings.onboardingState;
+  const onboardingIntent = onboardingIntentLabel(state?.onboardingIntent);
+  const analyticsExcluded = settings.analyticsExcluded === true;
 
   if (settings.onboardingCompletedAt) {
-    return { acquisitionSource, setupStage: "Complete" };
+    return {
+      acquisitionSource,
+      onboardingIntent,
+      analyticsExcluded,
+      setupStage: "Complete",
+    };
   }
-  const state = settings.onboardingState;
   const step = state?.journeyStepId;
   if (step) {
     const label = setupStepLabels[step] ?? step;
     return {
       acquisitionSource,
+      onboardingIntent,
+      analyticsExcluded,
       setupStage: state?.journeyDismissed ? `Paused at ${label}` : label,
     };
   }
-  return { acquisitionSource, setupStage: "Not started" };
+  return {
+    acquisitionSource,
+    onboardingIntent,
+    analyticsExcluded,
+    setupStage: "Not started",
+  };
 }
 
 export const adminRouter = createRouter({
@@ -217,6 +238,39 @@ export const adminRouter = createRouter({
           .where(eq(practices.id, input.practiceId));
 
         return { practiceId: input.practiceId, trialEndsAt };
+      })
+    ),
+
+  /** Reversibly exclude internal/test practices from conversion reporting. */
+  setAnalyticsExcluded: platformAdminProcedure
+    .input(
+      z.object({
+        practiceId: z.string().uuid(),
+        excluded: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) =>
+      withSystem(db, async (tx) => {
+        const [updated] = await tx
+          .update(practices)
+          .set({
+            settings: sql`coalesce(${practices.settings}, '{}'::jsonb) || ${JSON.stringify({
+              analyticsExcluded: input.excluded,
+            })}::jsonb`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(eq(practices.id, input.practiceId), isNull(practices.deletedAt))
+          )
+          .returning({ id: practices.id });
+
+        if (!updated) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Practice not found.",
+          });
+        }
+        return { practiceId: input.practiceId, excluded: input.excluded };
       })
     ),
 

@@ -82,8 +82,10 @@ describe("admin overview", () => {
           country: "US",
           createdAt: new Date("2026-06-01T02:00:00.000Z"),
           settings: {
+            analyticsExcluded: true,
             acquisition: { source: "homepage_hero", campaign: "summer_launch" },
             onboardingState: {
+              onboardingIntent: "alongside",
               journeyStepId: "data",
               journeyDismissed: true,
             },
@@ -106,6 +108,8 @@ describe("admin overview", () => {
       clientCount: 25,
       patientCount: 40,
       acquisitionSource: "homepage_hero · summer_launch",
+      onboardingIntent: "Alongside current PIMS",
+      analyticsExcluded: true,
       setupStage: "Paused at Data import",
     });
     expect(mocks.withSystem).toHaveBeenCalledWith(
