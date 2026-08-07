@@ -61,12 +61,21 @@ export default function AdminPage() {
   const { data: funnel, error: funnelError } =
     trpc.admin.activationFunnel.useQuery({ days: 30 }, { retry: false });
   const [extendTrialError, setExtendTrialError] = useState<string | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const extendTrial = trpc.admin.extendTrial.useMutation({
     onSuccess: () => {
       setExtendTrialError(null);
       utils.admin.overview.invalidate();
     },
     onError: (err) => setExtendTrialError(err.message),
+  });
+  const setAnalyticsExcluded = trpc.admin.setAnalyticsExcluded.useMutation({
+    onSuccess: () => {
+      setAnalyticsError(null);
+      utils.admin.overview.invalidate();
+      utils.admin.activationFunnel.invalidate();
+    },
+    onError: (err) => setAnalyticsError(err.message),
   });
 
   if (error?.data?.code === "FORBIDDEN") {
@@ -148,7 +157,7 @@ export default function AdminPage() {
         </div>
         {funnel ? (
           <>
-            <div className="mt-3 grid gap-4 sm:grid-cols-5">
+            <div className="mt-3 grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
               <div>
                 <p className="text-sm text-muted-foreground">Signups</p>
                 <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
@@ -183,7 +192,16 @@ export default function AdminPage() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Subscribed</p>
+                <p className="text-sm text-muted-foreground">Billing started</p>
+                <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
+                  {funnel.totals.billingStarted}
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    {formatPct(funnel.totals.billingStartRate)}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Paid active</p>
                 <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
                   {funnel.totals.subscribed}
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -194,7 +212,9 @@ export default function AdminPage() {
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               Setup progress comes from the guided clinic setup. Activated = added a
-              real client and booked a real visit.
+              real client and booked a real visit. Billing started = Stripe
+              subscription created; paid active = billing status active. All rates
+              are signup-cohort rates for this window.
             </p>
           </>
         ) : (
@@ -210,6 +230,11 @@ export default function AdminPage() {
           Could not extend the trial: {extendTrialError}
         </div>
       )}
+      {analyticsError && (
+        <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          Could not update funnel inclusion: {analyticsError}
+        </div>
+      )}
       <div className="mt-8 overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead>
@@ -218,7 +243,9 @@ export default function AdminPage() {
               <th className="px-4 py-2.5 font-medium">Plan</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium">Source</th>
+              <th className="px-4 py-2.5 font-medium">Intent</th>
               <th className="px-4 py-2.5 font-medium">Setup</th>
+              <th className="px-4 py-2.5 font-medium">Metrics</th>
               <th className="px-4 py-2.5 font-medium">Trial ends</th>
               <th className="px-4 py-2.5 font-medium text-right">Locations</th>
               <th className="px-4 py-2.5 font-medium text-right">Staff</th>
@@ -247,7 +274,35 @@ export default function AdminPage() {
                   {p.acquisitionSource}
                 </td>
                 <td className="px-4 py-2.5 text-muted-foreground">
+                  {p.onboardingIntent}
+                </td>
+                <td className="px-4 py-2.5 text-muted-foreground">
                   {p.setupStage}
+                </td>
+                <td className="px-4 py-2.5">
+                  <button
+                    type="button"
+                    title={
+                      p.analyticsExcluded
+                        ? "Include this practice in conversion reporting"
+                        : "Exclude this internal or test practice from conversion reporting"
+                    }
+                    aria-pressed={p.analyticsExcluded}
+                    disabled={setAnalyticsExcluded.isPending}
+                    onClick={() =>
+                      setAnalyticsExcluded.mutate({
+                        practiceId: p.id,
+                        excluded: !p.analyticsExcluded,
+                      })
+                    }
+                    className={`rounded border px-1.5 py-0.5 text-xs font-medium disabled:opacity-50 ${
+                      p.analyticsExcluded
+                        ? "border-amber-300 bg-amber-50 text-amber-800"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {p.analyticsExcluded ? "Excluded" : "Exclude"}
+                  </button>
                 </td>
                 <td className="px-4 py-2.5 text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
@@ -280,7 +335,7 @@ export default function AdminPage() {
             ))}
             {data.practices.length === 0 && (
               <tr>
-                <td colSpan={13} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={15} className="px-4 py-8 text-center text-muted-foreground">
                   No practices yet.
                 </td>
               </tr>
