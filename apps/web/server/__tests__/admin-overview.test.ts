@@ -68,6 +68,57 @@ afterEach(() => {
 });
 
 describe("admin overview", () => {
+  it("counts only unexpired trial windows as active trials", async () => {
+    vi.stubEnv("PLATFORM_ADMIN_EMAILS", "ops@example.com");
+    mocks.selectResults.push(
+      [
+        {
+          id: "00000000-0000-0000-0000-000000000011",
+          name: "Active Trial",
+          tier: "free",
+          billingStatus: "trialing",
+          trialEndsAt: new Date("2099-01-01T00:00:00.000Z"),
+          timezone: "UTC",
+          country: "US",
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+          settings: {},
+        },
+        {
+          id: "00000000-0000-0000-0000-000000000012",
+          name: "Expired Trial",
+          tier: "free",
+          billingStatus: "trialing",
+          trialEndsAt: new Date("2020-01-01T00:00:00.000Z"),
+          timezone: "UTC",
+          country: "US",
+          createdAt: new Date("2026-07-01T00:00:00.000Z"),
+          settings: {},
+        },
+        {
+          id: "00000000-0000-0000-0000-000000000013",
+          name: "Malformed Trial",
+          tier: "free",
+          billingStatus: "trialing",
+          trialEndsAt: null,
+          timezone: "UTC",
+          country: "US",
+          createdAt: new Date("2026-06-01T00:00:00.000Z"),
+          settings: {},
+        },
+      ],
+      [],
+      [],
+      [],
+      [],
+      []
+    );
+
+    const result = await caller().overview();
+
+    expect(result.totals.activeTrials).toBe(1);
+    expect(result.totals.practices).toBe(3);
+  });
+
   it("returns practice timezones for cross-tenant date rendering", async () => {
     vi.stubEnv("PLATFORM_ADMIN_EMAILS", "ops@example.com");
     mocks.selectResults.push(
