@@ -664,11 +664,15 @@ describe("messaging location sender join scoping", () => {
     );
   });
 
-  it("scopes shared sender resolution to active locations with or without practice context", () => {
+  it("requires practice context and scopes shared sender resolution to that active location", () => {
     const source = readSource("lib/messaging/index.ts");
 
+    expect(source).toContain("if (!opts.practiceId) return undefined");
     expect(source).toMatch(
-      /innerJoin\(\s*locations,\s*and\(\s*eq\(locations\.id, locationMessaging\.locationId\),\s*opts\.practiceId\s*\?\s*eq\(locations\.practiceId, opts\.practiceId\)\s*:\s*eq\(locations\.practiceId, locationMessaging\.practiceId\),\s*isNull\(locations\.deletedAt\)\s*\)\s*\)/s
+      /innerJoin\(\s*locations,\s*and\(\s*eq\(locations\.id, locationMessaging\.locationId\),\s*eq\(locations\.practiceId, opts\.practiceId!\),\s*isNull\(locations\.deletedAt\)\s*\)\s*\)/s
+    );
+    expect(source).toContain(
+      "eq(locationMessaging.practiceId, opts.practiceId!)"
     );
   });
 });

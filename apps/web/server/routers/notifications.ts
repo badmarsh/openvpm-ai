@@ -34,7 +34,10 @@ import {
   sendAppointmentReminderSms,
   sendVaccinationReminderSms,
 } from "@/lib/sms";
-import { pickReminderChannel } from "@/lib/messaging/reminders";
+import {
+  isQuietHours,
+  pickReminderChannel,
+} from "@/lib/messaging/reminders";
 import { formatCurrency } from "@/lib/locale/format";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
@@ -328,7 +331,7 @@ export const notificationsRouter = createRouter({
         phone: appt.clientPhone,
         smsConsent: appt.smsConsent ?? false,
         hasEmail: Boolean(normalizeEmailSuppressionAddress(appt.clientEmail)),
-        quietHours: false,
+        quietHours: isQuietHours(new Date(), appt.practiceTimezone),
       });
 
       if (channel === "none") {
@@ -336,6 +339,14 @@ export const notificationsRouter = createRouter({
           code: "BAD_REQUEST",
           message:
             "Client has no email and no SMS-consented phone number on file",
+        });
+      }
+
+      if (channel === "skip") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "SMS reminders cannot be sent during quiet hours (9 PM–8 AM local time). Try again after 8 AM.",
         });
       }
 
@@ -682,7 +693,7 @@ export const notificationsRouter = createRouter({
           phone: appt.clientPhone,
           smsConsent: appt.smsConsent ?? false,
           hasEmail: Boolean(normalizeEmailSuppressionAddress(appt.clientEmail)),
-          quietHours: false,
+          quietHours: isQuietHours(new Date(), appt.practiceTimezone),
         });
 
         if (channel === "sms") {
@@ -991,7 +1002,7 @@ export const notificationsRouter = createRouter({
           phone: data.clientPhone,
           smsConsent: data.smsConsent ?? false,
           hasEmail: Boolean(normalizeEmailSuppressionAddress(data.clientEmail)),
-          quietHours: false,
+          quietHours: isQuietHours(new Date(), practice.timezone),
         });
 
         if (channel === "sms") {

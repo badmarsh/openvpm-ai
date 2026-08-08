@@ -12,7 +12,7 @@ import {
   MESSAGING_WEBHOOK_BODY_MAX_BYTES,
   messagingWebhookContentLengthTooLarge,
 } from "@/lib/messaging-webhook-limits";
-import { addSuppression, normalizeE164 } from "@/lib/messaging";
+import { normalizeE164 } from "@/lib/messaging";
 import {
   findMessagingLocationForWebhook,
   handleInboundSmsReply,
@@ -37,17 +37,6 @@ function payloadTooLargeResponse() {
     { error: "Messaging webhook payload too large" },
     { status: 413 }
   );
-}
-
-function firstPayloadToPhone(payload: {
-  to?:
-    | Array<{ phone_number?: string; status?: string }>
-    | { phone_number?: string; status?: string };
-}): string | null {
-  const raw = Array.isArray(payload.to)
-    ? payload.to[0]?.phone_number
-    : payload.to?.phone_number;
-  return normalizeE164(raw);
 }
 
 function payloadString(value: unknown): string | null {
@@ -317,7 +306,7 @@ export async function POST(request: Request) {
     });
 
     if (loc) {
-      const updatedCommunications = await withTenant(db, loc.practiceId, (tx) =>
+      await withTenant(db, loc.practiceId, (tx) =>
         tx
           .update(communications)
           .set({ status: deliveryStatus })
@@ -334,18 +323,9 @@ export async function POST(request: Request) {
           .returning({ id: communications.id })
       );
 
-      if (deliveryStatus === "failed" && updatedCommunications.length > 0) {
-        const failedRecipient = firstPayloadToPhone(payload);
-        if (failedRecipient) {
-          await addSuppression({
-            practiceId: loc.practiceId,
-            locationId: loc.locationId,
-            phone: failedRecipient,
-            reason: "bounce",
-            detail: `Delivery failed for provider message ${providerMessageId}`,
-          });
-        }
-      }
+      // Generic Telnyx failure events do not distinguish a permanently invalid
+      // recipient from transient carrier/provider failures. Preserve delivery
+      // status, but leave automatic suppression to explicit STOP/opt-out events.
     }
 
     return NextResponse.json({ ok: true });

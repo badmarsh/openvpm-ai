@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 
 const mocks = vi.hoisted(() => ({
@@ -121,6 +121,12 @@ function createDb(opts?: {
   return { db, select, insertValues };
 }
 
+beforeEach(() => {
+  vi.useFakeTimers();
+  // Noon in Los Angeles / 3 PM in New York: outside SMS quiet hours.
+  vi.setSystemTime(new Date("2026-07-01T19:00:00Z"));
+});
+
 afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
@@ -234,6 +240,78 @@ describe("notification target safety", () => {
         status: "sent",
         providerMessageId: "sms-manual-1",
       })
+    );
+  });
+
+  it("blocks an SMS-only manual reminder during the clinic's quiet hours", async () => {
+    vi.setSystemTime(new Date("2026-07-02T05:00:00Z")); // 10 PM in Los Angeles
+    const { db, insertValues } = createDb({
+      selectResults: [
+        [
+          {
+            id: APPOINTMENT_ID,
+            startTime: new Date("2026-07-03T19:00:00Z"),
+            patientName: "Miso",
+            clientId: CLIENT_ID,
+            clientFirstName: "Ada",
+            clientLastName: "Lovelace",
+            clientEmail: null,
+            clientPhone: "(555) 555-0100",
+            preferredContactMethod: "sms",
+            smsConsent: true,
+            practiceName: "Neighborhood Veterinary",
+            practicePhone: "555-0100",
+            practiceTimezone: "America/Los_Angeles",
+          },
+        ],
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).sendAppointmentReminder({ appointmentId: APPOINTMENT_ID })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message:
+        "SMS reminders cannot be sent during quiet hours (9 PM–8 AM local time). Try again after 8 AM.",
+    });
+
+    expect(mocks.sendAppointmentReminderSms).not.toHaveBeenCalled();
+    expect(mocks.sendAppointmentReminder).not.toHaveBeenCalled();
+    expect(insertValues).not.toHaveBeenCalled();
+  });
+
+  it("falls back to email instead of texting during quiet hours", async () => {
+    vi.setSystemTime(new Date("2026-07-02T05:00:00Z")); // 10 PM in Los Angeles
+    const { db, insertValues } = createDb({
+      selectResults: [
+        [
+          {
+            id: APPOINTMENT_ID,
+            startTime: new Date("2026-07-03T19:00:00Z"),
+            patientName: "Miso",
+            clientId: CLIENT_ID,
+            clientFirstName: "Ada",
+            clientLastName: "Lovelace",
+            clientEmail: "ada@example.com",
+            clientPhone: "(555) 555-0100",
+            preferredContactMethod: "sms",
+            smsConsent: true,
+            practiceName: "Neighborhood Veterinary",
+            practicePhone: "555-0100",
+            practiceTimezone: "America/Los_Angeles",
+          },
+        ],
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).sendAppointmentReminder({ appointmentId: APPOINTMENT_ID })
+    ).resolves.toEqual({ success: true, channel: "email" });
+
+    expect(mocks.sendAppointmentReminderSms).not.toHaveBeenCalled();
+    expect(mocks.sendAppointmentReminder).toHaveBeenCalledOnce();
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ channel: "email", status: "sent" })
     );
   });
 

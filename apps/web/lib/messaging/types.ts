@@ -42,3 +42,13 @@ export interface MessagingProvider {
   isConfigured(): boolean;
   send(input: SendMessageInput): Promise<SendMessageResult>;
 }
+
+/**
+ * The provider and sender that must be used together for one outbound message.
+ * Location-scoped sends resolve this pair from the same `location_messaging`
+ * row so a global provider setting cannot route a clinic's sender elsewhere.
+ */
+export interface ResolvedMessagingTransport {
+  provider: MessagingProvider;
+  sender: MessagingSender;
+}
