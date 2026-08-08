@@ -85,6 +85,9 @@ vi.mock("twilio", () => ({
 
 const { POST } = await import("./route");
 const { communications } = await import("@openpims/db");
+const { inboundSmsOptInEvidence, SMS_INBOUND_OPT_IN } = await import(
+  "@/lib/messaging/consent"
+);
 const { MESSAGING_WEBHOOK_BODY_MAX_BYTES } = await import(
   "@/lib/messaging-webhook-limits"
 );
@@ -410,7 +413,9 @@ describe("Twilio webhook", () => {
     );
     expect(mocks.updateSet).toHaveBeenCalledWith({
       smsConsent: false,
-      smsConsentAt: expect.any(Date),
+      smsConsentAt: null,
+      smsConsentSource: null,
+      smsConsentDisclosure: null,
     });
     expect(mocks.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -460,6 +465,8 @@ describe("Twilio webhook", () => {
     expect(mocks.updateSet).toHaveBeenCalledWith({
       smsConsent: true,
       smsConsentAt: expect.any(Date),
+      smsConsentSource: SMS_INBOUND_OPT_IN.source,
+      smsConsentDisclosure: inboundSmsOptInEvidence("START"),
     });
     expect(mocks.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -479,7 +486,7 @@ describe("Twilio webhook", () => {
     });
   });
 
-  it("updates failed delivery callbacks and suppresses bounced recipients", async () => {
+  it("updates transient failed delivery callbacks without suppressing recipients", async () => {
     process.env.TWILIO_AUTH_TOKEN = "test-token";
     mocks.selectResults.push([
       {
@@ -494,6 +501,7 @@ describe("Twilio webhook", () => {
         To: "+15555550199",
         MessageSid: "SM-failed",
         MessageStatus: "undelivered",
+        ErrorCode: "30008",
       })
     );
 
@@ -501,15 +509,7 @@ describe("Twilio webhook", () => {
     expect(mocks.updateSet).toHaveBeenCalledWith({ status: "failed" });
     const condition = mocks.updateWhere.mock.calls[0]?.[0];
     expect(sqlIncludesColumnName(condition, "deleted_at")).toBe(true);
-    expect(mocks.insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        practiceId: "00000000-0000-0000-0000-0000000000aa",
-        locationId: "00000000-0000-0000-0000-000000000002",
-        phone: "+15555550199",
-        reason: "bounce",
-        detail: "Delivery failed for provider message SM-failed",
-      })
-    );
+    expect(mocks.insertValues).not.toHaveBeenCalled();
   });
 
   it("routes delivery callbacks by MessagingServiceSid when no sender number is stored", async () => {
@@ -542,14 +542,6 @@ describe("Twilio webhook", () => {
     );
     expect(sqlIncludesValue(profileCondition, "MG123")).toBe(true);
     expect(mocks.updateSet).toHaveBeenCalledWith({ status: "failed" });
-    expect(mocks.insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        practiceId: "00000000-0000-0000-0000-0000000000aa",
-        locationId: "00000000-0000-0000-0000-000000000002",
-        phone: "+15555550199",
-        reason: "bounce",
-        detail: "Delivery failed for provider message SM-profile-failed",
-      })
-    );
+    expect(mocks.insertValues).not.toHaveBeenCalled();
   });
 });

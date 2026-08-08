@@ -47,7 +47,8 @@ export const clients = pgTable(
     // captured and the exact disclosure shown. Required before texting a client.
     smsConsent: boolean("sms_consent").notNull().default(false),
     smsConsentAt: timestamp("sms_consent_at", { withTimezone: true }),
-    smsConsentSource: varchar("sms_consent_source", { length: 32 }), // intake|verbal|import|portal
+    // Versioned capture source, for example staff_attested_form:v1.
+    smsConsentSource: varchar("sms_consent_source", { length: 32 }),
     smsConsentDisclosure: text("sms_consent_disclosure"),
     notes: text("notes"),
     accessToken: varchar("access_token", { length: 64 }).unique(),

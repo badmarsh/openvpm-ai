@@ -1,6 +1,8 @@
 import { createPublicKey, verify } from "node:crypto";
 
-const SIGNATURE_TOLERANCE_SECONDS = 600;
+// Match Telnyx's current webhook guidance: reject signatures older than five
+// minutes so a captured request has a narrow replay window.
+const SIGNATURE_TOLERANCE_SECONDS = 300;
 
 /** Build a Node public key from Telnyx's base64 raw Ed25519 key (wrap in SPKI). */
 function ed25519PublicKey(b64: string) {

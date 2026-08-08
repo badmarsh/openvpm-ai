@@ -10,7 +10,7 @@ import {
   MESSAGING_WEBHOOK_BODY_MAX_BYTES,
   messagingWebhookContentLengthTooLarge,
 } from "@/lib/messaging-webhook-limits";
-import { addSuppression, normalizeE164 } from "@/lib/messaging";
+import { normalizeE164 } from "@/lib/messaging";
 import {
   findMessagingLocationForWebhook,
   handleInboundSmsReply,
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const updatedCommunications = await withTenant(db, loc.practiceId, (tx) =>
+  await withTenant(db, loc.practiceId, (tx) =>
     tx
       .update(communications)
       .set({ status: deliveryStatus })
@@ -150,15 +150,10 @@ export async function POST(request: Request) {
       .returning({ id: communications.id })
   );
 
-  if (deliveryStatus === "failed" && updatedCommunications.length > 0 && toPhone) {
-    await addSuppression({
-      practiceId: loc.practiceId,
-      locationId: loc.locationId,
-      phone: toPhone,
-      reason: "bounce",
-      detail: `Delivery failed for provider message ${providerMessageId}`,
-    });
-  }
+  // A failed/undelivered DLR is not proof that the recipient is permanently
+  // invalid: carrier congestion, filtering, and provider errors share these
+  // statuses. Keep STOP/opt-out webhooks as the only automatic SMS suppression
+  // until a provider-specific permanent-recipient signal is classified safely.
 
   return NextResponse.json({ ok: true });
 }

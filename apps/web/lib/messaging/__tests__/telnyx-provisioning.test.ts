@@ -4,6 +4,7 @@ import {
   parseAvailableNumbers,
   searchAvailableNumbers,
   TelnyxNotConfiguredError,
+  createMessagingProfile,
   createA2pBrand,
   createA2pCampaign,
   ensureA2pNumberAssignment,
@@ -101,6 +102,41 @@ describe("Telnyx provisioning requests", () => {
       TelnyxNotConfiguredError
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a US-scoped messaging profile with the production webhook format", async () => {
+    vi.stubEnv("TELNYX_API_KEY", "KEY123");
+    const fetchMock = vi.fn(
+      async (
+        _url: Parameters<typeof fetch>[0],
+        _init?: Parameters<typeof fetch>[1]
+      ) =>
+        new Response(
+          JSON.stringify({ data: { id: "3fa85f64-5717-4562-b3fc-2c963f66afa6" } })
+        )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createMessagingProfile({
+        name: "Healthy Pets — OpenVPM",
+        webhookUrl: "https://app.openvpm.com/api/webhooks/telnyx",
+      })
+    ).resolves.toEqual({ id: "3fa85f64-5717-4562-b3fc-2c963f66afa6" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telnyx.com/v2/messaging_profiles",
+      expect.objectContaining({ method: "POST" })
+    );
+    const body = JSON.parse(
+      String(fetchMock.mock.calls[0]?.[1]?.body)
+    ) as Record<string, unknown>;
+    expect(body).toEqual({
+      name: "Healthy Pets — OpenVPM",
+      webhook_url: "https://app.openvpm.com/api/webhooks/telnyx",
+      webhook_api_version: "2",
+      whitelisted_destinations: ["US"],
+    });
   });
 
   it("aborts hung hosted eligibility checks", async () => {

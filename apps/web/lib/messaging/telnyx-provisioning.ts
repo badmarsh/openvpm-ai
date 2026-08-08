@@ -161,6 +161,9 @@ export async function createMessagingProfile(opts: {
       name: opts.name,
       webhook_url: opts.webhookUrl,
       webhook_api_version: "2",
+      // Telnyx rejects new profiles without an explicit destination allowlist.
+      // OpenVPM's supported hosted launch market is the United States.
+      whitelisted_destinations: ["US"],
     }
   );
   const id = json.data?.id;

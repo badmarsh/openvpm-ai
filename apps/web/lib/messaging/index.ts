@@ -7,7 +7,12 @@ import { envValue, nonBlank } from "./env";
 import { hasNonBlankMessagingSender } from "./sender-query";
 import { telnyxProvider } from "./telnyx";
 import { twilioProvider } from "./twilio";
-import type { MessagingProvider, MessagingSender } from "./types";
+import type {
+  MessagingProvider,
+  MessagingProviderName,
+  MessagingSender,
+  ResolvedMessagingTransport,
+} from "./types";
 
 export * from "./types";
 export { normalizeE164 } from "./phone";
@@ -37,15 +42,14 @@ export function requiredMessagingEnvNames(): string[] {
     ? ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"]
     : [
         "TELNYX_API_KEY",
-        "TELNYX_MESSAGING_PROFILE_ID",
         "TELNYX_PUBLIC_KEY",
         "MESSAGING_REGISTRATION_ENCRYPTION_KEY",
       ];
 }
 
 /** Platform-wide env default sender for the active provider (dev + fallback). */
-function envSender(): MessagingSender {
-  if (getMessagingProvider().name === "twilio") {
+function envSender(providerName: MessagingProviderName): MessagingSender {
+  if (providerName === "twilio") {
     return {
       messagingServiceId: envValue("TWILIO_MESSAGING_SERVICE_SID"),
       from: envValue("TWILIO_PHONE_NUMBER"),
@@ -57,21 +61,32 @@ function envSender(): MessagingSender {
   };
 }
 
+/** Resolve a persisted provider name without consulting global provider env. */
+function providerByName(name: string): MessagingProvider | undefined {
+  if (name === "telnyx") return telnyxProvider;
+  if (name === "twilio") return twilioProvider;
+  return undefined;
+}
+
 /**
- * Resolve the sender for a practice/location. Calls with a location id must use
- * that location's active texting setup; calls without a location id fall back to
- * the platform-wide env default for dev / not-yet-provisioned workflows. A DB
- * error falls back to env only when there was no explicit location target.
+ * Resolve the provider and sender for a practice/location as one transport.
+ * Calls with a location id must use that location's active texting setup; calls
+ * without a location id fall back to the platform-wide env defaults for dev.
+ * Explicit locations never fall back after a missing, invalid, or failed lookup.
  */
-export async function resolveSender(opts: {
+export async function resolveMessagingTransport(opts: {
   practiceId?: string;
   locationId?: string;
-}): Promise<MessagingSender> {
+}): Promise<ResolvedMessagingTransport | undefined> {
   if (opts.locationId) {
+    // A location UUID is not an authorization boundary. Never resolve an
+    // explicit clinic sender unless its owning practice is supplied too.
+    if (!opts.practiceId) return undefined;
     try {
       const [row] = await withSystem(db, (tx) =>
         tx
           .select({
+            provider: locationMessaging.provider,
             messagingProfileId: locationMessaging.messagingProfileId,
             senderE164: locationMessaging.senderE164,
           })
@@ -80,48 +95,59 @@ export async function resolveSender(opts: {
             locations,
             and(
               eq(locations.id, locationMessaging.locationId),
-              opts.practiceId
-                ? eq(locations.practiceId, opts.practiceId)
-                : eq(locations.practiceId, locationMessaging.practiceId),
+              eq(locations.practiceId, opts.practiceId!),
               isNull(locations.deletedAt)
             )
           )
           .where(
-            opts.practiceId
-              ? and(
-                  eq(locationMessaging.locationId, opts.locationId!),
-                  eq(locationMessaging.practiceId, opts.practiceId),
-                  isNull(locationMessaging.deletedAt),
-                  eq(locations.practiceId, opts.practiceId),
-                  isNull(locations.deletedAt),
-                  eq(locationMessaging.enabled, true),
-                  eq(locationMessaging.registrationStatus, "active"),
-                  hasNonBlankMessagingSender()
-                )
-              : and(
-                  eq(locationMessaging.locationId, opts.locationId!),
-                  isNull(locationMessaging.deletedAt),
-                  isNull(locations.deletedAt),
-                  eq(locationMessaging.enabled, true),
-                  eq(locationMessaging.registrationStatus, "active"),
-                  hasNonBlankMessagingSender()
-                )
+            and(
+              eq(locationMessaging.locationId, opts.locationId!),
+              eq(locationMessaging.practiceId, opts.practiceId!),
+              isNull(locationMessaging.deletedAt),
+              eq(locations.practiceId, opts.practiceId!),
+              isNull(locations.deletedAt),
+              eq(locationMessaging.enabled, true),
+              eq(locationMessaging.registrationStatus, "active"),
+              hasNonBlankMessagingSender()
+            )
           )
           .limit(1)
       );
       if (row) {
         const messagingServiceId = nonBlank(row.messagingProfileId);
         const from = nonBlank(row.senderE164);
-        if (!messagingServiceId && !from) return {};
+        if (!messagingServiceId && !from) return undefined;
+        // Demo is the only permitted override for an explicit location: it must
+        // never send externally even if that location has live provider config.
+        const provider =
+          envValue("NEXT_PUBLIC_DEMO_MODE") === "true"
+            ? consoleProvider
+            : providerByName(row.provider);
+        if (!provider) return undefined;
         return {
-          messagingServiceId,
-          from,
+          provider,
+          sender: {
+            messagingServiceId,
+            from,
+          },
         };
       }
     } catch (e) {
-      console.error("[messaging] resolveSender lookup failed", e);
+      console.error("[messaging] resolveMessagingTransport lookup failed", e);
     }
-    return {};
+    return undefined;
   }
-  return envSender();
+  const provider = getMessagingProvider();
+  return { provider, sender: envSender(provider.name) };
+}
+
+/**
+ * Backwards-compatible sender-only lookup. Outbound sends should use
+ * `resolveMessagingTransport` so provider and sender cannot be separated.
+ */
+export async function resolveSender(opts: {
+  practiceId?: string;
+  locationId?: string;
+}): Promise<MessagingSender> {
+  return (await resolveMessagingTransport(opts))?.sender ?? {};
 }
