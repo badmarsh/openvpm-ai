@@ -136,6 +136,9 @@ describe("Telnyx provisioning requests", () => {
       webhook_url: "https://app.openvpm.com/api/webhooks/telnyx",
       webhook_api_version: "2",
       whitelisted_destinations: ["US"],
+      daily_spend_limit_enabled: true,
+      daily_spend_limit: "10.00",
+      smart_encoding: true,
     });
   });
 
@@ -159,6 +162,33 @@ describe("Telnyx provisioning requests", () => {
     );
     await vi.advanceTimersByTimeAsync(TELNYX_API_TIMEOUT_MS);
     await result;
+  });
+
+  it("uses the current hosted-number eligibility endpoint and response shape", async () => {
+    vi.stubEnv("TELNYX_API_KEY", "KEY123");
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          phone_numbers: [
+            {
+              phone_number: "+15555550100",
+              eligible: false,
+              detail: "number_can_not_be_wireless",
+            },
+          ],
+        })
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(checkHostedEligibility("+15555550100")).resolves.toEqual({
+      eligible: false,
+      detail: "number_can_not_be_wireless",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telnyx.com/v2/messaging_hosted_number_orders/eligibility_numbers_check",
+      expect.objectContaining({ method: "POST" })
+    );
   });
 
   it("submits provider-compatible brand and campaign payloads", async () => {

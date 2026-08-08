@@ -136,14 +136,20 @@ export async function checkHostedEligibility(
   phoneNumber: string
 ): Promise<HostedEligibility> {
   const json = await telnyxRequest<{
-    data?: Array<{ eligible?: boolean; phone_number?: string; reason?: string }>;
-  }>("POST", "/messaging_hosted_number_orders/eligibility_numbers", {
-    phone_numbers: [phoneNumber],
-  });
-  const row = (json.data ?? [])[0];
+    phone_numbers?: Array<{
+      eligible?: boolean;
+      phone_number?: string;
+      detail?: string;
+    }>;
+  }>(
+    "POST",
+    "/messaging_hosted_number_orders/eligibility_numbers_check",
+    { phone_numbers: [phoneNumber] }
+  );
+  const row = (json.phone_numbers ?? [])[0];
   return {
     eligible: Boolean(row?.eligible),
-    detail: row?.reason,
+    detail: row?.detail,
   };
 }
 
@@ -164,6 +170,11 @@ export async function createMessagingProfile(opts: {
       // Telnyx rejects new profiles without an explicit destination allowlist.
       // OpenVPM's supported hosted launch market is the United States.
       whitelisted_destinations: ["US"],
+      // Bound pilot blast radius at the provider as well as in OpenVPM. Smart
+      // encoding keeps common punctuation from unexpectedly multiplying parts.
+      daily_spend_limit_enabled: true,
+      daily_spend_limit: "10.00",
+      smart_encoding: true,
     }
   );
   const id = json.data?.id;
