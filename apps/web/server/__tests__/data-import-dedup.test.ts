@@ -1,25 +1,41 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+type MigrationMockInput = {
+  summary: {
+    plannedInsertCount: number;
+    plannedReconcileCount?: number;
+    duplicateCount?: number;
+  };
+  reviewedPlan?: {
+    plannerVersion: string;
+    dispositions: Array<Record<string, unknown>>;
+    targets: Array<Record<string, unknown>>;
+  };
+};
+
 vi.mock("@/lib/audit", () => ({
   recordAuditLog: vi.fn(async () => undefined),
 }));
 
 const migrationRunMocks = vi.hoisted(() => ({
+  MigrationPreviewError: class MigrationPreviewError extends Error {},
   createMigrationPreview: vi.fn(
-    async () => "00000000-0000-0000-0000-0000000000f1",
+    async (_db: unknown, _input: MigrationMockInput) =>
+      "00000000-0000-0000-0000-0000000000f1",
   ),
-  claimMigrationPreview: vi.fn(async () => ({
-    alreadyCommitted: false,
-    importedCount: 0,
-    reconciledCount: 0,
-    errorCount: 0,
-  })),
+  claimMigrationPreview: vi.fn(
+    async (_db: unknown, _input: MigrationMockInput) => ({
+      alreadyCommitted: false,
+      importedCount: 0,
+      reconciledCount: 0,
+      errorCount: 0,
+    }),
+  ),
   completeMigrationRun: vi.fn(async () => undefined),
   lockMigrationPractice: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/import/run-ledger", () => ({
-  MigrationPreviewError: class MigrationPreviewError extends Error {},
   ...migrationRunMocks,
 }));
 
@@ -29,6 +45,9 @@ const { IMPORT_CSV_MAX_BYTES, dataRouter, legacyImportCompatibilityOpen } =
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const CLIENT_ID = "00000000-0000-0000-0000-0000000000c1";
+const OTHER_CLIENT_ID = "00000000-0000-0000-0000-0000000000c2";
+const PATIENT_ID = "00000000-0000-0000-0000-0000000000d1";
+const OTHER_PATIENT_ID = "00000000-0000-0000-0000-0000000000d2";
 const PREVIEW_TOKEN = "00000000-0000-0000-0000-0000000000f1";
 
 function callerWithDb(db: Record<string, unknown>) {
@@ -45,13 +64,16 @@ function callerWithDb(db: Record<string, unknown>) {
 }
 
 function thenableRows(result: unknown[]) {
-  return {
+  const rows = {
     limit: vi.fn(async () => result),
+    orderBy: vi.fn(() => rows),
+    for: vi.fn(async () => result),
     then: (
       resolve: (value: unknown[]) => unknown,
       reject?: (error: unknown) => unknown,
     ) => Promise.resolve(result).then(resolve, reject),
   };
+  return rows;
 }
 
 function createDb(
@@ -289,7 +311,7 @@ describe("data import duplicate handling", () => {
 
   it("skips existing and in-file duplicate client emails", async () => {
     const { db, insertValues } = createDb([
-      [{ email: "existing@example.com" }],
+      [{ id: CLIENT_ID, email: "existing@example.com" }],
     ]);
 
     await expect(
@@ -350,7 +372,7 @@ describe("data import duplicate handling", () => {
 
   it("skips existing and in-file duplicate client emails from CSV imports", async () => {
     const { db, insertValues } = createDb([
-      [{ email: "existing@example.com" }],
+      [{ id: CLIENT_ID, email: "existing@example.com" }],
     ]);
 
     await expect(
@@ -390,7 +412,7 @@ describe("data import duplicate handling", () => {
 
   it("dry-runs client CSV imports with duplicate planning and no inserts", async () => {
     const { db, insertValues } = createDb([
-      [{ email: "existing@example.com" }],
+      [{ id: CLIENT_ID, email: "existing@example.com" }],
     ]);
 
     await expect(
@@ -604,6 +626,7 @@ describe("data import duplicate handling", () => {
       [{ id: CLIENT_ID, email: "owner@example.com" }],
       [
         {
+          id: PATIENT_ID,
           clientId: CLIENT_ID,
           name: "Rex",
           species: "canine",
@@ -1024,6 +1047,7 @@ describe("data import duplicate handling", () => {
       [{ id: CLIENT_ID, email: "owner@example.com" }],
       [
         {
+          id: PATIENT_ID,
           clientId: CLIENT_ID,
           name: "Rex",
           species: "canine",
@@ -1058,6 +1082,326 @@ describe("data import duplicate handling", () => {
     });
 
     expect(insertValues).not.toHaveBeenCalled();
+  });
+
+  it("rejects a same-count client target swap before any domain write", async () => {
+    const csv =
+      "Client ID,First Name,Last Name,Email\nC-42,Ada,Client,owner@example.com";
+    const updatedAt = new Date("2026-08-08T12:00:00.000Z");
+    const previewDb = createDb([
+      [
+        {
+          id: CLIENT_ID,
+          email: "owner@example.com",
+          externalSource: null,
+          externalId: null,
+          deletedAt: null,
+          updatedAt,
+        },
+      ],
+    ]);
+    await callerWithDb(previewDb.db).importClientsCsv({ csv, dryRun: true });
+    const reviewed =
+      migrationRunMocks.createMigrationPreview.mock.calls[0]?.[1]?.reviewedPlan
+        ?.targets;
+
+    migrationRunMocks.claimMigrationPreview.mockImplementationOnce(
+      async (_db, input) => {
+        expect(input.summary).toMatchObject({
+          plannedInsertCount: 0,
+          plannedReconcileCount: 1,
+        });
+        expect(input.reviewedPlan?.targets).not.toEqual(reviewed);
+        throw new migrationRunMocks.MigrationPreviewError(
+          "The reviewed import plan changed.",
+        );
+      },
+    );
+    const commitDb = createDb([
+      [
+        {
+          id: OTHER_CLIENT_ID,
+          email: "owner@example.com",
+          externalSource: null,
+          externalId: null,
+          deletedAt: null,
+          updatedAt,
+        },
+      ],
+    ]);
+
+    await expect(
+      callerWithDb(commitDb.db).importClientsCsv({
+        csv,
+        dryRun: false,
+        previewToken: PREVIEW_TOKEN,
+        migrationProtocol: "reviewed-v1",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(commitDb.update).not.toHaveBeenCalled();
+    expect(commitDb.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("rejects a selected client version change before any domain write", async () => {
+    const csv =
+      "Client ID,First Name,Last Name,Email\nC-42,Ada,Client,owner@example.com";
+    const clientAt = (updatedAt: string) => ({
+      id: CLIENT_ID,
+      email: "owner@example.com",
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date(updatedAt),
+    });
+    const previewDb = createDb([[clientAt("2026-08-08T12:00:00.000Z")]]);
+    await callerWithDb(previewDb.db).importClientsCsv({ csv, dryRun: true });
+    const reviewed =
+      migrationRunMocks.createMigrationPreview.mock.calls[0]?.[1]?.reviewedPlan
+        ?.targets;
+
+    migrationRunMocks.claimMigrationPreview.mockImplementationOnce(
+      async (_db, input) => {
+        expect(input.reviewedPlan?.targets).not.toEqual(reviewed);
+        throw new migrationRunMocks.MigrationPreviewError(
+          "The reviewed import plan changed.",
+        );
+      },
+    );
+    const commitDb = createDb([[clientAt("2026-08-08T12:01:00.000Z")]]);
+
+    await expect(
+      callerWithDb(commitDb.db).importClientsCsv({
+        csv,
+        dryRun: false,
+        previewToken: PREVIEW_TOKEN,
+        migrationProtocol: "reviewed-v1",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(commitDb.update).not.toHaveBeenCalled();
+    expect(commitDb.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("rejects a same-count owner target swap before inserting a patient", async () => {
+    const csv = "clientEmail,name,species\nowner@example.com,Rex,canine";
+    const ownerAt = (id: string) => ({
+      id,
+      email: "owner@example.com",
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    });
+    const previewDb = createDb([[ownerAt(CLIENT_ID)], []]);
+    await callerWithDb(previewDb.db).importPatientsCsv({ csv, dryRun: true });
+    const reviewed =
+      migrationRunMocks.createMigrationPreview.mock.calls[0]?.[1]?.reviewedPlan
+        ?.targets;
+
+    migrationRunMocks.claimMigrationPreview.mockImplementationOnce(
+      async (_db, input) => {
+        expect(input.summary).toMatchObject({
+          plannedInsertCount: 1,
+          plannedReconcileCount: 0,
+        });
+        expect(input.reviewedPlan?.targets).not.toEqual(reviewed);
+        throw new migrationRunMocks.MigrationPreviewError(
+          "The reviewed import plan changed.",
+        );
+      },
+    );
+    const commitDb = createDb([[ownerAt(OTHER_CLIENT_ID)], []]);
+
+    await expect(
+      callerWithDb(commitDb.db).importPatientsCsv({
+        csv,
+        dryRun: false,
+        previewToken: PREVIEW_TOKEN,
+        migrationProtocol: "reviewed-v1",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(commitDb.update).not.toHaveBeenCalled();
+    expect(commitDb.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("rejects a same-count patient target swap before reconciliation", async () => {
+    const csv = [
+      "Patient ID,Client Email,Name,Species,DOB",
+      "P-42,owner@example.com,Rex,canine,2020-01-01",
+    ].join("\n");
+    const owner = {
+      id: CLIENT_ID,
+      email: "owner@example.com",
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    };
+    const patientAt = (id: string) => ({
+      id,
+      clientId: CLIENT_ID,
+      name: "Rex",
+      species: "canine",
+      dob: "2020-01-01",
+      microchipNumber: null,
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    });
+    const previewDb = createDb([[owner], [patientAt(PATIENT_ID)]]);
+    await callerWithDb(previewDb.db).importPatientsCsv({ csv, dryRun: true });
+    const reviewed =
+      migrationRunMocks.createMigrationPreview.mock.calls[0]?.[1]?.reviewedPlan
+        ?.targets;
+
+    migrationRunMocks.claimMigrationPreview.mockImplementationOnce(
+      async (_db, input) => {
+        expect(input.summary).toMatchObject({
+          plannedInsertCount: 0,
+          plannedReconcileCount: 1,
+        });
+        expect(input.reviewedPlan?.targets).not.toEqual(reviewed);
+        throw new migrationRunMocks.MigrationPreviewError(
+          "The reviewed import plan changed.",
+        );
+      },
+    );
+    const commitDb = createDb([[owner], [patientAt(OTHER_PATIENT_ID)]]);
+
+    await expect(
+      callerWithDb(commitDb.db).importPatientsCsv({
+        csv,
+        dryRun: false,
+        previewToken: PREVIEW_TOKEN,
+        migrationProtocol: "reviewed-v1",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(commitDb.update).not.toHaveBeenCalled();
+    expect(commitDb.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("rejects same-count client row dispositions that swap after preview", async () => {
+    const csv = [
+      "First Name,Last Name,Email",
+      "Ada,One,ada@example.com",
+      "Ben,Two,ben@example.com",
+    ].join("\n");
+    const existingClient = (email: string) => ({
+      id: CLIENT_ID,
+      email,
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    });
+    const previewDb = createDb([[existingClient("ada@example.com")]]);
+    await callerWithDb(previewDb.db).importClientsCsv({ csv, dryRun: true });
+    const reviewed =
+      migrationRunMocks.createMigrationPreview.mock.calls[0]?.[1]?.reviewedPlan;
+    expect(reviewed?.plannerVersion).toBe("clients-v1");
+    expect(reviewed?.dispositions).toEqual([
+      { rowIndex: 0, entityKind: "client", action: "duplicate" },
+      { rowIndex: 1, entityKind: "client", action: "insert" },
+    ]);
+
+    migrationRunMocks.claimMigrationPreview.mockImplementationOnce(
+      async (_db, input) => {
+        expect(input.summary).toMatchObject({
+          plannedInsertCount: 1,
+          duplicateCount: 1,
+        });
+        expect(input.reviewedPlan?.dispositions).toEqual([
+          { rowIndex: 0, entityKind: "client", action: "insert" },
+          { rowIndex: 1, entityKind: "client", action: "duplicate" },
+        ]);
+        throw new migrationRunMocks.MigrationPreviewError(
+          "The reviewed import plan changed.",
+        );
+      },
+    );
+    const commitDb = createDb([[existingClient("ben@example.com")]]);
+
+    await expect(
+      callerWithDb(commitDb.db).importClientsCsv({
+        csv,
+        dryRun: false,
+        previewToken: PREVIEW_TOKEN,
+        migrationProtocol: "reviewed-v1",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(commitDb.update).not.toHaveBeenCalled();
+    expect(commitDb.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("rejects same-count patient row dispositions that swap after preview", async () => {
+    const csv = [
+      "Client Email,Name,Species,DOB",
+      "owner@example.com,Rex,canine,2020-01-01",
+      "owner@example.com,Luna,canine,2021-01-01",
+    ].join("\n");
+    const owner = {
+      id: CLIENT_ID,
+      email: "owner@example.com",
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    };
+    const existingPatient = (name: string, dob: string) => ({
+      id: PATIENT_ID,
+      clientId: CLIENT_ID,
+      name,
+      species: "canine",
+      dob,
+      microchipNumber: null,
+      externalSource: null,
+      externalId: null,
+      deletedAt: null,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    });
+    const previewDb = createDb([
+      [owner],
+      [existingPatient("Rex", "2020-01-01")],
+    ]);
+    await callerWithDb(previewDb.db).importPatientsCsv({ csv, dryRun: true });
+    const reviewed =
+      migrationRunMocks.createMigrationPreview.mock.calls[0]?.[1]?.reviewedPlan;
+    expect(reviewed?.plannerVersion).toBe("patients-v1");
+    expect(reviewed?.dispositions).toEqual([
+      { rowIndex: 0, entityKind: "patient", action: "duplicate" },
+      { rowIndex: 1, entityKind: "patient", action: "insert" },
+    ]);
+
+    migrationRunMocks.claimMigrationPreview.mockImplementationOnce(
+      async (_db, input) => {
+        expect(input.summary).toMatchObject({
+          plannedInsertCount: 1,
+          duplicateCount: 1,
+        });
+        expect(input.reviewedPlan?.dispositions).toEqual([
+          { rowIndex: 0, entityKind: "patient", action: "insert" },
+          { rowIndex: 1, entityKind: "patient", action: "duplicate" },
+        ]);
+        throw new migrationRunMocks.MigrationPreviewError(
+          "The reviewed import plan changed.",
+        );
+      },
+    );
+    const commitDb = createDb([
+      [owner],
+      [existingPatient("Luna", "2021-01-01")],
+    ]);
+
+    await expect(
+      callerWithDb(commitDb.db).importPatientsCsv({
+        csv,
+        dryRun: false,
+        previewToken: PREVIEW_TOKEN,
+        migrationProtocol: "reviewed-v1",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(commitDb.update).not.toHaveBeenCalled();
+    expect(commitDb.insertValues).not.toHaveBeenCalled();
   });
 
   it("rejects parsed CSV records with invalid bounded fields before DB work", async () => {
