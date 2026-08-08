@@ -4,6 +4,7 @@ import { withSystem } from "@/lib/tenant-db";
 import { funnelRate } from "@/lib/admin/activation-funnel";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+export const ABANDONMENT_GRACE_DAYS = 7;
 
 export interface JourneyFunnelWeek {
   weekStart: string;
@@ -65,9 +66,13 @@ function rowsFromExecute<T>(result: unknown): T[] {
 
 export async function computeJourneyFunnel(
   db: Database,
-  days: number
+  days: number,
+  now: Date = new Date()
 ): Promise<JourneyFunnel> {
-  const windowStart = new Date(Date.now() - days * DAY_MS).toISOString();
+  const windowStart = new Date(now.getTime() - days * DAY_MS).toISOString();
+  const abandonedBefore = new Date(
+    now.getTime() - ABANDONMENT_GRACE_DAYS * DAY_MS
+  ).toISOString();
 
   const { weeklyResult, unattributedResult, errorsResult } = await withSystem(db, async (tx) => {
     const weeklyResult = await tx.execute(sql`
@@ -86,6 +91,7 @@ export async function computeJourneyFunnel(
       ), journeys as (
         select
           ft.anonymous_id,
+          ft.cohort_at,
           date_trunc('week', ft.cohort_at) as week_start,
           exists (
             select 1 from funnel_events demo
@@ -93,8 +99,13 @@ export async function computeJourneyFunnel(
               and demo.event_name = 'demo_gate_submitted'
               and demo.deleted_at is null
           ) as tried_demo,
-          (
-            select registration.practice_id
+          registration.practice_id,
+          registration.registered_at
+        from first_touch ft
+        left join lateral (
+            select
+              registration.practice_id,
+              registration.created_at as registered_at
             from funnel_events registration
             join practices p on p.id = registration.practice_id
             where registration.anonymous_id = ft.anonymous_id
@@ -102,55 +113,73 @@ export async function computeJourneyFunnel(
               and registration.deleted_at is null
               and p.deleted_at is null
               and p.settings ->> 'analyticsExcluded' is distinct from 'true'
-            order by registration.created_at
+            order by registration.created_at, registration.id
             limit 1
-          ) as practice_id
-        from first_touch ft
+        ) registration on true
       ), stages as (
         select
           j.*,
-          exists (
-            select 1 from funnel_events activation
+          (
+            select min(activation.created_at) from funnel_events activation
             where activation.practice_id = j.practice_id
               and activation.event_name = 'activation'
               and activation.deleted_at is null
-          ) as activated,
-          exists (
-            select 1 from funnel_events card
+          ) as activation_at,
+          (
+            select min(card.created_at) from funnel_events card
             where card.practice_id = j.practice_id
               and card.event_name = 'card_added'
               and card.deleted_at is null
-          ) as card_added,
-          exists (
-            select 1 from funnel_events paid
+          ) as card_added_at,
+          (
+            select min(paid.created_at) from funnel_events paid
             where paid.practice_id = j.practice_id
               and paid.event_name = 'paid'
               and paid.deleted_at is null
-          ) as paid
+          ) as paid_at,
+          p.billing_status,
+          p.trial_ends_at,
+          p.stripe_subscription_id
         from journeys j
+        left join practices p on p.id = j.practice_id
       )
       select
         to_char(s.week_start, 'YYYY-MM-DD') as "weekStart",
         count(*)::int as "visitors",
         count(*) filter (where s.tried_demo)::int as "demos",
         count(*) filter (where s.practice_id is not null)::int as "registrations",
-        count(*) filter (where s.activated)::int as "activated",
-        count(*) filter (where s.card_added)::int as "cardAdded",
-        count(*) filter (where s.paid)::int as "paid",
+        count(*) filter (where s.activation_at is not null)::int as "activated",
+        count(*) filter (where s.card_added_at is not null)::int as "cardAdded",
+        count(*) filter (where s.paid_at is not null)::int as "paid",
         count(*) filter (
-          where not s.tried_demo and s.practice_id is null
+          where not s.tried_demo
+            and s.practice_id is null
+            and s.cohort_at < ${abandonedBefore}::timestamptz
         )::int as "leftBeforeTrying",
         count(*) filter (
-          where s.tried_demo and s.practice_id is null
+          where s.tried_demo
+            and s.practice_id is null
+            and s.cohort_at < ${abandonedBefore}::timestamptz
         )::int as "demoAbandoned",
         count(*) filter (
-          where s.practice_id is not null and not s.activated
+          where s.practice_id is not null
+            and s.activation_at is null
+            and s.registered_at < ${abandonedBefore}::timestamptz
         )::int as "registrationAbandoned",
         count(*) filter (
-          where s.activated and not s.card_added
+          where s.activation_at is not null
+            and s.card_added_at is null
+            and s.activation_at < ${abandonedBefore}::timestamptz
         )::int as "activationAbandoned",
         count(*) filter (
-          where s.card_added and not s.paid
+          where s.card_added_at is not null
+            and s.paid_at is null
+            and s.card_added_at < ${abandonedBefore}::timestamptz
+            and not (
+              s.stripe_subscription_id is not null
+              and s.billing_status = 'trialing'
+              and s.trial_ends_at > ${now.toISOString()}::timestamptz
+            )
         )::int as "cardAbandoned"
       from stages s
       group by s.week_start

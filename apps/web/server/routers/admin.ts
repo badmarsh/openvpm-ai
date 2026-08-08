@@ -16,6 +16,7 @@ import {
 import { isPlatformAdmin } from "@/lib/platform-admin";
 import { computeActivationFunnel } from "@/lib/admin/activation-funnel";
 import { computeJourneyFunnel } from "@/lib/admin/journey-funnel";
+import { computeActivationRecovery } from "@/lib/admin/activation-recovery";
 import {
   CLOUD_LOCATION_UNIT_PRICE_MONTHLY_USD,
   CLOUD_SEAT_UNIT_PRICE_MONTHLY_USD,
@@ -444,13 +445,20 @@ export const adminRouter = createRouter({
       byTier[t] += 1;
     }
 
+    const overviewNow = new Date();
+
     return {
       practices: practiceRows,
       totals: {
         practices: practiceRows.length,
         estimatedMrr,
         byTier,
-        trialing: practiceRows.filter((p) => p.billingStatus === "trialing").length,
+        activeTrials: practiceRows.filter(
+          (p) =>
+            p.billingStatus === "trialing" &&
+            p.trialEndsAt != null &&
+            p.trialEndsAt.getTime() > overviewNow.getTime()
+        ).length,
         active: practiceRows.filter((p) => p.billingStatus === "active").length,
         pastDue: practiceRows.filter((p) => p.billingStatus === "past_due").length,
       },
@@ -1199,6 +1207,11 @@ export const adminRouter = createRouter({
         .optional()
     )
     .query(({ input }) => computeActivationFunnel(db, input?.days ?? 30)),
+
+  /** Ranked, cross-tenant operator queue for recovering clinic activation. */
+  activationRecovery: platformAdminProcedure.query(() =>
+    computeActivationRecovery(db, new Date())
+  ),
 
   /** Privacy-safe first-touch cohorts spanning visit through paid. */
   journeyFunnel: platformAdminProcedure
