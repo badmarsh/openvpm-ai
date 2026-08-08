@@ -53,6 +53,9 @@ import {
   lockMigrationPractice,
   type MigrationClaimResult,
   type MigrationPreviewSummary,
+  type MigrationReviewedDisposition,
+  type MigrationReviewedPlan,
+  type MigrationReviewedTarget,
   type MigrationRunMode,
 } from "@/lib/import/run-ledger";
 import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
@@ -268,6 +271,13 @@ const importCsvInput = z.object({
 
 type CsvImportIntent = z.infer<typeof importCsvInput>;
 
+const CLIENT_IMPORT_PLANNER_VERSION = "clients-v1";
+const PATIENT_IMPORT_PLANNER_VERSION = "patients-v1";
+
+function csvPreviewResult<T extends Record<string, unknown>>(value: T) {
+  return value as T & { imported?: never; reconciled?: never };
+}
+
 const LEGACY_IMPORT_COMPATIBILITY_END_MS = Date.parse("2026-08-15T00:00:00Z");
 
 export function legacyImportCompatibilityOpen(
@@ -312,14 +322,17 @@ async function createCsvImportPreview(
   input: CsvImportIntent,
   mode: MigrationRunMode,
   summary: MigrationPreviewSummary,
+  reviewedPlan?: MigrationReviewedPlan,
+  db: Database = ctx.db,
 ): Promise<string> {
-  return createMigrationPreview(ctx.db, {
+  return createMigrationPreview(db, {
     practiceId: ctx.practiceId,
     createdBy: ctx.user.id,
     mode,
     source: input.source,
     csv: input.csv,
     summary,
+    reviewedPlan,
   });
 }
 
@@ -329,6 +342,7 @@ async function claimCsvImportPreview(
   input: CsvImportIntent,
   mode: MigrationRunMode,
   summary: MigrationPreviewSummary,
+  reviewedPlan?: MigrationReviewedPlan,
 ): Promise<MigrationClaimResult> {
   // One rollout keeps legacy, already-loaded browser bundles working. Every
   // newly shipped caller identifies the reviewed protocol and must provide the
@@ -344,6 +358,7 @@ async function claimCsvImportPreview(
       source: input.source,
       csv: input.csv,
       summary,
+      reviewedPlan,
     });
   } catch (error) {
     if (error instanceof MigrationPreviewError) {
@@ -431,6 +446,7 @@ type ExistingClientImportIdentity = {
   externalSource: string | null;
   externalId: string | null;
   deletedAt: Date | null;
+  updatedAt?: Date;
   plannedRowIndex?: number;
 };
 
@@ -440,6 +456,30 @@ type ExternalIdentityUpdate = {
   externalId: string;
 };
 
+function reviewedTarget(
+  rowIndex: number,
+  kind: MigrationReviewedTarget["kind"],
+  role: MigrationReviewedTarget["role"],
+  target: { id: string; updatedAt?: Date },
+): MigrationReviewedTarget | undefined {
+  if (target.id.startsWith("planned:")) return undefined;
+  return {
+    rowIndex,
+    kind,
+    role,
+    targetId: target.id,
+    targetVersion: target.updatedAt?.toISOString() ?? null,
+  };
+}
+
+function reviewedDisposition(
+  rowIndex: number,
+  entityKind: MigrationReviewedDisposition["entityKind"],
+  action: MigrationReviewedDisposition["action"],
+): MigrationReviewedDisposition {
+  return { rowIndex, entityKind, action };
+}
+
 function planClientCsvImport(
   records: ClientImportRecord[],
   source: string,
@@ -447,6 +487,8 @@ function planClientCsvImport(
 ): {
   rows: ClientImportRow[];
   identityUpdates: ExternalIdentityUpdate[];
+  reviewedDispositions: MigrationReviewedDisposition[];
+  reviewedTargets: MigrationReviewedTarget[];
   errors: string[];
   duplicates: number;
 } {
@@ -470,6 +512,8 @@ function planClientCsvImport(
 
   const rows: ClientImportRow[] = [];
   const identityUpdates: ExternalIdentityUpdate[] = [];
+  const reviewedDispositions: MigrationReviewedDisposition[] = [];
+  const reviewedTargets: MigrationReviewedTarget[] = [];
   const errors: string[] = [];
   let duplicates = 0;
 
@@ -486,24 +530,41 @@ function planClientCsvImport(
       email && !ambiguousEmails.has(email) ? byEmail.get(email) : undefined;
 
     if (externalMatch) {
+      const target = reviewedTarget(
+        index,
+        "client",
+        "external_match",
+        externalMatch,
+      );
+      if (target) reviewedTargets.push(target);
       if (externalMatch.deletedAt) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "client", "error"),
+        );
         errors.push(
           `Row ${index + 1}: This external client ID belongs to an archived client. Restore or review that client before importing.`,
         );
         return;
       }
       if (emailMatch && emailMatch.id !== externalMatch.id) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "client", "error"),
+        );
         errors.push(
           `Row ${index + 1}: The client email and external ID point to different existing clients. Nothing was changed.`,
         );
         return;
       }
       duplicates++;
+      reviewedDispositions.push(
+        reviewedDisposition(index, "client", "duplicate"),
+      );
       errors.push(`Row ${index + 1}: Skipped an already linked client.`);
       return;
     }
 
     if (email && ambiguousEmails.has(email)) {
+      reviewedDispositions.push(reviewedDisposition(index, "client", "error"));
       errors.push(
         `Row ${index + 1}: More than one existing client uses this email. Resolve the duplicate clients before importing.`,
       );
@@ -511,12 +572,25 @@ function planClientCsvImport(
     }
 
     if (emailMatch) {
+      const target = reviewedTarget(
+        index,
+        "client",
+        "identity_match",
+        emailMatch,
+      );
+      if (target) reviewedTargets.push(target);
       if (!externalId) {
         duplicates++;
+        reviewedDispositions.push(
+          reviewedDisposition(index, "client", "duplicate"),
+        );
         errors.push(`Row ${index + 1}: Skipped a duplicate client.`);
         return;
       }
       if (emailMatch.externalSource || emailMatch.externalId) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "client", "error"),
+        );
         errors.push(
           `Row ${index + 1}: This client already has a different external identity. Nothing was changed.`,
         );
@@ -524,6 +598,9 @@ function planClientCsvImport(
       }
 
       if (emailMatch.plannedRowIndex !== undefined) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "client", "merge"),
+        );
         const plannedRow = rows[emailMatch.plannedRowIndex];
         if (!plannedRow) {
           throw new Error("Missing planned client import row.");
@@ -531,6 +608,9 @@ function planClientCsvImport(
         plannedRow.externalSource = source;
         plannedRow.externalId = externalId;
       } else {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "client", "reconcile"),
+        );
         identityUpdates.push({
           id: emailMatch.id,
           externalSource: source,
@@ -554,6 +634,7 @@ function planClientCsvImport(
       zip: client.zip?.trim() || null,
       ...(externalId ? { externalSource: source, externalId } : {}),
     };
+    reviewedDispositions.push(reviewedDisposition(index, "client", "insert"));
     rows.push(row);
 
     const planned: ExistingClientImportIdentity = {
@@ -568,7 +649,14 @@ function planClientCsvImport(
     if (externalKey) byExternalId.set(externalKey, planned);
   });
 
-  return { rows, identityUpdates, errors, duplicates };
+  return {
+    rows,
+    identityUpdates,
+    reviewedDispositions,
+    reviewedTargets,
+    errors,
+    duplicates,
+  };
 }
 
 function patientIdentityKey(input: {
@@ -723,29 +811,42 @@ type ExistingPatientImportIdentity = {
   externalSource: string | null;
   externalId: string | null;
   deletedAt: Date | null;
+  updatedAt?: Date;
   plannedRowIndex?: number;
 };
 
+type ClientTargetReference = {
+  id: string;
+  updatedAt?: Date;
+};
+
 type ClientReferenceLookup = {
-  byEmail: Map<string, string | "ambiguous">;
-  byExternalId: Map<string, string | "archived">;
+  byEmail: Map<string, ClientTargetReference | "ambiguous">;
+  byExternalId: Map<string, ClientTargetReference | "archived">;
 };
 
 function createClientReferenceLookup(
   clientsToIndex: ExistingClientImportIdentity[],
 ): ClientReferenceLookup {
-  const byEmail = new Map<string, string | "ambiguous">();
-  const byExternalId = new Map<string, string | "archived">();
+  const byEmail = new Map<string, ClientTargetReference | "ambiguous">();
+  const byExternalId = new Map<string, ClientTargetReference | "archived">();
 
   for (const client of clientsToIndex) {
     const email = normalizeImportEmail(client.email);
     if (email && !client.deletedAt) {
-      byEmail.set(email, byEmail.has(email) ? "ambiguous" : client.id);
+      byEmail.set(
+        email,
+        byEmail.has(email)
+          ? "ambiguous"
+          : { id: client.id, updatedAt: client.updatedAt },
+      );
     }
     if (client.externalSource && client.externalId) {
       byExternalId.set(
         externalIdentityKey(client.externalSource, client.externalId),
-        client.deletedAt ? "archived" : client.id,
+        client.deletedAt
+          ? "archived"
+          : { id: client.id, updatedAt: client.updatedAt },
       );
     }
   }
@@ -757,7 +858,10 @@ function resolveClientReference(
   record: Pick<PatientImportRecord, "clientEmail" | "externalClientId">,
   source: string,
   lookup: ClientReferenceLookup,
-): { clientId?: string; issue?: "ambiguous" | "archived" | "conflict" } {
+): {
+  client?: ClientTargetReference;
+  issue?: "ambiguous" | "archived" | "conflict";
+} {
   const email = normalizeImportEmail(record.clientEmail);
   const externalId = normalizeExternalId(record.externalClientId);
   const emailResult = email ? lookup.byEmail.get(email) : undefined;
@@ -769,14 +873,14 @@ function resolveClientReference(
     if (externalResult === "archived") return { issue: "archived" };
     if (!externalResult) return {};
     if (emailResult === "ambiguous") return { issue: "ambiguous" };
-    if (emailResult && emailResult !== externalResult) {
+    if (emailResult && emailResult.id !== externalResult.id) {
       return { issue: "conflict" };
     }
-    return { clientId: externalResult };
+    return { client: externalResult };
   }
 
   if (emailResult === "ambiguous") return { issue: "ambiguous" };
-  return { clientId: emailResult };
+  return { client: emailResult };
 }
 
 function planPatientCsvImport(
@@ -787,6 +891,8 @@ function planPatientCsvImport(
 ): {
   rows: PatientImportRow[];
   identityUpdates: ExternalIdentityUpdate[];
+  reviewedDispositions: MigrationReviewedDisposition[];
+  reviewedTargets: MigrationReviewedTarget[];
   errors: string[];
   duplicates: number;
   unmatchedClient: number;
@@ -834,14 +940,19 @@ function planPatientCsvImport(
 
   const rows: PatientImportRow[] = [];
   const identityUpdates: ExternalIdentityUpdate[] = [];
+  const reviewedDispositions: MigrationReviewedDisposition[] = [];
+  const reviewedTargets: MigrationReviewedTarget[] = [];
   const errors: string[] = [];
   let duplicates = 0;
   let unmatchedClient = 0;
 
   records.forEach((patient, index) => {
     const owner = resolveClientReference(patient, source, clientLookup);
-    if (!owner.clientId) {
+    if (!owner.client) {
       unmatchedClient++;
+      reviewedDispositions.push(
+        reviewedDisposition(index, "patient", "unmatched"),
+      );
       const message =
         owner.issue === "archived"
           ? "The external owner ID belongs to an archived client. Restore or review that client before importing."
@@ -853,6 +964,14 @@ function planPatientCsvImport(
       errors.push(`Row ${index + 1}: ${message}`);
       return;
     }
+    const ownerTarget = reviewedTarget(
+      index,
+      "owner",
+      "owner_match",
+      owner.client,
+    );
+    if (ownerTarget) reviewedTargets.push(ownerTarget);
+    const clientId = owner.client.id;
 
     const externalId = normalizeExternalId(patient.externalPatientId);
     const externalKey = externalId
@@ -863,31 +982,47 @@ function planPatientCsvImport(
       : undefined;
     if (externalMatch) {
       if (externalMatch.deletedAt) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "error"),
+        );
         errors.push(
           `Row ${index + 1}: This external patient ID belongs to an archived patient. Restore or review that patient before importing.`,
         );
         return;
       }
-      if (externalMatch.clientId !== owner.clientId) {
+      const target = reviewedTarget(
+        index,
+        "patient",
+        "external_match",
+        externalMatch,
+      );
+      if (target) reviewedTargets.push(target);
+      if (externalMatch.clientId !== clientId) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "error"),
+        );
         errors.push(
           `Row ${index + 1}: The patient ID is linked to a different owner. Nothing was changed.`,
         );
         return;
       }
       duplicates++;
+      reviewedDispositions.push(
+        reviewedDisposition(index, "patient", "duplicate"),
+      );
       errors.push(`Row ${index + 1}: Skipped an already linked patient.`);
       return;
     }
 
     const identityKey = patientIdentityKey({
-      clientId: owner.clientId,
+      clientId,
       name: patient.name,
       species: patient.species,
       dob: patient.dob ?? null,
     });
     const identityMatch = byIdentity.get(identityKey);
     const weakIdentityKey = patientWeakIdentityKey({
-      clientId: owner.clientId,
+      clientId,
       name: patient.name,
       species: patient.species,
     });
@@ -895,24 +1030,28 @@ function planPatientCsvImport(
     const chipKey = patientMicrochipKey(patient.microchipNumber);
     const chipMatch = chipKey ? byMicrochip.get(chipKey) : undefined;
     if (chipMatch === "ambiguous") {
+      reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         `Row ${index + 1}: This microchip matches more than one patient. Resolve the duplicate charts before importing.`,
       );
       return;
     }
     if (identityMatch === "ambiguous") {
+      reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         `Row ${index + 1}: More than one existing patient matches this row. Resolve the duplicate charts before importing.`,
       );
       return;
     }
-    if (chipMatch && chipMatch.clientId !== owner.clientId) {
+    if (chipMatch && chipMatch.clientId !== clientId) {
+      reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         `Row ${index + 1}: This microchip is already linked to a patient under a different owner. Nothing was changed.`,
       );
       return;
     }
     if (identityMatch && chipMatch && identityMatch.id !== chipMatch.id) {
+      reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         `Row ${index + 1}: The patient identity and microchip point to different charts. Nothing was changed.`,
       );
@@ -921,12 +1060,25 @@ function planPatientCsvImport(
 
     const existingMatch = identityMatch ?? chipMatch;
     if (existingMatch) {
+      const target = reviewedTarget(
+        index,
+        "patient",
+        "identity_match",
+        existingMatch,
+      );
+      if (target) reviewedTargets.push(target);
       if (!externalId) {
         duplicates++;
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "duplicate"),
+        );
         errors.push(`Row ${index + 1}: Skipped a duplicate patient.`);
         return;
       }
       if (existingMatch.externalSource || existingMatch.externalId) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "error"),
+        );
         errors.push(
           `Row ${index + 1}: This patient already has a different external identity. Nothing was changed.`,
         );
@@ -937,12 +1089,18 @@ function planPatientCsvImport(
         !chipMatch &&
         !patient.dob
       ) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "error"),
+        );
         errors.push(
           `Row ${index + 1}: An existing patient may match this external ID, but a microchip or date of birth is needed before OpenVPM can connect it safely.`,
         );
         return;
       }
       if (existingMatch.plannedRowIndex !== undefined) {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "merge"),
+        );
         const plannedRow = rows[existingMatch.plannedRowIndex];
         if (!plannedRow) {
           throw new Error("Missing planned patient import row.");
@@ -950,6 +1108,9 @@ function planPatientCsvImport(
         plannedRow.externalSource = source;
         plannedRow.externalId = externalId;
       } else {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "patient", "reconcile"),
+        );
         identityUpdates.push({
           id: existingMatch.id,
           externalSource: source,
@@ -963,6 +1124,7 @@ function planPatientCsvImport(
     }
 
     if (externalId && !patient.dob && weakIdentityMatch) {
+      reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         weakIdentityMatch === "ambiguous"
           ? `Row ${index + 1}: More than one existing patient may match this external ID. Add a microchip or date of birth, or resolve the duplicate charts before importing.`
@@ -972,7 +1134,7 @@ function planPatientCsvImport(
     }
 
     const row: PatientImportRow = {
-      clientId: owner.clientId,
+      clientId,
       name: patient.name.trim(),
       species: patient.species,
       breed: patient.breed?.trim() || null,
@@ -982,11 +1144,12 @@ function planPatientCsvImport(
       microchipNumber: patient.microchipNumber?.trim() || null,
       ...(externalId ? { externalSource: source, externalId } : {}),
     };
+    reviewedDispositions.push(reviewedDisposition(index, "patient", "insert"));
     rows.push(row);
 
     const planned: ExistingPatientImportIdentity = {
       id: `planned:${index}`,
-      clientId: owner.clientId,
+      clientId,
       name: row.name,
       species: row.species,
       dob: row.dob ?? null,
@@ -1005,10 +1168,128 @@ function planPatientCsvImport(
   return {
     rows,
     identityUpdates,
+    reviewedDispositions,
+    reviewedTargets,
     errors,
     duplicates,
     unmatchedClient,
   };
+}
+
+async function loadClientCsvPlan(
+  db: Database,
+  practiceId: string,
+  records: ClientImportRecord[],
+  source: string,
+  parseErrors: string[],
+) {
+  const existing = await db
+    .select({
+      id: clients.id,
+      email: clients.email,
+      externalSource: clients.externalSource,
+      externalId: clients.externalId,
+      deletedAt: clients.deletedAt,
+      updatedAt: clients.updatedAt,
+    })
+    .from(clients)
+    .where(
+      and(
+        eq(clients.practiceId, practiceId),
+        activePracticePredicate(practiceId),
+      ),
+    )
+    .orderBy(clients.id)
+    .for("update");
+  const plan = planClientCsvImport(records, source, existing);
+  const combinedErrors = [...parseErrors, ...plan.errors];
+  const summary: MigrationPreviewSummary = {
+    sourceRowCount: records.length,
+    plannedInsertCount: plan.rows.length,
+    plannedReconcileCount: plan.identityUpdates.length,
+    duplicateCount: plan.duplicates,
+    errorCount: combinedErrors.length,
+  };
+  const reviewedPlan: MigrationReviewedPlan = {
+    plannerVersion: CLIENT_IMPORT_PLANNER_VERSION,
+    dispositions: plan.reviewedDispositions,
+    targets: plan.reviewedTargets,
+  };
+  return { plan, combinedErrors, summary, reviewedPlan };
+}
+
+async function loadPatientCsvPlan(
+  db: Database,
+  practiceId: string,
+  records: PatientImportRecord[],
+  source: string,
+  parseErrors: string[],
+) {
+  // Keep the lock order practice -> clients -> patients for every migration.
+  const clientRows = await db
+    .select({
+      id: clients.id,
+      email: clients.email,
+      externalSource: clients.externalSource,
+      externalId: clients.externalId,
+      deletedAt: clients.deletedAt,
+      updatedAt: clients.updatedAt,
+    })
+    .from(clients)
+    .where(
+      and(
+        eq(clients.practiceId, practiceId),
+        activePracticePredicate(practiceId),
+      ),
+    )
+    .orderBy(clients.id)
+    .for("update");
+  const clientLookup = createClientReferenceLookup(clientRows);
+
+  const existingPatients = await db
+    .select({
+      id: patients.id,
+      clientId: patients.clientId,
+      name: patients.name,
+      species: patients.species,
+      dob: patients.dob,
+      microchipNumber: patients.microchipNumber,
+      externalSource: patients.externalSource,
+      externalId: patients.externalId,
+      deletedAt: patients.deletedAt,
+      updatedAt: patients.updatedAt,
+    })
+    .from(patients)
+    .where(
+      and(
+        eq(patients.practiceId, practiceId),
+        activePracticePredicate(practiceId),
+      ),
+    )
+    .orderBy(patients.id)
+    .for("update");
+
+  const plan = planPatientCsvImport(
+    records,
+    source,
+    clientLookup,
+    existingPatients,
+  );
+  const combinedErrors = [...parseErrors, ...plan.errors];
+  const summary: MigrationPreviewSummary = {
+    sourceRowCount: records.length,
+    plannedInsertCount: plan.rows.length,
+    plannedReconcileCount: plan.identityUpdates.length,
+    duplicateCount: plan.duplicates,
+    unmatchedCount: plan.unmatchedClient,
+    errorCount: combinedErrors.length,
+  };
+  const reviewedPlan: MigrationReviewedPlan = {
+    plannerVersion: PATIENT_IMPORT_PLANNER_VERSION,
+    dispositions: plan.reviewedDispositions,
+    targets: plan.reviewedTargets,
+  };
+  return { plan, combinedErrors, summary, reviewedPlan };
 }
 
 /** Legacy key linking a historical row to a pet: owner email + pet name. */
@@ -1877,7 +2158,7 @@ export const dataRouter = createRouter({
             "clients",
             summary,
           );
-          return {
+          return csvPreviewResult({
             dryRun: true as const,
             previewToken,
             total: 0,
@@ -1885,7 +2166,7 @@ export const dataRouter = createRouter({
             willReconcile: 0,
             duplicates: 0,
             errors,
-          };
+          });
         }
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -1894,66 +2175,54 @@ export const dataRouter = createRouter({
       }
 
       await assertActivePractice(ctx);
-      await lockMigrationPractice(ctx.db, ctx.practiceId);
-
-      const existing = await ctx.db
-        .select({
-          id: clients.id,
-          email: clients.email,
-          externalSource: clients.externalSource,
-          externalId: clients.externalId,
-          deletedAt: clients.deletedAt,
-        })
-        .from(clients)
-        .where(
-          and(
-            eq(clients.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-          ),
-        );
-      const plan = planClientCsvImport(validRecords, input.source, existing);
-      const combinedErrors = [...errors, ...plan.errors];
-      const summary: MigrationPreviewSummary = {
-        sourceRowCount: validRecords.length,
-        plannedInsertCount: plan.rows.length,
-        plannedReconcileCount: plan.identityUpdates.length,
-        duplicateCount: plan.duplicates,
-        errorCount: combinedErrors.length,
-      };
-
-      if (input.dryRun) {
-        const previewToken = await createCsvImportPreview(
-          ctx,
-          input,
-          "clients",
-          summary,
-        );
-        return {
-          dryRun: true as const,
-          previewToken,
-          total: validRecords.length,
-          willInsert: plan.rows.length,
-          willReconcile: plan.identityUpdates.length,
-          duplicates: plan.duplicates,
-          errors: combinedErrors,
-        };
-      }
-
-      let replay:
-        | Extract<MigrationClaimResult, { alreadyCommitted: true }>
-        | undefined;
-      await ctx.db.transaction(async (tx) => {
+      return ctx.db.transaction(async (tx) => {
         const migrationDb = tx as unknown as Database;
+        await lockMigrationPractice(migrationDb, ctx.practiceId);
+        const { plan, combinedErrors, summary, reviewedPlan } =
+          await loadClientCsvPlan(
+            migrationDb,
+            ctx.practiceId,
+            validRecords,
+            input.source,
+            errors,
+          );
+
+        if (input.dryRun) {
+          const previewToken = await createCsvImportPreview(
+            ctx,
+            input,
+            "clients",
+            summary,
+            reviewedPlan,
+            migrationDb,
+          );
+          return csvPreviewResult({
+            dryRun: true as const,
+            previewToken,
+            total: validRecords.length,
+            willInsert: plan.rows.length,
+            willReconcile: plan.identityUpdates.length,
+            duplicates: plan.duplicates,
+            errors: combinedErrors,
+          });
+        }
+
         const claim = await claimCsvImportPreview(
           migrationDb,
           ctx.practiceId,
           input,
           "clients",
           summary,
+          reviewedPlan,
         );
         if (claim.alreadyCommitted) {
-          replay = claim;
-          return;
+          return {
+            imported: claim.importedCount,
+            reconciled: claim.reconciledCount,
+            errors: [] as string[],
+            alreadyCommitted: true as const,
+            migrationRunId: input.previewToken!,
+          };
         }
         for (const update of plan.identityUpdates) {
           const updated = await tx
@@ -1997,21 +2266,12 @@ export const dataRouter = createRouter({
           ctx.user.id,
           plan.identityUpdates.length,
         );
-      });
-      if (replay) {
         return {
-          imported: replay.importedCount,
-          reconciled: replay.reconciledCount,
-          errors: [] as string[],
-          alreadyCommitted: true as const,
-          migrationRunId: input.previewToken!,
+          imported: plan.rows.length,
+          reconciled: plan.identityUpdates.length,
+          errors: combinedErrors,
         };
-      }
-      return {
-        imported: plan.rows.length,
-        reconciled: plan.identityUpdates.length,
-        errors: combinedErrors,
-      };
+      });
     }),
 
   importPatientsCsv: adminProcedure
@@ -2042,7 +2302,7 @@ export const dataRouter = createRouter({
             "patients",
             summary,
           );
-          return {
+          return csvPreviewResult({
             dryRun: true as const,
             previewToken,
             total: 0,
@@ -2051,7 +2311,7 @@ export const dataRouter = createRouter({
             unmatchedClient: 0,
             duplicates: 0,
             errors,
-          };
+          });
         }
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -2060,95 +2320,55 @@ export const dataRouter = createRouter({
       }
 
       await assertActivePractice(ctx);
-      await lockMigrationPractice(ctx.db, ctx.practiceId);
-
-      const clientRows = await ctx.db
-        .select({
-          id: clients.id,
-          email: clients.email,
-          externalSource: clients.externalSource,
-          externalId: clients.externalId,
-          deletedAt: clients.deletedAt,
-        })
-        .from(clients)
-        .where(
-          and(
-            eq(clients.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-          ),
-        );
-      const clientLookup = createClientReferenceLookup(clientRows);
-
-      const existingPatients = await ctx.db
-        .select({
-          id: patients.id,
-          clientId: patients.clientId,
-          name: patients.name,
-          species: patients.species,
-          dob: patients.dob,
-          microchipNumber: patients.microchipNumber,
-          externalSource: patients.externalSource,
-          externalId: patients.externalId,
-          deletedAt: patients.deletedAt,
-        })
-        .from(patients)
-        .where(
-          and(
-            eq(patients.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-          ),
-        );
-
-      const plan = planPatientCsvImport(
-        validRecords,
-        input.source,
-        clientLookup,
-        existingPatients,
-      );
-      const combinedErrors = [...errors, ...plan.errors];
-      const summary: MigrationPreviewSummary = {
-        sourceRowCount: validRecords.length,
-        plannedInsertCount: plan.rows.length,
-        plannedReconcileCount: plan.identityUpdates.length,
-        duplicateCount: plan.duplicates,
-        unmatchedCount: plan.unmatchedClient,
-        errorCount: combinedErrors.length,
-      };
-
-      if (input.dryRun) {
-        const previewToken = await createCsvImportPreview(
-          ctx,
-          input,
-          "patients",
-          summary,
-        );
-        return {
-          dryRun: true as const,
-          previewToken,
-          total: validRecords.length,
-          willInsert: plan.rows.length,
-          willReconcile: plan.identityUpdates.length,
-          unmatchedClient: plan.unmatchedClient,
-          duplicates: plan.duplicates,
-          errors: combinedErrors,
-        };
-      }
-
-      let replay:
-        | Extract<MigrationClaimResult, { alreadyCommitted: true }>
-        | undefined;
-      await ctx.db.transaction(async (tx) => {
+      return ctx.db.transaction(async (tx) => {
         const migrationDb = tx as unknown as Database;
+        await lockMigrationPractice(migrationDb, ctx.practiceId);
+        const { plan, combinedErrors, summary, reviewedPlan } =
+          await loadPatientCsvPlan(
+            migrationDb,
+            ctx.practiceId,
+            validRecords,
+            input.source,
+            errors,
+          );
+
+        if (input.dryRun) {
+          const previewToken = await createCsvImportPreview(
+            ctx,
+            input,
+            "patients",
+            summary,
+            reviewedPlan,
+            migrationDb,
+          );
+          return csvPreviewResult({
+            dryRun: true as const,
+            previewToken,
+            total: validRecords.length,
+            willInsert: plan.rows.length,
+            willReconcile: plan.identityUpdates.length,
+            unmatchedClient: plan.unmatchedClient,
+            duplicates: plan.duplicates,
+            errors: combinedErrors,
+          });
+        }
+
         const claim = await claimCsvImportPreview(
           migrationDb,
           ctx.practiceId,
           input,
           "patients",
           summary,
+          reviewedPlan,
         );
         if (claim.alreadyCommitted) {
-          replay = claim;
-          return;
+          return {
+            imported: claim.importedCount,
+            reconciled: claim.reconciledCount,
+            errors: [] as string[],
+            alreadyCommitted: true as const,
+            migrationRunId: input.previewToken!,
+          };
         }
         for (const update of plan.identityUpdates) {
           const updated = await tx
@@ -2192,21 +2412,12 @@ export const dataRouter = createRouter({
           ctx.user.id,
           plan.identityUpdates.length,
         );
-      });
-      if (replay) {
         return {
-          imported: replay.importedCount,
-          reconciled: replay.reconciledCount,
-          errors: [] as string[],
-          alreadyCommitted: true as const,
-          migrationRunId: input.previewToken!,
+          imported: plan.rows.length,
+          reconciled: plan.identityUpdates.length,
+          errors: combinedErrors,
         };
-      }
-      return {
-        imported: plan.rows.length,
-        reconciled: plan.identityUpdates.length,
-        errors: combinedErrors,
-      };
+      });
     }),
 
   /**

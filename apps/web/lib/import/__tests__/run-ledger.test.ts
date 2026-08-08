@@ -2,11 +2,13 @@ import type { Database } from "@openpims/db/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MIGRATION_PREVIEW_TTL_MS,
+  MIGRATION_REVIEWED_PLAN_SCHEMA_VERSION,
   MigrationPreviewError,
   claimMigrationPreview,
   completeMigrationRun,
   createMigrationPreview,
   migrationFileHash,
+  migrationReviewedPlanHash,
 } from "../run-ledger";
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
@@ -109,12 +111,211 @@ describe("migrationFileHash", () => {
   });
 });
 
+describe("migrationReviewedPlanHash", () => {
+  const identity = {
+    mode: "patients" as const,
+    source: "shepherd",
+    csv: "ownerEmail,name,species\nowner@example.com,Rex,canine",
+    summary: {
+      sourceRowCount: 1,
+      plannedInsertCount: 0,
+      plannedReconcileCount: 1,
+      duplicateCount: 0,
+      unmatchedCount: 0,
+      errorCount: 0,
+    },
+  };
+  const dispositions = [
+    {
+      rowIndex: 0,
+      entityKind: "patient" as const,
+      action: "reconcile" as const,
+    },
+  ];
+
+  function reviewedPlan(
+    targets: Array<{
+      rowIndex: number;
+      kind: "owner" | "patient" | "client";
+      role: "owner_match" | "identity_match" | "external_match";
+      targetId: string;
+      targetVersion: string | null;
+    }>,
+    plannerVersion = "patients-v1",
+  ) {
+    return { plannerVersion, dispositions, targets };
+  }
+
+  it("changes when an owner or patient target changes despite identical counts", () => {
+    const first = migrationReviewedPlanHash({
+      ...identity,
+      reviewedPlan: reviewedPlan([
+        {
+          rowIndex: 0,
+          kind: "owner",
+          role: "owner_match",
+          targetId: "00000000-0000-0000-0000-0000000000c1",
+          targetVersion: "2026-08-08T12:00:00.000Z",
+        },
+        {
+          rowIndex: 0,
+          kind: "patient",
+          role: "identity_match",
+          targetId: "00000000-0000-0000-0000-0000000000d1",
+          targetVersion: "2026-08-08T12:00:00.000Z",
+        },
+      ]),
+    });
+    const ownerSwap = migrationReviewedPlanHash({
+      ...identity,
+      reviewedPlan: reviewedPlan([
+        {
+          rowIndex: 0,
+          kind: "owner",
+          role: "owner_match",
+          targetId: "00000000-0000-0000-0000-0000000000c2",
+          targetVersion: "2026-08-08T12:00:00.000Z",
+        },
+        {
+          rowIndex: 0,
+          kind: "patient",
+          role: "identity_match",
+          targetId: "00000000-0000-0000-0000-0000000000d1",
+          targetVersion: "2026-08-08T12:00:00.000Z",
+        },
+      ]),
+    });
+    const patientSwap = migrationReviewedPlanHash({
+      ...identity,
+      reviewedPlan: reviewedPlan([
+        {
+          rowIndex: 0,
+          kind: "owner",
+          role: "owner_match",
+          targetId: "00000000-0000-0000-0000-0000000000c1",
+          targetVersion: "2026-08-08T12:00:00.000Z",
+        },
+        {
+          rowIndex: 0,
+          kind: "patient",
+          role: "identity_match",
+          targetId: "00000000-0000-0000-0000-0000000000d2",
+          targetVersion: "2026-08-08T12:00:00.000Z",
+        },
+      ]),
+    });
+
+    expect(ownerSwap).not.toBe(first);
+    expect(patientSwap).not.toBe(first);
+  });
+
+  it("changes when the selected target version changes", () => {
+    const reviewedTargets = [
+      {
+        rowIndex: 0,
+        kind: "client" as const,
+        role: "identity_match" as const,
+        targetId: "00000000-0000-0000-0000-0000000000c1",
+        targetVersion: "2026-08-08T12:00:00.000Z",
+      },
+    ];
+
+    expect(
+      migrationReviewedPlanHash({
+        ...identity,
+        reviewedPlan: reviewedPlan(reviewedTargets),
+      }),
+    ).not.toBe(
+      migrationReviewedPlanHash({
+        ...identity,
+        reviewedPlan: reviewedPlan([
+          {
+            ...reviewedTargets[0],
+            targetVersion: "2026-08-08T12:01:00.000Z",
+          },
+        ]),
+      }),
+    );
+  });
+
+  it("changes when same-count row dispositions are swapped", () => {
+    const rows = {
+      ...identity,
+      summary: {
+        ...identity.summary,
+        sourceRowCount: 2,
+        plannedInsertCount: 1,
+        plannedReconcileCount: 0,
+        duplicateCount: 1,
+      },
+    };
+    const first = migrationReviewedPlanHash({
+      ...rows,
+      reviewedPlan: {
+        plannerVersion: "patients-v1",
+        dispositions: [
+          { rowIndex: 0, entityKind: "patient", action: "insert" },
+          { rowIndex: 1, entityKind: "patient", action: "duplicate" },
+        ],
+        targets: [],
+      },
+    });
+    const swapped = migrationReviewedPlanHash({
+      ...rows,
+      reviewedPlan: {
+        plannerVersion: "patients-v1",
+        dispositions: [
+          { rowIndex: 0, entityKind: "patient", action: "duplicate" },
+          { rowIndex: 1, entityKind: "patient", action: "insert" },
+        ],
+        targets: [],
+      },
+    });
+
+    expect(swapped).not.toBe(first);
+  });
+
+  it("requires a deliberate planner version and schema version", () => {
+    expect(MIGRATION_REVIEWED_PLAN_SCHEMA_VERSION).toBe(1);
+    expect(
+      migrationReviewedPlanHash({
+        ...identity,
+        reviewedPlan: reviewedPlan([], "patients-v1"),
+      }),
+    ).not.toBe(
+      migrationReviewedPlanHash({
+        ...identity,
+        reviewedPlan: reviewedPlan([], "patients-v2"),
+      }),
+    );
+  });
+});
+
 describe("createMigrationPreview", () => {
   it("persists only a safe aggregate ledger with the exact hash, size, counts, and TTL", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
     const { db, insertValues, set, where, selectFor } = makeDb();
     const csv = "name,email\nZoë,secret@example.com";
+    const reviewedPlan = {
+      plannerVersion: "patients-v1",
+      dispositions: [
+        {
+          rowIndex: 0,
+          entityKind: "patient" as const,
+          action: "reconcile" as const,
+        },
+      ],
+      targets: [
+        {
+          rowIndex: 0,
+          kind: "patient" as const,
+          role: "identity_match" as const,
+          targetId: "00000000-0000-0000-0000-0000000000d1",
+          targetVersion: "2026-08-08T11:59:00.000Z",
+        },
+      ],
+    };
 
     const token = await createMigrationPreview(db, {
       practiceId: PRACTICE_ID,
@@ -130,6 +331,7 @@ describe("createMigrationPreview", () => {
         unmatchedCount: 1,
         errorCount: 4,
       },
+      reviewedPlan,
     });
 
     expect(token).toMatch(
@@ -168,6 +370,20 @@ describe("createMigrationPreview", () => {
       mode: "patients",
       source: "shepherd",
       fileHash: migrationFileHash(csv),
+      reviewedPlanHash: migrationReviewedPlanHash({
+        mode: "patients",
+        source: "shepherd",
+        csv,
+        summary: {
+          sourceRowCount: 17,
+          plannedInsertCount: 11,
+          plannedReconcileCount: 2,
+          duplicateCount: 3,
+          unmatchedCount: 1,
+          errorCount: 4,
+        },
+        reviewedPlan,
+      }),
       fileSizeBytes: Buffer.byteLength(csv, "utf8"),
       sourceRowCount: 17,
       plannedInsertCount: 11,
@@ -179,7 +395,11 @@ describe("createMigrationPreview", () => {
     });
     expect(persisted).not.toHaveProperty("csv");
     expect(persisted).not.toHaveProperty("errors");
+    expect(persisted).not.toHaveProperty("reviewedPlan");
     expect(JSON.stringify(persisted)).not.toContain("secret@example.com");
+    expect(JSON.stringify(persisted)).not.toContain(
+      reviewedPlan.targets[0].targetId,
+    );
   });
 });
 
@@ -203,6 +423,7 @@ describe("claimMigrationPreview", () => {
     status: "previewed",
     previewExpiresAt: new Date(NOW.getTime() + 60_000),
     sourceRowCount: 5,
+    reviewedPlanHash: migrationReviewedPlanHash(identity),
     plannedInsertCount: 3,
     plannedReconcileCount: 1,
     duplicateCount: 1,
@@ -262,20 +483,40 @@ describe("claimMigrationPreview", () => {
     );
   });
 
-  it("returns saved counts without claiming an exact committed retry", async () => {
+  it("returns saved counts for an exact-file token after its committed targets changed", async () => {
     const { db, set } = makeDb(
       [],
       [
         {
           ...previewRun,
           status: "committed",
+          reviewedPlanHash: "f".repeat(64),
           importedCount: 3,
           reconciledCount: 1,
         },
       ],
     );
 
-    await expect(claimMigrationPreview(db, identity)).resolves.toEqual({
+    await expect(
+      claimMigrationPreview(db, {
+        ...identity,
+        reviewedPlan: {
+          plannerVersion: "clients-v2",
+          dispositions: [
+            { rowIndex: 0, entityKind: "client", action: "duplicate" },
+          ],
+          targets: [
+            {
+              rowIndex: 0,
+              kind: "client",
+              role: "identity_match",
+              targetId: "00000000-0000-0000-0000-0000000000dd",
+              targetVersion: "2026-08-08T12:01:00.000Z",
+            },
+          ],
+        },
+      }),
+    ).resolves.toEqual({
       alreadyCommitted: true,
       importedCount: 3,
       reconciledCount: 1,
