@@ -451,6 +451,9 @@ export async function GET(request: Request) {
           smsConsent: appt.smsConsent ?? false,
           hasEmail: Boolean(normalizeEmailSuppressionAddress(appt.clientEmail)),
           quietHours: isQuietHours(now, appt.practiceTimezone),
+          // This sweep runs hourly, so preserve an SMS preference and retry
+          // after quiet hours instead of silently changing the channel.
+          deferQuietHoursSms: true,
         });
 
         if (channel === "skip") {

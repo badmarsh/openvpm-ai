@@ -20,5 +20,10 @@ describe("Vercel cron schedule", () => {
         "/api/cron/activation-digest",
       ])
     );
+
+    expect(
+      config.crons?.find((cron) => cron.path === "/api/cron/reminders")
+        ?.schedule
+    ).toBe("0 * * * *");
   });
 });

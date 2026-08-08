@@ -54,6 +54,15 @@ describe("pickReminderChannel", () => {
   it("falls back to email during quiet hours when email exists", () => {
     expect(pickReminderChannel({ ...base, quietHours: true })).toBe("email");
   });
+  it("defers automated SMS during quiet hours instead of changing channel", () => {
+    expect(
+      pickReminderChannel({
+        ...base,
+        quietHours: true,
+        deferQuietHoursSms: true,
+      })
+    ).toBe("skip");
+  });
   it("returns none when there is no usable channel", () => {
     expect(
       pickReminderChannel({

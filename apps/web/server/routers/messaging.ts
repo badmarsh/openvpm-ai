@@ -12,7 +12,7 @@ import {
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { usageForPractice, currentPeriodMonth } from "@/lib/billing/usage";
-import { getPlan } from "@/lib/billing/plans";
+import { billingEnforced, getPlan } from "@/lib/billing/plans";
 import { normalizeE164 } from "@/lib/messaging";
 import { summarizeInboxSmsStatus } from "@/lib/messaging/inbox-status";
 import { hasNonBlankMessagingSender } from "@/lib/messaging/sender-query";
@@ -175,6 +175,28 @@ function assertProvisioningEnabled(): void {
       code: "PRECONDITION_FAILED",
       message:
         "Texting setup is almost ready. We are finishing carrier registration; check back soon.",
+    });
+  }
+}
+
+/**
+ * Hosted number orders can incur immediate and recurring provider charges.
+ * During controlled rollout, require an explicit tenant allowlist in addition
+ * to the global kill-switch. Self-hosters retain the existing switch-only path.
+ */
+function assertHostedProvisioningPracticeAllowed(practiceId: string): void {
+  if (!billingEnforced()) return;
+  const allowed = new Set(
+    (process.env.MESSAGING_PROVISIONING_PRACTICE_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+  if (!allowed.has(practiceId)) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Texting number setup is available only to approved pilot clinics. Contact OpenVPM support.",
     });
   }
 }
@@ -702,6 +724,7 @@ export const messagingRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       assertProvisioningEnabled();
+      assertHostedProvisioningPracticeAllowed(ctx.practiceId);
       await assertActivePractice(ctx);
       const [loc] = await ctx.db
         .select({ id: locations.id, name: locations.name, phone: locations.phone })
