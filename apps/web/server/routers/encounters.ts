@@ -517,7 +517,7 @@ async function syncVisitWorkItems(
 ) {
   await ctx.db.execute(sql`
     insert into ${visitWorkItems}
-      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.vaccinationRecordId})
+      (practice_id, appointment_id, vaccination_record_id)
     select ${vaccinationRecords.practiceId}, ${vaccinationRecords.appointmentId}, ${vaccinationRecords.id}
     from ${vaccinationRecords}
     where ${vaccinationRecords.practiceId} = ${ctx.practiceId}
@@ -527,7 +527,7 @@ async function syncVisitWorkItems(
   `);
   await ctx.db.execute(sql`
     insert into ${visitWorkItems}
-      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.labResultId})
+      (practice_id, appointment_id, lab_result_id)
     select ${labResults.practiceId}, ${labResults.appointmentId}, ${labResults.id}
     from ${labResults}
     where ${labResults.practiceId} = ${ctx.practiceId}
@@ -537,7 +537,7 @@ async function syncVisitWorkItems(
   `);
   await ctx.db.execute(sql`
     insert into ${visitWorkItems}
-      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.procedureId})
+      (practice_id, appointment_id, procedure_id)
     select ${procedures.practiceId}, ${procedures.appointmentId}, ${procedures.id}
     from ${procedures}
     where ${procedures.practiceId} = ${ctx.practiceId}
@@ -547,7 +547,7 @@ async function syncVisitWorkItems(
   `);
   await ctx.db.execute(sql`
     insert into ${visitWorkItems}
-      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.prescriptionId})
+      (practice_id, appointment_id, prescription_id)
     select ${prescriptions.practiceId}, ${prescriptions.appointmentId}, ${prescriptions.id}
     from ${prescriptions}
     where ${prescriptions.practiceId} = ${ctx.practiceId}

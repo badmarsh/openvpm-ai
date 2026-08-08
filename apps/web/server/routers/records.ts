@@ -379,28 +379,28 @@ async function registerVisitWorkItem(
   if ("vaccinationRecordId" in source) {
     await ctx.db.execute(sql`
       insert into ${visitWorkItems}
-        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.vaccinationRecordId})
+        (practice_id, appointment_id, vaccination_record_id)
       values (${ctx.practiceId}, ${appointmentId}, ${source.vaccinationRecordId})
       on conflict do nothing
     `);
   } else if ("labResultId" in source) {
     await ctx.db.execute(sql`
       insert into ${visitWorkItems}
-        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.labResultId})
+        (practice_id, appointment_id, lab_result_id)
       values (${ctx.practiceId}, ${appointmentId}, ${source.labResultId})
       on conflict do nothing
     `);
   } else if ("procedureId" in source) {
     await ctx.db.execute(sql`
       insert into ${visitWorkItems}
-        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.procedureId})
+        (practice_id, appointment_id, procedure_id)
       values (${ctx.practiceId}, ${appointmentId}, ${source.procedureId})
       on conflict do nothing
     `);
   } else {
     await ctx.db.execute(sql`
       insert into ${visitWorkItems}
-        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.prescriptionId})
+        (practice_id, appointment_id, prescription_id)
       values (${ctx.practiceId}, ${appointmentId}, ${source.prescriptionId})
       on conflict do nothing
     `);
