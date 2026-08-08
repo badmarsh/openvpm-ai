@@ -68,10 +68,10 @@ try {
     (${aUser}, ${`rls-${aUser}@example.com`}, 'not-a-real-hash', 'RLS Admin A', 'admin', ${aId}),
     (${bUser}, ${`rls-${bUser}@example.com`}, 'not-a-real-hash', 'RLS Admin B', 'admin', ${bId})`;
   await owner`insert into migration_runs
-    (id, practice_id, created_by, mode, source, file_hash, file_size_bytes, preview_expires_at)
+    (id, practice_id, created_by, mode, source, file_hash, reviewed_plan_hash, file_size_bytes, preview_expires_at)
     values
-    (${aMigrationRun}, ${aId}, ${aUser}, 'clients', 'other', ${"a".repeat(64)}, 10, now() + interval '1 day'),
-    (${bMigrationRun}, ${bId}, ${bUser}, 'clients', 'other', ${"b".repeat(64)}, 10, now() + interval '1 day')`;
+    (${aMigrationRun}, ${aId}, ${aUser}, 'clients', 'other', ${"a".repeat(64)}, ${"c".repeat(64)}, 10, now() + interval '1 day'),
+    (${bMigrationRun}, ${bId}, ${bUser}, 'clients', 'other', ${"b".repeat(64)}, ${"d".repeat(64)}, 10, now() + interval '1 day')`;
   await owner`insert into funnel_events (id, event_name, practice_id)
     values (${funnelEventId}, 'registration', ${aId})`;
   await owner`insert into appointments (id, practice_id, client_id, start_time, end_time)
@@ -138,8 +138,8 @@ try {
     await appTransaction(async (tx) => {
       await tx`select set_config('app.current_practice_id', ${aId}, true)`;
       await tx`insert into migration_runs
-        (practice_id, created_by, mode, source, file_hash, file_size_bytes, preview_expires_at)
-        values (${bId}, ${bUser}, 'patients', 'other', ${"c".repeat(64)}, 10, now() + interval '1 day')`;
+        (practice_id, created_by, mode, source, file_hash, reviewed_plan_hash, file_size_bytes, preview_expires_at)
+        values (${bId}, ${bUser}, 'patients', 'other', ${"c".repeat(64)}, ${"e".repeat(64)}, 10, now() + interval '1 day')`;
     });
   } catch {
     migrationInsertBlocked = true;

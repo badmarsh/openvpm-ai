@@ -38,6 +38,9 @@ describe("declaredSchema", () => {
     expect(declared.has("soap_notes")).toBe(true);
     expect(declared.get("prescriptions")?.has("product_id")).toBe(true);
     expect(declared.get("soap_notes")?.has("imported")).toBe(true);
+    expect(declared.get("migration_runs")?.has("reviewed_plan_hash")).toBe(
+      true,
+    );
   });
 
   it("uses database column names, not camelCase property names", () => {
@@ -56,8 +59,9 @@ describe("findSchemaDrift", () => {
     const db = fakeDb(
       liveSchemaWithout(
         (row) =>
-          row.table_name === "prescriptions" && row.column_name === "product_id"
-      )
+          row.table_name === "prescriptions" &&
+          row.column_name === "product_id",
+      ),
     );
 
     const drift = await findSchemaDrift(db);
@@ -74,8 +78,8 @@ describe("findSchemaDrift", () => {
     const db = fakeDb(
       liveSchemaWithout(
         (row) =>
-          row.table_name === "soap_notes" && row.column_name === "imported"
-      )
+          row.table_name === "soap_notes" && row.column_name === "imported",
+      ),
     );
 
     const drift = await findSchemaDrift(db);
@@ -87,17 +91,35 @@ describe("findSchemaDrift", () => {
     expect(driftIsClean(drift)).toBe(false);
   });
 
+  it("catches a missing migration_runs.reviewed_plan_hash deployment", async () => {
+    const db = fakeDb(
+      liveSchemaWithout(
+        (row) =>
+          row.table_name === "migration_runs" &&
+          row.column_name === "reviewed_plan_hash",
+      ),
+    );
+
+    const drift = await findSchemaDrift(db);
+
+    expect(drift.missingColumns).toContainEqual({
+      table: "migration_runs",
+      column: "reviewed_plan_hash",
+    });
+    expect(driftIsClean(drift)).toBe(false);
+  });
+
   it("catches an entirely missing table without also listing its columns", async () => {
     const db = fakeDb(
-      liveSchemaWithout((row) => row.table_name === "wellness_plans")
+      liveSchemaWithout((row) => row.table_name === "wellness_plans"),
     );
 
     const drift = await findSchemaDrift(db);
 
     expect(drift.missingTables).toContain("wellness_plans");
-    expect(
-      drift.missingColumns.some((c) => c.table === "wellness_plans")
-    ).toBe(false);
+    expect(drift.missingColumns.some((c) => c.table === "wellness_plans")).toBe(
+      false,
+    );
   });
 
   it("ignores extra tables and columns the database has but the code does not", async () => {
@@ -129,9 +151,9 @@ describe("describeDrift", () => {
       fakeDb(
         liveSchemaWithout(
           (row) =>
-            row.table_name === "soap_notes" && row.column_name === "imported"
-        )
-      )
+            row.table_name === "soap_notes" && row.column_name === "imported",
+        ),
+      ),
     );
 
     const summary = describeDrift(drift);
@@ -141,7 +163,7 @@ describe("describeDrift", () => {
 
   it("says so plainly when the schema is clean", () => {
     expect(describeDrift({ missingTables: [], missingColumns: [] })).toBe(
-      "Database schema matches the deployed code"
+      "Database schema matches the deployed code",
     );
   });
 
