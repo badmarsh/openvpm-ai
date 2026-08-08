@@ -43,8 +43,21 @@ describe("verifyTelnyxSignature", () => {
     ).toBe(false);
   });
 
-  it("rejects a stale timestamp (replay)", () => {
-    const oldTs = String(Math.floor(nowMs / 1000) - 1000); // > tolerance
+  it("accepts a signature at the five-minute boundary", () => {
+    const boundaryTs = String(Math.floor(nowMs / 1000) - 300);
+    expect(
+      verifyTelnyxSignature({
+        rawBody: body,
+        signatureB64: signPayload(boundaryTs, body),
+        timestamp: boundaryTs,
+        publicKeyB64,
+        nowMs,
+      })
+    ).toBe(true);
+  });
+
+  it("rejects a signature beyond the five-minute replay window", () => {
+    const oldTs = String(Math.floor(nowMs / 1000) - 301);
     expect(
       verifyTelnyxSignature({
         rawBody: body,

@@ -11,6 +11,10 @@ import {
 import { withSystem, withTenant } from "@/lib/tenant-db";
 import { normalizeE164 } from "./phone";
 import { addSuppression, removeSuppression } from "./suppression";
+import {
+  inboundSmsOptInEvidence,
+  SMS_INBOUND_OPT_IN,
+} from "./consent";
 import { latestAssignedToForClient } from "@/lib/communications/assignment";
 
 export type InboundSmsProvider = "telnyx" | "twilio";
@@ -152,7 +156,8 @@ export async function setClientSmsConsentByPhone(
   practiceId: string,
   e164: string,
   consent: boolean,
-  matchedClientId?: string | null
+  matchedClientId?: string | null,
+  optInKeyword?: string
 ): Promise<void> {
   const digits = e164.replace(/\D/g, "").slice(-10);
   if (digits.length < 10) return;
@@ -167,7 +172,14 @@ export async function setClientSmsConsentByPhone(
     await withSystem(db, (tx) =>
       tx
         .update(clients)
-        .set({ smsConsent: true, smsConsentAt: new Date() })
+        .set({
+          smsConsent: true,
+          smsConsentAt: new Date(),
+          smsConsentSource: SMS_INBOUND_OPT_IN.source,
+          smsConsentDisclosure: inboundSmsOptInEvidence(
+            optInKeyword ?? "START"
+          ),
+        })
         .where(
           and(
             eq(clients.id, clientId),
@@ -182,7 +194,12 @@ export async function setClientSmsConsentByPhone(
   await withSystem(db, (tx) =>
     tx
       .update(clients)
-      .set({ smsConsent: false, smsConsentAt: new Date() })
+      .set({
+        smsConsent: false,
+        smsConsentAt: null,
+        smsConsentSource: null,
+        smsConsentDisclosure: null,
+      })
       .where(
         and(
           eq(clients.practiceId, practiceId),
@@ -275,7 +292,13 @@ export async function handleInboundSmsReply(opts: {
 
   if (START_KEYWORDS.has(keyword)) {
     await removeSuppression(loc.practiceId, fromPhone);
-    await setClientSmsConsentByPhone(loc.practiceId, fromPhone, true, clientId);
+    await setClientSmsConsentByPhone(
+      loc.practiceId,
+      fromPhone,
+      true,
+      clientId,
+      keyword
+    );
     await logInboundSmsCommunication({
       practiceId: loc.practiceId,
       clientId,

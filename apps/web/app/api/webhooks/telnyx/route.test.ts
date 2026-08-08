@@ -92,6 +92,9 @@ vi.mock("@/lib/messaging/telnyx-signature", () => ({
 
 const { POST } = await import("./route");
 const { communications } = await import("@openpims/db");
+const { inboundSmsOptInEvidence, SMS_INBOUND_OPT_IN } = await import(
+  "@/lib/messaging/consent"
+);
 const { MESSAGING_WEBHOOK_BODY_MAX_BYTES } = await import(
   "@/lib/messaging-webhook-limits"
 );
@@ -748,7 +751,9 @@ describe("Telnyx webhook", () => {
     );
     expect(mocks.updateSet).toHaveBeenCalledWith({
       smsConsent: false,
-      smsConsentAt: expect.any(Date),
+      smsConsentAt: null,
+      smsConsentSource: null,
+      smsConsentDisclosure: null,
     });
     expect(mocks.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -811,6 +816,8 @@ describe("Telnyx webhook", () => {
     expect(mocks.updateSet).toHaveBeenCalledWith({
       smsConsent: true,
       smsConsentAt: expect.any(Date),
+      smsConsentSource: SMS_INBOUND_OPT_IN.source,
+      smsConsentDisclosure: inboundSmsOptInEvidence("START"),
     });
     const condition = mocks.updateWhere.mock.calls[0]?.[0];
     expect(sqlIncludesColumnParamPair(condition, "id", clientId)).toBe(true);
@@ -943,7 +950,7 @@ describe("Telnyx webhook", () => {
     expect(inserted.dedupeKey?.length).toBeLessThanOrEqual(160);
   });
 
-  it("suppresses SMS recipients after failed delivery receipts", async () => {
+  it("updates generic failed delivery receipts without suppressing recipients", async () => {
     process.env.TELNYX_PUBLIC_KEY = "test-public-key";
     mocks.selectResults.push([
       {
@@ -975,16 +982,8 @@ describe("Telnyx webhook", () => {
 
     await expect(response.json()).resolves.toEqual({ ok: true });
     expect(mocks.updateSet).toHaveBeenCalledWith({ status: "failed" });
-    expect(mocks.insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        practiceId: "00000000-0000-0000-0000-0000000000aa",
-        locationId: "00000000-0000-0000-0000-000000000002",
-        phone: "+15555550199",
-        reason: "bounce",
-        detail: "Delivery failed for provider message msg-failed",
-      })
-    );
-    expect(mocks.insertConflict).toHaveBeenCalled();
+    expect(mocks.insertValues).not.toHaveBeenCalled();
+    expect(mocks.insertConflict).not.toHaveBeenCalled();
   });
 
   it("does not suppress recipients when a failed delivery receipt matches no outbound communication", async () => {

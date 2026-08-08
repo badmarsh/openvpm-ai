@@ -5,8 +5,8 @@ const mocks = vi.hoisted(() => ({
   billingEnforced: vi.fn(() => false),
   requiredMessagingEnvNames: vi.fn(() => [
     "TELNYX_API_KEY",
-    "TELNYX_MESSAGING_PROFILE_ID",
     "TELNYX_PUBLIC_KEY",
+    "MESSAGING_REGISTRATION_ENCRYPTION_KEY",
   ]),
   shouldAssertHostedRlsRole: vi.fn(() => false),
   inspectHostedRlsRole: vi.fn(async () => ({
@@ -107,8 +107,8 @@ afterEach(() => {
   mocks.billingEnforced.mockReturnValue(false);
   mocks.requiredMessagingEnvNames.mockReturnValue([
     "TELNYX_API_KEY",
-    "TELNYX_MESSAGING_PROFILE_ID",
     "TELNYX_PUBLIC_KEY",
+    "MESSAGING_REGISTRATION_ENCRYPTION_KEY",
   ]);
   mocks.shouldAssertHostedRlsRole.mockReturnValue(false);
   mocks.hostedRlsRoleViolations.mockReturnValue([]);
@@ -260,6 +260,7 @@ describe("health route", () => {
     expect(body).not.toContain("GOOGLE_GENERATIVE_AI_API_KEY");
     expect(body).not.toContain("TELNYX_API_KEY");
     expect(body).not.toContain("TELNYX_PUBLIC_KEY");
+    expect(body).not.toContain("MESSAGING_REGISTRATION_ENCRYPTION_KEY");
     expect(json.checks.hostedSms).toEqual({
       ok: false,
       detail: "3 required hosted configuration values are missing",

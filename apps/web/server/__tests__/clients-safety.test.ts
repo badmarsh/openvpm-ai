@@ -16,6 +16,7 @@ vi.mock("@/lib/webhook-dispatcher", () => ({
 
 const { clientsRouter } = await import("../routers/clients");
 const { LIST_OFFSET_MAX } = await import("../routers/pagination");
+const { SMS_CONSENT_DISCLOSURE } = await import("@/lib/messaging/consent");
 const CLIENTS_SOURCE = readFileSync(
   new URL("../routers/clients.ts", import.meta.url),
   "utf8"
@@ -55,6 +56,7 @@ function createDb(opts?: {
       where: vi.fn(() => builder),
       orderBy: vi.fn(() => builder),
       limit: vi.fn(() => builder),
+      for: vi.fn(() => builder),
       offset: vi.fn(async () => result),
       then: (
         resolve: (value: unknown[]) => unknown,
@@ -337,6 +339,58 @@ describe("clients mutation safety", () => {
     );
   });
 
+  it("stores the current server-owned disclosure only on explicit creation consent", async () => {
+    const { db, insertValues } = createDb({
+      selectResults: [[{ id: PRACTICE_ID }]],
+      insertedRows: [
+        {
+          id: CLIENT_ID,
+          firstName: "Ada",
+          lastName: "Lovelace",
+          phone: "+15555550123",
+        },
+      ],
+    });
+
+    await callerWithDb(db).create({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      phone: "(555) 555-0123",
+      smsConsent: true,
+    });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        smsConsent: true,
+        smsConsentAt: expect.any(Date),
+        smsConsentSource: SMS_CONSENT_DISCLOSURE.source,
+        smsConsentDisclosure: SMS_CONSENT_DISCLOSURE.snapshot,
+      })
+    );
+    expect(SMS_CONSENT_DISCLOSURE.source).toContain(
+      SMS_CONSENT_DISCLOSURE.version
+    );
+  });
+
+  it("rejects explicit creation consent without a valid SMS destination", async () => {
+    const { db, select, insertValues } = createDb();
+
+    await expect(
+      callerWithDb(db).create({
+        firstName: "Ada",
+        lastName: "Lovelace",
+        phone: "12345",
+        smsConsent: true,
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "A valid mobile phone number is required for SMS consent",
+    });
+
+    expect(select).not.toHaveBeenCalled();
+    expect(insertValues).not.toHaveBeenCalled();
+  });
+
   it("rejects client creation before insert when the practice is missing or deleted", async () => {
     const { db, insertValues } = createDb({ selectResults: [[]] });
 
@@ -372,6 +426,82 @@ describe("clients mutation safety", () => {
       firstName: "Ada",
       address: undefined,
       notes: "Prefers morning appointments.",
+    });
+  });
+
+  it("preserves consent evidence across formatting-only phone edits", async () => {
+    const { db, updateSet } = createDb({
+      selectResults: [[{ id: CLIENT_ID, phone: "+15555550123" }]],
+      updatedRows: [{ id: CLIENT_ID, phone: "(555) 555-0123" }],
+    });
+
+    await callerWithDb(db).update({
+      id: CLIENT_ID,
+      phone: "(555) 555-0123",
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      phone: "(555) 555-0123",
+    });
+  });
+
+  it("clears consent evidence when the normalized phone destination changes", async () => {
+    const { db, updateSet } = createDb({
+      selectResults: [[{ id: CLIENT_ID, phone: "+15555550123" }]],
+      updatedRows: [{ id: CLIENT_ID, phone: "+15555550999" }],
+    });
+
+    await callerWithDb(db).update({
+      id: CLIENT_ID,
+      phone: "+15555550999",
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      phone: "+15555550999",
+      smsConsent: false,
+      smsConsentAt: null,
+      smsConsentSource: null,
+      smsConsentDisclosure: null,
+    });
+  });
+
+  it("stores fresh current evidence when a phone edit explicitly re-consents", async () => {
+    const { db, updateSet } = createDb({
+      selectResults: [[{ id: CLIENT_ID, phone: "+15555550123" }]],
+      updatedRows: [{ id: CLIENT_ID, phone: "+15555550999" }],
+    });
+
+    await callerWithDb(db).update({
+      id: CLIENT_ID,
+      phone: "+15555550999",
+      smsConsent: true,
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      phone: "+15555550999",
+      smsConsent: true,
+      smsConsentAt: expect.any(Date),
+      smsConsentSource: SMS_CONSENT_DISCLOSURE.source,
+      smsConsentDisclosure: SMS_CONSENT_DISCLOSURE.snapshot,
+    });
+  });
+
+  it("clears prior evidence when staff explicitly withdraws SMS consent", async () => {
+    const { db, updateSet } = createDb({
+      selectResults: [[{ id: CLIENT_ID, phone: "+15555550123" }]],
+      updatedRows: [{ id: CLIENT_ID, smsConsent: false }],
+    });
+
+    await callerWithDb(db).update({
+      id: CLIENT_ID,
+      smsConsent: false,
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      smsConsent: false,
+      smsConsentAt: null,
+      smsConsentSource: null,
+      smsConsentDisclosure: null,
     });
   });
 

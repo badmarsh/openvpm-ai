@@ -84,8 +84,6 @@ describe("self-hosting operations docs", () => {
 
     expect(requiredHostedEnvBlock).toContain("MESSAGING_PROVIDER=telnyx");
     expect(requiredHostedEnvBlock).toContain("TELNYX_API_KEY=...");
-    expect(requiredHostedEnvBlock).toContain("TELNYX_MESSAGING_PROFILE_ID=...");
-    expect(requiredHostedEnvBlock).toContain("TELNYX_FROM_NUMBER=...");
     expect(requiredHostedEnvBlock).toContain("TELNYX_PUBLIC_KEY=...");
     expect(requiredHostedEnvBlock).toContain("RESEND_WEBHOOK_SECRET=...");
     expect(requiredHostedEnvBlock).toContain("EMAIL_SUPPORT_ADDRESS=");
@@ -100,6 +98,8 @@ describe("self-hosting operations docs", () => {
       "`STRIPE_PRICE_CLOUD_USER` and `STRIPE_PRICE_CLOUD` are legacy-only"
     );
     expect(envExample).toContain("TELNYX_PUBLIC_KEY=");
+    expect(envExample).toContain("TELNYX_MESSAGING_PROFILE_ID=");
+    expect(envExample).toContain("TELNYX_FROM_NUMBER=");
     expect(envExample).toContain("RESEND_WEBHOOK_SECRET=");
     expect(envExample).toContain("EMAIL_SUPPORT_ADDRESS=");
     expect(envExample).toContain("EMAIL_COMPANY_ADDRESS=");
