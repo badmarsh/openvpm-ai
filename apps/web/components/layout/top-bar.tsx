@@ -25,6 +25,7 @@ const routeLabels: Record<string, string> = {
   "/billing": "Billing",
   "/inventory": "Inventory",
   "/inbox": "Inbox",
+  "/recalls": "Vaccination Recalls",
   "/whiteboard": "Whiteboard",
   "/agent": "Agent",
   "/controlled-substances": "Controlled Substances",

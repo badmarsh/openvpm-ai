@@ -19,6 +19,7 @@ import {
   Mail,
   Loader2,
   AlertCircle,
+  Syringe,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -64,6 +65,12 @@ const navigationItems: CommandItemConfig[] = [
   { label: "Billing", href: "/billing", Icon: DollarSign, roles: allRoles },
   { label: "Inventory", href: "/inventory", Icon: Package, roles: allRoles },
   { label: "Inbox", href: "/inbox", Icon: Mail, roles: allRoles },
+  {
+    label: "Vaccination Recalls",
+    href: "/recalls",
+    Icon: Syringe,
+    roles: ["admin", "veterinarian", "front_desk"],
+  },
   { label: "Settings", href: "/settings", Icon: Settings, roles: ["admin"] },
 ];
 
