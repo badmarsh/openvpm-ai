@@ -321,6 +321,10 @@ describe("visit work reconciliation", () => {
       new URL("../routers/encounters.ts", import.meta.url),
       "utf8",
     );
+    const recordsRouter = readFileSync(
+      new URL("../routers/records.ts", import.meta.url),
+      "utf8",
+    );
     const migration = readFileSync(
       new URL(
         "../../../../packages/db/drizzle/0045_visit_work_ledger.sql",
@@ -335,6 +339,14 @@ describe("visit work reconciliation", () => {
     );
     expect(router).toContain("eq(invoices.practiceId, ctx.practiceId)");
     expect(router).toContain("eq(invoices.appointmentId, input.appointmentId)");
+    expect(router).toContain(
+      "(practice_id, appointment_id, vaccination_record_id)",
+    );
+    expect(recordsRouter).toContain(
+      "(practice_id, appointment_id, vaccination_record_id)",
+    );
+    expect(router).not.toContain("(${visitWorkItems.practiceId}");
+    expect(recordsRouter).not.toContain("(${visitWorkItems.practiceId}");
     expect(migration).toContain("visit_work_items_vaccination_source_fk");
     expect(migration).toContain("visit_work_items_lab_result_source_fk");
     expect(migration).toContain("visit_work_items_procedure_source_fk");
