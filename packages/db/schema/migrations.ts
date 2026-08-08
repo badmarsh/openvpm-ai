@@ -32,9 +32,9 @@ export const migrationRunStatusEnum = pgEnum("migration_run_status", [
  * Privacy-safe ledger for supervised clinic migrations.
  *
  * Raw files and row-level errors never belong here. The ledger stores only a
- * SHA-256 file identity, aggregate counts, lifecycle state, and actor. That is
- * enough to prove what was reviewed and committed without making another copy
- * of clinic data.
+ * SHA-256 file and canonical reviewed-plan identities, aggregate counts,
+ * lifecycle state, and actor. That is enough to prove what was reviewed and
+ * committed without making another copy of clinic data.
  */
 export const migrationRuns = pgTable(
   "migration_runs",
@@ -49,6 +49,7 @@ export const migrationRuns = pgTable(
     mode: migrationRunModeEnum("mode").notNull(),
     source: varchar("source", { length: 64 }).notNull(),
     fileHash: varchar("file_hash", { length: 64 }).notNull(),
+    reviewedPlanHash: varchar("reviewed_plan_hash", { length: 64 }).notNull(),
     fileSizeBytes: integer("file_size_bytes").notNull(),
     status: migrationRunStatusEnum("status").notNull().default("previewed"),
     sourceRowCount: integer("source_row_count").notNull().default(0),
@@ -87,6 +88,10 @@ export const migrationRuns = pgTable(
     fileHashCheck: check(
       "migration_runs_file_hash_check",
       sql`${table.fileHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    reviewedPlanHashCheck: check(
+      "migration_runs_reviewed_plan_hash_check",
+      sql`${table.reviewedPlanHash} ~ '^[0-9a-f]{64}$'`,
     ),
     fileSizeCheck: check(
       "migration_runs_file_size_check",

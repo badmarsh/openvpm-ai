@@ -510,6 +510,26 @@ describe("committed Drizzle migrations", () => {
     expect(rls).toContain("'migration_runs'");
   });
 
+  it("adds a backfilled privacy-safe reviewed-plan hash to migration runs", () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries?: Array<{ tag?: string }> };
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0044_round_chronomancer",
+    );
+
+    const sql = readRepoFile("packages/db/drizzle/0044_round_chronomancer.sql");
+    expect(sql).toContain('ADD COLUMN "reviewed_plan_hash" varchar(64)');
+    expect(sql).toContain(
+      'SET "reviewed_plan_hash" = "file_hash" WHERE "reviewed_plan_hash" IS NULL',
+    );
+    expect(sql).toContain('ALTER COLUMN "reviewed_plan_hash" SET NOT NULL');
+    expect(sql).toContain(
+      'CONSTRAINT "migration_runs_reviewed_plan_hash_check"',
+    );
+    expect(sql).not.toMatch(/name|email|phone|note|external_id|raw_csv/i);
+  });
+
   it("fails clearly before enforcing one active invoice per visit", () => {
     const journal = JSON.parse(
       readRepoFile("packages/db/drizzle/meta/_journal.json"),
@@ -564,7 +584,7 @@ describe("committed Drizzle migrations", () => {
       'ALTER TYPE "public"."visit_follow_up_disposition" RENAME TO "visit_follow_up_disposition_old"',
     );
     expect(sql).toContain(
-      'CREATE TYPE "public"."visit_follow_up_disposition" AS ENUM(\'none\', \'needed\', \'scheduled\')',
+      "CREATE TYPE \"public\".\"visit_follow_up_disposition\" AS ENUM('none', 'needed', 'scheduled')",
     );
     expect(sql).toContain(
       'ALTER TABLE "visit_closeouts" ALTER COLUMN "follow_up_disposition" TYPE',

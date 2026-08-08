@@ -27,6 +27,35 @@ export type MigrationPreviewSummary = {
   errorCount: number;
 };
 
+export type MigrationReviewedTarget = {
+  rowIndex: number;
+  kind: "client" | "owner" | "patient";
+  role: "external_match" | "identity_match" | "owner_match";
+  targetId: string;
+  targetVersion: string | null;
+};
+
+export type MigrationReviewedDisposition = {
+  rowIndex: number;
+  entityKind: "client" | "patient";
+  action:
+    | "insert"
+    | "reconcile"
+    | "merge"
+    | "duplicate"
+    | "error"
+    | "unmatched";
+};
+
+export const MIGRATION_REVIEWED_PLAN_SCHEMA_VERSION = 1;
+
+export type MigrationReviewedPlan = {
+  /** Bump deliberately whenever planner semantics change. */
+  plannerVersion: string;
+  dispositions: readonly MigrationReviewedDisposition[];
+  targets: readonly MigrationReviewedTarget[];
+};
+
 export type MigrationClaimResult =
   | { alreadyCommitted: false }
   | {
@@ -42,6 +71,7 @@ type MigrationPreviewIdentity = {
   source: string;
   csv: string;
   summary: MigrationPreviewSummary;
+  reviewedPlan?: MigrationReviewedPlan;
 };
 
 export async function lockMigrationPractice(
@@ -62,6 +92,72 @@ export async function lockMigrationPractice(
 
 export function migrationFileHash(csv: string): string {
   return createHash("sha256").update(csv, "utf8").digest("hex");
+}
+
+function normalizedSummary(summary: MigrationPreviewSummary) {
+  return {
+    sourceRowCount: summary.sourceRowCount,
+    plannedInsertCount: summary.plannedInsertCount,
+    plannedReconcileCount: summary.plannedReconcileCount ?? 0,
+    duplicateCount: summary.duplicateCount ?? 0,
+    unmatchedCount: summary.unmatchedCount ?? 0,
+    errorCount: summary.errorCount,
+  };
+}
+
+/**
+ * Bind confirmation to the PII-free decisions reviewed in the preview.
+ *
+ * The canonical payload exists only in memory. The ledger receives the hash,
+ * never names, contact details, notes, external IDs, or raw CSV content.
+ */
+export function migrationReviewedPlanHash(
+  input: Pick<
+    MigrationPreviewIdentity,
+    "mode" | "source" | "csv" | "summary" | "reviewedPlan"
+  >,
+): string {
+  const dispositions = [...(input.reviewedPlan?.dispositions ?? [])]
+    .map((disposition) => ({
+      rowIndex: disposition.rowIndex,
+      entityKind: disposition.entityKind,
+      action: disposition.action,
+    }))
+    .sort(
+      (left, right) =>
+        left.rowIndex - right.rowIndex ||
+        left.entityKind.localeCompare(right.entityKind) ||
+        left.action.localeCompare(right.action),
+    );
+  const targets = [...(input.reviewedPlan?.targets ?? [])]
+    .map((target) => ({
+      rowIndex: target.rowIndex,
+      kind: target.kind,
+      role: target.role,
+      targetId: target.targetId,
+      targetVersion: target.targetVersion,
+    }))
+    .sort(
+      (left, right) =>
+        [
+          left.rowIndex - right.rowIndex,
+          left.kind.localeCompare(right.kind),
+          left.role.localeCompare(right.role),
+          left.targetId.localeCompare(right.targetId),
+          (left.targetVersion ?? "").localeCompare(right.targetVersion ?? ""),
+        ].find((comparison) => comparison !== 0) ?? 0,
+    );
+  const canonicalPlan = JSON.stringify({
+    schemaVersion: MIGRATION_REVIEWED_PLAN_SCHEMA_VERSION,
+    plannerVersion: input.reviewedPlan?.plannerVersion ?? "aggregate-v1",
+    mode: input.mode,
+    source: input.source,
+    fileHash: migrationFileHash(input.csv),
+    summary: normalizedSummary(input.summary),
+    dispositions,
+    targets,
+  });
+  return createHash("sha256").update(canonicalPlan, "utf8").digest("hex");
 }
 
 export async function createMigrationPreview(
@@ -93,6 +189,7 @@ export async function createMigrationPreview(
     mode: input.mode,
     source: input.source,
     fileHash: migrationFileHash(input.csv),
+    reviewedPlanHash: migrationReviewedPlanHash(input),
     fileSizeBytes: Buffer.byteLength(input.csv, "utf8"),
     sourceRowCount: input.summary.sourceRowCount,
     plannedInsertCount: input.summary.plannedInsertCount,
@@ -115,6 +212,7 @@ export async function claimMigrationPreview(
       status: migrationRuns.status,
       previewExpiresAt: migrationRuns.previewExpiresAt,
       sourceRowCount: migrationRuns.sourceRowCount,
+      reviewedPlanHash: migrationRuns.reviewedPlanHash,
       plannedInsertCount: migrationRuns.plannedInsertCount,
       plannedReconcileCount: migrationRuns.plannedReconcileCount,
       duplicateCount: migrationRuns.duplicateCount,
@@ -151,17 +249,11 @@ export async function claimMigrationPreview(
     };
   }
 
-  const expected = {
-    sourceRowCount: input.summary.sourceRowCount,
-    plannedInsertCount: input.summary.plannedInsertCount,
-    plannedReconcileCount: input.summary.plannedReconcileCount ?? 0,
-    duplicateCount: input.summary.duplicateCount ?? 0,
-    unmatchedCount: input.summary.unmatchedCount ?? 0,
-    errorCount: input.summary.errorCount,
-  };
+  const expected = normalizedSummary(input.summary);
   const previewMatches =
     run.status === "previewed" &&
     run.previewExpiresAt.getTime() > Date.now() &&
+    run.reviewedPlanHash === migrationReviewedPlanHash(input) &&
     run.sourceRowCount === expected.sourceRowCount &&
     run.plannedInsertCount === expected.plannedInsertCount &&
     run.plannedReconcileCount === expected.plannedReconcileCount &&
