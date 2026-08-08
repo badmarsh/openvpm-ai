@@ -125,4 +125,18 @@ describe("clinic encounter workspace", () => {
     expect(workspaceSource).toContain("inventory already dispensed");
     expect(workspaceSource).toContain("expectedUpdatedAt");
   });
+
+  it("makes performed work reconciliation explicit without automatic billing", () => {
+    expect(workspaceSource).toContain(
+      "trpc.encounters.getVisitReconciliation.useQuery",
+    );
+    expect(workspaceSource).toContain(
+      "trpc.encounters.resolveVisitWork.useMutation",
+    );
+    expect(workspaceSource).toContain("Performed work reconciliation");
+    expect(workspaceSource).toContain("Link confirmed charge");
+    expect(workspaceSource).toContain("No charge");
+    expect(workspaceSource).toContain("Void/corrected");
+    expect(workspaceSource).toContain("never bills a suggestion automatically");
+  });
 });

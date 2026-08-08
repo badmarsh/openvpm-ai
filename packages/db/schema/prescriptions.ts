@@ -8,6 +8,7 @@ import {
   date,
   index,
   uniqueIndex,
+  foreignKey,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -73,6 +74,16 @@ export const prescriptions = pgTable(
       table.appointmentId,
       table.deletedAt
     ),
+    visitSourceUq: uniqueIndex("prescriptions_visit_source_uq").on(
+      table.practiceId,
+      table.appointmentId,
+      table.id
+    ),
+    appointmentPracticeFk: foreignKey({
+      columns: [table.practiceId, table.appointmentId],
+      foreignColumns: [appointments.practiceId, appointments.id],
+      name: "prescriptions_practice_appointment_fk",
+    }),
     operationUq: uniqueIndex("prescriptions_practice_operation_uq").on(
       table.practiceId,
       table.operationId

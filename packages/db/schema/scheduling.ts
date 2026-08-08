@@ -9,6 +9,7 @@ import {
   date,
   time,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { baseColumns } from "./common";
@@ -125,6 +126,10 @@ export const appointments = pgTable(
     ),
   },
   (table) => ({
+    practiceIdUq: uniqueIndex("appointments_practice_id_uq").on(
+      table.practiceId,
+      table.id
+    ),
     practiceTimeIdx: index("appointments_practice_time_idx").on(
       table.practiceId,
       table.startTime,
