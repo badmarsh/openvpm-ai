@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   automatedAppointmentReminderSuppressionReason,
   hasReservedEmailDomain,
+  hasReservedFixturePhone,
 } from "../automated-reminder-policy";
 
 describe("automated reminder delivery policy", () => {
@@ -45,5 +46,12 @@ describe("automated reminder delivery policy", () => {
     expect(
       automatedAppointmentReminderSuppressionReason({ clientEmail: email })
     ).toBeNull();
+  });
+
+  it("recognizes NANPA's fictional 555-0100 through 555-0199 range", () => {
+    expect(hasReservedFixturePhone("(303) 555-0100")).toBe(true);
+    expect(hasReservedFixturePhone("+1 212 555 0199")).toBe(true);
+    expect(hasReservedFixturePhone("+1 303 555 0200")).toBe(false);
+    expect(hasReservedFixturePhone("+44 20 7946 0958")).toBe(false);
   });
 });

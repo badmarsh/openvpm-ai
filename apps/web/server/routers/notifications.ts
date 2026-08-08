@@ -46,6 +46,10 @@ import {
   normalizeEmailSuppressionAddress,
 } from "@/lib/email-suppression";
 import { hasNonBlankMessagingSender } from "@/lib/messaging/sender-query";
+import {
+  getVaccinationRecallPreview,
+  sendVaccinationRecallReminders,
+} from "../vaccination-recalls";
 
 const DEFAULT_PRACTICE_NAME = "your clinic";
 
@@ -835,8 +839,17 @@ export const notificationsRouter = createRouter({
     return Array.from(grouped.values());
   }),
 
+  getVaccinationRecallPreview: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .query(async ({ ctx }) => {
+      await assertActivePractice(ctx);
+      const preview = await getVaccinationRecallPreview(ctx);
+      if (!preview) throw practiceNotFound();
+      return preview;
+    }),
+
   sendVaccinationReminders: protectedProcedure
-    .use(requireRole("admin"))
+    .use(requireRole("admin", "veterinarian", "front_desk"))
     .input(
       z.object({
         patientIds: z
@@ -849,220 +862,11 @@ export const notificationsRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
-      if (input.patientIds.length === 0) return { sent: 0, failed: 0 };
-      const patientIds = [...new Set(input.patientIds)];
-
-      const practice = await practiceNotificationSettings(ctx);
-      const today = formatDateInputForTimeZone(new Date(), practice.timezone);
-
-      const rows = await ctx.db
-        .select({
-          patientId: patients.id,
-          patientName: patients.name,
-          clientId: clients.id,
-          clientFirstName: clients.firstName,
-          clientLastName: clients.lastName,
-          clientEmail: clients.email,
-          clientPhone: clients.phone,
-          preferredContactMethod: clients.preferredContactMethod,
-          smsConsent: clients.smsConsent,
-          emailSuppressionReason: emailSuppressions.reason,
-          vaccineName: vaccinationRecords.vaccineName,
-          nextDueDate: vaccinationRecords.nextDueDate,
-        })
-        .from(vaccinationRecords)
-        .innerJoin(
-          patients,
-          and(
-            eq(vaccinationRecords.patientId, patients.id),
-            eq(patients.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-            isNull(patients.deletedAt)
-          )
-        )
-        .innerJoin(
-          clients,
-          and(
-            eq(patients.clientId, clients.id),
-            eq(clients.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-            isNull(clients.deletedAt)
-          )
-        )
-        .leftJoin(
-          emailSuppressions,
-          and(
-            eq(emailSuppressions.practiceId, ctx.practiceId),
-            sql`${emailSuppressions.email} = lower(trim(${clients.email}))`,
-            isNull(emailSuppressions.deletedAt)
-          )
-        )
-        .where(
-          and(
-            eq(vaccinationRecords.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-            isNull(vaccinationRecords.deletedAt),
-            eq(patients.practiceId, ctx.practiceId),
-            isNull(patients.deletedAt),
-            eq(clients.practiceId, ctx.practiceId),
-            isNull(clients.deletedAt),
-            inArray(patients.id, patientIds),
-            lt(vaccinationRecords.nextDueDate, today)
-          )
-        );
-
-      const grouped = new Map<string, {
-        patientName: string;
-        clientId: string;
-        clientName: string;
-        clientEmail: string | null;
-        emailSuppressionReason: string | null;
-        clientPhone: string | null;
-        preferredContactMethod: string | null;
-        smsConsent: boolean | null;
-        vaccines: { vaccineName: string; nextDueDate: string | null }[];
-      }>();
-
-      for (const row of rows) {
-        const existing = grouped.get(row.patientId);
-        if (existing) {
-          existing.vaccines.push({ vaccineName: row.vaccineName, nextDueDate: row.nextDueDate });
-        } else {
-          grouped.set(row.patientId, {
-            patientName: row.patientName,
-            clientId: row.clientId,
-            clientName: `${row.clientFirstName} ${row.clientLastName}`,
-            clientEmail: row.clientEmail,
-            emailSuppressionReason: row.emailSuppressionReason,
-            clientPhone: row.clientPhone,
-            preferredContactMethod: row.preferredContactMethod,
-            smsConsent: row.smsConsent,
-            vaccines: [{ vaccineName: row.vaccineName, nextDueDate: row.nextDueDate }],
-          });
-        }
-      }
-
-      let sent = 0;
-      let failed = patientIds.length - grouped.size;
-      let smsSenderPromise: Promise<{ locationId: string } | null> | null = null;
-      const getSmsSender = () => {
-        smsSenderPromise ??= activeReminderSmsSender(ctx);
-        return smsSenderPromise;
-      };
-
-      for (const [, data] of grouped) {
-        const vaccineNames = data.vaccines.map((v) => v.vaccineName).join(", ");
-        const logReminder = (
-          channel: "sms" | "email",
-          providerMessageId?: string,
-          vaccineLabel = vaccineNames
-        ) =>
-          ctx.db.insert(communications).values({
-            practiceId: ctx.practiceId,
-            clientId: data.clientId,
-            channel,
-            direction: "outbound",
-            subject: "Vaccination Reminder",
-            content: `Vaccination reminder sent for ${data.patientName}: ${vaccineLabel}`,
-            status: "sent",
-            providerMessageId,
-          });
-
-        const sendEmail = async (): Promise<boolean> => {
-          const clientEmail = normalizeEmailSuppressionAddress(data.clientEmail);
-          if (!clientEmail) return false;
-          if (data.emailSuppressionReason) return false;
-          try {
-            // Send one email per overdue vaccine (the email template handles a single vaccine)
-            for (const vax of data.vaccines) {
-              const result = await sendVaccinationReminder({
-                to: clientEmail,
-                clientName: data.clientName,
-                patientName: data.patientName,
-                vaccineName: vax.vaccineName,
-                dueDate: formatClinicalDate(
-                  vax.nextDueDate,
-                  practice.timezone,
-                  "overdue"
-                ),
-                practiceName: practice.name,
-                practicePhone: practice.phone ?? undefined,
-              });
-              if (!result.success) return false;
-              await logReminder("email", result.id, vax.vaccineName);
-            }
-            return true;
-          } catch {
-            return false;
-          }
-        };
-
-        const channel = pickReminderChannel({
-          preferredContactMethod: data.preferredContactMethod,
-          phone: data.clientPhone,
-          smsConsent: data.smsConsent ?? false,
-          hasEmail: Boolean(normalizeEmailSuppressionAddress(data.clientEmail)),
-          quietHours: isQuietHours(new Date(), practice.timezone),
-        });
-
-        if (channel === "sms") {
-          const smsSender = await getSmsSender();
-          let result: { success: boolean; sid?: string; error?: string };
-          if (smsSender) {
-            try {
-              result = await sendVaccinationReminderSms({
-                to: data.clientPhone!,
-                patientName: data.patientName,
-                vaccineName: vaccineNames,
-                practiceName: practice.name,
-                practicePhone: practice.phone ?? undefined,
-                practiceId: ctx.practiceId,
-                locationId: smsSender.locationId,
-              });
-            } catch (error) {
-              result = {
-                success: false,
-                error:
-                  error instanceof Error
-                    ? error.message
-                    : "Could not send SMS vaccination reminder",
-              };
-            }
-          } else {
-            result = {
-              success: false,
-              error:
-                "Set up an active texting number before sending SMS reminders",
-            };
-          }
-
-          if (result.success) {
-            await logReminder("sms", result.sid);
-            sent++;
-            continue;
-          }
-
-          if (await sendEmail()) {
-            sent++;
-            continue;
-          }
-
-          failed++;
-          continue;
-        }
-
-        if (channel === "email") {
-          if (await sendEmail()) {
-            sent++;
-          } else {
-            failed++;
-          }
-          continue;
-        }
-
-        failed++;
-      }
-
-      return { sent, failed };
+      const result = await sendVaccinationRecallReminders(
+        ctx,
+        input.patientIds
+      );
+      if (!result) throw practiceNotFound();
+      return result;
     }),
 });
