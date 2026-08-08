@@ -33,6 +33,7 @@ vi.mock("@/lib/tenant-db", () => ({
 import {
   getMessagingProvider,
   requiredMessagingEnvNames,
+  resolveMessagingTransport,
   resolveSender,
 } from "../index";
 
@@ -125,7 +126,6 @@ describe("requiredMessagingEnvNames", () => {
     vi.stubEnv("TELNYX_API_KEY", "KEY123");
     expect(requiredMessagingEnvNames()).toEqual([
       "TELNYX_API_KEY",
-      "TELNYX_MESSAGING_PROFILE_ID",
       "TELNYX_PUBLIC_KEY",
       "MESSAGING_REGISTRATION_ENCRYPTION_KEY",
     ]);
@@ -183,7 +183,11 @@ describe("resolveSender", () => {
     vi.stubEnv("TELNYX_API_KEY", "KEY123");
     vi.stubEnv("TELNYX_MESSAGING_PROFILE_ID", "env-profile");
     mocks.senderRows.push([
-      { messagingProfileId: "loc-profile", senderE164: "+15555550122" },
+      {
+        provider: "telnyx",
+        messagingProfileId: "loc-profile",
+        senderE164: "+15555550122",
+      },
     ]);
 
     await expect(
@@ -204,7 +208,7 @@ describe("resolveSender", () => {
     vi.stubEnv("TELNYX_MESSAGING_PROFILE_ID", "env-profile");
     vi.stubEnv("TELNYX_FROM_NUMBER", "+15555550100");
     mocks.senderRows.push([
-      { messagingProfileId: "   ", senderE164: "\n" },
+      { provider: "telnyx", messagingProfileId: "   ", senderE164: "\n" },
     ]);
 
     await expect(
@@ -228,5 +232,110 @@ describe("resolveSender", () => {
         locationId: "00000000-0000-0000-0000-000000000099",
       })
     ).resolves.toEqual({});
+  });
+});
+
+describe("resolveMessagingTransport", () => {
+  it("fails closed before DB work when a location has no practice scope", async () => {
+    clearMessagingEnv();
+    vi.stubEnv("TELNYX_API_KEY", "KEY123");
+    vi.stubEnv("TELNYX_MESSAGING_PROFILE_ID", "env-profile");
+
+    await expect(
+      resolveMessagingTransport({
+        locationId: "00000000-0000-0000-0000-000000000002",
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mocks.withSystem).not.toHaveBeenCalled();
+    expect(mocks.selectInnerJoin).not.toHaveBeenCalled();
+  });
+
+  it("binds an explicit location's persisted provider and sender in one lookup", async () => {
+    clearMessagingEnv();
+    vi.stubEnv("TELNYX_API_KEY", "KEY123");
+    vi.stubEnv("MESSAGING_PROVIDER", "telnyx");
+    mocks.senderRows.push([
+      {
+        provider: "twilio",
+        messagingProfileId: "MG-location",
+        senderE164: "+15555550122",
+      },
+    ]);
+
+    const transport = await resolveMessagingTransport({
+      practiceId: "00000000-0000-0000-0000-0000000000aa",
+      locationId: "00000000-0000-0000-0000-000000000002",
+    });
+
+    expect(transport).toEqual({
+      provider: expect.objectContaining({ name: "twilio" }),
+      sender: {
+        messagingServiceId: "MG-location",
+        from: "+15555550122",
+      },
+    });
+    expect(mocks.selectInnerJoin).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed for an unsupported persisted provider instead of using the global provider", async () => {
+    clearMessagingEnv();
+    vi.stubEnv("TELNYX_API_KEY", "KEY123");
+    vi.stubEnv("TELNYX_MESSAGING_PROFILE_ID", "env-profile");
+    mocks.senderRows.push([
+      {
+        provider: "unknown-provider",
+        messagingProfileId: "location-profile",
+        senderE164: "+15555550122",
+      },
+    ]);
+
+    await expect(
+      resolveMessagingTransport({
+        practiceId: "00000000-0000-0000-0000-0000000000aa",
+        locationId: "00000000-0000-0000-0000-000000000002",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("forces explicit location sends through console in demo mode", async () => {
+    clearMessagingEnv();
+    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "true");
+    mocks.senderRows.push([
+      {
+        provider: "twilio",
+        messagingProfileId: "MG-location",
+        senderE164: "+15555550122",
+      },
+    ]);
+
+    await expect(
+      resolveMessagingTransport({
+        practiceId: "00000000-0000-0000-0000-0000000000aa",
+        locationId: "00000000-0000-0000-0000-000000000002",
+      })
+    ).resolves.toEqual({
+      provider: expect.objectContaining({ name: "console" }),
+      sender: {
+        messagingServiceId: "MG-location",
+        from: "+15555550122",
+      },
+    });
+  });
+
+  it("keeps the env-selected provider and sender for locationless dev sends", async () => {
+    clearMessagingEnv();
+    vi.stubEnv("MESSAGING_PROVIDER", "twilio");
+    vi.stubEnv("TWILIO_MESSAGING_SERVICE_SID", "MG-env");
+    vi.stubEnv("TWILIO_PHONE_NUMBER", "+15555550111");
+
+    await expect(resolveMessagingTransport({ practiceId: "p1" })).resolves.toEqual({
+      provider: expect.objectContaining({ name: "twilio" }),
+      sender: {
+        messagingServiceId: "MG-env",
+        from: "+15555550111",
+      },
+    });
+    expect(mocks.selectInnerJoin).not.toHaveBeenCalled();
   });
 });

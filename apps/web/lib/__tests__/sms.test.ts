@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => {
       send: providerSend,
     })),
     providerSend,
-    resolveSender: vi.fn(),
+    resolveMessagingTransport: vi.fn(),
     isSuppressed: vi.fn(),
     recordUsage: vi.fn(),
     billingEnforced: vi.fn(() => false),
@@ -41,7 +41,7 @@ vi.mock("@/lib/messaging", async (importOriginal) => {
   return {
     ...actual,
     getMessagingProvider: mocks.getMessagingProvider,
-    resolveSender: mocks.resolveSender,
+    resolveMessagingTransport: mocks.resolveMessagingTransport,
     isSuppressed: mocks.isSuppressed,
   };
 });
@@ -58,6 +58,17 @@ function deferred<T = void>() {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+function transport(
+  sender: { messagingServiceId?: string; from?: string },
+  name: "telnyx" | "twilio" | "console" = "telnyx",
+  send = mocks.providerSend
+) {
+  return {
+    provider: { name, isConfigured: () => true, send },
+    sender,
+  };
 }
 
 afterEach(() => {
@@ -102,7 +113,9 @@ describe("sendSms", () => {
 
   it("meters successful real provider sends for hosted usage billing", async () => {
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({ from: "+15555550100" });
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport({ from: "+15555550100" })
+    );
     mocks.providerSend.mockResolvedValue({ success: true, id: "sms-1" });
 
     await expect(
@@ -121,7 +134,9 @@ describe("sendSms", () => {
 
   it("normalizes recipients before suppression checks and provider sends", async () => {
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({ from: "+15555550100" });
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport({ from: "+15555550100" })
+    );
     mocks.providerSend.mockResolvedValue({ success: true, id: "sms-1" });
 
     await expect(
@@ -156,7 +171,7 @@ describe("sendSms", () => {
     });
 
     expect(mocks.isSuppressed).not.toHaveBeenCalled();
-    expect(mocks.resolveSender).not.toHaveBeenCalled();
+    expect(mocks.resolveMessagingTransport).not.toHaveBeenCalled();
     expect(mocks.providerSend).not.toHaveBeenCalled();
     expect(mocks.recordUsage).not.toHaveBeenCalled();
   });
@@ -164,7 +179,9 @@ describe("sendSms", () => {
   it("waits for hosted usage recording before returning a successful real send", async () => {
     const usage = deferred();
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({ from: "+15555550100" });
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport({ from: "+15555550100" })
+    );
     mocks.providerSend.mockResolvedValue({ success: true, id: "sms-1" });
     mocks.recordUsage.mockReturnValueOnce(usage.promise);
 
@@ -191,7 +208,9 @@ describe("sendSms", () => {
 
   it("keeps provider message ids on appointment reminder helper results", async () => {
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({ from: "+15555550100" });
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport({ from: "+15555550100" })
+    );
     mocks.providerSend.mockResolvedValue({ success: true, id: "sms-reminder-1" });
 
     await expect(
@@ -211,7 +230,9 @@ describe("sendSms", () => {
 
   it("keeps provider message ids on vaccination reminder helper results", async () => {
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({ from: "+15555550100" });
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport({ from: "+15555550100" })
+    );
     mocks.providerSend.mockResolvedValue({ success: true, id: "sms-vax-1" });
 
     await expect(
@@ -230,7 +251,9 @@ describe("sendSms", () => {
 
   it("does not meter failed provider sends", async () => {
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({ from: "+15555550100" });
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport({ from: "+15555550100" })
+    );
     mocks.providerSend.mockResolvedValue({
       success: false,
       error: "Provider rejected",
@@ -258,7 +281,7 @@ describe("sendSms", () => {
       send: mocks.providerSend,
     });
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({});
+    mocks.resolveMessagingTransport.mockResolvedValue(transport({}, "console"));
     mocks.providerSend.mockResolvedValue({ success: true, id: "console-1" });
 
     await expect(
@@ -295,7 +318,7 @@ describe("sendSms", () => {
       error: "SMS provider is not configured for hosted sending.",
     });
 
-    expect(mocks.resolveSender).not.toHaveBeenCalled();
+    expect(mocks.resolveMessagingTransport).not.toHaveBeenCalled();
     expect(mocks.providerSend).not.toHaveBeenCalled();
     expect(mocks.recordUsage).not.toHaveBeenCalled();
   });
@@ -309,7 +332,7 @@ describe("sendSms", () => {
       send: mocks.providerSend,
     });
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({});
+    mocks.resolveMessagingTransport.mockResolvedValue(transport({}, "console"));
     mocks.providerSend.mockResolvedValue({ success: true, id: "console-1" });
 
     await expect(
@@ -360,14 +383,14 @@ describe("sendSms", () => {
 
     expect(mocks.hasHostedFullAccess).not.toHaveBeenCalled();
     expect(mocks.isSuppressed).not.toHaveBeenCalled();
-    expect(mocks.resolveSender).not.toHaveBeenCalled();
+    expect(mocks.resolveMessagingTransport).not.toHaveBeenCalled();
     expect(mocks.providerSend).not.toHaveBeenCalled();
     expect(mocks.recordUsage).not.toHaveBeenCalled();
   });
 
   it("fails closed for explicit locations without an active sender", async () => {
     mocks.isSuppressed.mockResolvedValue(false);
-    mocks.resolveSender.mockResolvedValue({});
+    mocks.resolveMessagingTransport.mockResolvedValue(undefined);
 
     await expect(
       sendSms({
@@ -381,7 +404,43 @@ describe("sendSms", () => {
       error: "No active texting sender is configured for this location.",
     });
 
+    expect(mocks.getMessagingProvider).not.toHaveBeenCalled();
     expect(mocks.providerSend).not.toHaveBeenCalled();
     expect(mocks.recordUsage).not.toHaveBeenCalled();
+  });
+
+  it("dispatches an explicit location through its persisted provider, not the global provider", async () => {
+    const twilioSend = vi.fn().mockResolvedValue({ success: true, id: "SM-location" });
+    mocks.isSuppressed.mockResolvedValue(false);
+    mocks.resolveMessagingTransport.mockResolvedValue(
+      transport(
+        {
+          messagingServiceId: "MG-location",
+          from: "+15555550122",
+        },
+        "twilio",
+        twilioSend
+      )
+    );
+
+    await expect(
+      sendSms({
+        to: "+15555550199",
+        body: "Location-bound message",
+        practiceId: "00000000-0000-0000-0000-0000000000aa",
+        locationId: "00000000-0000-0000-0000-000000000002",
+      })
+    ).resolves.toEqual({ success: true, sid: "SM-location", error: undefined });
+
+    expect(mocks.getMessagingProvider).not.toHaveBeenCalled();
+    expect(mocks.providerSend).not.toHaveBeenCalled();
+    expect(twilioSend).toHaveBeenCalledWith({
+      to: "+15555550199",
+      body: "Location-bound message",
+      sender: {
+        messagingServiceId: "MG-location",
+        from: "+15555550122",
+      },
+    });
   });
 });

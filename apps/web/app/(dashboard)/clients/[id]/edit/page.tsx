@@ -21,6 +21,11 @@ import {
   isOptionalClientTextValid,
   isRequiredClientTextValid,
 } from "@/lib/clients/policy";
+import { normalizeE164 } from "@/lib/messaging/phone";
+import {
+  phoneNumbersMatchForConsent,
+  SMS_CONSENT_DISCLOSURE,
+} from "@/lib/messaging/consent";
 
 function EditClientLoadingPanel() {
   return (
@@ -96,6 +101,7 @@ function EditClientForm() {
     zip: "",
   });
   const [smsConsent, setSmsConsent] = useState(false);
+  const [smsConsentTouched, setSmsConsentTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -120,6 +126,7 @@ function EditClientForm() {
         zip: client.zip ?? "",
       });
       setSmsConsent(client.smsConsent ?? false);
+      setSmsConsentTouched(false);
     }
   }, [client]);
 
@@ -134,6 +141,10 @@ function EditClientForm() {
     },
   });
 
+  const smsPhoneValid = normalizeE164(form.phone) !== null;
+  const phoneChanged = client
+    ? !phoneNumbersMatchForConsent(client.phone, form.phone)
+    : false;
   const canSubmit =
     isRequiredClientTextValid(form.firstName, CLIENT_NAME_MAX_LENGTH) &&
     isRequiredClientTextValid(form.lastName, CLIENT_NAME_MAX_LENGTH) &&
@@ -142,7 +153,8 @@ function EditClientForm() {
     isOptionalClientTextValid(form.address, CLIENT_ADDRESS_MAX_LENGTH) &&
     isOptionalClientTextValid(form.city, CLIENT_CITY_MAX_LENGTH) &&
     isOptionalClientTextValid(form.state, CLIENT_STATE_MAX_LENGTH) &&
-    isOptionalClientTextValid(form.zip, CLIENT_ZIP_MAX_LENGTH);
+    isOptionalClientTextValid(form.zip, CLIENT_ZIP_MAX_LENGTH) &&
+    (!smsConsentTouched || !smsConsent || smsPhoneValid);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +162,10 @@ function EditClientForm() {
 
     if (!client) {
       setError("Load the client before saving changes.");
+      return;
+    }
+    if (smsConsentTouched && smsConsent && !smsPhoneValid) {
+      setError("Enter a valid mobile phone number before recording SMS consent.");
       return;
     }
     if (!canSubmit) {
@@ -167,12 +183,22 @@ function EditClientForm() {
       city: form.city.trim() || undefined,
       state: form.state.trim() || undefined,
       zip: form.zip.trim() || undefined,
-      smsConsent,
+      ...(smsConsentTouched ? { smsConsent } : {}),
     });
   };
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (field === "phone" && client) {
+      // Consent belongs to the destination. Any material phone change requires
+      // a fresh, explicit check after the new number is entered.
+      setSmsConsent(
+        phoneNumbersMatchForConsent(client.phone, value)
+          ? (client.smsConsent ?? false)
+          : false
+      );
+      setSmsConsentTouched(false);
+    }
   };
 
   if (isLoading) {
@@ -285,16 +311,28 @@ function EditClientForm() {
         <label className="flex items-start gap-2 rounded-md border border-border p-3 text-sm">
           <Checkbox
             checked={smsConsent}
-            onChange={(e) => setSmsConsent(e.target.checked)}
+            onChange={(e) => {
+              setSmsConsent(e.target.checked);
+              setSmsConsentTouched(true);
+            }}
+            disabled={!smsPhoneValid && !smsConsent}
             className="mt-0.5"
           />
           <span>
             <span className="font-medium">
-              Client agrees to receive text messages
+              I confirm the client explicitly consented to SMS
             </span>
             <span className="block text-xs text-muted-foreground">
-              Appointment and care reminders by SMS. They can reply STOP to opt out
-              anytime.
+              {SMS_CONSENT_DISCLOSURE.snapshot}
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Saving other details does not renew consent. Only check this after
+              the client has read this disclosure or you have read it to them.
+              {phoneChanged
+                ? " The phone number changed, so prior SMS consent will be removed unless the client explicitly re-consents."
+                : !smsPhoneValid && !smsConsent
+                  ? " Enter a valid mobile phone number to record consent."
+                  : ""}
             </span>
           </span>
         </label>

@@ -24,6 +24,11 @@ import {
   CLIENT_STATE_MAX_LENGTH,
   CLIENT_ZIP_MAX_LENGTH,
 } from "@/lib/clients/policy";
+import { normalizeE164 } from "@/lib/messaging/phone";
+import {
+  phoneNumbersMatchForConsent,
+  SMS_CONSENT_DISCLOSURE,
+} from "@/lib/messaging/consent";
 
 const clientNameInput = z.string().trim().min(1).max(CLIENT_NAME_MAX_LENGTH);
 const clientEmailInput = z
@@ -261,10 +266,22 @@ export const clientsRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      await assertActivePractice(ctx);
       const { smsConsent, ...rest } = input;
+      if (smsConsent && !normalizeE164(rest.phone)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A valid mobile phone number is required for SMS consent",
+        });
+      }
+
+      await assertActivePractice(ctx);
       const consent = smsConsent
-        ? { smsConsent: true, smsConsentAt: new Date(), smsConsentSource: "intake" }
+        ? {
+            smsConsent: true,
+            smsConsentAt: new Date(),
+            smsConsentSource: SMS_CONSENT_DISCLOSURE.source,
+            smsConsentDisclosure: SMS_CONSENT_DISCLOSURE.snapshot,
+          }
         : {};
       const [client] = await ctx.db
         .insert(clients)
@@ -303,32 +320,90 @@ export const clientsRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, smsConsent, ...rest } = input;
-      const data: Record<string, unknown> = { ...rest };
-      // Record consent transitions with an audit timestamp + source.
-      if (smsConsent !== undefined) {
-        data.smsConsent = smsConsent;
-        if (smsConsent) {
-          data.smsConsentAt = new Date();
-          data.smsConsentSource = "intake";
+      return ctx.db.transaction(async (tx) => {
+        const phoneWasProvided = Object.prototype.hasOwnProperty.call(
+          input,
+          "phone"
+        );
+        const { id, smsConsent, phone, ...rest } = input;
+        const data: Record<string, unknown> = { ...rest };
+
+        if (phoneWasProvided) {
+          // Drizzle ignores undefined values. Use null so an explicitly cleared
+          // phone field is actually removed from the client record.
+          data.phone = phone ?? null;
         }
-      }
-      const [client] = await ctx.db
-        .update(clients)
-        .set(data)
-        .where(
-          and(
-            eq(clients.id, id),
-            eq(clients.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-            isNull(clients.deletedAt)
+
+        if (phoneWasProvided || smsConsent !== undefined) {
+          // Keep the consent decision and destination update under one row lock.
+          // Without the surrounding transaction, FOR UPDATE would release before
+          // the write and a concurrent phone edit could attach consent to the
+          // wrong destination.
+          const [existingClient] = await tx
+            .select({ id: clients.id, phone: clients.phone })
+            .from(clients)
+            .where(
+              and(
+                eq(clients.id, id),
+                eq(clients.practiceId, ctx.practiceId),
+                activePracticePredicate(ctx.practiceId),
+                isNull(clients.deletedAt)
+              )
+            )
+            .limit(1)
+            .for("update");
+
+          if (!existingClient) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+          }
+
+          const nextPhone = phoneWasProvided ? phone : existingClient.phone;
+          const phoneChanged = !phoneNumbersMatchForConsent(
+            existingClient.phone,
+            nextPhone
+          );
+
+          if (smsConsent === true) {
+            if (!normalizeE164(nextPhone)) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "A valid mobile phone number is required for SMS consent",
+              });
+            }
+
+            // A true value is an explicit staff attestation under the current,
+            // server-owned disclosure. Unrelated edits omit this field entirely.
+            data.smsConsent = true;
+            data.smsConsentAt = new Date();
+            data.smsConsentSource = SMS_CONSENT_DISCLOSURE.source;
+            data.smsConsentDisclosure = SMS_CONSENT_DISCLOSURE.snapshot;
+          } else if (phoneChanged || smsConsent === false) {
+            // Consent belongs to one destination. Changing that destination (or
+            // explicitly withdrawing consent) invalidates all prior evidence.
+            data.smsConsent = false;
+            data.smsConsentAt = null;
+            data.smsConsentSource = null;
+            data.smsConsentDisclosure = null;
+          }
+        }
+
+        const [client] = await tx
+          .update(clients)
+          .set(data)
+          .where(
+            and(
+              eq(clients.id, id),
+              eq(clients.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(clients.deletedAt)
+            )
           )
-        )
-        .returning();
-      if (!client) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
-      }
-      return client;
+          .returning();
+        if (!client) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+        }
+        return client;
+      });
     }),
 
   rotatePortalAccessToken: clientManagerProcedure

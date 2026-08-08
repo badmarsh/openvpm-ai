@@ -7,7 +7,7 @@ import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 import {
   getMessagingProvider,
   normalizeE164,
-  resolveSender,
+  resolveMessagingTransport,
   isSuppressed,
 } from "@/lib/messaging";
 import { envFlagEnabled } from "@/lib/env-bool";
@@ -15,10 +15,10 @@ import { envFlagEnabled } from "@/lib/env-bool";
 // ---------------------------------------------------------------------------
 // Core send function
 //
-// Transport is provider-agnostic (lib/messaging): the active provider (Telnyx
-// preferred, Twilio fallback, console in dev) is chosen by env. This module
-// keeps the hosted entitlement gate and usage metering; the per-location sender
-// is resolved by lib/messaging (env default today, per-location config in P1).
+// Transport is provider-agnostic (lib/messaging): explicit locations bind the
+// persisted provider and sender from one active location_messaging row. Calls
+// without a location retain the env-selected provider/sender fallback for dev.
+// This module keeps the hosted entitlement gate and usage metering.
 // ---------------------------------------------------------------------------
 
 export async function sendSms(options: {
@@ -26,10 +26,9 @@ export async function sendSms(options: {
   body: string;
   /** When set (and a real send occurs), meters the SMS for hosted billing. */
   practiceId?: string;
-  /** Future: selects the location's own number/messaging profile (P1). */
+  /** Selects the location's bound provider and number/messaging profile. */
   locationId?: string;
 }): Promise<{ success: boolean; sid?: string; error?: string }> {
-  const provider = getMessagingProvider();
   const hostedBilling = billingEnforced();
   const recipient = normalizeE164(options.to);
 
@@ -40,8 +39,11 @@ export async function sendSms(options: {
     };
   }
 
+  // Preserve the locationless hosted guard without consulting the global
+  // provider for explicit locations. Their provider comes only from the DB row.
   if (
-    provider.name === "console" &&
+    !options.locationId &&
+    getMessagingProvider().name === "console" &&
     hostedBilling &&
     !envFlagEnabled("NEXT_PUBLIC_DEMO_MODE")
   ) {
@@ -101,18 +103,30 @@ export async function sendSms(options: {
     }
   }
 
-  const sender = await resolveSender({
+  const transport = await resolveMessagingTransport({
     practiceId: options.practiceId,
     locationId: options.locationId,
   });
-  if (
-    options.locationId &&
-    !sender.messagingServiceId &&
-    !sender.from
-  ) {
+  if (options.locationId && !transport) {
     return {
       success: false,
       error: "No active texting sender is configured for this location.",
+    };
+  }
+
+  if (!transport) {
+    return { success: false, error: "SMS provider is not configured." };
+  }
+
+  const { provider, sender } = transport;
+  if (
+    provider.name === "console" &&
+    hostedBilling &&
+    !envFlagEnabled("NEXT_PUBLIC_DEMO_MODE")
+  ) {
+    return {
+      success: false,
+      error: "SMS provider is not configured for hosted sending.",
     };
   }
 

@@ -84,11 +84,9 @@ EMAIL_SUPPORT_ADDRESS=support@openvpm.com
 EMAIL_COMPANY_ADDRESS=...
 MESSAGING_PROVIDER=telnyx
 TELNYX_API_KEY=...
-TELNYX_MESSAGING_PROFILE_ID=...
-TELNYX_FROM_NUMBER=...
 TELNYX_PUBLIC_KEY=...
 MESSAGING_REGISTRATION_ENCRYPTION_KEY=... # openssl rand -base64 32
-MESSAGING_PROVISIONING_ENABLED=true
+MESSAGING_PROVISIONING_ENABLED=false
 AI_MODEL=claude-sonnet-4-6
 ANTHROPIC_API_KEY=...
 OPS_ALERT_WEBHOOK_URL=...
@@ -103,6 +101,11 @@ Telnyx is the hosted SMS default. `TELNYX_PUBLIC_KEY` is required for the
 public webhook to verify inbound SMS and delivery-status callbacks. For a
 hosted Telnyx deployment, set a dedicated 32-byte
 `MESSAGING_REGISTRATION_ENCRYPTION_KEY` before collecting clinic A2P details.
+Normal clinic sends use the per-location profile and number stored after the
+location completes texting setup. `TELNYX_MESSAGING_PROFILE_ID` and
+`TELNYX_FROM_NUMBER` are optional platform fallback sender values for legacy or
+development calls that do not specify a location; do not point them at an
+individual clinic merely to satisfy readiness checks.
 Keep `MESSAGING_PROVISIONING_ENABLED=false` until the Telnyx account, webhook,
 operator queue, and budget controls have been verified; changing it to `true`
 opens the explicitly confirmed fee-bearing provisioning actions. For a

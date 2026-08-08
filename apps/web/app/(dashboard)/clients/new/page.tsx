@@ -21,6 +21,8 @@ import {
   isOptionalClientTextValid,
   isRequiredClientTextValid,
 } from "@/lib/clients/policy";
+import { normalizeE164 } from "@/lib/messaging/phone";
+import { SMS_CONSENT_DISCLOSURE } from "@/lib/messaging/consent";
 
 function canManageClientFormRole(role?: string | null): boolean {
   return (
@@ -100,6 +102,7 @@ function NewClientForm() {
     },
   });
 
+  const smsPhoneValid = normalizeE164(form.phone) !== null;
   const canSubmit =
     isRequiredClientTextValid(form.firstName, CLIENT_NAME_MAX_LENGTH) &&
     isRequiredClientTextValid(form.lastName, CLIENT_NAME_MAX_LENGTH) &&
@@ -108,12 +111,17 @@ function NewClientForm() {
     isOptionalClientTextValid(form.address, CLIENT_ADDRESS_MAX_LENGTH) &&
     isOptionalClientTextValid(form.city, CLIENT_CITY_MAX_LENGTH) &&
     isOptionalClientTextValid(form.state, CLIENT_STATE_MAX_LENGTH) &&
-    isOptionalClientTextValid(form.zip, CLIENT_ZIP_MAX_LENGTH);
+    isOptionalClientTextValid(form.zip, CLIENT_ZIP_MAX_LENGTH) &&
+    (!smsConsent || smsPhoneValid);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    if (smsConsent && !smsPhoneValid) {
+      setError("Enter a valid mobile phone number before recording SMS consent.");
+      return;
+    }
     if (!canSubmit) {
       setError("Check required fields and field lengths.");
       return;
@@ -134,6 +142,9 @@ function NewClientForm() {
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (field === "phone" && !normalizeE164(value)) {
+      setSmsConsent(false);
+    }
   };
 
   return (
@@ -225,15 +236,22 @@ function NewClientForm() {
           <Checkbox
             checked={smsConsent}
             onChange={(e) => setSmsConsent(e.target.checked)}
+            disabled={!smsPhoneValid}
             className="mt-0.5"
           />
           <span>
             <span className="font-medium">
-              Client agrees to receive text messages
+              I confirm the client explicitly consented to SMS
             </span>
             <span className="block text-xs text-muted-foreground">
-              Appointment and care reminders by SMS. They can reply STOP to opt out
-              anytime.
+              {SMS_CONSENT_DISCLOSURE.snapshot}
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Only check this after the client has read this disclosure or you
+              have read it to them.
+              {!smsPhoneValid
+                ? " Enter a valid mobile phone number to record consent."
+                : ""}
             </span>
           </span>
         </label>
