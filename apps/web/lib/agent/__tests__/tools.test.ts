@@ -3,10 +3,16 @@ import { readFileSync } from "node:fs";
 
 const webhookMocks = vi.hoisted(() => ({
   dispatchWebhookEvent: vi.fn(async () => undefined),
+  recordActivationAfterAppointmentCreated: vi.fn(async () => true),
 }));
 
 vi.mock("@/lib/webhook-dispatcher", () => ({
   dispatchWebhookEvent: webhookMocks.dispatchWebhookEvent,
+}));
+
+vi.mock("@/lib/funnel-events-server", () => ({
+  recordActivationAfterAppointmentCreated:
+    webhookMocks.recordActivationAfterAppointmentCreated,
 }));
 
 import {
@@ -363,6 +369,9 @@ describe("book_appointment validation", () => {
       "appointment.created",
       expect.objectContaining({ source: "agent" })
     );
+    expect(
+      webhookMocks.recordActivationAfterAppointmentCreated
+    ).toHaveBeenCalledWith(ctx.db, PRACTICE_ID, "agent.book_appointment");
   });
 });
 

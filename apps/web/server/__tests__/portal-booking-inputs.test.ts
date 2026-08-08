@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   })),
   billingEnforced: vi.fn(() => false),
   dispatchWebhookEvent: vi.fn(async () => undefined),
+  recordActivationAfterAppointmentCreated: vi.fn(async () => true),
   hasHostedFullAccess: vi.fn(() => true),
 }));
 
@@ -17,6 +18,11 @@ vi.mock("@/lib/rate-limit", () => ({
 
 vi.mock("@/lib/webhook-dispatcher", () => ({
   dispatchWebhookEvent: mocks.dispatchWebhookEvent,
+}));
+
+vi.mock("@/lib/funnel-events-server", () => ({
+  recordActivationAfterAppointmentCreated:
+    mocks.recordActivationAfterAppointmentCreated,
 }));
 
 vi.mock("@/lib/billing/plans", () => ({
@@ -742,6 +748,11 @@ describe("portal booking input validation", () => {
           "Requested: 2026-07-01 09:00 (America/Los_Angeles)"
         ),
       })
+    );
+    expect(mocks.recordActivationAfterAppointmentCreated).toHaveBeenCalledWith(
+      db,
+      PRACTICE_ID,
+      "portal.requestAppointment"
     );
     const communicationInsert = insertValues.mock.calls[1] as unknown as [
       { content: string; assignedTo?: unknown },

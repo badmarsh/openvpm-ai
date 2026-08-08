@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 
 const mocks = vi.hoisted(() => {
   const selectResults: unknown[][] = [];
@@ -32,6 +33,7 @@ const mocks = vi.hoisted(() => {
 
 const {
   ensureRegistrationFirstTouch,
+  recordActivationAfterAppointmentCreated,
   recordPracticeFunnelStage,
 } = await import("../funnel-events-server");
 
@@ -147,5 +149,44 @@ describe("registration funnel attribution", () => {
         practiceId: PRACTICE_ID,
       })
     );
+  });
+});
+
+describe("appointment activation telemetry", () => {
+  it("keeps demo clients and appointments out of the durable stage", () => {
+    const source = readFileSync(
+      new URL("../funnel-events-server.ts", import.meta.url),
+      "utf8"
+    );
+
+    expect(source).toContain("p.settings -> 'demoData' -> 'clientIds'");
+    expect(source).toContain("p.settings -> 'demoData' -> 'appointmentIds'");
+    expect(source).toContain(".onConflictDoNothing()");
+  });
+
+  it("does not fail a durable appointment when activation persistence fails", async () => {
+    const error = new Error("analytics unavailable");
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const db = {
+      transaction: vi.fn(async () => {
+        throw error;
+      }),
+    };
+
+    await expect(
+      recordActivationAfterAppointmentCreated(
+        db as never,
+        PRACTICE_ID,
+        "booking.book"
+      )
+    ).resolves.toBe(false);
+
+    expect(consoleError).toHaveBeenCalledWith(
+      "[booking.book] activation funnel event failed:",
+      error
+    );
+    consoleError.mockRestore();
   });
 });
