@@ -145,6 +145,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.NEXT_PUBLIC_APP_URL;
   delete process.env.NEXTAUTH_URL;
+  delete process.env.HOSTED_BILLING_ENABLED;
+  delete process.env.MESSAGING_PROVISIONING_PRACTICE_IDS;
   // The platform kill-switch is on for behavior tests; the gate itself is
   // covered in "messaging provisioning kill-switch".
   vi.stubEnv("MESSAGING_PROVISIONING_ENABLED", "true");
@@ -168,6 +170,32 @@ describe("messaging provisioning kill-switch", () => {
     // No DB reads and no Telnyx calls happen while the switch is off.
     expect(select).not.toHaveBeenCalled();
     expect(mocks.searchAvailableNumbers).not.toHaveBeenCalled();
+  });
+
+  it("requires an explicit practice allowlist for hosted number orders", async () => {
+    vi.stubEnv("HOSTED_BILLING_ENABLED", "true");
+    const { db, select } = createDb({
+      practiceRows: [
+        {
+          tier: "cloud",
+          billingStatus: "trialing",
+          trialEndsAt: new Date("2099-01-01T00:00:00Z"),
+        },
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).provisionNumber({ locationId: LOCATION_ID, mode: "host" })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: expect.stringContaining("approved pilot clinics"),
+    });
+
+    // Only the hosted subscription guard may read; the messaging mutation
+    // stops before its practice/location queries or any provider call.
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(mocks.createMessagingProfile).not.toHaveBeenCalled();
+    expect(mocks.createHostedOrder).not.toHaveBeenCalled();
   });
 });
 

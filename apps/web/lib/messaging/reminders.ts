@@ -41,7 +41,8 @@ export type ReminderChannel = "sms" | "email" | "skip" | "none";
  * Choose the channel for one reminder:
  * - "sms"   — client prefers SMS, has a phone + consent, and it's not quiet hours
  * - "email" — fall back to email whenever SMS isn't chosen and an email exists
- * - "skip"  — SMS-preferred but quiet hours and no email → defer to a later run
+ * - "skip"  — SMS-preferred during quiet hours and the caller requested deferral,
+ *             or no email exists → defer to a later run
  * - "none"  — no usable channel
  * (The suppression list is enforced separately as a hard gate inside sendSms.)
  */
@@ -51,12 +52,15 @@ export function pickReminderChannel(opts: {
   smsConsent: boolean;
   hasEmail: boolean;
   quietHours: boolean;
+  /** Automated sweeps can retry after quiet hours instead of changing channel. */
+  deferQuietHoursSms?: boolean;
 }): ReminderChannel {
   const smsEligible =
     opts.preferredContactMethod === "sms" &&
     normalizeE164(opts.phone) !== null &&
     opts.smsConsent;
   if (smsEligible && !opts.quietHours) return "sms";
+  if (smsEligible && opts.quietHours && opts.deferQuietHoursSms) return "skip";
   if (opts.hasEmail) return "email";
   if (smsEligible && opts.quietHours) return "skip";
   return "none";
