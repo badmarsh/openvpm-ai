@@ -179,6 +179,11 @@ export const invoices = pgTable(
           and ${table.status} <> 'void'
           and ${table.deletedAt} is null`
       ),
+    visitTargetUq: uniqueIndex("invoices_visit_target_uq").on(
+      table.practiceId,
+      table.appointmentId,
+      table.id
+    ),
   })
 );
 
@@ -223,6 +228,10 @@ export const invoiceItems = pgTable(
       .where(
         sql`${table.sourcePrescriptionId} is not null and ${table.deletedAt} is null`
       ),
+    invoiceItemTargetUq: uniqueIndex("invoice_items_invoice_item_target_uq").on(
+      table.invoiceId,
+      table.id
+    ),
   })
 );
 

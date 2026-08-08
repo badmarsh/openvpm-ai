@@ -46,6 +46,7 @@ function createDb(opts: {
   selectResults: unknown[][];
   invoiceInsert?: Record<string, unknown>;
   updateReturns?: unknown[][];
+  executeResults?: unknown[];
 }) {
   const selectResults = [...opts.selectResults];
   let transactionDepth = 0;
@@ -106,6 +107,8 @@ function createDb(opts: {
   });
   const update = vi.fn(() => ({ set: updateSet }));
 
+  const executeResults = [...(opts.executeResults ?? [])];
+  const execute = vi.fn(async () => executeResults.shift());
   const db: Record<string, unknown> = {
     transaction: async (fn: (tx: unknown) => unknown) => {
       transactionDepth += 1;
@@ -115,13 +118,13 @@ function createDb(opts: {
         transactionDepth -= 1;
       }
     },
-    execute: vi.fn(async () => undefined),
+    execute,
     select,
     insert,
     update,
   };
 
-  return { db, select, insertValues, update, updateSet, lockCalls };
+  return { db, select, insertValues, update, updateSet, lockCalls, execute };
 }
 
 const productLine = {
@@ -602,6 +605,41 @@ describe("billing invoice integrity", () => {
         total: "45.00",
       }),
     ]);
+  });
+
+  it("does not remove invoice lines already confirmed against performed work", async () => {
+    const { db, updateSet, insertValues, execute } = createDb({
+      selectResults: [
+        [{ taxRatePercent: "0.00" }],
+        [
+          {
+            id: INVOICE_ID,
+            paidAmount: "0.00",
+            status: "draft",
+            isEstimate: false,
+            updatedAt: UPDATED_AT,
+            appointmentId: APPOINTMENT_ID,
+            patientId: PATIENT_ID,
+          },
+        ],
+      ],
+      executeResults: [[], [], { rows: [{ id: "visit-work-item" }] }],
+    });
+
+    await expect(
+      callerWithDb(db).updateInvoiceItems({
+        id: INVOICE_ID,
+        expectedUpdatedAt: UPDATED_AT,
+        items: [productLine],
+      })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: expect.stringContaining("confirmed against performed work"),
+    });
+
+    expect(execute).toHaveBeenCalledTimes(3);
+    expect(updateSet).not.toHaveBeenCalled();
+    expect(insertValues).not.toHaveBeenCalled();
   });
 
   it("allows an unchanged archived service reference already on the draft", async () => {

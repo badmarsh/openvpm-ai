@@ -598,4 +598,30 @@ describe("committed Drizzle migrations", () => {
     );
     expect(sql).toContain("visit_closeouts_follow_up_resolution_check");
   });
+
+  it("adds the tenant-bound visit work ledger before checkout enforcement ships", () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries?: Array<{ tag?: string }> };
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0045_visit_work_ledger",
+    );
+
+    const sql = readRepoFile("packages/db/drizzle/0045_visit_work_ledger.sql");
+    expect(sql).toContain('CREATE TABLE "visit_work_items"');
+    expect(sql).toContain(
+      '"vaccination_records" ADD COLUMN "appointment_id" uuid',
+    );
+    expect(sql).toContain("visit_work_items_exactly_one_source_check");
+    expect(sql).toContain("visit_work_items_resolution_check");
+    expect(sql).toContain("visit_work_items_practice_appointment_fk");
+    expect(sql).toContain("visit_work_items_vaccination_source_fk");
+    expect(sql).toContain("visit_work_items_invoice_visit_fk");
+    expect(sql).toContain("visit_work_items_invoice_item_fk");
+    expect(sql).toContain("ON CONFLICT DO NOTHING");
+    expect(sql).toContain("a.status IN ('checked_in', 'in_exam')");
+    expect(
+      sql.indexOf('CREATE UNIQUE INDEX "appointments_practice_id_uq"'),
+    ).toBeLessThan(sql.indexOf("visit_work_items_practice_appointment_fk"));
+  });
 });
