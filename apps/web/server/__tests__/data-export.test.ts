@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   })),
   isPracticeBackupJsonSizeValid: vi.fn(() => true),
   recordAuditLog: vi.fn(async () => undefined),
+  recordActivationAfterAppointmentCreated: vi.fn(async () => true),
 }));
 
 vi.mock("@/lib/backup/export", () => ({
@@ -42,6 +43,11 @@ vi.mock("@/lib/backup/policy", () => ({
 
 vi.mock("@/lib/audit", () => ({
   recordAuditLog: mocks.recordAuditLog,
+}));
+
+vi.mock("@/lib/funnel-events-server", () => ({
+  recordActivationAfterAppointmentCreated:
+    mocks.recordActivationAfterAppointmentCreated,
 }));
 
 const { dataRouter } = await import("../routers/data");
@@ -290,6 +296,11 @@ describe("data full backup restore", () => {
       tx,
       PRACTICE_ID,
       { clients: [] }
+    );
+    expect(mocks.recordActivationAfterAppointmentCreated).toHaveBeenCalledWith(
+      tx,
+      PRACTICE_ID,
+      "data.restoreBackup"
     );
   });
 });

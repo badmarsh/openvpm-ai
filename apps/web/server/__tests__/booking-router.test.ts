@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   billingEnforced: vi.fn(() => false),
   hasHostedFullAccess: vi.fn(() => true),
   dispatchWebhookEvent: vi.fn(async () => undefined),
+  recordActivationAfterAppointmentCreated: vi.fn(async () => true),
   recordAuditLog: vi.fn(async () => undefined),
 }));
 
@@ -18,6 +19,11 @@ vi.mock("@/lib/rate-limit", () => ({
 
 vi.mock("@/lib/webhook-dispatcher", () => ({
   dispatchWebhookEvent: mocks.dispatchWebhookEvent,
+}));
+
+vi.mock("@/lib/funnel-events-server", () => ({
+  recordActivationAfterAppointmentCreated:
+    mocks.recordActivationAfterAppointmentCreated,
 }));
 
 vi.mock("@/lib/billing/plans", () => ({
@@ -335,6 +341,11 @@ describe("public booking", () => {
       PRACTICE_ID,
       "appointment.created",
       expect.objectContaining({ source: "booking_page" })
+    );
+    expect(mocks.recordActivationAfterAppointmentCreated).toHaveBeenCalledWith(
+      db,
+      PRACTICE_ID,
+      "booking.book"
     );
   });
 

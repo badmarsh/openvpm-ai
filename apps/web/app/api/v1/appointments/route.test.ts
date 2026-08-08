@@ -69,6 +69,7 @@ const mocks = vi.hoisted(() => {
       ) => fn(db)
     ),
     dispatchWebhookEvent: vi.fn(async () => undefined),
+    recordActivationAfterAppointmentCreated: vi.fn(async () => true),
     db,
     insertRow,
     insertReturning,
@@ -92,6 +93,11 @@ vi.mock("@/lib/tenant-db", () => ({
 
 vi.mock("@/lib/webhook-dispatcher", () => ({
   dispatchWebhookEvent: mocks.dispatchWebhookEvent,
+}));
+
+vi.mock("@/lib/funnel-events-server", () => ({
+  recordActivationAfterAppointmentCreated:
+    mocks.recordActivationAfterAppointmentCreated,
 }));
 
 const { GET, POST } = await import("./route");
@@ -574,6 +580,11 @@ describe("/api/v1/appointments", () => {
         roomId: ROOM_ID,
         source: "api",
       })
+    );
+    expect(mocks.recordActivationAfterAppointmentCreated).toHaveBeenCalledWith(
+      mocks.db,
+      PRACTICE_ID,
+      "api.v1.appointments.POST"
     );
     const webhookCall = mocks.dispatchWebhookEvent.mock.calls[0] as
       | unknown[]

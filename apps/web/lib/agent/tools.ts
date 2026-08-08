@@ -31,6 +31,7 @@ import {
 } from "@openpims/db";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { appointmentCreatedWebhookPayload } from "@/lib/appointment-webhooks";
+import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
 import {
   dateInputTimeUtcInstant,
   formatDateInputForTimeZone,
@@ -571,6 +572,11 @@ const bookAppointment: AgentTool = {
         notes: input.notes ?? null,
       })
       .returning();
+    await recordActivationAfterAppointmentCreated(
+      ctx.db,
+      ctx.practiceId,
+      "agent.book_appointment"
+    );
     await dispatchWebhookEvent(
       ctx.practiceId,
       "appointment.created",

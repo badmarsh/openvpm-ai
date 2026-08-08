@@ -55,6 +55,7 @@ import {
   type MigrationPreviewSummary,
   type MigrationRunMode,
 } from "@/lib/import/run-ledger";
+import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
 
 const adminProcedure = protectedProcedure.use(requireRole("admin"));
 export { IMPORT_CSV_MAX_BYTES, IMPORT_MAX_ROWS } from "@/lib/import/policy";
@@ -1744,6 +1745,11 @@ export const dataRouter = createRouter({
         ctx.db,
         ctx.practiceId,
         input.backup,
+      );
+      await recordActivationAfterAppointmentCreated(
+        ctx.db,
+        ctx.practiceId,
+        "data.restoreBackup",
       );
       return { dryRun: false as const, ...result };
     }),
