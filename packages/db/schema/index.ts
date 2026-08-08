@@ -22,3 +22,4 @@ export * from "./booking";
 export * from "./funnel-events";
 export * from "./migrations";
 export * from "./visit-closeouts";
+export * from "./visit-work-items";

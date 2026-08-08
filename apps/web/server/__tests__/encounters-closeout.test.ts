@@ -19,6 +19,7 @@ const CLIENT_ID = "00000000-0000-0000-0000-000000000004";
 const CLOSEOUT_ID = "00000000-0000-0000-0000-000000000005";
 const INVOICE_ID = "00000000-0000-0000-0000-000000000006";
 const ASSIGNEE_ID = "00000000-0000-0000-0000-000000000007";
+const WORK_ITEM_ID = "00000000-0000-0000-0000-000000000008";
 
 function callerWithDb(db: Record<string, unknown>, role = "admin") {
   return encountersRouter.createCaller({
@@ -39,6 +40,7 @@ function createDb(opts: {
   selectResults?: unknown[][];
   updateResults?: unknown[][];
   insertResults?: unknown[][];
+  executeResults?: unknown[];
 }) {
   const selectResults = [...(opts.selectResults ?? [])];
   const select = vi.fn(() => {
@@ -76,14 +78,16 @@ function createDb(opts: {
   }));
   const insert = vi.fn(() => ({ values: insertValues }));
 
+  const executeResults = [...(opts.executeResults ?? [])];
+  const execute = vi.fn(async () => executeResults.shift());
   const db: Record<string, unknown> = {
     select,
     update,
     insert,
-    execute: vi.fn(async () => undefined),
+    execute,
   };
   db.transaction = vi.fn(async (fn: (tx: unknown) => unknown) => fn(db));
-  return { db, select, updateSet, insertValues };
+  return { db, select, updateSet, insertValues, execute };
 }
 
 const openAppointment = {
@@ -180,6 +184,36 @@ describe("encounter closeout database locking", () => {
 });
 
 describe("encounter closeout safety", () => {
+  it("blocks checkout when performed visit work is unresolved", async () => {
+    const { db, updateSet, execute } = createDb({
+      selectResults: [
+        [openAppointment],
+        [{ id: PATIENT_ID }],
+        [clinicalFinalized],
+      ],
+      executeResults: [[], [], [], [], [], { rows: [{ id: WORK_ITEM_ID }] }],
+    });
+
+    const result = callerWithDb(db).completeVisit({
+      appointmentId: APPOINTMENT_ID,
+      expectedRevision: 2,
+      chargeDisposition: "no_charge",
+      noChargeReason: "Complimentary postoperative recheck",
+      handoffMethod: "verbal",
+    });
+    const error = await result.catch((caught) => caught);
+    expect(execute).toHaveBeenCalledTimes(6);
+    expect(await execute.mock.results[5]?.value).toEqual({
+      rows: [{ id: WORK_ITEM_ID }],
+    });
+    expect(error).toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: expect.stringContaining("Resolve every performed vaccination"),
+    });
+
+    expect(updateSet).not.toHaveBeenCalled();
+  });
+
   it("atomically completes an explicit no-charge visit", async () => {
     const completed = {
       ...clinicalFinalized,

@@ -76,6 +76,7 @@ import {
   appointments,
   prescriptions,
   visitCloseouts,
+  visitWorkItems,
 } from "@openpims/db";
 import {
   clinicalDateInput,
@@ -83,6 +84,7 @@ import {
   optionalClinicalTextInput,
 } from "@/lib/records/clinical-inputs";
 import { listOffsetInput } from "./pagination";
+import { rowsFromExecute } from "@/lib/db/execute-rows";
 
 type BillingDb = Pick<Database, "select" | "insert" | "update" | "execute">;
 type ServiceCatalogDb = Pick<Database, "select" | "execute">;
@@ -103,6 +105,29 @@ type InvoiceForPayment = {
 
 type InvoiceAdjustmentType = "credit" | "write_off";
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "void";
+
+async function assertInvoiceItemsNotReconciled(
+  ctx: BillingContext,
+  invoiceId: string
+) {
+  const rows = await ctx.db.execute(sql`
+    select ${visitWorkItems.id}
+    from ${visitWorkItems}
+    where ${visitWorkItems.practiceId} = ${ctx.practiceId}
+      and ${visitWorkItems.invoiceId} = ${invoiceId}
+      and ${visitWorkItems.status} = 'charged'
+      and ${visitWorkItems.deletedAt} is null
+    order by ${visitWorkItems.createdAt}, ${visitWorkItems.id}
+    limit 1
+  `);
+  if (rowsFromExecute<{ id: string }>(rows).length > 0) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "This invoice has charges confirmed against performed work. Correct the reconciliation before changing or voiding its lines.",
+    });
+  }
+}
 
 const allowedInvoiceStatusTransitions: Record<
   InvoiceStatus,
@@ -1980,6 +2005,7 @@ export const billingRouter = createRouter({
               "Only an unpaid draft invoice can have its line items changed.",
           });
         }
+        await assertInvoiceItemsNotReconciled(txCtx, input.id);
         if (existing.appointmentId) {
           const [appointment] = await tx
             .select({
@@ -2882,6 +2908,7 @@ export const billingRouter = createRouter({
         const txCtx: BillingContext = { db: tx, practiceId: ctx.practiceId };
         await lockAppointmentForInvoiceMutation(txCtx, invoice.appointmentId);
         await assertInvoiceNotCompletedCloseout(txCtx, input.id);
+        await assertInvoiceItemsNotReconciled(txCtx, input.id);
         const adjustedCents = await getInvoiceAdjustmentTotalCents(
           txCtx,
           input.id

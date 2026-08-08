@@ -21,6 +21,7 @@ import {
   consentRequests,
   files,
   visitCloseouts,
+  visitWorkItems,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
@@ -157,6 +158,7 @@ async function practiceDateInput(ctx: RecordsContext): Promise<string> {
 
 const createVaccinationInput = z.object({
   patientId: z.string().uuid(),
+  appointmentId: z.string().uuid().optional(),
   vaccineName: clinicalTextInput("Vaccine name", VACCINATION_NAME_MAX_LENGTH),
   lotNumber: optionalClinicalTextInput(
     "Lot number",
@@ -230,6 +232,7 @@ const createPrescriptionInput = z
 const createLabResultInput = z
   .object({
     patientId: z.string().uuid(),
+    appointmentId: z.string().uuid().optional(),
     testName: clinicalTextInput("Test name", LAB_TEST_NAME_MAX_LENGTH),
     resultValue: optionalClinicalTextInput(
       "Result value",
@@ -308,10 +311,11 @@ async function assertAppointmentBelongsToPatient(
   return appointment;
 }
 
-async function lockOpenAppointmentForPrescription(
+async function lockOpenAppointmentForClinicalWork(
   ctx: RecordsContext,
   appointmentId: string,
-  patientId: string
+  patientId: string,
+  workLabel: string
 ) {
   const [appointment] = await ctx.db
     .select({ id: appointments.id, status: appointments.status })
@@ -333,7 +337,7 @@ async function lockOpenAppointmentForPrescription(
   if (appointment.status !== "in_exam") {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "Start the exam before creating a visit-linked prescription.",
+      message: `Start the exam before recording visit-linked ${workLabel}.`,
     });
   }
 
@@ -354,9 +358,52 @@ async function lockOpenAppointmentForPrescription(
   ) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message:
-        "Clinical handoff is finalized. Use an attributed amendment before changing visit prescriptions.",
+      message: `Clinical handoff is finalized. Use an attributed amendment before changing visit ${workLabel}.`,
     });
+  }
+}
+
+type VisitWorkSource =
+  | { vaccinationRecordId: string }
+  | { labResultId: string }
+  | { procedureId: string }
+  | { prescriptionId: string };
+
+/** Atomic, idempotent registration. Labels and clinical details deliberately
+ * remain on the source record so the reconciliation ledger is PII-safe. */
+async function registerVisitWorkItem(
+  ctx: RecordsContext,
+  appointmentId: string,
+  source: VisitWorkSource
+) {
+  if ("vaccinationRecordId" in source) {
+    await ctx.db.execute(sql`
+      insert into ${visitWorkItems}
+        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.vaccinationRecordId})
+      values (${ctx.practiceId}, ${appointmentId}, ${source.vaccinationRecordId})
+      on conflict do nothing
+    `);
+  } else if ("labResultId" in source) {
+    await ctx.db.execute(sql`
+      insert into ${visitWorkItems}
+        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.labResultId})
+      values (${ctx.practiceId}, ${appointmentId}, ${source.labResultId})
+      on conflict do nothing
+    `);
+  } else if ("procedureId" in source) {
+    await ctx.db.execute(sql`
+      insert into ${visitWorkItems}
+        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.procedureId})
+      values (${ctx.practiceId}, ${appointmentId}, ${source.procedureId})
+      on conflict do nothing
+    `);
+  } else {
+    await ctx.db.execute(sql`
+      insert into ${visitWorkItems}
+        (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.prescriptionId})
+      values (${ctx.practiceId}, ${appointmentId}, ${source.prescriptionId})
+      on conflict do nothing
+    `);
   }
 }
 
@@ -697,23 +744,40 @@ export const recordsRouter = createRouter({
     .use(requireRole("admin", "veterinarian", "technician"))
     .input(createVaccinationInput)
     .mutation(async ({ ctx, input }) => {
-      await assertPatientBelongsToPractice(ctx, input.patientId);
-      const [record] = await ctx.db
-        .insert(vaccinationRecords)
-        .values({
-          ...input,
-          administeredBy: ctx.user.id,
-          practiceId: ctx.practiceId,
-        })
-        .returning();
+      const record = await ctx.db.transaction(async (tx) => {
+        const txCtx: RecordsContext = { db: tx, practiceId: ctx.practiceId };
+        await assertPatientBelongsToPractice(txCtx, input.patientId);
+        if (input.appointmentId) {
+          await lockOpenAppointmentForClinicalWork(
+            txCtx,
+            input.appointmentId,
+            input.patientId,
+            "vaccination"
+          );
+        }
+        const [created] = await tx
+          .insert(vaccinationRecords)
+          .values({
+            ...input,
+            administeredBy: ctx.user.id,
+            practiceId: ctx.practiceId,
+          })
+          .returning();
+        if (created?.appointmentId) {
+          await registerVisitWorkItem(txCtx, created.appointmentId, {
+            vaccinationRecordId: created.id,
+          });
+        }
+        return created!;
+      });
       await dispatchWebhookEvent(ctx.practiceId, "vaccination.recorded", {
-        id: record!.id,
-        patientId: record!.patientId,
-        vaccineName: record!.vaccineName,
-        administeredBy: record!.administeredBy,
+        id: record.id,
+        patientId: record.patientId,
+        vaccineName: record.vaccineName,
+        administeredBy: record.administeredBy,
         source: "dashboard",
       });
-      return record!;
+      return record;
     }),
 
   // Problem List
@@ -927,6 +991,11 @@ export const recordsRouter = createRouter({
                 "This prescription operation ID was already used for different details.",
             });
           }
+          if (existing.appointmentId) {
+            await registerVisitWorkItem(txCtx, existing.appointmentId, {
+              prescriptionId: existing.id,
+            });
+          }
           return { rx: existing, replayed: true as const };
         }
 
@@ -973,10 +1042,11 @@ export const recordsRouter = createRouter({
         }
 
         if (input.appointmentId) {
-          await lockOpenAppointmentForPrescription(
+          await lockOpenAppointmentForClinicalWork(
             txCtx,
             input.appointmentId,
-            input.patientId
+            input.patientId,
+            "prescriptions"
           );
         }
 
@@ -1007,6 +1077,11 @@ export const recordsRouter = createRouter({
             operationId: input.operationId,
           })
           .returning();
+        if (rx?.appointmentId) {
+          await registerVisitWorkItem(txCtx, rx.appointmentId, {
+            prescriptionId: rx.id,
+          });
+        }
         return { rx: rx!, replayed: false as const };
       });
       if (!result.replayed) {
@@ -1064,24 +1139,41 @@ export const recordsRouter = createRouter({
     .use(requireRole("admin", "veterinarian"))
     .input(createLabResultInput)
     .mutation(async ({ ctx, input }) => {
-      await assertPatientBelongsToPractice(ctx, input.patientId);
-      const [result] = await ctx.db
-        .insert(labResults)
-        .values({
-          ...input,
-          orderedBy: ctx.user.id,
-          practiceId: ctx.practiceId,
-        })
-        .returning();
+      const result = await ctx.db.transaction(async (tx) => {
+        const txCtx: RecordsContext = { db: tx, practiceId: ctx.practiceId };
+        await assertPatientBelongsToPractice(txCtx, input.patientId);
+        if (input.appointmentId) {
+          await lockOpenAppointmentForClinicalWork(
+            txCtx,
+            input.appointmentId,
+            input.patientId,
+            "lab work"
+          );
+        }
+        const [created] = await tx
+          .insert(labResults)
+          .values({
+            ...input,
+            orderedBy: ctx.user.id,
+            practiceId: ctx.practiceId,
+          })
+          .returning();
+        if (created?.appointmentId) {
+          await registerVisitWorkItem(txCtx, created.appointmentId, {
+            labResultId: created.id,
+          });
+        }
+        return created!;
+      });
       await dispatchWebhookEvent(ctx.practiceId, "lab_result.created", {
-        id: result!.id,
-        patientId: result!.patientId,
-        testName: result!.testName,
-        status: result!.status,
-        orderedBy: result!.orderedBy,
+        id: result.id,
+        patientId: result.patientId,
+        testName: result.testName,
+        status: result.status,
+        orderedBy: result.orderedBy,
         source: "dashboard",
       });
-      return result!;
+      return result;
     }),
 
   updateLabResultStatus: protectedProcedure
@@ -1182,31 +1274,41 @@ export const recordsRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      await assertPatientBelongsToPractice(ctx, input.patientId);
-      if (input.appointmentId) {
-        await assertAppointmentBelongsToPatient(
-          ctx,
-          input.appointmentId,
-          input.patientId
-        );
-      }
-      const [procedure] = await ctx.db
-        .insert(procedures)
-        .values({
-          ...input,
-          performedBy: ctx.user.id,
-          practiceId: ctx.practiceId,
-        })
-        .returning();
+      const procedure = await ctx.db.transaction(async (tx) => {
+        const txCtx: RecordsContext = { db: tx, practiceId: ctx.practiceId };
+        await assertPatientBelongsToPractice(txCtx, input.patientId);
+        if (input.appointmentId) {
+          await lockOpenAppointmentForClinicalWork(
+            txCtx,
+            input.appointmentId,
+            input.patientId,
+            "procedures"
+          );
+        }
+        const [created] = await tx
+          .insert(procedures)
+          .values({
+            ...input,
+            performedBy: ctx.user.id,
+            practiceId: ctx.practiceId,
+          })
+          .returning();
+        if (created?.appointmentId) {
+          await registerVisitWorkItem(txCtx, created.appointmentId, {
+            procedureId: created.id,
+          });
+        }
+        return created!;
+      });
       await dispatchWebhookEvent(ctx.practiceId, "procedure.created", {
-        id: procedure!.id,
-        patientId: procedure!.patientId,
-        appointmentId: procedure!.appointmentId,
-        name: procedure!.name,
-        performedBy: procedure!.performedBy,
+        id: procedure.id,
+        patientId: procedure.patientId,
+        appointmentId: procedure.appointmentId,
+        name: procedure.name,
+        performedBy: procedure.performedBy,
         source: "dashboard",
       });
-      return procedure!;
+      return procedure;
     }),
 
   // In-consult QR photo capture. Staff mint a short-lived capture link for a

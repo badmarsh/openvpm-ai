@@ -9,7 +9,9 @@ import {
   numeric,
   date,
   boolean,
+  foreignKey,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { baseColumns } from "./common";
@@ -95,6 +97,7 @@ export const vaccinationRecords = pgTable(
     patientId: uuid("patient_id")
       .notNull()
       .references(() => patients.id),
+    appointmentId: uuid("appointment_id").references(() => appointments.id),
     vaccineName: varchar("vaccine_name", { length: 255 }).notNull(),
     lotNumber: varchar("lot_number", { length: 64 }),
     manufacturer: varchar("manufacturer", { length: 128 }),
@@ -115,6 +118,21 @@ export const vaccinationRecords = pgTable(
       table.nextDueDate,
       table.deletedAt
     ),
+    appointmentIdx: index("vaccination_records_appointment_idx").on(
+      table.practiceId,
+      table.appointmentId,
+      table.deletedAt
+    ),
+    visitSourceUq: uniqueIndex("vaccination_records_visit_source_uq").on(
+      table.practiceId,
+      table.appointmentId,
+      table.id
+    ),
+    appointmentPracticeFk: foreignKey({
+      columns: [table.practiceId, table.appointmentId],
+      foreignColumns: [appointments.practiceId, appointments.id],
+      name: "vaccination_records_practice_appointment_fk",
+    }),
   })
 );
 
@@ -151,6 +169,21 @@ export const labResults = pgTable(
       table.status,
       table.deletedAt
     ),
+    appointmentIdx: index("lab_results_appointment_idx").on(
+      table.practiceId,
+      table.appointmentId,
+      table.deletedAt
+    ),
+    visitSourceUq: uniqueIndex("lab_results_visit_source_uq").on(
+      table.practiceId,
+      table.appointmentId,
+      table.id
+    ),
+    appointmentPracticeFk: foreignKey({
+      columns: [table.practiceId, table.appointmentId],
+      foreignColumns: [appointments.practiceId, appointments.id],
+      name: "lab_results_practice_appointment_fk",
+    }),
   })
 );
 
@@ -178,6 +211,21 @@ export const procedures = pgTable(
       table.practiceId,
       table.deletedAt
     ),
+    appointmentIdx: index("procedures_appointment_idx").on(
+      table.practiceId,
+      table.appointmentId,
+      table.deletedAt
+    ),
+    visitSourceUq: uniqueIndex("procedures_visit_source_uq").on(
+      table.practiceId,
+      table.appointmentId,
+      table.id
+    ),
+    appointmentPracticeFk: foreignKey({
+      columns: [table.practiceId, table.appointmentId],
+      foreignColumns: [appointments.practiceId, appointments.id],
+      name: "procedures_practice_appointment_fk",
+    }),
   })
 );
 

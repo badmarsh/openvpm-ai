@@ -1272,6 +1272,10 @@ function RecordsPageContent() {
                       if (!canSubmitVaccination) return;
                       createVaccination.mutate({
                         patientId,
+                        appointmentId:
+                          linkedAppointmentId && linkedPatientId === patientId
+                            ? linkedAppointmentId
+                            : undefined,
                         vaccineName: vaccinationForm.vaccineName.trim(),
                         lotNumber:
                           vaccinationForm.lotNumber.trim() || undefined,
@@ -2222,6 +2226,10 @@ function RecordsPageContent() {
                       if (!canSubmitLabResult) return;
                       createLabResult.mutate({
                         patientId,
+                        appointmentId:
+                          linkedAppointmentId && linkedPatientId === patientId
+                            ? linkedAppointmentId
+                            : undefined,
                         testName: labForm.testName.trim(),
                         resultValue: labForm.resultValue.trim() || undefined,
                         unit: labForm.unit.trim() || undefined,
@@ -2526,6 +2534,10 @@ function RecordsPageContent() {
                         procedureForm.durationMinutes.trim();
                       createProcedure.mutate({
                         patientId,
+                        appointmentId:
+                          linkedAppointmentId && linkedPatientId === patientId
+                            ? linkedAppointmentId
+                            : undefined,
                         name: procedureForm.name.trim(),
                         description:
                           procedureForm.description.trim() || undefined,

@@ -16,6 +16,7 @@ import type { Database } from "@openpims/db/client";
 import {
   appointments,
   appointmentTypes,
+  auditLog,
   clients,
   invoiceAdjustments,
   invoiceItems,
@@ -24,8 +25,13 @@ import {
   practices,
   prescriptions,
   products,
+  procedures,
+  labResults,
+  vaccinationRecords,
+  services,
   soapNotes,
   visitCloseouts,
+  visitWorkItems,
   users,
 } from "@openpims/db";
 import {
@@ -43,8 +49,9 @@ import {
 import { canTransitionAppointmentStatus } from "@/lib/scheduling/appointment-status";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { clinicalDateInput } from "@/lib/records/clinical-inputs";
+import { rowsFromExecute } from "@/lib/db/execute-rows";
 
-type EncounterDb = Pick<Database, "select" | "insert" | "update">;
+type EncounterDb = Pick<Database, "select" | "insert" | "update" | "execute">;
 
 type EncounterContext = {
   db: EncounterDb;
@@ -237,6 +244,43 @@ const resolveNeededFollowUpInput = z
       });
     }
   });
+
+const resolveVisitWorkInput = z.object({
+  appointmentId: z.string().uuid(),
+  workItemId: z.string().uuid(),
+  resolution: z.discriminatedUnion("status", [
+    z.object({
+      status: z.literal("charged"),
+      invoiceItemId: z.string().uuid(),
+    }),
+    z.object({
+      status: z.literal("no_charge"),
+      reason: z
+        .string()
+        .trim()
+        .min(3, "Explain why this performed item is not charged.")
+        .max(CLOSEOUT_REASON_MAX_LENGTH),
+    }),
+    z.object({
+      status: z.literal("voided"),
+      reason: z
+        .string()
+        .trim()
+        .min(3, "Explain why this source item is void or corrected.")
+        .max(CLOSEOUT_REASON_MAX_LENGTH),
+    }),
+  ]),
+});
+
+const reopenVisitWorkInput = z.object({
+  appointmentId: z.string().uuid(),
+  workItemId: z.string().uuid(),
+  reason: z
+    .string()
+    .trim()
+    .min(5, "Explain why this reconciliation needs correction.")
+    .max(CLOSEOUT_REASON_MAX_LENGTH),
+});
 
 function activePracticePredicate(practiceId: string) {
   return sql`exists (
@@ -462,6 +506,98 @@ async function invoiceReadiness(
   };
 }
 
+/**
+ * Re-materialize any visit-linked source records that predate the ledger or
+ * arrived through a trusted non-dashboard path. Each statement is tenant and
+ * appointment scoped, and unique source indexes make retries idempotent.
+ */
+async function syncVisitWorkItems(
+  ctx: EncounterContext,
+  appointmentId: string
+) {
+  await ctx.db.execute(sql`
+    insert into ${visitWorkItems}
+      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.vaccinationRecordId})
+    select ${vaccinationRecords.practiceId}, ${vaccinationRecords.appointmentId}, ${vaccinationRecords.id}
+    from ${vaccinationRecords}
+    where ${vaccinationRecords.practiceId} = ${ctx.practiceId}
+      and ${vaccinationRecords.appointmentId} = ${appointmentId}
+      and ${vaccinationRecords.deletedAt} is null
+    on conflict do nothing
+  `);
+  await ctx.db.execute(sql`
+    insert into ${visitWorkItems}
+      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.labResultId})
+    select ${labResults.practiceId}, ${labResults.appointmentId}, ${labResults.id}
+    from ${labResults}
+    where ${labResults.practiceId} = ${ctx.practiceId}
+      and ${labResults.appointmentId} = ${appointmentId}
+      and ${labResults.deletedAt} is null
+    on conflict do nothing
+  `);
+  await ctx.db.execute(sql`
+    insert into ${visitWorkItems}
+      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.procedureId})
+    select ${procedures.practiceId}, ${procedures.appointmentId}, ${procedures.id}
+    from ${procedures}
+    where ${procedures.practiceId} = ${ctx.practiceId}
+      and ${procedures.appointmentId} = ${appointmentId}
+      and ${procedures.deletedAt} is null
+    on conflict do nothing
+  `);
+  await ctx.db.execute(sql`
+    insert into ${visitWorkItems}
+      (${visitWorkItems.practiceId}, ${visitWorkItems.appointmentId}, ${visitWorkItems.prescriptionId})
+    select ${prescriptions.practiceId}, ${prescriptions.appointmentId}, ${prescriptions.id}
+    from ${prescriptions}
+    where ${prescriptions.practiceId} = ${ctx.practiceId}
+      and ${prescriptions.appointmentId} = ${appointmentId}
+      and ${prescriptions.deletedAt} is null
+    on conflict do nothing
+  `);
+}
+
+async function assertNoUnresolvedVisitWork(
+  ctx: EncounterContext,
+  appointmentId: string
+) {
+  const rows = await ctx.db.execute(sql`
+    select ${visitWorkItems.id}
+    from ${visitWorkItems}
+    left join ${invoiceItems}
+      on ${invoiceItems.id} = ${visitWorkItems.invoiceItemId}
+    left join ${invoices}
+      on ${invoices.id} = ${visitWorkItems.invoiceId}
+      and ${invoices.practiceId} = ${ctx.practiceId}
+      and ${invoices.appointmentId} = ${appointmentId}
+    where ${visitWorkItems.practiceId} = ${ctx.practiceId}
+      and ${visitWorkItems.appointmentId} = ${appointmentId}
+      and (
+        ${visitWorkItems.status} = 'unresolved'
+        or (
+          ${visitWorkItems.status} = 'charged'
+          and (
+            ${invoiceItems.id} is null
+            or ${invoiceItems.deletedAt} is not null
+            or ${invoices.id} is null
+            or ${invoices.deletedAt} is not null
+            or ${invoices.status} = 'void'
+          )
+        )
+      )
+      and ${visitWorkItems.deletedAt} is null
+    order by ${visitWorkItems.createdAt}, ${visitWorkItems.id}
+    limit 1
+  `);
+  if (rowsFromExecute<{ id: string }>(rows).length > 0) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Resolve every performed vaccination, lab, procedure, and prescription as charged, no charge, or void/corrected before checkout.",
+    });
+  }
+}
+
 export const encountersRouter = createRouter({
   listPendingFollowUps: protectedProcedure.query(async ({ ctx }) =>
     ctx.db
@@ -682,6 +818,475 @@ export const encountersRouter = createRouter({
         invoices: invoiceSummaries,
       };
     }),
+
+  getVisitReconciliation: protectedProcedure
+    .input(z.object({ appointmentId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [appointment] = await ctx.db
+        .select({ id: appointments.id, status: appointments.status })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.id, input.appointmentId),
+            eq(appointments.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(appointments.deletedAt)
+          )
+        )
+        .limit(1);
+      if (!appointment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Appointment not found",
+        });
+      }
+      // Do not manufacture unresolved work for historical visits that were
+      // already closed before this ledger existed. New visit-linked writes are
+      // restricted to an open exam, while checked-in legacy rows are covered
+      // by the one-time migration backfill.
+      if (appointment.status === "in_exam") {
+        await syncVisitWorkItems(ctx, input.appointmentId);
+      }
+
+      const [items, serviceCatalog, invoiceItemOptions] = await Promise.all([
+        ctx.db
+          .select({
+            id: visitWorkItems.id,
+            status: visitWorkItems.status,
+            sourceType: sql<
+              "vaccination" | "lab" | "procedure" | "prescription"
+            >`
+              case
+                when ${visitWorkItems.vaccinationRecordId} is not null then 'vaccination'
+                when ${visitWorkItems.labResultId} is not null then 'lab'
+                when ${visitWorkItems.procedureId} is not null then 'procedure'
+                else 'prescription'
+              end`,
+            sourceId: sql<string>`coalesce(
+              ${visitWorkItems.vaccinationRecordId},
+              ${visitWorkItems.labResultId},
+              ${visitWorkItems.procedureId},
+              ${visitWorkItems.prescriptionId}
+            )`,
+            sourceLabel: sql<string>`coalesce(
+              ${vaccinationRecords.vaccineName},
+              ${labResults.testName},
+              ${procedures.name},
+              ${prescriptions.medicationName},
+              'Unavailable source'
+            )`,
+            invoiceId: visitWorkItems.invoiceId,
+            invoiceItemId: visitWorkItems.invoiceItemId,
+            invoiceItemDescription: invoiceItems.description,
+            invoiceItemDeletedAt: invoiceItems.deletedAt,
+            invoiceStatus: invoices.status,
+            invoiceDeletedAt: invoices.deletedAt,
+            noChargeReason: visitWorkItems.noChargeReason,
+            voidReason: visitWorkItems.voidReason,
+            resolvedAt: visitWorkItems.resolvedAt,
+            resolvedByName: users.name,
+            suggestedProductId: products.id,
+            suggestedProductName: products.name,
+            suggestedProductPrice: products.unitPrice,
+            createdAt: visitWorkItems.createdAt,
+          })
+          .from(visitWorkItems)
+          .leftJoin(
+            vaccinationRecords,
+            and(
+              eq(visitWorkItems.vaccinationRecordId, vaccinationRecords.id),
+              eq(vaccinationRecords.practiceId, ctx.practiceId),
+              eq(vaccinationRecords.appointmentId, input.appointmentId),
+              isNull(vaccinationRecords.deletedAt)
+            )
+          )
+          .leftJoin(
+            labResults,
+            and(
+              eq(visitWorkItems.labResultId, labResults.id),
+              eq(labResults.practiceId, ctx.practiceId),
+              eq(labResults.appointmentId, input.appointmentId),
+              isNull(labResults.deletedAt)
+            )
+          )
+          .leftJoin(
+            procedures,
+            and(
+              eq(visitWorkItems.procedureId, procedures.id),
+              eq(procedures.practiceId, ctx.practiceId),
+              eq(procedures.appointmentId, input.appointmentId),
+              isNull(procedures.deletedAt)
+            )
+          )
+          .leftJoin(
+            prescriptions,
+            and(
+              eq(visitWorkItems.prescriptionId, prescriptions.id),
+              eq(prescriptions.practiceId, ctx.practiceId),
+              eq(prescriptions.appointmentId, input.appointmentId),
+              isNull(prescriptions.deletedAt)
+            )
+          )
+          .leftJoin(
+            products,
+            and(
+              eq(prescriptions.productId, products.id),
+              eq(products.practiceId, ctx.practiceId),
+              isNull(products.deletedAt)
+            )
+          )
+          .leftJoin(
+            invoiceItems,
+            eq(visitWorkItems.invoiceItemId, invoiceItems.id)
+          )
+          .leftJoin(
+            invoices,
+            and(
+              eq(visitWorkItems.invoiceId, invoices.id),
+              eq(invoices.practiceId, ctx.practiceId),
+              eq(invoices.appointmentId, input.appointmentId)
+            )
+          )
+          .leftJoin(
+            users,
+            and(
+              eq(visitWorkItems.resolvedBy, users.id),
+              eq(users.practiceId, ctx.practiceId),
+              isNull(users.deletedAt)
+            )
+          )
+          .where(
+            and(
+              eq(visitWorkItems.practiceId, ctx.practiceId),
+              eq(visitWorkItems.appointmentId, input.appointmentId),
+              isNull(visitWorkItems.deletedAt)
+            )
+          )
+          .orderBy(asc(visitWorkItems.createdAt), asc(visitWorkItems.id)),
+        ctx.db
+          .select({
+            id: services.id,
+            name: services.name,
+            defaultPrice: services.defaultPrice,
+          })
+          .from(services)
+          .where(
+            and(
+              eq(services.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(services.deletedAt)
+            )
+          )
+          .orderBy(asc(services.name), asc(services.id))
+          .limit(500),
+        ctx.db
+          .select({
+            id: invoiceItems.id,
+            invoiceId: invoices.id,
+            description: invoiceItems.description,
+            itemType: invoiceItems.itemType,
+            itemId: invoiceItems.itemId,
+            quantity: invoiceItems.quantity,
+            total: invoiceItems.total,
+          })
+          .from(invoiceItems)
+          .innerJoin(
+            invoices,
+            and(
+              eq(invoiceItems.invoiceId, invoices.id),
+              eq(invoices.practiceId, ctx.practiceId),
+              eq(invoices.appointmentId, input.appointmentId),
+              eq(invoices.isEstimate, false),
+              ne(invoices.status, "void"),
+              isNull(invoices.deletedAt)
+            )
+          )
+          .leftJoin(
+            visitWorkItems,
+            and(
+              eq(invoiceItems.id, visitWorkItems.invoiceItemId),
+              isNull(visitWorkItems.deletedAt)
+            )
+          )
+          .where(and(isNull(invoiceItems.deletedAt), isNull(visitWorkItems.id)))
+          .orderBy(asc(invoiceItems.createdAt), asc(invoiceItems.id)),
+      ]);
+
+      const servicesByName = new Map<string, (typeof serviceCatalog)[number]>();
+      for (const service of serviceCatalog) {
+        const key = service.name.trim().toLocaleLowerCase("en-US");
+        if (!servicesByName.has(key)) servicesByName.set(key, service);
+      }
+
+      return {
+        items: items.map((item) => ({
+          ...item,
+          chargeLinkActive:
+            item.status !== "charged" ||
+            (Boolean(item.invoiceStatus) &&
+              item.invoiceItemDeletedAt === null &&
+              item.invoiceDeletedAt === null &&
+              item.invoiceStatus !== "void"),
+          suggestedService:
+            servicesByName.get(
+              item.sourceLabel.trim().toLocaleLowerCase("en-US")
+            ) ?? null,
+        })),
+        invoiceItemOptions,
+        unresolvedCount: items.filter(
+          (item) =>
+            item.status === "unresolved" ||
+            (item.status === "charged" &&
+              (item.invoiceItemDeletedAt !== null ||
+                item.invoiceDeletedAt !== null ||
+                !item.invoiceStatus ||
+                item.invoiceStatus === "void"))
+        ).length,
+      };
+    }),
+
+  resolveVisitWork: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "technician", "front_desk"))
+    .input(resolveVisitWorkInput)
+    .mutation(async ({ ctx, input }) => {
+      if (
+        input.resolution.status === "voided" &&
+        ctx.user.role !== "admin" &&
+        ctx.user.role !== "veterinarian"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only an administrator or veterinarian can void clinical work.",
+        });
+      }
+      return ctx.db.transaction(async (tx) => {
+        const txCtx: EncounterContext = { db: tx, practiceId: ctx.practiceId };
+        const appointment = await lockAppointment(txCtx, input.appointmentId);
+        if (appointment.status !== "in_exam") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Visit work can be reconciled only while the exam is open.",
+          });
+        }
+        await syncVisitWorkItems(txCtx, input.appointmentId);
+        const [workItem] = await tx
+          .select()
+          .from(visitWorkItems)
+          .where(
+            and(
+              eq(visitWorkItems.id, input.workItemId),
+              eq(visitWorkItems.practiceId, ctx.practiceId),
+              eq(visitWorkItems.appointmentId, input.appointmentId),
+              isNull(visitWorkItems.deletedAt)
+            )
+          )
+          .limit(1)
+          .for("update");
+        if (!workItem) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Visit work item not found",
+          });
+        }
+
+        if (workItem.status !== "unresolved") {
+          const sameResolution =
+            (input.resolution.status === "charged" &&
+              workItem.status === "charged" &&
+              workItem.invoiceItemId === input.resolution.invoiceItemId) ||
+            (input.resolution.status === "no_charge" &&
+              workItem.status === "no_charge" &&
+              workItem.noChargeReason === input.resolution.reason) ||
+            (input.resolution.status === "voided" &&
+              workItem.status === "voided" &&
+              workItem.voidReason === input.resolution.reason);
+          if (sameResolution) return workItem;
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "This performed item is already reconciled.",
+          });
+        }
+
+        let values:
+          | {
+              status: "charged";
+              invoiceId: string;
+              invoiceItemId: string;
+              resolvedBy: string;
+              resolvedAt: Date;
+            }
+          | {
+              status: "no_charge";
+              noChargeReason: string;
+              resolvedBy: string;
+              resolvedAt: Date;
+            }
+          | {
+              status: "voided";
+              voidReason: string;
+              resolvedBy: string;
+              resolvedAt: Date;
+            };
+        const resolvedAt = new Date();
+        if (input.resolution.status === "charged") {
+          const [charge] = await tx
+            .select({ invoiceId: invoices.id })
+            .from(invoiceItems)
+            .innerJoin(
+              invoices,
+              and(
+                eq(invoiceItems.invoiceId, invoices.id),
+                eq(invoices.practiceId, ctx.practiceId),
+                eq(invoices.appointmentId, input.appointmentId),
+                eq(invoices.isEstimate, false),
+                ne(invoices.status, "void"),
+                isNull(invoices.deletedAt)
+              )
+            )
+            .where(
+              and(
+                eq(invoiceItems.id, input.resolution.invoiceItemId),
+                isNull(invoiceItems.deletedAt)
+              )
+            )
+            .limit(1);
+          if (!charge) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Choose an active charge from this visit invoice.",
+            });
+          }
+          values = {
+            status: "charged",
+            invoiceId: charge.invoiceId,
+            invoiceItemId: input.resolution.invoiceItemId,
+            resolvedBy: ctx.user.id,
+            resolvedAt,
+          };
+        } else if (input.resolution.status === "no_charge") {
+          values = {
+            status: "no_charge",
+            noChargeReason: input.resolution.reason,
+            resolvedBy: ctx.user.id,
+            resolvedAt,
+          };
+        } else {
+          values = {
+            status: "voided",
+            voidReason: input.resolution.reason,
+            resolvedBy: ctx.user.id,
+            resolvedAt,
+          };
+        }
+
+        const [resolved] = await tx
+          .update(visitWorkItems)
+          .set(values)
+          .where(
+            and(
+              eq(visitWorkItems.id, workItem.id),
+              eq(visitWorkItems.practiceId, ctx.practiceId),
+              eq(visitWorkItems.appointmentId, input.appointmentId),
+              eq(visitWorkItems.status, "unresolved"),
+              isNull(visitWorkItems.deletedAt)
+            )
+          )
+          .returning();
+        if (!resolved) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Visit work changed; refresh and retry.",
+          });
+        }
+        return resolved;
+      });
+    }),
+
+  reopenVisitWork: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(reopenVisitWorkInput)
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const txCtx: EncounterContext = { db: tx, practiceId: ctx.practiceId };
+        const appointment = await lockAppointment(txCtx, input.appointmentId);
+        if (appointment.status !== "in_exam") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Visit reconciliation can be corrected only while the exam is open.",
+          });
+        }
+        const [workItem] = await tx
+          .select()
+          .from(visitWorkItems)
+          .where(
+            and(
+              eq(visitWorkItems.id, input.workItemId),
+              eq(visitWorkItems.practiceId, ctx.practiceId),
+              eq(visitWorkItems.appointmentId, input.appointmentId),
+              isNull(visitWorkItems.deletedAt)
+            )
+          )
+          .limit(1)
+          .for("update");
+        if (!workItem) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Visit work item not found",
+          });
+        }
+        if (workItem.status === "unresolved") return workItem;
+
+        await tx.insert(auditLog).values({
+          practiceId: ctx.practiceId,
+          userId: ctx.user.id,
+          action: "reopened",
+          entityType: "visit_work_item",
+          entityId: workItem.id,
+          changes: {
+            reason: input.reason,
+            priorStatus: workItem.status,
+            priorInvoiceId: workItem.invoiceId,
+            priorInvoiceItemId: workItem.invoiceItemId,
+            priorNoChargeReason: workItem.noChargeReason,
+            priorVoidReason: workItem.voidReason,
+            priorResolvedBy: workItem.resolvedBy,
+            priorResolvedAt: workItem.resolvedAt?.toISOString() ?? null,
+          },
+        });
+
+        const [reopened] = await tx
+          .update(visitWorkItems)
+          .set({
+            status: "unresolved",
+            invoiceId: null,
+            invoiceItemId: null,
+            noChargeReason: null,
+            voidReason: null,
+            resolvedBy: null,
+            resolvedAt: null,
+          })
+          .where(
+            and(
+              eq(visitWorkItems.id, workItem.id),
+              eq(visitWorkItems.practiceId, ctx.practiceId),
+              eq(visitWorkItems.appointmentId, input.appointmentId),
+              eq(visitWorkItems.status, workItem.status),
+              isNull(visitWorkItems.deletedAt)
+            )
+          )
+          .returning();
+        if (!reopened) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Visit work changed; refresh before correcting it.",
+          });
+        }
+        return reopened;
+      })
+    ),
 
   saveDraft: protectedProcedure
     .use(requireRole("admin", "veterinarian", "technician"))
@@ -1360,6 +1965,9 @@ export const encountersRouter = createRouter({
             message: "Closeout changed in another session. Refresh before completing the visit.",
           });
         }
+
+        await syncVisitWorkItems(txCtx, input.appointmentId);
+        await assertNoUnresolvedVisitWork(txCtx, input.appointmentId);
 
         const invoiceRows = await appointmentInvoiceRows(
           txCtx,
