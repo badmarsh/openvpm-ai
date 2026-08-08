@@ -15,6 +15,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { dateInputTimeUtcInstant } from "@/lib/date-input";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { appointmentCreatedWebhookPayload } from "@/lib/appointment-webhooks";
+import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
 import { findOpenSlots } from "@/lib/scheduling/availability";
 import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 import { generatePortalAccessToken } from "@/lib/portal/tokens";
@@ -538,6 +539,11 @@ export const bookingRouter = createRouter({
           notes: `[Online booking] ${input.reason}`,
         })
         .returning();
+      await recordActivationAfterAppointmentCreated(
+        ctx.db,
+        practice.id,
+        "booking.book"
+      );
 
       // Surface the booking in the communications inbox so the front desk
       // sees new online bookings alongside portal requests and messages.

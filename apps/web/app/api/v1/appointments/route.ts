@@ -26,6 +26,7 @@ import { authenticateApiKey } from "@/lib/api-auth";
 import { withTenant } from "@/lib/tenant-db";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { appointmentCreatedWebhookPayload } from "@/lib/appointment-webhooks";
+import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
 import {
   withErrorHandling,
   apiError,
@@ -402,6 +403,12 @@ export async function POST(req: Request) {
       return { ok: true as const, row: row! };
     });
     if (!result.ok) return result.response;
+
+    await recordActivationAfterAppointmentCreated(
+      db,
+      auth.ctx.practiceId,
+      "api.v1.appointments.POST"
+    );
 
     const apiAppointment = toApiAppointment(result.row);
 

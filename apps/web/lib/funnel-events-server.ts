@@ -182,6 +182,25 @@ export async function recordActivationIfReached(
   });
 }
 
+/**
+ * Appointment creation is a primary product action, so activation telemetry
+ * must never turn a durable booking into a failed request. Each creation path
+ * calls this only after its appointment insert/transaction succeeds. The
+ * practice-stage unique index keeps retries idempotent.
+ */
+export async function recordActivationAfterAppointmentCreated(
+  db: Database,
+  practiceId: string,
+  source: string
+): Promise<boolean> {
+  try {
+    return await recordActivationIfReached(db, practiceId);
+  } catch (err) {
+    console.error(`[${source}] activation funnel event failed:`, err);
+    return false;
+  }
+}
+
 export async function recordRegistration(
   db: Database,
   practiceId: string

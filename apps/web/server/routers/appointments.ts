@@ -48,7 +48,7 @@ import {
 } from "@/lib/scheduling/appointment-status";
 import { generateCalendarFeedToken } from "@/lib/calendar/tokens";
 import { appBaseUrl } from "@/lib/app-url";
-import { recordActivationIfReached } from "@/lib/funnel-events-server";
+import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
 import { CLOSEOUT_BYPASS_MESSAGE } from "@/lib/encounters/closeout-policy";
 
 type AppointmentsContext = {
@@ -725,16 +725,16 @@ export const appointmentsRouter = createRouter({
           practiceId: ctx.practiceId,
         })
         .returning();
+      await recordActivationAfterAppointmentCreated(
+        ctx.db,
+        ctx.practiceId,
+        "appointments.create"
+      );
       await dispatchWebhookEvent(
         ctx.practiceId,
         "appointment.created",
         appointmentCreatedWebhookPayload(appt!, "dashboard")
       );
-      try {
-        await recordActivationIfReached(ctx.db, ctx.practiceId);
-      } catch (err) {
-        console.error("[appointments.create] funnel event failed:", err);
-      }
       return appt!;
     }),
 
@@ -1169,7 +1169,7 @@ export const appointmentsRouter = createRouter({
         });
       }
 
-      return ctx.db.transaction(async (tx) => {
+      const result = await ctx.db.transaction(async (tx) => {
         const txCtx = { ...ctx, db: tx as unknown as Database };
         const targets = await assertAppointmentTargets(txCtx, input);
         const timezone = await practiceTimeZone(txCtx);
@@ -1251,6 +1251,14 @@ export const appointmentsRouter = createRouter({
 
         return { seriesId: series!.id, created, skipped };
       });
+      if (result.created > 0) {
+        await recordActivationAfterAppointmentCreated(
+          ctx.db,
+          ctx.practiceId,
+          "appointments.createRecurring"
+        );
+      }
+      return result;
     }),
 
   // ── ICS calendar feed ─────────────────────────────────────

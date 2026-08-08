@@ -20,6 +20,7 @@ import { users } from "@openpims/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { appointmentCreatedWebhookPayload } from "@/lib/appointment-webhooks";
+import { recordActivationAfterAppointmentCreated } from "@/lib/funnel-events-server";
 import {
   assertSlotWithinPortalBookingHours,
   buildRequestedSlot,
@@ -1012,6 +1013,11 @@ export const portalRouter = createRouter({
           notes: `[Portal request] ${input.reason}`,
         })
         .returning();
+      await recordActivationAfterAppointmentCreated(
+        ctx.db,
+        client.practiceId,
+        "portal.requestAppointment"
+      );
 
       // Mirror into the communications inbox so front desk sees it there too.
       await ctx.db.insert(communications).values({
