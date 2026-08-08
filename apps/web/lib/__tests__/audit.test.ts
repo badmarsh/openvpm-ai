@@ -43,6 +43,25 @@ describe("redactSecrets", () => {
     expect(out.secret).toBe("[redacted]");
     expect(out.authToken).toBe("[redacted]");
   });
+  it("redacts government tax identifiers used for carrier registration", () => {
+    const out = redactSecrets({
+      taxId: "12-3456789",
+      federalTaxId: "12-3456789",
+      ein: "123456789",
+      ssn: "123-45-6789",
+      taxIdLast4: "6789",
+      legalName: "Healthy Pets LLC",
+    });
+
+    expect(out).toEqual({
+      taxId: "[redacted]",
+      federalTaxId: "[redacted]",
+      ein: "[redacted]",
+      ssn: "[redacted]",
+      taxIdLast4: "[redacted]",
+      legalName: "Healthy Pets LLC",
+    });
+  });
   it("redacts nested secret-ish keys without dropping non-secret context", () => {
     const out = redactSecrets({
       patientId: "patient-1",

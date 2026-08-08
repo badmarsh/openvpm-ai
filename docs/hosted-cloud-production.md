@@ -87,6 +87,7 @@ TELNYX_API_KEY=...
 TELNYX_PUBLIC_KEY=...
 MESSAGING_REGISTRATION_ENCRYPTION_KEY=... # openssl rand -base64 32
 MESSAGING_PROVISIONING_ENABLED=false
+MESSAGING_PROVISIONING_PRACTICE_IDS= # comma-separated approved pilot practice UUIDs
 AI_MODEL=claude-sonnet-4-6
 ANTHROPIC_API_KEY=...
 OPS_ALERT_WEBHOOK_URL=...
@@ -108,7 +109,12 @@ development calls that do not specify a location; do not point them at an
 individual clinic merely to satisfy readiness checks.
 Keep `MESSAGING_PROVISIONING_ENABLED=false` until the Telnyx account, webhook,
 operator queue, and budget controls have been verified; changing it to `true`
-opens the explicitly confirmed fee-bearing provisioning actions. For a
+opens the explicitly confirmed fee-bearing provisioning actions. Hosted
+number orders additionally require the clinic's practice UUID in
+`MESSAGING_PROVISIONING_PRACTICE_IDS`, so a controlled pilot does not expose
+purchases to every clinic admin. New OpenVPM-created messaging profiles enforce
+a `$10.00` daily Telnyx spend limit and smart encoding; review that cap before
+expanding beyond a design-partner pilot. For a
 Twilio fallback deployment, set `MESSAGING_PROVIDER=twilio` and provide
 `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_PHONE_NUMBER` instead of
 the Telnyx send envs.
