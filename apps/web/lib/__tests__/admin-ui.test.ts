@@ -49,6 +49,30 @@ describe("admin UI", () => {
     expect(source).toContain("Could not load the funnel.");
   });
 
+  it("shows a ranked activation recovery queue with verified contacts", () => {
+    expect(source).toContain("trpc.admin.activationRecovery.useQuery");
+    expect(source).toContain("Clinic activation recovery");
+    expect(source).toContain("clinic.queueRank");
+    expect(source).toContain("clinic.verifiedAdminEmail && clinic.verifiedAdminEmailAt");
+    expect(source).toContain('href={`mailto:${clinic.verifiedAdminEmail}`}');
+    expect(source).toContain("No verified admin contact");
+    expect(source).toContain("clinic.setupStage");
+    expect(source).toContain("clinic.setupHelpRequestedAt");
+    expect(source).toContain("clinic.realClientCount");
+    expect(source).toContain("clinic.realAppointmentCount");
+    expect(source).toContain("clinic.lastMeaningfulActivityAt");
+    expect(source).toContain("clinic.stallAgeDays");
+    expect(source).toContain("clinic.authoritativeStage");
+    expect(source).toContain("clinic.nextAction");
+    expect(source).toContain("clinic.nextActionPriority");
+  });
+
+  it("labels the overview KPI as active trials", () => {
+    expect(source).toContain('label: "Active trials"');
+    expect(source).toContain("data.totals.activeTrials");
+    expect(source).not.toContain('label: "On trial"');
+  });
+
   it("shows production journey cohorts and abandonment counts", () => {
     expect(source).toContain(
       "trpc.admin.journeyFunnel.useQuery({ days: 30 }, { retry: false })"
@@ -61,6 +85,8 @@ describe("admin UI", () => {
     expect(source).toContain("journey.totals.cardAbandoned");
     expect(source).toContain("journey.totals.clientErrors");
     expect(source).toContain("journey.weeks.map");
+    expect(source).toContain("Stalls require seven full days");
+    expect(source).toContain("active card-on-file trials are not stalled");
   });
 
   it("shows trial source and setup stage for diagnosing individual drop-off", () => {

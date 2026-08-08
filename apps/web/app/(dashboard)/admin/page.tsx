@@ -54,6 +54,17 @@ const statusStyles: Record<string, string> = {
   none: "bg-gray-100 text-gray-500",
 };
 
+const recoveryTrialStyles: Record<string, string> = {
+  active: "bg-green-100 text-green-700",
+  ending_soon: "bg-amber-100 text-amber-800",
+  expired: "bg-red-100 text-red-700",
+  no_trial: "bg-gray-100 text-gray-600",
+};
+
+function recoveryLabel(value: string) {
+  return value.replaceAll("_", " ");
+}
+
 export default function AdminPage() {
   const utils = trpc.useUtils();
   const { data, isLoading, error, refetch } =
@@ -62,6 +73,8 @@ export default function AdminPage() {
     });
   const { data: funnel, error: funnelError } =
     trpc.admin.activationFunnel.useQuery({ days: 30 }, { retry: false });
+  const { data: recoveryQueue, error: recoveryError } =
+    trpc.admin.activationRecovery.useQuery(undefined, { retry: false });
   const { data: journey, error: journeyError } =
     trpc.admin.journeyFunnel.useQuery({ days: 30 }, { retry: false });
   const { data: messagingQueue, error: messagingQueueError } =
@@ -81,6 +94,7 @@ export default function AdminPage() {
       setAnalyticsError(null);
       utils.admin.overview.invalidate();
       utils.admin.activationFunnel.invalidate();
+      utils.admin.activationRecovery.invalidate();
     },
     onError: (err) => setAnalyticsError(err.message),
   });
@@ -174,7 +188,7 @@ export default function AdminPage() {
   const kpis = [
     { label: "Practices", value: String(data.totals.practices), icon: Building2 },
     { label: "Est. MRR", value: formatUsd(data.totals.estimatedMrr), icon: DollarSign },
-    { label: "On trial", value: String(data.totals.trialing), icon: Clock },
+    { label: "Active trials", value: String(data.totals.activeTrials), icon: Clock },
     { label: "Active", value: String(data.totals.active), icon: CheckCircle },
     { label: "Past due", value: String(data.totals.pastDue), icon: AlertTriangle },
   ];
@@ -202,6 +216,122 @@ export default function AdminPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Activation recovery queue */}
+      <div className="mt-6 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <TrendingUp className="h-4 w-4" />
+          <span className="text-sm">Clinic activation recovery</span>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Ranked by the next operator action, then by days since a real clinic
+          milestone. Internal/test workspaces and sample data are excluded.
+        </p>
+        {recoveryQueue ? (
+          <div className="mt-4 overflow-x-auto rounded-md border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
+                  <th className="px-3 py-2 font-medium">Rank</th>
+                  <th className="px-3 py-2 font-medium">Clinic contact</th>
+                  <th className="px-3 py-2 font-medium">Trial</th>
+                  <th className="px-3 py-2 font-medium">Setup</th>
+                  <th className="px-3 py-2 font-medium">Real activity</th>
+                  <th className="px-3 py-2 font-medium">Stage</th>
+                  <th className="px-3 py-2 font-medium">Next action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {recoveryQueue.map((clinic) => (
+                  <tr key={clinic.practiceId} className="align-top hover:bg-muted/20">
+                    <td className="px-3 py-2 font-medium tabular-nums">
+                      {clinic.queueRank}
+                    </td>
+                    <td className="px-3 py-2">
+                      <p className="font-medium">{clinic.practiceName}</p>
+                      {clinic.verifiedAdminEmail && clinic.verifiedAdminEmailAt ? (
+                        <a
+                          href={`mailto:${clinic.verifiedAdminEmail}`}
+                          className="mt-0.5 block text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                        >
+                          {clinic.verifiedAdminName
+                            ? `${clinic.verifiedAdminName} · `
+                            : ""}
+                          {clinic.verifiedAdminEmail}
+                        </a>
+                      ) : (
+                        <p className="mt-0.5 text-xs font-medium text-amber-700">
+                          No verified admin contact
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                          recoveryTrialStyles[clinic.trialState] ??
+                          recoveryTrialStyles.no_trial
+                        }`}
+                      >
+                        {recoveryLabel(clinic.trialState)}
+                      </span>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {clinic.trialEndsAt
+                          ? `Ends ${formatDate(clinic.trialEndsAt, clinic.timezone)}`
+                          : "No trial end"}
+                      </p>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      <p>{clinic.setupStage}</p>
+                      {clinic.setupHelpRequestedAt ? (
+                        <p className="mt-0.5 text-xs font-medium text-emerald-700">
+                          Help requested {formatDate(
+                            clinic.setupHelpRequestedAt,
+                            clinic.timezone
+                          )}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2">
+                      <p className="tabular-nums">
+                        {clinic.realClientCount} clients ·{" "}
+                        {clinic.realAppointmentCount} visits
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Last {formatDate(
+                          clinic.lastMeaningfulActivityAt,
+                          clinic.timezone
+                        )} · stalled {clinic.stallAgeDays}d
+                      </p>
+                    </td>
+                    <td className="px-3 py-2 capitalize text-muted-foreground">
+                      {recoveryLabel(clinic.authoritativeStage)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <p className="font-medium">{clinic.nextAction}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Priority {clinic.nextActionPriority}
+                      </p>
+                    </td>
+                  </tr>
+                ))}
+                {recoveryQueue.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                      No clinic workspaces need activation recovery.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {recoveryError
+              ? "Could not load activation recovery."
+              : "Loading activation recovery…"}
+          </p>
+        )}
       </div>
 
       {/* Messaging carrier operations */}
@@ -495,11 +625,11 @@ export default function AdminPage() {
             </div>
 
             <div className="mt-5 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-6">
-              <p>Left before trying: {journey.totals.leftBeforeTrying}</p>
-              <p>Demo without signup: {journey.totals.demoAbandoned}</p>
-              <p>Signup without activation: {journey.totals.registrationAbandoned}</p>
-              <p>Activated without card: {journey.totals.activationAbandoned}</p>
-              <p>Card without payment: {journey.totals.cardAbandoned}</p>
+              <p>Left before trying (7d+): {journey.totals.leftBeforeTrying}</p>
+              <p>Demo without signup (7d+): {journey.totals.demoAbandoned}</p>
+              <p>Signup stalled (7d+): {journey.totals.registrationAbandoned}</p>
+              <p>Activation stalled (7d+): {journey.totals.activationAbandoned}</p>
+              <p>Card stalled after trial (7d+): {journey.totals.cardAbandoned}</p>
               <p>Client errors: {journey.totals.clientErrors}</p>
             </div>
 
@@ -540,7 +670,8 @@ export default function AdminPage() {
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               Anonymous first touch is carried across openvpm.com, demo, and signup.
-              Rates are visit-to-step for demo and registration, then step-to-step.
+              Rates are visit-to-step for demo and registration, then step-to-step.{" "}
+              Stalls require seven full days; active card-on-file trials are not stalled.
               {journey.totals.unattributedRegistrations > 0
                 ? ` ${journey.totals.unattributedRegistrations} registration(s) could not be matched to a first touch.`
                 : ""}
