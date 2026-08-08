@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const mocks = vi.hoisted(() => ({
   recordAuditLog: vi.fn(async () => undefined),
   dispatchWebhookEvent: vi.fn(async () => undefined),
+  recordActivationAfterAppointmentCreated: vi.fn(async () => true),
 }));
 
 vi.mock("@/lib/audit", () => ({
@@ -12,6 +13,11 @@ vi.mock("@/lib/audit", () => ({
 
 vi.mock("@/lib/webhook-dispatcher", () => ({
   dispatchWebhookEvent: mocks.dispatchWebhookEvent,
+}));
+
+vi.mock("@/lib/funnel-events-server", () => ({
+  recordActivationAfterAppointmentCreated:
+    mocks.recordActivationAfterAppointmentCreated,
 }));
 
 const { appointmentsRouter } = await import("../routers/appointments");
@@ -376,6 +382,11 @@ describe("appointments target safety", () => {
         clientId: CLIENT_ID,
         source: "dashboard",
       })
+    );
+    expect(mocks.recordActivationAfterAppointmentCreated).toHaveBeenCalledWith(
+      db,
+      PRACTICE_ID,
+      "appointments.create"
     );
   });
 
@@ -1023,6 +1034,11 @@ describe("appointments target safety", () => {
         notes: "Follow-up recheck",
         recurringSeriesId: SERIES_ID,
       })
+    );
+    expect(mocks.recordActivationAfterAppointmentCreated).toHaveBeenCalledWith(
+      db,
+      PRACTICE_ID,
+      "appointments.createRecurring"
     );
   });
 
