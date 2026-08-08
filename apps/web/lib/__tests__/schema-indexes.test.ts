@@ -39,6 +39,7 @@ import {
   treatmentPlanItems,
   users,
   vaccinationRecords,
+  visitWorkItems,
   verificationTokens,
   vitalSigns,
   webhooks,
@@ -114,12 +115,19 @@ describe("hot table indexes", () => {
       [
         "vaccination_records_patient_idx",
         "vaccination_records_practice_due_idx",
+        "vaccination_records_appointment_idx",
+        "vaccination_records_visit_source_uq",
       ],
     ],
     [
       "lab_results",
       labResults,
-      ["lab_results_patient_idx", "lab_results_practice_status_idx"],
+      [
+        "lab_results_patient_idx",
+        "lab_results_practice_status_idx",
+        "lab_results_appointment_idx",
+        "lab_results_visit_source_uq",
+      ],
     ],
     [
       "patient_weights",
@@ -139,7 +147,12 @@ describe("hot table indexes", () => {
     [
       "procedures",
       procedures,
-      ["procedures_patient_idx", "procedures_practice_idx"],
+      [
+        "procedures_patient_idx",
+        "procedures_practice_idx",
+        "procedures_appointment_idx",
+        "procedures_visit_source_uq",
+      ],
     ],
     [
       "soap_notes",
@@ -204,6 +217,7 @@ describe("hot table indexes", () => {
       "appointments",
       appointments,
       [
+        "appointments_practice_id_uq",
         "appointments_practice_time_idx",
         "appointments_client_status_idx",
         "appointments_patient_status_idx",
@@ -260,6 +274,7 @@ describe("hot table indexes", () => {
         "invoices_practice_idx",
         "invoices_client_idx",
         "invoices_patient_idx",
+        "invoices_visit_target_uq",
       ],
     ],
     [
@@ -270,6 +285,7 @@ describe("hot table indexes", () => {
         "invoice_items_item_idx",
         "invoice_items_source_prescription_idx",
         "invoice_items_source_prescription_invoice_uq",
+        "invoice_items_invoice_item_target_uq",
       ],
     ],
     [
@@ -294,6 +310,20 @@ describe("hot table indexes", () => {
         "prescriptions_product_idx",
         "prescriptions_appointment_idx",
         "prescriptions_practice_operation_uq",
+        "prescriptions_visit_source_uq",
+      ],
+    ],
+    [
+      "visit_work_items",
+      visitWorkItems,
+      [
+        "visit_work_items_visit_status_idx",
+        "visit_work_items_unresolved_idx",
+        "visit_work_items_vaccination_uq",
+        "visit_work_items_lab_result_uq",
+        "visit_work_items_procedure_uq",
+        "visit_work_items_prescription_uq",
+        "visit_work_items_invoice_item_uq",
       ],
     ],
     [

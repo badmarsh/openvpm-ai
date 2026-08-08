@@ -66,6 +66,7 @@ function createDb(opts?: {
     const result = selectResults.shift() ?? [];
     const afterWhere = {
       limit: vi.fn(async () => result),
+      for: vi.fn(async () => result),
       orderBy: vi.fn(() => afterWhere),
       then: (
         resolve: (value: unknown[]) => unknown,
@@ -559,7 +560,11 @@ describe("records target safety", () => {
 
   it("emits a webhook after creating a procedure", async () => {
     const { db } = createDb({
-      selectResults: [patientRow, appointmentRow],
+      selectResults: [
+        patientRow,
+        [{ id: APPOINTMENT_ID, status: "in_exam" }],
+        [],
+      ],
       insertedRows: [
         {
           id: RECORD_ID,

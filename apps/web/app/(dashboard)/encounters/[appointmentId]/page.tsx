@@ -440,6 +440,18 @@ export default function EncounterWorkspacePage() {
               closeoutQuery.data?.closeout?.status !== "completed"
             }
           />
+
+          <VisitWorkReconciliation
+            appointmentId={appointmentId}
+            canManage={canManageVisit(role) && appointment.status === "in_exam"}
+            canCorrect={
+              appointment.status === "in_exam" &&
+              (role === "admin" ||
+                role === "veterinarian" ||
+                role === "front_desk")
+            }
+            canVoid={role === "admin" || role === "veterinarian"}
+          />
         </div>
 
         <div id="charge-capture" className="scroll-mt-4">
@@ -2025,6 +2037,302 @@ function useCurrencyFormatterWithConfig() {
       config.data?.currency ?? "usd",
       config.data?.country ?? "US",
     );
+}
+
+function VisitWorkReconciliation({
+  appointmentId,
+  canManage,
+  canCorrect,
+  canVoid,
+}: {
+  appointmentId: string;
+  canManage: boolean;
+  canCorrect: boolean;
+  canVoid: boolean;
+}) {
+  const utils = trpc.useUtils();
+  const fmt = useCurrencyFormatterWithConfig();
+  const reconciliation = trpc.encounters.getVisitReconciliation.useQuery({
+    appointmentId,
+  });
+  const [selectedCharges, setSelectedCharges] = useState<
+    Record<string, string>
+  >({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const resolve = trpc.encounters.resolveVisitWork.useMutation({
+    onSuccess: () => {
+      toast.success("Performed item reconciled");
+      utils.encounters.getVisitReconciliation.invalidate({ appointmentId });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const reopen = trpc.encounters.reopenVisitWork.useMutation({
+    onSuccess: () => {
+      toast.success("Reconciliation reopened for correction");
+      utils.encounters.getVisitReconciliation.invalidate({ appointmentId });
+      utils.billing.listInvoices.invalidate({
+        appointmentId,
+        limit: 25,
+        offset: 0,
+      });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Card id="visit-work-reconciliation" className="scroll-mt-4">
+      <CardHeader>
+        <CardTitle>Performed work reconciliation</CardTitle>
+        <CardDescription>
+          Every vaccination, lab, procedure, and visit prescription must be
+          linked to a confirmed invoice line or given an attributable no-charge
+          or void/correction reason before checkout.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {reconciliation.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Checking performed work...
+          </div>
+        ) : reconciliation.error || !reconciliation.data ? (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            Reconciliation state is unavailable. Checkout remains blocked until
+            it can be verified.
+          </div>
+        ) : reconciliation.data.items.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+            No visit-owned vaccinations, labs, procedures, or prescriptions have
+            been recorded.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-sm">
+              <span>Items requiring attention</span>
+              <Badge
+                variant={
+                  reconciliation.data.unresolvedCount > 0
+                    ? "destructive"
+                    : "success"
+                }
+              >
+                {reconciliation.data.unresolvedCount}
+              </Badge>
+            </div>
+            {reconciliation.data.items.map((item) => {
+              const unresolved = item.status === "unresolved";
+              const staleCharge =
+                item.status === "charged" && !item.chargeLinkActive;
+              const suggestedCatalog = item.suggestedProductId
+                ? `${item.suggestedProductName} (${fmt(item.suggestedProductPrice)})`
+                : item.suggestedService
+                  ? `${item.suggestedService.name} (${fmt(item.suggestedService.defaultPrice)})`
+                  : null;
+              const reason = reasons[item.id] ?? "";
+              const selectedCharge = selectedCharges[item.id] ?? "";
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-md border border-border p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{item.sourceLabel}</p>
+                      <p className="text-xs capitalize text-muted-foreground">
+                        {item.sourceType}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        unresolved || staleCharge ? "destructive" : "outline"
+                      }
+                    >
+                      {staleCharge
+                        ? "charge removed"
+                        : item.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+
+                  {unresolved || staleCharge ? (
+                    <div className="mt-4 flex flex-col gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        {suggestedCatalog
+                          ? `Suggested catalog match: ${suggestedCatalog}. Add and save it in Charge capture, then link the saved invoice line here.`
+                          : "Add and save the appropriate service or product in Charge capture, then link the saved invoice line here. OpenVPM never bills a suggestion automatically."}
+                      </p>
+                      {unresolved && canManage ? (
+                        <>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <select
+                              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+                              aria-label={`Invoice charge for ${item.sourceLabel}`}
+                              value={selectedCharge}
+                              disabled={resolve.isPending || reopen.isPending}
+                              onChange={(event) =>
+                                setSelectedCharges((current) => ({
+                                  ...current,
+                                  [item.id]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">
+                                Choose saved invoice line
+                              </option>
+                              {reconciliation.data.invoiceItemOptions.map(
+                                (charge) => (
+                                  <option key={charge.id} value={charge.id}>
+                                    {charge.description} · qty {charge.quantity}{" "}
+                                    · {fmt(charge.total)}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                            <Button
+                              variant="outline"
+                              disabled={
+                                !selectedCharge ||
+                                resolve.isPending ||
+                                reopen.isPending
+                              }
+                              onClick={() =>
+                                resolve.mutate({
+                                  appointmentId,
+                                  workItemId: item.id,
+                                  resolution: {
+                                    status: "charged",
+                                    invoiceItemId: selectedCharge,
+                                  },
+                                })
+                              }
+                            >
+                              Link confirmed charge
+                            </Button>
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              value={reason}
+                              maxLength={500}
+                              placeholder="Reason required for no charge or void/correction"
+                              aria-label={`Reconciliation reason for ${item.sourceLabel}`}
+                              disabled={resolve.isPending || reopen.isPending}
+                              onChange={(event) =>
+                                setReasons((current) => ({
+                                  ...current,
+                                  [item.id]: event.target.value,
+                                }))
+                              }
+                            />
+                            <Button
+                              variant="outline"
+                              disabled={
+                                reason.trim().length < 3 ||
+                                resolve.isPending ||
+                                reopen.isPending
+                              }
+                              onClick={() =>
+                                resolve.mutate({
+                                  appointmentId,
+                                  workItemId: item.id,
+                                  resolution: {
+                                    status: "no_charge",
+                                    reason: reason.trim(),
+                                  },
+                                })
+                              }
+                            >
+                              No charge
+                            </Button>
+                            {canVoid ? (
+                              <Button
+                                variant="outline"
+                                disabled={
+                                  reason.trim().length < 3 ||
+                                  resolve.isPending ||
+                                  reopen.isPending
+                                }
+                                onClick={() =>
+                                  resolve.mutate({
+                                    appointmentId,
+                                    workItemId: item.id,
+                                    resolution: {
+                                      status: "voided",
+                                      reason: reason.trim(),
+                                    },
+                                  })
+                                }
+                              >
+                                Void/corrected
+                              </Button>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : staleCharge ? (
+                        <p className="text-sm text-destructive">
+                          The linked invoice line is no longer active. Reopen
+                          this resolution with a correction reason, fix the
+                          invoice, and link the replacement line before
+                          checkout.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          A clinic teammate with visit access must reconcile
+                          this item.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {item.status === "charged"
+                        ? `Linked charge: ${item.invoiceItemDescription}`
+                        : item.status === "no_charge"
+                          ? `No-charge reason: ${item.noChargeReason}`
+                          : `Void/correction reason: ${item.voidReason}`}
+                      {item.resolvedByName ? ` · ${item.resolvedByName}` : ""}
+                    </p>
+                  )}
+
+                  {!unresolved && canCorrect ? (
+                    <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row">
+                      <Input
+                        value={reason}
+                        maxLength={500}
+                        placeholder="Why does this reconciliation need correction?"
+                        aria-label={`Correction reason for ${item.sourceLabel}`}
+                        disabled={resolve.isPending || reopen.isPending}
+                        onChange={(event) =>
+                          setReasons((current) => ({
+                            ...current,
+                            [item.id]: event.target.value,
+                          }))
+                        }
+                      />
+                      <Button
+                        variant="outline"
+                        disabled={
+                          reason.trim().length < 5 ||
+                          resolve.isPending ||
+                          reopen.isPending
+                        }
+                        onClick={() =>
+                          reopen.mutate({
+                            appointmentId,
+                            workItemId: item.id,
+                            reason: reason.trim(),
+                          })
+                        }
+                      >
+                        Reopen for correction
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function ChargeCapture({
