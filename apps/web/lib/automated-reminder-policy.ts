@@ -42,6 +42,17 @@ export function hasReservedEmailDomain(
   );
 }
 
+/** NANPA reserves 555-0100 through 555-0199 in every area code for fiction. */
+export function hasReservedFixturePhone(
+  value: string | null | undefined
+): boolean {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  const national = digits.length === 11 && digits.startsWith("1")
+    ? digits.slice(1)
+    : digits;
+  return /^\d{3}55501\d{2}$/.test(national);
+}
+
 /**
  * Fail closed before an automated reminder creates a delivery claim. Sample
  * records stay visible in the product, but neither they nor reserved fixture
