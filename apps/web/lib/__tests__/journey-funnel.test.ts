@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
@@ -100,5 +101,18 @@ describe("computeJourneyFunnel", () => {
       cardRate: 0,
       paidRate: 0,
     });
+  });
+
+  it("only calls mature stalls abandoned and exempts active card trials", () => {
+    const source = readFileSync("lib/admin/journey-funnel.ts", "utf8");
+
+    expect(source).toContain("export const ABANDONMENT_GRACE_DAYS = 7");
+    expect(source).toContain("s.cohort_at < ${abandonedBefore}::timestamptz");
+    expect(source).toContain("s.registered_at < ${abandonedBefore}::timestamptz");
+    expect(source).toContain("s.activation_at < ${abandonedBefore}::timestamptz");
+    expect(source).toContain("s.card_added_at < ${abandonedBefore}::timestamptz");
+    expect(source).toContain("s.stripe_subscription_id is not null");
+    expect(source).toContain("s.billing_status = 'trialing'");
+    expect(source).toContain("s.trial_ends_at > ${now.toISOString()}::timestamptz");
   });
 });
