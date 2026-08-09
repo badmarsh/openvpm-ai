@@ -980,4 +980,106 @@ describe("committed Drizzle migrations", () => {
       "REVOKE ALL ON lab_result_replacements FROM authenticated",
     );
   });
+
+  it("creates system-only verification email attempts and immutable delivery evidence", () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries?: Array<{ tag?: string }> };
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0062_ambitious_moon_knight",
+    );
+
+    const sql = readRepoFile(
+      "packages/db/drizzle/0062_ambitious_moon_knight.sql",
+    );
+    expect(sql).toContain('CREATE TABLE "auth_email_attempts"');
+    expect(sql).toContain('CREATE TABLE "auth_email_delivery_events"');
+    expect(sql).toContain('CREATE TABLE "auth_email_webhook_conflicts"');
+    expect(sql).toContain(
+      'CREATE TABLE "auth_email_provider_identity_conflicts"',
+    );
+    expect(sql).toContain("auth_email_attempts_outcome_shape_check");
+    expect(sql).toContain("auth_email_attempts_state_guard");
+    expect(sql).toContain("guard_auth_email_attempt_mutation");
+    expect(sql).toContain("Auth email attempt identity is immutable");
+    expect(sql).toContain(
+      "Auth email attempt state transition is not permitted",
+    );
+    expect(sql).toContain("OLD.outcome = 'outcome_unknown'");
+    expect(sql).toContain("NEW.outcome = 'accepted'");
+    expect(sql).toContain(
+      "Auth email attempts may only be deleted during owner maintenance",
+    );
+    expect(sql).toContain("\"provider\" in ('resend', 'console')");
+    expect(sql).toContain("auth_email_delivery_events_attribution_shape_check");
+    expect(sql).toContain(
+      "auth_email_delivery_events_raw_body_fingerprint_check",
+    );
+    expect(sql).toContain('"raw_body_fingerprint" varchar(64) NOT NULL');
+    expect(sql).toContain("'^[0-9a-f]{64}$'");
+    expect(sql).toContain("auth_email_delivery_events_immutable");
+    expect(sql).toContain("auth_email_webhook_conflicts_identity_uq");
+    expect(sql.indexOf("auth_email_delivery_events_webhook_uq")).toBeLessThan(
+      sql.indexOf("auth_email_webhook_conflicts_webhook_fk"),
+    );
+    expect(sql).toContain("auth_email_webhook_conflicts_immutable");
+    expect(sql).toContain("auth_email_provider_identity_conflicts_immutable");
+    expect(sql).toContain(
+      "auth_email_provider_identity_conflicts_distinct_id_check",
+    );
+    expect(sql).toContain(
+      "auth_email_provider_identity_conflicts_id_shape_check",
+    );
+    expect(sql).toContain(
+      "auth_email_webhook_conflicts_raw_body_fingerprint_check",
+    );
+    expect(sql).toContain(
+      "ALTER TABLE auth_email_attempts ENABLE ROW LEVEL SECURITY",
+    );
+    expect(sql).toContain(
+      "ALTER TABLE auth_email_delivery_events ENABLE ROW LEVEL SECURITY",
+    );
+    expect(sql).toContain(
+      "ALTER TABLE auth_email_webhook_conflicts ENABLE ROW LEVEL SECURITY",
+    );
+    expect(sql).toContain(
+      "ALTER TABLE auth_email_provider_identity_conflicts ENABLE ROW LEVEL SECURITY",
+    );
+    expect(sql).toContain(
+      "GRANT SELECT, INSERT, UPDATE ON auth_email_attempts TO openpims_app",
+    );
+    expect(sql).toContain(
+      "GRANT SELECT, INSERT ON auth_email_delivery_events, auth_email_webhook_conflicts, auth_email_provider_identity_conflicts TO openpims_app",
+    );
+    expect(sql).not.toMatch(
+      /recipient|verify_url|auth_token|subject|html|\bto\b varchar/i,
+    );
+
+    const reset = readRepoFile("packages/db/reset.ts");
+    expect(reset).toContain('"auth_email_delivery_events"');
+    expect(reset).toContain('"auth_email_webhook_conflicts"');
+    expect(reset).toContain('"auth_email_provider_identity_conflicts"');
+    expect(reset).toContain('"auth_email_attempts"');
+    expect(reset.indexOf('"auth_email_webhook_conflicts"')).toBeLessThan(
+      reset.indexOf('"auth_email_delivery_events"'),
+    );
+    expect(reset.indexOf('"auth_email_delivery_events"')).toBeLessThan(
+      reset.indexOf('"auth_email_attempts"'),
+    );
+
+    const rls = readRepoFile("packages/db/rls/enable-rls.sql");
+    expect(rls).toContain("CREATE POLICY system_only ON auth_email_attempts");
+    expect(rls).toContain(
+      "CREATE POLICY system_only ON auth_email_delivery_events",
+    );
+    expect(rls).toContain(
+      "CREATE POLICY system_only ON auth_email_webhook_conflicts",
+    );
+    expect(rls).toContain(
+      "CREATE POLICY system_only ON auth_email_provider_identity_conflicts",
+    );
+    expect(rls).toContain(
+      "REVOKE ALL ON auth_email_attempts, auth_email_delivery_events, auth_email_webhook_conflicts, auth_email_provider_identity_conflicts FROM openpims_app",
+    );
+  });
 });
