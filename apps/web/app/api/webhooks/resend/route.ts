@@ -14,25 +14,27 @@ import {
   type EmailSuppressionReason,
 } from "@/lib/email-suppression";
 import { emailEnv } from "@/lib/email-env";
+import {
+  authEmailWebhookFingerprint,
+  recordAuthEmailDeliveryEvent,
+  type AuthEmailWebhookEvent,
+} from "@/lib/auth-email-delivery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type EmailWebhookEvent = Extract<
-  WebhookEventPayload,
-  { data: { email_id: string; to: string[] } }
->;
+type EmailWebhookEvent = AuthEmailWebhookEvent;
 
 function payloadTooLargeResponse() {
   return NextResponse.json(
     { error: "Email webhook payload too large" },
-    { status: 413 }
+    { status: 413 },
   );
 }
 
 function verifiedEvent(
   rawBody: string,
-  headers: Headers
+  headers: Headers,
 ): WebhookEventPayload | null {
   const webhookSecret = emailEnv("RESEND_WEBHOOK_SECRET");
   const id = headers.get("svix-id");
@@ -42,7 +44,9 @@ function verifiedEvent(
   if (!webhookSecret || !id || !timestamp || !signature) return null;
 
   try {
-    const resend = new Resend(emailEnv("RESEND_API_KEY") ?? "re_webhook_verify");
+    const resend = new Resend(
+      emailEnv("RESEND_API_KEY") ?? "re_webhook_verify",
+    );
     return resend.webhooks.verify({
       payload: rawBody,
       webhookSecret,
@@ -54,14 +58,14 @@ function verifiedEvent(
 }
 
 function isEmailWebhookEvent(
-  event: WebhookEventPayload
+  event: WebhookEventPayload,
 ): event is EmailWebhookEvent {
   const data = (event as { data?: { email_id?: unknown; to?: unknown } }).data;
   return typeof data?.email_id === "string" && Array.isArray(data.to);
 }
 
 function communicationStatusForEvent(
-  type: WebhookEventPayload["type"]
+  type: WebhookEventPayload["type"],
 ): "delivered" | "failed" | null {
   if (type === "email.delivered") return "delivered";
   if (
@@ -76,7 +80,7 @@ function communicationStatusForEvent(
 }
 
 function suppressionReasonForEvent(
-  type: WebhookEventPayload["type"]
+  type: WebhookEventPayload["type"],
 ): EmailSuppressionReason | null {
   if (type === "email.bounced") return "bounce";
   if (type === "email.complained") return "complaint";
@@ -89,7 +93,9 @@ function eventDetail(event: EmailWebhookEvent): string {
     return event.data.bounce?.message || "Resend reported a hard bounce.";
   }
   if (event.type === "email.failed") {
-    return event.data.failed?.reason || "Resend reported email delivery failed.";
+    return (
+      event.data.failed?.reason || "Resend reported email delivery failed."
+    );
   }
   if (event.type === "email.suppressed") {
     return (
@@ -103,11 +109,14 @@ function eventDetail(event: EmailWebhookEvent): string {
 }
 
 function groupByPractice(
-  rows: Array<{ id: string; practiceId: string }>
+  rows: Array<{ id: string; practiceId: string }>,
 ): Map<string, string[]> {
   const grouped = new Map<string, string[]>();
   for (const row of rows) {
-    grouped.set(row.practiceId, [...(grouped.get(row.practiceId) ?? []), row.id]);
+    grouped.set(row.practiceId, [
+      ...(grouped.get(row.practiceId) ?? []),
+      row.id,
+    ]);
   }
   return grouped;
 }
@@ -119,7 +128,7 @@ export async function POST(request: Request) {
 
   const rawBody = await readRequestTextWithLimit(
     request,
-    EMAIL_WEBHOOK_BODY_MAX_BYTES
+    EMAIL_WEBHOOK_BODY_MAX_BYTES,
   );
   if (!rawBody.ok) {
     return payloadTooLargeResponse();
@@ -131,6 +140,23 @@ export async function POST(request: Request) {
   }
 
   if (!isEmailWebhookEvent(event)) {
+    return NextResponse.json({ ok: true });
+  }
+
+  // Account-verification mail is system auth traffic, not a clinic-to-client
+  // communication. Claim its redacted evidence first and never turn its
+  // recipient into a clinic email suppression.
+  const authDelivery = await recordAuthEmailDeliveryEvent({
+    event,
+    webhookId: request.headers.get("svix-id")!,
+    rawBodyFingerprint: authEmailWebhookFingerprint(rawBody.text),
+    db,
+  });
+  if (authDelivery.tracked) {
+    // Identity conflicts are acknowledged only after the recorder durably
+    // quarantines safe fingerprint/provider evidence. A database failure
+    // throws above and remains retryable; a committed conflict must not cause
+    // an infinite provider retry loop.
     return NextResponse.json({ ok: true });
   }
 
@@ -151,26 +177,26 @@ export async function POST(request: Request) {
         practices,
         and(
           eq(practices.id, communications.practiceId),
-          isNull(practices.deletedAt)
-        )
+          isNull(practices.deletedAt),
+        ),
       )
       .where(
         and(
           eq(communications.providerMessageId, event.data.email_id),
           eq(communications.channel, "email"),
           eq(communications.direction, "outbound"),
-          isNull(communications.deletedAt)
-        )
+          isNull(communications.deletedAt),
+        ),
       )
-      .limit(20)
+      .limit(20),
   );
 
   const recipients = Array.from(
     new Set(
       event.data.to
         .map((email) => normalizeEmailSuppressionAddress(email))
-        .filter((email): email is string => Boolean(email))
-    )
+        .filter((email): email is string => Boolean(email)),
+    ),
   );
   const detail = eventDetail(event);
 
@@ -190,10 +216,10 @@ export async function POST(request: Request) {
                 communications.status,
                 status === "delivered"
                   ? ["pending", "sent"]
-                  : ["pending", "sent", "delivered"]
+                  : ["pending", "sent", "delivered"],
               ),
-              isNull(communications.deletedAt)
-            )
+              isNull(communications.deletedAt),
+            ),
           );
       }
 
@@ -206,7 +232,7 @@ export async function POST(request: Request) {
               email,
               reason: suppressionReason,
               detail,
-            }))
+            })),
           )
           .onConflictDoNothing({
             target: [emailSuppressions.practiceId, emailSuppressions.email],

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const ROUTE_SOURCE = readFileSync(
   fileURLToPath(new URL("./route.ts", import.meta.url)),
-  "utf8"
+  "utf8",
 );
 
 const mocks = vi.hoisted(() => {
@@ -45,15 +45,26 @@ const mocks = vi.hoisted(() => {
     updateWhere,
     verify,
     Resend,
+    recordAuthEmailDeliveryEvent: vi.fn(
+      async (): Promise<{
+        tracked: boolean;
+        duplicate: boolean;
+        conflict: boolean;
+        attribution: string | null;
+      }> => ({
+        tracked: false,
+        duplicate: false,
+        conflict: false,
+        attribution: null,
+      }),
+    ),
+    authEmailWebhookFingerprint: vi.fn(() => "f".repeat(64)),
     withSystem: vi.fn(async (_db: unknown, fn: (tx: unknown) => unknown) =>
-      fn(db)
+      fn(db),
     ),
     withTenant: vi.fn(
-      async (
-        _db: unknown,
-        _practiceId: string,
-        fn: (tx: unknown) => unknown
-      ) => fn(db)
+      async (_db: unknown, _practiceId: string, fn: (tx: unknown) => unknown) =>
+        fn(db),
     ),
   };
 });
@@ -71,10 +82,14 @@ vi.mock("@/lib/tenant-db", () => ({
   withTenant: mocks.withTenant,
 }));
 
+vi.mock("@/lib/auth-email-delivery", () => ({
+  recordAuthEmailDeliveryEvent: mocks.recordAuthEmailDeliveryEvent,
+  authEmailWebhookFingerprint: mocks.authEmailWebhookFingerprint,
+}));
+
 const { POST } = await import("./route");
-const { EMAIL_WEBHOOK_BODY_MAX_BYTES } = await import(
-  "@/lib/email-webhook-limits"
-);
+const { EMAIL_WEBHOOK_BODY_MAX_BYTES } =
+  await import("@/lib/email-webhook-limits");
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const COMMUNICATION_ID = "00000000-0000-0000-0000-0000000000cc";
@@ -95,6 +110,12 @@ function signedRequest(body: string, headers?: Record<string, string>) {
 afterEach(() => {
   vi.clearAllMocks();
   mocks.selectResults.length = 0;
+  mocks.recordAuthEmailDeliveryEvent.mockResolvedValue({
+    tracked: false,
+    duplicate: false,
+    conflict: false,
+    attribution: null,
+  });
   delete process.env.RESEND_WEBHOOK_SECRET;
   delete process.env.RESEND_API_KEY;
 });
@@ -104,7 +125,7 @@ describe("Resend webhook", () => {
     const response = await POST(
       signedRequest("{}", {
         "content-length": String(EMAIL_WEBHOOK_BODY_MAX_BYTES + 1),
-      })
+      }),
     );
 
     expect(response.status).toBe(413);
@@ -118,7 +139,7 @@ describe("Resend webhook", () => {
 
   it("rejects streamed oversized payloads without a content-length header", async () => {
     const response = await POST(
-      signedRequest("x".repeat(EMAIL_WEBHOOK_BODY_MAX_BYTES + 1))
+      signedRequest("x".repeat(EMAIL_WEBHOOK_BODY_MAX_BYTES + 1)),
     );
 
     expect(response.status).toBe(413);
@@ -141,7 +162,7 @@ describe("Resend webhook", () => {
       new Request("https://openvpm.test/api/webhooks/resend", {
         method: "POST",
         body: "{}",
-      })
+      }),
     );
 
     expect(response.status).toBe(401);
@@ -199,7 +220,7 @@ describe("Resend webhook", () => {
     expect(mocks.withTenant).toHaveBeenCalledWith(
       mocks.db,
       PRACTICE_ID,
-      expect.any(Function)
+      expect.any(Function),
     );
     expect(mocks.updateSet).toHaveBeenCalledWith({ status: "delivered" });
     expect(mocks.insertValues).not.toHaveBeenCalled();
@@ -242,6 +263,79 @@ describe("Resend webhook", () => {
     expect(mocks.insertConflict).toHaveBeenCalledTimes(1);
   });
 
+  it("records verification evidence without polluting client suppressions", async () => {
+    process.env.RESEND_WEBHOOK_SECRET = "whsec_test";
+    const event = {
+      type: "email.bounced" as const,
+      created_at: "2026-06-29T12:00:00Z",
+      data: {
+        email_id: "email-auth-1",
+        from: "OpenVPM <noreply@mail.openvpm.com>",
+        to: ["owner@example.com"],
+        subject: "Verify your OpenVPM email",
+        created_at: "2026-06-29T12:00:00Z",
+        tags: {
+          openvpm_email_kind: "auth_verification",
+          openvpm_attempt_id: "00000000-0000-4000-8000-000000000001",
+        },
+        bounce: {
+          message: "Mailbox unavailable",
+          subType: "General",
+          type: "Permanent",
+        },
+      },
+    };
+    mocks.verify.mockReturnValue(event);
+    mocks.recordAuthEmailDeliveryEvent.mockResolvedValue({
+      tracked: true,
+      duplicate: false,
+      conflict: false,
+      attribution: "attempt_tag",
+    });
+
+    const response = await POST(signedRequest("{}"));
+
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(mocks.recordAuthEmailDeliveryEvent).toHaveBeenCalledWith({
+      event,
+      webhookId: "msg_123",
+      rawBodyFingerprint: "f".repeat(64),
+      db: mocks.db,
+    });
+    expect(mocks.withTenant).not.toHaveBeenCalled();
+    expect(mocks.updateSet).not.toHaveBeenCalled();
+    expect(mocks.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("acknowledges a durably quarantined Svix identity conflict without tenant work", async () => {
+    process.env.RESEND_WEBHOOK_SECRET = "whsec_test";
+    mocks.verify.mockReturnValue({
+      type: "email.delivered",
+      created_at: "2026-06-29T12:00:00Z",
+      data: {
+        email_id: "email-auth-1",
+        from: "OpenVPM <noreply@mail.openvpm.com>",
+        to: ["owner@example.com"],
+        subject: "Verify your OpenVPM email",
+        created_at: "2026-06-29T12:00:00Z",
+        tags: { openvpm_email_kind: "auth_verification" },
+      },
+    });
+    mocks.recordAuthEmailDeliveryEvent.mockResolvedValue({
+      tracked: true,
+      duplicate: false,
+      conflict: true,
+      attribution: "identity_conflict",
+    });
+
+    const response = await POST(signedRequest("changed signed body"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(mocks.withTenant).not.toHaveBeenCalled();
+    expect(mocks.insertValues).not.toHaveBeenCalled();
+  });
+
   it("acks unmatched provider events without creating suppressions", async () => {
     process.env.RESEND_WEBHOOK_SECRET = "whsec_test";
     mocks.verify.mockReturnValue({
@@ -267,7 +361,7 @@ describe("Resend webhook", () => {
 
   it("matches provider email events only for active practices", () => {
     const matchLookup = ROUTE_SOURCE.match(
-      /const matches = await withSystem[\s\S]+?\.limit\(20\)/
+      /const matches = await withSystem[\s\S]+?\.limit\(20\)/,
     )?.[0];
 
     expect(matchLookup).toContain("innerJoin(");

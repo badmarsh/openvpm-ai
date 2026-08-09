@@ -2,14 +2,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { users } from "@openpims/db";
 
 const mocks = vi.hoisted(() => ({
-  rateLimit: vi.fn(async () => ({ success: true, remaining: 4, resetAt: new Date() })),
+  rateLimit: vi.fn(async () => ({
+    success: true,
+    remaining: 4,
+    resetAt: new Date(),
+  })),
   createAuthToken: vi.fn(async () => "token-123"),
   consumeAuthToken: vi.fn(),
   sendPasswordResetEmail: vi.fn(async () => ({ success: true })),
-  sendVerificationEmail: vi.fn(
-    async (): Promise<{ success: boolean; id?: string; error?: string }> => ({
+  sendTrackedVerificationEmail: vi.fn(
+    async (): Promise<{
+      success: boolean;
+      provider: "resend" | "console";
+      outcome: "accepted" | "definite_failure" | "outcome_unknown";
+      possiblySent: boolean;
+      evidencePersisted: boolean;
+    }> => ({
       success: true,
-    })
+      provider: "resend",
+      outcome: "accepted",
+      possiblySent: false,
+      evidencePersisted: true,
+    }),
   ),
   sendWelcomeEmail: vi.fn(async () => ({ success: true })),
   createSubscriptionCheckoutSession: vi.fn(async () => ({
@@ -33,8 +47,11 @@ vi.mock("@/lib/auth-tokens", () => ({
 
 vi.mock("@/lib/email", () => ({
   sendPasswordResetEmail: mocks.sendPasswordResetEmail,
-  sendVerificationEmail: mocks.sendVerificationEmail,
   sendWelcomeEmail: mocks.sendWelcomeEmail,
+}));
+
+vi.mock("@/lib/auth-email-delivery", () => ({
+  sendTrackedVerificationEmail: mocks.sendTrackedVerificationEmail,
 }));
 
 vi.mock("@/lib/onboarding/defaults", () => ({
@@ -70,7 +87,7 @@ const { authRouter } = await import("../routers/auth");
 function sqlIncludesValue(
   value: unknown,
   needle: unknown,
-  seen = new WeakSet<object>()
+  seen = new WeakSet<object>(),
 ): boolean {
   if (Object.is(value, needle)) {
     return true;
@@ -95,12 +112,12 @@ function sqlIncludesValue(
   }
   if (Array.isArray(candidate.queryChunks)) {
     return candidate.queryChunks.some((item) =>
-      sqlIncludesValue(item, needle, seen)
+      sqlIncludesValue(item, needle, seen),
     );
   }
 
   return Object.values(value as Record<string, unknown>).some((item) =>
-    sqlIncludesValue(item, needle, seen)
+    sqlIncludesValue(item, needle, seen),
   );
 }
 
@@ -130,13 +147,25 @@ function createSelectDb(selectResults: unknown[][]) {
   const selectFrom = vi.fn(() => ({ where: selectWhere }));
   const select = vi.fn(() => ({ from: selectFrom }));
 
+  let transactionDepth = 0;
   const db: Record<string, unknown> = {
-    transaction: async (fn: (tx: unknown) => unknown) => fn(db),
+    transaction: async (fn: (tx: unknown) => unknown) => {
+      transactionDepth += 1;
+      try {
+        return await fn(db);
+      } finally {
+        transactionDepth -= 1;
+      }
+    },
     execute: vi.fn(async () => undefined),
     select,
   };
 
-  return { db, selectWhere };
+  return {
+    db,
+    selectWhere,
+    isInTransaction: () => transactionDepth > 0,
+  };
 }
 
 function createRegistrationDb(opts?: { insertRows?: unknown[] }) {
@@ -161,13 +190,13 @@ function createRegistrationDb(opts?: { insertRows?: unknown[] }) {
   const updateSet = vi.fn(() => ({ where: updateWhere }));
   const update = vi.fn(() => ({ set: updateSet }));
 
-  let inTransaction = false;
+  let transactionDepth = 0;
   const transaction = vi.fn(async (fn: (tx: unknown) => unknown) => {
-    inTransaction = true;
+    transactionDepth += 1;
     try {
       return await fn(db);
     } finally {
-      inTransaction = false;
+      transactionDepth -= 1;
     }
   });
   const db: Record<string, unknown> = {
@@ -183,7 +212,7 @@ function createRegistrationDb(opts?: { insertRows?: unknown[] }) {
     insertValues,
     updateSet,
     transaction,
-    isInTransaction: () => inTransaction,
+    isInTransaction: () => transactionDepth > 0,
   };
 }
 
@@ -222,7 +251,13 @@ afterEach(() => {
   mocks.billingEnforced.mockReturnValue(false);
   mocks.noCardTrialEnabled.mockReturnValue(false);
   mocks.createAuthToken.mockResolvedValue("token-123");
-  mocks.sendVerificationEmail.mockResolvedValue({ success: true });
+  mocks.sendTrackedVerificationEmail.mockResolvedValue({
+    success: true,
+    provider: "resend",
+    outcome: "accepted",
+    possiblySent: false,
+    evidencePersisted: true,
+  });
   mocks.createSubscriptionCheckoutSession.mockResolvedValue({
     url: "https://stripe.example/signup-checkout",
   });
@@ -240,7 +275,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -248,7 +283,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "p".repeat(129),
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -256,7 +291,7 @@ describe("auth router input validation", () => {
         email: `${"a".repeat(250)}@example.com`,
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -264,7 +299,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: " ".repeat(4),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -275,7 +310,7 @@ describe("auth router input validation", () => {
         onboardingDraft: {
           logoName: "l".repeat(121),
         },
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -284,20 +319,20 @@ describe("auth router input validation", () => {
         password: "password123",
         practiceName: "Neighborhood Veterinary",
         acquisition: { source: "<script>" },
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
       caller.requestPasswordReset({
         email: `${"b".repeat(250)}@example.com`,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
       caller.resetPassword({
         token: "a".repeat(64),
         password: "p".repeat(129),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(db.select).not.toHaveBeenCalled();
@@ -331,7 +366,7 @@ describe("auth router input validation", () => {
           medium: "website",
           campaign: "summer_launch",
         },
-      })
+      }),
     ).resolves.toMatchObject({
       id: "user-1",
       email: "owner@example.com",
@@ -343,14 +378,14 @@ describe("auth router input validation", () => {
       expect.objectContaining({
         name: "Neighborhood Veterinary",
         email: "owner@example.com",
-      })
+      }),
     );
     expect(insertValues).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         practiceId: "practice-1",
         name: "North Clinic",
-      })
+      }),
     );
     expect(insertValues).toHaveBeenNthCalledWith(
       3,
@@ -359,7 +394,7 @@ describe("auth router input validation", () => {
         name: "Dr Owner",
         role: "admin",
         practiceId: "practice-1",
-      })
+      }),
     );
     expect(updateSet).toHaveBeenCalledWith({
       settings: {
@@ -386,11 +421,7 @@ describe("auth router input validation", () => {
 
   it("fails signup before setup side effects when core account bootstrap returns no user", async () => {
     const { db, insertValues, transaction, updateSet } = createRegistrationDb({
-      insertRows: [
-        { id: "practice-1" },
-        { id: "location-1" },
-        undefined,
-      ],
+      insertRows: [{ id: "practice-1" }, { id: "location-1" }, undefined],
     });
 
     await expect(
@@ -398,7 +429,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       message: "Account setup failed.",
@@ -409,7 +440,7 @@ describe("auth router input validation", () => {
     expect(mocks.seedPractice).not.toHaveBeenCalled();
     expect(mocks.seedDemoData).not.toHaveBeenCalled();
     expect(mocks.createAuthToken).not.toHaveBeenCalled();
-    expect(mocks.sendVerificationEmail).not.toHaveBeenCalled();
+    expect(mocks.sendTrackedVerificationEmail).not.toHaveBeenCalled();
     expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
     expect(mocks.createSubscriptionCheckoutSession).not.toHaveBeenCalled();
     expect(updateSet).not.toHaveBeenCalled();
@@ -424,7 +455,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
       message:
@@ -457,7 +488,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
       message: "Could not start hosted billing checkout. Please try again.",
@@ -470,16 +501,16 @@ describe("auth router input validation", () => {
         lineItems: [{ priceId: "price_location", quantity: 1 }],
         practiceId: "practice-1",
         customerEmail: "owner@example.com",
-      })
+      }),
     );
     expect(mocks.seedPractice).not.toHaveBeenCalled();
     expect(mocks.seedDemoData).not.toHaveBeenCalled();
     expect(mocks.createAuthToken).not.toHaveBeenCalled();
-    expect(mocks.sendVerificationEmail).not.toHaveBeenCalled();
+    expect(mocks.sendTrackedVerificationEmail).not.toHaveBeenCalled();
     expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith(
       "[register] subscription checkout failed:",
-      expect.any(Error)
+      expect.any(Error),
     );
     consoleError.mockRestore();
     expect(updateSet).not.toHaveBeenCalled();
@@ -500,7 +531,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).resolves.toMatchObject({
       id: "user-1",
       email: "owner@example.com",
@@ -529,7 +560,7 @@ describe("auth router input validation", () => {
         trialPeriodDays: 14,
         successUrl: "http://localhost:3000/login?checkout=success",
         cancelUrl: "http://localhost:3000/login?checkout=cancelled",
-      })
+      }),
     );
   });
 
@@ -537,18 +568,40 @@ describe("auth router input validation", () => {
     vi.stubEnv("STRIPE_PRICE_CLOUD_LOCATION", "price_location");
     mocks.billingEnforced.mockReturnValue(true);
     mocks.noCardTrialEnabled.mockReturnValue(true);
-    const { db, insertValues } = createRegistrationDb();
+    const { db, insertValues, isInTransaction } = createRegistrationDb();
+    mocks.createAuthToken.mockImplementationOnce(async () => {
+      expect(isInTransaction()).toBe(true);
+      return "token-123";
+    });
+    mocks.sendTrackedVerificationEmail.mockImplementationOnce(async () => {
+      expect(isInTransaction()).toBe(false);
+      return {
+        success: true,
+        provider: "resend",
+        outcome: "accepted",
+        possiblySent: false,
+        evidencePersisted: true,
+      };
+    });
+    mocks.sendWelcomeEmail.mockImplementationOnce(async () => {
+      expect(isInTransaction()).toBe(false);
+      return { success: true };
+    });
 
     await expect(
       callerWithDb(db).register({
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).resolves.toMatchObject({
       id: "user-1",
       email: "owner@example.com",
       verificationRequired: true,
+      verificationEmailSent: true,
+      verificationEmailPossiblySent: false,
+      verificationEmailPreviewed: false,
+      verificationEmailProvider: "resend",
       onboardingRequired: true,
       checkoutUrl: undefined,
     });
@@ -565,6 +618,42 @@ describe("auth router input validation", () => {
     expect(practiceInsert.trialEndsAt).toBeInstanceOf(Date);
     // Card-free trial never touches Stripe Checkout.
     expect(mocks.createSubscriptionCheckoutSession).not.toHaveBeenCalled();
+    expect(mocks.sendTrackedVerificationEmail).toHaveBeenCalledWith({
+      practiceId: "practice-1",
+      userId: "user-1",
+      source: "registration",
+      to: "owner@example.com",
+      name: "Dr Owner",
+      verifyUrl: "http://localhost:3000/verify-email?token=token-123",
+      db,
+    });
+  });
+
+  it("reports a console verification preview without claiming registration email delivery", async () => {
+    mocks.billingEnforced.mockReturnValue(true);
+    mocks.noCardTrialEnabled.mockReturnValue(true);
+    const { db } = createRegistrationDb();
+    mocks.sendTrackedVerificationEmail.mockResolvedValueOnce({
+      success: true,
+      provider: "console",
+      outcome: "accepted",
+      possiblySent: false,
+      evidencePersisted: true,
+    });
+
+    await expect(
+      callerWithDb(db).register({
+        email: "owner@example.com",
+        password: "password123",
+        practiceName: "Neighborhood Veterinary",
+      }),
+    ).resolves.toMatchObject({
+      verificationRequired: true,
+      verificationEmailSent: false,
+      verificationEmailPossiblySent: false,
+      verificationEmailPreviewed: true,
+      verificationEmailProvider: "console",
+    });
   });
 
   it("rejects hosted signup when Stripe returns an unsafe checkout URL", async () => {
@@ -580,7 +669,7 @@ describe("auth router input validation", () => {
         email: "owner@example.com",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
       message: "Could not start hosted billing checkout. Please try again.",
@@ -605,7 +694,7 @@ describe("auth router email normalization", () => {
         email: "Admin@Example.COM",
         password: "password123",
         practiceName: "Neighborhood Veterinary",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       message: "Email already registered",
@@ -616,9 +705,9 @@ describe("auth router email normalization", () => {
       limit: 5,
       windowMs: 3600000,
     });
-    expect(sqlIncludesValue(selectWhere.mock.calls[0]?.[0], "admin@example.com")).toBe(
-      true
-    );
+    expect(
+      sqlIncludesValue(selectWhere.mock.calls[0]?.[0], "admin@example.com"),
+    ).toBe(true);
   });
 
   it("normalizes password-reset rate-limit keys and account lookups", async () => {
@@ -627,7 +716,7 @@ describe("auth router email normalization", () => {
     ]);
 
     await expect(
-      callerWithDb(db).requestPasswordReset({ email: "Admin@Example.COM" })
+      callerWithDb(db).requestPasswordReset({ email: "Admin@Example.COM" }),
     ).resolves.toEqual({ ok: true });
 
     expect(mocks.rateLimit).toHaveBeenCalledWith({
@@ -635,12 +724,12 @@ describe("auth router email normalization", () => {
       limit: 5,
       windowMs: 3600000,
     });
-    expect(sqlIncludesValue(selectWhere.mock.calls[0]?.[0], "admin@example.com")).toBe(
-      true
-    );
-    expect(sqlIncludesValue(selectWhere.mock.calls[0]?.[0], users.deletedAt)).toBe(
-      true
-    );
+    expect(
+      sqlIncludesValue(selectWhere.mock.calls[0]?.[0], "admin@example.com"),
+    ).toBe(true);
+    expect(
+      sqlIncludesValue(selectWhere.mock.calls[0]?.[0], users.deletedAt),
+    ).toBe(true);
     expect(mocks.createAuthToken).toHaveBeenCalledWith({
       userId: "user-1",
       email: "admin@example.com",
@@ -648,7 +737,6 @@ describe("auth router email normalization", () => {
       db,
     });
   });
-
 });
 
 describe("authenticated verification resend", () => {
@@ -669,11 +757,32 @@ describe("authenticated verification resend", () => {
   });
 
   it("binds resend to the signed-in account and reports provider acceptance", async () => {
-    const { db, selectWhere } = createSelectDb([[unverifiedUser]]);
+    const { db, selectWhere, isInTransaction } = createSelectDb([
+      [unverifiedUser],
+    ]);
+    mocks.createAuthToken.mockImplementationOnce(async () => {
+      expect(isInTransaction()).toBe(true);
+      return "token-123";
+    });
+    mocks.sendTrackedVerificationEmail.mockImplementationOnce(async () => {
+      expect(isInTransaction()).toBe(false);
+      return {
+        success: true,
+        provider: "resend",
+        outcome: "accepted",
+        possiblySent: false,
+        evidencePersisted: true,
+      };
+    });
 
     await expect(callerWithSession(db).resendVerification()).resolves.toEqual({
       ok: true,
       alreadyVerified: false,
+      verificationEmailSent: true,
+      possiblySent: false,
+      verificationEmailPreviewed: false,
+      verificationEmailProvider: "resend",
+      message: "Verification email sent. Check your inbox and spam folder.",
     });
 
     const condition = selectWhere.mock.calls[0]?.[0];
@@ -691,50 +800,104 @@ describe("authenticated verification resend", () => {
       type: "email_verify",
       db,
     });
-    expect(mocks.sendVerificationEmail).toHaveBeenCalledWith({
+    expect(mocks.sendTrackedVerificationEmail).toHaveBeenCalledWith({
+      practiceId: "practice-1",
+      userId: "user-1",
+      source: "authenticated_resend",
       to: "admin@example.com",
       name: "Admin",
       verifyUrl: "http://localhost:3000/verify-email?token=token-123",
+      db,
     });
   });
 
   it("does not send another message after the account is verified", async () => {
     const { db } = createSelectDb([
-      [{ ...unverifiedUser, emailVerifiedAt: new Date("2026-08-09T12:00:00Z") }],
+      [
+        {
+          ...unverifiedUser,
+          emailVerifiedAt: new Date("2026-08-09T12:00:00Z"),
+        },
+      ],
     ]);
 
     await expect(callerWithSession(db).resendVerification()).resolves.toEqual({
       ok: true,
       alreadyVerified: true,
+      verificationEmailSent: false,
+      possiblySent: false,
+      verificationEmailPreviewed: false,
+      verificationEmailProvider: null,
+      message: "Your email is already verified.",
     });
     expect(mocks.rateLimit).not.toHaveBeenCalled();
     expect(mocks.createAuthToken).not.toHaveBeenCalled();
-    expect(mocks.sendVerificationEmail).not.toHaveBeenCalled();
+    expect(mocks.sendTrackedVerificationEmail).not.toHaveBeenCalled();
   });
 
-  it("reports provider rejection instead of claiming the email was sent", async () => {
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+  it("reports provider rejection without claiming the email was sent", async () => {
     const { db } = createSelectDb([[unverifiedUser]]);
-    mocks.sendVerificationEmail.mockResolvedValueOnce({
+    mocks.sendTrackedVerificationEmail.mockResolvedValueOnce({
       success: false,
-      error: "provider unavailable",
+      provider: "resend",
+      outcome: "definite_failure",
+      possiblySent: false,
+      evidencePersisted: true,
     });
 
-    try {
-      await expect(callerWithSession(db).resendVerification()).rejects.toMatchObject({
-        code: "INTERNAL_SERVER_ERROR",
-        message:
-          "We couldn't send the verification email. Please try again in a moment.",
-      });
-      expect(consoleError).toHaveBeenCalledWith(
-        "[resendVerification] email failed:",
-        expect.any(Error)
-      );
-    } finally {
-      consoleError.mockRestore();
-    }
+    await expect(callerWithSession(db).resendVerification()).resolves.toEqual({
+      ok: true,
+      alreadyVerified: false,
+      verificationEmailSent: false,
+      possiblySent: false,
+      verificationEmailPreviewed: false,
+      verificationEmailProvider: "resend",
+      message:
+        "The email provider did not accept the verification email. Please try again later.",
+    });
+  });
+
+  it("tells users to check their inbox when the provider outcome is unknown", async () => {
+    const { db } = createSelectDb([[unverifiedUser]]);
+    mocks.sendTrackedVerificationEmail.mockResolvedValueOnce({
+      success: false,
+      provider: "resend",
+      outcome: "outcome_unknown",
+      possiblySent: true,
+      evidencePersisted: true,
+    });
+
+    const result = await callerWithSession(db).resendVerification();
+
+    expect(result).toMatchObject({
+      verificationEmailSent: false,
+      possiblySent: true,
+      verificationEmailProvider: "resend",
+    });
+    expect(result.message).toMatch(/may have been sent/i);
+    expect(result.message).not.toMatch(/try again|retry/i);
+  });
+
+  it("reports console preview semantics without claiming an email was sent", async () => {
+    const { db } = createSelectDb([[unverifiedUser]]);
+    mocks.sendTrackedVerificationEmail.mockResolvedValueOnce({
+      success: true,
+      provider: "console",
+      outcome: "accepted",
+      possiblySent: false,
+      evidencePersisted: true,
+    });
+
+    await expect(callerWithSession(db).resendVerification()).resolves.toEqual({
+      ok: true,
+      alreadyVerified: false,
+      verificationEmailSent: false,
+      possiblySent: false,
+      verificationEmailPreviewed: true,
+      verificationEmailProvider: "console",
+      message:
+        "Verification email preview generated in the server console. No email was sent.",
+    });
   });
 
   it("fails closed when the resend limiter is unavailable", async () => {
@@ -745,16 +908,18 @@ describe("authenticated verification resend", () => {
     mocks.rateLimit.mockRejectedValueOnce(new Error("rate limiter down"));
 
     try {
-      await expect(callerWithSession(db).resendVerification()).rejects.toMatchObject({
+      await expect(
+        callerWithSession(db).resendVerification(),
+      ).rejects.toMatchObject({
         code: "TOO_MANY_REQUESTS",
         message: "Too many requests. Please try again later.",
       });
       expect(consoleError).toHaveBeenCalledWith(
         "[auth.resendVerification] rate limit failed:",
-        expect.any(Error)
+        expect.any(Error),
       );
       expect(mocks.createAuthToken).not.toHaveBeenCalled();
-      expect(mocks.sendVerificationEmail).not.toHaveBeenCalled();
+      expect(mocks.sendTrackedVerificationEmail).not.toHaveBeenCalled();
     } finally {
       consoleError.mockRestore();
     }
@@ -799,18 +964,18 @@ describe("auth router rate-limit failure guards", () => {
 
         expect(consoleError).toHaveBeenCalledWith(
           `[auth.${logContext}] rate limit failed:`,
-          expect.any(Error)
+          expect.any(Error),
         );
         expect(db.select).not.toHaveBeenCalled();
         expect(mocks.createAuthToken).not.toHaveBeenCalled();
-        expect(mocks.sendVerificationEmail).not.toHaveBeenCalled();
+        expect(mocks.sendTrackedVerificationEmail).not.toHaveBeenCalled();
         expect(mocks.sendPasswordResetEmail).not.toHaveBeenCalled();
         expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
         expect(mocks.createSubscriptionCheckoutSession).not.toHaveBeenCalled();
       } finally {
         consoleError.mockRestore();
       }
-    }
+    },
   );
 });
 
@@ -821,14 +986,19 @@ describe("auth router token validation", () => {
     const { db } = createSelectDb([]);
     const caller = callerWithDb(db);
 
-    await expect(caller.verifyEmail({ token: "not-a-token" })).rejects.toMatchObject({
+    await expect(
+      caller.verifyEmail({ token: "not-a-token" }),
+    ).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
     await expect(
-      caller.resetPassword({ token: "b".repeat(65), password: "password123" })
+      caller.resetPassword({ token: "b".repeat(65), password: "password123" }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(
-      caller.acceptInvite({ token: "../".repeat(1024), password: "password123" })
+      caller.acceptInvite({
+        token: "../".repeat(1024),
+        password: "password123",
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(mocks.consumeAuthToken).not.toHaveBeenCalled();
@@ -836,7 +1006,11 @@ describe("auth router token validation", () => {
 
   it("accepts issued 64-hex tokens for verification, reset, and invite flows", async () => {
     const { db, updateWhere } = createAuthUpdateDb({
-      returningRows: [[{ id: "user-1" }], [{ id: "user-1" }], [{ id: "user-1" }]],
+      returningRows: [
+        [{ id: "user-1" }],
+        [{ id: "user-1" }],
+        [{ id: "user-1" }],
+      ],
     });
     mocks.consumeAuthToken.mockResolvedValue({
       userId: "user-1",
@@ -848,21 +1022,21 @@ describe("auth router token validation", () => {
       ok: true,
     });
     await expect(
-      caller.resetPassword({ token: validToken, password: "password123" })
+      caller.resetPassword({ token: validToken, password: "password123" }),
     ).resolves.toEqual({ ok: true });
     await expect(
-      caller.acceptInvite({ token: validToken, password: "password123" })
+      caller.acceptInvite({ token: validToken, password: "password123" }),
     ).resolves.toEqual({ ok: true });
 
     expect(mocks.consumeAuthToken).toHaveBeenCalledWith(
       validToken,
       "email_verify",
-      { db }
+      { db },
     );
     expect(mocks.consumeAuthToken).toHaveBeenCalledWith(
       validToken,
       "password_reset",
-      { db }
+      { db },
     );
     expect(mocks.consumeAuthToken).toHaveBeenCalledWith(validToken, "invite", {
       db,
@@ -882,18 +1056,20 @@ describe("auth router token validation", () => {
     });
     const caller = callerWithDb(db);
 
-    await expect(caller.verifyEmail({ token: validToken })).rejects.toMatchObject({
+    await expect(
+      caller.verifyEmail({ token: validToken }),
+    ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "This verification link is invalid or has expired.",
     });
     await expect(
-      caller.resetPassword({ token: validToken, password: "password123" })
+      caller.resetPassword({ token: validToken, password: "password123" }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "This reset link is invalid or has expired.",
     });
     await expect(
-      caller.acceptInvite({ token: validToken, password: "password123" })
+      caller.acceptInvite({ token: validToken, password: "password123" }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "This invite link is invalid or has expired.",
