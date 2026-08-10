@@ -243,8 +243,37 @@ describe("committed Drizzle migrations", () => {
     expect(preflight).not.toContain("select *");
     expect(validation).toContain("SET LOCAL lock_timeout = '5s'");
     expect(validation).toContain("SET LOCAL statement_timeout = '5min'");
-    expect(validation.match(/VALIDATE CONSTRAINT/g)).toHaveLength(25);
-    expect(validation).not.toContain("ADD CONSTRAINT");
+    const categoryRequiredAdd = validation.indexOf(
+      'ADD CONSTRAINT "files_category_required_check"',
+    );
+    const categoryRequiredValidation = validation.indexOf(
+      'VALIDATE CONSTRAINT "files_category_required_check"',
+    );
+    expect(categoryRequiredAdd).toBeGreaterThanOrEqual(0);
+    expect(categoryRequiredValidation).toBeGreaterThan(categoryRequiredAdd);
+    expect(validation).toContain('"category" is not null');
+    expect(validation.match(/VALIDATE CONSTRAINT/g)).toHaveLength(26);
+    expect(validation.match(/ADD CONSTRAINT/g)).toHaveLength(1);
+  });
+
+  it("keeps the file recovery snapshot lineage contiguous", () => {
+    const snapshots = ["0076", "0077", "0078", "0079", "0080", "0081"].map(
+      (prefix) => {
+        const path = JSON.parse(
+          readRepoFile("packages/db/drizzle/meta/_journal.json"),
+        ).entries.find((entry: { tag: string }) =>
+          entry.tag.startsWith(`${prefix}_`),
+        )?.tag;
+        expect(path).toBeTruthy();
+        return JSON.parse(
+          readRepoFile(`packages/db/drizzle/meta/${prefix}_snapshot.json`),
+        ) as { id: string; prevId: string };
+      },
+    );
+
+    for (let index = 1; index < snapshots.length; index++) {
+      expect(snapshots[index]!.prevId).toBe(snapshots[index - 1]!.id);
+    }
   });
 
   it("backfills clinical provider capability before indexing it", () => {

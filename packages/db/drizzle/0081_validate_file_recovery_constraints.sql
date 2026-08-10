@@ -2,12 +2,17 @@
 -- file recovery preflight is clean in production and demo.
 SET LOCAL lock_timeout = '5s';--> statement-breakpoint
 SET LOCAL statement_timeout = '5min';--> statement-breakpoint
+-- PostgreSQL CHECK constraints accept UNKNOWN, so the namespace check alone
+-- cannot make the legacy nullable category column required. Add an explicit
+-- companion constraint before validating either one.
+ALTER TABLE "files" ADD CONSTRAINT "files_category_required_check" CHECK ("files"."category" is not null) NOT VALID;--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_uploader_tenant_fk";--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_checksum_sha256_format_check";--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_file_size_bytes_check";--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_appointment_requires_patient_check";--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_available_evidence_check";--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_primary_namespace_check";--> statement-breakpoint
+ALTER TABLE "files" VALIDATE CONSTRAINT "files_category_required_check";--> statement-breakpoint
 ALTER TABLE "files" VALIDATE CONSTRAINT "files_patient_entity_consistency_check";--> statement-breakpoint
 ALTER TABLE "file_object_replicas" VALIDATE CONSTRAINT "file_object_replicas_attempt_count_check";--> statement-breakpoint
 ALTER TABLE "file_object_replicas" VALIDATE CONSTRAINT "file_object_replicas_checksum_sha256_format_check";--> statement-breakpoint

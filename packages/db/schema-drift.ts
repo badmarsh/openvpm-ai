@@ -30,7 +30,211 @@ export type DeclaredColumn = {
 export type SchemaDrift = {
   missingTables: string[];
   missingColumns: DeclaredColumn[];
+  invalidObjects: DeclaredDatabaseObject[];
 };
+
+export type DeclaredDatabaseObject = {
+  kind:
+    | "constraint"
+    | "index"
+    | "rls_policy"
+    | "table_privilege"
+    | "forbidden_table_privilege";
+  table: string;
+  name: string;
+};
+
+/**
+ * Release-critical database controls that cannot be inferred from the mere
+ * presence of a table or column. Keep this deliberately narrow: these are the
+ * controls whose absence would let the attachment recovery worker cross a
+ * tenant boundary, accept unverifiable recovery evidence, or expose its
+ * operational state to a clinic session.
+ *
+ * A constraint that exists but remains NOT VALID and an index that exists but
+ * is not valid/ready both count as drift. This makes the application release
+ * wait for the separate validation gate instead of treating a staged schema as
+ * fully ready.
+ */
+export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
+  const objects: DeclaredDatabaseObject[] = [
+    { kind: "constraint", table: "files", name: "files_uploader_tenant_fk" },
+    { kind: "constraint", table: "files", name: "files_patient_tenant_fk" },
+    {
+      kind: "constraint",
+      table: "files",
+      name: "files_appointment_patient_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "files",
+      name: "files_available_evidence_check",
+    },
+    {
+      kind: "constraint",
+      table: "files",
+      name: "files_primary_namespace_check",
+    },
+    {
+      kind: "constraint",
+      table: "files",
+      name: "files_category_required_check",
+    },
+    {
+      kind: "constraint",
+      table: "files",
+      name: "files_patient_entity_consistency_check",
+    },
+    {
+      kind: "constraint",
+      table: "files",
+      name: "files_appointment_requires_patient_check",
+    },
+    {
+      kind: "constraint",
+      table: "file_object_replicas",
+      name: "file_object_replicas_file_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "file_object_replicas",
+      name: "file_object_replicas_available_evidence_check",
+    },
+    {
+      kind: "constraint",
+      table: "file_object_replicas",
+      name: "file_object_replicas_independent_object_key_check",
+    },
+    {
+      kind: "constraint",
+      table: "file_object_replicas",
+      name: "file_object_replicas_lease_coherence_check",
+    },
+    {
+      kind: "constraint",
+      table: "file_storage_events",
+      name: "file_storage_events_file_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "capture_sessions",
+      name: "capture_sessions_patient_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "capture_sessions",
+      name: "capture_sessions_creator_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "capture_sessions",
+      name: "capture_sessions_appointment_patient_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_patient_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_creator_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_appointment_patient_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_form_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_file_tenant_fk",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_status_check",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_signing_evidence_check",
+    },
+    {
+      kind: "index",
+      table: "files",
+      name: "files_practice_file_key_uq",
+    },
+    {
+      kind: "index",
+      table: "files",
+      name: "files_practice_idempotency_key_uq",
+    },
+    {
+      kind: "index",
+      table: "file_object_replicas",
+      name: "file_object_replicas_due_idx",
+    },
+    {
+      kind: "index",
+      table: "file_storage_events",
+      name: "file_storage_events_event_key_uq",
+    },
+    {
+      kind: "index",
+      table: "consent_forms",
+      name: "consent_forms_practice_id_uq",
+    },
+    { kind: "rls_policy", table: "files", name: "tenant_isolation" },
+    {
+      kind: "rls_policy",
+      table: "capture_sessions",
+      name: "tenant_isolation",
+    },
+    {
+      kind: "rls_policy",
+      table: "consent_requests",
+      name: "tenant_isolation",
+    },
+    {
+      kind: "rls_policy",
+      table: "file_object_replicas",
+      name: "system_only",
+    },
+    {
+      kind: "rls_policy",
+      table: "file_storage_events",
+      name: "system_read",
+    },
+    {
+      kind: "rls_policy",
+      table: "file_storage_events",
+      name: "system_insert",
+    },
+    ...["SELECT", "INSERT", "UPDATE", "DELETE"].map((name) => ({
+      kind: "table_privilege" as const,
+      table: "file_object_replicas",
+      name,
+    })),
+    ...["SELECT", "INSERT"].map((name) => ({
+      kind: "table_privilege" as const,
+      table: "file_storage_events",
+      name,
+    })),
+    ...["UPDATE", "DELETE"].map((name) => ({
+      kind: "forbidden_table_privilege" as const,
+      table: "file_storage_events",
+      name,
+    })),
+  ];
+
+  return objects;
+}
 
 /** Every table the Drizzle schema declares, with its database column names. */
 export function declaredSchema(): Map<string, Set<string>> {
@@ -43,27 +247,38 @@ export function declaredSchema(): Map<string, Set<string>> {
     if (config.schema && config.schema !== "public") continue;
     declared.set(
       config.name,
-      new Set(config.columns.map((column) => column.name))
+      new Set(config.columns.map((column) => column.name)),
     );
   }
 
   return declared;
 }
 
-type ColumnRow = { table_name: string; column_name: string };
+type SchemaObjectRow = {
+  object_type:
+    | "column"
+    | "constraint"
+    | "index"
+    | "rls_policy"
+    | "table_privilege"
+    | "forbidden_table_privilege";
+  table_name: string;
+  object_name: string;
+  healthy: boolean;
+};
 
 type Queryable = {
   execute: (query: ReturnType<typeof sql>) => Promise<unknown>;
 };
 
-function toRows(result: unknown): ColumnRow[] {
+function toRows(result: unknown): SchemaObjectRow[] {
   // postgres-js returns the rows array directly; node-postgres wraps them in
   // { rows }. Support both so this works against the app client and a plain
   // script connection.
-  if (Array.isArray(result)) return result as ColumnRow[];
+  if (Array.isArray(result)) return result as SchemaObjectRow[];
   if (result && typeof result === "object" && "rows" in result) {
     const rows = (result as { rows: unknown }).rows;
-    if (Array.isArray(rows)) return rows as ColumnRow[];
+    if (Array.isArray(rows)) return rows as SchemaObjectRow[];
   }
   return [];
 }
@@ -71,23 +286,90 @@ function toRows(result: unknown): ColumnRow[] {
 /**
  * Compare the declared schema against the live database.
  *
- * One introspection query, no per-table round trips, so this is cheap enough to
- * run on a health check.
+ * One introspection query, no per-table round trips, so this remains cheap
+ * enough to run on a health check while also proving the critical constraints,
+ * indexes, and RLS policies are present and active.
  */
 export async function findSchemaDrift(db: Queryable): Promise<SchemaDrift> {
   const result = await db.execute(sql`
-    select table_name, column_name
+    select
+      'column'::text as object_type,
+      table_name::text,
+      column_name::text as object_name,
+      true as healthy
     from information_schema.columns
     where table_schema = 'public'
+    union all
+    select
+      'constraint'::text,
+      table_class.relname::text,
+      constraint_object.conname::text,
+      constraint_object.convalidated
+    from pg_catalog.pg_constraint constraint_object
+    join pg_catalog.pg_class table_class
+      on table_class.oid = constraint_object.conrelid
+    join pg_catalog.pg_namespace table_namespace
+      on table_namespace.oid = table_class.relnamespace
+    where table_namespace.nspname = 'public'
+    union all
+    select
+      'index'::text,
+      table_class.relname::text,
+      index_class.relname::text,
+      (index_state.indisvalid and index_state.indisready)
+    from pg_catalog.pg_index index_state
+    join pg_catalog.pg_class table_class
+      on table_class.oid = index_state.indrelid
+    join pg_catalog.pg_class index_class
+      on index_class.oid = index_state.indexrelid
+    join pg_catalog.pg_namespace table_namespace
+      on table_namespace.oid = table_class.relnamespace
+    where table_namespace.nspname = 'public'
+    union all
+    select
+      'rls_policy'::text,
+      table_class.relname::text,
+      policy_object.polname::text,
+      table_class.relrowsecurity
+    from pg_catalog.pg_policy policy_object
+    join pg_catalog.pg_class table_class
+      on table_class.oid = policy_object.polrelid
+    join pg_catalog.pg_namespace table_namespace
+      on table_namespace.oid = table_class.relnamespace
+    where table_namespace.nspname = 'public'
+    union all
+    select
+      'table_privilege'::text,
+      table_name::text,
+      privilege_type::text,
+      true
+    from information_schema.role_table_grants
+    where table_schema = 'public'
+      and grantee = 'openpims_app'
+    union all
+    select
+      'forbidden_table_privilege'::text,
+      required_absence.table_name,
+      required_absence.privilege_type,
+      not has_table_privilege(
+        'openpims_app',
+        format('public.%I', required_absence.table_name),
+        required_absence.privilege_type
+      )
+    from (values
+      ('file_storage_events'::text, 'UPDATE'::text),
+      ('file_storage_events'::text, 'DELETE'::text)
+    ) required_absence(table_name, privilege_type)
   `);
 
   const live = new Map<string, Set<string>>();
   for (const row of toRows(result)) {
+    if (row.object_type !== "column") continue;
     const existing = live.get(row.table_name);
     if (existing) {
-      existing.add(row.column_name);
+      existing.add(row.object_name);
     } else {
-      live.set(row.table_name, new Set([row.column_name]));
+      live.set(row.table_name, new Set([row.object_name]));
     }
   }
 
@@ -111,14 +393,32 @@ export async function findSchemaDrift(db: Queryable): Promise<SchemaDrift> {
   missingColumns.sort((a, b) =>
     a.table === b.table
       ? a.column.localeCompare(b.column)
-      : a.table.localeCompare(b.table)
+      : a.table.localeCompare(b.table),
   );
 
-  return { missingTables, missingColumns };
+  const liveObjects = new Map<string, boolean>();
+  for (const row of toRows(result)) {
+    if (row.object_type === "column") continue;
+    liveObjects.set(
+      `${row.object_type}:${row.table_name}:${row.object_name}`,
+      row.healthy,
+    );
+  }
+
+  const invalidObjects = criticalDatabaseContract().filter(
+    (object) =>
+      liveObjects.get(`${object.kind}:${object.table}:${object.name}`) !== true,
+  );
+
+  return { missingTables, missingColumns, invalidObjects };
 }
 
 export function driftIsClean(drift: SchemaDrift): boolean {
-  return drift.missingTables.length === 0 && drift.missingColumns.length === 0;
+  return (
+    drift.missingTables.length === 0 &&
+    drift.missingColumns.length === 0 &&
+    drift.invalidObjects.length === 0
+  );
 }
 
 /** Short operator-facing summary, e.g. "2 tables and 1 column missing". */
@@ -132,7 +432,7 @@ export function describeDrift(drift: SchemaDrift): string {
         drift.missingTables.length === 1 ? "" : "s"
       } missing (${drift.missingTables.slice(0, 5).join(", ")}${
         drift.missingTables.length > 5 ? ", …" : ""
-      })`
+      })`,
     );
   }
   if (drift.missingColumns.length > 0) {
@@ -143,7 +443,20 @@ export function describeDrift(drift: SchemaDrift): string {
     parts.push(
       `${drift.missingColumns.length} column${
         drift.missingColumns.length === 1 ? "" : "s"
-      } missing (${shown}${drift.missingColumns.length > 5 ? ", …" : ""})`
+      } missing (${shown}${drift.missingColumns.length > 5 ? ", …" : ""})`,
+    );
+  }
+  if (drift.invalidObjects.length > 0) {
+    const shown = drift.invalidObjects
+      .slice(0, 5)
+      .map((object) => `${object.table}.${object.name}`)
+      .join(", ");
+    parts.push(
+      `${drift.invalidObjects.length} critical database control${
+        drift.invalidObjects.length === 1 ? "" : "s"
+      } missing or invalid (${shown}${
+        drift.invalidObjects.length > 5 ? ", …" : ""
+      })`,
     );
   }
   return `Database is behind the deployed code: ${parts.join("; ")}`;

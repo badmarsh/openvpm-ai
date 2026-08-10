@@ -140,6 +140,10 @@ export const files = pgTable(
       "files_primary_namespace_check",
       sql`${table.category} in ('patient-photos', 'documents', 'lab-results', 'branding', 'consents') and ${table.fileKey} ~ ('^' || ${table.practiceId}::text || '/' || ${table.category} || '/[^/]+$') and ${table.fileUrl} = '/api/files/' || ${table.fileKey}`,
     ),
+    categoryRequiredCheck: check(
+      "files_category_required_check",
+      sql`${table.category} is not null`,
+    ),
     patientEntityConsistencyCheck: check(
       "files_patient_entity_consistency_check",
       sql`${table.entityType} is distinct from 'patient' or (${table.patientId} is not null and ${table.entityId} is not null and ${table.entityId} = ${table.patientId})`,
