@@ -33,6 +33,16 @@ const mocks = vi.hoisted(() => ({
   findSchemaDrift: vi.fn(async () => ({
     missingTables: [] as string[],
     missingColumns: [] as { table: string; column: string }[],
+    invalidObjects: [] as Array<{
+      kind:
+        | "constraint"
+        | "index"
+        | "rls_policy"
+        | "table_privilege"
+        | "forbidden_table_privilege";
+      table: string;
+      name: string;
+    }>,
   })),
   platformEmailIdentityConfigurationReady: vi.fn(async () => ({
     ready: true,
@@ -167,6 +177,7 @@ afterEach(() => {
   mocks.findSchemaDrift.mockResolvedValue({
     missingTables: [],
     missingColumns: [],
+    invalidObjects: [],
   });
   mocks.platformEmailIdentityConfigurationReady.mockResolvedValue({
     ready: true,
@@ -190,6 +201,7 @@ describe("health route schema drift", () => {
     mocks.findSchemaDrift.mockResolvedValue({
       missingTables: [],
       missingColumns: [{ table: "soap_notes", column: "imported" }],
+      invalidObjects: [],
     });
 
     const response = await GET();
@@ -205,6 +217,7 @@ describe("health route schema drift", () => {
     mocks.findSchemaDrift.mockResolvedValue({
       missingTables: ["invoice_adjustments"],
       missingColumns: [],
+      invalidObjects: [],
     });
 
     const response = await GET();

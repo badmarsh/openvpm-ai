@@ -67,8 +67,18 @@ async function main() {
     console.error("");
   }
 
+  if (drift.invalidObjects.length > 0) {
+    console.error(
+      `Critical database controls missing or invalid (${drift.invalidObjects.length}):`,
+    );
+    for (const { kind, table, name } of drift.invalidObjects) {
+      console.error(`  - ${kind}: ${table}.${name}`);
+    }
+    console.error("");
+  }
+
   console.error(
-    "Apply the outstanding migrations with `pnpm db:migrate` against this database."
+    "Apply the outstanding migrations and RLS policy, then validate staged constraints before deploying the application.",
   );
   return 1;
 }
@@ -79,7 +89,10 @@ main()
     process.exit(code);
   })
   .catch(async (err) => {
-    console.error("Drift check failed:", err instanceof Error ? err.message : err);
+    console.error(
+      "Drift check failed:",
+      err instanceof Error ? err.message : err,
+    );
     await client.end();
     process.exit(1);
   });
