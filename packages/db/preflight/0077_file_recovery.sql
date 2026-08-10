@@ -63,7 +63,9 @@ where f.appointment_id is not null
   and f.patient_id is null
   and exists (
     select 1 from appointments a
-    where a.id = f.appointment_id and a.practice_id = f.practice_id
+    where a.id = f.appointment_id
+      and a.practice_id = f.practice_id
+      and a.patient_id is not null
   )
 union all
 select 'unrepairable_appointment_links', count(*)
