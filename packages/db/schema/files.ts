@@ -9,8 +9,9 @@ import {
   uniqueIndex,
   date,
   foreignKey,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
 import { practices } from "./practices";
 import { patients } from "./patients";
@@ -84,6 +85,13 @@ export const files = pgTable(
       table.practiceId,
       table.id,
     ),
+    practiceFileKeyUq: uniqueIndex("files_practice_file_key_uq").on(
+      table.practiceId,
+      table.fileKey,
+    ),
+    practiceIdempotencyUq: uniqueIndex("files_practice_idempotency_key_uq")
+      .on(table.practiceId, table.idempotencyKey)
+      .where(sql`${table.idempotencyKey} is not null`),
     entityIdx: index("files_entity_idx").on(table.entityType, table.entityId),
     uploadedByIdx: index("files_uploaded_by_idx").on(table.uploadedBy),
     categoryIdx: index("files_category_idx").on(
@@ -111,6 +119,35 @@ export const files = pgTable(
       ],
       name: "files_appointment_patient_tenant_fk",
     }),
+    uploaderTenantFk: foreignKey({
+      columns: [table.practiceId, table.uploadedBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "files_uploader_tenant_fk",
+    }),
+    checksumFormatCheck: check(
+      "files_checksum_sha256_format_check",
+      sql`${table.checksumSha256} is null or ${table.checksumSha256} ~ '^[0-9a-f]{64}$'`,
+    ),
+    sizeCheck: check(
+      "files_file_size_bytes_check",
+      sql`${table.fileSizeBytes} is null or ${table.fileSizeBytes} >= 0`,
+    ),
+    availableEvidenceCheck: check(
+      "files_available_evidence_check",
+      sql`${table.storageStatus} <> 'available' or (${table.checksumSha256} is not null and ${table.fileSizeBytes} is not null and ${table.storageVerifiedAt} is not null)`,
+    ),
+    primaryNamespaceCheck: check(
+      "files_primary_namespace_check",
+      sql`${table.category} in ('patient-photos', 'documents', 'lab-results', 'branding', 'consents') and ${table.fileKey} ~ ('^' || ${table.practiceId}::text || '/' || ${table.category} || '/[^/]+$') and ${table.fileUrl} = '/api/files/' || ${table.fileKey}`,
+    ),
+    patientEntityConsistencyCheck: check(
+      "files_patient_entity_consistency_check",
+      sql`${table.entityType} is distinct from 'patient' or (${table.patientId} is not null and ${table.entityId} is not null and ${table.entityId} = ${table.patientId})`,
+    ),
+    appointmentPatientCheck: check(
+      "files_appointment_requires_patient_check",
+      sql`${table.appointmentId} is null or ${table.patientId} is not null`,
+    ),
   }),
 );
 
@@ -153,6 +190,12 @@ export const fileObjectReplicas = pgTable(
     replicatedAt: timestamp("replicated_at", { withTimezone: true }),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     failureCode: varchar("failure_code", { length: 64 }),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    leaseToken: uuid("lease_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    lastErrorClass: varchar("last_error_class", { length: 64 }),
   },
   (table) => ({
     fileTargetUq: uniqueIndex("file_object_replicas_file_target_uq").on(
@@ -164,11 +207,40 @@ export const fileObjectReplicas = pgTable(
       table.status,
       table.updatedAt,
     ),
+    dueIdx: index("file_object_replicas_due_idx").on(
+      table.status,
+      table.nextAttemptAt,
+      table.leaseExpiresAt,
+    ),
     fileTenantFk: foreignKey({
       columns: [table.practiceId, table.fileId],
       foreignColumns: [files.practiceId, files.id],
       name: "file_object_replicas_file_tenant_fk",
     }),
+    attemptCountCheck: check(
+      "file_object_replicas_attempt_count_check",
+      sql`${table.attemptCount} >= 0`,
+    ),
+    checksumFormatCheck: check(
+      "file_object_replicas_checksum_sha256_format_check",
+      sql`${table.checksumSha256} is null or ${table.checksumSha256} ~ '^[0-9a-f]{64}$'`,
+    ),
+    sizeCheck: check(
+      "file_object_replicas_file_size_bytes_check",
+      sql`${table.fileSizeBytes} is null or ${table.fileSizeBytes} >= 0`,
+    ),
+    availableEvidenceCheck: check(
+      "file_object_replicas_available_evidence_check",
+      sql`${table.status} <> 'available' or (${table.checksumSha256} is not null and ${table.fileSizeBytes} is not null and ${table.replicatedAt} is not null and ${table.verifiedAt} is not null)`,
+    ),
+    independentObjectKeyCheck: check(
+      "file_object_replicas_independent_object_key_check",
+      sql`${table.replicaTarget} <> 'independent-v1' or (${table.objectKey} ~ ('^attachments/v1/' || ${table.practiceId}::text || '/' || ${table.fileId}::text || '/(pending|[0-9a-f]{64})$') and (${table.status} <> 'available' or (${table.checksumSha256} is not null and ${table.objectKey} = 'attachments/v1/' || ${table.practiceId}::text || '/' || ${table.fileId}::text || '/' || ${table.checksumSha256} and ${table.objectVersionId} is not null)))`,
+    ),
+    leaseCoherenceCheck: check(
+      "file_object_replicas_lease_coherence_check",
+      sql`(${table.leaseToken} is null and ${table.leaseExpiresAt} is null) or (${table.leaseToken} is not null and ${table.leaseExpiresAt} is not null)`,
+    ),
   }),
 );
 
@@ -181,6 +253,83 @@ export const fileObjectReplicasRelations = relations(
     }),
     file: one(files, {
       fields: [fileObjectReplicas.fileId],
+      references: [files.id],
+    }),
+  }),
+);
+
+/** Append-only system evidence for primary and replica storage transitions. */
+export const fileStorageEvents = pgTable(
+  "file_storage_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    fileId: uuid("file_id").notNull(),
+    storageTarget: varchar("storage_target", { length: 64 }).notNull(),
+    eventKey: varchar("event_key", { length: 255 }).notNull(),
+    operationId: uuid("operation_id").notNull(),
+    eventKind: varchar("event_kind", { length: 64 }).notNull(),
+    previousStatus: varchar("previous_status", { length: 32 }),
+    nextStatus: varchar("next_status", { length: 32 }).notNull(),
+    expectedChecksumSha256: varchar("expected_checksum_sha256", { length: 64 }),
+    observedChecksumSha256: varchar("observed_checksum_sha256", { length: 64 }),
+    expectedFileSizeBytes: integer("expected_file_size_bytes"),
+    observedFileSizeBytes: integer("observed_file_size_bytes"),
+    objectEtag: varchar("object_etag", { length: 255 }),
+    objectVersionId: varchar("object_version_id", { length: 255 }),
+    failureCode: varchar("failure_code", { length: 64 }),
+    workerRunId: uuid("worker_run_id"),
+  },
+  (table) => ({
+    eventKeyUq: uniqueIndex("file_storage_events_event_key_uq").on(
+      table.eventKey,
+    ),
+    fileCreatedIdx: index("file_storage_events_file_created_idx").on(
+      table.practiceId,
+      table.fileId,
+      table.createdAt,
+    ),
+    operationIdx: index("file_storage_events_operation_idx").on(
+      table.operationId,
+    ),
+    fileTenantFk: foreignKey({
+      columns: [table.practiceId, table.fileId],
+      foreignColumns: [files.practiceId, files.id],
+      name: "file_storage_events_file_tenant_fk",
+    }),
+    expectedChecksumFormatCheck: check(
+      "file_storage_events_expected_checksum_format_check",
+      sql`${table.expectedChecksumSha256} is null or ${table.expectedChecksumSha256} ~ '^[0-9a-f]{64}$'`,
+    ),
+    observedChecksumFormatCheck: check(
+      "file_storage_events_observed_checksum_format_check",
+      sql`${table.observedChecksumSha256} is null or ${table.observedChecksumSha256} ~ '^[0-9a-f]{64}$'`,
+    ),
+    expectedSizeCheck: check(
+      "file_storage_events_expected_file_size_bytes_check",
+      sql`${table.expectedFileSizeBytes} is null or ${table.expectedFileSizeBytes} >= 0`,
+    ),
+    observedSizeCheck: check(
+      "file_storage_events_observed_file_size_bytes_check",
+      sql`${table.observedFileSizeBytes} is null or ${table.observedFileSizeBytes} >= 0`,
+    ),
+  }),
+);
+
+export const fileStorageEventsRelations = relations(
+  fileStorageEvents,
+  ({ one }) => ({
+    practice: one(practices, {
+      fields: [fileStorageEvents.practiceId],
+      references: [practices.id],
+    }),
+    file: one(files, {
+      fields: [fileStorageEvents.fileId],
       references: [files.id],
     }),
   }),
@@ -218,6 +367,25 @@ export const captureSessions = pgTable(
       table.deletedAt,
     ),
     patientIdx: index("capture_sessions_patient_idx").on(table.patientId),
+    patientTenantFk: foreignKey({
+      columns: [table.practiceId, table.patientId],
+      foreignColumns: [patients.practiceId, patients.id],
+      name: "capture_sessions_patient_tenant_fk",
+    }),
+    creatorTenantFk: foreignKey({
+      columns: [table.practiceId, table.createdBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "capture_sessions_creator_tenant_fk",
+    }),
+    appointmentPatientTenantFk: foreignKey({
+      columns: [table.practiceId, table.appointmentId, table.patientId],
+      foreignColumns: [
+        appointments.practiceId,
+        appointments.id,
+        appointments.patientId,
+      ],
+      name: "capture_sessions_appointment_patient_tenant_fk",
+    }),
   }),
 );
 
