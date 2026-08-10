@@ -8,8 +8,10 @@ import {
   index,
   timestamp,
   uniqueIndex,
+  foreignKey,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
 import { practices } from "./practices";
 import { patients } from "./patients";
@@ -41,13 +43,17 @@ export const consentForms = pgTable(
   (table) => ({
     practiceSlugUq: uniqueIndex("consent_forms_practice_slug_uq").on(
       table.practiceId,
-      table.slug
+      table.slug,
     ),
     practiceIdx: index("consent_forms_practice_idx").on(
       table.practiceId,
-      table.deletedAt
+      table.deletedAt,
     ),
-  })
+    practiceIdUq: uniqueIndex("consent_forms_practice_id_uq").on(
+      table.practiceId,
+      table.id,
+    ),
+  }),
 );
 
 export const consentFormsRelations = relations(consentForms, ({ one }) => ({
@@ -101,10 +107,47 @@ export const consentRequests = pgTable(
     tokenUq: uniqueIndex("consent_requests_token_uq").on(table.token),
     practiceIdx: index("consent_requests_practice_idx").on(
       table.practiceId,
-      table.deletedAt
+      table.deletedAt,
     ),
     patientIdx: index("consent_requests_patient_idx").on(table.patientId),
-  })
+    patientTenantFk: foreignKey({
+      columns: [table.practiceId, table.patientId],
+      foreignColumns: [patients.practiceId, patients.id],
+      name: "consent_requests_patient_tenant_fk",
+    }),
+    creatorTenantFk: foreignKey({
+      columns: [table.practiceId, table.createdBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "consent_requests_creator_tenant_fk",
+    }),
+    appointmentPatientTenantFk: foreignKey({
+      columns: [table.practiceId, table.appointmentId, table.patientId],
+      foreignColumns: [
+        appointments.practiceId,
+        appointments.id,
+        appointments.patientId,
+      ],
+      name: "consent_requests_appointment_patient_tenant_fk",
+    }),
+    formTenantFk: foreignKey({
+      columns: [table.practiceId, table.formId],
+      foreignColumns: [consentForms.practiceId, consentForms.id],
+      name: "consent_requests_form_tenant_fk",
+    }),
+    fileTenantFk: foreignKey({
+      columns: [table.practiceId, table.fileId],
+      foreignColumns: [files.practiceId, files.id],
+      name: "consent_requests_file_tenant_fk",
+    }),
+    statusCheck: check(
+      "consent_requests_status_check",
+      sql`${table.status} in ('pending', 'signing', 'signed')`,
+    ),
+    signingEvidenceCheck: check(
+      "consent_requests_signing_evidence_check",
+      sql`(${table.status} = 'pending' and ${table.signerName} is null and ${table.signedAt} is null and ${table.fileId} is null) or (${table.status} = 'signing' and ${table.signerName} is not null and ${table.signedAt} is not null) or (${table.status} = 'signed' and ${table.signerName} is not null and ${table.signedAt} is not null and ${table.fileId} is not null)`,
+    ),
+  }),
 );
 
 export const consentRequestsRelations = relations(
@@ -134,5 +177,5 @@ export const consentRequestsRelations = relations(
       fields: [consentRequests.formId],
       references: [consentForms.id],
     }),
-  })
+  }),
 );

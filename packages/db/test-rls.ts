@@ -122,6 +122,10 @@ const aFile = randomUUID();
 const bFile = randomUUID();
 const aReplica = randomUUID();
 const aSystemReplica = randomUUID();
+const aFileStorageEvent = randomUUID();
+const aSystemFileStorageEvent = randomUUID();
+const aFileStorageOperation = randomUUID();
+const crossTenantUploaderFile = randomUUID();
 const crossTenantPatientFile = randomUUID();
 const wrongAppointmentPatientFile = randomUUID();
 const aPatientAllergy = randomUUID();
@@ -347,14 +351,55 @@ try {
     values
     (${aFile}, ${aId}, ${aUser}, 'rls-file-a.pdf',
       ${`${aId}/documents/rls-file-a.pdf`},
-      ${`/api/files/${aFile}`}, 'document', ${aPatient}, 'patient', ${aPatient}),
+      ${`/api/files/${aId}/documents/rls-file-a.pdf`}, 'documents', ${aPatient}, 'patient', ${aPatient}),
     (${bFile}, ${bId}, ${bUser}, 'rls-file-b.pdf',
       ${`${bId}/documents/rls-file-b.pdf`},
-      ${`/api/files/${bFile}`}, 'document', ${bPatient}, 'patient', ${bPatient})`;
+      ${`/api/files/${bId}/documents/rls-file-b.pdf`}, 'documents', ${bPatient}, 'patient', ${bPatient})`;
   await owner`insert into file_object_replicas
-    (id, practice_id, file_id, replica_target, object_key, status)
+    (id, practice_id, file_id, replica_target, object_key, status,
+     checksum_sha256, file_size_bytes, replicated_at, verified_at)
     values (${aReplica}, ${aId}, ${aFile}, 'rls_owner_fixture',
-      ${`replica/${aId}/documents/rls-file-a.pdf`}, 'available')`;
+      ${`replica/${aId}/documents/rls-file-a.pdf`}, 'available',
+      ${"a".repeat(64)}, 12, now(), now())`;
+  await owner`insert into file_storage_events
+    (id, practice_id, file_id, storage_target, event_key, operation_id,
+     event_kind, next_status)
+    values (${aFileStorageEvent}, ${aId}, ${aFile}, 'primary',
+      ${`rls:file-storage:${aFileStorageEvent}`}, ${aFileStorageOperation},
+      'primary_verified', 'available')`;
+  const [fileRecoveryPrivileges] = await owner<
+    Array<{
+      replica_select: boolean;
+      replica_insert: boolean;
+      replica_update: boolean;
+      replica_delete: boolean;
+      event_select: boolean;
+      event_insert: boolean;
+      event_update: boolean;
+      event_delete: boolean;
+    }>
+  >`select
+      has_table_privilege('openpims_app', 'file_object_replicas', 'select') replica_select,
+      has_table_privilege('openpims_app', 'file_object_replicas', 'insert') replica_insert,
+      has_table_privilege('openpims_app', 'file_object_replicas', 'update') replica_update,
+      has_table_privilege('openpims_app', 'file_object_replicas', 'delete') replica_delete,
+      has_table_privilege('openpims_app', 'file_storage_events', 'select') event_select,
+      has_table_privilege('openpims_app', 'file_storage_events', 'insert') event_insert,
+      has_table_privilege('openpims_app', 'file_storage_events', 'update') event_update,
+      has_table_privilege('openpims_app', 'file_storage_events', 'delete') event_delete`;
+  check(
+    "application role has exact file recovery table privileges",
+    Boolean(
+      fileRecoveryPrivileges?.replica_select &&
+        fileRecoveryPrivileges.replica_insert &&
+        fileRecoveryPrivileges.replica_update &&
+        fileRecoveryPrivileges.replica_delete &&
+        fileRecoveryPrivileges.event_select &&
+        fileRecoveryPrivileges.event_insert &&
+        !fileRecoveryPrivileges.event_update &&
+        !fileRecoveryPrivileges.event_delete,
+    ),
+  );
   await owner`insert into patient_allergies
     (id, patient_id, allergen, reaction, severity, noted_by, deleted_at)
     values
@@ -2552,7 +2597,7 @@ try {
       await tx`insert into file_object_replicas
         (practice_id, file_id, replica_target, object_key, status)
         values (${aId}, ${aFile}, 'rls_tenant_forgery',
-          ${`replica/${aId}/documents/forged.pdf`}, 'available')`;
+          ${`replica/${aId}/documents/forged.pdf`}, 'pending')`;
     });
   } catch {
     tenantCannotWriteFileReplica = true;
@@ -2560,6 +2605,32 @@ try {
   check(
     "tenant context cannot forge file replica evidence",
     tenantCannotWriteFileReplica,
+  );
+  const hiddenFileStorageEvents = await appTransaction(async (tx) => {
+    await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+    return tx`select id from file_storage_events where id = ${aFileStorageEvent}`;
+  });
+  check(
+    "tenant context cannot read system-only file storage events",
+    hiddenFileStorageEvents.length === 0,
+  );
+  let tenantCannotWriteFileStorageEvent = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+      await tx`insert into file_storage_events
+        (practice_id, file_id, storage_target, event_key, operation_id,
+         event_kind, next_status)
+        values (${aId}, ${aFile}, 'primary',
+          ${`rls:tenant-forgery:${randomUUID()}`}, ${randomUUID()},
+          'forged', 'available')`;
+    });
+  } catch {
+    tenantCannotWriteFileStorageEvent = true;
+  }
+  check(
+    "tenant context cannot forge file storage events",
+    tenantCannotWriteFileStorageEvent,
   );
   const hiddenClinicPilotEvents = await appTransaction(async (tx) => {
     await tx`select set_config('app.current_practice_id', ${aId}, true)`;
@@ -2676,15 +2747,55 @@ try {
   const systemFileReplicas = await appTransaction(async (tx) => {
     await tx`select set_config('app.rls_bypass', 'on', true)`;
     await tx`insert into file_object_replicas
-      (id, practice_id, file_id, replica_target, object_key, status)
+      (id, practice_id, file_id, replica_target, object_key, status,
+       checksum_sha256, file_size_bytes, replicated_at, verified_at)
       values (${aSystemReplica}, ${aId}, ${aFile}, 'rls_system_writer',
-        ${`replica/${aId}/documents/rls-system-file-a.pdf`}, 'available')`;
+        ${`replica/${aId}/documents/rls-system-file-a.pdf`}, 'available',
+        ${"a".repeat(64)}, 12, now(), now())`;
     return tx`select id from file_object_replicas
       where id in (${aReplica}, ${aSystemReplica}) order by id`;
   });
   check(
     "system bypass can write and read file replica evidence",
     systemFileReplicas.length === 2,
+  );
+  const systemFileStorageEvents = await appTransaction(async (tx) => {
+    await tx`select set_config('app.rls_bypass', 'on', true)`;
+    await tx`insert into file_storage_events
+      (id, practice_id, file_id, storage_target, event_key, operation_id,
+       event_kind, previous_status, next_status)
+      values (${aSystemFileStorageEvent}, ${aId}, ${aFile}, 'independent-v1',
+        ${`rls:file-storage:${aSystemFileStorageEvent}`}, ${randomUUID()},
+        'replica_verified', 'pending', 'available')`;
+    return tx`select id from file_storage_events
+      where id in (${aFileStorageEvent}, ${aSystemFileStorageEvent}) order by id`;
+  });
+  check(
+    "system bypass can append and read file storage events",
+    systemFileStorageEvents.length === 2,
+  );
+  let storageEventUpdateBlocked = false;
+  let storageEventDeleteBlocked = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.rls_bypass', 'on', true)`;
+      await tx`update file_storage_events set next_status = 'corrupt'
+        where id = ${aSystemFileStorageEvent}`;
+    });
+  } catch {
+    storageEventUpdateBlocked = true;
+  }
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.rls_bypass', 'on', true)`;
+      await tx`delete from file_storage_events where id = ${aSystemFileStorageEvent}`;
+    });
+  } catch {
+    storageEventDeleteBlocked = true;
+  }
+  check(
+    "file storage events are append-only for the application role",
+    storageEventUpdateBlocked && storageEventDeleteBlocked,
   );
   let mismatchedReplicaOwnershipRejected = false;
   try {
@@ -2693,7 +2804,7 @@ try {
       await tx`insert into file_object_replicas
         (practice_id, file_id, replica_target, object_key, status)
         values (${aId}, ${bFile}, 'rls_cross_tenant',
-          ${`replica/${aId}/documents/cross-tenant.pdf`}, 'available')`;
+          ${`replica/${aId}/documents/cross-tenant.pdf`}, 'pending')`;
     });
   } catch {
     mismatchedReplicaOwnershipRejected = true;
@@ -2701,6 +2812,42 @@ try {
   check(
     "database rejects cross-tenant file replica ownership even for system jobs",
     mismatchedReplicaOwnershipRejected,
+  );
+  let mismatchedStorageEventOwnershipRejected = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.rls_bypass', 'on', true)`;
+      await tx`insert into file_storage_events
+        (practice_id, file_id, storage_target, event_key, operation_id,
+         event_kind, next_status)
+        values (${aId}, ${bFile}, 'primary', ${`rls:cross-tenant:${randomUUID()}`},
+          ${randomUUID()}, 'forged', 'available')`;
+    });
+  } catch {
+    mismatchedStorageEventOwnershipRejected = true;
+  }
+  check(
+    "database rejects cross-tenant file storage event ownership even for system jobs",
+    mismatchedStorageEventOwnershipRejected,
+  );
+  let crossTenantFileUploaderRejected = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.rls_bypass', 'on', true)`;
+      await tx`insert into files
+        (id, practice_id, uploaded_by, file_name, file_key, file_url, category)
+        values (${crossTenantUploaderFile}, ${aId}, ${bUser},
+          'cross-tenant-uploader.pdf',
+          ${`${aId}/documents/cross-tenant-uploader.pdf`},
+          ${`/api/files/${aId}/documents/cross-tenant-uploader.pdf`},
+          'documents')`;
+    });
+  } catch {
+    crossTenantFileUploaderRejected = true;
+  }
+  check(
+    "database rejects a file uploader from another practice even for system jobs",
+    crossTenantFileUploaderRejected,
   );
   let crossTenantFilePatientRejected = false;
   try {
@@ -2713,7 +2860,7 @@ try {
           'cross-tenant-patient.pdf',
           ${`${aId}/documents/cross-tenant-patient.pdf`},
           ${`/api/files/${aId}/documents/cross-tenant-patient.pdf`},
-          'document', ${bPatient}, 'patient', ${bPatient})`;
+          'documents', ${bPatient}, 'patient', ${bPatient})`;
     });
   } catch {
     crossTenantFilePatientRejected = true;
@@ -2733,7 +2880,7 @@ try {
           'wrong-appointment-patient.pdf',
           ${`${aId}/documents/wrong-appointment-patient.pdf`},
           ${`/api/files/${aId}/documents/wrong-appointment-patient.pdf`},
-          'document', ${aMergeTargetPatient}, ${aSoapLegalAppointment},
+          'documents', ${aMergeTargetPatient}, ${aSoapLegalAppointment},
           'patient', ${aMergeTargetPatient})`;
     });
   } catch {
@@ -3236,8 +3383,9 @@ try {
     await cleanup`delete from rooms where id in (${aRoom}, ${bRoom})`;
     await cleanup`delete from prescriptions where id in (${aPrescription}, ${bPrescription})`;
     await cleanup`delete from products where id in (${aProduct}, ${bProduct})`;
+    await cleanup`delete from file_storage_events where id in (${aFileStorageEvent}, ${aSystemFileStorageEvent})`;
     await cleanup`delete from file_object_replicas where id in (${aReplica}, ${aSystemReplica})`;
-    await cleanup`delete from files where id in (${aFile}, ${bFile})`;
+    await cleanup`delete from files where id in (${aFile}, ${bFile}, ${crossTenantUploaderFile}, ${crossTenantPatientFile}, ${wrongAppointmentPatientFile})`;
     await cleanup`delete from patients where id in (${aPatient}, ${bPatient}, ${aMergeTargetPatient}, ${bMergeTargetPatient}, ${aLineageCandidatePatient})`;
     await cleanup`delete from clients where practice_id in (${aId}, ${bId})`;
     await cleanup`delete from staff_schedules where id in (${aStaffSchedule}, ${bStaffSchedule})`;

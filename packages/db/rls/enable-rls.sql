@@ -81,6 +81,22 @@ DROP POLICY IF EXISTS system_only ON file_object_replicas;
 CREATE POLICY system_only ON file_object_replicas
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
+REVOKE ALL ON file_object_replicas FROM PUBLIC;
+REVOKE ALL ON file_object_replicas FROM openpims_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON file_object_replicas TO openpims_app;
+
+-- Storage transition evidence is append-only operational history. Only the
+-- system worker may read or append it; even that role cannot rewrite events.
+ALTER TABLE file_storage_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS system_read ON file_storage_events;
+CREATE POLICY system_read ON file_storage_events
+  FOR SELECT USING (app_rls_bypass());
+DROP POLICY IF EXISTS system_insert ON file_storage_events;
+CREATE POLICY system_insert ON file_storage_events
+  FOR INSERT WITH CHECK (app_rls_bypass());
+REVOKE ALL ON file_storage_events FROM PUBLIC;
+REVOKE ALL ON file_storage_events FROM openpims_app;
+GRANT SELECT, INSERT ON file_storage_events TO openpims_app;
 
 -- Clinical correction events are a legal/clinical history ledger. The app may
 -- append and read them, but even a future generic repository path must not
@@ -441,7 +457,7 @@ BEGIN
   FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
       EXECUTE format(
-        'REVOKE ALL ON auth_email_attempts, auth_email_delivery_events, auth_email_provider_identity_conflicts, auth_email_webhook_conflicts, auth_tokens, clinic_pilot_events, clinic_pilots, clinical_record_corrections, demo_accesses, dispense_charge_queue, file_object_replicas, funnel_events, lab_result_events, lab_result_replacements, messaging_registration_events, patient_allergies, patient_merge_events, platform_email_identity, platform_email_preference_events, platform_email_preferences, practice_conversion_milestones, prescription_events, sessions, sms_delivery_event_history, sms_delivery_events, sms_send_attempt_events, sms_send_attempts, stripe_events, verification_tokens FROM %I', r
+        'REVOKE ALL ON auth_email_attempts, auth_email_delivery_events, auth_email_provider_identity_conflicts, auth_email_webhook_conflicts, auth_tokens, clinic_pilot_events, clinic_pilots, clinical_record_corrections, demo_accesses, dispense_charge_queue, file_object_replicas, file_storage_events, funnel_events, lab_result_events, lab_result_replacements, messaging_registration_events, patient_allergies, patient_merge_events, platform_email_identity, platform_email_preference_events, platform_email_preferences, practice_conversion_milestones, prescription_events, sessions, sms_delivery_event_history, sms_delivery_events, sms_send_attempt_events, sms_send_attempts, stripe_events, verification_tokens FROM %I', r
       );
     END IF;
   END LOOP;
