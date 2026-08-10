@@ -274,6 +274,33 @@ describe("committed Drizzle migrations", () => {
     expect(preflight).toContain("c.convalidated");
   });
 
+  it("validates every staged recovery guard before the canonical consent swap", () => {
+    const validation = readRepoFile(
+      "packages/db/drizzle/0083_validate_recovery_hold_consent_signature.sql",
+    );
+
+    expect(validation).toContain("SET LOCAL lock_timeout = '5s'");
+    expect(validation).toContain("SET LOCAL statement_timeout = '5min'");
+    expect(validation.match(/VALIDATE CONSTRAINT/g)).toHaveLength(5);
+    const validations = [
+      "practices_recovery_hold_evidence_check",
+      "consent_requests_signature_evidence_pair_check",
+      "consent_requests_signature_evidence_size_check",
+      "consent_requests_signature_evidence_hash_check",
+      "consent_requests_signing_signature_evidence_check",
+    ].map((name) => validation.indexOf(`VALIDATE CONSTRAINT "${name}"`));
+    expect(validations.every((index) => index >= 0)).toBe(true);
+
+    const dropOld = validation.indexOf(
+      'DROP CONSTRAINT "consent_requests_signing_evidence_check"',
+    );
+    const renameStrong = validation.indexOf(
+      'RENAME CONSTRAINT "consent_requests_signing_signature_evidence_check" TO "consent_requests_signing_evidence_check"',
+    );
+    expect(dropOld).toBeGreaterThan(Math.max(...validations));
+    expect(renameStrong).toBeGreaterThan(dropOld);
+  });
+
   it("keeps the file recovery snapshot lineage contiguous", () => {
     const snapshots = [
       "0076",
@@ -283,6 +310,7 @@ describe("committed Drizzle migrations", () => {
       "0080",
       "0081",
       "0082",
+      "0083",
     ].map((prefix) => {
       const path = JSON.parse(
         readRepoFile("packages/db/drizzle/meta/_journal.json"),

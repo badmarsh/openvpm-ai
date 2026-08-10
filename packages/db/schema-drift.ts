@@ -58,6 +58,11 @@ export type DeclaredDatabaseObject = {
  */
 export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
   const objects: DeclaredDatabaseObject[] = [
+    {
+      kind: "constraint",
+      table: "practices",
+      name: "practices_recovery_hold_evidence_check",
+    },
     { kind: "constraint", table: "files", name: "files_uploader_tenant_fk" },
     { kind: "constraint", table: "files", name: "files_patient_tenant_fk" },
     {
@@ -164,6 +169,21 @@ export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
       kind: "constraint",
       table: "consent_requests",
       name: "consent_requests_signing_evidence_check",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_signature_evidence_pair_check",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_signature_evidence_size_check",
+    },
+    {
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_signature_evidence_hash_check",
     },
     {
       kind: "index",
