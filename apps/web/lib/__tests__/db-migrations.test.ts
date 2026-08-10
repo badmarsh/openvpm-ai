@@ -105,6 +105,116 @@ describe("committed Drizzle migrations", () => {
     expect(journal.entries?.map((entry) => entry.tag)).toContain(
       "0069_shocking_spitfire",
     );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0077_gifted_wolverine",
+    );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0078_optimal_bloodaxe",
+    );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0079_green_shiva",
+    );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0080_unusual_bruce_banner",
+    );
+  });
+
+  it("stages file recovery constraints behind a count-only preflight", () => {
+    const preflight = readRepoFile(
+      "packages/db/preflight/0077_file_recovery.sql",
+    );
+    const migration77 = readRepoFile(
+      "packages/db/drizzle/0077_gifted_wolverine.sql",
+    );
+    const migration78 = readRepoFile(
+      "packages/db/drizzle/0078_optimal_bloodaxe.sql",
+    );
+    const migration79 = readRepoFile(
+      "packages/db/drizzle/0079_green_shiva.sql",
+    );
+    const migration80 = readRepoFile(
+      "packages/db/drizzle/0080_unusual_bruce_banner.sql",
+    );
+
+    for (const issue of [
+      "duplicate_file_key_groups",
+      "duplicate_idempotency_groups",
+      "cross_tenant_uploaders",
+      "available_files_without_evidence",
+      "patient_id_backfills",
+      "unrepairable_patient_entities",
+      "appointment_patient_id_backfills",
+      "unrepairable_appointment_links",
+      "invalid_primary_namespaces",
+      "available_replicas_without_evidence",
+      "invalid_independent_replica_keys",
+      "cross_tenant_capture_patients",
+      "cross_tenant_capture_creators",
+      "invalid_capture_appointments",
+      "cross_tenant_consent_patients",
+      "cross_tenant_consent_creators",
+      "invalid_consent_appointments",
+      "cross_tenant_consent_forms",
+      "cross_tenant_consent_files",
+      "invalid_consent_signing_state",
+    ]) {
+      expect(preflight).toContain(`'${issue}'`);
+    }
+    expect(preflight).not.toContain("select *");
+    expect(preflight).toContain("Every release-blocking count must be zero");
+    expect(preflight).toContain(
+      "f.patient_id is not null and f.patient_id <> f.entity_id",
+    );
+    expect(migration77).toContain("duplicate practice/file keys exist");
+    expect(migration77).toContain("SET LOCAL lock_timeout = '5s'");
+    expect(migration77).toContain('"files_uploader_tenant_fk"');
+    expect(migration77).toContain("NOT VALID");
+    expect(migration78).toContain('"files_primary_namespace_check"');
+    expect(migration78).toContain('"entity_id" is not null');
+    expect(migration78).toContain("NOT VALID");
+    expect(migration79).toContain(
+      '"file_object_replicas_independent_object_key_check"',
+    );
+    expect(migration79).toContain('"object_version_id" is not null');
+    expect(migration79).toContain("NOT VALID");
+    expect(migration80).toContain("SET LOCAL lock_timeout = '5s'");
+    expect(migration80.indexOf("consent_forms_practice_id_uq")).toBeLessThan(
+      migration80.indexOf("consent_requests_form_tenant_fk"),
+    );
+    for (const constraint of [
+      "capture_sessions_patient_tenant_fk",
+      "capture_sessions_creator_tenant_fk",
+      "capture_sessions_appointment_patient_tenant_fk",
+      "consent_requests_patient_tenant_fk",
+      "consent_requests_creator_tenant_fk",
+      "consent_requests_appointment_patient_tenant_fk",
+      "consent_requests_form_tenant_fk",
+      "consent_requests_file_tenant_fk",
+      "consent_requests_status_check",
+      "consent_requests_signing_evidence_check",
+    ]) {
+      expect(migration80).toContain(`"${constraint}"`);
+    }
+    expect(migration80.match(/NOT VALID/g)).toHaveLength(10);
+    expect(
+      `${migration77}${migration78}${migration79}${migration80}`,
+    ).not.toContain("VALIDATE CONSTRAINT");
+  });
+
+  it("keeps replica state system-only and storage events append-only", () => {
+    const rls = readRepoFile("packages/db/rls/enable-rls.sql");
+
+    expect(rls).toContain("REVOKE ALL ON file_object_replicas FROM PUBLIC");
+    expect(rls).toContain(
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON file_object_replicas TO openpims_app",
+    );
+    expect(rls).toContain("REVOKE ALL ON file_storage_events FROM PUBLIC");
+    expect(rls).toContain(
+      "GRANT SELECT, INSERT ON file_storage_events TO openpims_app",
+    );
+    expect(rls).not.toContain(
+      "GRANT SELECT, INSERT, UPDATE ON file_storage_events",
+    );
   });
 
   it("backfills clinical provider capability before indexing it", () => {
@@ -185,7 +295,9 @@ describe("committed Drizzle migrations", () => {
     expect(sql).toContain("NOT VALID");
     expect(sql).toContain("VALIDATE CONSTRAINT");
     expect(sql).toContain("SET search_path = ''");
-    expect(sql).toContain("A clinic location is required before creating this room.");
+    expect(sql).toContain(
+      "A clinic location is required before creating this room.",
+    );
     expect(sql).toContain(
       "Choose a clinic location before scheduling this appointment.",
     );
@@ -258,7 +370,66 @@ describe("committed Drizzle migrations", () => {
     expect(replicaPolicy).toContain("WITH CHECK (app_rls_bypass())");
     expect(replicaPolicy).not.toContain("app_current_practice_id");
     expect(rls).toContain(
-      "dispense_charge_queue, file_object_replicas, funnel_events",
+      "dispense_charge_queue, file_object_replicas, file_storage_events, funnel_events",
+    );
+  });
+
+  it("adds durable replica leases and append-only storage evidence", () => {
+    const sql = readRepoFile("packages/db/drizzle/0077_gifted_wolverine.sql");
+    const eventTable = sql.indexOf('CREATE TABLE "file_storage_events"');
+    const eventRls = sql.indexOf(
+      'ALTER TABLE "file_storage_events" ENABLE ROW LEVEL SECURITY',
+    );
+    const eventTenantFk = sql.indexOf(
+      'ADD CONSTRAINT "file_storage_events_file_tenant_fk"',
+    );
+    const patientEntityBackfill = sql.indexOf(
+      'SET "patient_id" = f."entity_id"',
+    );
+    const appointmentBackfill = sql.indexOf(
+      'SET "patient_id" = a."patient_id"',
+    );
+    const appointmentCheck = sql.indexOf(
+      'ADD CONSTRAINT "files_appointment_requires_patient_check"',
+    );
+
+    expect(eventTable).toBeGreaterThanOrEqual(0);
+    expect(eventRls).toBeGreaterThan(eventTable);
+    expect(eventTenantFk).toBeGreaterThan(eventRls);
+    expect(patientEntityBackfill).toBeGreaterThan(eventTenantFk);
+    expect(appointmentBackfill).toBeGreaterThan(patientEntityBackfill);
+    expect(appointmentCheck).toBeGreaterThan(appointmentBackfill);
+    expect(sql).toContain(
+      'CREATE INDEX "file_object_replicas_due_idx" ON "file_object_replicas"',
+    );
+    expect(sql).toContain(
+      'CONSTRAINT "file_object_replicas_lease_coherence_check"',
+    );
+    expect(sql).toContain(
+      'CONSTRAINT "file_object_replicas_available_evidence_check"',
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "files_practice_idempotency_key_uq"',
+    );
+
+    const rls = readRepoFile("packages/db/rls/enable-rls.sql");
+    const eventPolicies = rls.slice(
+      rls.indexOf("ALTER TABLE file_storage_events ENABLE ROW LEVEL SECURITY"),
+      rls.indexOf("-- Clinical correction events"),
+    );
+    expect(eventPolicies).toContain(
+      "CREATE POLICY system_read ON file_storage_events",
+    );
+    expect(eventPolicies).toContain(
+      "CREATE POLICY system_insert ON file_storage_events",
+    );
+    expect(eventPolicies).not.toContain("FOR UPDATE");
+    expect(eventPolicies).not.toContain("FOR DELETE");
+    expect(eventPolicies).toContain(
+      "REVOKE ALL ON file_storage_events FROM openpims_app",
+    );
+    expect(eventPolicies).toContain(
+      "GRANT SELECT, INSERT ON file_storage_events TO openpims_app",
     );
   });
 
