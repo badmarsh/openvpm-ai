@@ -58,6 +58,17 @@ export const practices = pgTable(
     appointmentReminderLeadHours: integer("appointment_reminder_lead_hours")
       .notNull()
       .default(24),
+    // Disaster-recovery safety boundary. A restore sets this in the same
+    // transaction as the recovered rows so autonomous jobs and external
+    // delivery remain quiesced until an owner completes reconciliation.
+    recoveryHold: boolean("recovery_hold").notNull().default(false),
+    recoveryHoldReason: varchar("recovery_hold_reason", { length: 255 }),
+    recoveryHoldSetAt: timestamp("recovery_hold_set_at", {
+      withTimezone: true,
+    }),
+    recoveryHoldReleasedAt: timestamp("recovery_hold_released_at", {
+      withTimezone: true,
+    }),
     // Capability token for the read-only ICS schedule feed (null = feed off).
     // Practice-wide by design: one shared clinic calendar, same trust
     // boundary as the whiteboard. Rotating it invalidates the old URL.
@@ -85,6 +96,10 @@ export const practices = pgTable(
     appointmentReminderLeadHoursCheck: check(
       "practices_appointment_reminder_lead_hours_check",
       sql`${table.appointmentReminderLeadHours} in (24, 48, 72)`,
+    ),
+    recoveryHoldEvidenceCheck: check(
+      "practices_recovery_hold_evidence_check",
+      sql`not ${table.recoveryHold} or (${table.recoveryHoldSetAt} is not null and nullif(btrim(${table.recoveryHoldReason}), '') is not null)`,
     ),
   }),
 );
