@@ -26,6 +26,17 @@ describe("practice recovery hold schema", () => {
     expect(migration).toContain(
       'ADD CONSTRAINT "practices_recovery_hold_evidence_check"',
     );
+    expect(migration).toContain(
+      '"recovery_hold_reason" ~ \'[^[:space:]]\'',
+    );
     expect(migration).toContain("NOT VALID");
+
+    const preflight = readFileSync(
+      "../../packages/db/preflight/0083_validate_recovery_hold_consent_signature.sql",
+      "utf8",
+    );
+    expect(preflight).toContain(
+      "recovery_hold_reason !~ '[^[:space:]]'",
+    );
   });
 });
