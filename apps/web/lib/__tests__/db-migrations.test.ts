@@ -117,6 +117,9 @@ describe("committed Drizzle migrations", () => {
     expect(journal.entries?.map((entry) => entry.tag)).toContain(
       "0080_unusual_bruce_banner",
     );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0081_validate_file_recovery_constraints",
+    );
   });
 
   it("stages file recovery constraints behind a count-only preflight", () => {
@@ -215,6 +218,33 @@ describe("committed Drizzle migrations", () => {
     expect(rls).not.toContain(
       "GRANT SELECT, INSERT, UPDATE ON file_storage_events",
     );
+  });
+
+  it("validates staged recovery constraints only behind a second zero-count gate", () => {
+    const preflight = readRepoFile(
+      "packages/db/preflight/0081_validate_file_recovery.sql",
+    );
+    const validation = readRepoFile(
+      "packages/db/drizzle/0081_validate_file_recovery_constraints.sql",
+    );
+
+    expect(preflight).toContain("Every count must be zero");
+    for (const issue of [
+      "appointments_without_patients",
+      "negative_replica_attempt_counts",
+      "incoherent_replica_leases",
+      "negative_storage_event_sizes",
+      "invalid_consent_signing_state",
+      "missing_staged_constraints",
+      "invalid_required_indexes",
+    ]) {
+      expect(preflight).toContain(`'${issue}'`);
+    }
+    expect(preflight).not.toContain("select *");
+    expect(validation).toContain("SET LOCAL lock_timeout = '5s'");
+    expect(validation).toContain("SET LOCAL statement_timeout = '5min'");
+    expect(validation.match(/VALIDATE CONSTRAINT/g)).toHaveLength(25);
+    expect(validation).not.toContain("ADD CONSTRAINT");
   });
 
   it("backfills clinical provider capability before indexing it", () => {
