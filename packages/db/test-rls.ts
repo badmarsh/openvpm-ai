@@ -129,6 +129,10 @@ const nullCategoryFile = randomUUID();
 const crossTenantUploaderFile = randomUUID();
 const crossTenantPatientFile = randomUUID();
 const wrongAppointmentPatientFile = randomUUID();
+const pendingConsentWithSignature = randomUUID();
+const unpairedSignedConsent = randomUUID();
+const emptySignatureConsent = randomUUID();
+const mismatchedSignatureConsent = randomUUID();
 const aPatientAllergy = randomUUID();
 const bPatientAllergy = randomUUID();
 const aLegacyDeletedPatientAllergy = randomUUID();
@@ -2849,6 +2853,95 @@ try {
     "database rejects a file without a canonical category",
     nullFileCategoryRejected,
   );
+  let whitespaceRecoveryReasonRejected = false;
+  try {
+    await owner`update practices
+      set recovery_hold = true,
+          recovery_hold_set_at = now(),
+          recovery_hold_reason = ${" \t\n "}
+      where id = ${aId}`;
+  } catch {
+    whitespaceRecoveryReasonRejected = true;
+  } finally {
+    await owner`update practices
+      set recovery_hold = false,
+          recovery_hold_set_at = null,
+          recovery_hold_reason = null
+      where id = ${aId}`;
+  }
+  check(
+    "database rejects an active recovery hold with whitespace-only evidence",
+    whitespaceRecoveryReasonRejected,
+  );
+
+  let pendingSignatureEvidenceRejected = false;
+  try {
+    await owner`insert into consent_requests
+      (id, practice_id, patient_id, created_by, token, expires_at, title,
+       body_text, signature_png_bytes, signature_sha256)
+      values (${pendingConsentWithSignature}, ${aId}, ${aPatient}, ${aUser},
+        ${"1".repeat(64)}, now() + interval '1 hour', 'RLS consent', 'Body',
+        pg_catalog.decode('89504e47', 'hex'),
+        pg_catalog.encode(pg_catalog.sha256(pg_catalog.decode('89504e47', 'hex')), 'hex'))`;
+  } catch {
+    pendingSignatureEvidenceRejected = true;
+  }
+  check(
+    "database rejects signature evidence while consent is pending",
+    pendingSignatureEvidenceRejected,
+  );
+
+  let unpairedSignatureEvidenceRejected = false;
+  try {
+    await owner`insert into consent_requests
+      (id, practice_id, patient_id, created_by, token, expires_at, title,
+       body_text, status, signer_name, signed_at, file_id, signature_png_bytes)
+      values (${unpairedSignedConsent}, ${aId}, ${aPatient}, ${aUser},
+        ${"2".repeat(64)}, now() + interval '1 hour', 'RLS consent', 'Body',
+        'signed', 'Signer', now(), ${aFile}, pg_catalog.decode('89', 'hex'))`;
+  } catch {
+    unpairedSignatureEvidenceRejected = true;
+  }
+  check(
+    "database rejects unpaired signed-consent signature evidence",
+    unpairedSignatureEvidenceRejected,
+  );
+
+  let emptySignatureEvidenceRejected = false;
+  try {
+    await owner`insert into consent_requests
+      (id, practice_id, patient_id, created_by, token, expires_at, title,
+       body_text, status, signer_name, signed_at, file_id,
+       signature_png_bytes, signature_sha256)
+      values (${emptySignatureConsent}, ${aId}, ${aPatient}, ${aUser},
+        ${"3".repeat(64)}, now() + interval '1 hour', 'RLS consent', 'Body',
+        'signed', 'Signer', now(), ${aFile}, pg_catalog.decode('', 'hex'),
+        pg_catalog.encode(pg_catalog.sha256(pg_catalog.decode('', 'hex')), 'hex'))`;
+  } catch {
+    emptySignatureEvidenceRejected = true;
+  }
+  check(
+    "database rejects empty signed-consent signature evidence",
+    emptySignatureEvidenceRejected,
+  );
+
+  let mismatchedSignatureEvidenceRejected = false;
+  try {
+    await owner`insert into consent_requests
+      (id, practice_id, patient_id, created_by, token, expires_at, title,
+       body_text, status, signer_name, signed_at, file_id,
+       signature_png_bytes, signature_sha256)
+      values (${mismatchedSignatureConsent}, ${aId}, ${aPatient}, ${aUser},
+        ${"4".repeat(64)}, now() + interval '1 hour', 'RLS consent', 'Body',
+        'signed', 'Signer', now(), ${aFile}, pg_catalog.decode('89', 'hex'),
+        ${"0".repeat(64)})`;
+  } catch {
+    mismatchedSignatureEvidenceRejected = true;
+  }
+  check(
+    "database rejects signed-consent signature hash mismatches",
+    mismatchedSignatureEvidenceRejected,
+  );
   let crossTenantFileUploaderRejected = false;
   try {
     await appTransaction(async (tx) => {
@@ -3404,6 +3497,7 @@ try {
     await cleanup`delete from products where id in (${aProduct}, ${bProduct})`;
     await cleanup`delete from file_storage_events where id in (${aFileStorageEvent}, ${aSystemFileStorageEvent})`;
     await cleanup`delete from file_object_replicas where id in (${aReplica}, ${aSystemReplica})`;
+    await cleanup`delete from consent_requests where id in (${pendingConsentWithSignature}, ${unpairedSignedConsent}, ${emptySignatureConsent}, ${mismatchedSignatureConsent})`;
     await cleanup`delete from files where id in (${aFile}, ${bFile}, ${nullCategoryFile}, ${crossTenantUploaderFile}, ${crossTenantPatientFile}, ${wrongAppointmentPatientFile})`;
     await cleanup`delete from patients where id in (${aPatient}, ${bPatient}, ${aMergeTargetPatient}, ${bMergeTargetPatient}, ${aLineageCandidatePatient})`;
     await cleanup`delete from clients where practice_id in (${aId}, ${bId})`;
