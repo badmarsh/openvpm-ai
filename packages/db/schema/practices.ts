@@ -99,7 +99,7 @@ export const practices = pgTable(
     ),
     recoveryHoldEvidenceCheck: check(
       "practices_recovery_hold_evidence_check",
-      sql`not ${table.recoveryHold} or (${table.recoveryHoldSetAt} is not null and nullif(btrim(${table.recoveryHoldReason}), '') is not null)`,
+      sql`not ${table.recoveryHold} or (${table.recoveryHoldSetAt} is not null and ${table.recoveryHoldReason} is not null and ${table.recoveryHoldReason} ~ '[^[:space:]]')`,
     ),
   }),
 );

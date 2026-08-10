@@ -436,7 +436,7 @@
         },
         "practices_recovery_hold_evidence_check": {
           "name": "practices_recovery_hold_evidence_check",
-          "value": "not \"practices\".\"recovery_hold\" or (\"practices\".\"recovery_hold_set_at\" is not null and nullif(btrim(\"practices\".\"recovery_hold_reason\"), '') is not null)"
+          "value": "not \"practices\".\"recovery_hold\" or (\"practices\".\"recovery_hold_set_at\" is not null and \"practices\".\"recovery_hold_reason\" is not null and \"practices\".\"recovery_hold_reason\" ~ '[^[:space:]]')"
         }
       },
       "isRLSEnabled": false

@@ -5,7 +5,8 @@ from practices
 where recovery_hold
   and (
     recovery_hold_set_at is null
-    or nullif(btrim(recovery_hold_reason), '') is null
+    or recovery_hold_reason is null
+    or recovery_hold_reason !~ '[^[:space:]]'
   )
 union all
 select 'unpaired_signature_evidence', count(*)::int
@@ -50,6 +51,20 @@ where not (
     and signed_at is not null
     and file_id is not null
   )
+)
+union all
+select 'missing_or_unvalidated_live_signing_constraint', count(*)::int
+from (values (1)) marker(value)
+where not exists (
+  select 1
+  from pg_catalog.pg_constraint c
+  join pg_catalog.pg_class t on t.oid = c.conrelid
+  join pg_catalog.pg_namespace n on n.oid = t.relnamespace
+  where n.nspname = 'public'
+    and t.relname = 'consent_requests'
+    and c.conname = 'consent_requests_signing_evidence_check'
+    and c.contype = 'c'
+    and c.convalidated
 )
 union all
 select 'missing_staged_constraints', count(*)::int

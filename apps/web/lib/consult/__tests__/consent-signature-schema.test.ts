@@ -60,6 +60,14 @@ describe("consent signature persistence schema", () => {
     );
     expect(preflight).toContain("owner-visible gate");
     expect(preflight).toContain("invalid_signature_states");
+    expect(preflight).toContain(
+      "missing_or_unvalidated_live_signing_constraint",
+    );
+    expect(preflight).toContain(
+      "c.conname = 'consent_requests_signing_evidence_check'",
+    );
+    expect(preflight).toContain("c.contype = 'c'");
+    expect(preflight).toContain("c.convalidated");
     expect(preflight).toContain("missing_staged_constraints");
   });
 });

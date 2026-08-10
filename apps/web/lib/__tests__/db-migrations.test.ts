@@ -259,6 +259,21 @@ describe("committed Drizzle migrations", () => {
     expect(validation.match(/ADD CONSTRAINT/g)).toHaveLength(1);
   });
 
+  it("requires the validated live consent guard before the signature swap", () => {
+    const preflight = readRepoFile(
+      "packages/db/preflight/0083_validate_recovery_hold_consent_signature.sql",
+    );
+
+    expect(preflight).toContain(
+      "'missing_or_unvalidated_live_signing_constraint'",
+    );
+    expect(preflight).toContain(
+      "c.conname = 'consent_requests_signing_evidence_check'",
+    );
+    expect(preflight).toContain("c.contype = 'c'");
+    expect(preflight).toContain("c.convalidated");
+  });
+
   it("keeps the file recovery snapshot lineage contiguous", () => {
     const snapshots = [
       "0076",
