@@ -120,6 +120,9 @@ describe("committed Drizzle migrations", () => {
     expect(journal.entries?.map((entry) => entry.tag)).toContain(
       "0081_validate_file_recovery_constraints",
     );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0082_overconfident_manta",
+    );
   });
 
   it("stages file recovery constraints behind a count-only preflight", () => {
@@ -257,19 +260,25 @@ describe("committed Drizzle migrations", () => {
   });
 
   it("keeps the file recovery snapshot lineage contiguous", () => {
-    const snapshots = ["0076", "0077", "0078", "0079", "0080", "0081"].map(
-      (prefix) => {
-        const path = JSON.parse(
-          readRepoFile("packages/db/drizzle/meta/_journal.json"),
-        ).entries.find((entry: { tag: string }) =>
-          entry.tag.startsWith(`${prefix}_`),
-        )?.tag;
-        expect(path).toBeTruthy();
-        return JSON.parse(
-          readRepoFile(`packages/db/drizzle/meta/${prefix}_snapshot.json`),
-        ) as { id: string; prevId: string };
-      },
-    );
+    const snapshots = [
+      "0076",
+      "0077",
+      "0078",
+      "0079",
+      "0080",
+      "0081",
+      "0082",
+    ].map((prefix) => {
+      const path = JSON.parse(
+        readRepoFile("packages/db/drizzle/meta/_journal.json"),
+      ).entries.find((entry: { tag: string }) =>
+        entry.tag.startsWith(`${prefix}_`),
+      )?.tag;
+      expect(path).toBeTruthy();
+      return JSON.parse(
+        readRepoFile(`packages/db/drizzle/meta/${prefix}_snapshot.json`),
+      ) as { id: string; prevId: string };
+    });
 
     for (let index = 1; index < snapshots.length; index++) {
       expect(snapshots[index]!.prevId).toBe(snapshots[index - 1]!.id);
