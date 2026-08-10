@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   foreignKey,
   check,
+  customType,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
@@ -18,6 +19,14 @@ import { patients } from "./patients";
 import { users } from "./users";
 import { files } from "./files";
 import { appointments } from "./scheduling";
+
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+const SIGNATURE_PNG_MAX_BYTES = 500_000;
 
 /**
  * Per-practice consent form templates. Seeded from the starter library
@@ -100,6 +109,11 @@ export const consentRequests = pgTable(
     status: varchar("status", { length: 16 }).notNull().default("pending"),
     signerName: varchar("signer_name", { length: 120 }),
     signedAt: timestamp("signed_at", { withTimezone: true }),
+    /** Exact canonical PNG evidence captured by the first successful claim.
+     * Nullable so already-signed legacy rows remain valid. New signing flows
+     * persist this before rendering or provider I/O and always reuse it. */
+    signaturePngBytes: bytea("signature_png_bytes"),
+    signatureSha256: varchar("signature_sha256", { length: 64 }),
     /** The signed consent PDF in the files table. */
     fileId: uuid("file_id").references(() => files.id),
   },
@@ -145,7 +159,19 @@ export const consentRequests = pgTable(
     ),
     signingEvidenceCheck: check(
       "consent_requests_signing_evidence_check",
-      sql`(${table.status} = 'pending' and ${table.signerName} is null and ${table.signedAt} is null and ${table.fileId} is null) or (${table.status} = 'signing' and ${table.signerName} is not null and ${table.signedAt} is not null) or (${table.status} = 'signed' and ${table.signerName} is not null and ${table.signedAt} is not null and ${table.fileId} is not null)`,
+      sql`(${table.status} = 'pending' and ${table.signerName} is null and ${table.signedAt} is null and ${table.fileId} is null and ${table.signaturePngBytes} is null and ${table.signatureSha256} is null) or (${table.status} = 'signing' and ${table.signerName} is not null and ${table.signedAt} is not null and ${table.signaturePngBytes} is not null and ${table.signatureSha256} is not null) or (${table.status} = 'signed' and ${table.signerName} is not null and ${table.signedAt} is not null and ${table.fileId} is not null)`,
+    ),
+    signatureEvidencePairCheck: check(
+      "consent_requests_signature_evidence_pair_check",
+      sql`(${table.signaturePngBytes} is null and ${table.signatureSha256} is null) or (${table.signaturePngBytes} is not null and ${table.signatureSha256} is not null)`,
+    ),
+    signatureEvidenceSizeCheck: check(
+      "consent_requests_signature_evidence_size_check",
+      sql`${table.signaturePngBytes} is null or octet_length(${table.signaturePngBytes}) between 1 and ${sql.raw(String(SIGNATURE_PNG_MAX_BYTES))}`,
+    ),
+    signatureEvidenceHashCheck: check(
+      "consent_requests_signature_evidence_hash_check",
+      sql`${table.signatureSha256} is null or (${table.signatureSha256} ~ '^[0-9a-f]{64}$' and ${table.signatureSha256} = pg_catalog.encode(pg_catalog.sha256(${table.signaturePngBytes}), 'hex'))`,
     ),
   }),
 );
