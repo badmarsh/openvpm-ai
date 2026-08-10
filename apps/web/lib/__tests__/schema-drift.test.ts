@@ -224,6 +224,37 @@ describe("findSchemaDrift", () => {
     ]);
   });
 
+  it("requires validated recovery-hold and signature-evidence guards", async () => {
+    const required = criticalDatabaseContract()
+      .filter(
+        (object) =>
+          object.name === "practices_recovery_hold_evidence_check" ||
+          object.name.startsWith("consent_requests_signature_evidence_") ||
+          object.name === "consent_requests_signing_evidence_check",
+      )
+      .map((object) => object.name);
+
+    expect(required).toEqual([
+      "practices_recovery_hold_evidence_check",
+      "consent_requests_signing_evidence_check",
+      "consent_requests_signature_evidence_pair_check",
+      "consent_requests_signature_evidence_size_check",
+      "consent_requests_signature_evidence_hash_check",
+    ]);
+
+    const rows = liveSchemaWithout(() => false).map((row) =>
+      row.object_name === "consent_requests_signature_evidence_hash_check"
+        ? { ...row, healthy: false }
+        : row,
+    );
+    const drift = await findSchemaDrift(fakeDb(rows));
+    expect(drift.invalidObjects).toContainEqual({
+      kind: "constraint",
+      table: "consent_requests",
+      name: "consent_requests_signature_evidence_hash_check",
+    });
+  });
+
   it("catches a missing policy and RLS disabled under an existing policy", async () => {
     const rows = liveSchemaWithout(
       (row) =>

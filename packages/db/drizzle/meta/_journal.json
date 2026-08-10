@@ -582,6 +582,13 @@
       "when": 1786389705756,
       "tag": "0082_overconfident_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1786400548748,
+      "tag": "0083_validate_recovery_hold_consent_signature",
+      "breakpoints": true
     }
   ]
 }
