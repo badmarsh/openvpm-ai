@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  criticalDatabaseContract,
   declaredSchema,
   describeDrift,
   driftIsClean,
@@ -12,21 +13,48 @@ import {
  * migration, and nothing reported it until someone emailed.
  */
 
-type ColumnRow = { table_name: string; column_name: string };
+type SchemaObjectRow = {
+  object_type:
+    | "column"
+    | "constraint"
+    | "index"
+    | "rls_policy"
+    | "table_privilege"
+    | "forbidden_table_privilege";
+  table_name: string;
+  object_name: string;
+  healthy: boolean;
+};
 
 /** Stand-in for the Drizzle client that returns a fixed information_schema. */
-function fakeDb(rows: ColumnRow[]) {
+function fakeDb(rows: SchemaObjectRow[]) {
   return { execute: async () => rows };
 }
 
 /** The live database, minus whatever we want to pretend was never migrated. */
-function liveSchemaWithout(omit: (row: ColumnRow) => boolean): ColumnRow[] {
-  const rows: ColumnRow[] = [];
+function liveSchemaWithout(
+  omit: (row: SchemaObjectRow) => boolean,
+): SchemaObjectRow[] {
+  const rows: SchemaObjectRow[] = [];
   for (const [table, columns] of declaredSchema()) {
     for (const column of columns) {
-      const row = { table_name: table, column_name: column };
+      const row: SchemaObjectRow = {
+        object_type: "column",
+        table_name: table,
+        object_name: column,
+        healthy: true,
+      };
       if (!omit(row)) rows.push(row);
     }
+  }
+  for (const object of criticalDatabaseContract()) {
+    const row: SchemaObjectRow = {
+      object_type: object.kind,
+      table_name: object.table,
+      object_name: object.name,
+      healthy: true,
+    };
+    if (!omit(row)) rows.push(row);
   }
   return rows;
 }
@@ -51,7 +79,11 @@ describe("declaredSchema", () => {
 describe("findSchemaDrift", () => {
   it("reports no drift when the database matches the code", async () => {
     const drift = await findSchemaDrift(fakeDb(liveSchemaWithout(() => false)));
-    expect(drift).toEqual({ missingTables: [], missingColumns: [] });
+    expect(drift).toEqual({
+      missingTables: [],
+      missingColumns: [],
+      invalidObjects: [],
+    });
     expect(driftIsClean(drift)).toBe(true);
   });
 
@@ -59,8 +91,9 @@ describe("findSchemaDrift", () => {
     const db = fakeDb(
       liveSchemaWithout(
         (row) =>
+          row.object_type === "column" &&
           row.table_name === "prescriptions" &&
-          row.column_name === "product_id",
+          row.object_name === "product_id",
       ),
     );
 
@@ -78,7 +111,9 @@ describe("findSchemaDrift", () => {
     const db = fakeDb(
       liveSchemaWithout(
         (row) =>
-          row.table_name === "soap_notes" && row.column_name === "imported",
+          row.object_type === "column" &&
+          row.table_name === "soap_notes" &&
+          row.object_name === "imported",
       ),
     );
 
@@ -95,8 +130,9 @@ describe("findSchemaDrift", () => {
     const db = fakeDb(
       liveSchemaWithout(
         (row) =>
+          row.object_type === "column" &&
           row.table_name === "migration_runs" &&
-          row.column_name === "reviewed_plan_hash",
+          row.object_name === "reviewed_plan_hash",
       ),
     );
 
@@ -124,8 +160,18 @@ describe("findSchemaDrift", () => {
 
   it("ignores extra tables and columns the database has but the code does not", async () => {
     const rows = liveSchemaWithout(() => false);
-    rows.push({ table_name: "legacy_scratch", column_name: "id" });
-    rows.push({ table_name: "prescriptions", column_name: "retired_field" });
+    rows.push({
+      object_type: "column",
+      table_name: "legacy_scratch",
+      object_name: "id",
+      healthy: true,
+    });
+    rows.push({
+      object_type: "column",
+      table_name: "prescriptions",
+      object_name: "retired_field",
+      healthy: true,
+    });
 
     const drift = await findSchemaDrift(fakeDb(rows));
 
@@ -143,6 +189,89 @@ describe("findSchemaDrift", () => {
     expect(drift.missingTables.length).toBeGreaterThan(10);
     expect(driftIsClean(drift)).toBe(false);
   });
+
+  it("catches a missing critical constraint", async () => {
+    const drift = await findSchemaDrift(
+      fakeDb(
+        liveSchemaWithout(
+          (row) =>
+            row.object_type === "constraint" &&
+            row.object_name === "files_uploader_tenant_fk",
+        ),
+      ),
+    );
+
+    expect(drift.invalidObjects).toContainEqual({
+      kind: "constraint",
+      table: "files",
+      name: "files_uploader_tenant_fk",
+    });
+    expect(driftIsClean(drift)).toBe(false);
+  });
+
+  it("catches a NOT VALID constraint or invalid index", async () => {
+    const rows = liveSchemaWithout(() => false).map((row) =>
+      row.object_name === "files_available_evidence_check" ||
+      row.object_name === "file_object_replicas_due_idx"
+        ? { ...row, healthy: false }
+        : row,
+    );
+    const drift = await findSchemaDrift(fakeDb(rows));
+
+    expect(drift.invalidObjects.map((object) => object.name)).toEqual([
+      "files_available_evidence_check",
+      "file_object_replicas_due_idx",
+    ]);
+  });
+
+  it("catches a missing policy and RLS disabled under an existing policy", async () => {
+    const rows = liveSchemaWithout(
+      (row) =>
+        row.object_type === "rls_policy" &&
+        row.table_name === "file_storage_events" &&
+        row.object_name === "system_insert",
+    ).map((row) =>
+      row.object_type === "rls_policy" &&
+      row.table_name === "file_object_replicas"
+        ? { ...row, healthy: false }
+        : row,
+    );
+    const drift = await findSchemaDrift(fakeDb(rows));
+
+    expect(drift.invalidObjects.map((object) => object.name)).toContain(
+      "system_only",
+    );
+    expect(drift.invalidObjects.map((object) => object.name)).toContain(
+      "system_insert",
+    );
+  });
+
+  it("catches missing required and present forbidden application privileges", async () => {
+    const rows = liveSchemaWithout(
+      (row) =>
+        row.object_type === "table_privilege" &&
+        row.table_name === "file_object_replicas" &&
+        row.object_name === "DELETE",
+    ).map((row) =>
+      row.object_type === "forbidden_table_privilege" &&
+      row.table_name === "file_storage_events" &&
+      row.object_name === "UPDATE"
+        ? { ...row, healthy: false }
+        : row,
+    );
+    const drift = await findSchemaDrift(fakeDb(rows));
+
+    expect(drift.invalidObjects).toContainEqual({
+      kind: "table_privilege",
+      table: "file_object_replicas",
+      name: "DELETE",
+    });
+    expect(drift.invalidObjects).toContainEqual({
+      kind: "forbidden_table_privilege",
+      table: "file_storage_events",
+      name: "UPDATE",
+    });
+  });
 });
 
 describe("describeDrift", () => {
@@ -151,7 +280,9 @@ describe("describeDrift", () => {
       fakeDb(
         liveSchemaWithout(
           (row) =>
-            row.table_name === "soap_notes" && row.column_name === "imported",
+            row.object_type === "column" &&
+            row.table_name === "soap_notes" &&
+            row.object_name === "imported",
         ),
       ),
     );
@@ -162,15 +293,20 @@ describe("describeDrift", () => {
   });
 
   it("says so plainly when the schema is clean", () => {
-    expect(describeDrift({ missingTables: [], missingColumns: [] })).toBe(
-      "Database schema matches the deployed code",
-    );
+    expect(
+      describeDrift({
+        missingTables: [],
+        missingColumns: [],
+        invalidObjects: [],
+      }),
+    ).toBe("Database schema matches the deployed code");
   });
 
   it("truncates long lists instead of dumping every object", () => {
     const summary = describeDrift({
       missingTables: ["a", "b", "c", "d", "e", "f", "g"],
       missingColumns: [],
+      invalidObjects: [],
     });
     expect(summary).toContain("7 tables missing");
     expect(summary).toContain("…");

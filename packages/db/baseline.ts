@@ -28,11 +28,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import postgres from "postgres";
-import {
-  describeDrift,
-  driftIsClean,
-  type SchemaDrift,
-} from "./schema-drift";
+import { describeDrift, driftIsClean, type SchemaDrift } from "./schema-drift";
 
 type JournalEntry = { idx: number; tag: string; when: number };
 type SnapshotTable = {
@@ -49,7 +45,7 @@ const throughArg = args[args.indexOf("--through") + 1];
 if (!args.includes("--through") || !throughArg || throughArg.startsWith("--")) {
   console.error(
     "Usage: pnpm db:baseline --through <migration-prefix> [--apply]\n" +
-      "Example: pnpm db:baseline --through 0030 --apply"
+      "Example: pnpm db:baseline --through 0030 --apply",
   );
   process.exit(1);
 }
@@ -70,7 +66,7 @@ const cutoff = journal.entries.findIndex((e) => e.tag.startsWith(throughArg));
 if (cutoff === -1) {
   console.error(
     `No migration in the journal starts with "${throughArg}".\n` +
-      `Known tags: ${journal.entries.map((e) => e.tag).join(", ")}`
+      `Known tags: ${journal.entries.map((e) => e.tag).join(", ")}`,
   );
   process.exit(1);
 }
@@ -86,7 +82,7 @@ function snapshotPath(entry: JournalEntry): string {
 /** Verify the live database contains every table/column at the chosen cutoff. */
 async function findBaselineDrift(entry: JournalEntry): Promise<SchemaDrift> {
   const snapshot = JSON.parse(
-    readFileSync(snapshotPath(entry), "utf8")
+    readFileSync(snapshotPath(entry), "utf8"),
   ) as MigrationSnapshot;
   const expected = new Map<string, Set<string>>();
 
@@ -94,7 +90,7 @@ async function findBaselineDrift(entry: JournalEntry): Promise<SchemaDrift> {
     if (table.schema && table.schema !== "public") continue;
     expected.set(
       table.name,
-      new Set(Object.values(table.columns).map((column) => column.name))
+      new Set(Object.values(table.columns).map((column) => column.name)),
     );
   }
 
@@ -127,9 +123,11 @@ async function findBaselineDrift(entry: JournalEntry): Promise<SchemaDrift> {
   missingColumns.sort((a, b) =>
     a.table === b.table
       ? a.column.localeCompare(b.column)
-      : a.table.localeCompare(b.table)
+      : a.table.localeCompare(b.table),
   );
-  return { missingTables, missingColumns };
+  // Baseline adoption predates application-managed constraints and policies;
+  // the full post-migration contract is enforced by `db:drift`.
+  return { missingTables, missingColumns, invalidObjects: [] };
 }
 
 // drizzle-kit identifies an applied migration by the SHA-256 of the migration
@@ -170,10 +168,10 @@ async function main() {
       select count(*)::int as n from drizzle."__drizzle_migrations"
     `;
     console.log(
-      `A migration ledger already exists with ${applied[0]?.n ?? 0} row(s).`
+      `A migration ledger already exists with ${applied[0]?.n ?? 0} row(s).`,
     );
     console.log(
-      "Baselining is a one-time operation — use `pnpm db:migrate` instead."
+      "Baselining is a one-time operation — use `pnpm db:migrate` instead.",
     );
     return 1;
   }
@@ -182,11 +180,11 @@ async function main() {
   const drift = await findBaselineDrift(target);
   if (!driftIsClean(drift)) {
     console.error(
-      `Cannot baseline through ${target.tag}: the live database does not match that migration snapshot.`
+      `Cannot baseline through ${target.tag}: the live database does not match that migration snapshot.`,
     );
     console.error(describeDrift(drift));
     console.error(
-      "Apply or push the missing schema changes, then run the baseline again."
+      "Apply or push the missing schema changes, then run the baseline again.",
     );
     return 1;
   }
@@ -196,11 +194,13 @@ async function main() {
 
   if (remaining.length > 0) {
     console.log(
-      `\nWill leave ${remaining.length} migration(s) for \`pnpm db:migrate\`:`
+      `\nWill leave ${remaining.length} migration(s) for \`pnpm db:migrate\`:`,
     );
     for (const entry of remaining) console.log(`  → ${entry.tag}`);
   } else {
-    console.log("\nNo migrations left over — the selected snapshot is current.");
+    console.log(
+      "\nNo migrations left over — the selected snapshot is current.",
+    );
   }
 
   if (!apply) {
@@ -221,7 +221,7 @@ async function main() {
       await tx.unsafe(
         `insert into drizzle."__drizzle_migrations" (hash, created_at)
          values ($1, $2)`,
-        [migrationHash(entry.tag), entry.when]
+        [migrationHash(entry.tag), entry.when],
       );
     }
   });

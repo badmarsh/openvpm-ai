@@ -125,6 +125,7 @@ const aSystemReplica = randomUUID();
 const aFileStorageEvent = randomUUID();
 const aSystemFileStorageEvent = randomUUID();
 const aFileStorageOperation = randomUUID();
+const nullCategoryFile = randomUUID();
 const crossTenantUploaderFile = randomUUID();
 const crossTenantPatientFile = randomUUID();
 const wrongAppointmentPatientFile = randomUUID();
@@ -2830,6 +2831,24 @@ try {
     "database rejects cross-tenant file storage event ownership even for system jobs",
     mismatchedStorageEventOwnershipRejected,
   );
+  let nullFileCategoryRejected = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.rls_bypass', 'on', true)`;
+      await tx`insert into files
+        (id, practice_id, uploaded_by, file_name, file_key, file_url)
+        values (${nullCategoryFile}, ${aId}, ${aUser},
+          'missing-category.pdf',
+          ${`${aId}/documents/missing-category.pdf`},
+          ${`/api/files/${aId}/documents/missing-category.pdf`})`;
+    });
+  } catch {
+    nullFileCategoryRejected = true;
+  }
+  check(
+    "database rejects a file without a canonical category",
+    nullFileCategoryRejected,
+  );
   let crossTenantFileUploaderRejected = false;
   try {
     await appTransaction(async (tx) => {
@@ -3385,7 +3404,7 @@ try {
     await cleanup`delete from products where id in (${aProduct}, ${bProduct})`;
     await cleanup`delete from file_storage_events where id in (${aFileStorageEvent}, ${aSystemFileStorageEvent})`;
     await cleanup`delete from file_object_replicas where id in (${aReplica}, ${aSystemReplica})`;
-    await cleanup`delete from files where id in (${aFile}, ${bFile}, ${crossTenantUploaderFile}, ${crossTenantPatientFile}, ${wrongAppointmentPatientFile})`;
+    await cleanup`delete from files where id in (${aFile}, ${bFile}, ${nullCategoryFile}, ${crossTenantUploaderFile}, ${crossTenantPatientFile}, ${wrongAppointmentPatientFile})`;
     await cleanup`delete from patients where id in (${aPatient}, ${bPatient}, ${aMergeTargetPatient}, ${bMergeTargetPatient}, ${aLineageCandidatePatient})`;
     await cleanup`delete from clients where practice_id in (${aId}, ${bId})`;
     await cleanup`delete from staff_schedules where id in (${aStaffSchedule}, ${bStaffSchedule})`;

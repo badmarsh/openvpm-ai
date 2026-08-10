@@ -117,6 +117,9 @@ describe("committed Drizzle migrations", () => {
     expect(journal.entries?.map((entry) => entry.tag)).toContain(
       "0080_unusual_bruce_banner",
     );
+    expect(journal.entries?.map((entry) => entry.tag)).toContain(
+      "0081_validate_file_recovery_constraints",
+    );
   });
 
   it("stages file recovery constraints behind a count-only preflight", () => {
@@ -215,6 +218,62 @@ describe("committed Drizzle migrations", () => {
     expect(rls).not.toContain(
       "GRANT SELECT, INSERT, UPDATE ON file_storage_events",
     );
+  });
+
+  it("validates staged recovery constraints only behind a second zero-count gate", () => {
+    const preflight = readRepoFile(
+      "packages/db/preflight/0081_validate_file_recovery.sql",
+    );
+    const validation = readRepoFile(
+      "packages/db/drizzle/0081_validate_file_recovery_constraints.sql",
+    );
+
+    expect(preflight).toContain("Every count must be zero");
+    for (const issue of [
+      "appointments_without_patients",
+      "negative_replica_attempt_counts",
+      "incoherent_replica_leases",
+      "negative_storage_event_sizes",
+      "invalid_consent_signing_state",
+      "missing_staged_constraints",
+      "invalid_required_indexes",
+    ]) {
+      expect(preflight).toContain(`'${issue}'`);
+    }
+    expect(preflight).not.toContain("select *");
+    expect(validation).toContain("SET LOCAL lock_timeout = '5s'");
+    expect(validation).toContain("SET LOCAL statement_timeout = '5min'");
+    const categoryRequiredAdd = validation.indexOf(
+      'ADD CONSTRAINT "files_category_required_check"',
+    );
+    const categoryRequiredValidation = validation.indexOf(
+      'VALIDATE CONSTRAINT "files_category_required_check"',
+    );
+    expect(categoryRequiredAdd).toBeGreaterThanOrEqual(0);
+    expect(categoryRequiredValidation).toBeGreaterThan(categoryRequiredAdd);
+    expect(validation).toContain('"category" is not null');
+    expect(validation.match(/VALIDATE CONSTRAINT/g)).toHaveLength(26);
+    expect(validation.match(/ADD CONSTRAINT/g)).toHaveLength(1);
+  });
+
+  it("keeps the file recovery snapshot lineage contiguous", () => {
+    const snapshots = ["0076", "0077", "0078", "0079", "0080", "0081"].map(
+      (prefix) => {
+        const path = JSON.parse(
+          readRepoFile("packages/db/drizzle/meta/_journal.json"),
+        ).entries.find((entry: { tag: string }) =>
+          entry.tag.startsWith(`${prefix}_`),
+        )?.tag;
+        expect(path).toBeTruthy();
+        return JSON.parse(
+          readRepoFile(`packages/db/drizzle/meta/${prefix}_snapshot.json`),
+        ) as { id: string; prevId: string };
+      },
+    );
+
+    for (let index = 1; index < snapshots.length; index++) {
+      expect(snapshots[index]!.prevId).toBe(snapshots[index - 1]!.id);
+    }
   });
 
   it("backfills clinical provider capability before indexing it", () => {

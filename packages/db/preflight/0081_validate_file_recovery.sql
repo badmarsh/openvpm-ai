@@ -1,21 +1,7 @@
--- Count-only, read-only preflight for the file recovery foundation.
--- Run against production and demo before applying migrations 0077-0079.
--- Every release-blocking count must be zero. The two *_backfills counts are
--- informational and are repaired deterministically by migration 0078 before
--- its constraints are staged. This query intentionally returns no row
--- contents.
-select 'duplicate_file_key_groups' issue, count(*) violations
-from (
-  select 1 from files group by practice_id, file_key having count(*) > 1
-) v
-union all
-select 'duplicate_idempotency_groups', count(*)
-from (
-  select 1 from files where idempotency_key is not null
-  group by practice_id, idempotency_key having count(*) > 1
-) v
-union all
-select 'cross_tenant_uploaders', count(*)
+-- Count-only, read-only gate for migration 0081.
+-- Run after 0077-0080 and RLS are applied. Every count must be zero before
+-- validating the staged attachment/capture/consent constraints.
+select 'cross_tenant_uploaders' issue, count(*) violations
 from files f
 where not exists (
   select 1 from users u
@@ -30,62 +16,13 @@ union all
 select 'negative_file_sizes', count(*)
 from files where file_size_bytes < 0
 union all
+select 'appointments_without_patients', count(*)
+from files where appointment_id is not null and patient_id is null
+union all
 select 'available_files_without_evidence', count(*)
 from files
 where storage_status = 'available'
   and (checksum_sha256 is null or file_size_bytes is null or storage_verified_at is null)
-union all
-select 'patient_id_backfills', count(*)
-from files f
-where f.entity_type = 'patient'
-  and f.patient_id is null
-  and f.entity_id is not null
-  and exists (
-    select 1 from patients p
-    where p.id = f.entity_id and p.practice_id = f.practice_id
-  )
-union all
-select 'unrepairable_patient_entities', count(*)
-from files f
-where f.entity_type = 'patient'
-  and (
-    f.entity_id is null
-    or (f.patient_id is not null and f.patient_id <> f.entity_id)
-    or not exists (
-      select 1 from patients p
-      where p.id = f.entity_id and p.practice_id = f.practice_id
-    )
-  )
-union all
-select 'appointment_patient_id_backfills', count(*)
-from files f
-where f.appointment_id is not null
-  and f.patient_id is null
-  and exists (
-    select 1 from appointments a
-    where a.id = f.appointment_id
-      and a.practice_id = f.practice_id
-      and a.patient_id is not null
-  )
-union all
-select 'unrepairable_appointment_links', count(*)
-from files f
-where f.appointment_id is not null
-  and (
-    not exists (
-      select 1 from appointments a
-      where a.id = f.appointment_id and a.practice_id = f.practice_id
-    )
-    or (
-      f.patient_id is not null
-      and not exists (
-        select 1 from appointments a
-        where a.id = f.appointment_id
-          and a.practice_id = f.practice_id
-          and a.patient_id = f.patient_id
-      )
-    )
-  )
 union all
 select 'invalid_primary_namespaces', count(*)
 from files
@@ -93,6 +30,14 @@ where category is null
    or category not in ('patient-photos','documents','lab-results','branding','consents')
    or file_key !~ ('^' || practice_id::text || '/' || category || '/[^/]+$')
    or file_url is distinct from '/api/files/' || file_key
+union all
+select 'invalid_patient_entities', count(*)
+from files
+where entity_type = 'patient'
+  and (patient_id is null or entity_id is null or entity_id <> patient_id)
+union all
+select 'negative_replica_attempt_counts', count(*)
+from file_object_replicas where attempt_count < 0
 union all
 select 'bad_replica_checksums', count(*)
 from file_object_replicas
@@ -108,9 +53,13 @@ where status = 'available'
   and (
     checksum_sha256 is null
     or file_size_bytes is null
-    or verified_at is null
     or replicated_at is null
+    or verified_at is null
   )
+union all
+select 'incoherent_replica_leases', count(*)
+from file_object_replicas
+where (lease_token is null) <> (lease_expires_at is null)
 union all
 select 'invalid_independent_replica_keys', count(*)
 from file_object_replicas
@@ -131,6 +80,10 @@ where replica_target = 'independent-v1'
       )
     )
   )
+union all
+select 'negative_storage_event_sizes', count(*)
+from file_storage_events
+where expected_file_size_bytes < 0 or observed_file_size_bytes < 0
 union all
 select 'cross_tenant_capture_patients', count(*)
 from capture_sessions s
@@ -205,4 +158,61 @@ where status not in ('pending', 'signing', 'signed')
      (status = 'pending' and signer_name is null and signed_at is null and file_id is null)
      or (status = 'signing' and signer_name is not null and signed_at is not null)
      or (status = 'signed' and signer_name is not null and signed_at is not null and file_id is not null)
-   );
+   )
+union all
+select 'missing_staged_constraints', count(*)
+from (values
+  ('files', 'files_uploader_tenant_fk'),
+  ('files', 'files_checksum_sha256_format_check'),
+  ('files', 'files_file_size_bytes_check'),
+  ('files', 'files_appointment_requires_patient_check'),
+  ('files', 'files_available_evidence_check'),
+  ('files', 'files_primary_namespace_check'),
+  ('files', 'files_patient_entity_consistency_check'),
+  ('file_object_replicas', 'file_object_replicas_attempt_count_check'),
+  ('file_object_replicas', 'file_object_replicas_checksum_sha256_format_check'),
+  ('file_object_replicas', 'file_object_replicas_file_size_bytes_check'),
+  ('file_object_replicas', 'file_object_replicas_available_evidence_check'),
+  ('file_object_replicas', 'file_object_replicas_lease_coherence_check'),
+  ('file_object_replicas', 'file_object_replicas_independent_object_key_check'),
+  ('file_storage_events', 'file_storage_events_expected_file_size_bytes_check'),
+  ('file_storage_events', 'file_storage_events_observed_file_size_bytes_check'),
+  ('capture_sessions', 'capture_sessions_patient_tenant_fk'),
+  ('capture_sessions', 'capture_sessions_creator_tenant_fk'),
+  ('capture_sessions', 'capture_sessions_appointment_patient_tenant_fk'),
+  ('consent_requests', 'consent_requests_patient_tenant_fk'),
+  ('consent_requests', 'consent_requests_creator_tenant_fk'),
+  ('consent_requests', 'consent_requests_appointment_patient_tenant_fk'),
+  ('consent_requests', 'consent_requests_form_tenant_fk'),
+  ('consent_requests', 'consent_requests_file_tenant_fk'),
+  ('consent_requests', 'consent_requests_status_check'),
+  ('consent_requests', 'consent_requests_signing_evidence_check')
+) expected(table_name, constraint_name)
+where not exists (
+  select 1
+  from pg_catalog.pg_constraint c
+  join pg_catalog.pg_class t on t.oid = c.conrelid
+  join pg_catalog.pg_namespace n on n.oid = t.relnamespace
+  where n.nspname = 'public'
+    and t.relname = expected.table_name
+    and c.conname = expected.constraint_name
+)
+union all
+select 'invalid_required_indexes', count(*)
+from (values
+  ('files_practice_file_key_uq'),
+  ('files_practice_idempotency_key_uq'),
+  ('file_object_replicas_due_idx'),
+  ('file_storage_events_event_key_uq'),
+  ('consent_forms_practice_id_uq')
+) expected(index_name)
+where not exists (
+  select 1
+  from pg_catalog.pg_index i
+  join pg_catalog.pg_class idx on idx.oid = i.indexrelid
+  join pg_catalog.pg_namespace n on n.oid = idx.relnamespace
+  where n.nspname = 'public'
+    and idx.relname = expected.index_name
+    and i.indisvalid
+    and i.indisready
+);
