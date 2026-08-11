@@ -28,6 +28,18 @@ describe("inventory product form UX", () => {
   const source = readFileSync("app/(dashboard)/inventory/page.tsx", "utf8");
   const routerSource = readFileSync("server/routers/inventory.ts", "utf8");
 
+  it("defines medication inventory and pricing in one dispensing unit", () => {
+    expect(source).toContain("Price per unit *");
+    expect(source).toContain("Stock units");
+    expect(source).toContain(
+      "enter stock and price per tablet—not per bottle or package"
+    );
+    expect(source).toContain("Prescription");
+    expect(source).toContain(
+      "quantities, stock deductions, and invoice totals all use this unit."
+    );
+  });
+
   it("keeps product create and edit fields aligned to shared policy", () => {
     expect(INVENTORY_PRODUCT_NAME_MAX_LENGTH).toBe(255);
     expect(INVENTORY_PRODUCT_SKU_MAX_LENGTH).toBe(64);

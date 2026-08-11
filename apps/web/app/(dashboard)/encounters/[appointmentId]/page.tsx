@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   AlertCircle,
+  ArrowRight,
   ArrowLeft,
   CalendarClock,
   Check,
@@ -48,6 +49,10 @@ import { tryCalculateInvoiceTaxTotals } from "@/lib/billing/invoice-tax";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { useUnsavedChangesGuard } from "@/lib/use-unsaved-changes-guard";
 import { useOnlineStatus } from "@/lib/use-online-status";
+import {
+  getVisitCompletionAction,
+  requiresPrescriptionInventoryUnitReview,
+} from "@/lib/encounters/visit-completion";
 import {
   APPOINTMENT_PATIENT_SEARCH_MAX_LENGTH,
   isAppointmentPatientSearchInputValid,
@@ -486,8 +491,7 @@ export default function EncounterWorkspacePage() {
     appointment.status === "in_exam" &&
     closeoutQuery.data?.closeout?.status !== "clinical_finalized" &&
     closeoutQuery.data?.closeout?.status !== "completed";
-  const missingClinicalTarget =
-    !appointment.patientId || !appointment.clientId;
+  const missingClinicalTarget = !appointment.patientId || !appointment.clientId;
   const activeInvoices =
     invoicesQuery.data?.items.filter(
       (invoice) => !invoice.isEstimate && invoice.status !== "void",
@@ -588,6 +592,16 @@ export default function EncounterWorkspacePage() {
         ) : null}
       </header>
 
+      <VisitCompletionGuide
+        appointmentId={appointmentId}
+        appointmentStatus={appointment.status}
+        patientId={appointment.patientId}
+        role={role}
+        closeoutQuery={closeoutQuery}
+        invoicesQuery={invoicesQuery}
+        hasActiveInvoice={activeInvoices.length > 0}
+      />
+
       {appointment.notes ? (
         <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
           <span className="font-medium">Visit note:</span> {appointment.notes}
@@ -596,7 +610,7 @@ export default function EncounterWorkspacePage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.8fr)]">
         <div className="flex flex-col gap-6">
-          <Card>
+          <Card id="clinical-work" className="scroll-mt-4">
             <CardHeader>
               <CardTitle>Clinical work</CardTitle>
               <CardDescription>
@@ -848,6 +862,178 @@ export default function EncounterWorkspacePage() {
   );
 }
 
+function VisitCompletionGuide({
+  appointmentId,
+  appointmentStatus,
+  patientId,
+  role,
+  closeoutQuery,
+  invoicesQuery,
+  hasActiveInvoice,
+}: {
+  appointmentId: string;
+  appointmentStatus: string;
+  patientId: string | null;
+  role?: string | null;
+  closeoutQuery: CloseoutQueryState;
+  invoicesQuery: InvoiceQueryState;
+  hasActiveInvoice: boolean;
+}) {
+  const reconciliation = trpc.encounters.getVisitReconciliation.useQuery(
+    { appointmentId },
+    { enabled: Boolean(appointmentId && patientId) },
+  );
+  const closeoutStatus = closeoutQuery.data?.closeout?.status;
+  const completed = closeoutStatus === "completed";
+  const clinicalRecordComplete =
+    (closeoutQuery.data?.linkedSoapCount ?? 0) > 0 ||
+    closeoutStatus === "clinical_finalized" ||
+    completed;
+  const billingComplete =
+    hasActiveInvoice ||
+    (completed &&
+      closeoutQuery.data?.closeout?.chargeDisposition === "no_charge");
+  const reconciliationComplete =
+    Boolean(reconciliation.data) && reconciliation.data?.unresolvedCount === 0;
+  const handoffComplete = closeoutStatus === "clinical_finalized" || completed;
+  const stateReady =
+    Boolean(closeoutQuery.data) &&
+    !closeoutQuery.error &&
+    Boolean(invoicesQuery.data) &&
+    !invoicesQuery.error &&
+    Boolean(reconciliation.data) &&
+    !reconciliation.error;
+  const action = getVisitCompletionAction({
+    appointmentStatus,
+    hasPatient: Boolean(patientId),
+    closeoutStatus,
+    stateReady,
+    linkedSoapCount: closeoutQuery.data?.linkedSoapCount,
+    hasActiveInvoice,
+    unresolvedWorkCount: reconciliation.data?.unresolvedCount,
+    canCreateSoap: canCreateSoap(role),
+    canManageBilling: canManageBilling(role),
+    canManageVisit: canManageVisit(role),
+  });
+  const steps = [
+    { label: "Clinical record", complete: clinicalRecordComplete },
+    { label: "Visit charges", complete: billingComplete },
+    { label: "Reconcile work", complete: reconciliationComplete },
+    { label: "Owner handoff", complete: handoffComplete },
+    { label: "Checkout", complete: completed },
+  ];
+  const actionHref =
+    action.target === "patient"
+      ? "#clinical-work"
+      : action.target === "soap" && patientId
+        ? `/records/new-soap/${patientId}?appointmentId=${appointmentId}`
+        : action.target === "charge_capture"
+          ? "#charge-capture"
+          : action.target === "reconciliation"
+            ? "#visit-work-reconciliation"
+            : action.target === "closeout"
+              ? "#visit-closeout"
+              : action.target === "complete"
+                ? "/schedule"
+                : null;
+  const actionLabel =
+    action.target === "patient"
+      ? "Attach patient"
+      : action.target === "soap"
+        ? "Write SOAP note"
+        : action.target === "charge_capture"
+          ? "Capture charges"
+          : action.target === "reconciliation"
+            ? "Reconcile work"
+            : action.target === "closeout"
+              ? handoffComplete
+                ? "Complete checkout"
+                : "Finish owner handoff"
+              : action.target === "complete"
+                ? "Back to schedule"
+                : null;
+
+  return (
+    <Card className="border-primary/30 bg-primary/[0.03]">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Finish this visit
+            </p>
+            <CardTitle className="mt-1">{action.title}</CardTitle>
+            <CardDescription className="mt-1 max-w-2xl">
+              {action.description}
+            </CardDescription>
+          </div>
+          {actionHref && actionLabel ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild>
+                <a href={actionHref}>
+                  {actionLabel}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+              {action.target === "charge_capture" ? (
+                <Button variant="ghost" asChild>
+                  <a href="#visit-closeout">No charge? Continue handoff</a>
+                </Button>
+              ) : null}
+            </div>
+          ) : action.target === "loading" ? (
+            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking visit
+            </div>
+          ) : null}
+        </div>
+        {action.target === "soap" ? (
+          <p className="text-xs text-muted-foreground">
+            Truly exempt visit? Use the documented SOAP exception in Visit
+            closeout instead.
+          </p>
+        ) : action.target === "charge_capture" ? (
+          <p className="text-xs text-muted-foreground">
+            OpenVPM will not bill a suggestion automatically. A teammate must
+            add and save each charge, or document a no-charge disposition at
+            checkout.
+          </p>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        <ol
+          className="grid gap-2 sm:grid-cols-5"
+          aria-label="Visit completion progress"
+        >
+          {steps.map((step, index) => (
+            <li
+              key={step.label}
+              className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs"
+            >
+              <span
+                className={
+                  step.complete
+                    ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                    : "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground"
+                }
+              >
+                {step.complete ? <Check className="h-3 w-3" /> : index + 1}
+              </span>
+              <span
+                className={
+                  step.complete ? "font-medium" : "text-muted-foreground"
+                }
+              >
+                {step.label}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}
+
 function splitOwnerInstructions(value: string | null | undefined): string[] {
   return (value ?? "")
     .split(/\n+/)
@@ -1001,10 +1187,7 @@ function VisitCloseout({
       setDraftSaveState("conflict");
       return;
     }
-    if (
-      draftInitializedRef.current &&
-      serverRevision <= revisionRef.current
-    ) {
+    if (draftInitializedRef.current && serverRevision <= revisionRef.current) {
       hydratedRevision.current = key;
       return;
     }
@@ -1190,7 +1373,12 @@ function VisitCloseout({
         if (savePromiseRef.current === request) savePromiseRef.current = null;
       }
     }
-  }, [appointmentId, canDraftClinical, clinicalLocked, utils.encounters.getCloseout]);
+  }, [
+    appointmentId,
+    canDraftClinical,
+    clinicalLocked,
+    utils.encounters.getCloseout,
+  ]);
 
   const closeoutNeedsLeaveGuard = useCallback(() => {
     if (!draftInitializedRef.current || clinicalLocked) return false;
@@ -1210,10 +1398,7 @@ function VisitCloseout({
     if (fingerprint === lastSavedFingerprintRef.current) return;
     setDraftSaveState("unsaved");
     if (!isOnline) return;
-    const timer = window.setTimeout(
-      () => void persistCloseoutDraft(),
-      1_200,
-    );
+    const timer = window.setTimeout(() => void persistCloseoutDraft(), 1_200);
     autosaveTimerRef.current = timer;
     return () => {
       window.clearTimeout(timer);
@@ -1267,8 +1452,7 @@ function VisitCloseout({
       followUpAppointmentId: fields.followUpAppointmentId || null,
       followUpDueDate: fields.followUpDueDate || null,
       followUpAssignedTo: fields.followUpAssignedTo || null,
-      documentationExceptionReason:
-        fields.documentationExceptionReason || null,
+      documentationExceptionReason: fields.documentationExceptionReason || null,
     });
   }
 
@@ -1287,14 +1471,15 @@ function VisitCloseout({
       followUpAppointmentId: source?.followUpAppointmentId ?? "",
       followUpDueDate: source?.followUpDueDate ?? "",
       followUpAssignedTo: source?.followUpAssignedTo ?? "",
-      documentationExceptionReason:
-        source?.documentationExceptionReason ?? "",
+      documentationExceptionReason: source?.documentationExceptionReason ?? "",
     };
   };
 
   async function useServerCloseoutDraft() {
     try {
-      const latest = await utils.encounters.getCloseout.fetch({ appointmentId });
+      const latest = await utils.encounters.getCloseout.fetch({
+        appointmentId,
+      });
       const serverFields = fieldsFromPayload(latest);
       applyClinicalFields(serverFields);
       revisionRef.current = latest.closeout?.revision ?? 0;
@@ -1319,7 +1504,9 @@ function VisitCloseout({
       return;
     }
     try {
-      const latest = await utils.encounters.getCloseout.fetch({ appointmentId });
+      const latest = await utils.encounters.getCloseout.fetch({
+        appointmentId,
+      });
       const serverFields = fieldsFromPayload(latest);
       revisionRef.current = latest.closeout?.revision ?? conflictRevision ?? 0;
       lastSavedFingerprintRef.current = clinicalDraftFingerprint(serverFields);
@@ -2090,7 +2277,12 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
             local fields still visible below. Nothing is overwritten silently.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={props.onUseServer}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={props.onUseServer}
+            >
               Use server version
             </Button>
             <Button type="button" size="sm" onClick={props.onOverwrite}>
@@ -2715,7 +2907,10 @@ function OperationalCloseoutForm({
       ) : null}
       {chargeDisposition === "accounts_receivable" ? (
         <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
-          <label className="text-sm font-medium" htmlFor="closeout-invoice-due-date">
+          <label
+            className="text-sm font-medium"
+            htmlFor="closeout-invoice-due-date"
+          >
             Payment due date
           </label>
           <Input
@@ -3221,9 +3416,7 @@ function ChargeCapture({
   const [quantity, setQuantity] = useState(1);
   const [items, setItems] = useState<ChargeItem[]>([]);
   const [loadedInvoiceId, setLoadedInvoiceId] = useState<string | null>(null);
-  const lastSavedItemsFingerprintRef = useRef(
-    chargeItemsFingerprint([]),
-  );
+  const lastSavedItemsFingerprintRef = useRef(chargeItemsFingerprint([]));
   const configQuery = trpc.billing.getTaxConfig.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
@@ -3271,16 +3464,16 @@ function ChargeCapture({
       loadedInvoiceId !== activeInvoice.id
     ) {
       const loadedItems = invoiceDetailQuery.data.items.map((item) => ({
-          key: item.id,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          itemType: item.itemType,
-          itemId: item.itemId ?? undefined,
-          taxable: item.taxable,
-          sourcePrescriptionId: item.sourcePrescriptionId ?? undefined,
-          sourceDispenseChargeId: item.sourceDispenseChargeId ?? undefined,
-        }));
+        key: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        itemType: item.itemType,
+        itemId: item.itemId ?? undefined,
+        taxable: item.taxable,
+        sourcePrescriptionId: item.sourcePrescriptionId ?? undefined,
+        sourceDispenseChargeId: item.sourceDispenseChargeId ?? undefined,
+      }));
       setItems(loadedItems);
       lastSavedItemsFingerprintRef.current =
         chargeItemsFingerprint(loadedItems);
@@ -3310,6 +3503,14 @@ function ChargeCapture({
     }));
     const linkedProductIds = new Set(
       linkedPrescriptions
+        .filter(
+          (prescription) =>
+            prescription.dispenseChargeStatus === "pending" &&
+            Boolean(prescription.dispenseChargeDescription) &&
+            !requiresPrescriptionInventoryUnitReview({
+              description: prescription.dispenseChargeDescription!,
+            }),
+        )
         .map((prescription) => prescription.productId)
         .filter((id): id is string => Boolean(id)),
     );
@@ -3321,7 +3522,10 @@ function ChargeCapture({
           prescription.quantity &&
           prescription.dispenseChargeId &&
           prescription.dispenseChargeStatus === "pending" &&
-          prescription.dispenseChargeDescription,
+          prescription.dispenseChargeDescription &&
+          !requiresPrescriptionInventoryUnitReview({
+            description: prescription.dispenseChargeDescription,
+          }),
       )
       .map((prescription) => ({
         id: `prescription:${prescription.id}`,
@@ -3355,6 +3559,21 @@ function ChargeCapture({
   }, [linkedPrescriptions, productsQuery.data, servicesQuery.data]);
 
   const selected = catalog.find((entry) => entry.id === selectedCatalogId);
+  const readyVisitPrescriptionCharges = catalog.filter(
+    (entry) =>
+      entry.sourceDispenseChargeId &&
+      !items.some(
+        (item) => item.sourceDispenseChargeId === entry.sourceDispenseChargeId,
+      ),
+  );
+  const prescriptionChargesNeedingUnitReview = linkedPrescriptions.filter(
+    (prescription) =>
+      prescription.dispenseChargeStatus === "pending" &&
+      Boolean(prescription.dispenseChargeDescription) &&
+      requiresPrescriptionInventoryUnitReview({
+        description: prescription.dispenseChargeDescription!,
+      }),
+  );
   useEffect(() => {
     setQuantity(selected?.quantity ?? 1);
   }, [selected?.id, selected?.quantity]);
@@ -3439,22 +3658,39 @@ function ChargeCapture({
     "Visit charges have not been saved on the server. Leave and lose these changes?",
   );
 
-  function addSelectedItem() {
-    if (!selected || !canAdd) return;
+  function addCatalogItem(
+    entry: (typeof catalog)[number],
+    itemQuantity: number,
+  ) {
+    if (
+      items.length >= BILLING_INVOICE_MAX_ITEMS ||
+      (entry.sourceDispenseChargeId &&
+        items.some(
+          (item) =>
+            item.sourceDispenseChargeId === entry.sourceDispenseChargeId,
+        ))
+    ) {
+      return;
+    }
     setItems((current) => [
       ...current,
       {
         key: crypto.randomUUID(),
-        description: selected.name,
-        quantity,
-        unitPrice: selected.defaultPrice,
-        itemType: selected.itemType,
-        itemId: selected.itemId,
-        taxable: selected.taxable,
-        sourcePrescriptionId: selected.sourcePrescriptionId,
-        sourceDispenseChargeId: selected.sourceDispenseChargeId,
+        description: entry.name,
+        quantity: itemQuantity,
+        unitPrice: entry.defaultPrice,
+        itemType: entry.itemType,
+        itemId: entry.itemId,
+        taxable: entry.taxable,
+        sourcePrescriptionId: entry.sourcePrescriptionId,
+        sourceDispenseChargeId: entry.sourceDispenseChargeId,
       },
     ]);
+  }
+
+  function addSelectedItem() {
+    if (!selected || !canAdd) return;
+    addCatalogItem(selected, quantity);
     setSelectedCatalogId("");
     setQuantity(1);
   }
@@ -3587,6 +3823,82 @@ function ChargeCapture({
               >
                 Offline — charges stay only in this form. Reconnect before
                 creating or updating the visit invoice.
+              </div>
+            ) : null}
+            {readyVisitPrescriptionCharges.length > 0 ? (
+              <div className="rounded-md border border-primary/30 bg-primary/[0.04] p-3">
+                <p className="text-sm font-medium">Ready from this visit</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  These prescription charges are linked to medication already
+                  dispensed during this appointment. Quantity and price use the
+                  inventory item&apos;s individual dispensing unit. Confirm both
+                  before saving the invoice.
+                </p>
+                <div
+                  className="mt-3 flex flex-col gap-2"
+                  aria-label="Ready-to-add visit prescription charges"
+                >
+                  {readyVisitPrescriptionCharges.map((entry) => (
+                    <Button
+                      key={entry.id}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-auto justify-between gap-3 whitespace-normal py-2 text-left"
+                      aria-label={`Add visit charge ${entry.name}`}
+                      disabled={
+                        isSaving || items.length >= BILLING_INVOICE_MAX_ITEMS
+                      }
+                      onClick={() => addCatalogItem(entry, entry.quantity ?? 1)}
+                    >
+                      <span>{entry.name}</span>
+                      <span className="shrink-0 text-right text-muted-foreground">
+                        {entry.quantity ?? 1} × {fmt(entry.defaultPrice)}
+                        <span className="block font-medium text-foreground">
+                          {fmt(
+                            centsToMoney(
+                              moneyToCents(entry.defaultPrice) *
+                                (entry.quantity ?? 1),
+                            ),
+                          )}
+                        </span>
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {prescriptionChargesNeedingUnitReview.length > 0 ? (
+              <div
+                className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+                role="alert"
+              >
+                <p className="font-medium">
+                  Review medication unit before charging
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  OpenVPM blocked a legacy package-priced dispense snapshot. Do
+                  not copy that package price into an invoice. Record an
+                  attributable exception for the legacy work item, then add the
+                  current inventory product using its verified per-unit price.
+                </p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {prescriptionChargesNeedingUnitReview.map((prescription) => (
+                    <li key={prescription.id}>
+                      {prescription.dispenseChargeDescription} · quantity{" "}
+                      {prescription.quantity ?? "not recorded"}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  asChild
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                >
+                  <Link href="/inventory">Review inventory units</Link>
+                </Button>
               </div>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_90px_auto] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_80px_auto]">
