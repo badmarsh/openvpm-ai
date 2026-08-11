@@ -308,6 +308,12 @@ describe("records prescription form UX", () => {
     expect(source).toContain("Inventory unavailable");
     expect(source).toContain("Unable to load inventory products. Please retry.");
     expect(source).toContain("prescriptionQuantity <= selectedPrescriptionProduct.stockQuantity");
+    expect(source).toContain("Quantity (inventory units)");
+    expect(source).toMatch(
+      /\{product\.stockQuantity\} units\s+on hand · \{product\.unitPrice\} each/
+    );
+    expect(source).toContain("The prescription quantity will be");
+    expect(source).toContain("charged in that same unit.");
     expect(source).toContain("isPrescriptionOptionalPositiveIntegerInputValid");
     expect(source).toContain("isPrescriptionNonnegativeIntegerInputValid");
     expect(source).toContain(
