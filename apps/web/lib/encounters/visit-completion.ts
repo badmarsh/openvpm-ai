@@ -14,6 +14,15 @@ export type VisitCompletionAction = {
   description: string;
 };
 
+const PACKAGE_PRICED_MEDICATION_PATTERN =
+  /(?:\(\s*\d+(?:\.\d+)?\s*(?:ct|count|ml|oz|g)\s*\)|\b(?:bottle|box|package)\b)/i;
+
+export function requiresPrescriptionInventoryUnitReview(input: {
+  description: string;
+}): boolean {
+  return PACKAGE_PRICED_MEDICATION_PATTERN.test(input.description);
+}
+
 export function getVisitCompletionAction(input: {
   appointmentStatus: string;
   hasPatient: boolean;

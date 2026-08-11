@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getVisitCompletionAction } from "./visit-completion";
+import {
+  getVisitCompletionAction,
+  requiresPrescriptionInventoryUnitReview,
+} from "./visit-completion";
 
 const readyVisit = {
   appointmentStatus: "in_exam",
@@ -15,6 +18,24 @@ const readyVisit = {
 };
 
 describe("visit completion next action", () => {
+  it("quarantines package-priced medication snapshots from quick charging", () => {
+    expect(
+      requiresPrescriptionInventoryUnitReview({
+        description: "Rimadyl 75mg (60ct) — carprofen",
+      }),
+    ).toBe(true);
+    expect(
+      requiresPrescriptionInventoryUnitReview({
+        description: "Metacam oral suspension (32mL)",
+      }),
+    ).toBe(true);
+    expect(
+      requiresPrescriptionInventoryUnitReview({
+        description: "Rimadyl 75mg tablet — carprofen",
+      }),
+    ).toBe(false);
+  });
+
   it("keeps the standard clinic-day sequence explicit", () => {
     expect(
       getVisitCompletionAction({ ...readyVisit, linkedSoapCount: 0 }).target,

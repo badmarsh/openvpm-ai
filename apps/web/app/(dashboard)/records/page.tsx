@@ -2271,8 +2271,8 @@ function RecordsPageContent() {
                           {verifiedInventoryProducts
                             ? verifiedInventoryProducts.items.map((product) => (
                                 <option key={product.id} value={product.id}>
-                                  {product.name} ({product.stockQuantity} on
-                                  hand)
+                                  {product.name} ({product.stockQuantity} units
+                                  on hand · {product.unitPrice} each)
                                 </option>
                               ))
                             : null}
@@ -2285,7 +2285,10 @@ function RecordsPageContent() {
                         ) : prescriptionForm.productId &&
                           selectedPrescriptionProduct ? (
                           <p className="mt-1 text-xs text-muted-foreground">
-                            Stock will be deducted by the dispensed quantity.
+                            Stock and billing both use individual units at{" "}
+                            {selectedPrescriptionProduct.unitPrice} per unit.
+                            The prescription quantity will be deducted and
+                            charged in that same unit.
                           </p>
                         ) : null}
                       </div>
@@ -2325,7 +2328,9 @@ function RecordsPageContent() {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-muted-foreground mb-1">
-                          Quantity
+                          {selectedPrescriptionProduct
+                            ? "Quantity (inventory units)"
+                            : "Quantity"}
                         </label>
                         <Input
                           type="number"

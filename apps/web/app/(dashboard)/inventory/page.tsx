@@ -181,6 +181,11 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
       className="mt-4 rounded-lg border border-border bg-card p-4 space-y-3"
     >
       <h3 className="font-medium text-sm">Add Product</h3>
+      <p className="text-xs text-muted-foreground">
+        Use one consistent inventory unit. For medication dispensed as tablets,
+        enter stock and price per tablet—not per bottle or package. Prescription
+        quantities, stock deductions, and invoice totals all use this unit.
+      </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Input
           placeholder="Name *"
@@ -212,7 +217,7 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
           min={INVENTORY_MONEY_AMOUNT_MIN}
           max={INVENTORY_MONEY_AMOUNT_MAX}
           step="0.01"
-          placeholder="Unit Price *"
+          placeholder="Price per unit *"
           value={form.unitPrice}
           onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
           required
@@ -241,7 +246,7 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
           min={INVENTORY_STOCK_QUANTITY_MIN}
           max={INVENTORY_STOCK_QUANTITY_MAX}
           step={1}
-          placeholder="Stock Qty"
+          placeholder="Stock units"
           value={form.stockQuantity}
           onChange={(e) =>
             setForm({ ...form, stockQuantity: parseInt(e.target.value) || 0 })
@@ -1124,7 +1129,7 @@ export default function InventoryPage() {
                       Category
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Unit Price
+                      Price / unit
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       Tax
@@ -1133,7 +1138,7 @@ export default function InventoryPage() {
                       Cost
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Stock
+                      Stock units
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       Reorder Pt
