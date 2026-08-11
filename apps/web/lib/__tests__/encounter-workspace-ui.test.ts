@@ -297,7 +297,15 @@ describe("clinic encounter workspace", () => {
     expect(workspaceSource).toContain(
       "sourceDispenseChargeId === entry.sourceDispenseChargeId",
     );
-    expect(workspaceSource).toContain("Confirm each one before");
+    expect(workspaceSource).toContain("individual dispensing unit");
+    expect(workspaceSource).toContain("moneyToCents(entry.defaultPrice)");
+    expect(workspaceSource).toContain("Review medication unit before charging");
+    expect(workspaceSource).toContain(
+      "requiresPrescriptionInventoryUnitReview",
+    );
+    expect(workspaceSource).toContain(
+      "legacy package-priced dispense snapshot",
+    );
   });
 
   it("autosaves revisioned closeout drafts and preserves local work on conflict", () => {

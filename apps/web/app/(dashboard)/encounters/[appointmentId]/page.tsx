@@ -49,7 +49,10 @@ import { tryCalculateInvoiceTaxTotals } from "@/lib/billing/invoice-tax";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { useUnsavedChangesGuard } from "@/lib/use-unsaved-changes-guard";
 import { useOnlineStatus } from "@/lib/use-online-status";
-import { getVisitCompletionAction } from "@/lib/encounters/visit-completion";
+import {
+  getVisitCompletionAction,
+  requiresPrescriptionInventoryUnitReview,
+} from "@/lib/encounters/visit-completion";
 import {
   APPOINTMENT_PATIENT_SEARCH_MAX_LENGTH,
   isAppointmentPatientSearchInputValid,
@@ -3500,6 +3503,14 @@ function ChargeCapture({
     }));
     const linkedProductIds = new Set(
       linkedPrescriptions
+        .filter(
+          (prescription) =>
+            prescription.dispenseChargeStatus === "pending" &&
+            Boolean(prescription.dispenseChargeDescription) &&
+            !requiresPrescriptionInventoryUnitReview({
+              description: prescription.dispenseChargeDescription!,
+            }),
+        )
         .map((prescription) => prescription.productId)
         .filter((id): id is string => Boolean(id)),
     );
@@ -3511,7 +3522,10 @@ function ChargeCapture({
           prescription.quantity &&
           prescription.dispenseChargeId &&
           prescription.dispenseChargeStatus === "pending" &&
-          prescription.dispenseChargeDescription,
+          prescription.dispenseChargeDescription &&
+          !requiresPrescriptionInventoryUnitReview({
+            description: prescription.dispenseChargeDescription,
+          }),
       )
       .map((prescription) => ({
         id: `prescription:${prescription.id}`,
@@ -3551,6 +3565,14 @@ function ChargeCapture({
       !items.some(
         (item) => item.sourceDispenseChargeId === entry.sourceDispenseChargeId,
       ),
+  );
+  const prescriptionChargesNeedingUnitReview = linkedPrescriptions.filter(
+    (prescription) =>
+      prescription.dispenseChargeStatus === "pending" &&
+      Boolean(prescription.dispenseChargeDescription) &&
+      requiresPrescriptionInventoryUnitReview({
+        description: prescription.dispenseChargeDescription!,
+      }),
   );
   useEffect(() => {
     setQuantity(selected?.quantity ?? 1);
@@ -3808,8 +3830,9 @@ function ChargeCapture({
                 <p className="text-sm font-medium">Ready from this visit</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   These prescription charges are linked to medication already
-                  dispensed during this appointment. Confirm each one before
-                  saving the invoice.
+                  dispensed during this appointment. Quantity and price use the
+                  inventory item&apos;s individual dispensing unit. Confirm both
+                  before saving the invoice.
                 </p>
                 <div
                   className="mt-3 flex flex-col gap-2"
@@ -3829,12 +3852,53 @@ function ChargeCapture({
                       onClick={() => addCatalogItem(entry, entry.quantity ?? 1)}
                     >
                       <span>{entry.name}</span>
-                      <span className="shrink-0 text-muted-foreground">
-                        {fmt(entry.defaultPrice)}
+                      <span className="shrink-0 text-right text-muted-foreground">
+                        {entry.quantity ?? 1} × {fmt(entry.defaultPrice)}
+                        <span className="block font-medium text-foreground">
+                          {fmt(
+                            centsToMoney(
+                              moneyToCents(entry.defaultPrice) *
+                                (entry.quantity ?? 1),
+                            ),
+                          )}
+                        </span>
                       </span>
                     </Button>
                   ))}
                 </div>
+              </div>
+            ) : null}
+            {prescriptionChargesNeedingUnitReview.length > 0 ? (
+              <div
+                className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+                role="alert"
+              >
+                <p className="font-medium">
+                  Review medication unit before charging
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  OpenVPM blocked a legacy package-priced dispense snapshot. Do
+                  not copy that package price into an invoice. Record an
+                  attributable exception for the legacy work item, then add the
+                  current inventory product using its verified per-unit price.
+                </p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {prescriptionChargesNeedingUnitReview.map((prescription) => (
+                    <li key={prescription.id}>
+                      {prescription.dispenseChargeDescription} · quantity{" "}
+                      {prescription.quantity ?? "not recorded"}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  asChild
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                >
+                  <Link href="/inventory">Review inventory units</Link>
+                </Button>
               </div>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_90px_auto] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_80px_auto]">
