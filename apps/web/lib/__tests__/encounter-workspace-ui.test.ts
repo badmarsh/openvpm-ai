@@ -21,10 +21,7 @@ const patientChartSource = readFileSync(
   "app/(dashboard)/patients/[id]/page.tsx",
   "utf8",
 );
-const recordsSource = readFileSync(
-  "app/(dashboard)/records/page.tsx",
-  "utf8",
-);
+const recordsSource = readFileSync("app/(dashboard)/records/page.tsx", "utf8");
 
 describe("clinic encounter workspace", () => {
   it("opens from an appointment and keeps visit and patient context together", () => {
@@ -118,13 +115,9 @@ describe("clinic encounter workspace", () => {
       /<a\s+href=\{`\/records\/new-soap\/\$\{encodeURIComponent\(patientId\)\}/,
     );
     for (const source of [workspaceSource, recordsSource, patientChartSource]) {
-      expect(source).not.toMatch(
-        /<Link\s+href=\{`\/records\/new-soap\//,
-      );
+      expect(source).not.toMatch(/<Link\s+href=\{`\/records\/new-soap\//);
     }
-    expect(workspaceSource).not.toContain(
-      "<Link href={props.soapDraftHref}>",
-    );
+    expect(workspaceSource).not.toContain("<Link href={props.soapDraftHref}>");
   });
 
   it("keeps visit vitals appointment-owned and readable after closeout", () => {
@@ -150,7 +143,9 @@ describe("clinic encounter workspace", () => {
     expect(encounterVitalsSource).toContain(
       "const vitalsReady = Boolean(vitalsQuery.data) && !vitalsQuery.error",
     );
-    expect(encounterVitalsSource).toContain("canRecord &&\n    isOnline &&\n    vitalsReady &&");
+    expect(encounterVitalsSource).toContain(
+      "canRecord &&\n    isOnline &&\n    vitalsReady &&",
+    );
     expect(encounterVitalsSource).toMatch(
       /recordVitals\.mutate\(\{\s+patientId,\s+appointmentId,/,
     );
@@ -280,6 +275,31 @@ describe("clinic encounter workspace", () => {
     expect(workspaceSource).toContain("never bills a suggestion automatically");
   });
 
+  it("guides the clinic through one safe visit-completion action at a time", () => {
+    expect(workspaceSource).toContain("Finish this visit");
+    expect(workspaceSource).toContain("Visit completion progress");
+    expect(workspaceSource).toContain("getVisitCompletionAction");
+    expect(workspaceSource).toContain("href={actionHref}");
+    expect(workspaceSource).toContain("No charge? Continue handoff");
+    expect(workspaceSource).toContain(
+      "OpenVPM will not bill a suggestion automatically",
+    );
+  });
+
+  it("surfaces exact pending prescription charges without automatic billing", () => {
+    expect(workspaceSource).toContain("Ready from this visit");
+    expect(workspaceSource).toContain(
+      "Ready-to-add visit prescription charges",
+    );
+    expect(workspaceSource).toContain(
+      "addCatalogItem(entry, entry.quantity ?? 1)",
+    );
+    expect(workspaceSource).toContain(
+      "sourceDispenseChargeId === entry.sourceDispenseChargeId",
+    );
+    expect(workspaceSource).toContain("Confirm each one before");
+  });
+
   it("autosaves revisioned closeout drafts and preserves local work on conflict", () => {
     expect(workspaceSource).toContain("persistCloseoutDraft");
     expect(workspaceSource).toContain("expectedRevision: revisionRef.current");
@@ -288,8 +308,12 @@ describe("clinic encounter workspace", () => {
     expect(workspaceSource).toContain('setDraftSaveState("conflict")');
     expect(workspaceSource).toContain("Use server version");
     expect(workspaceSource).toContain("Overwrite with local version");
-    expect(workspaceSource).toContain("async function finalizeClinicalHandoff()");
-    expect(workspaceSource).toContain("const saved = await persistCloseoutDraft()");
+    expect(workspaceSource).toContain(
+      "async function finalizeClinicalHandoff()",
+    );
+    expect(workspaceSource).toContain(
+      "const saved = await persistCloseoutDraft()",
+    );
     expect(workspaceSource).toContain("autosaveTimerRef.current");
     expect(workspaceSource).toContain(
       "Offline — changes are only on this device until you reconnect.",
@@ -297,7 +321,10 @@ describe("clinic encounter workspace", () => {
   });
 
   it("guards unsaved vitals and charges without persisting clinical data in the browser", () => {
-    const guardSource = readFileSync("lib/use-unsaved-changes-guard.ts", "utf8");
+    const guardSource = readFileSync(
+      "lib/use-unsaved-changes-guard.ts",
+      "utf8",
+    );
     expect(encounterVitalsSource).toContain("useUnsavedChangesGuard(");
     expect(encounterVitalsSource).toContain("Offline — keep this page open.");
     expect(workspaceSource).toContain("hasUnsavedCharges");
