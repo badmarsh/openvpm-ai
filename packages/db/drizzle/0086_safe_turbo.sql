@@ -50,6 +50,11 @@ CREATE UNIQUE INDEX "care_reminders_external_id_uq" ON "care_reminders" USING bt
 CREATE UNIQUE INDEX "care_reminders_import_fingerprint_uq" ON "care_reminders" USING btree ("practice_id","import_fingerprint") WHERE "care_reminders"."import_fingerprint" is not null;--> statement-breakpoint
 CREATE INDEX "care_reminders_open_due_idx" ON "care_reminders" USING btree ("practice_id","due_date","id") WHERE "care_reminders"."status" = 'open' and "care_reminders"."deleted_at" is null;--> statement-breakpoint
 CREATE INDEX "care_reminders_patient_timeline_idx" ON "care_reminders" USING btree ("practice_id","patient_id","due_date","id");--> statement-breakpoint
+CREATE OR REPLACE FUNCTION app_current_practice_id() RETURNS uuid
+  LANGUAGE sql STABLE
+  SET search_path = ''
+  AS
+$fn$ SELECT nullif(current_setting('app.current_practice_id', true), '')::uuid $fn$;--> statement-breakpoint
 ALTER TABLE "care_reminders" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE POLICY tenant_isolation ON "care_reminders"
   USING (app_rls_bypass() OR practice_id = app_current_practice_id())
