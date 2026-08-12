@@ -21,6 +21,8 @@ import {
   AlertCircle,
   Syringe,
   FlaskConical,
+  BellRing,
+  Archive,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -61,7 +63,12 @@ const navigationItems: CommandItemConfig[] = [
   { label: "Patients", href: "/patients", Icon: PawPrint, roles: allRoles },
   { label: "Clients", href: "/clients", Icon: Users, roles: allRoles },
   { label: "Schedule", href: "/schedule", Icon: Calendar, roles: allRoles },
-  { label: "Whiteboard", href: "/whiteboard", Icon: Clipboard, roles: allRoles },
+  {
+    label: "Whiteboard",
+    href: "/whiteboard",
+    Icon: Clipboard,
+    roles: allRoles,
+  },
   { label: "Records", href: "/records", Icon: FileText, roles: allRoles },
   {
     label: "Lab Inbox",
@@ -77,6 +84,18 @@ const navigationItems: CommandItemConfig[] = [
     href: "/recalls",
     Icon: Syringe,
     roles: ["admin", "veterinarian", "front_desk"],
+  },
+  {
+    label: "Care Reminders",
+    href: "/care-reminders",
+    Icon: BellRing,
+    roles: allRoles,
+  },
+  {
+    label: "Imported History",
+    href: "/migration-archive",
+    Icon: Archive,
+    roles: allRoles,
   },
   { label: "Settings", href: "/settings", Icon: Settings, roles: ["admin"] },
 ];
@@ -116,8 +135,7 @@ export function CommandSearch({
   const router = useRouter();
   const { data: session, status } = useSession();
   const role = isUserRole(session?.user?.role) ? session.user.role : undefined;
-  const canUseCommandSearch =
-    status === "authenticated" && role !== undefined;
+  const canUseCommandSearch = status === "authenticated" && role !== undefined;
   const [search, setSearch] = useState("");
 
   const debouncedSearch = useDebounce(search, 200);
@@ -125,12 +143,12 @@ export function CommandSearch({
 
   const patients = trpc.patients.search.useQuery(
     { query: debouncedSearch },
-    { enabled: open && hasQuery && canUseCommandSearch }
+    { enabled: open && hasQuery && canUseCommandSearch },
   );
 
   const clients = trpc.clients.search.useQuery(
     { query: debouncedSearch },
-    { enabled: open && hasQuery && canUseCommandSearch }
+    { enabled: open && hasQuery && canUseCommandSearch },
   );
 
   const checkingSearchAccess = hasQuery && status === "loading";
@@ -170,8 +188,7 @@ export function CommandSearch({
 
   const patientResults =
     searchUnavailable || !patients.data ? [] : patients.data;
-  const clientResults =
-    searchUnavailable || !clients.data ? [] : clients.data;
+  const clientResults = searchUnavailable || !clients.data ? [] : clients.data;
   const hasResults = patientResults.length > 0 || clientResults.length > 0;
 
   return (

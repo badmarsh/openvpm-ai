@@ -292,7 +292,26 @@ async function deductTemplateProductStock(
   items: readonly TemplateInvoiceItem[]
 ) {
   const deductions = computeStockDeductions([...items]);
+  const trackedRows =
+    deductions.length === 0
+      ? []
+      : await ctx.db
+          .select({ id: products.id })
+          .from(products)
+          .where(
+            and(
+              inArray(
+                products.id,
+                deductions.map((deduction) => deduction.productId)
+              ),
+              eq(products.practiceId, ctx.practiceId),
+              eq(products.inventoryTracked, true),
+              isNull(products.deletedAt)
+            )
+          );
+  const trackedIds = new Set(trackedRows.map((row) => row.id));
   for (const deduction of deductions) {
+    if (!trackedIds.has(deduction.productId)) continue;
     const [product] = await ctx.db
       .update(products)
       .set({
@@ -302,6 +321,7 @@ async function deductTemplateProductStock(
         and(
           eq(products.id, deduction.productId),
           eq(products.practiceId, ctx.practiceId),
+          eq(products.inventoryTracked, true),
           activePracticePredicate(ctx.practiceId),
           isNull(products.deletedAt),
           sql`${products.stockQuantity} >= ${deduction.quantity}`

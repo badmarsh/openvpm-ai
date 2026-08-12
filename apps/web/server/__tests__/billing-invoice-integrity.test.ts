@@ -38,8 +38,10 @@ function callerWithDb(db: Record<string, unknown>, role = "front_desk") {
 function thenableRows(result: unknown[]) {
   return {
     limit: vi.fn(async () => result),
-    then: (resolve: (value: unknown[]) => unknown, reject?: (e: unknown) => unknown) =>
-      Promise.resolve(result).then(resolve, reject),
+    then: (
+      resolve: (value: unknown[]) => unknown,
+      reject?: (e: unknown) => unknown,
+    ) => Promise.resolve(result).then(resolve, reject),
   };
 }
 
@@ -148,7 +150,7 @@ describe("billing invoice integrity", () => {
     });
 
     await expect(
-      callerWithDb(db, "viewer").convertEstimateToInvoice({ id: INVOICE_ID })
+      callerWithDb(db, "viewer").convertEstimateToInvoice({ id: INVOICE_ID }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
     expect(select).not.toHaveBeenCalled();
@@ -169,7 +171,7 @@ describe("billing invoice integrity", () => {
           },
         ],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -182,7 +184,7 @@ describe("billing invoice integrity", () => {
           },
         ],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -197,7 +199,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [{ ...productLine, description: " ".repeat(4) }],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -205,7 +207,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [{ ...productLine, description: "d".repeat(501) }],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -214,7 +216,7 @@ describe("billing invoice integrity", () => {
         items: [productLine],
         dueDate: "2026-02-31",
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -222,7 +224,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: Array.from({ length: 201 }, () => productLine),
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -236,7 +238,7 @@ describe("billing invoice integrity", () => {
           },
         ],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -251,7 +253,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -268,7 +270,7 @@ describe("billing invoice integrity", () => {
         patientId: PATIENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -286,7 +288,7 @@ describe("billing invoice integrity", () => {
         appointmentId: APPOINTMENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Appointment not found for this client and patient.",
@@ -305,6 +307,9 @@ describe("billing invoice integrity", () => {
         [{ id: APPOINTMENT_ID, status: "in_exam" }],
         [],
         [{ id: PRODUCT_ID, deletedAt: null }],
+        [],
+        [],
+        [{ id: PRODUCT_ID }],
       ],
       invoiceInsert: { id: INVOICE_ID, isEstimate: false },
       updateReturns: [[{ id: PRODUCT_ID, stockQuantity: 8 }]],
@@ -324,7 +329,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
-      })
+      }),
     );
 
     const duplicate = createDb({
@@ -345,7 +350,7 @@ describe("billing invoice integrity", () => {
         appointmentId: APPOINTMENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
       message:
@@ -375,7 +380,7 @@ describe("billing invoice integrity", () => {
         appointmentId: APPOINTMENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message: "Start the exam before capturing visit charges.",
@@ -388,11 +393,7 @@ describe("billing invoice integrity", () => {
 
   it("rejects product line references outside the practice", async () => {
     const { db, insertValues } = createDb({
-      selectResults: [
-        [{ id: CLIENT_ID }],
-        [{ taxRatePercent: "0.00" }],
-        [],
-      ],
+      selectResults: [[{ id: CLIENT_ID }], [{ taxRatePercent: "0.00" }], []],
     });
 
     await expect(
@@ -400,7 +401,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -412,6 +413,7 @@ describe("billing invoice integrity", () => {
         [{ id: CLIENT_ID }],
         [{ taxRatePercent: "0.00" }],
         [{ id: PRODUCT_ID, deletedAt: null }],
+        [{ id: PRODUCT_ID }],
       ],
       invoiceInsert: { id: INVOICE_ID, isEstimate: false },
       updateReturns: [[{ id: PRODUCT_ID, stockQuantity: 8 }]],
@@ -438,7 +440,7 @@ describe("billing invoice integrity", () => {
         total: "30.00",
         dueDate: "2026-07-15",
         isEstimate: false,
-      })
+      }),
     );
     expect(insertValues).toHaveBeenCalledWith([
       expect.objectContaining({
@@ -460,6 +462,7 @@ describe("billing invoice integrity", () => {
         [{ id: CLIENT_ID }],
         [{ taxRatePercent: "10.00" }],
         [{ id: PRODUCT_ID, deletedAt: null, taxable: false }],
+        [{ id: PRODUCT_ID }],
       ],
       invoiceInsert: { id: INVOICE_ID, isEstimate: false },
       updateReturns: [[{ id: PRODUCT_ID, stockQuantity: 8 }]],
@@ -493,6 +496,7 @@ describe("billing invoice integrity", () => {
         [{ taxRatePercent: "0.00" }],
         [{ id: SERVICE_ID, deletedAt: null }],
         [{ id: PRODUCT_ID, deletedAt: null }],
+        [{ id: PRODUCT_ID }],
       ],
       invoiceInsert: { id: INVOICE_ID, isEstimate: false },
       updateReturns: [[{ id: PRODUCT_ID, stockQuantity: 8 }]],
@@ -529,7 +533,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",
@@ -545,6 +549,7 @@ describe("billing invoice integrity", () => {
         [{ id: CLIENT_ID }],
         [{ taxRatePercent: "0.00" }],
         [{ id: PRODUCT_ID, deletedAt: null }],
+        [{ id: PRODUCT_ID }],
       ],
       updateReturns: [[]],
     });
@@ -554,7 +559,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(updateSet).toHaveBeenCalledTimes(1);
@@ -578,6 +583,8 @@ describe("billing invoice integrity", () => {
         ],
         [{ itemType: "product", itemId: PRODUCT_ID, quantity: 1 }],
         [{ id: PRODUCT_ID, deletedAt: null }],
+        [],
+        [{ id: PRODUCT_ID }],
       ],
       updateReturns: [
         [{ id: PRODUCT_ID, stockQuantity: 9 }],
@@ -599,7 +606,7 @@ describe("billing invoice integrity", () => {
         id: INVOICE_ID,
         expectedUpdatedAt: UPDATED_AT,
         items: [{ ...productLine, quantity: 3 }],
-      })
+      }),
     ).resolves.toMatchObject({
       id: INVOICE_ID,
       subtotal: "45.00",
@@ -620,14 +627,14 @@ describe("billing invoice integrity", () => {
         subtotal: "45.00",
         tax: "4.50",
         total: "49.50",
-      })
+      }),
     );
     expect(updateSet).toHaveBeenNthCalledWith(
       4,
       expect.objectContaining({
         deletedAt: expect.any(Date),
         updatedAt: expect.any(Date),
-      })
+      }),
     );
     expect(insertValues).toHaveBeenCalledWith([
       expect.objectContaining({
@@ -665,7 +672,7 @@ describe("billing invoice integrity", () => {
         id: INVOICE_ID,
         expectedUpdatedAt: UPDATED_AT,
         items: [productLine],
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message: expect.stringContaining("confirmed against performed work"),
@@ -721,7 +728,7 @@ describe("billing invoice integrity", () => {
             itemId: SERVICE_ID,
           },
         ],
-      })
+      }),
     ).resolves.toMatchObject({ id: INVOICE_ID, total: "80.00" });
 
     expect(lockCalls).toEqual([
@@ -782,7 +789,7 @@ describe("billing invoice integrity", () => {
               itemId: SERVICE_ID,
             },
           ],
-        })
+        }),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "One or more services were not found",
@@ -793,7 +800,7 @@ describe("billing invoice integrity", () => {
       ]);
       expect(updateSet).not.toHaveBeenCalled();
       expect(insertValues).not.toHaveBeenCalled();
-    }
+    },
   );
 
   it("rejects an archived product reference before inventory or invoice writes", async () => {
@@ -810,7 +817,7 @@ describe("billing invoice integrity", () => {
         clientId: CLIENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "One or more products were not found",
@@ -850,7 +857,7 @@ describe("billing invoice integrity", () => {
           },
         ],
         isEstimate: false,
-      })
+      }),
     ).resolves.toMatchObject({ id: INVOICE_ID });
 
     expect(updateSet).not.toHaveBeenCalled();
@@ -1306,7 +1313,7 @@ describe("billing invoice integrity", () => {
         appointmentId: APPOINTMENT_ID,
         items: [productLine],
         isEstimate: false,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message:
@@ -1340,7 +1347,7 @@ describe("billing invoice integrity", () => {
         id: INVOICE_ID,
         expectedUpdatedAt: UPDATED_AT,
         items: [productLine],
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message: "Only an unpaid draft invoice can have its line items changed.",
@@ -1380,7 +1387,7 @@ describe("billing invoice integrity", () => {
             itemType: "service",
           },
         ],
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message:
@@ -1423,10 +1430,11 @@ describe("billing invoice integrity", () => {
             itemType: "service",
           },
         ],
-      })
+      }),
     ).rejects.toMatchObject({
       code: "CONFLICT",
-      message: "Invoice state changed while saving charges. Refresh and try again.",
+      message:
+        "Invoice state changed while saving charges. Refresh and try again.",
     });
 
     expect(updateSet).toHaveBeenCalledTimes(1);
@@ -1454,7 +1462,7 @@ describe("billing invoice integrity", () => {
     });
 
     await expect(
-      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID })
+      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID }),
     ).resolves.toMatchObject({ isEstimate: false });
 
     expect(updateSet).toHaveBeenCalledWith({ isEstimate: false });
@@ -1477,7 +1485,7 @@ describe("billing invoice integrity", () => {
     });
 
     await expect(
-      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID })
+      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "Cannot convert a void estimate.",
@@ -1504,7 +1512,7 @@ describe("billing invoice integrity", () => {
     });
 
     await expect(
-      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID })
+      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(updateSet).toHaveBeenCalledTimes(1);
@@ -1529,7 +1537,7 @@ describe("billing invoice integrity", () => {
     });
 
     await expect(
-      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID })
+      callerWithDb(db).convertEstimateToInvoice({ id: INVOICE_ID }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(updateSet).toHaveBeenCalledWith({ isEstimate: false });
@@ -1543,7 +1551,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).updateInvoiceStatus({
         id: INVOICE_ID,
         status: "void",
-      } as never)
+      } as never),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -1574,7 +1582,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).updateInvoiceStatus({
         id: INVOICE_ID,
         status: "sent",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message:
@@ -1607,7 +1615,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).updateInvoiceStatus({
         id: INVOICE_ID,
         status: "sent",
-      })
+      }),
     ).resolves.toMatchObject({ status: "sent" });
     expect(updateSet).toHaveBeenCalledWith({ status: "sent" });
   });
@@ -1639,7 +1647,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).voidInvoice({
         id: INVOICE_ID,
         reason: "Duplicate invoice",
-      })
+      }),
     ).resolves.toMatchObject({ status: "void" });
 
     expect(updateSet).toHaveBeenNthCalledWith(1, { status: "void" });
@@ -1684,7 +1692,7 @@ describe("billing invoice integrity", () => {
         invoiceItemId: null,
         resolvedBy: null,
         resolvedAt: null,
-      })
+      }),
     );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1697,7 +1705,7 @@ describe("billing invoice integrity", () => {
           nextStatus: "void",
           reopenedVisitWorkItemIds: [workItemId],
         }),
-      })
+      }),
     );
   });
 
@@ -1723,7 +1731,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).voidInvoice({
         id: INVOICE_ID,
         reason: "Duplicate invoice",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "PRECONDITION_FAILED",
       message:
@@ -1754,7 +1762,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).voidInvoice({
         id: INVOICE_ID,
         reason: "Duplicate invoice",
-      })
+      }),
     ).resolves.toMatchObject({ status: "void" });
 
     expect(updateSet).not.toHaveBeenCalled();
@@ -1781,7 +1789,7 @@ describe("billing invoice integrity", () => {
       callerWithDb(db).voidInvoice({
         id: INVOICE_ID,
         reason: "Duplicate invoice",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(updateSet).toHaveBeenCalledTimes(1);

@@ -108,6 +108,9 @@ export const services = pgTable(
     category: varchar("category", { length: 128 }),
     defaultPrice: numeric("default_price", { precision: 10, scale: 2 }).notNull(),
     taxable: boolean("taxable").notNull().default(true),
+    externalSource: varchar("external_source", { length: 64 }),
+    externalId: varchar("external_id", { length: 160 }),
+    importFingerprint: varchar("import_fingerprint", { length: 64 }),
   },
   (table) => ({
     practiceNameIdx: index("services_practice_name_idx").on(
@@ -118,6 +121,27 @@ export const services = pgTable(
     defaultPriceNonnegative: check(
       "services_default_price_nonnegative",
       sql`${table.defaultPrice} >= 0`
+    ),
+    externalIdUq: uniqueIndex("services_external_id_uq")
+      .on(table.practiceId, table.externalSource, table.externalId)
+      .where(
+        sql`${table.externalSource} is not null and ${table.externalId} is not null`,
+      ),
+    importFingerprintUq: uniqueIndex("services_import_fingerprint_uq")
+      .on(table.practiceId, table.importFingerprint)
+      .where(sql`${table.importFingerprint} is not null`),
+    importIdentityCheck: check(
+      "services_import_identity_check",
+      sql`(${table.externalSource} is null and ${table.externalId} is null and ${table.importFingerprint} is null)
+        or (${table.externalSource} is not null and ${table.externalId} is not null and ${table.importFingerprint} is not null)`,
+    ),
+    importFingerprintCheck: check(
+      "services_import_fingerprint_check",
+      sql`${table.importFingerprint} is null or ${table.importFingerprint} ~ '^[0-9a-f]{64}$'`,
+    ),
+    externalSourceCheck: check(
+      "services_external_source_check",
+      sql`${table.externalSource} is null or ${table.externalSource} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`,
     ),
   })
 );
@@ -295,10 +319,14 @@ export const products = pgTable(
     unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
     taxable: boolean("taxable").notNull().default(true),
     costPrice: numeric("cost_price", { precision: 10, scale: 2 }),
+    inventoryTracked: boolean("inventory_tracked").notNull().default(true),
     stockQuantity: integer("stock_quantity").notNull().default(0),
     reorderPoint: integer("reorder_point").default(10),
     lotNumber: varchar("lot_number", { length: 64 }),
     expirationDate: date("expiration_date"),
+    externalSource: varchar("external_source", { length: 64 }),
+    externalId: varchar("external_id", { length: 160 }),
+    importFingerprint: varchar("import_fingerprint", { length: 64 }),
   },
   (table) => ({
     practiceIdx: index("products_practice_idx").on(
@@ -329,6 +357,36 @@ export const products = pgTable(
     practiceIdUq: uniqueIndex("products_practice_id_uq").on(
       table.practiceId,
       table.id
+    ),
+    externalIdUq: uniqueIndex("products_external_id_uq")
+      .on(table.practiceId, table.externalSource, table.externalId)
+      .where(
+        sql`${table.externalSource} is not null and ${table.externalId} is not null`
+      ),
+    importFingerprintUq: uniqueIndex("products_import_fingerprint_uq")
+      .on(table.practiceId, table.importFingerprint)
+      .where(sql`${table.importFingerprint} is not null`),
+    importIdentityCheck: check(
+      "products_import_identity_check",
+      sql`(${table.externalSource} is null and ${table.externalId} is null and ${table.importFingerprint} is null)
+        or (${table.externalSource} is not null and ${table.externalId} is not null and ${table.importFingerprint} is not null)`
+    ),
+    importFingerprintCheck: check(
+      "products_import_fingerprint_check",
+      sql`${table.importFingerprint} is null or ${table.importFingerprint} ~ '^[0-9a-f]{64}$'`
+    ),
+    externalSourceCheck: check(
+      "products_external_source_check",
+      sql`${table.externalSource} is null or ${table.externalSource} ~ '^[a-z0-9][a-z0-9_-]{0,63}$'`
+    ),
+    inventoryTrackingCheck: check(
+      "products_inventory_tracking_check",
+      sql`${table.inventoryTracked} or (
+        ${table.stockQuantity} = 0
+        and ${table.reorderPoint} is null
+        and ${table.lotNumber} is null
+        and ${table.expirationDate} is null
+      )`
     ),
   })
 );

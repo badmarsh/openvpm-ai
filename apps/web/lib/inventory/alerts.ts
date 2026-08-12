@@ -1,7 +1,8 @@
-export type StockStatus = "out" | "low" | "ok";
+export type StockStatus = "not_tracked" | "out" | "low" | "ok";
 export type ExpirationStatus = "expired" | "expiring_soon" | "ok" | "none";
 
 export type InventoryAlertInput = {
+  inventoryTracked?: boolean;
   stockQuantity: number;
   reorderPoint?: number | null;
   expirationDate?: string | Date | null;
@@ -75,11 +76,20 @@ export function inventoryAlert(
   product: InventoryAlertInput,
   today: Date | string = new Date()
 ): InventoryAlert {
-  const stockStatus = classifyStock(product.stockQuantity, product.reorderPoint);
-  const expirationStatus = classifyExpiration(product.expirationDate, today);
+  const tracked = product.inventoryTracked !== false;
+  const stockStatus = tracked
+    ? classifyStock(product.stockQuantity, product.reorderPoint)
+    : "not_tracked";
+  const expirationStatus = tracked
+    ? classifyExpiration(product.expirationDate, today)
+    : "none";
   return {
     stockStatus,
     expirationStatus,
-    needsAttention: stockStatus !== "ok" || expirationStatus === "expired" || expirationStatus === "expiring_soon",
+    needsAttention:
+      tracked &&
+      (stockStatus !== "ok" ||
+        expirationStatus === "expired" ||
+        expirationStatus === "expiring_soon"),
   };
 }

@@ -1,4 +1,4 @@
-import { eq, and, isNull, inArray, sql, getTableColumns } from "drizzle-orm";
+import { eq, and, isNull, inArray, or, sql, getTableColumns } from "drizzle-orm";
 import { createHash, randomUUID } from "node:crypto";
 import type { Database } from "@openpims/db/client";
 import { withSystem } from "@/lib/tenant-db";
@@ -18,6 +18,7 @@ import {
   auditLog,
   caseEntries,
   cases,
+  clientContacts,
   clinicalRecordCorrections,
   clinicalNotes,
   clients,
@@ -25,15 +26,25 @@ import {
   controlledSubstanceLog,
   dispenseChargeQueue,
   emailSuppressions,
+  externalLabObservations,
+  externalLabReports,
+  externalPrescriptionFills,
+  externalPrescriptions,
   files,
   invoiceAdjustments,
   invoiceItems,
   invoices,
   insuranceClaims,
   insurancePolicies,
+  historicalAppointments,
+  historicalDocuments,
   labResults,
   labResultEvents,
   labResultReplacements,
+  legacyFinancialAllocations,
+  legacyFinancialDocuments,
+  legacyFinancialLineItems,
+  legacyFinancialPayments,
   locationMessaging,
   locations,
   patientAllergies,
@@ -162,6 +173,7 @@ export const PRACTICE_EXPORT_SECTIONS = [
   "rooms",
   "recurringSeries",
   "clients",
+  "clientContacts",
   "patients",
   "patientMergeEvents",
   "insurancePolicies",
@@ -170,6 +182,7 @@ export const PRACTICE_EXPORT_SECTIONS = [
   "patientWeights",
   "patientAllergies",
   "appointments",
+  "historicalAppointments",
   "appointmentWaitlist",
   "staffSchedules",
   "services",
@@ -189,6 +202,8 @@ export const PRACTICE_EXPORT_SECTIONS = [
   "vaccinationRecords",
   "labResults",
   "labResultEvents",
+  "externalLabReports",
+  "externalLabObservations",
   "procedures",
   "clinicalNotes",
   "problemList",
@@ -201,9 +216,16 @@ export const PRACTICE_EXPORT_SECTIONS = [
   "treatmentPlanItems",
   "prescriptions",
   "prescriptionEvents",
+  "externalPrescriptions",
+  "externalPrescriptionFills",
+  "legacyFinancialDocuments",
+  "legacyFinancialLineItems",
+  "legacyFinancialPayments",
+  "legacyFinancialAllocations",
   "dispenseChargeQueue",
   "visitCloseouts",
   "files",
+  "historicalDocuments",
   "controlledSubstanceLog",
   "communications",
 ] as const;
@@ -211,6 +233,19 @@ export const PRACTICE_EXPORT_SECTIONS = [
 export type PracticeExportSection = (typeof PRACTICE_EXPORT_SECTIONS)[number];
 
 const PRACTICE_EXPORT_OPTIONAL_RESTORE_SECTIONS = [
+  // Additive imported-history sections introduced in v7. Older backups do not
+  // contain them, but every new backup owns and round-trips the full archive.
+  "clientContacts",
+  "historicalAppointments",
+  "externalPrescriptions",
+  "externalPrescriptionFills",
+  "externalLabReports",
+  "externalLabObservations",
+  "legacyFinancialDocuments",
+  "legacyFinancialLineItems",
+  "legacyFinancialPayments",
+  "legacyFinancialAllocations",
+  "historicalDocuments",
   "emailSuppressions",
   // Backward compatibility for backups created before the immutable
   // prescription lifecycle ledger was introduced.
@@ -246,7 +281,7 @@ export type PracticeExport = {
   counts: Record<PracticeExportSection, number>;
 } & Record<PracticeExportSection, unknown[]>;
 
-export const PRACTICE_EXPORT_FORMAT_VERSION = 6;
+export const PRACTICE_EXPORT_FORMAT_VERSION = 7;
 export const PRACTICE_RECOVERY_HOLD_REASON =
   "Practice data restore pending owner reconciliation";
 
@@ -2245,7 +2280,11 @@ async function activeRows(db: Database, table: any, practiceId: string) {
 
 /** Export the portable attachment manifest while keeping provider-specific
  * replica projections and storage-event evidence out of clinic JSON. */
-async function activeFileRows(db: Database, practiceId: string) {
+async function activeFileRows(
+  db: Database,
+  practiceId: string,
+  referencedFileIds: string[] = [],
+) {
   const rows = await db
     .select({
       id: files.id,
@@ -2271,7 +2310,14 @@ async function activeFileRows(db: Database, practiceId: string) {
       appointmentId: files.appointmentId,
     })
     .from(files)
-    .where(and(eq(files.practiceId, practiceId), isNull(files.deletedAt)));
+    .where(
+      and(
+        eq(files.practiceId, practiceId),
+        referencedFileIds.length > 0
+          ? or(isNull(files.deletedAt), inArray(files.id, referencedFileIds))
+          : isNull(files.deletedAt),
+      ),
+    );
 
   return rows.map((row) => ({
     ...row,
@@ -2437,9 +2483,11 @@ export async function exportPracticeData(
     allRoomRows,
     allRecurringSeriesRows,
     allClientRows,
+    clientContactRows,
     allPatientRows,
     patientMergeRows,
     allAppointmentRows,
+    historicalAppointmentRows,
     appointmentWaitlistRows,
     staffScheduleRows,
     serviceRows,
@@ -2458,6 +2506,8 @@ export async function exportPracticeData(
     allVaccinationRows,
     labRows,
     labResultEventRows,
+    externalLabReportRows,
+    externalLabObservationRows,
     procedureRows,
     clinicalNoteRows,
     problemRows,
@@ -2468,9 +2518,15 @@ export async function exportPracticeData(
     treatmentPlanRows,
     allPrescriptionRows,
     prescriptionEventRows,
+    externalPrescriptionRows,
+    externalPrescriptionFillRows,
+    legacyFinancialDocumentRows,
+    legacyFinancialLineItemRows,
+    legacyFinancialPaymentRows,
+    legacyFinancialAllocationRows,
     dispenseChargeRows,
     visitCloseoutRows,
-    fileRows,
+    historicalDocumentRows,
     controlledSubstanceRows,
     allCommunicationRows,
   ] = await Promise.all([
@@ -2490,9 +2546,11 @@ export async function exportPracticeData(
     allPracticeRows(db, rooms, practiceId),
     allPracticeRows(db, recurringSeries, practiceId),
     allPracticeRows(db, clients, practiceId),
+    allPracticeRows(db, clientContacts, practiceId),
     allPracticeRows(db, patients, practiceId),
     allPracticeRows(db, patientMergeEvents, practiceId),
     allPracticeRows(db, appointments, practiceId),
+    allPracticeRows(db, historicalAppointments, practiceId),
     activeRows(db, appointmentWaitlist, practiceId),
     activeRows(db, staffSchedules, practiceId),
     activeRows(db, services, practiceId),
@@ -2511,6 +2569,8 @@ export async function exportPracticeData(
     allPracticeRows(db, vaccinationRecords, practiceId),
     allPracticeRows(db, labResults, practiceId),
     allPracticeRows(db, labResultEvents, practiceId),
+    allPracticeRows(db, externalLabReports, practiceId),
+    allPracticeRows(db, externalLabObservations, practiceId),
     activeRows(db, procedures, practiceId),
     activeRows(db, clinicalNotes, practiceId),
     activeRows(db, problemList, practiceId),
@@ -2521,12 +2581,27 @@ export async function exportPracticeData(
     activeRows(db, treatmentPlans, practiceId),
     allPracticeRows(db, prescriptions, practiceId),
     allPracticeRows(db, prescriptionEvents, practiceId),
+    allPracticeRows(db, externalPrescriptions, practiceId),
+    allPracticeRows(db, externalPrescriptionFills, practiceId),
+    allPracticeRows(db, legacyFinancialDocuments, practiceId),
+    allPracticeRows(db, legacyFinancialLineItems, practiceId),
+    allPracticeRows(db, legacyFinancialPayments, practiceId),
+    allPracticeRows(db, legacyFinancialAllocations, practiceId),
     allPracticeRows(db, dispenseChargeQueue, practiceId),
     activeRows(db, visitCloseouts, practiceId),
-    activeFileRows(db, practiceId),
+    allPracticeRows(db, historicalDocuments, practiceId),
     activeRows(db, controlledSubstanceLog, practiceId),
     allPracticeRows(db, communications, practiceId),
   ]);
+
+  const referencedHistoricalFileIds = historicalDocumentRows.map(
+    (document) => document.fileId as string,
+  );
+  const fileRows = await activeFileRows(
+    db,
+    practiceId,
+    referencedHistoricalFileIds,
+  );
 
   const attributedDeliveryEventIds = new Set(
     practiceSmsDeliveryHistoryRows
@@ -2611,6 +2686,12 @@ export async function exportPracticeData(
       ...vaccinationRows.map((vaccination) => vaccination.patientId),
       ...labRows.map((result) => result.patientId),
       ...labResultEventRows.map((event) => event.patientId),
+      ...historicalAppointmentRows.map((appointment) => appointment.patientId),
+      ...externalPrescriptionRows.map((prescription) => prescription.patientId),
+      ...externalLabReportRows.map((report) => report.patientId),
+      ...legacyFinancialDocumentRows.map((document) => document.patientId),
+      ...legacyFinancialLineItemRows.map((item) => item.patientId),
+      ...historicalDocumentRows.map((document) => document.patientId),
       ...fileRows.map((file) => restoredFilePatientId(file)),
       ...appointmentRows.map((appointment) => appointment.patientId),
       ...patientMergeRows.flatMap((event) => [
@@ -2672,6 +2753,10 @@ export async function exportPracticeData(
       ...patientMergeRows.map((event) => event.clientId),
       ...smsConsentEventRows.map((event) => event.clientId),
       ...smsSendAttemptRows.map((attempt) => attempt.clientId),
+      ...clientContactRows.map((contact) => contact.clientId),
+      ...historicalAppointmentRows.map((appointment) => appointment.clientId),
+      ...legacyFinancialDocumentRows.map((document) => document.clientId),
+      ...legacyFinancialPaymentRows.map((payment) => payment.clientId),
     ].filter((id): id is string => typeof id === "string"),
   );
   const clientRows = allClientRows.filter(
@@ -2852,6 +2937,7 @@ export async function exportPracticeData(
     rooms: roomRows,
     recurringSeries: recurringSeriesRows,
     clients: sanitizePracticeExportRows("clients", clientRows),
+    clientContacts: clientContactRows,
     patients: patientRows,
     patientMergeEvents: patientMergeRows,
     insurancePolicies: insurancePolicyRows,
@@ -2860,6 +2946,7 @@ export async function exportPracticeData(
     patientWeights: patientWeightRows,
     patientAllergies: allergyRows,
     appointments: appointmentRows,
+    historicalAppointments: historicalAppointmentRows,
     appointmentWaitlist: appointmentWaitlistRows,
     staffSchedules: staffScheduleRows,
     services: serviceRows,
@@ -2879,6 +2966,8 @@ export async function exportPracticeData(
     vaccinationRecords: vaccinationRows,
     labResults: labRows,
     labResultEvents: labResultEventRows,
+    externalLabReports: externalLabReportRows,
+    externalLabObservations: externalLabObservationRows,
     procedures: procedureRows,
     clinicalNotes: clinicalNoteRows,
     problemList: problemRows,
@@ -2891,9 +2980,16 @@ export async function exportPracticeData(
     treatmentPlanItems: treatmentPlanItemRows,
     prescriptions: prescriptionRows,
     prescriptionEvents: prescriptionEventRows,
+    externalPrescriptions: externalPrescriptionRows,
+    externalPrescriptionFills: externalPrescriptionFillRows,
+    legacyFinancialDocuments: legacyFinancialDocumentRows,
+    legacyFinancialLineItems: legacyFinancialLineItemRows,
+    legacyFinancialPayments: legacyFinancialPaymentRows,
+    legacyFinancialAllocations: legacyFinancialAllocationRows,
     dispenseChargeQueue: dispenseChargeRows,
     visitCloseouts: visitCloseoutRows,
     files: fileRows,
+    historicalDocuments: historicalDocumentRows,
     controlledSubstanceLog: controlledSubstanceRows,
     communications: communicationRows,
   };
@@ -3123,6 +3219,7 @@ async function restorePracticeDataRows(
     smsConsentRestore.clients,
     { practiceId },
   );
+  await restorePracticeRows("clientContacts", clientContacts);
   restored.smsConsentEvents = await restoreRows(
     db,
     smsConsentEvents,
@@ -3144,6 +3241,7 @@ async function restorePracticeDataRows(
     schedulingRestore.appointments,
     { practiceId },
   );
+  await restorePracticeRows("historicalAppointments", historicalAppointments);
   await restorePracticeRows("appointmentWaitlist", appointmentWaitlist);
   await restorePracticeRows("staffSchedules", staffSchedules);
   await restorePracticeRows("services", services);
@@ -3185,6 +3283,11 @@ async function restorePracticeDataRows(
     { practiceId },
   );
   await restorePracticeRows("labResultEvents", labResultEvents);
+  await restorePracticeRows("externalLabReports", externalLabReports);
+  await restorePracticeRows(
+    "externalLabObservations",
+    externalLabObservations,
+  );
   await restorePracticeRows("procedures", procedures);
   await restorePracticeRows("clinicalNotes", clinicalNotes);
   await restorePracticeRows("vitalSigns", vitalSigns);
@@ -3292,6 +3395,27 @@ async function restorePracticeDataRows(
     prescriptionEventRows,
     { practiceId },
   );
+  await restorePracticeRows("externalPrescriptions", externalPrescriptions);
+  await restorePracticeRows(
+    "externalPrescriptionFills",
+    externalPrescriptionFills,
+  );
+  await restorePracticeRows(
+    "legacyFinancialDocuments",
+    legacyFinancialDocuments,
+  );
+  await restorePracticeRows(
+    "legacyFinancialLineItems",
+    legacyFinancialLineItems,
+  );
+  await restorePracticeRows(
+    "legacyFinancialPayments",
+    legacyFinancialPayments,
+  );
+  await restorePracticeRows(
+    "legacyFinancialAllocations",
+    legacyFinancialAllocations,
+  );
   // Restore every queue row as pending first. Invoiced rows form an intentional
   // cycle with invoice_items, and the database protection trigger should see
   // the exact active source line before accepting their final status.
@@ -3370,6 +3494,7 @@ async function restorePracticeDataRows(
     })),
     { practiceId },
   );
+  await restorePracticeRows("historicalDocuments", historicalDocuments);
   await restorePracticeRows("controlledSubstanceLog", controlledSubstanceLog);
   await restorePracticeRows("communications", communications);
   // Provider callback evidence is exported for clinic audit/portability, but
