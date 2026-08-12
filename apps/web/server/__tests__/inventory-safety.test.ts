@@ -635,6 +635,54 @@ describe("inventory mutation safety", () => {
     expect(updateSet).not.toHaveBeenCalled();
   });
 
+  it("starts stock tracking from an explicit reviewed opening quantity", async () => {
+    const { db, updateSet } = createDb({
+      updatedRows: [
+        {
+          id: PRODUCT_ID,
+          inventoryTracked: true,
+          stockQuantity: 12,
+          reorderPoint: 4,
+        },
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).startTracking({
+        id: PRODUCT_ID,
+        stockQuantity: 12,
+        reorderPoint: 4,
+      })
+    ).resolves.toMatchObject({
+      inventoryTracked: true,
+      stockQuantity: 12,
+    });
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inventoryTracked: true,
+        stockQuantity: 12,
+        reorderPoint: 4,
+      })
+    );
+  });
+
+  it("blocks adjustments until imported catalog stock is reviewed", async () => {
+    const { db, updateSet } = createDb({
+      selectResults: [
+        [{ id: PRODUCT_ID, inventoryTracked: false, stockQuantity: 0 }],
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).adjustStock({
+        id: PRODUCT_ID,
+        adjustment: 1,
+        reason: "Opening count",
+      })
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(updateSet).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid stock adjustment input before DB work", async () => {
     const { db, select, updateSet } = createDb();
 

@@ -27,6 +27,8 @@ const routeLabels: Record<string, string> = {
   "/inventory": "Inventory",
   "/inbox": "Inbox",
   "/recalls": "Vaccination Recalls",
+  "/care-reminders": "Care Reminders",
+  "/migration-archive": "Imported History",
   "/whiteboard": "Whiteboard",
   "/agent": "Agent",
   "/controlled-substances": "Controlled Substances",
@@ -97,7 +99,10 @@ export function TopBar({
   useEffect(() => {
     if (!newMenuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
+      if (
+        newMenuRef.current &&
+        !newMenuRef.current.contains(e.target as Node)
+      ) {
         setNewMenuOpen(false);
       }
     }
@@ -173,7 +178,7 @@ export function TopBar({
                       <Icon className="h-4 w-4 text-muted-foreground" />
                       {actionLabel}
                     </Link>
-                  )
+                  ),
                 )}
               </div>
             )}

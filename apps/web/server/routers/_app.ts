@@ -31,6 +31,8 @@ import { subscriptionRouter } from "./subscription";
 import { adminRouter } from "./admin";
 import { messagingRouter } from "./messaging";
 import { bookingRouter } from "./booking";
+import { careRemindersRouter } from "./care-reminders";
+import { migrationArchiveRouter } from "./migration-archive";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -65,6 +67,8 @@ export const appRouter = createRouter({
   admin: adminRouter,
   messaging: messagingRouter,
   booking: bookingRouter,
+  careReminders: careRemindersRouter,
+  migrationArchive: migrationArchiveRouter,
 });
 
 export type AppRouter = typeof appRouter;

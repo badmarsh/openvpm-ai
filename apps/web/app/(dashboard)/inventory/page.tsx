@@ -69,6 +69,9 @@ const ALERT_FILTERS = [
 type AlertFilter = (typeof ALERT_FILTERS)[number]["value"];
 
 function stockBadge(status: string) {
+  if (status === "not_tracked") {
+    return { label: "Stock not tracked", className: "bg-slate-100 text-slate-700" };
+  }
   if (status === "out") {
     return { label: "Out", className: "bg-red-100 text-red-700" };
   }
@@ -317,6 +320,7 @@ function EditProductRow({
     unitPrice: string;
     taxable: boolean;
     costPrice: string | null;
+    inventoryTracked: boolean;
     stockQuantity: number;
     reorderPoint: number | null;
     lotNumber: string | null;
@@ -363,12 +367,13 @@ function EditProductRow({
     ) &&
     isInventoryCurrencyAmountInputValid(form.unitPrice) &&
     isInventoryOptionalCurrencyAmountInputValid(form.costPrice) &&
-    isInventoryNonnegativeIntegerInputValid(form.reorderPoint) &&
-    isInventoryOptionalTextInputValid(
-      form.lotNumber,
-      INVENTORY_PRODUCT_LOT_NUMBER_MAX_LENGTH
-    ) &&
-    isInventoryOptionalExpirationDateInputValid(form.expirationDate);
+    (!product.inventoryTracked ||
+      (isInventoryNonnegativeIntegerInputValid(form.reorderPoint) &&
+        isInventoryOptionalTextInputValid(
+          form.lotNumber,
+          INVENTORY_PRODUCT_LOT_NUMBER_MAX_LENGTH
+        ) &&
+        isInventoryOptionalExpirationDateInputValid(form.expirationDate)));
 
   const handleSave = () => {
     if (!canSave) return;
@@ -380,9 +385,13 @@ function EditProductRow({
       unitPrice: form.unitPrice.trim(),
       taxable: form.taxable,
       costPrice: trimmedOrUndefined(form.costPrice),
-      reorderPoint: form.reorderPoint,
-      lotNumber: trimmedOrUndefined(form.lotNumber),
-      expirationDate: trimmedOrNull(form.expirationDate),
+      ...(product.inventoryTracked
+        ? {
+            reorderPoint: form.reorderPoint,
+            lotNumber: trimmedOrUndefined(form.lotNumber),
+            expirationDate: trimmedOrNull(form.expirationDate),
+          }
+        : {}),
     });
   };
 
@@ -411,6 +420,10 @@ function EditProductRow({
           className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm w-full"
         >
           <option value="">--</option>
+          {form.category &&
+            !CATEGORIES.some((category) => category.value === form.category) && (
+              <option value={form.category}>{form.category}</option>
+            )}
           {CATEGORIES.slice(1).map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
@@ -453,7 +466,7 @@ function EditProductRow({
         />
       </td>
       <td className="px-4 py-2 text-right tabular-nums">
-        {product.stockQuantity}
+        {product.inventoryTracked ? product.stockQuantity : "—"}
       </td>
       <td className="px-4 py-2">
         <Input
@@ -462,6 +475,7 @@ function EditProductRow({
           max={INVENTORY_STOCK_QUANTITY_MAX}
           step={1}
           value={form.reorderPoint}
+          disabled={!product.inventoryTracked}
           onChange={(e) =>
             setForm({ ...form, reorderPoint: parseInt(e.target.value) || 0 })
           }
@@ -472,6 +486,7 @@ function EditProductRow({
         <div className="space-y-1">
           <Input
             value={form.lotNumber}
+            disabled={!product.inventoryTracked}
             maxLength={INVENTORY_PRODUCT_LOT_NUMBER_MAX_LENGTH}
             onChange={(e) => setForm({ ...form, lotNumber: e.target.value })}
             className="h-8 text-sm"
@@ -480,6 +495,7 @@ function EditProductRow({
           <Input
             type="date"
             value={form.expirationDate}
+            disabled={!product.inventoryTracked}
             aria-invalid={
               !isInventoryOptionalExpirationDateInputValid(
                 form.expirationDate
@@ -515,6 +531,86 @@ function EditProductRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+// --- Start Stock Tracking Popover ---
+
+function StartTrackingPopover({
+  productId,
+  productName,
+  onClose,
+}: {
+  productId: string;
+  productName: string;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const [stockQuantity, setStockQuantity] = useState(0);
+  const [reorderPoint, setReorderPoint] = useState(10);
+  const mutation = trpc.inventory.startTracking.useMutation({
+    onSuccess: async () => {
+      await utils.inventory.list.invalidate();
+      onClose();
+      toast.success("Stock tracking started");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const valid =
+    isInventoryNonnegativeIntegerInputValid(stockQuantity) &&
+    isInventoryNonnegativeIntegerInputValid(reorderPoint);
+
+  return (
+    <div className="absolute right-0 top-9 z-20 w-72 rounded-lg border border-border bg-popover p-4 shadow-lg">
+      <p className="text-sm font-medium">Start tracking {productName}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Enter a reviewed opening quantity. Imported source stock and lots are
+        not assumed.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className="text-xs">
+          Opening units
+          <Input
+            type="number"
+            min={0}
+            step={1}
+            value={stockQuantity}
+            onChange={(event) =>
+              setStockQuantity(Number.parseInt(event.target.value, 10) || 0)
+            }
+            className="mt-1"
+          />
+        </label>
+        <label className="text-xs">
+          Reorder point
+          <Input
+            type="number"
+            min={0}
+            step={1}
+            value={reorderPoint}
+            onChange={(event) =>
+              setReorderPoint(Number.parseInt(event.target.value, 10) || 0)
+            }
+            className="mt-1"
+          />
+        </label>
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Button type="button" size="sm" variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!valid || mutation.isPending}
+          onClick={() =>
+            mutation.mutate({ id: productId, stockQuantity, reorderPoint })
+          }
+        >
+          Start tracking
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -1197,7 +1293,9 @@ export default function InventoryPage() {
                             : "\u2014"}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
-                          {product.stockQuantity}
+                          {product.inventoryTracked
+                            ? product.stockQuantity
+                            : "—"}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                           {product.reorderPoint ?? "\u2014"}
@@ -1259,17 +1357,34 @@ export default function InventoryPage() {
                                       : product.id
                                   )
                                 }
-                                title="Adjust Stock"
+                                title={
+                                  product.inventoryTracked
+                                    ? "Adjust stock"
+                                    : "Start stock tracking"
+                                }
+                                aria-label={
+                                  product.inventoryTracked
+                                    ? `Adjust stock for ${product.name}`
+                                    : `Start stock tracking for ${product.name}`
+                                }
                               >
                                 <Plus className="h-3.5 w-3.5" />
                               </Button>
                               {adjustingId === product.id && (
-                                <StockAdjustPopover
-                                  productId={product.id}
-                                  productName={product.name}
-                                  productStockQuantity={product.stockQuantity}
-                                  onClose={() => setAdjustingId(null)}
-                                />
+                                product.inventoryTracked ? (
+                                  <StockAdjustPopover
+                                    productId={product.id}
+                                    productName={product.name}
+                                    productStockQuantity={product.stockQuantity}
+                                    onClose={() => setAdjustingId(null)}
+                                  />
+                                ) : (
+                                  <StartTrackingPopover
+                                    productId={product.id}
+                                    productName={product.name}
+                                    onClose={() => setAdjustingId(null)}
+                                  />
+                                )
                               )}
                             </div>
                           ) : (

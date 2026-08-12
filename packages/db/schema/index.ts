@@ -38,3 +38,5 @@ export * from "./migrations";
 export * from "./visit-closeouts";
 export * from "./visit-work-items";
 export * from "./clinic-pilots";
+export * from "./care-reminders";
+export * from "./migration-records";

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { parseCsv, normalizeKey, normalizeRow } from "./parse";
 import {
   normalizeDateValue,
+  normalizePatientStatusValue,
   normalizeSexValue,
   normalizeSpeciesValue,
 } from "@/lib/import/normalize";
@@ -47,6 +48,7 @@ export interface PatientImportRecord {
   dob?: string;
   color?: string;
   microchipNumber?: string;
+  status?: "active" | "inactive" | "deceased";
 }
 
 export interface VaccinationImportRecord {
@@ -73,6 +75,26 @@ export interface SoapNoteImportRecord {
   objective?: string;
   assessment?: string;
   plan?: string;
+}
+
+export interface CareReminderImportRecord {
+  externalReminderId: string;
+  clientEmail?: string;
+  externalClientId?: string;
+  externalPatientId?: string;
+  patientName?: string;
+  title: string;
+  dueDate: string;
+  notes?: string;
+}
+
+export interface ServiceImportRecord {
+  externalServiceId: string;
+  name: string;
+  code?: string;
+  category?: string;
+  defaultPrice: string;
+  taxable: boolean;
 }
 
 export interface ParseResult<T> {
@@ -169,6 +191,7 @@ const PATIENT_ALIASES: Record<keyof PatientImportRecord, string[]> = {
     "microchipid",
     "chipid",
   ],
+  status: ["status", "patientstatus", "chartstatus", "animalstatus"],
 };
 
 const VACCINATION_ALIASES: Record<keyof VaccinationImportRecord, string[]> = {
@@ -312,6 +335,67 @@ const SOAP_NOTE_ALIASES: Record<keyof SoapNoteImportRecord | "note", string[]> =
     ],
   };
 
+const CARE_REMINDER_ALIASES: Record<keyof CareReminderImportRecord, string[]> =
+  {
+    externalReminderId: [
+      "reminderid",
+      "externalreminderid",
+      "taskid",
+      "followupid",
+      "id",
+    ],
+    externalClientId: [
+      "clientid",
+      "ownerid",
+      "accountid",
+      "clientnumber",
+      "ownernumber",
+      "accountnumber",
+    ],
+    externalPatientId: [
+      "patientid",
+      "petid",
+      "animalid",
+      "patientnumber",
+      "petnumber",
+      "animalnumber",
+    ],
+    clientEmail: ["clientemail", "owneremail", "email", "emailaddress"],
+    patientName: [
+      "patientname",
+      "name",
+      "petname",
+      "patient",
+      "pet",
+      "animalname",
+    ],
+    title: [
+      "title",
+      "reminder",
+      "remindername",
+      "task",
+      "followup",
+      "description",
+    ],
+    dueDate: ["duedate", "datedue", "due", "dueon", "followupdate"],
+    notes: ["notes", "note", "instructions", "details"],
+  };
+
+const SERVICE_ALIASES: Record<keyof ServiceImportRecord, string[]> = {
+  externalServiceId: [
+    "serviceid",
+    "externalserviceid",
+    "productid",
+    "itemid",
+    "id",
+  ],
+  name: ["name", "servicename", "itemname", "description"],
+  code: ["code", "servicecode", "itemcode", "customid", "sku"],
+  category: ["category", "servicecategory", "productcategory"],
+  defaultPrice: ["defaultprice", "price", "unitprice", "serviceprice"],
+  taxable: ["taxable", "istaxable", "taxed", "applytax"],
+};
+
 /** SOAP sections in the order a standalone notes column fills empty ones. */
 const SOAP_SECTION_KEYS = [
   "subjective",
@@ -419,6 +503,24 @@ function patientReferencePreflight(headers: string[]): string[] {
 function opt(v: string | undefined): string | undefined {
   const t = v?.trim();
   return t ? t : undefined;
+}
+
+function normalizeImportMoney(value: string | undefined): string | undefined {
+  const raw = value?.trim();
+  if (!raw || !/^\d+(?:\.\d{1,2})?$/.test(raw)) return undefined;
+  const [whole, fraction = ""] = raw.split(".");
+  const cents = BigInt(whole!) * 100n + BigInt(fraction.padEnd(2, "0"));
+  if (cents > 9_999_999_999n) return undefined;
+  return `${cents / 100n}.${String(cents % 100n).padStart(2, "0")}`;
+}
+
+function normalizeImportBoolean(
+  value: string | undefined,
+): boolean | undefined {
+  const raw = value?.trim().toLowerCase();
+  if (["true", "yes", "y", "1"].includes(raw ?? "")) return true;
+  if (["false", "no", "n", "0"].includes(raw ?? "")) return false;
+  return undefined;
 }
 
 /** First non-empty value among a field's normalized-header aliases. */
@@ -569,6 +671,14 @@ export function csvToPatientRecords(
     // the router's validation reports it with the exact expected format.
     const dobRaw = fromAliases(r, PATIENT_ALIASES.dob);
     const dob = dobRaw ? (normalizeDateValue(dobRaw) ?? dobRaw) : undefined;
+    const statusRaw = fromAliases(r, PATIENT_ALIASES.status);
+    const status = normalizePatientStatusValue(statusRaw);
+    if (statusRaw && !status) {
+      errors.push(
+        `Row ${i + 1}: patient status must be active, inactive, or deceased.`,
+      );
+      return;
+    }
 
     records.push({
       clientEmail,
@@ -581,6 +691,7 @@ export function csvToPatientRecords(
       dob,
       color: fromAliases(r, PATIENT_ALIASES.color),
       microchipNumber: fromAliases(r, PATIENT_ALIASES.microchipNumber),
+      ...(status ? { status } : {}),
     });
   });
 
@@ -843,6 +954,219 @@ export function csvToSoapNoteRecords(
       objective: sections.objective,
       assessment: sections.assessment,
       plan: sections.plan,
+    });
+  });
+
+  return { records, errors };
+}
+
+/**
+ * Internal care-task import. Creating these rows never schedules or sends a
+ * client communication; staff review and complete them inside OpenVPM.
+ */
+export function csvToCareReminderRecords(
+  csv: string,
+): ParseResult<CareReminderImportRecord> {
+  const { headers, rows, errors: parseErrors } = parseCsv(csv);
+  const records: CareReminderImportRecord[] = [];
+  const errors: string[] = [...parseErrors];
+
+  if (parseErrors.length > 0) return { records, errors };
+
+  const preflightErrors = [
+    ...patientReferencePreflight(headers),
+    ...preflightCsvHeaders(headers, rows, [
+      {
+        label: "reminder ID",
+        aliases: CARE_REMINDER_ALIASES.externalReminderId,
+        examples: "Reminder ID, Task ID, Follow-up ID, or ID",
+      },
+      {
+        label: "reminder title",
+        aliases: CARE_REMINDER_ALIASES.title,
+        examples: "Title, Reminder, Task, or Description",
+      },
+      {
+        label: "reminder due date",
+        aliases: CARE_REMINDER_ALIASES.dueDate,
+        examples: "Due Date, Date Due, or Follow-up Date",
+      },
+    ]),
+  ];
+  if (preflightErrors.length > 0) {
+    return { records, errors: preflightErrors };
+  }
+
+  rows.forEach((raw, index) => {
+    const row = normalizeRow(raw);
+    const externalReminderId = fromAliases(
+      row,
+      CARE_REMINDER_ALIASES.externalReminderId,
+    );
+    const externalPatientId = fromAliases(
+      row,
+      CARE_REMINDER_ALIASES.externalPatientId,
+    );
+    const externalClientId = fromAliases(
+      row,
+      CARE_REMINDER_ALIASES.externalClientId,
+    );
+    const clientEmail = fromAliases(row, CARE_REMINDER_ALIASES.clientEmail);
+    const patientName = fromAliases(row, CARE_REMINDER_ALIASES.patientName);
+    const title = fromAliases(row, CARE_REMINDER_ALIASES.title);
+    const dueRaw = fromAliases(row, CARE_REMINDER_ALIASES.dueDate);
+    const dueDate = normalizeDateValue(dueRaw);
+    const notes = fromAliases(row, CARE_REMINDER_ALIASES.notes);
+
+    if (!externalReminderId) {
+      errors.push(`Row ${index + 1}: an external reminder ID is required.`);
+      return;
+    }
+    if (externalReminderId.length > EXTERNAL_ID_MAX) {
+      errors.push(`Row ${index + 1}: external reminder ID is too long.`);
+      return;
+    }
+    if (!externalPatientId && !clientEmail && !externalClientId) {
+      errors.push(
+        `Row ${index + 1}: a patient ID or owner reference is required to link the reminder.`,
+      );
+      return;
+    }
+    if (!externalPatientId && !patientName) {
+      errors.push(`Row ${index + 1}: patientName is required.`);
+      return;
+    }
+    if (clientEmail && !importEmailCheck.safeParse(clientEmail).success) {
+      errors.push(
+        `Row ${index + 1}: owner email is not a valid email address.`,
+      );
+      return;
+    }
+    if (
+      (externalClientId?.length ?? 0) > EXTERNAL_ID_MAX ||
+      (externalPatientId?.length ?? 0) > EXTERNAL_ID_MAX
+    ) {
+      errors.push(`Row ${index + 1}: an external ID is too long.`);
+      return;
+    }
+    if (!title) {
+      errors.push(`Row ${index + 1}: reminder title is required.`);
+      return;
+    }
+    if (title.length > 255) {
+      errors.push(`Row ${index + 1}: reminder title is too long.`);
+      return;
+    }
+    if (!dueDate) {
+      errors.push(`Row ${index + 1}: due date could not be read as a date.`);
+      return;
+    }
+    if ((notes?.length ?? 0) > 4000) {
+      errors.push(`Row ${index + 1}: reminder notes are too long.`);
+      return;
+    }
+
+    records.push({
+      externalReminderId,
+      externalPatientId,
+      externalClientId,
+      clientEmail,
+      patientName,
+      title,
+      dueDate,
+      notes,
+    });
+  });
+
+  return { records, errors };
+}
+
+/** Generic service-catalog import. Inventory products use a separate safety
+ * contract because charging them can change stock. */
+export function csvToServiceRecords(
+  csv: string,
+): ParseResult<ServiceImportRecord> {
+  const { headers, rows, errors: parseErrors } = parseCsv(csv);
+  const records: ServiceImportRecord[] = [];
+  const errors: string[] = [...parseErrors];
+
+  if (parseErrors.length > 0) return { records, errors };
+  const preflightErrors = preflightCsvHeaders(headers, rows, [
+    {
+      label: "service ID",
+      aliases: SERVICE_ALIASES.externalServiceId,
+      examples: "Service ID, Product ID, Item ID, or ID",
+    },
+    {
+      label: "service name",
+      aliases: SERVICE_ALIASES.name,
+      examples: "Name, Service Name, Item Name, or Description",
+    },
+    {
+      label: "default price",
+      aliases: SERVICE_ALIASES.defaultPrice,
+      examples: "Default Price, Price, Unit Price, or Service Price",
+    },
+    {
+      label: "taxable status",
+      aliases: SERVICE_ALIASES.taxable,
+      examples: "Taxable, Is Taxable, or Apply Tax",
+    },
+  ]);
+  if (preflightErrors.length > 0) {
+    return { records, errors: preflightErrors };
+  }
+
+  rows.forEach((raw, index) => {
+    const row = normalizeRow(raw);
+    const externalServiceId = fromAliases(
+      row,
+      SERVICE_ALIASES.externalServiceId,
+    );
+    const name = fromAliases(row, SERVICE_ALIASES.name);
+    const code = fromAliases(row, SERVICE_ALIASES.code);
+    const category = fromAliases(row, SERVICE_ALIASES.category);
+    const defaultPrice = normalizeImportMoney(
+      fromAliases(row, SERVICE_ALIASES.defaultPrice),
+    );
+    const taxable = normalizeImportBoolean(
+      fromAliases(row, SERVICE_ALIASES.taxable),
+    );
+
+    if (!externalServiceId || externalServiceId.length > EXTERNAL_ID_MAX) {
+      errors.push(`Row ${index + 1}: a valid external service ID is required.`);
+      return;
+    }
+    if (!name || name.length > 255) {
+      errors.push(`Row ${index + 1}: a valid service name is required.`);
+      return;
+    }
+    if ((code?.length ?? 0) > 32) {
+      errors.push(`Row ${index + 1}: service code is too long.`);
+      return;
+    }
+    if ((category?.length ?? 0) > 128) {
+      errors.push(`Row ${index + 1}: service category is too long.`);
+      return;
+    }
+    if (!defaultPrice) {
+      errors.push(
+        `Row ${index + 1}: default price must be a non-negative currency amount.`,
+      );
+      return;
+    }
+    if (taxable === undefined) {
+      errors.push(`Row ${index + 1}: taxable status must be true or false.`);
+      return;
+    }
+
+    records.push({
+      externalServiceId,
+      name,
+      code,
+      category,
+      defaultPrice,
+      taxable,
     });
   });
 

@@ -3496,6 +3496,7 @@ function ChargeCapture({
       category: ["Service", service.category].filter(Boolean).join(" · "),
       defaultPrice: service.defaultPrice,
       taxable: service.taxable,
+      inventoryTracked: null as boolean | null,
       stockQuantity: null as number | null,
       quantity: null as number | null,
       sourcePrescriptionId: undefined as string | undefined,
@@ -3535,6 +3536,7 @@ function ChargeCapture({
         category: "Visit prescription · inventory already dispensed",
         defaultPrice: prescription.productUnitPrice!,
         taxable: prescription.productTaxable ?? true,
+        inventoryTracked: true as boolean | null,
         stockQuantity: null as number | null,
         quantity: prescription.quantity!,
         sourcePrescriptionId: undefined as string | undefined,
@@ -3547,10 +3549,13 @@ function ChargeCapture({
         itemId: product.id,
         itemType: "product" as const,
         name: product.name,
-        category: `Product · ${product.stockQuantity} in stock`,
+        category: product.inventoryTracked
+          ? `Product · ${product.stockQuantity} in stock`
+          : "Product · stock not tracked",
         defaultPrice: product.unitPrice,
         taxable: product.taxable,
-        stockQuantity: product.stockQuantity,
+        inventoryTracked: product.inventoryTracked,
+        stockQuantity: product.inventoryTracked ? product.stockQuantity : null,
         quantity: null as number | null,
         sourcePrescriptionId: undefined as string | undefined,
         sourceDispenseChargeId: undefined as string | undefined,
@@ -3597,6 +3602,7 @@ function ChargeCapture({
     selected?.itemType !== "product" ||
     Boolean(selected.sourcePrescriptionId) ||
     Boolean(selected.sourceDispenseChargeId) ||
+    selected.inventoryTracked === false ||
     (selected.stockQuantity !== null && quantity <= selected.stockQuantity);
   const canAdd =
     Boolean(selected) &&

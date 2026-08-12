@@ -196,7 +196,8 @@ describe("attachment manifest restore safety", () => {
     const source = readFileSync("lib/backup/export.ts", "utf8");
 
     expect(source).toContain("async function activeFileRows");
-    expect(source).toContain("activeFileRows(db, practiceId)");
+    expect(source).toContain("const fileRows = await activeFileRows(");
+    expect(source).toContain("referencedHistoricalFileIds");
     expect(source).not.toContain("activeRows(db, files, practiceId)");
     expect(source).toContain("fileUrl: canonicalFileUrl(row.fileKey)");
     expect(source).not.toContain("objectEtag: files.objectEtag");
@@ -1056,7 +1057,7 @@ describe("independent recovery metadata", () => {
         ...backup,
         formatVersion: PRACTICE_EXPORT_FORMAT_VERSION + 1,
       }).errors,
-    ).toContain("backup format v7 is newer than this release supports.");
+    ).toContain("backup format v8 is newer than this release supports.");
     expect(
       validatePracticeExportRestore({
         ...backup,

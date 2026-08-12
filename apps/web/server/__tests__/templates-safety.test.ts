@@ -48,7 +48,7 @@ function createDb(opts?: {
     for: ReturnType<typeof vi.fn>;
     then: (
       resolve: (value: unknown[]) => unknown,
-      reject?: (error: unknown) => unknown
+      reject?: (error: unknown) => unknown,
     ) => Promise<unknown>;
   };
   const select = vi.fn(() => {
@@ -59,7 +59,7 @@ function createDb(opts?: {
       for: lockFor,
       then: (
         resolve: (value: unknown[]) => unknown,
-        reject?: (error: unknown) => unknown
+        reject?: (error: unknown) => unknown,
       ) => Promise.resolve(result).then(resolve, reject),
     };
     afterWhereForCurrentSelect = afterWhere;
@@ -79,7 +79,9 @@ function createDb(opts?: {
 
   const updateResults = [...(opts?.updateResults ?? [])];
   const updateReturning = vi.fn(async () =>
-    updateResults.length > 0 ? updateResults.shift() : (opts?.updatedRows ?? [])
+    updateResults.length > 0
+      ? updateResults.shift()
+      : (opts?.updatedRows ?? []),
   );
   const updateWhere = vi.fn(() => ({ returning: updateReturning }));
   const updateSet = vi.fn(() => ({ where: updateWhere }));
@@ -126,7 +128,7 @@ describe("treatment template safety", () => {
             sortOrder: 0,
           },
         ],
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -137,7 +139,7 @@ describe("treatment template safety", () => {
         defaultQuantity: 1,
         defaultUnitPrice: "100000000",
         sortOrder: 0,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -158,7 +160,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).create({
         name: "Dental package",
         items: [unlinkedProduct],
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: expect.stringContaining("active inventory product"),
@@ -168,7 +170,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).addItem({
         templateId: TEMPLATE_ID,
         ...unlinkedProduct,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: expect.stringContaining("active inventory product"),
@@ -185,7 +187,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).create({
         name: " ".repeat(4),
         items: [],
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -193,7 +195,7 @@ describe("treatment template safety", () => {
         name: "Dental package",
         description: "d".repeat(2001),
         items: [],
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -201,7 +203,7 @@ describe("treatment template safety", () => {
         name: "Dental package",
         category: "c".repeat(129),
         items: [],
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -214,7 +216,7 @@ describe("treatment template safety", () => {
           defaultUnitPrice: "75.00",
           sortOrder: 0,
         })),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -225,7 +227,7 @@ describe("treatment template safety", () => {
         defaultQuantity: 2,
         defaultUnitPrice: "99999999.99",
         sortOrder: 0,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -236,14 +238,14 @@ describe("treatment template safety", () => {
         defaultQuantity: 1,
         defaultUnitPrice: "75.00",
         sortOrder: 10001,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
       callerWithDb(db).update({
         id: TEMPLATE_ID,
         name: " ".repeat(4),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -251,32 +253,29 @@ describe("treatment template safety", () => {
     expect(updateSet).not.toHaveBeenCalled();
   });
 
-  it(
-    "requires referenced product items to belong to the practice before creating a template",
-    async () => {
-      const { db, insertValues } = createDb({
-        selectResults: [[{ id: PRACTICE_ID }], []],
-      });
+  it("requires referenced product items to belong to the practice before creating a template", async () => {
+    const { db, insertValues } = createDb({
+      selectResults: [[{ id: PRACTICE_ID }], []],
+    });
 
-      await expect(
-        callerWithDb(db).create({
-          name: "Dental package",
-          items: [
-            {
-              itemType: "product",
-              itemId: PRODUCT_ID,
-              description: "Dental chews",
-              defaultQuantity: 1,
-              defaultUnitPrice: "12.00",
-              sortOrder: 0,
-            },
-          ],
-        })
-      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      callerWithDb(db).create({
+        name: "Dental package",
+        items: [
+          {
+            itemType: "product",
+            itemId: PRODUCT_ID,
+            description: "Dental chews",
+            defaultQuantity: 1,
+            defaultUnitPrice: "12.00",
+            sortOrder: 0,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
-      expect(insertValues).not.toHaveBeenCalled();
-    }
-  );
+    expect(insertValues).not.toHaveBeenCalled();
+  });
 
   it("lists active tenant inventory products for template setup", async () => {
     const productOptions = [
@@ -291,7 +290,9 @@ describe("treatment template safety", () => {
       selectResults: [[{ id: PRACTICE_ID }], productOptions],
     });
 
-    await expect(callerWithDb(db).listProducts()).resolves.toEqual(productOptions);
+    await expect(callerWithDb(db).listProducts()).resolves.toEqual(
+      productOptions,
+    );
     expect(select).toHaveBeenCalledTimes(2);
   });
 
@@ -299,20 +300,22 @@ describe("treatment template safety", () => {
     const { db, select } = createDb();
 
     await expect(
-      callerWithDb(db, "veterinarian").listProducts()
+      callerWithDb(db, "veterinarian").listProducts(),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(select).not.toHaveBeenCalled();
 
     const source = readFileSync("server/routers/templates.ts", "utf8");
     const listProductsBlock = source.slice(
       source.indexOf("listProducts:"),
-      source.indexOf("getById:")
+      source.indexOf("getById:"),
     );
     expect(listProductsBlock).toContain('requireRole("admin")');
     expect(listProductsBlock).toContain(
-      "eq(products.practiceId, ctx.practiceId)"
+      "eq(products.practiceId, ctx.practiceId)",
     );
-    expect(listProductsBlock).toContain("activePracticePredicate(ctx.practiceId)");
+    expect(listProductsBlock).toContain(
+      "activePracticePredicate(ctx.practiceId)",
+    );
     expect(listProductsBlock).toContain("isNull(products.deletedAt)");
   });
 
@@ -375,7 +378,7 @@ describe("treatment template safety", () => {
     const source = readFileSync("server/routers/templates.ts", "utf8");
     const detailBlock = source.slice(
       source.indexOf("getById:"),
-      source.indexOf("create: protectedProcedure")
+      source.indexOf("create: protectedProcedure"),
     );
     expect(detailBlock).toContain("inArray(products.id, linkedProductIds)");
     expect(detailBlock).toContain("eq(products.practiceId, ctx.practiceId)");
@@ -403,13 +406,13 @@ describe("treatment template safety", () => {
             sortOrder: 0,
           },
         ],
-      })
+      }),
     ).resolves.toMatchObject({ id: TEMPLATE_ID });
 
     expect(transaction).toHaveBeenCalled();
     expect(lockFor).toHaveBeenCalledWith("share");
     expect(lockFor.mock.invocationCallOrder[0]).toBeLessThan(
-      insertValues.mock.invocationCallOrder[0]!
+      insertValues.mock.invocationCallOrder[0]!,
     );
     expect(insertValues).toHaveBeenNthCalledWith(
       1,
@@ -418,7 +421,7 @@ describe("treatment template safety", () => {
         name: "Dental package",
         description: "Common oral-health estimate",
         category: "Dentistry",
-      })
+      }),
     );
     expect(insertValues).toHaveBeenNthCalledWith(2, [
       expect.objectContaining({
@@ -450,13 +453,13 @@ describe("treatment template safety", () => {
         defaultQuantity: 1,
         defaultUnitPrice: " 75.00 ",
         sortOrder: 1,
-      })
+      }),
     ).resolves.toMatchObject({ id: ITEM_ID });
 
     expect(transaction).toHaveBeenCalled();
     expect(lockFor).toHaveBeenCalledWith("share");
     expect(lockFor.mock.invocationCallOrder[0]).toBeLessThan(
-      insertValues.mock.invocationCallOrder[0]!
+      insertValues.mock.invocationCallOrder[0]!,
     );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -465,7 +468,7 @@ describe("treatment template safety", () => {
         itemId: SERVICE_ID,
         description: "Exam",
         defaultUnitPrice: "75.00",
-      })
+      }),
     );
   });
 
@@ -483,7 +486,7 @@ describe("treatment template safety", () => {
         defaultQuantity: 1,
         defaultUnitPrice: "75.00",
         sortOrder: 0,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -495,7 +498,7 @@ describe("treatment template safety", () => {
     });
 
     await expect(
-      callerWithDb(db).removeItem({ id: ITEM_ID })
+      callerWithDb(db).removeItem({ id: ITEM_ID }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(updateSet).not.toHaveBeenCalled();
@@ -511,7 +514,7 @@ describe("treatment template safety", () => {
     });
 
     await expect(
-      callerWithDb(db).removeItem({ id: ITEM_ID })
+      callerWithDb(db).removeItem({ id: ITEM_ID }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(updateSet).toHaveBeenCalledWith({ deletedAt: expect.any(Date) });
@@ -557,7 +560,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).resolves.toMatchObject({
       id: INVOICE_ID,
       total: "165.00",
@@ -609,7 +612,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: expect.stringContaining("active inventory product"),
@@ -693,7 +696,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).resolves.toMatchObject({ id: INVOICE_ID, total: "185.00" });
 
     expect(insertValues).toHaveBeenCalledWith(
@@ -702,7 +705,7 @@ describe("treatment template safety", () => {
         expect.objectContaining({ itemId: SECOND_SERVICE_ID }),
         expect.objectContaining({ itemId: PRODUCT_ID }),
         expect.objectContaining({ itemId: SECOND_PRODUCT_ID }),
-      ])
+      ]),
     );
     expect(lockFor).toHaveBeenCalledTimes(2);
     expect(lockFor).toHaveBeenNthCalledWith(1, "share");
@@ -734,6 +737,7 @@ describe("treatment template safety", () => {
           },
         ],
         [{ id: PRODUCT_ID }],
+        [{ id: PRODUCT_ID }],
         [{ quantity: 3, unitPrice: "12.00" }],
         [{ taxRatePercent: "0.00" }],
       ],
@@ -747,7 +751,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).resolves.toMatchObject({
       id: INVOICE_ID,
       total: "36.00",
@@ -807,7 +811,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).resolves.toMatchObject({ id: INVOICE_ID });
 
     expect(updateSet).toHaveBeenCalledTimes(1);
@@ -841,6 +845,7 @@ describe("treatment template safety", () => {
           },
         ],
         [{ id: PRODUCT_ID }],
+        [{ id: PRODUCT_ID }],
       ],
       updatedRows: [],
     });
@@ -849,7 +854,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(updateSet).toHaveBeenCalledWith({
@@ -878,7 +883,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(transaction).toHaveBeenCalledTimes(1);
@@ -906,7 +911,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(transaction).toHaveBeenCalledTimes(1);
@@ -944,7 +949,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -981,7 +986,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Service not found",
@@ -1023,7 +1028,7 @@ describe("treatment template safety", () => {
       callerWithDb(db).applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Product not found",
@@ -1039,7 +1044,7 @@ describe("treatment template safety", () => {
     const source = readFileSync("server/routers/templates.ts", "utf8");
     const block = source.slice(
       source.indexOf("async function lockActiveTemplateCatalogItems"),
-      source.indexOf("async function deductTemplateProductStock")
+      source.indexOf("async function deductTemplateProductStock"),
     );
 
     expect(block).toContain("inArray(services.id, serviceIds)");
@@ -1079,14 +1084,14 @@ describe("treatment template safety", () => {
     });
 
     await expect(
-      caller.create({ name: "Dental package", items: [] })
+      caller.create({ name: "Dental package", items: [] }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",
     });
 
     await expect(
-      caller.update({ id: TEMPLATE_ID, name: "Dental package" })
+      caller.update({ id: TEMPLATE_ID, name: "Dental package" }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",
@@ -1105,7 +1110,7 @@ describe("treatment template safety", () => {
         defaultQuantity: 1,
         defaultUnitPrice: "75.00",
         sortOrder: 0,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",
@@ -1120,7 +1125,7 @@ describe("treatment template safety", () => {
       caller.applyToInvoice({
         templateId: TEMPLATE_ID,
         invoiceId: INVOICE_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",

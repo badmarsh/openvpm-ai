@@ -287,7 +287,7 @@ describe("reports", () => {
       /eq\(appointments\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(appointments\.deletedAt\)/
     );
     expect(source).toMatch(
-      /eq\(products\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(products\.deletedAt\)/
+      /eq\(products\.practiceId, ctx\.practiceId\),\s+eq\(products\.inventoryTracked, true\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(products\.deletedAt\)/
     );
   });
 

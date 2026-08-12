@@ -136,6 +136,7 @@ describe("prescription lifecycle mutations", () => {
             name: "Carprofen",
             stockQuantity: 40,
             unitPrice: "12.50",
+            inventoryTracked: true,
           },
         ],
         [{ clientId: "00000000-0000-0000-0000-000000000006" }],
@@ -145,6 +146,7 @@ describe("prescription lifecycle mutations", () => {
             name: "Carprofen",
             stockQuantity: 30,
             unitPrice: "12.50",
+            inventoryTracked: true,
           },
         ],
       ],
@@ -326,7 +328,14 @@ describe("prescription lifecycle mutations", () => {
         [],
         [activePrescription()],
         [{ name: "Clinic", phone: null, timezone: "UTC" }],
-        [{ id: PRODUCT_ID, name: "Carprofen", stockQuantity: 40 }],
+        [
+          {
+            id: PRODUCT_ID,
+            name: "Carprofen",
+            stockQuantity: 40,
+            inventoryTracked: true,
+          },
+        ],
       ],
       updates: [[{ id: PRODUCT_ID, stockQuantity: 30 }], []],
     });

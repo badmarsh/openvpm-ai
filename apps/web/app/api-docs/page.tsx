@@ -1006,7 +1006,7 @@ const sections: Section[] = [
 }`,
         response: `{
   items: Array<InventoryItem & {
-    stockStatus: "ok" | "low" | "out",
+    stockStatus: "not_tracked" | "ok" | "low" | "out",
     expirationStatus: "ok" | "expired" | "expiring_soon"
   }>,
   total: number,
