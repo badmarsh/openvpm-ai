@@ -58,7 +58,7 @@ const SPECIES_ALIASES: Record<string, NormalizedSpecies> = {
 
 /** Map a source species value onto our enum, or null when unrecognized. */
 export function normalizeSpeciesValue(
-  value: string | undefined
+  value: string | undefined,
 ): NormalizedSpecies | null {
   const v = value?.trim().toLowerCase().replace(/\s+/g, " ");
   if (!v) return null;
@@ -98,11 +98,37 @@ const SEX_ALIASES: Record<string, NormalizedSex> = {
 
 /** Map a source sex value onto our enum, or undefined when unrecognized. */
 export function normalizeSexValue(
-  value: string | undefined
+  value: string | undefined,
 ): NormalizedSex | undefined {
-  const v = value?.trim().toLowerCase().replace(/[\s/-]+/g, " ");
+  const v = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/[\s/-]+/g, " ");
   if (!v) return undefined;
   return SEX_ALIASES[v];
+}
+
+export type NormalizedPatientStatus = "active" | "inactive" | "deceased";
+
+const PATIENT_STATUS_ALIASES: Record<string, NormalizedPatientStatus> = {
+  active: "active",
+  current: "active",
+  inactive: "inactive",
+  archived: "inactive",
+  deceased: "deceased",
+  dead: "deceased",
+};
+
+/** Map source chart status without ever turning an unknown status active. */
+export function normalizePatientStatusValue(
+  value: string | undefined,
+): NormalizedPatientStatus | undefined {
+  const normalized = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/[\s/-]+/g, "_");
+  if (!normalized) return undefined;
+  return PATIENT_STATUS_ALIASES[normalized];
 }
 
 function pad2(n: number): string {
@@ -127,7 +153,7 @@ function isRealDate(year: number, month: number, day: number): boolean {
  */
 export function normalizeDateValue(
   value: string | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): string | null {
   const v = value?.trim();
   if (!v) return null;

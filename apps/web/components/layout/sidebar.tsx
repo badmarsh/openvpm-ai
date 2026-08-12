@@ -16,19 +16,26 @@ import {
   Package,
   MessageSquare,
   Syringe,
+  BellRing,
   ClipboardList,
   BarChart3,
   Settings,
   ShieldAlert,
   Bot,
   FlaskConical,
+  Archive,
   ChevronLeft,
   ChevronRight,
   LogOut,
 } from "lucide-react";
 import { PawMark } from "@/components/brand/paw-mark";
 
-type UserRole = "admin" | "veterinarian" | "technician" | "front_desk" | "viewer";
+type UserRole =
+  | "admin"
+  | "veterinarian"
+  | "technician"
+  | "front_desk"
+  | "viewer";
 
 const allRoles: UserRole[] = [
   "admin",
@@ -68,10 +75,42 @@ const navItems: {
     icon: Syringe,
     roles: ["admin", "veterinarian", "front_desk"],
   },
-  { href: "/whiteboard", label: "Whiteboard", icon: ClipboardList, roles: allRoles },
-  { href: "/agent", label: "Agent", icon: Bot, roles: ["admin", "veterinarian"] },
-  { href: "/controlled-substances", label: "Controlled Substances", icon: ShieldAlert, roles: ["admin", "veterinarian"] },
-  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "veterinarian"] },
+  {
+    href: "/care-reminders",
+    label: "Care Reminders",
+    icon: BellRing,
+    roles: allRoles,
+  },
+  {
+    href: "/migration-archive",
+    label: "Imported History",
+    icon: Archive,
+    roles: allRoles,
+  },
+  {
+    href: "/whiteboard",
+    label: "Whiteboard",
+    icon: ClipboardList,
+    roles: allRoles,
+  },
+  {
+    href: "/agent",
+    label: "Agent",
+    icon: Bot,
+    roles: ["admin", "veterinarian"],
+  },
+  {
+    href: "/controlled-substances",
+    label: "Controlled Substances",
+    icon: ShieldAlert,
+    roles: ["admin", "veterinarian"],
+  },
+  {
+    href: "/reports",
+    label: "Reports",
+    icon: BarChart3,
+    roles: ["admin", "veterinarian"],
+  },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] },
 ];
 
@@ -101,7 +140,7 @@ export function Sidebar({
       enabled: canShowNav,
       refetchInterval: 30000,
       retry: false,
-    }
+    },
   );
   const visibleNavItems = canShowNav
     ? navItems.filter((item) => item.roles.includes(role))
@@ -115,7 +154,7 @@ export function Sidebar({
       className={cn(
         "flex h-screen flex-col border-r border-border bg-surface transition-all duration-150",
         width === "full" ? "w-full" : isCollapsed ? "w-16" : "w-60",
-        className
+        className,
       )}
     >
       {/* Logo */}
@@ -134,15 +173,17 @@ export function Sidebar({
             </div>
           )}
           {!isCollapsed && (
-            <span className="font-heading text-lg font-semibold">
-              OpenVPM
-            </span>
+            <span className="font-heading text-lg font-semibold">OpenVPM</span>
           )}
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2" role="navigation" aria-label="Main navigation">
+      <nav
+        className="flex-1 overflow-y-auto px-2 py-2"
+        role="navigation"
+        aria-label="Main navigation"
+      >
         <ul className="space-y-0.5">
           {visibleNavItems.map((item) => {
             const isActive =
@@ -161,7 +202,7 @@ export function Sidebar({
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                 >
                   <span className="relative shrink-0">
@@ -175,7 +216,9 @@ export function Sidebar({
                       />
                     ) : null}
                   </span>
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  {!isCollapsed && (
+                    <span className="truncate">{item.label}</span>
+                  )}
                   {!isCollapsed &&
                   item.href === "/inbox" &&
                   unreadInboxCount > 0 ? (

@@ -5,6 +5,8 @@ import {
   csvToPatientRecords,
   csvToVaccinationRecords,
   csvToSoapNoteRecords,
+  csvToCareReminderRecords,
+  csvToServiceRecords,
 } from "../import";
 
 describe("parseCsv", () => {
@@ -154,6 +156,27 @@ describe("csvToClientRecords", () => {
 });
 
 describe("csvToPatientRecords", () => {
+  it("preserves inactive and deceased chart status", () => {
+    const { records, errors } = csvToPatientRecords(
+      "clientId,patientId,name,species,status\nowner-1,pet-1,Sample,canine,deceased\nowner-2,pet-2,Sample Two,feline,inactive",
+    );
+    expect(errors).toEqual([]);
+    expect(records.map((record) => record.status)).toEqual([
+      "deceased",
+      "inactive",
+    ]);
+  });
+
+  it("does not turn an unknown source chart status active", () => {
+    const { records, errors } = csvToPatientRecords(
+      "clientId,patientId,name,species,status\nowner-1,pet-1,Sample,canine,custom-canary",
+    );
+    expect(records).toEqual([]);
+    expect(errors).toEqual([
+      "Row 1: patient status must be active, inactive, or deceased.",
+    ]);
+  });
+
   it("validates species and links by client email", () => {
     const csv =
       "clientEmail,name,species,sex\njane@x.com,Rex,canine,male_neutered\njane@x.com,Mystery,dragon";
@@ -244,6 +267,55 @@ describe("csvToPatientRecords", () => {
     expect(errors).toEqual([
       expect.stringMatching(/missing a recognized species column/i),
     ]);
+  });
+});
+
+describe("csvToCareReminderRecords", () => {
+  it("maps source-scoped internal follow-up tasks", () => {
+    const result = csvToCareReminderRecords(
+      [
+        "Reminder ID,Patient ID,Reminder,Date Due,Notes",
+        "task-1,pet-1,Recheck mobility,2026-09-03,Internal review only",
+      ].join("\n"),
+    );
+
+    expect(result).toEqual({
+      records: [
+        {
+          externalReminderId: "task-1",
+          externalPatientId: "pet-1",
+          externalClientId: undefined,
+          clientEmail: undefined,
+          patientName: undefined,
+          title: "Recheck mobility",
+          dueDate: "2026-09-03",
+          notes: "Internal review only",
+        },
+      ],
+      errors: [],
+    });
+  });
+
+  it("requires stable reminder and patient identities", () => {
+    const result = csvToCareReminderRecords(
+      "Reminder,Date Due\nRecheck mobility,2026-09-03",
+    );
+
+    expect(result.records).toEqual([]);
+    expect(result.errors.join(" ")).toMatch(/patient reference/i);
+    expect(result.errors.join(" ")).toMatch(/reminder ID/i);
+  });
+
+  it("reports an unreadable due date without echoing the source value", () => {
+    const result = csvToCareReminderRecords(
+      "Reminder ID,Patient ID,Reminder,Date Due\ntask-1,pet-1,Follow up,private-canary",
+    );
+
+    expect(result.records).toEqual([]);
+    expect(result.errors).toEqual([
+      "Row 1: due date could not be read as a date.",
+    ]);
+    expect(result.errors.join(" ")).not.toContain("private-canary");
   });
 });
 
@@ -491,5 +563,41 @@ describe("csvToSoapNoteRecords", () => {
     ]);
     expect(errors[0]).not.toContain("owner@example.com");
     expect(errors[0]).not.toContain("Rex");
+  });
+});
+
+describe("csvToServiceRecords", () => {
+  it("normalizes exact service fields without inventory semantics", () => {
+    const result = csvToServiceRecords(
+      "Service ID,Service Name,Category,Price,Is Taxable\nsvc-1,Wellness exam,Exams,75,no",
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.records).toEqual([
+      {
+        externalServiceId: "svc-1",
+        name: "Wellness exam",
+        code: undefined,
+        category: "Exams",
+        defaultPrice: "75.00",
+        taxable: false,
+      },
+    ]);
+  });
+
+  it("fails closed on missing tax evidence or precision that would be rounded", () => {
+    const missingTax = csvToServiceRecords(
+      "Service ID,Name,Price\nsvc-1,Synthetic service,10.00",
+    );
+    const imprecise = csvToServiceRecords(
+      "Service ID,Name,Price,Taxable\nsvc-1,Synthetic service,10.999,false",
+    );
+
+    expect(missingTax.records).toEqual([]);
+    expect(missingTax.errors[0]).toMatch(/taxable status column/i);
+    expect(imprecise.records).toEqual([]);
+    expect(imprecise.errors).toEqual([
+      "Row 1: default price must be a non-negative currency amount.",
+    ]);
   });
 });

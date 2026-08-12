@@ -4,7 +4,21 @@ export type ImportFingerprintMode =
   | "clients"
   | "patients"
   | "vaccinations"
-  | "soap_notes";
+  | "soap_notes"
+  | "care_reminders"
+  | "services"
+  | "products"
+  | "client_contacts"
+  | "historical_appointments"
+  | "external_prescriptions"
+  | "external_prescription_fills"
+  | "external_lab_reports"
+  | "external_lab_observations"
+  | "legacy_financial_documents"
+  | "legacy_financial_line_items"
+  | "legacy_financial_payments"
+  | "legacy_financial_allocations"
+  | "historical_documents";
 
 const IMPORT_FINGERPRINT_SCHEMA_VERSION = 1;
 

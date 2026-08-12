@@ -104,7 +104,9 @@ describe("onboarding UI states", () => {
     expect(settingsRouter).toContain("migrationHasCommittedChanges: false");
     expect(settingsRouter).toContain("migrationLastCommittedAt: null");
     expect(dataRouter).toContain("migrationHasCommittedChanges', true");
-    expect(dataRouter).toContain("migrationLastCommittedAt', ${committedAt}");
+    expect(dataRouter).toContain(
+      "migrationLastCommittedAt', ${committedAt}::text",
+    );
     expect(journeyOverlay).toContain("initialMigrationHasCommittedChanges={");
     expect(journeyOverlay).toContain(
       "keepSampleData: !initialMigrationHasCommittedChanges",

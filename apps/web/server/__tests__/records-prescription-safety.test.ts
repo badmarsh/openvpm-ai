@@ -456,7 +456,14 @@ describe("records.createPrescription safety enforcement", () => {
         [],
         [],
         [],
-        [{ id: PRODUCT_ID, name: "Carprofen", stockQuantity: 12 }],
+        [
+          {
+            id: PRODUCT_ID,
+            name: "Carprofen",
+            stockQuantity: 12,
+            inventoryTracked: true,
+          },
+        ],
       ],
     });
 
@@ -615,7 +622,14 @@ describe("records.createPrescription safety enforcement", () => {
         [],
         [],
         [],
-        [{ id: PRODUCT_ID, name: "Carprofen", stockQuantity: 12 }],
+        [
+          {
+            id: PRODUCT_ID,
+            name: "Carprofen",
+            stockQuantity: 12,
+            inventoryTracked: true,
+          },
+        ],
       ],
       updateReturns: [[{ id: PRODUCT_ID, stockQuantity: 2 }]],
     });
@@ -649,7 +663,14 @@ describe("records.createPrescription safety enforcement", () => {
         [],
         [],
         [],
-        [{ id: PRODUCT_ID, name: "Carprofen", stockQuantity: 12 }],
+        [
+          {
+            id: PRODUCT_ID,
+            name: "Carprofen",
+            stockQuantity: 12,
+            inventoryTracked: true,
+          },
+        ],
       ],
       updateReturns: [[]],
     });
