@@ -603,6 +603,34 @@
       "when": 1786428459802,
       "tag": "0085_foamy_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1786491884265,
+      "tag": "0086_safe_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1786493363385,
+      "tag": "0087_medical_grey_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1786499494870,
+      "tag": "0088_noisy_lucky_pierre",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1786502748265,
+      "tag": "0089_odd_titanium_man",
+      "breakpoints": true
     }
   ]
 }

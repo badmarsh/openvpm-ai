@@ -13,6 +13,8 @@ import {
   users,
   vaccinationRecords,
   soapNotes,
+  careReminders,
+  services,
 } from "@openpims/db";
 import { db as rootDb, type Database } from "@openpims/db/client";
 import {
@@ -20,10 +22,14 @@ import {
   type PatientImportRecord,
   type VaccinationImportRecord,
   type SoapNoteImportRecord,
+  type CareReminderImportRecord,
+  type ServiceImportRecord,
   csvToClientRecords,
   csvToPatientRecords,
   csvToVaccinationRecords,
   csvToSoapNoteRecords,
+  csvToCareReminderRecords,
+  csvToServiceRecords,
 } from "@/lib/csv/import";
 import {
   SOAP_SECTION_MAX_LENGTH,
@@ -88,6 +94,11 @@ type SoapNoteImportRow = {
   createdAt: Date;
   importFingerprint: string;
 };
+type CareReminderImportRow = Omit<
+  typeof careReminders.$inferInsert,
+  "practiceId"
+>;
+type ServiceImportRow = Omit<typeof services.$inferInsert, "practiceId">;
 type DataContext = {
   db: Database;
   practiceId: string;
@@ -163,6 +174,7 @@ const patientImportRecordInput = z
     dob: importOptionalDate,
     color: importOptionalText("Color", 64),
     microchipNumber: importOptionalText("Microchip number", 64),
+    status: z.enum(["active", "inactive", "deceased"]).optional(),
   })
   .refine((record) => record.clientEmail || record.externalClientId, {
     message: "An owner email or external owner ID is required.",
@@ -191,6 +203,7 @@ const patientJsonImportRecordInput = z.object({
   dob: importOptionalDate,
   color: importOptionalText("Color", 64),
   microchipNumber: importOptionalText("Microchip number", 64),
+  status: z.enum(["active", "inactive", "deceased"]).optional(),
 });
 const importClientsInput = z.object({
   clients: z
@@ -264,6 +277,47 @@ const soapNoteImportRecordsInput = z
     IMPORT_MAX_ROWS,
     `Medical history imports can include at most ${IMPORT_MAX_ROWS} rows.`,
   );
+const careReminderImportRecordInput = z
+  .object({
+    externalReminderId: importRequiredText("External reminder ID", 160),
+    clientEmail: importOptionalEmail,
+    externalClientId: importOptionalExternalId,
+    externalPatientId: importOptionalExternalId,
+    patientName: importOptionalText("Patient name", 128),
+    title: importRequiredText("Reminder title", 255),
+    dueDate: clinicalDateInput("Due date"),
+    notes: importOptionalText("Reminder notes", 4000),
+  })
+  .refine(
+    (record) =>
+      record.externalPatientId ||
+      (record.patientName && (record.clientEmail || record.externalClientId)),
+    {
+      message: "A patient ID or owner reference plus patient name is required.",
+    },
+  );
+const careReminderImportRecordsInput = z
+  .array(careReminderImportRecordInput)
+  .max(
+    IMPORT_MAX_ROWS,
+    `Care reminder imports can include at most ${IMPORT_MAX_ROWS} rows.`,
+  );
+const serviceImportRecordInput = z.object({
+  externalServiceId: importRequiredText("External service ID", 160),
+  name: importRequiredText("Service name", 255),
+  code: importOptionalText("Service code", 32),
+  category: importOptionalText("Service category", 128),
+  defaultPrice: z
+    .string()
+    .regex(/^\d{1,8}\.\d{2}$/, "Default price must be a currency amount."),
+  taxable: z.boolean(),
+});
+const serviceImportRecordsInput = z
+  .array(serviceImportRecordInput)
+  .max(
+    IMPORT_MAX_ROWS,
+    `Service imports can include at most ${IMPORT_MAX_ROWS} rows.`,
+  );
 const importCsvTextInput = z
   .string()
   .min(1, "Choose a non-empty CSV file.")
@@ -288,6 +342,8 @@ const CLIENT_IMPORT_PLANNER_VERSION = "clients-v1";
 const PATIENT_IMPORT_PLANNER_VERSION = "patients-v1";
 const VACCINATION_IMPORT_PLANNER_VERSION = "vaccinations-v1";
 const SOAP_NOTE_IMPORT_PLANNER_VERSION = "soap-notes-v1";
+const CARE_REMINDER_IMPORT_PLANNER_VERSION = "care-reminders-v1";
+const SERVICE_IMPORT_PLANNER_VERSION = "services-v1";
 
 function csvPreviewResult<T extends Record<string, unknown>>(value: T) {
   return value as T & { imported?: never; reconciled?: never };
@@ -404,7 +460,7 @@ async function finishCsvImportRun(
         coalesce(${practices.settings} -> 'onboardingState', '{}'::jsonb)
           || jsonb_build_object(
             'migrationHasCommittedChanges', true,
-            'migrationLastCommittedAt', ${committedAt}
+            'migrationLastCommittedAt', ${committedAt}::text
           ),
         true
       )
@@ -896,6 +952,7 @@ function dedupePatientImport(
       dob: patient.dob?.trim() || null,
       color: patient.color?.trim() || null,
       microchipNumber: patient.microchipNumber?.trim() || null,
+      status: patient.status ?? "active",
       importFingerprint: migrationImportFingerprint("patients", [
         clientId,
         normalizeImportText(patient.name),
@@ -1021,6 +1078,7 @@ function planPatientCsvImport(
     string,
     ExistingPatientImportIdentity | "ambiguous"
   >();
+  const initiallyAmbiguousIdentityKeys = new Set<string>();
   const importFingerprints = new Set<string>();
 
   for (const patient of existingPatients) {
@@ -1036,6 +1094,8 @@ function planPatientCsvImport(
     }
     if (patient.deletedAt) continue;
     const identityKey = patientIdentityKey(patient);
+    if (byIdentity.has(identityKey))
+      initiallyAmbiguousIdentityKeys.add(identityKey);
     byIdentity.set(
       identityKey,
       byIdentity.has(identityKey) ? "ambiguous" : patient,
@@ -1152,13 +1212,24 @@ function planPatientCsvImport(
       );
       return;
     }
-    if (identityMatch === "ambiguous") {
+    const distinctPlannedSourceChart =
+      !!externalId &&
+      !chipMatch &&
+      !initiallyAmbiguousIdentityKeys.has(identityKey) &&
+      (identityMatch === "ambiguous" ||
+        (identityMatch?.plannedRowIndex !== undefined &&
+          identityMatch.externalSource === source &&
+          !!identityMatch.externalId &&
+          identityMatch.externalId !== externalId));
+    if (identityMatch === "ambiguous" && !distinctPlannedSourceChart) {
       reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         `Row ${index + 1}: More than one existing patient matches this row. Resolve the duplicate charts before importing.`,
       );
       return;
     }
+    const resolvedIdentityMatch =
+      identityMatch === "ambiguous" ? undefined : identityMatch;
     if (chipMatch && chipMatch.clientId !== clientId) {
       reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
@@ -1166,7 +1237,11 @@ function planPatientCsvImport(
       );
       return;
     }
-    if (identityMatch && chipMatch && identityMatch.id !== chipMatch.id) {
+    if (
+      resolvedIdentityMatch &&
+      chipMatch &&
+      resolvedIdentityMatch.id !== chipMatch.id
+    ) {
       reviewedDispositions.push(reviewedDisposition(index, "patient", "error"));
       errors.push(
         `Row ${index + 1}: The patient identity and microchip point to different charts. Nothing was changed.`,
@@ -1174,7 +1249,9 @@ function planPatientCsvImport(
       return;
     }
 
-    const existingMatch = identityMatch ?? chipMatch;
+    const existingMatch = distinctPlannedSourceChart
+      ? undefined
+      : (resolvedIdentityMatch ?? chipMatch);
     if (existingMatch) {
       const target = reviewedTarget(
         index,
@@ -1258,15 +1335,21 @@ function planPatientCsvImport(
       dob: patient.dob?.trim() || null,
       color: patient.color?.trim() || null,
       microchipNumber: patient.microchipNumber?.trim() || null,
+      status: patient.status ?? "active",
       ...(externalId ? { externalSource: source, externalId } : {}),
     };
-    row.importFingerprint = migrationImportFingerprint("patients", [
-      clientId,
-      normalizeImportText(row.name),
-      row.species,
-      row.dob?.trim() ?? "",
-      patientMicrochipKey(row.microchipNumber),
-    ]);
+    row.importFingerprint = migrationImportFingerprint(
+      "patients",
+      externalId
+        ? ["external", source, externalId]
+        : [
+            clientId,
+            normalizeImportText(row.name),
+            row.species,
+            row.dob?.trim() ?? "",
+            patientMicrochipKey(row.microchipNumber),
+          ],
+    );
     if (importFingerprints.has(row.importFingerprint)) {
       duplicates++;
       reviewedDispositions.push(
@@ -1291,7 +1374,10 @@ function planPatientCsvImport(
       deletedAt: null,
       plannedRowIndex: rows.length - 1,
     };
-    byIdentity.set(identityKey, planned);
+    byIdentity.set(
+      identityKey,
+      byIdentity.has(identityKey) ? "ambiguous" : planned,
+    );
     byWeakIdentity.set(weakIdentityKey, planned);
     if (chipKey) byMicrochip.set(chipKey, planned);
     if (externalKey) byExternalId.set(externalKey, planned);
@@ -1794,6 +1880,422 @@ function parseVaccinationImportRecords(
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Vaccination import rows contain invalid values.",
+    });
+  }
+  return result.data;
+}
+
+function careReminderPayloadSignature(input: {
+  patientId: string;
+  title: string;
+  dueDate: string;
+  notes?: string | null;
+}): string {
+  return [
+    input.patientId,
+    normalizeImportText(input.title),
+    input.dueDate,
+    normalizeImportText(input.notes),
+  ].join("|");
+}
+
+function planCareReminderImport(
+  records: CareReminderImportRecord[],
+  patientLookup: PatientReferenceLookup,
+  source: string,
+  existingReminders: Array<{
+    patientId: string;
+    title: string;
+    dueDate: string;
+    notes: string | null;
+    externalSource: string | null;
+    externalId: string | null;
+  }>,
+): {
+  rows: CareReminderImportRow[];
+  reviewedDispositions: MigrationReviewedDisposition[];
+  reviewedTargets: MigrationReviewedTarget[];
+  errors: string[];
+  duplicates: number;
+  unmatchedPatient: number;
+} {
+  const existingBySourceId = new Map(
+    existingReminders
+      .filter((reminder) => reminder.externalSource && reminder.externalId)
+      .map((reminder) => [
+        externalIdentityKey(reminder.externalSource!, reminder.externalId!),
+        careReminderPayloadSignature(reminder),
+      ]),
+  );
+  const rows: CareReminderImportRow[] = [];
+  const reviewedDispositions: MigrationReviewedDisposition[] = [];
+  const reviewedTargets: MigrationReviewedTarget[] = [];
+  const errors: string[] = [];
+  let duplicates = 0;
+  let unmatchedPatient = 0;
+
+  records.forEach((record, index) => {
+    const patientReference = resolvePatientReference(
+      record,
+      source,
+      patientLookup,
+    );
+    if (!patientReference) {
+      unmatchedPatient++;
+      reviewedDispositions.push(
+        reviewedDisposition(index, "care_reminder", "unmatched"),
+      );
+      errors.push(
+        `Row ${index + 1}: No matching patient was found for the supplied reference.`,
+      );
+      return;
+    }
+    if (patientReference === "ambiguous") {
+      unmatchedPatient++;
+      reviewedDispositions.push(
+        reviewedDisposition(index, "care_reminder", "error"),
+      );
+      errors.push(
+        `Row ${index + 1}: The supplied patient references are ambiguous or conflict. Nothing was changed.`,
+      );
+      return;
+    }
+
+    const externalReminderId = normalizeExternalId(record.externalReminderId);
+    if (!externalReminderId) {
+      reviewedDispositions.push(
+        reviewedDisposition(index, "care_reminder", "error"),
+      );
+      errors.push(`Row ${index + 1}: External reminder ID is required.`);
+      return;
+    }
+
+    const target = reviewedTarget(
+      index,
+      "patient",
+      patientReference.role,
+      patientReference.target,
+    );
+    if (target) reviewedTargets.push(target);
+
+    const patientId = patientReference.target.id;
+    const payload = careReminderPayloadSignature({
+      patientId,
+      title: record.title,
+      dueDate: record.dueDate,
+      notes: record.notes,
+    });
+    const sourceIdentity = externalIdentityKey(source, externalReminderId);
+    const existingPayload = existingBySourceId.get(sourceIdentity);
+    if (existingPayload) {
+      if (existingPayload === payload) {
+        duplicates++;
+        reviewedDispositions.push(
+          reviewedDisposition(index, "care_reminder", "duplicate"),
+        );
+        errors.push(`Row ${index + 1}: Skipped an already imported reminder.`);
+      } else {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "care_reminder", "error"),
+        );
+        errors.push(
+          `Row ${index + 1}: The source reminder ID already exists with different content. Nothing was changed.`,
+        );
+      }
+      return;
+    }
+
+    existingBySourceId.set(sourceIdentity, payload);
+    reviewedDispositions.push(
+      reviewedDisposition(index, "care_reminder", "insert"),
+    );
+    rows.push({
+      patientId,
+      title: record.title.trim(),
+      notes: record.notes?.trim() || null,
+      dueDate: record.dueDate,
+      status: "open",
+      createdBy: null,
+      completedAt: null,
+      completedBy: null,
+      externalSource: source,
+      externalId: externalReminderId,
+      importFingerprint: migrationImportFingerprint("care_reminders", [
+        source,
+        externalReminderId,
+        payload,
+      ]),
+    });
+  });
+
+  return {
+    rows,
+    reviewedDispositions,
+    reviewedTargets,
+    errors,
+    duplicates,
+    unmatchedPatient,
+  };
+}
+
+async function loadCareReminderCsvPlan(
+  db: Database,
+  practiceId: string,
+  records: CareReminderImportRecord[],
+  source: string,
+  parseErrors: string[],
+) {
+  const patientRows = await loadMigrationPatientReferences(db, practiceId);
+  const patientLookup = createPatientReferenceLookup(patientRows);
+  const existingReminders = await db
+    .select({
+      patientId: careReminders.patientId,
+      title: careReminders.title,
+      dueDate: careReminders.dueDate,
+      notes: careReminders.notes,
+      externalSource: careReminders.externalSource,
+      externalId: careReminders.externalId,
+    })
+    .from(careReminders)
+    .where(
+      and(
+        eq(careReminders.practiceId, practiceId),
+        activePracticePredicate(practiceId),
+      ),
+    )
+    .orderBy(careReminders.id)
+    .for("update");
+  const plan = planCareReminderImport(
+    records,
+    patientLookup,
+    source,
+    existingReminders,
+  );
+  const combinedErrors = [...parseErrors, ...plan.errors];
+  const summary: MigrationPreviewSummary = {
+    sourceRowCount: records.length,
+    plannedInsertCount: plan.rows.length,
+    duplicateCount: plan.duplicates,
+    unmatchedCount: plan.unmatchedPatient,
+    errorCount: combinedErrors.length,
+  };
+  const reviewedPlan: MigrationReviewedPlan = {
+    plannerVersion: CARE_REMINDER_IMPORT_PLANNER_VERSION,
+    dispositions: plan.reviewedDispositions,
+    targets: plan.reviewedTargets,
+  };
+  return { plan, combinedErrors, summary, reviewedPlan };
+}
+
+function parseCareReminderImportRecords(
+  records: CareReminderImportRecord[],
+): CareReminderImportRecord[] {
+  const result = careReminderImportRecordsInput.safeParse(records);
+  if (!result.success) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Care reminder import rows contain invalid values.",
+    });
+  }
+  return result.data;
+}
+
+function servicePayloadSignature(input: {
+  name: string;
+  code?: string | null;
+  category?: string | null;
+  defaultPrice: string;
+  taxable: boolean;
+}): string {
+  return [
+    normalizeImportText(input.name),
+    normalizeImportText(input.code),
+    normalizeImportText(input.category),
+    input.defaultPrice,
+    input.taxable ? "true" : "false",
+  ].join("|");
+}
+
+function serviceIdentity(value: string | null | undefined): string {
+  return normalizeImportText(value).replace(/\s+/g, " ");
+}
+
+function conflictingServiceIdentities(
+  records: ServiceImportRecord[],
+): Set<string> {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    const name = `name:${serviceIdentity(record.name)}`;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+    const code = serviceIdentity(record.code);
+    if (code) counts.set(`code:${code}`, (counts.get(`code:${code}`) ?? 0) + 1);
+  }
+  return new Set(
+    [...counts.entries()]
+      .filter(([, value]) => value > 1)
+      .map(([identity]) => identity),
+  );
+}
+
+function planServiceImport(
+  records: ServiceImportRecord[],
+  source: string,
+  existingServices: Array<{
+    name: string;
+    code: string | null;
+    category: string | null;
+    defaultPrice: string;
+    taxable: boolean;
+    externalSource: string | null;
+    externalId: string | null;
+  }>,
+): {
+  rows: ServiceImportRow[];
+  reviewedDispositions: MigrationReviewedDisposition[];
+  errors: string[];
+  duplicates: number;
+} {
+  const existingBySourceId = new Map(
+    existingServices
+      .filter((service) => service.externalSource && service.externalId)
+      .map((service) => [
+        externalIdentityKey(service.externalSource!, service.externalId!),
+        servicePayloadSignature(service),
+      ]),
+  );
+  const names = new Set(
+    existingServices.map((service) => serviceIdentity(service.name)),
+  );
+  const codes = new Set(
+    existingServices
+      .map((service) => serviceIdentity(service.code))
+      .filter(Boolean),
+  );
+  const sourceConflicts = conflictingServiceIdentities(records);
+  const rows: ServiceImportRow[] = [];
+  const reviewedDispositions: MigrationReviewedDisposition[] = [];
+  const errors: string[] = [];
+  let duplicates = 0;
+
+  records.forEach((record, index) => {
+    const externalServiceId = normalizeExternalId(record.externalServiceId);
+    if (!externalServiceId) {
+      reviewedDispositions.push(reviewedDisposition(index, "service", "error"));
+      errors.push(`Row ${index + 1}: External service ID is required.`);
+      return;
+    }
+    const payload = servicePayloadSignature(record);
+    const sourceIdentity = externalIdentityKey(source, externalServiceId);
+    const existingPayload = existingBySourceId.get(sourceIdentity);
+    if (existingPayload) {
+      if (existingPayload === payload) {
+        duplicates++;
+        reviewedDispositions.push(
+          reviewedDisposition(index, "service", "duplicate"),
+        );
+        errors.push(`Row ${index + 1}: Skipped an already imported service.`);
+      } else {
+        reviewedDispositions.push(
+          reviewedDisposition(index, "service", "error"),
+        );
+        errors.push(
+          `Row ${index + 1}: The source service ID already exists with different content. Nothing was changed.`,
+        );
+      }
+      return;
+    }
+
+    const nameIdentity = serviceIdentity(record.name);
+    const codeIdentity = serviceIdentity(record.code);
+    if (
+      sourceConflicts.has(`name:${nameIdentity}`) ||
+      (codeIdentity && sourceConflicts.has(`code:${codeIdentity}`))
+    ) {
+      reviewedDispositions.push(reviewedDisposition(index, "service", "error"));
+      errors.push(
+        `Row ${index + 1}: Multiple source services use the same name or code. Review them before importing either row.`,
+      );
+      return;
+    }
+    if (names.has(nameIdentity) || (codeIdentity && codes.has(codeIdentity))) {
+      reviewedDispositions.push(reviewedDisposition(index, "service", "error"));
+      errors.push(
+        `Row ${index + 1}: An active service already uses this name or code. Nothing was changed.`,
+      );
+      return;
+    }
+
+    names.add(nameIdentity);
+    if (codeIdentity) codes.add(codeIdentity);
+    existingBySourceId.set(sourceIdentity, payload);
+    reviewedDispositions.push(reviewedDisposition(index, "service", "insert"));
+    rows.push({
+      name: record.name.trim(),
+      code: record.code?.trim() || null,
+      category: record.category?.trim() || null,
+      defaultPrice: record.defaultPrice,
+      taxable: record.taxable,
+      externalSource: source,
+      externalId: externalServiceId,
+      importFingerprint: migrationImportFingerprint("services", [
+        source,
+        externalServiceId,
+        payload,
+      ]),
+    });
+  });
+
+  return { rows, reviewedDispositions, errors, duplicates };
+}
+
+async function loadServiceCsvPlan(
+  database: Database,
+  practiceId: string,
+  records: ServiceImportRecord[],
+  source: string,
+  parseErrors: string[],
+) {
+  await database.execute(
+    sql`select pg_advisory_xact_lock(hashtext(${`service-catalog:${practiceId}`}::text))`,
+  );
+  const existingServices = await database
+    .select({
+      name: services.name,
+      code: services.code,
+      category: services.category,
+      defaultPrice: services.defaultPrice,
+      taxable: services.taxable,
+      externalSource: services.externalSource,
+      externalId: services.externalId,
+    })
+    .from(services)
+    .where(and(eq(services.practiceId, practiceId), isNull(services.deletedAt)))
+    .orderBy(services.id)
+    .for("update");
+  const plan = planServiceImport(records, source, existingServices);
+  const combinedErrors = [...parseErrors, ...plan.errors];
+  const summary: MigrationPreviewSummary = {
+    sourceRowCount: records.length,
+    plannedInsertCount: plan.rows.length,
+    duplicateCount: plan.duplicates,
+    errorCount: combinedErrors.length,
+  };
+  const reviewedPlan: MigrationReviewedPlan = {
+    plannerVersion: SERVICE_IMPORT_PLANNER_VERSION,
+    dispositions: plan.reviewedDispositions,
+    targets: [],
+  };
+  return { plan, combinedErrors, summary, reviewedPlan };
+}
+
+function parseServiceImportRecords(
+  records: ServiceImportRecord[],
+): ServiceImportRecord[] {
+  const result = serviceImportRecordsInput.safeParse(records);
+  if (!result.success) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Service import rows contain invalid values.",
     });
   }
   return result.data;
@@ -2541,7 +3043,10 @@ export const dataRouter = createRouter({
       if (validRecords.length === 0 && errors.length > 0) {
         await assertActivePractice(ctx);
         return ctx.db.transaction(async (tx) => {
-          await tx.execute(sql`set transaction isolation level serializable`);
+          // The protected procedure already owns the tenant RLS transaction.
+          // lockMigrationPractice below serializes every preview/commit for
+          // this practice; changing isolation here would be too late after the
+          // tenant GUC and billing guard have already issued statements.
           const migrationDb = tx as unknown as Database;
           await lockMigrationPractice(migrationDb, ctx.practiceId);
           const summary: MigrationPreviewSummary = {
@@ -2610,7 +3115,8 @@ export const dataRouter = createRouter({
 
       await assertActivePractice(ctx);
       const result = await ctx.db.transaction(async (tx) => {
-        await tx.execute(sql`set transaction isolation level serializable`);
+        // Practice-row locking and the reviewed-plan CAS provide the import
+        // serialization inside the already-open tenant RLS transaction.
         const migrationDb = tx as unknown as Database;
         await lockMigrationPractice(migrationDb, ctx.practiceId);
         const { plan, combinedErrors, summary, reviewedPlan } =
@@ -2734,7 +3240,8 @@ export const dataRouter = createRouter({
       if (validRecords.length === 0 && errors.length > 0) {
         await assertActivePractice(ctx);
         return ctx.db.transaction(async (tx) => {
-          await tx.execute(sql`set transaction isolation level serializable`);
+          // See the client import path: the outer tenant transaction has
+          // already begun, so serialization is practice-row based here.
           const migrationDb = tx as unknown as Database;
           await lockMigrationPractice(migrationDb, ctx.practiceId);
           const summary: MigrationPreviewSummary = {
@@ -2804,7 +3311,7 @@ export const dataRouter = createRouter({
 
       await assertActivePractice(ctx);
       return ctx.db.transaction(async (tx) => {
-        await tx.execute(sql`set transaction isolation level serializable`);
+        // The practice lock below is the canonical import serialization point.
         const migrationDb = tx as unknown as Database;
         await lockMigrationPractice(migrationDb, ctx.practiceId);
         const { plan, combinedErrors, summary, reviewedPlan } =
@@ -2919,7 +3426,7 @@ export const dataRouter = createRouter({
       if (validRecords.length === 0 && errors.length > 0) {
         await assertActivePractice(ctx);
         return ctx.db.transaction(async (tx) => {
-          await tx.execute(sql`set transaction isolation level serializable`);
+          // The protected procedure already established the tenant transaction.
           const migrationDb = tx as unknown as Database;
           await lockMigrationPractice(migrationDb, ctx.practiceId);
           const summary: MigrationPreviewSummary = {
@@ -2987,7 +3494,7 @@ export const dataRouter = createRouter({
 
       await assertActivePractice(ctx);
       return ctx.db.transaction(async (tx) => {
-        await tx.execute(sql`set transaction isolation level serializable`);
+        // The practice lock below serializes the reviewed preview and commit.
         const migrationDb = tx as unknown as Database;
         await lockMigrationPractice(migrationDb, ctx.practiceId);
         const { plan, combinedErrors, summary, reviewedPlan } =
@@ -3074,7 +3581,7 @@ export const dataRouter = createRouter({
       if (validRecords.length === 0 && errors.length > 0) {
         await assertActivePractice(ctx);
         return ctx.db.transaction(async (tx) => {
-          await tx.execute(sql`set transaction isolation level serializable`);
+          // The protected procedure already established the tenant transaction.
           const migrationDb = tx as unknown as Database;
           await lockMigrationPractice(migrationDb, ctx.practiceId);
           const summary: MigrationPreviewSummary = {
@@ -3142,7 +3649,7 @@ export const dataRouter = createRouter({
 
       await assertActivePractice(ctx);
       return ctx.db.transaction(async (tx) => {
-        await tx.execute(sql`set transaction isolation level serializable`);
+        // The practice lock below serializes the reviewed preview and commit.
         const migrationDb = tx as unknown as Database;
         await lockMigrationPractice(migrationDb, ctx.practiceId);
         const { plan, combinedErrors, summary, reviewedPlan } =
@@ -3215,6 +3722,229 @@ export const dataRouter = createRouter({
           imported: plan.rows.length,
           errors: combinedErrors,
         };
+      });
+    }),
+
+  /**
+   * General internal care reminders. Importing creates no communications and
+   * never changes SMS/email consent; staff must review each task in OpenVPM.
+   */
+  importCareRemindersCsv: adminProcedure
+    .input(importCsvInput)
+    .mutation(async ({ ctx, input }) => {
+      requireValidImportIntent(input);
+      const { records, errors } = csvToCareReminderRecords(input.csv);
+      const validRecords = parseCareReminderImportRecords(records);
+
+      if (validRecords.length === 0 && errors.length > 0) {
+        await assertActivePractice(ctx);
+        return ctx.db.transaction(async (tx) => {
+          const migrationDb = tx as unknown as Database;
+          await lockMigrationPractice(migrationDb, ctx.practiceId);
+          const summary: MigrationPreviewSummary = {
+            sourceRowCount: 0,
+            plannedInsertCount: 0,
+            errorCount: errors.length,
+          };
+          const reviewedPlan: MigrationReviewedPlan = {
+            plannerVersion: CARE_REMINDER_IMPORT_PLANNER_VERSION,
+            dispositions: [],
+            targets: [],
+          };
+          if (input.dryRun) {
+            const previewToken = await createCsvImportPreview(
+              ctx,
+              input,
+              "care_reminders",
+              summary,
+              reviewedPlan,
+              migrationDb,
+            );
+            return {
+              dryRun: true as const,
+              previewToken,
+              total: 0,
+              willInsert: 0,
+              unmatchedPatient: 0,
+              duplicates: 0,
+              errors,
+            };
+          }
+          if (!input.previewToken) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "This CSV has no importable care reminder rows. Check it again.",
+            });
+          }
+          const claim = await claimCsvImportPreview(
+            migrationDb,
+            ctx.practiceId,
+            input,
+            "care_reminders",
+            summary,
+            reviewedPlan,
+          );
+          if (claim.alreadyCommitted) {
+            return {
+              imported: claim.importedCount,
+              errors,
+              alreadyCommitted: true as const,
+              migrationRunId: input.previewToken,
+            };
+          }
+          await finishCsvImportRun(
+            migrationDb,
+            ctx.practiceId,
+            input.previewToken,
+            0,
+            ctx.user.id,
+          );
+          return { imported: 0, errors };
+        });
+      }
+
+      await assertActivePractice(ctx);
+      return ctx.db.transaction(async (tx) => {
+        const migrationDb = tx as unknown as Database;
+        await lockMigrationPractice(migrationDb, ctx.practiceId);
+        const { plan, combinedErrors, summary, reviewedPlan } =
+          await loadCareReminderCsvPlan(
+            migrationDb,
+            ctx.practiceId,
+            validRecords,
+            input.source,
+            errors,
+          );
+
+        if (input.dryRun) {
+          const previewToken = await createCsvImportPreview(
+            ctx,
+            input,
+            "care_reminders",
+            summary,
+            reviewedPlan,
+            migrationDb,
+          );
+          return {
+            dryRun: true as const,
+            previewToken,
+            total: validRecords.length,
+            willInsert: plan.rows.length,
+            unmatchedPatient: plan.unmatchedPatient,
+            duplicates: plan.duplicates,
+            errors: combinedErrors,
+          };
+        }
+
+        const claim = await claimCsvImportPreview(
+          migrationDb,
+          ctx.practiceId,
+          input,
+          "care_reminders",
+          summary,
+          reviewedPlan,
+        );
+        if (claim.alreadyCommitted) {
+          return {
+            imported: claim.importedCount,
+            errors: [] as string[],
+            alreadyCommitted: true as const,
+            migrationRunId: input.previewToken!,
+          };
+        }
+        if (plan.rows.length > 0) {
+          await tx.insert(careReminders).values(
+            plan.rows.map((reminder) => ({
+              ...reminder,
+              practiceId: ctx.practiceId,
+            })),
+          );
+        }
+        await finishCsvImportRun(
+          migrationDb,
+          ctx.practiceId,
+          input.previewToken!,
+          plan.rows.length,
+          ctx.user.id,
+        );
+        return { imported: plan.rows.length, errors: combinedErrors };
+      });
+    }),
+
+  /** Import billable services only. Stock-bearing products are intentionally
+   * excluded until their inventory semantics are explicitly supported. */
+  importServicesCsv: adminProcedure
+    .input(importCsvInput)
+    .mutation(async ({ ctx, input }) => {
+      requireValidImportIntent(input);
+      const { records, errors } = csvToServiceRecords(input.csv);
+      const validRecords = parseServiceImportRecords(records);
+
+      await assertActivePractice(ctx);
+      return ctx.db.transaction(async (tx) => {
+        const migrationDb = tx as unknown as Database;
+        await lockMigrationPractice(migrationDb, ctx.practiceId);
+        const { plan, combinedErrors, summary, reviewedPlan } =
+          await loadServiceCsvPlan(
+            migrationDb,
+            ctx.practiceId,
+            validRecords,
+            input.source,
+            errors,
+          );
+
+        if (input.dryRun) {
+          const previewToken = await createCsvImportPreview(
+            ctx,
+            input,
+            "services",
+            summary,
+            reviewedPlan,
+            migrationDb,
+          );
+          return {
+            dryRun: true as const,
+            previewToken,
+            total: validRecords.length,
+            willInsert: plan.rows.length,
+            duplicates: plan.duplicates,
+            errors: combinedErrors,
+          };
+        }
+
+        const claim = await claimCsvImportPreview(
+          migrationDb,
+          ctx.practiceId,
+          input,
+          "services",
+          summary,
+          reviewedPlan,
+        );
+        if (claim.alreadyCommitted) {
+          return {
+            imported: claim.importedCount,
+            errors: [] as string[],
+            alreadyCommitted: true as const,
+            migrationRunId: input.previewToken!,
+          };
+        }
+        if (plan.rows.length > 0) {
+          await tx.insert(services).values(
+            plan.rows.map((service) => ({
+              ...service,
+              practiceId: ctx.practiceId,
+            })),
+          );
+        }
+        await finishCsvImportRun(
+          migrationDb,
+          ctx.practiceId,
+          input.previewToken!,
+          plan.rows.length,
+          ctx.user.id,
+        );
+        return { imported: plan.rows.length, errors: combinedErrors };
       });
     }),
 });

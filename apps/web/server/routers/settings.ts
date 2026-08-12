@@ -1635,6 +1635,12 @@ export const settingsRouter = createRouter({
           .filter((run) => run.source === latestMigrationSource)
           .map((run) =>
             run.mode === "soap_notes" ? ("soapNotes" as const) : run.mode,
+          )
+          .filter(
+            (
+              mode,
+            ): mode is "clients" | "patients" | "vaccinations" | "soapNotes" =>
+              mode !== "care_reminders" && mode !== "services",
           ),
       ),
     );
@@ -2267,9 +2273,7 @@ export const settingsRouter = createRouter({
       if (!practice) {
         throw practiceNotFound();
       }
-      if (
-        !(await lockPracticeForExternalSideEffects(ctx.db, ctx.practiceId))
-      ) {
+      if (!(await lockPracticeForExternalSideEffects(ctx.db, ctx.practiceId))) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: RECOVERY_HOLD_BLOCK_MESSAGE,

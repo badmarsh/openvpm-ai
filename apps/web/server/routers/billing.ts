@@ -1144,6 +1144,36 @@ function stockOwnedItems(
     }));
 }
 
+async function trackedStockOwnedItems(
+  ctx: BillingContext,
+  items: readonly InvoiceLineInput[]
+): Promise<DispensableItem[]> {
+  const candidates = stockOwnedItems(items);
+  const productIds = [
+    ...new Set(
+      candidates
+        .filter((item) => item.itemType === "product" && item.itemId)
+        .map((item) => item.itemId!)
+    ),
+  ];
+  if (productIds.length === 0) return candidates;
+  const trackedRows = await ctx.db
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        inArray(products.id, productIds),
+        eq(products.practiceId, ctx.practiceId),
+        eq(products.inventoryTracked, true),
+        isNull(products.deletedAt)
+      )
+    );
+  const trackedIds = new Set(trackedRows.map((row) => row.id));
+  return candidates.filter(
+    (item) => item.itemType !== "product" || trackedIds.has(item.itemId ?? "")
+  );
+}
+
 async function assertPrescriptionChargeSources(
   ctx: BillingContext,
   items: readonly InvoiceLineInput[],
@@ -1556,6 +1586,7 @@ async function deductProductStock(
         and(
           eq(products.id, deduction.productId),
           eq(products.practiceId, ctx.practiceId),
+          eq(products.inventoryTracked, true),
           isNull(products.deletedAt),
           sql`${products.stockQuantity} >= ${deduction.quantity}`
         )
@@ -1582,6 +1613,15 @@ async function invoiceProductItemsForStock(
       quantity: invoiceItems.quantity,
     })
     .from(invoiceItems)
+    .innerJoin(
+      products,
+      and(
+        eq(invoiceItems.itemId, products.id),
+        eq(products.practiceId, ctx.practiceId),
+        eq(products.inventoryTracked, true),
+        isNull(products.deletedAt)
+      )
+    )
     .where(
       and(
         eq(invoiceItems.invoiceId, invoiceId),
@@ -1608,6 +1648,7 @@ async function restoreProductStock(
         and(
           eq(products.id, restoration.productId),
           eq(products.practiceId, ctx.practiceId),
+          eq(products.inventoryTracked, true),
           isNull(products.deletedAt),
           sql`${products.stockQuantity} + ${restoration.quantity} <= ${POSTGRES_INTEGER_MAX}`
         )
@@ -2864,7 +2905,10 @@ export const billingRouter = createRouter({
           isEstimate: input.isEstimate ?? false,
         });
         if (!(input.isEstimate ?? false)) {
-          await deductProductStock(txCtx, stockOwnedItems(input.items));
+          await deductProductStock(
+            txCtx,
+            await trackedStockOwnedItems(txCtx, input.items)
+          );
         }
 
         const totals = invoiceLineTaxTotals(
@@ -3042,7 +3086,10 @@ export const billingRouter = createRouter({
           isEstimate: existing.isEstimate,
         });
         await restoreProductStock(txCtx, previousItems);
-        await deductProductStock(txCtx, stockOwnedItems(input.items));
+        await deductProductStock(
+          txCtx,
+          await trackedStockOwnedItems(txCtx, input.items)
+        );
 
         const totals = invoiceLineTaxTotals(
           input.items,

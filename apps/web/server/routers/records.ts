@@ -733,6 +733,7 @@ async function assertDispensedProductBelongsToPractice(
       id: products.id,
       name: products.name,
       unitPrice: products.unitPrice,
+      inventoryTracked: products.inventoryTracked,
       stockQuantity: products.stockQuantity,
     })
     .from(products)
@@ -748,6 +749,13 @@ async function assertDispensedProductBelongsToPractice(
 
   if (!product) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+  }
+  if (!product.inventoryTracked) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Start stock tracking with a reviewed opening quantity before dispensing this product.",
+    });
   }
 
   return product;
@@ -811,6 +819,7 @@ async function deductDispensedProductStock(
       and(
         eq(products.id, productId),
         eq(products.practiceId, ctx.practiceId),
+        eq(products.inventoryTracked, true),
         activePracticePredicate(ctx.practiceId),
         isNull(products.deletedAt),
         sql`${products.stockQuantity} >= ${quantity}`
@@ -1863,6 +1872,7 @@ export const recordsRouter = createRouter({
           refillsRemaining: prescriptions.refillsRemaining,
           productId: prescriptions.productId,
           productName: products.name,
+          productInventoryTracked: products.inventoryTracked,
           productStockQuantity: products.stockQuantity,
           startDate: prescriptions.startDate,
           endDate: prescriptions.endDate,

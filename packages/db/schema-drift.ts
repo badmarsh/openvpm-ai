@@ -422,6 +422,151 @@ export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
       table: "sms_provider_event_resolutions",
       name,
     })),
+    ...[
+      "care_reminders_patient_tenant_fk",
+      "care_reminders_creator_tenant_fk",
+      "care_reminders_completer_tenant_fk",
+      "care_reminders_state_check",
+      "care_reminders_import_identity_check",
+    ].map((name) => ({
+      kind: "constraint" as const,
+      table: "care_reminders",
+      name,
+    })),
+    ...[
+      "care_reminders_external_id_uq",
+      "care_reminders_import_fingerprint_uq",
+      "care_reminders_open_due_idx",
+    ].map((name) => ({
+      kind: "index" as const,
+      table: "care_reminders",
+      name,
+    })),
+    {
+      kind: "rls_policy",
+      table: "care_reminders",
+      name: "tenant_isolation",
+    },
+    ...[
+      "services_import_identity_check",
+      "services_import_fingerprint_check",
+      "services_external_source_check",
+    ].map((name) => ({
+      kind: "constraint" as const,
+      table: "services",
+      name,
+    })),
+    ...["services_external_id_uq", "services_import_fingerprint_uq"].map(
+      (name) => ({
+        kind: "index" as const,
+        table: "services",
+        name,
+      }),
+    ),
+    ...[
+      "client_contacts",
+      "historical_appointments",
+      "external_prescriptions",
+      "external_prescription_fills",
+      "external_lab_reports",
+      "external_lab_observations",
+      "legacy_financial_documents",
+      "legacy_financial_line_items",
+      "legacy_financial_payments",
+      "legacy_financial_allocations",
+      "historical_documents",
+    ].map((table) => ({
+      kind: "rls_policy" as const,
+      table,
+      name: "tenant_isolation",
+    })),
+    ...[
+      ["client_contacts", "client_contacts_client_tenant_fk"],
+      [
+        "historical_appointments",
+        "historical_appointments_patient_tenant_fk",
+      ],
+      [
+        "historical_appointments",
+        "historical_appointments_client_tenant_fk",
+      ],
+      [
+        "external_prescriptions",
+        "external_prescriptions_patient_tenant_fk",
+      ],
+      [
+        "external_prescription_fills",
+        "external_prescription_fills_prescription_tenant_fk",
+      ],
+      ["external_lab_reports", "external_lab_reports_patient_tenant_fk"],
+      [
+        "external_lab_observations",
+        "external_lab_observations_report_tenant_fk",
+      ],
+      [
+        "legacy_financial_documents",
+        "legacy_financial_documents_client_tenant_fk",
+      ],
+      [
+        "legacy_financial_line_items",
+        "legacy_financial_line_items_document_tenant_fk",
+      ],
+      [
+        "legacy_financial_payments",
+        "legacy_financial_payments_client_tenant_fk",
+      ],
+      [
+        "legacy_financial_allocations",
+        "legacy_financial_allocations_document_tenant_fk",
+      ],
+      [
+        "legacy_financial_allocations",
+        "legacy_financial_allocations_payment_tenant_fk",
+      ],
+      ["historical_documents", "historical_documents_file_tenant_fk"],
+      ["historical_documents", "historical_documents_link_shape_check"],
+      ["historical_documents", "historical_documents_kind_shape_check"],
+    ].map(([table, name]) => ({
+      kind: "constraint" as const,
+      table,
+      name,
+    })),
+    ...[
+      ["client_contacts", "client_contacts_external_id_uq"],
+      ["historical_appointments", "historical_appointments_external_id_uq"],
+      ["external_prescriptions", "external_prescriptions_external_id_uq"],
+      [
+        "external_prescription_fills",
+        "external_prescription_fills_external_id_uq",
+      ],
+      ["external_lab_reports", "external_lab_reports_external_id_uq"],
+      [
+        "external_lab_observations",
+        "external_lab_observations_external_id_uq",
+      ],
+      [
+        "legacy_financial_documents",
+        "legacy_financial_documents_external_id_uq",
+      ],
+      [
+        "legacy_financial_line_items",
+        "legacy_financial_line_items_external_id_uq",
+      ],
+      [
+        "legacy_financial_payments",
+        "legacy_financial_payments_external_id_uq",
+      ],
+      [
+        "legacy_financial_allocations",
+        "legacy_financial_allocations_external_id_uq",
+      ],
+      ["historical_documents", "historical_documents_external_id_uq"],
+      ["historical_documents", "historical_documents_file_uq"],
+    ].map(([table, name]) => ({
+      kind: "index" as const,
+      table,
+      name,
+    })),
   ];
 
   return objects;

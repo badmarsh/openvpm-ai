@@ -13,10 +13,14 @@ import {
 } from "@/lib/file-replication";
 import { UPLOAD_FILE_MAX_BYTES } from "@/lib/upload-limits";
 
-export type ManagedUploadCategory = "branding" | "patient-photos" | "consents";
-export type DashboardUploadCategory = Exclude<
+export type ManagedUploadCategory =
+  | "branding"
+  | "patient-photos"
+  | "consents"
+  | "documents";
+export type DashboardUploadCategory = Extract<
   ManagedUploadCategory,
-  "consents"
+  "branding" | "patient-photos"
 >;
 
 export class ManagedUploadConflictError extends Error {

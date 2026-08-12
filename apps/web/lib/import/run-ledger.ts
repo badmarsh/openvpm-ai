@@ -16,7 +16,20 @@ export type MigrationRunMode =
   | "clients"
   | "patients"
   | "vaccinations"
-  | "soap_notes";
+  | "soap_notes"
+  | "care_reminders"
+  | "services"
+  | "client_contacts"
+  | "historical_appointments"
+  | "external_prescriptions"
+  | "external_prescription_fills"
+  | "external_lab_reports"
+  | "external_lab_observations"
+  | "legacy_financial_documents"
+  | "legacy_financial_line_items"
+  | "legacy_financial_payments"
+  | "legacy_financial_allocations"
+  | "historical_documents";
 
 export type MigrationPreviewSummary = {
   sourceRowCount: number;
@@ -37,7 +50,24 @@ export type MigrationReviewedTarget = {
 
 export type MigrationReviewedDisposition = {
   rowIndex: number;
-  entityKind: "client" | "patient" | "vaccination" | "soap_note";
+  entityKind:
+    | "client"
+    | "patient"
+    | "vaccination"
+    | "soap_note"
+    | "care_reminder"
+    | "service"
+    | "client_contact"
+    | "historical_appointment"
+    | "external_prescription"
+    | "external_prescription_fill"
+    | "external_lab_report"
+    | "external_lab_observation"
+    | "legacy_financial_document"
+    | "legacy_financial_line_item"
+    | "legacy_financial_payment"
+    | "legacy_financial_allocation"
+    | "historical_document";
   action:
     | "insert"
     | "reconcile"

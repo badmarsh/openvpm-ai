@@ -209,10 +209,10 @@ export const inventoryRouter = createRouter({
         await practiceTimeZone(ctx)
       );
       const soonYmd = addDaysYmd(todayYmd, 90);
-      const lowStockCondition = sql`${products.stockQuantity} <= coalesce(${products.reorderPoint}, 10)`;
-      const expiredCondition = sql`${products.expirationDate} is not null and ${products.expirationDate} < ${todayYmd}`;
-      const expiringSoonCondition = sql`${products.expirationDate} is not null and ${products.expirationDate} >= ${todayYmd} and ${products.expirationDate} <= ${soonYmd}`;
-      const attentionCondition = sql`(${lowStockCondition} or (${products.expirationDate} is not null and ${products.expirationDate} <= ${soonYmd}))`;
+      const lowStockCondition = sql`${products.inventoryTracked} and ${products.stockQuantity} <= coalesce(${products.reorderPoint}, 10)`;
+      const expiredCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} < ${todayYmd}`;
+      const expiringSoonCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} >= ${todayYmd} and ${products.expirationDate} <= ${soonYmd}`;
+      const attentionCondition = sql`(${lowStockCondition} or (${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} <= ${soonYmd}))`;
 
       const baseConditions: SQL[] = [
         eq(products.practiceId, ctx.practiceId),
@@ -301,6 +301,7 @@ export const inventoryRouter = createRouter({
           unitPrice: input.unitPrice,
           taxable: input.taxable,
           costPrice: input.costPrice ?? null,
+          inventoryTracked: true,
           stockQuantity: input.stockQuantity,
           reorderPoint: input.reorderPoint,
           lotNumber: input.lotNumber ?? null,
@@ -351,6 +352,49 @@ export const inventoryRouter = createRouter({
       return product;
     }),
 
+  startTracking: inventoryManagerProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        stockQuantity: nonnegativeIntegerColumnInput,
+        reorderPoint: nonnegativeIntegerColumnInput.default(10),
+        lotNumber: optionalTrimmedString(
+          "Lot number",
+          INVENTORY_PRODUCT_LOT_NUMBER_MAX_LENGTH
+        ),
+        expirationDate: clinicalDateInput("Expiration date").optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [product] = await ctx.db
+        .update(products)
+        .set({
+          inventoryTracked: true,
+          stockQuantity: input.stockQuantity,
+          reorderPoint: input.reorderPoint,
+          lotNumber: input.lotNumber ?? null,
+          expirationDate: input.expirationDate ?? null,
+        })
+        .where(
+          and(
+            eq(products.id, input.id),
+            eq(products.practiceId, ctx.practiceId),
+            eq(products.inventoryTracked, false),
+            activePracticePredicate(ctx.practiceId),
+            isNull(products.deletedAt)
+          )
+        )
+        .returning();
+      if (!product) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "This product is unavailable or stock tracking has already started. Refresh and try again.",
+        });
+      }
+      return product;
+    }),
+
   adjustStock: inventoryManagerProcedure
     .input(
       z.object({
@@ -366,6 +410,7 @@ export const inventoryRouter = createRouter({
       const [current] = await ctx.db
         .select({
           id: products.id,
+          inventoryTracked: products.inventoryTracked,
           stockQuantity: products.stockQuantity,
         })
         .from(products)
@@ -383,6 +428,14 @@ export const inventoryRouter = createRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Product not found",
+        });
+      }
+
+      if (current.inventoryTracked === false) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Start stock tracking with a reviewed opening quantity before recording adjustments.",
         });
       }
 
@@ -408,6 +461,7 @@ export const inventoryRouter = createRouter({
           and(
             eq(products.id, input.id),
             eq(products.practiceId, ctx.practiceId),
+            eq(products.inventoryTracked, true),
             activePracticePredicate(ctx.practiceId),
             isNull(products.deletedAt),
             sql`${products.stockQuantity} + ${input.adjustment} >= 0`,

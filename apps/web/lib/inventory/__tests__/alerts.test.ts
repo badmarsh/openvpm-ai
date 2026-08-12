@@ -68,4 +68,22 @@ describe("inventory alerts", () => {
       )
     ).toMatchObject({ stockStatus: "ok", expirationStatus: "ok", needsAttention: false });
   });
+
+  it("does not invent stock or expiry alerts for untracked catalog rows", () => {
+    expect(
+      inventoryAlert(
+        {
+          inventoryTracked: false,
+          stockQuantity: 0,
+          reorderPoint: null,
+          expirationDate: null,
+        },
+        TODAY
+      )
+    ).toEqual({
+      stockStatus: "not_tracked",
+      expirationStatus: "none",
+      needsAttention: false,
+    });
+  });
 });

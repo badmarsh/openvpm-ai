@@ -86,6 +86,7 @@ function createDb(
     const rows = thenableRows(result);
     const builder = {
       from: vi.fn(() => builder),
+      innerJoin: vi.fn(() => builder),
       where: vi.fn(() => rows),
     };
     return builder;
@@ -362,9 +363,10 @@ describe("data import duplicate handling", () => {
       db,
       expect.objectContaining({ importedCount: 0, reconciledCount: 0 }),
     );
-    // Tenant scoping, SERIALIZABLE isolation, and the deferred-constraint
-    // flush all execute inside the same transaction before commit.
-    expect(execute).toHaveBeenCalledTimes(3);
+    // Tenant scoping and the deferred-constraint flush execute inside the
+    // already-open request transaction. Import serialization is the practice
+    // row lock, not a too-late SET TRANSACTION statement.
+    expect(execute).toHaveBeenCalledTimes(2);
     expect(insertValues).not.toHaveBeenCalled();
   });
 
@@ -781,6 +783,7 @@ describe("data import duplicate handling", () => {
         dob: "2021-03-04",
         color: "Black",
         microchipNumber: "985112003009999",
+        status: "active",
         importFingerprint: expect.stringMatching(/^[0-9a-f]{64}$/),
       },
     ]);
@@ -907,6 +910,41 @@ describe("data import duplicate handling", () => {
       }),
     ]);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("preserves distinct source charts that share a weak patient identity", async () => {
+    const { db, insertValues } = createDb([
+      [
+        {
+          id: CLIENT_ID,
+          email: "owner@example.com",
+          externalSource: "shepherd",
+          externalId: "C-42",
+          deletedAt: null,
+        },
+      ],
+      [],
+    ]);
+
+    const result = await callerWithDb(db).importPatientsCsv({
+      csv: [
+        "Client ID,Patient ID,Patient Name,Species,DOB",
+        "C-42,P-1,Rex,Dog,2020-01-01",
+        "C-42,P-2,Rex,Dog,2020-01-01",
+      ].join("\n"),
+      source: "shepherd",
+      dryRun: false,
+      previewToken: PREVIEW_TOKEN,
+    });
+
+    expect(result).toMatchObject({ imported: 2, reconciled: 0, errors: [] });
+    const calls = insertValues.mock.calls as unknown as Array<[unknown]>;
+    const inserted = calls[0]?.[0] as Array<{
+      externalId: string;
+      importFingerprint: string;
+    }>;
+    expect(inserted.map((row) => row.externalId)).toEqual(["P-1", "P-2"]);
+    expect(new Set(inserted.map((row) => row.importFingerprint)).size).toBe(2);
   });
 
   it("requires a strong patient match before attaching a durable external ID", async () => {
@@ -1181,7 +1219,7 @@ describe("data import duplicate handling", () => {
       db,
       expect.objectContaining({ importedCount: 0, reconciledCount: 0 }),
     );
-    expect(execute).toHaveBeenCalledTimes(3);
+    expect(execute).toHaveBeenCalledTimes(2);
     expect(insertValues).not.toHaveBeenCalled();
   });
 
@@ -1616,5 +1654,104 @@ describe("data import duplicate handling", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(insertValues).not.toHaveBeenCalled();
+  });
+
+  it("previews source-scoped care reminders without sending or writing", async () => {
+    const { db, insertValues } = createDb([
+      [
+        {
+          id: PATIENT_ID,
+          name: "Synthetic Pet",
+          externalSource: "shepherd",
+          externalId: "pet-1",
+          clientEmail: "owner@example.com",
+          clientExternalSource: "shepherd",
+          clientExternalId: "owner-1",
+          updatedAt: new Date("2026-08-11T12:00:00.000Z"),
+          isDemoClient: false,
+          isDemoPatient: false,
+        },
+      ],
+      [],
+    ]);
+
+    const result = await callerWithDb(db).importCareRemindersCsv({
+      csv: [
+        "Reminder ID,Patient ID,Reminder,Date Due",
+        "task-1,pet-1,Recheck mobility,2026-09-03",
+      ].join("\n"),
+      source: "shepherd",
+      dryRun: true,
+      migrationProtocol: "reviewed-v1",
+    });
+
+    expect(result).toMatchObject({
+      dryRun: true,
+      total: 1,
+      willInsert: 1,
+      unmatchedPatient: 0,
+      duplicates: 0,
+      errors: [],
+    });
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(
+      migrationRunMocks.createMigrationPreview.mock.calls.at(-1)?.[1],
+    ).toMatchObject({
+      mode: "care_reminders",
+      reviewedPlan: {
+        plannerVersion: "care-reminders-v1",
+        dispositions: [
+          { rowIndex: 0, entityKind: "care_reminder", action: "insert" },
+        ],
+      },
+    });
+  });
+
+  it("previews source-scoped services and rejects ambiguous source names", async () => {
+    const { db, insertValues, execute } = createDb([[]]);
+
+    const result = await callerWithDb(db).importServicesCsv({
+      csv: [
+        "Service ID,Name,Category,Price,Taxable",
+        "svc-1,Wellness exam,Exams,75.00,false",
+        "svc-2,Duplicate service,Exams,10.00,false",
+        "svc-3,duplicate  service,Exams,20.00,false",
+      ].join("\n"),
+      source: "shepherd",
+      dryRun: true,
+      migrationProtocol: "reviewed-v1",
+    });
+
+    expect(result).toMatchObject({
+      dryRun: true,
+      total: 3,
+      willInsert: 1,
+      duplicates: 0,
+      errors: [
+        expect.stringMatching(/Multiple source services/),
+        expect.stringMatching(/Multiple source services/),
+      ],
+    });
+    expect(execute).toHaveBeenCalled();
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(
+      migrationRunMocks.createMigrationPreview.mock.calls.at(-1)?.[1],
+    ).toMatchObject({
+      mode: "services",
+      summary: {
+        sourceRowCount: 3,
+        plannedInsertCount: 1,
+        duplicateCount: 0,
+        errorCount: 2,
+      },
+      reviewedPlan: {
+        plannerVersion: "services-v1",
+        dispositions: [
+          { rowIndex: 0, entityKind: "service", action: "insert" },
+          { rowIndex: 1, entityKind: "service", action: "error" },
+          { rowIndex: 2, entityKind: "service", action: "error" },
+        ],
+      },
+    });
   });
 });

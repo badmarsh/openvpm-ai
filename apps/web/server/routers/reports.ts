@@ -315,6 +315,7 @@ export const reportsRouter = createRouter({
 
     const baseConds = [
       eq(products.practiceId, ctx.practiceId),
+      eq(products.inventoryTracked, true),
       activePracticePredicate(ctx.practiceId),
       isNull(products.deletedAt),
     ];
