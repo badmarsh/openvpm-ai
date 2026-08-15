@@ -184,7 +184,7 @@ export default function InboxPage() {
   const [linkClientSearch, setLinkClientSearch] = useState("");
 
   // Compose form state
-  const [composeChannel, setComposeChannel] = useState<Channel>("email");
+  const [composeChannel, setComposeChannel] = useState<Channel>("portal");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeContent, setComposeContent] = useState("");
 
@@ -299,13 +299,13 @@ export default function InboxPage() {
     }
   }, [inboxSettingsError, inboxSettingsMissing]);
 
-  const smsComposeRequest = useRef<{
+  const externalComposeRequest = useRef<{
     fingerprint: string;
     requestId: string;
   } | null>(null);
   const createMutation = trpc.communications.create.useMutation({
     onSuccess: () => {
-      smsComposeRequest.current = null;
+      externalComposeRequest.current = null;
       toast.success("Message sent");
       utils.communications.listConversations.invalidate();
       if (selectedClientId) {
@@ -318,7 +318,7 @@ export default function InboxPage() {
     },
     onError: (err) => {
       if (err.data?.code === "BAD_REQUEST") {
-        smsComposeRequest.current = null;
+        externalComposeRequest.current = null;
       }
       toast.error(err.message);
       utils.communications.listConversations.invalidate();
@@ -495,15 +495,15 @@ export default function InboxPage() {
     const trimmedContent = composeContent.trim();
     const trimmedSubject = composeSubject.trim();
     let requestId: string | undefined;
-    if (composeChannel === "sms") {
-      const fingerprint = `${selectedClientId}\u0000${trimmedContent}`;
-      if (smsComposeRequest.current?.fingerprint !== fingerprint) {
-        smsComposeRequest.current = {
+    if (composeChannel === "sms" || composeChannel === "email") {
+      const fingerprint = `${composeChannel}\u0000${selectedClientId}\u0000${trimmedSubject}\u0000${trimmedContent}`;
+      if (externalComposeRequest.current?.fingerprint !== fingerprint) {
+        externalComposeRequest.current = {
           fingerprint,
           requestId: crypto.randomUUID(),
         };
       }
-      requestId = smsComposeRequest.current.requestId;
+      requestId = externalComposeRequest.current.requestId;
     }
     createMutation.mutate({
       clientId: selectedClientId,
@@ -518,7 +518,7 @@ export default function InboxPage() {
 
   function handleNewMessage() {
     if (!canMutateInbox) return;
-    smsComposeRequest.current = null;
+    externalComposeRequest.current = null;
     setNewMessageMode(true);
     setSelectedClientId(null);
     setSelectedClientName("");
@@ -1177,7 +1177,6 @@ export default function InboxPage() {
                     className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                   >
                     <option value="sms">SMS</option>
-                    <option value="email">Email</option>
                     <option value="portal">Portal</option>
                   </select>
 
@@ -1217,12 +1216,6 @@ export default function InboxPage() {
                   <p className="text-xs text-muted-foreground">
                     Unable to check texting setup. Retry from the inbox banner
                     before sending SMS.
-                  </p>
-                ) : composeChannel === "email" ? (
-                  <p className="text-xs text-muted-foreground">
-                    Outbound email is logged here. Replies go to the practice
-                    email when configured, but inbound email replies are not
-                    imported into OpenVPM yet.
                   </p>
                 ) : composeChannel === "portal" ? (
                   <p className="text-xs text-muted-foreground">
