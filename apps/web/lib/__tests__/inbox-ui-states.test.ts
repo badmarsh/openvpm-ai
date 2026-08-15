@@ -16,6 +16,10 @@ import {
 describe("inbox UI states", () => {
   const source = readFileSync("app/(dashboard)/inbox/page.tsx", "utf8");
   const routerSource = readFileSync("server/routers/communications.ts", "utf8");
+  const outboundEmailSecuritySource = readFileSync(
+    "lib/outbound-email-security.ts",
+    "utf8",
+  );
 
   it("keeps viewer access read-only for inbox writes", () => {
     expect(source).toContain('import { useSession } from "next-auth/react"');
@@ -247,6 +251,8 @@ describe("inbox UI states", () => {
       "const composeContentMaxLength = communicationContentMaxLength(",
     );
     expect(source).toContain('<option value="portal">Portal</option>');
+    expect(source).not.toContain('<option value="email">Email</option>');
+    expect(source).toContain('useState<Channel>("portal")');
     expect(source).toContain('composeChannel === "portal"');
     expect(source).toContain(
       "isCommunicationContentValid(composeContent, composeDeliveryChannel)",
@@ -266,32 +272,33 @@ describe("inbox UI states", () => {
     expect(source).not.toContain("{msg.status && (");
   });
 
-  it("keeps one client request ID across retries of the same SMS", () => {
-    expect(source).toContain("const smsComposeRequest = useRef<");
+  it("keeps one client request ID across retries of the same external message", () => {
+    expect(source).toContain("const externalComposeRequest = useRef<");
     expect(source).toContain("requestId: crypto.randomUUID()");
     expect(source).toContain(
-      "if (smsComposeRequest.current?.fingerprint !== fingerprint)",
+      "if (externalComposeRequest.current?.fingerprint !== fingerprint)",
     );
-    expect(source).toContain("requestId = smsComposeRequest.current.requestId");
+    expect(source).toContain(
+      "requestId = externalComposeRequest.current.requestId",
+    );
     expect(source).toContain("...(requestId ? { requestId } : {})");
-    expect(source).toContain("smsComposeRequest.current = null");
+    expect(source).toContain("externalComposeRequest.current = null");
     expect(routerSource).toContain(
-      "SMS request ID was already used for different message data.",
+      "Message request ID was already used for different message data.",
     );
     expect(routerSource).toContain(
-      "`sms:inbox:${ctx.practiceId}:${input.requestId!}`",
+      "`${input.channel}:inbox:${ctx.practiceId}:${input.requestId!}`",
     );
   });
 
-  it("sets accurate expectations for outbound email replies", () => {
-    expect(source).toContain(
-      "Outbound email is logged here. Replies go to the practice",
+  it("does not expose free-form outbound email in the inbox composer", () => {
+    expect(source).not.toContain('<option value="email">Email</option>');
+    expect(source).not.toContain("Outbound email is logged here");
+    expect(routerSource).toContain(
+      'await assertOutboundEmailAllowed({',
     );
-    expect(source).toContain(
-      "inbound email replies are not\n                    imported into OpenVPM yet",
-    );
-    expect(source.indexOf('composeChannel === "email"')).toBeLessThan(
-      source.indexOf("smsComposeBlocked && smsSummary"),
+    expect(outboundEmailSecuritySource).toContain(
+      'if (context.operation === "inbox")',
     );
   });
 
