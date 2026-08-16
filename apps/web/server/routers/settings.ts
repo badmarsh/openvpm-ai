@@ -2345,7 +2345,7 @@ export const settingsRouter = createRouter({
       // serializes first invites and retries across practices, matching the
       // global unique-email boundary and ensuring only the newest token stays
       // active. A token failure rolls back a newly inserted staff seat.
-      const { user, token } = await ctx.db
+      const preparedIdentity = await ctx.db
         .transaction(async (tx) => {
           await tx.execute(
             sql`select pg_advisory_xact_lock(hashtext(${staffInviteLockKey(
@@ -2386,10 +2386,11 @@ export const settingsRouter = createRouter({
               Boolean(priorInvite);
 
             if (!isPendingInviteRetry) {
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "A user with that email already exists.",
-              });
+              // Returning a typed conflict keeps this expected outcome intact
+              // across database transaction adapters that may wrap thrown
+              // application errors. The caller translates it to a stable
+              // public CONFLICT after the transaction releases its email lock.
+              return { ok: false as const };
             }
             user = { id: existing.id, email: existing.email };
           } else {
@@ -2441,7 +2442,7 @@ export const settingsRouter = createRouter({
             type: "invite",
             db: tx as unknown as Database,
           });
-          return { user, token };
+          return { ok: true as const, user, token };
         })
         .catch((error) => {
           if (error instanceof TRPCError) throw error;
@@ -2452,6 +2453,13 @@ export const settingsRouter = createRouter({
               "The staff invitation could not be prepared. Please retry in a moment.",
           });
         });
+      if (!preparedIdentity.ok) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A user with that email already exists.",
+        });
+      }
+      const { user, token } = preparedIdentity;
       const inviteUrl = `${appBaseUrl()}/accept-invite?token=${token}`;
 
       // Keep the pending seat synchronized even when delivery is refused. A
@@ -2753,6 +2761,11 @@ export const settingsRouter = createRouter({
             message: "Staff member changed. Refresh and try again.",
           });
         }
+
+        // Deactivation must revoke every outstanding credential in the same
+        // transaction as the user row. Otherwise a pending invite, reset, or
+        // verification link could become usable after a later restoration.
+        await tx.delete(authTokens).where(eq(authTokens.userId, input.id));
       });
       await syncBillingAfterStaffChange(ctx.db, ctx.practiceId);
       return { success: true };
