@@ -11,9 +11,8 @@ vi.mock("@/lib/billing/subscription-sync", () => ({
 }));
 
 const { settingsRouter } = await import("../routers/settings");
-const { syncPracticeSubscriptionQuantities } = await import(
-  "@/lib/billing/subscription-sync"
-);
+const { syncPracticeSubscriptionQuantities } =
+  await import("@/lib/billing/subscription-sync");
 
 function callerWithDb(db: Record<string, unknown>) {
   const session = {
@@ -103,6 +102,9 @@ describe("settings staff billing sync", () => {
             ]),
           })),
         })),
+      })),
+      delete: vi.fn(() => ({
+        where: vi.fn(async () => undefined),
       })),
     });
 
