@@ -106,6 +106,8 @@ function createDb(opts?: {
   const insertReturning = vi.fn(async () => opts?.insertedRows ?? []);
   const insertValues = vi.fn(() => ({ returning: insertReturning }));
   const insert = vi.fn(() => ({ values: insertValues }));
+  const deleteWhere = vi.fn(async () => undefined);
+  const deleteFrom = vi.fn(() => ({ where: deleteWhere }));
 
   const transaction = vi.fn(async (fn: (tx: unknown) => unknown) => fn(db));
   const execute = vi.fn(async () => undefined);
@@ -115,9 +117,18 @@ function createDb(opts?: {
     select,
     update,
     insert,
+    delete: deleteFrom,
   };
 
-  return { db, transaction, execute, updateSet, insertValues };
+  return {
+    db,
+    transaction,
+    execute,
+    updateSet,
+    insertValues,
+    deleteFrom,
+    deleteWhere,
+  };
 }
 
 beforeEach(() => {
@@ -453,7 +464,42 @@ describe("settings admin stale target safety", () => {
         password: "password123",
         role: "front_desk",
       }),
-    ).rejects.toMatchObject({ code: "CONFLICT" });
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "A user with that email already exists.",
+    });
+
+    expect(insertValues).not.toHaveBeenCalled();
+    expect(mocks.createAuthToken).not.toHaveBeenCalled();
+    expect(mocks.sendStaffInviteEmail).not.toHaveBeenCalled();
+  });
+
+  it("reports a cross-practice verified identity as a stable invite conflict", async () => {
+    const { db, insertValues } = createDb({
+      selectResults: [
+        [{ name: "Neighborhood Veterinary" }],
+        [
+          {
+            id: STAFF_ID,
+            email: "existing@example.com",
+            practiceId: "00000000-0000-0000-0000-0000000000bb",
+            emailVerifiedAt: new Date("2026-08-16T00:00:00Z"),
+            deletedAt: null,
+          },
+        ],
+        [],
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).inviteStaff({
+        email: "existing@example.com",
+        role: "viewer",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "A user with that email already exists.",
+    });
 
     expect(insertValues).not.toHaveBeenCalled();
     expect(syncPracticeSubscriptionQuantities).not.toHaveBeenCalled();
@@ -809,6 +855,21 @@ describe("settings admin stale target safety", () => {
     expect(syncPracticeSubscriptionQuantities).not.toHaveBeenCalled();
   });
 
+  it("revokes outstanding auth tokens atomically when staff are deactivated", async () => {
+    const { db, deleteFrom, deleteWhere } = createDb({
+      selectResults: [[{ id: STAFF_ID, role: "viewer" }], [], []],
+      updatedRows: [{ id: STAFF_ID }],
+    });
+
+    await expect(
+      callerWithDb(db).deactivateUser({ id: STAFF_ID }),
+    ).resolves.toEqual({ success: true });
+
+    expect(deleteFrom).toHaveBeenCalledTimes(1);
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
+    expect(syncPracticeSubscriptionQuantities).toHaveBeenCalledTimes(1);
+  });
+
   it("does not sync billing after stale staff restore", async () => {
     const { db, updateSet } = createDb({ updatedRows: [] });
 
@@ -1141,6 +1202,8 @@ describe("settings scheduling metadata delete safety", () => {
       "eq(staffSchedules.practiceId, ctx.practiceId)",
     );
     expect(deactivateBlock).toContain("isNull(staffSchedules.deletedAt)");
+    expect(deactivateBlock).toContain("tx.delete(authTokens)");
+    expect(deactivateBlock).toContain("eq(authTokens.userId, input.id)");
   });
 
   it("guards staff role demotions with an admin roster lock", () => {
