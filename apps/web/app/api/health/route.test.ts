@@ -84,8 +84,7 @@ vi.mock("@openpims/db/schema-drift", async () => {
 });
 
 vi.mock("@/lib/billing/plans", () => ({
-  STRIPE_PRICE_CLOUD_LOCATION_ANNUAL_ENV:
-    "STRIPE_PRICE_CLOUD_LOCATION_ANNUAL",
+  STRIPE_PRICE_CLOUD_LOCATION_ANNUAL_ENV: "STRIPE_PRICE_CLOUD_LOCATION_ANNUAL",
   STRIPE_PRICE_CLOUD_LOCATION_ENV: "STRIPE_PRICE_CLOUD_LOCATION",
   billingEnforced: mocks.billingEnforced,
 }));
@@ -154,8 +153,16 @@ function stubHostedRequiredEnvs() {
   vi.stubEnv("EMAIL_PREFERENCE_BASE_URL", "https://app.openvpm.com");
   vi.stubEnv("EMAIL_SUPPORT_ADDRESS", "support@openvpm.com");
   vi.stubEnv("EMAIL_COMPANY_ADDRESS", "123 Cloud Lane, Boston, MA");
-  vi.stubEnv("AI_MODEL", "gemini-2.5-flash");
-  vi.stubEnv("GOOGLE_API_KEY", "AIza-test");
+  vi.stubEnv("AI_MODEL", "gemini-3.5-flash");
+  vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
+  vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
+  vi.stubEnv("GCP_PROJECT_NUMBER", "123456789012");
+  vi.stubEnv(
+    "GCP_SERVICE_ACCOUNT_EMAIL",
+    "vertex@openvpm-ai.iam.gserviceaccount.com",
+  );
+  vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_ID", "vercel");
+  vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", "vercel");
   vi.stubEnv("CRON_SECRET", "cron-secret");
   vi.stubEnv("OPS_ALERT_WEBHOOK_URL", "https://ops.example/hook");
   vi.stubEnv("CRON_HEARTBEAT_URL", "https://heartbeat.example/{job}");
@@ -344,7 +351,7 @@ describe("health route", () => {
       detail: "Hosted subscription tax is not enabled",
     });
     expect(json.checks.hostedAi.detail).toBe(
-      "1 required hosted configuration value is missing",
+      "6 required hosted configuration values are missing",
     );
     expect(json.checks.hostedEmail.detail).toBe(
       "7 required hosted configuration values are missing",
@@ -364,8 +371,12 @@ describe("health route", () => {
     expect(body).not.toContain("EMAIL_SUPPORT_ADDRESS");
     expect(body).not.toContain("EMAIL_COMPANY_ADDRESS");
     expect(body).not.toContain("STRIPE_PRICE_CLOUD_USER");
-    expect(body).not.toContain("GOOGLE_API_KEY");
-    expect(body).not.toContain("GOOGLE_GENERATIVE_AI_API_KEY");
+    expect(body).not.toContain("GOOGLE_VERTEX_PROJECT");
+    expect(body).not.toContain("GOOGLE_VERTEX_LOCATION");
+    expect(body).not.toContain("GCP_PROJECT_NUMBER");
+    expect(body).not.toContain("GCP_SERVICE_ACCOUNT_EMAIL");
+    expect(body).not.toContain("GCP_WORKLOAD_IDENTITY_POOL_ID");
+    expect(body).not.toContain("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID");
     expect(body).not.toContain("TELNYX_API_KEY");
     expect(body).not.toContain("TELNYX_PUBLIC_KEY");
     expect(body).not.toContain("MESSAGING_REGISTRATION_ENCRYPTION_KEY");
@@ -839,12 +850,11 @@ describe("health route", () => {
     expect(body).not.toContain("123 Cloud Lane");
   });
 
-  it("ignores blank AI_MODEL values before selecting the hosted AI provider key", async () => {
+  it("ignores blank AI_MODEL values before selecting the hosted Vertex provider", async () => {
     mocks.billingEnforced.mockReturnValue(true);
     stubHostedRequiredEnvs();
     vi.stubEnv("AI_MODEL", "   ");
-    vi.stubEnv("AGENT_MODEL", " google/gemini-2.5-flash ");
-    vi.stubEnv("GOOGLE_API_KEY", "AIza-test");
+    vi.stubEnv("AGENT_MODEL", " google/gemini-3.5-flash ");
     vi.stubEnv("ANTHROPIC_API_KEY", "");
 
     const response = await GET();
@@ -853,31 +863,29 @@ describe("health route", () => {
     expect(response.status).toBe(200);
     expect(json.checks.hostedAi).toEqual({
       ok: true,
-      detail: "Hosted AI envs present",
+      detail: "Hosted Vertex AI envs present",
     });
     expect(JSON.stringify(json)).not.toContain("ANTHROPIC_API_KEY");
   });
 
-  it("accepts the legacy Google Generative AI key for hosted Gemini readiness", async () => {
+  it("fails closed when any required Vertex workload identity value is blank", async () => {
     mocks.billingEnforced.mockReturnValue(true);
     stubHostedRequiredEnvs();
-    vi.stubEnv("AI_MODEL", "google/gemini-2.5-flash");
-    vi.stubEnv("GOOGLE_API_KEY", "   ");
-    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "AIza-fallback");
+    vi.stubEnv("AI_MODEL", "google/gemini-3.5-flash");
+    vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", "   ");
     vi.stubEnv("ANTHROPIC_API_KEY", "");
 
     const response = await GET();
     const json = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(503);
     expect(json.checks.hostedAi).toEqual({
-      ok: true,
-      detail: "Hosted AI envs present",
+      ok: false,
+      detail: "1 required hosted configuration value is missing",
     });
     const body = JSON.stringify(json);
-    expect(body).not.toContain("GOOGLE_API_KEY");
-    expect(body).not.toContain("GOOGLE_GENERATIVE_AI_API_KEY");
-    expect(body).not.toContain("AIza-fallback");
+    expect(body).not.toContain("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID");
+    expect(body).not.toContain("vercel");
   });
 
   it("fails hosted readiness when configured app URLs are not HTTPS origins", async () => {

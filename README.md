@@ -291,7 +291,7 @@ The PIMS is the system of record. AI agents are first-class citizens.
 
 ### OpenVPM Agent
 
-OpenVPM ships with a built-in AI agent that operates on practice data through a typed tool layer (find clients/patients, pull a clinical summary, list overdue vaccinations, calculate a weight-based drug dose, book appointments). It runs a provider-agnostic tool-use loop scoped to a single practice, gates every write behind an explicit opt-in, and degrades gracefully when no matching model key is set. Choose the model with `AI_MODEL` and bring your own `GOOGLE_API_KEY` or legacy `GOOGLE_GENERATIVE_AI_API_KEY` for Gemini, or `ANTHROPIC_API_KEY` for Claude. Available in-app under **Agent** and via the `agent` tRPC router plus `/api/v1/agent`.
+OpenVPM ships with a built-in AI agent that operates on practice data through a typed tool layer (find clients/patients, pull a clinical summary, list overdue vaccinations, calculate a weight-based drug dose, book appointments). It runs a provider-agnostic tool-use loop scoped to a single practice, gates every write behind an explicit opt-in, and degrades gracefully when no matching model configuration is present. Choose the model with `AI_MODEL`; managed Cloud Gemini uses Google Cloud Vertex AI with Vercel OIDC workload identity federation, while a non-Vercel/self-host Vertex service account and an explicit Claude model remain supported alternatives. Available in-app under **Agent** and via the `agent` tRPC router plus `/api/v1/agent`.
 
 ## OpenVPM Cloud
 

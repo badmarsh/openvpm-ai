@@ -8,7 +8,8 @@
  *
  * Pricing (managed Cloud): ONE simple self-serve tier — flat $79/mo or
  * $790/yr per active location, unlimited staff. Hosted entitlements are included while
- * trialing/active, with generous included SMS / AI allowances and metered
+ * trialing/active, with AI enabled after signed billing setup during a trial
+ * and generous included SMS / AI allowances with metered
  * overage beyond. Enterprise = custom.
  */
 

@@ -11,23 +11,27 @@ describe("agent UI states", () => {
   const apiRouteSource = readFileSync("app/api/v1/agent/route.ts", "utf8");
 
   it("fails closed until agent status is loaded and configured", () => {
-    expect(source).toContain('import { useEffect, useRef, useState } from "react"');
+    expect(source).toContain(
+      'import { useEffect, useRef, useState } from "react"',
+    );
     expect(source).toContain("const verifiedAgentStatus =");
     expect(source).toContain(
-      "status.error || statusMissing || !status.data ? null : status.data"
+      "status.error || statusMissing || !status.data ? null : status.data",
     );
     expect(source).toContain(
-      "const configured = verifiedAgentStatus\n    ? verifiedAgentStatus.configured\n    : false"
+      "const configured = verifiedAgentStatus\n    ? verifiedAgentStatus.configured\n    : false",
     );
     expect(source).toContain(
-      "const statusMissing = !status.isLoading && !status.error && !status.data"
-    );
-    expect(source).toContain("const canRun = !status.isLoading && configured");
-    expect(source).toContain(
-      "const submitDisabled =\n    !canRun || !isAgentInstructionValid(instruction) || run.isPending"
+      "const statusMissing = !status.isLoading && !status.error && !status.data",
     );
     expect(source).toContain(
-      "if (!canRun && allowWrites) {\n      setAllowWrites(false);"
+      "const canRun = !status.isLoading && configured && canUseAi",
+    );
+    expect(source).toContain(
+      "const submitDisabled =\n    !canRun || !isAgentInstructionValid(instruction) || run.isPending",
+    );
+    expect(source).toContain(
+      "if (!canRun && allowWrites) {\n      setAllowWrites(false);",
     );
     expect(source).toContain("if (submitDisabled) return");
     expect(source).toContain("onSettled: () => setAllowWrites(false)");
@@ -37,9 +41,7 @@ describe("agent UI states", () => {
   });
 
   it("makes clinical write mode explicit and one-run only", () => {
-    expect(source).toContain(
-      "Allow writes: appointments and patient vitals"
-    );
+    expect(source).toContain("Allow writes: appointments and patient vitals");
     expect(source).toContain("Write mode can create appointments");
     expect(source).toContain("record patient vitals");
     expect(source).not.toContain("save SOAP");
@@ -58,30 +60,37 @@ describe("agent UI states", () => {
     // admins keep them because they can actually act on them.
     expect(source).toContain("verifiedAgentStatus?.hosted ? (");
     expect(source.indexOf("verifiedAgentStatus?.hosted ? (")).toBeLessThan(
-      source.indexOf("GOOGLE_API_KEY")
+      source.indexOf("GOOGLE_VERTEX_PROJECT"),
     );
     expect(source.indexOf(": status.error ? (")).toBeLessThan(
-      source.indexOf(": statusMissing ? (")
+      source.indexOf(": statusMissing ? ("),
     );
     expect(source.indexOf(": statusMissing ? (")).toBeLessThan(
-      source.indexOf(": !configured ? (")
+      source.indexOf(": !configured ? ("),
     );
     expect(source).toContain(": !configured ? (");
+    expect(source).toContain("Add a card to try AI");
+    expect(source).toContain('router.push("/settings?tab=billing")');
+    expect(source.indexOf(": needsBillingSetup ? (")).toBeLessThan(
+      source.indexOf(": !configured ? ("),
+    );
   });
 
   it("bounds instructions with the shared agent policy", () => {
     expect(AGENT_INSTRUCTION_MAX_LENGTH).toBe(2000);
-    expect(isAgentInstructionValid("Summarize today's appointments")).toBe(true);
+    expect(isAgentInstructionValid("Summarize today's appointments")).toBe(
+      true,
+    );
     expect(isAgentInstructionValid(" ".repeat(8))).toBe(false);
     expect(isAgentInstructionValid("A".repeat(2001))).toBe(false);
 
     expect(routerSource).toContain('from "@/lib/agent/policy"');
     expect(routerSource).toContain(
-      "instruction: z.string().trim().min(1).max(AGENT_INSTRUCTION_MAX_LENGTH)"
+      "instruction: z.string().trim().min(1).max(AGENT_INSTRUCTION_MAX_LENGTH)",
     );
     expect(apiRouteSource).toContain('from "@/lib/agent/policy"');
     expect(apiRouteSource).toContain(
-      "instruction: z.string().trim().min(1).max(AGENT_INSTRUCTION_MAX_LENGTH)"
+      "instruction: z.string().trim().min(1).max(AGENT_INSTRUCTION_MAX_LENGTH)",
     );
     expect(source).toContain('from "@/lib/agent/policy"');
     expect(source).toContain("maxLength={AGENT_INSTRUCTION_MAX_LENGTH}");
@@ -93,17 +102,19 @@ describe("agent UI states", () => {
     expect(source).toContain('import { useRouter } from "next/navigation"');
     expect(source).toContain('import { useSession } from "next-auth/react"');
     expect(source).toContain(
-      "function canRunAgentRole(role?: string | null): boolean"
+      "function canRunAgentRole(role?: string | null): boolean",
     );
     expect(source).toContain('role === "admin" || role === "veterinarian"');
     expect(source).toContain("const { data: session, status } = useSession()");
     expect(source).toContain('if (status === "loading")');
     expect(source).toContain("if (!canRunAgentRole(session?.user?.role))");
     expect(source).toContain("Agent access is restricted");
-    expect(source).toContain("return <AgentRunner />");
-    expect(source).toContain("function AgentRunner()");
-    expect(source.indexOf("function AgentRunner()")).toBeLessThan(
-      source.indexOf("trpc.agent.status.useQuery")
+    expect(source).toContain(
+      'return <AgentRunner isAdmin={session?.user?.role === "admin"} />',
+    );
+    expect(source).toContain("function AgentRunner({ isAdmin }");
+    expect(source.indexOf("function AgentRunner({ isAdmin }")).toBeLessThan(
+      source.indexOf("trpc.agent.status.useQuery"),
     );
     expect(routerSource).toContain('requireRole("admin", "veterinarian")');
   });

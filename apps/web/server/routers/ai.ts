@@ -29,6 +29,7 @@ import {
 } from "@/lib/ai/soap-draft";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordUsage } from "@/lib/billing/usage";
+import { readHostedAiAccess } from "@/lib/billing/ai-access";
 import {
   lockPracticeForExternalSideEffects,
   RECOVERY_HOLD_BLOCK_MESSAGE,
@@ -144,14 +145,14 @@ async function practiceDateInput(ctx: AIContext): Promise<string> {
 }
 
 async function practiceDayRange(
-  ctx: AIContext
+  ctx: AIContext,
 ): Promise<{ date: string; start: Date; end: Date }> {
   return dateInputUtcRangeForTimeZone(new Date(), await practiceTimeZone(ctx));
 }
 
 async function assertPatientBelongsToPractice(
   ctx: AIContext,
-  patientId: string
+  patientId: string,
 ) {
   const [patient] = await ctx.db
     .select({ id: patients.id })
@@ -161,8 +162,8 @@ async function assertPatientBelongsToPractice(
         eq(patients.id, patientId),
         eq(patients.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
-        isNull(patients.deletedAt)
-      )
+        isNull(patients.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -176,7 +177,7 @@ async function assertPatientBelongsToPractice(
 async function assertAppointmentBelongsToPatient(
   ctx: AIContext,
   appointmentId: string,
-  patientId: string
+  patientId: string,
 ) {
   const visit = await lockOpenVisitForClinicalAppend(ctx.db, {
     practiceId: ctx.practiceId,
@@ -213,23 +214,19 @@ export const aiRouter = createRouter({
         appointmentId: z.string().uuid(),
         subjective: optionalClinicalTextInput(
           "SOAP subjective",
-          SOAP_SECTION_MAX_LENGTH
+          SOAP_SECTION_MAX_LENGTH,
         ),
         objective: optionalClinicalTextInput(
           "SOAP objective",
-          SOAP_SECTION_MAX_LENGTH
+          SOAP_SECTION_MAX_LENGTH,
         ),
         assessment: optionalClinicalTextInput(
           "SOAP assessment",
-          SOAP_SECTION_MAX_LENGTH
+          SOAP_SECTION_MAX_LENGTH,
         ),
         plan: optionalClinicalTextInput("SOAP plan", SOAP_SECTION_MAX_LENGTH),
-        source: z
-          .string()
-          .trim()
-          .min(1)
-          .max(AI_SOURCE_MAX_LENGTH),
-      })
+        source: z.string().trim().min(1).max(AI_SOURCE_MAX_LENGTH),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { source } = input;
@@ -248,7 +245,8 @@ export const aiRouter = createRouter({
       if (hasUnresolvedSoapTemplatePrompts(normalizedNote)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Replace or delete every SOAP template prompt before saving.",
+          message:
+            "Replace or delete every SOAP template prompt before saving.",
         });
       }
       await assertActivePractice(ctx);
@@ -256,7 +254,7 @@ export const aiRouter = createRouter({
       await assertAppointmentBelongsToPatient(
         ctx,
         input.appointmentId,
-        input.patientId
+        input.patientId,
       );
       try {
         const note = await ctx.db.transaction((tx) =>
@@ -292,9 +290,9 @@ export const aiRouter = createRouter({
         patientId: z.string().uuid(),
         visitContext: optionalClinicalTextInput(
           "Visit context",
-          SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH
+          SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
         ),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
@@ -328,8 +326,8 @@ export const aiRouter = createRouter({
                 eq(patients.id, input.patientId),
                 eq(patients.practiceId, ctx.practiceId),
                 activePracticePredicate(ctx.practiceId),
-                isNull(patients.deletedAt)
-              )
+                isNull(patients.deletedAt),
+              ),
             )
             .limit(1),
           ctx.db
@@ -355,8 +353,8 @@ export const aiRouter = createRouter({
                   where allergy_correction.practice_id = ${ctx.practiceId}
                     and allergy_correction.patient_allergy_id = ${patientAllergies.id}
                 )`,
-                isNull(patientAllergies.deletedAt)
-              )
+                isNull(patientAllergies.deletedAt),
+              ),
             ),
           ctx.db
             .select({
@@ -369,8 +367,8 @@ export const aiRouter = createRouter({
                 eq(problemList.patientId, input.patientId),
                 eq(problemList.practiceId, ctx.practiceId),
                 activePracticePredicate(ctx.practiceId),
-                isNull(problemList.deletedAt)
-              )
+                isNull(problemList.deletedAt),
+              ),
             ),
           ctx.db
             .select({
@@ -391,23 +389,36 @@ export const aiRouter = createRouter({
                   from ${clinicalRecordCorrections}
                   where ${clinicalRecordCorrections.practiceId} = ${ctx.practiceId}
                     and ${clinicalRecordCorrections.vitalSignId} = ${vitalSigns.id}
-                )`
-              )
+                )`,
+              ),
             )
             .orderBy(desc(vitalSigns.recordedAt))
             .limit(1),
         ]);
 
       if (!patient) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Patient not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Patient not found",
+        });
       }
 
-      if (
-        !(await lockPracticeForExternalSideEffects(ctx.db, ctx.practiceId))
-      ) {
+      if (!(await lockPracticeForExternalSideEffects(ctx.db, ctx.practiceId))) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: RECOVERY_HOLD_BLOCK_MESSAGE,
+        });
+      }
+
+      // Re-read entitlement under the practice share lock immediately before
+      // the provider call. Stripe cannot remove card-backed access between the
+      // check and Gemini generation.
+      const aiAccess = await readHostedAiAccess(ctx.db, ctx.practiceId);
+      if (!aiAccess) throw practiceNotFound();
+      if (!aiAccess.allowed) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: aiAccess.message ?? "OpenVPM AI is not available.",
         });
       }
 
@@ -463,8 +474,8 @@ export const aiRouter = createRouter({
           eq(vaccinationRecords.patientId, patients.id),
           eq(patients.practiceId, ctx.practiceId),
           activePracticePredicate(ctx.practiceId),
-          isNull(patients.deletedAt)
-        )
+          isNull(patients.deletedAt),
+        ),
       )
       .leftJoin(
         clients,
@@ -472,8 +483,8 @@ export const aiRouter = createRouter({
           eq(patients.clientId, clients.id),
           eq(clients.practiceId, ctx.practiceId),
           activePracticePredicate(ctx.practiceId),
-          isNull(clients.deletedAt)
-        )
+          isNull(clients.deletedAt),
+        ),
       )
       .where(
         and(
@@ -486,8 +497,8 @@ export const aiRouter = createRouter({
           isNull(patients.deletedAt),
           eq(clients.practiceId, ctx.practiceId),
           isNull(clients.deletedAt),
-          lt(vaccinationRecords.nextDueDate, today)
-        )
+          lt(vaccinationRecords.nextDueDate, today),
+        ),
       )
       .orderBy(vaccinationRecords.nextDueDate);
 
@@ -501,7 +512,7 @@ export const aiRouter = createRouter({
       vaccineName: r.vaccineName,
       nextDueDate: r.nextDueDate,
       daysOverdue: Math.floor(
-        (Date.now() - new Date(r.nextDueDate!).getTime()) / 86_400_000
+        (Date.now() - new Date(r.nextDueDate!).getTime()) / 86_400_000,
       ),
     }));
   }),
@@ -536,8 +547,8 @@ export const aiRouter = createRouter({
           eq(patients.clientId, appointments.clientId),
           eq(patients.practiceId, ctx.practiceId),
           activePracticePredicate(ctx.practiceId),
-          isNull(patients.deletedAt)
-        )
+          isNull(patients.deletedAt),
+        ),
       )
       .leftJoin(
         clients,
@@ -545,8 +556,8 @@ export const aiRouter = createRouter({
           eq(appointments.clientId, clients.id),
           eq(clients.practiceId, ctx.practiceId),
           activePracticePredicate(ctx.practiceId),
-          isNull(clients.deletedAt)
-        )
+          isNull(clients.deletedAt),
+        ),
       )
       .where(
         and(
@@ -559,8 +570,8 @@ export const aiRouter = createRouter({
           isNull(clients.deletedAt),
           eq(appointments.status, "checked_out"),
           gte(appointments.startTime, sevenDaysAgo),
-          lte(appointments.startTime, now)
-        )
+          lte(appointments.startTime, now),
+        ),
       )
       .orderBy(desc(appointments.startTime));
 
@@ -569,7 +580,7 @@ export const aiRouter = createRouter({
       ...new Set(
         recentCheckedOut
           .map((a) => a.patientId)
-          .filter((patientId): patientId is string => Boolean(patientId))
+          .filter((patientId): patientId is string => Boolean(patientId)),
       ),
     ];
 
@@ -587,13 +598,13 @@ export const aiRouter = createRouter({
           activePracticePredicate(ctx.practiceId),
           isNull(appointments.deletedAt),
           gte(appointments.startTime, now),
-          inArray(appointments.patientId, patientIds)
-        )
+          inArray(appointments.patientId, patientIds),
+        ),
       )
       .groupBy(appointments.patientId);
 
     const patientsWithFuture = new Set(
-      futureAppointments.map((r) => r.patientId)
+      futureAppointments.map((r) => r.patientId),
     );
 
     return recentCheckedOut
@@ -617,27 +628,24 @@ export const aiRouter = createRouter({
   dailySummary: protectedProcedure.query(async ({ ctx }) => {
     const today = await practiceDayRange(ctx);
 
-    const [
-      appointmentsByStatus,
-      soapNotesCreated,
-      invoicesPaid,
-    ] = await Promise.all([
-      // Appointments by status
-      ctx.db
-        .select({
-          status: appointments.status,
-          count: sql<number>`count(*)`,
-        })
-        .from(appointments)
-        .where(
-          and(
-            eq(appointments.practiceId, ctx.practiceId),
-            activePracticePredicate(ctx.practiceId),
-            isNull(appointments.deletedAt),
-            gte(appointments.startTime, today.start),
-            lt(appointments.startTime, today.end)
+    const [appointmentsByStatus, soapNotesCreated, invoicesPaid] =
+      await Promise.all([
+        // Appointments by status
+        ctx.db
+          .select({
+            status: appointments.status,
+            count: sql<number>`count(*)`,
+          })
+          .from(appointments)
+          .where(
+            and(
+              eq(appointments.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(appointments.deletedAt),
+              gte(appointments.startTime, today.start),
+              lt(appointments.startTime, today.end),
+            ),
           )
-        )
           .groupBy(appointments.status),
 
         // SOAP notes created today
@@ -678,14 +686,15 @@ export const aiRouter = createRouter({
       ]);
 
     const statusMap = Object.fromEntries(
-      appointmentsByStatus.map((r) => [r.status, Number(r.count)])
+      appointmentsByStatus.map((r) => [r.status, Number(r.count)]),
     );
 
     const totalAppointments = Object.values(statusMap).reduce(
       (a, b) => a + b,
-      0
+      0,
     );
-    const patientsSeen = (statusMap["checked_out"] ?? 0) + (statusMap["in_exam"] ?? 0);
+    const patientsSeen =
+      (statusMap["checked_out"] ?? 0) + (statusMap["in_exam"] ?? 0);
 
     return {
       date: today.date,

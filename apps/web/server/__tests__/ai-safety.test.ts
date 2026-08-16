@@ -46,7 +46,7 @@ function createDb(opts?: {
       orderBy: vi.fn(async () => result),
       then: (
         resolve: (value: unknown[]) => unknown,
-        reject?: (error: unknown) => unknown
+        reject?: (error: unknown) => unknown,
       ) => Promise.resolve(result).then(resolve, reject),
     };
     const builder = {
@@ -81,6 +81,22 @@ afterEach(() => {
 });
 
 describe("AI SOAP note safety", () => {
+  it("rechecks hosted AI access under the practice lock before SOAP generation", () => {
+    const source = readFileSync(
+      new URL("../routers/ai.ts", import.meta.url),
+      "utf8",
+    );
+    const handler = source.slice(source.indexOf("draftSoapNote:"));
+
+    const lockIndex = handler.indexOf("lockPracticeForExternalSideEffects");
+    const accessIndex = handler.indexOf("readHostedAiAccess");
+    const providerIndex = handler.indexOf("const draft = await draftSoapNote");
+
+    expect(lockIndex).toBeGreaterThanOrEqual(0);
+    expect(accessIndex).toBeGreaterThan(lockIndex);
+    expect(providerIndex).toBeGreaterThan(accessIndex);
+  });
+
   it("rejects a patient-only live AI SOAP note before querying", async () => {
     const { db, select, insertValues } = createDb();
 
@@ -89,7 +105,7 @@ describe("AI SOAP note safety", () => {
         patientId: PATIENT_ID,
         subjective: "Eating well",
         source: "scribe",
-      } as never)
+      } as never),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -107,7 +123,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -124,7 +140,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -151,7 +167,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
-      })
+      }),
     ).resolves.toMatchObject({
       id: NOTE_ID,
       patientId: PATIENT_ID,
@@ -164,7 +180,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         practiceId: PRACTICE_ID,
         authorId: USER_ID,
-      })
+      }),
     );
   });
 
@@ -180,7 +196,7 @@ describe("AI SOAP note safety", () => {
         subjective: "<p><br></p>",
         plan: "&nbsp;",
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -195,7 +211,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: SOAP_NOTE_TEMPLATES[0]!.sections.subjective,
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "Replace or delete every SOAP template prompt before saving.",
@@ -214,7 +230,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -223,7 +239,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         objective: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -232,7 +248,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         assessment: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -241,7 +257,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         plan: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -257,7 +273,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "A".repeat(AI_SOURCE_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -273,7 +289,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",
@@ -286,13 +302,13 @@ describe("AI SOAP note safety", () => {
 describe("AI recommendation query safety", () => {
   const source = readFileSync(
     new URL("../routers/ai.ts", import.meta.url),
-    "utf8"
+    "utf8",
   );
 
   function scopedJoinPattern(
     joinMethod: "innerJoin" | "leftJoin",
     table: string,
-    foreignKey: string
+    foreignKey: string,
   ) {
     return new RegExp(
       `${joinMethod}\\(\\s*${table},\\s*and\\(\\s*eq\\(${foreignKey.replace(
@@ -309,21 +325,22 @@ describe("AI recommendation query safety", () => {
         scopedJoinPattern(
           "innerJoin",
           "patients",
-          "vaccinationRecords.patientId"
-        )
-      )?.length
+          "vaccinationRecords.patientId",
+        ),
+      )?.length,
     ).toBeGreaterThanOrEqual(1);
 
     expect(
-      source.match(scopedJoinPattern("leftJoin", "clients", "patients.clientId"))
-        ?.length
+      source.match(
+        scopedJoinPattern("leftJoin", "clients", "patients.clientId"),
+      )?.length,
     ).toBeGreaterThanOrEqual(1);
   });
 
   it("uses the practice timezone for overdue vaccination cutoffs", () => {
     const vaccinationBlock = source.slice(
       source.indexOf("patientsOverdueVaccinations:"),
-      source.indexOf("patientsNeedingFollowUp:")
+      source.indexOf("patientsNeedingFollowUp:"),
     );
 
     expect(source).toContain("async function practiceDateInput");
@@ -331,10 +348,10 @@ describe("AI recommendation query safety", () => {
     expect(source).toContain("return practice.timezone ?? null");
     expect(source).not.toContain("practice?.timezone");
     expect(source).toContain(
-      "formatDateInputForTimeZone(new Date(), await practiceTimeZone(ctx))"
+      "formatDateInputForTimeZone(new Date(), await practiceTimeZone(ctx))",
     );
     expect(vaccinationBlock).toContain(
-      "const today = await practiceDateInput(ctx)"
+      "const today = await practiceDateInput(ctx)",
     );
     expect(source).not.toContain("new Date().toISOString().slice(0, 10)");
   });
@@ -360,7 +377,7 @@ describe("AI recommendation query safety", () => {
     });
 
     await expect(
-      callerWithDb(db).patientsOverdueVaccinations()
+      callerWithDb(db).patientsOverdueVaccinations(),
     ).resolves.toEqual([
       expect.objectContaining({
         patientId: PATIENT_ID,
@@ -376,7 +393,7 @@ describe("AI recommendation query safety", () => {
     const { db } = createDb({ selectResults: [[]] });
 
     await expect(
-      callerWithDb(db).patientsOverdueVaccinations()
+      callerWithDb(db).patientsOverdueVaccinations(),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Practice not found",
@@ -388,7 +405,7 @@ describe("AI recommendation query safety", () => {
 
     expect(source).toContain("async function practiceDayRange");
     expect(source).toContain(
-      "dateInputUtcRangeForTimeZone(new Date(), await practiceTimeZone(ctx))"
+      "dateInputUtcRangeForTimeZone(new Date(), await practiceTimeZone(ctx))",
     );
     expect(summaryBlock).toContain("const today = await practiceDayRange(ctx)");
     expect(summaryBlock).toContain("gte(appointments.startTime, today.start)");
@@ -451,15 +468,15 @@ describe("AI recommendation query safety", () => {
   it("scopes follow-up recommendation display joins to active tenant rows", () => {
     expect(
       source.match(
-        scopedJoinPattern("leftJoin", "clients", "appointments.clientId")
-      )?.length
+        scopedJoinPattern("leftJoin", "clients", "appointments.clientId"),
+      )?.length,
     ).toBeGreaterThanOrEqual(1);
   });
 
   it("keeps follow-up recommendation patients tied to the appointment client", () => {
     const followUpBlock = source.slice(
       source.indexOf("patientsNeedingFollowUp:"),
-      source.indexOf("dailySummary:")
+      source.indexOf("dailySummary:"),
     );
 
     expect(followUpBlock).toMatch(

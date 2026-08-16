@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Bot, Loader2, Send, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ export function TryAgentStep({
 }: {
   register: (h: StepHandle) => void;
 }) {
+  const router = useRouter();
   const status = trpc.agent.status.useQuery();
   const run = trpc.agent.run.useMutation();
   const [question, setQuestion] = useState(DEFAULT_QUESTION);
@@ -71,8 +73,9 @@ export function TryAgentStep({
   const canAsk = Boolean(
     verifiedAgentStatus &&
     configured &&
+    verifiedAgentStatus.canUseAi &&
     isAgentInstructionValid(question) &&
-    !run.isPending
+    !run.isPending,
   );
 
   function ask() {
@@ -118,6 +121,53 @@ export function TryAgentStep({
     );
   }
 
+  // The error/missing branch above renders the recovery state. This additional
+  // guard keeps the remaining branches fail-closed and makes the narrowed
+  // status explicit to TypeScript.
+  if (!verifiedAgentStatus) return null;
+
+  if (verifiedAgentStatus.needsBillingSetup) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm leading-6 text-slate-600">
+          AI is built right into OpenVPM. It can answer questions about your
+          clinic in plain words.
+        </p>
+        <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Add a card to try AI</p>
+            <p className="mt-1 text-emerald-900/80">
+              Your free trial keeps going. The rest of OpenVPM is ready to use
+              without a card.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="mt-3"
+              onClick={() => router.push("/settings?tab=billing")}
+            >
+              Add a card
+            </Button>
+          </div>
+        </div>
+        <ExampleChat />
+      </div>
+    );
+  }
+
+  if (!verifiedAgentStatus.canUseAi) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          {verifiedAgentStatus.accessMessage ??
+            "AI is not available for this workspace."}
+        </p>
+        <ExampleChat />
+      </div>
+    );
+  }
+
   if (!configured) {
     return (
       <div className="space-y-4">
@@ -128,8 +178,8 @@ export function TryAgentStep({
         <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Your AI helper turns on once your AI key is set. You can try it any
-            time from the Agent page.
+            Your AI helper is not available right now. You can try it any time
+            from the Agent page once service is restored.
           </p>
         </div>
         <ExampleChat />
@@ -140,8 +190,8 @@ export function TryAgentStep({
   return (
     <div className="space-y-4">
       <p className="text-sm leading-6 text-slate-600">
-        AI is built right in. Ask a question about your clinic and see what comes
-        back.
+        AI is built right in. Ask a question about your clinic and see what
+        comes back.
       </p>
 
       <ExampleChat />

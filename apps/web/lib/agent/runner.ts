@@ -5,8 +5,10 @@ import {
   type LanguageModel,
   type ToolSet,
 } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createVertex } from "@ai-sdk/google-vertex";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { getVercelOidcToken } from "@vercel/oidc";
+import { ExternalAccountClient } from "google-auth-library";
 import {
   AGENT_TOOLS,
   AgentPracticeNotFoundError,
@@ -14,6 +16,7 @@ import {
   type AgentToolContext,
 } from "./tools";
 import { recordUsage } from "@/lib/billing/usage";
+import { readHostedAiAccess } from "@/lib/billing/ai-access";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   lockPracticeForExternalSideEffects,
@@ -27,7 +30,7 @@ import {
  * change. Each tool already carries a Zod schema, which the AI SDK consumes
  * directly, and the SDK runs the tool-use loop for us up to MAX_ITERATIONS.
  */
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+const DEFAULT_MODEL = "gemini-3.5-flash";
 const MAX_ITERATIONS = 8;
 const MAX_OUTPUT_TOKENS = 1024;
 export const AGENT_RUN_RATE_WINDOW_MS = 60_000;
@@ -60,7 +63,7 @@ export interface AgentRunResult {
 export class AgentNotConfiguredError extends Error {
   constructor() {
     super(
-      "OpenVPM Agent is not configured. Set an AI key (GOOGLE_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY for Gemini, or ANTHROPIC_API_KEY for Claude) to enable agent runs."
+      "OpenVPM Agent is not configured. Configure Google Vertex AI for Gemini, or set ANTHROPIC_API_KEY for an explicit Claude model.",
     );
     this.name = "AgentNotConfiguredError";
   }
@@ -70,7 +73,7 @@ export class AgentRateLimitedError extends Error {
   constructor(
     public readonly retryAfterSeconds: number,
     public readonly limit: number,
-    public readonly resetAt: Date
+    public readonly resetAt: Date,
   ) {
     super("Too many agent runs. Try again later.");
     this.name = "AgentRateLimitedError";
@@ -81,6 +84,13 @@ export class AgentRecoveryHoldError extends Error {
   constructor() {
     super(RECOVERY_HOLD_BLOCK_MESSAGE);
     this.name = "AgentRecoveryHoldError";
+  }
+}
+
+export class AgentBillingAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AgentBillingAccessError";
   }
 }
 
@@ -104,45 +114,124 @@ function isGoogleModel(modelId: string): boolean {
   return /^(google\/|models\/)?gemini/i.test(modelId);
 }
 
-function googleApiKey(): string | undefined {
-  return (
-    nonBlank(process.env.GOOGLE_API_KEY) ??
-    nonBlank(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
-  );
+function vertexProject(): string | undefined {
+  return nonBlank(process.env.GOOGLE_VERTEX_PROJECT);
+}
+
+function vertexLocation(): string | undefined {
+  return nonBlank(process.env.GOOGLE_VERTEX_LOCATION);
+}
+
+function vertexServiceAccountEmail(): string | undefined {
+  return nonBlank(process.env.GCP_SERVICE_ACCOUNT_EMAIL);
+}
+
+function vertexProjectNumber(): string | undefined {
+  return nonBlank(process.env.GCP_PROJECT_NUMBER);
+}
+
+function vertexWorkloadIdentityPoolId(): string | undefined {
+  return nonBlank(process.env.GCP_WORKLOAD_IDENTITY_POOL_ID);
+}
+
+function vertexWorkloadIdentityProviderId(): string | undefined {
+  return nonBlank(process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID);
+}
+
+function vertexFallbackClientEmail(): string | undefined {
+  return nonBlank(process.env.GOOGLE_CLIENT_EMAIL);
+}
+
+function vertexPrivateKey(): string | undefined {
+  return nonBlank(process.env.GOOGLE_PRIVATE_KEY)?.replace(/\\n/g, "\n");
 }
 
 function anthropicApiKey(): string | undefined {
   return nonBlank(process.env.ANTHROPIC_API_KEY);
 }
 
-function hasProviderKey(modelId: string): boolean {
-  return isGoogleModel(modelId) ? Boolean(googleApiKey()) : Boolean(anthropicApiKey());
+function hasVertexOidcConfiguration(): boolean {
+  return Boolean(
+    vertexProject() &&
+    vertexLocation() &&
+    vertexProjectNumber() &&
+    vertexServiceAccountEmail() &&
+    vertexWorkloadIdentityPoolId() &&
+    vertexWorkloadIdentityProviderId(),
+  );
 }
 
-/** Whether the configured provider has its API key set. */
+function hasVertexServiceAccountConfiguration(): boolean {
+  return Boolean(
+    vertexProject() &&
+    vertexLocation() &&
+    vertexFallbackClientEmail() &&
+    vertexPrivateKey(),
+  );
+}
+
+function hasVertexConfiguration(): boolean {
+  return hasVertexOidcConfiguration() || hasVertexServiceAccountConfiguration();
+}
+
+function hasProviderConfiguration(modelId: string): boolean {
+  return isGoogleModel(modelId)
+    ? hasVertexConfiguration()
+    : Boolean(anthropicApiKey());
+}
+
+/** Whether the configured provider has a complete authentication boundary. */
 export function isAgentConfigured(): boolean {
-  return hasProviderKey(activeModelId());
+  return hasProviderConfiguration(activeModelId());
 }
 
 /**
  * Resolve the configured AI SDK model instance for one-shot generations
  * (e.g. SOAP drafts) that share the agent's provider/model configuration.
- * Throws AgentNotConfiguredError when no provider key is set.
+ * Throws AgentNotConfiguredError when no provider authentication is set.
  */
 export function configuredModel(): LanguageModel {
   const modelId = activeModelId();
-  if (!hasProviderKey(modelId)) throw new AgentNotConfiguredError();
+  if (!hasProviderConfiguration(modelId)) throw new AgentNotConfiguredError();
   return resolveModel(modelId);
 }
 
 /** Build an AI SDK model instance for the given model id. */
 function resolveModel(modelId: string) {
   if (isGoogleModel(modelId)) {
-    const google = createGoogleGenerativeAI({ apiKey: googleApiKey() });
-    return google(modelId.replace(/^google\//, ""));
+    const googleAuthOptions = hasVertexOidcConfiguration()
+      ? vertexOidcAuthOptions()
+      : {
+          credentials: {
+            client_email: vertexFallbackClientEmail(),
+            private_key: vertexPrivateKey(),
+          },
+        };
+    const vertex = createVertex({
+      project: vertexProject(),
+      location: vertexLocation(),
+      googleAuthOptions,
+    });
+    return vertex(modelId.replace(/^(google\/|models\/)/, ""));
   }
   const anthropic = createAnthropic({ apiKey: anthropicApiKey() });
   return anthropic(modelId.replace(/^anthropic\//, ""));
+}
+
+function vertexOidcAuthOptions() {
+  const serviceAccountEmail = vertexServiceAccountEmail();
+  const authClient = ExternalAccountClient.fromJSON({
+    type: "external_account",
+    audience: `//iam.googleapis.com/projects/${vertexProjectNumber()}/locations/global/workloadIdentityPools/${vertexWorkloadIdentityPoolId()}/providers/${vertexWorkloadIdentityProviderId()}`,
+    subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    token_url: "https://sts.googleapis.com/v1/token",
+    service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccountEmail}:generateAccessToken`,
+    subject_token_supplier: {
+      getSubjectToken: async () => getVercelOidcToken(),
+    },
+  });
+  if (!authClient) throw new AgentNotConfiguredError();
+  return { authClient, projectId: vertexProject() };
 }
 
 function retryAfterSeconds(resetAt: Date): number {
@@ -155,11 +244,11 @@ function hasApiScope(scopes: string[], required: string): boolean {
 
 function missingToolApiScopes(
   toolDef: AgentTool,
-  apiKeyScopes: string[] | undefined
+  apiKeyScopes: string[] | undefined,
 ): string[] {
   if (!apiKeyScopes) return [];
   return (toolDef.requiredApiScopes ?? []).filter(
-    (scope) => !hasApiScope(apiKeyScopes, scope)
+    (scope) => !hasApiScope(apiKeyScopes, scope),
   );
 }
 
@@ -181,7 +270,7 @@ async function enforceAgentRunRateLimitBucket(input: {
     throw new AgentRateLimitedError(
       retryAfterSeconds(resetAt),
       input.limit,
-      resetAt
+      resetAt,
     );
   }
 
@@ -189,7 +278,7 @@ async function enforceAgentRunRateLimitBucket(input: {
     throw new AgentRateLimitedError(
       retryAfterSeconds(result.resetAt),
       input.limit,
-      result.resetAt
+      result.resetAt,
     );
   }
 }
@@ -217,39 +306,43 @@ function buildToolSet(
   ctx: AgentToolContext,
   allowWrites: boolean,
   apiKeyScopes: string[] | undefined,
-  sink: AgentToolCall[]
+  sink: AgentToolCall[],
 ): ToolSet {
-  const entries = AGENT_TOOLS.map((t) => [
-    t.name,
-    tool({
-      description: t.description,
-      inputSchema: t.zod,
-      execute: async (args: unknown) => {
-        const call: AgentToolCall = { name: t.name, input: args };
-        try {
-          if (!t.readOnly && !allowWrites) {
-            call.error = "Write tools are disabled for this run.";
-          } else {
-            const missingScopes = missingToolApiScopes(t, apiKeyScopes);
-            if (missingScopes.length > 0) {
-              call.error = `Tool requires API key scope${
-                missingScopes.length === 1 ? "" : "s"
-              }: ${missingScopes.join(", ")}.`;
-            } else {
-              call.result = await t.execute(args, ctx);
+  const entries = AGENT_TOOLS.map(
+    (t) =>
+      [
+        t.name,
+        tool({
+          description: t.description,
+          inputSchema: t.zod,
+          execute: async (args: unknown) => {
+            const call: AgentToolCall = { name: t.name, input: args };
+            try {
+              if (!t.readOnly && !allowWrites) {
+                call.error = "Write tools are disabled for this run.";
+              } else {
+                const missingScopes = missingToolApiScopes(t, apiKeyScopes);
+                if (missingScopes.length > 0) {
+                  call.error = `Tool requires API key scope${
+                    missingScopes.length === 1 ? "" : "s"
+                  }: ${missingScopes.join(", ")}.`;
+                } else {
+                  call.result = await t.execute(args, ctx);
+                }
+              }
+            } catch (e) {
+              if (e instanceof AgentPracticeNotFoundError) {
+                throw e;
+              }
+              call.error =
+                e instanceof Error ? e.message : "Tool execution failed";
             }
-          }
-        } catch (e) {
-          if (e instanceof AgentPracticeNotFoundError) {
-            throw e;
-          }
-          call.error = e instanceof Error ? e.message : "Tool execution failed";
-        }
-        sink.push(call);
-        return call.error ? { error: call.error } : call.result;
-      },
-    }),
-  ] as const);
+            sink.push(call);
+            return call.error ? { error: call.error } : call.result;
+          },
+        }),
+      ] as const,
+  );
   return Object.fromEntries(entries) as ToolSet;
 }
 
@@ -268,7 +361,7 @@ export async function runAgent(opts: {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 }): Promise<AgentRunResult> {
   const modelId = activeModelId(opts.model);
-  if (!hasProviderKey(modelId)) throw new AgentNotConfiguredError();
+  if (!hasProviderConfiguration(modelId)) throw new AgentNotConfiguredError();
   if (
     !(await lockPracticeForExternalSideEffects(
       opts.context.db,
@@ -276,6 +369,21 @@ export async function runAgent(opts: {
     ))
   ) {
     throw new AgentRecoveryHoldError();
+  }
+
+  // Re-read entitlement only after taking the practice share lock that remains
+  // held through the provider call. A concurrent Stripe lifecycle update must
+  // therefore commit before this decision or wait until no Gemini call can be
+  // started under the old state.
+  const aiAccess = await readHostedAiAccess(
+    opts.context.db,
+    opts.context.practiceId,
+  );
+  if (!aiAccess) throw new AgentPracticeNotFoundError();
+  if (!aiAccess.allowed) {
+    throw new AgentBillingAccessError(
+      aiAccess.message ?? "OpenVPM AI is not available.",
+    );
   }
 
   const allowWrites = opts.allowWrites ?? false;
@@ -300,7 +408,7 @@ export async function runAgent(opts: {
       opts.context,
       allowWrites,
       opts.apiKeyScopes,
-      toolCalls
+      toolCalls,
     ),
     stopWhen: stepCountIs(MAX_ITERATIONS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,

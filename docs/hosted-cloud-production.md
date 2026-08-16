@@ -123,8 +123,13 @@ MESSAGING_PROVISIONING_PRACTICE_IDS= # comma-separated approved pilot practice U
 MESSAGING_SENDING_ENABLED=false
 MESSAGING_SENDING_PRACTICE_IDS= # comma-separated approved pilot practice UUIDs
 MESSAGING_SENDING_LOCATION_IDS= # comma-separated approved pilot location UUIDs
-AI_MODEL=claude-sonnet-4-6
-ANTHROPIC_API_KEY=...
+AI_MODEL=gemini-3.5-flash
+GOOGLE_VERTEX_PROJECT=...
+GOOGLE_VERTEX_LOCATION=global
+GCP_PROJECT_NUMBER=...
+GCP_SERVICE_ACCOUNT_EMAIL=... # dedicated least-privilege Vertex caller
+GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
 OPS_ALERT_WEBHOOK_URL=...
 CRON_SECRET=...
 CRON_HEARTBEAT_URL=...
@@ -294,7 +299,6 @@ Use these fixed thresholds and responses:
   the platform-admin **SMS evidence recovery** console to select the exact event
   and, when present, the exact conflict. The console offers only the resolution
   supported by durable evidence:
-
   - inbound projection repair must produce the exact communication and any
     required START/STOP consent event;
   - conflicting inbound evidence is resolved conservatively as a system-actor
@@ -363,10 +367,19 @@ STOP/HELP footer. Hosted sends do not use this override: they require an active,
 provider-matching `messaging_registrations` row. Console-only local testing may
 use the practice name because it never contacts a carrier.
 
-Hosted AI defaults to Claude and requires `ANTHROPIC_API_KEY`. If you choose a
-Gemini `AI_MODEL`, set either `GOOGLE_API_KEY` or the legacy
-`GOOGLE_GENERATIVE_AI_API_KEY`; `/api/health` requires one matching provider
-credential, not both providers.
+Hosted AI defaults to stable `gemini-3.5-flash` through Google Cloud Vertex AI.
+Set the project and workload-identity values shown above; `/api/health` fails
+closed when any one is absent. Configure Vercel's team-mode OIDC issuer and bind
+only `owner:evangauers-projects:project:openvpm-app:environment:production` to a
+dedicated service account with the Vertex AI invocation role. The app exchanges
+Vercel's signed runtime token for short-lived Google credentials; do not create
+or store a Google private key in Vercel. Configure the Google Cloud
+data-governance controls required by the clinic-data policy before enabling AI.
+Do not substitute an AI Studio / Gemini Developer API key: OpenVPM sends
+veterinary chart context and that API's terms do not permit use in clinical
+practice. If an operator explicitly selects a Claude `AI_MODEL`,
+`ANTHROPIC_API_KEY` remains supported for self-hosted or separately approved
+deployments.
 
 For local or staging signup tests without real email delivery, set `OPENVPM_EXPOSE_AUTH_LINKS=true`. This exposes the verification link after signup so the full flow can be clicked through. Do not enable it in production.
 

@@ -14,12 +14,14 @@ import {
   isAgentConfigured,
   AGENT_TOOL_NAMES,
   AgentNotConfiguredError,
+  AgentBillingAccessError,
   AgentPracticeNotFoundError,
   AgentRateLimitedError,
   AgentRecoveryHoldError,
 } from "@/lib/agent";
 import { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
 import { billingEnforced } from "@/lib/billing/plans";
+import { readHostedAiAccess } from "@/lib/billing/ai-access";
 
 export { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
 
@@ -55,13 +57,24 @@ async function assertActivePractice(ctx: AgentContext) {
 
 export const agentRouter = createRouter({
   /** Whether the agent is enabled (API key present) and what it can do. */
-  status: protectedProcedure.query(() => ({
-    configured: isAgentConfigured(),
-    // Hosted users get a friendly "unavailable" message when unconfigured;
-    // self-host admins get env-var instructions they can act on.
-    hosted: billingEnforced(),
-    tools: AGENT_TOOL_NAMES,
-  })),
+  status: protectedProcedure.query(async ({ ctx }) => {
+    const hosted = billingEnforced();
+    const access = await readHostedAiAccess(ctx.db, ctx.practiceId, {
+      enforced: hosted,
+    });
+    if (!access) throw practiceNotFound();
+
+    return {
+      configured: isAgentConfigured(),
+      // Hosted users get a friendly "unavailable" message when unconfigured;
+      // self-host admins get env-var instructions they can act on.
+      hosted,
+      canUseAi: access.allowed,
+      needsBillingSetup: access.reason === "billing_setup_required",
+      accessMessage: access.message,
+      tools: AGENT_TOOL_NAMES,
+    };
+  }),
 
   /** Run the OpenVPM Agent against a natural-language instruction. */
   run: agentProcedure
@@ -76,12 +89,16 @@ export const agentRouter = createRouter({
           .array(
             z.object({
               role: z.enum(["user", "assistant"]),
-              content: z.string().trim().min(1).max(AGENT_INSTRUCTION_MAX_LENGTH),
-            })
+              content: z
+                .string()
+                .trim()
+                .min(1)
+                .max(AGENT_INSTRUCTION_MAX_LENGTH),
+            }),
           )
           .max(20)
           .optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
@@ -98,6 +115,9 @@ export const agentRouter = createRouter({
           },
         });
       } catch (e) {
+        if (e instanceof AgentBillingAccessError) {
+          throw new TRPCError({ code: "FORBIDDEN", message: e.message });
+        }
         if (e instanceof AgentNotConfiguredError) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
@@ -105,7 +125,10 @@ export const agentRouter = createRouter({
           });
         }
         if (e instanceof AgentRateLimitedError) {
-          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: e.message });
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: e.message,
+          });
         }
         if (e instanceof AgentRecoveryHoldError) {
           throw new TRPCError({

@@ -34,16 +34,16 @@ practice — a key can only ever read or write its own practice's data.
 
 ### Scopes
 
-| Scope | Grants |
-|---|---|
-| `clients:read` | List/read clients |
-| `patients:read` | List/read patients |
-| `appointments:read` | List/read appointments |
-| `appointments:write` | Create appointments |
-| `records:write` | Create clinical record entries such as SOAP notes |
-| `agent:run` | Run the OpenVPM Agent over the API |
-| `agent:write` | Allow write-enabled agent runs when paired with `agent:run`; write tools still require their resource scopes |
-| `*` | All of the above |
+| Scope                | Grants                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `clients:read`       | List/read clients                                                                                            |
+| `patients:read`      | List/read patients                                                                                           |
+| `appointments:read`  | List/read appointments                                                                                       |
+| `appointments:write` | Create appointments                                                                                          |
+| `records:write`      | Create clinical record entries such as SOAP notes                                                            |
+| `agent:run`          | Run the OpenVPM Agent over the API                                                                           |
+| `agent:write`        | Allow write-enabled agent runs when paired with `agent:run`; write tools still require their resource scopes |
+| `*`                  | All of the above                                                                                             |
 
 A request missing the required scope returns `403`.
 API key creation rejects `agent:write` unless the key also includes `agent:run`
@@ -69,16 +69,21 @@ All errors use a single envelope:
 Validation errors (`400`) include field detail:
 
 ```json
-{ "error": { "message": "Validation failed", "fields": { "end_time": ["end_time must be after start_time"] } } }
+{
+  "error": {
+    "message": "Validation failed",
+    "fields": { "end_time": ["end_time must be after start_time"] }
+  }
+}
 ```
 
-| Status | Meaning |
-|---|---|
-| `400` | Malformed JSON or failed validation |
-| `401` | Missing or invalid API key |
-| `403` | Key lacks the required scope |
-| `404` | Resource not found (or not in your practice) |
-| `429` | Rate limit exceeded |
+| Status | Meaning                                      |
+| ------ | -------------------------------------------- |
+| `400`  | Malformed JSON or failed validation          |
+| `401`  | Missing or invalid API key                   |
+| `403`  | Key lacks the required scope                 |
+| `404`  | Resource not found (or not in your practice) |
+| `429`  | Rate limit exceeded                          |
 
 ## Endpoints
 
@@ -86,17 +91,26 @@ List responses use a `{ data, pagination }` envelope; single-resource responses
 use `{ data }`.
 
 ### `GET /api/v1/clients`
+
 Scope `clients:read`. Query: `limit` (default 25, max 100), `offset`.
 
 ```json
 {
   "data": [
     {
-      "id": "…", "first_name": "Jane", "last_name": "Doe",
-      "email": "jane@example.com", "phone": "555-0100",
-      "address": "1 Main St", "city": "Tampa", "state": "FL", "zip": "33601",
-      "preferred_contact_method": "email", "notes": null,
-      "created_at": "2026-01-02T03:04:05.000Z", "updated_at": "2026-01-02T03:04:05.000Z"
+      "id": "…",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "email": "jane@example.com",
+      "phone": "555-0100",
+      "address": "1 Main St",
+      "city": "Tampa",
+      "state": "FL",
+      "zip": "33601",
+      "preferred_contact_method": "email",
+      "notes": null,
+      "created_at": "2026-01-02T03:04:05.000Z",
+      "updated_at": "2026-01-02T03:04:05.000Z"
     }
   ],
   "pagination": { "limit": 25, "offset": 0, "total": 1 }
@@ -104,18 +118,22 @@ Scope `clients:read`. Query: `limit` (default 25, max 100), `offset`.
 ```
 
 ### `GET /api/v1/clients/:id`
+
 Scope `clients:read`. Returns `{ data: <client> }` or `404`.
 
 ### `GET /api/v1/patients`
+
 Scope `patients:read`. Query: `limit`, `offset`, optional `client_id`.
 Species are normalized to integrator-friendly values (`dog`, `cat`, `bird`,
 `rabbit`, `reptile`, `horse`, `other`) and the internal sex enum is split into
 `sex` (`male`/`female`/`unknown`) + `neutered` (boolean | null).
 
 ### `GET /api/v1/patients/:id`
+
 Scope `patients:read`. Returns `{ data: <patient> }` or `404`.
 
 ### `GET /api/v1/appointments`
+
 Scope `appointments:read`. Query: `limit`, `offset`, optional `client_id`,
 `patient_id`, `status`, `from`, and `to`. `status` must be one of `scheduled`,
 `confirmed`, `checked_in`, `in_exam`, `checked_out`, `no_show`, or `cancelled`.
@@ -147,9 +165,11 @@ as UTC calendar-day bounds (`from` starts at `00:00:00.000Z`; `to` ends at
 ```
 
 ### `GET /api/v1/appointments/:id`
+
 Scope `appointments:read`. Returns `{ data: <appointment> }` or `404`.
 
 ### `POST /api/v1/appointments`
+
 Scope `appointments:write`. Body:
 
 ```json
@@ -201,11 +221,15 @@ SOAP draft or an effective finalized SOAP note; integrations must not treat
 this endpoint as an editable draft workflow.
 
 ### `POST /api/v1/agent`
+
 Scope `agent:run`. Run the OpenVPM Agent over the API, scoped to the key's
 practice. Body:
 
 ```json
-{ "instruction": "Which patients are overdue for vaccinations?", "allow_writes": false }
+{
+  "instruction": "Which patients are overdue for vaccinations?",
+  "allow_writes": false
+}
 ```
 
 `instruction` must contain non-whitespace text and is trimmed before the agent
@@ -215,6 +239,8 @@ appointments and recording vitals. Requests with
 tool, the key must also carry that tool's resource scope, such as
 `appointments:write` for booking or `records:write` for vitals. Returns
 `{ data: { text, toolCalls, iterations, stopReason } }`, where `toolCalls`
-traces every tool the agent invoked. Returns `503` if the configured model
-provider is missing its key (`GOOGLE_API_KEY` or legacy
-`GOOGLE_GENERATIVE_AI_API_KEY` for Gemini, or `ANTHROPIC_API_KEY` for Claude).
+traces every tool the agent invoked. On OpenVPM Cloud, a card-free trial
+returns `403` until billing setup is confirmed by the signed Stripe Checkout
+webhook; adding a card does not end the free trial. Returns `503` if the
+configured model provider is unavailable (Vertex AI workload identity settings
+for hosted Gemini, or `ANTHROPIC_API_KEY` for an explicit Claude model).
