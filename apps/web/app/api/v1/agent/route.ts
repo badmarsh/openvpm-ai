@@ -10,6 +10,7 @@ import {
 } from "@/lib/compat/shared/errors";
 import {
   AgentNotConfiguredError,
+  AgentBillingAccessError,
   AgentPracticeNotFoundError,
   AgentRateLimitedError,
   AgentRecoveryHoldError,
@@ -59,13 +60,11 @@ export async function POST(req: Request) {
     }
 
     try {
-      const postCommitEffects: Array<
-        (rootDb: typeof db) => Promise<void>
-      > = [];
+      const postCommitEffects: Array<(rootDb: typeof db) => Promise<void>> = [];
       const result = await withTenant(db, auth.ctx.practiceId, async (tx) => {
         const activePractice = await assertActivePractice(
           tx,
-          auth.ctx.practiceId
+          auth.ctx.practiceId,
         );
         if (!activePractice.ok) return activePractice.response;
 
@@ -92,6 +91,9 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ data: result });
     } catch (e) {
+      if (e instanceof AgentBillingAccessError) {
+        return apiError(e.message, 403);
+      }
       if (e instanceof AgentNotConfiguredError) {
         return apiError(e.message, 503);
       }
@@ -101,7 +103,7 @@ export async function POST(req: Request) {
           {
             status: 429,
             headers: agentRateLimitHeaders(e),
-          }
+          },
         );
       }
       if (e instanceof AgentRecoveryHoldError) {

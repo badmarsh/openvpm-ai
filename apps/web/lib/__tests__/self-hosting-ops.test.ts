@@ -108,7 +108,7 @@ describe("self-hosting operations docs", () => {
     expect(envExample).toContain("EMAIL_COMPANY_ADDRESS=");
   });
 
-  it("documents hosted AI provider key alternatives", () => {
+  it("documents hosted AI authentication alternatives", () => {
     const hostedRunbook = readFileSync(
       "../../docs/hosted-cloud-production.md",
       "utf8",
@@ -125,15 +125,28 @@ describe("self-hosting operations docs", () => {
       hostedRunbook.indexOf("```", hostedEnvBlockStart + "```env".length),
     );
 
-    expect(requiredHostedEnvBlock).toContain("AI_MODEL=claude-sonnet-4-6");
-    expect(requiredHostedEnvBlock).toContain("ANTHROPIC_API_KEY=...");
-    expect(hostedRunbook).toContain("Hosted AI defaults to Claude");
-    expect(hostedRunbook).toContain(
-      "set either `GOOGLE_API_KEY` or the legacy\n`GOOGLE_GENERATIVE_AI_API_KEY`",
+    expect(requiredHostedEnvBlock).toContain("AI_MODEL=gemini-3.5-flash");
+    expect(requiredHostedEnvBlock).toContain("GOOGLE_VERTEX_PROJECT=...");
+    expect(requiredHostedEnvBlock).toContain("GOOGLE_VERTEX_LOCATION=global");
+    expect(requiredHostedEnvBlock).toContain("GCP_PROJECT_NUMBER=...");
+    expect(requiredHostedEnvBlock).toContain("GCP_SERVICE_ACCOUNT_EMAIL=...");
+    expect(requiredHostedEnvBlock).toContain(
+      "GCP_WORKLOAD_IDENTITY_POOL_ID=vercel",
     );
-    expect(envExample).toContain("GOOGLE_GENERATIVE_AI_API_KEY=");
-    expect(healthRoute).toContain("HOSTED_GOOGLE_AI_ENV_NAMES");
-    expect(healthRoute).toContain("some((name) => configured(name))");
+    expect(requiredHostedEnvBlock).toContain(
+      "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel",
+    );
+    expect(hostedRunbook).toContain(
+      "Hosted AI defaults to stable `gemini-3.5-flash` through Google Cloud Vertex AI",
+    );
+    expect(hostedRunbook).toContain("Do not substitute an AI Studio / Gemini");
+    expect(hostedRunbook).toMatch(
+      /do not create\s+or store a Google private key in Vercel/,
+    );
+    expect(envExample).toContain("GOOGLE_VERTEX_PROJECT=");
+    expect(envExample).not.toContain("GOOGLE_GENERATIVE_AI_API_KEY=");
+    expect(healthRoute).toContain("HOSTED_VERTEX_AI_ENV_NAMES");
+    expect(healthRoute).toContain("Hosted Vertex AI envs present");
   });
 
   it("documents Stripe Tax as a hosted production readiness gate", () => {

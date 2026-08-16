@@ -41,8 +41,7 @@ import {
 import { useOnlineStatus } from "@/lib/use-online-status";
 
 const SoapNoteEditor = dynamic(
-  () =>
-    import("@/components/SoapNoteEditor").then((mod) => mod.SoapNoteEditor),
+  () => import("@/components/SoapNoteEditor").then((mod) => mod.SoapNoteEditor),
   {
     ssr: false,
     loading: () => (
@@ -50,7 +49,7 @@ const SoapNoteEditor = dynamic(
         Loading editor...
       </div>
     ),
-  }
+  },
 );
 
 function canCreateSoapNoteRole(role?: string | null): boolean {
@@ -146,7 +145,7 @@ export default function NewSoapNotePage() {
   const [assessment, setAssessment] = useState("");
   const [plan, setPlan] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState(
-    SOAP_NOTE_TEMPLATES[0]?.id ?? ""
+    SOAP_NOTE_TEMPLATES[0]?.id ?? "",
   );
   const [replaceTemplateContent, setReplaceTemplateContent] = useState(false);
   const canSave = hasSoapContent({ subjective, objective, assessment, plan });
@@ -163,11 +162,10 @@ export default function NewSoapNotePage() {
     data: patient,
     isLoading: patientLoading,
     error: patientError,
-  } =
-    trpc.patients.getById.useQuery(
-      { id: params.patientId },
-      { enabled: !!params.patientId && canCreateSoapNote && !!appointmentId }
-    );
+  } = trpc.patients.getById.useQuery(
+    { id: params.patientId },
+    { enabled: !!params.patientId && canCreateSoapNote && !!appointmentId },
+  );
 
   const draftQuery = trpc.records.getSoapDraft.useQuery(
     { patientId: params.patientId, appointmentId: appointmentId! },
@@ -216,9 +214,7 @@ export default function NewSoapNotePage() {
         draftInitialized: draftInitializedRef.current,
         finalizedElsewhere: finalizedElsewhereRef.current,
         localTextCopied: localTextCopiedRef.current,
-        hasLocalText: Boolean(
-          localSoapTextForClipboard(sectionsRef.current),
-        ),
+        hasLocalText: Boolean(localSoapTextForClipboard(sectionsRef.current)),
         conflict: conflictRef.current,
         savePending: savePromiseRef.current !== null,
         dirty:
@@ -396,6 +392,8 @@ export default function NewSoapNotePage() {
     enabled: canCreateSoapNote && !!appointmentId,
   });
   const aiConfigured = agentStatus.data?.configured ?? false;
+  const canUseAi = agentStatus.data?.canUseAi ?? false;
+  const needsAiBillingSetup = agentStatus.data?.needsBillingSetup ?? false;
   const draftWithAi = trpc.ai.draftSoapNote.useMutation({
     onSuccess: (draft) => {
       if (finalizedElsewhereRef.current) return;
@@ -527,11 +525,7 @@ export default function NewSoapNotePage() {
   }
 
   async function handleDiscardDraft() {
-    if (
-      finalizedElsewhereRef.current ||
-      !appointmentId ||
-      !draftIdRef.current
-    )
+    if (finalizedElsewhereRef.current || !appointmentId || !draftIdRef.current)
       return;
     if (
       !window.confirm(
@@ -575,7 +569,7 @@ export default function NewSoapNotePage() {
     const next = applySoapTemplateToSections(
       { subjective, objective, assessment, plan },
       selectedTemplate,
-      { replaceExisting: replaceTemplateContent }
+      { replaceExisting: replaceTemplateContent },
     );
     setSubjective(next.subjective);
     setObjective(next.objective);
@@ -584,7 +578,7 @@ export default function NewSoapNotePage() {
     toast.info(
       replaceTemplateContent || !canSave
         ? `${selectedTemplate.name} draft prompts applied`
-        : `${selectedTemplate.name} draft prompts filled blank sections`
+        : `${selectedTemplate.name} draft prompts filled blank sections`,
     );
   }
 
@@ -599,9 +593,7 @@ export default function NewSoapNotePage() {
           finalizedElsewhere: finalizedElsewhereRef.current,
           needsGuard: editorNeedsLeaveGuard(),
           localTextCopied: localTextCopiedRef.current,
-          hasLocalText: Boolean(
-            localSoapTextForClipboard(sectionsRef.current),
-          ),
+          hasLocalText: Boolean(localSoapTextForClipboard(sectionsRef.current)),
         }),
         persistDraft,
         confirmFinalizedLocalTextLeave: () =>
@@ -648,10 +640,7 @@ export default function NewSoapNotePage() {
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
-      if (
-        !editorNeedsLeaveGuard() &&
-        navigationAttemptRef.current === null
-      ) {
+      if (!editorNeedsLeaveGuard() && navigationAttemptRef.current === null) {
         return;
       }
       if (!(event.target instanceof Element)) return;
@@ -840,7 +829,9 @@ export default function NewSoapNotePage() {
             ) : (
               <Copy className="mr-2 h-4 w-4" />
             )}
-            {localTextCopied ? "Local SOAP text copied" : "Copy local SOAP text"}
+            {localTextCopied
+              ? "Local SOAP text copied"
+              : "Copy local SOAP text"}
           </Button>
           <Button
             type="button"
@@ -904,7 +895,9 @@ export default function NewSoapNotePage() {
               variant="outline"
               size="sm"
               onClick={handleDraftWithAi}
-              disabled={!isOnline || !aiConfigured || draftWithAi.isPending}
+              disabled={
+                !isOnline || !aiConfigured || !canUseAi || draftWithAi.isPending
+              }
             >
               {draftWithAi.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -914,11 +907,31 @@ export default function NewSoapNotePage() {
               {draftWithAi.isPending ? "Drafting..." : "Draft with AI"}
             </Button>
           </div>
-          {!aiConfigured && !agentStatus.isLoading && (
+          {needsAiBillingSetup && !agentStatus.isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Add a card to your trial to try AI.</span>
+              {userRole === "admin" ? (
+                <button
+                  type="button"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  onClick={() => router.push("/settings?tab=billing")}
+                >
+                  Add a card
+                </button>
+              ) : (
+                <span>Ask a practice administrator.</span>
+              )}
+            </div>
+          ) : !canUseAi && !agentStatus.isLoading ? (
             <p className="text-xs text-muted-foreground">
-              AI is not set up yet. Ask your admin to add an AI key.
+              {agentStatus.data?.accessMessage ??
+                "AI is not available for this workspace."}
             </p>
-          )}
+          ) : !aiConfigured && !agentStatus.isLoading ? (
+            <p className="text-xs text-muted-foreground">
+              AI is not available right now. Please try again later.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -1074,9 +1087,9 @@ export default function NewSoapNotePage() {
             role="alert"
             className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
           >
-            This draft still contains template prompts. Replace each prompt
-            with findings verified during this visit, or delete it if it does
-            not apply.
+            This draft still contains template prompts. Replace each prompt with
+            findings verified during this visit, or delete it if it does not
+            apply.
           </div>
         ) : null}
 
@@ -1128,9 +1141,7 @@ export default function NewSoapNotePage() {
 
           {/* Plan */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Plan
-            </label>
+            <label className="block text-sm font-medium mb-1.5">Plan</label>
             <p className="text-xs text-muted-foreground mb-2">
               Treatment plan, medications, follow-up instructions
             </p>

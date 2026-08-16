@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => {
       limit: vi.fn(async () => result),
       then: (
         resolve: (value: unknown[]) => unknown,
-        reject?: (error: unknown) => unknown
+        reject?: (error: unknown) => unknown,
       ) => Promise.resolve(result).then(resolve, reject),
     };
     return {
@@ -36,22 +36,36 @@ const mocks = vi.hoisted(() => {
     rateLimitResponseHeaders: vi.fn(
       (
         limit: number,
-        result: { remaining: number; resetAt: Date }
+        result: { remaining: number; resetAt: Date },
       ): Record<string, string> => ({
         "Retry-After": String(
-          Math.max(1, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000))
+          Math.max(
+            1,
+            Math.ceil((result.resetAt.getTime() - Date.now()) / 1000),
+          ),
         ),
         "X-RateLimit-Limit": String(limit),
         "X-RateLimit-Remaining": String(result.remaining),
         "X-RateLimit-Reset": result.resetAt.toISOString(),
-      })
+      }),
     ),
     bcryptCompare: vi.fn(async () => false),
     bcryptHash: vi.fn(async () => "hashed-key"),
     billingEnforced: vi.fn(() => false),
     hasHostedFullAccess: vi.fn(() => true),
+    readHostedAiAccess: vi.fn(
+      async (): Promise<{
+        allowed: boolean;
+        reason: string;
+        message: string | null;
+      } | null> => ({
+        allowed: true,
+        reason: "allowed",
+        message: null,
+      }),
+    ),
     withSystem: vi.fn(async (_db: unknown, fn: (tx: unknown) => unknown) =>
-      fn({ select, update })
+      fn({ select, update }),
     ),
   };
 });
@@ -74,6 +88,10 @@ vi.mock("@/lib/billing/plans", () => ({
   hasHostedFullAccess: mocks.hasHostedFullAccess,
 }));
 
+vi.mock("@/lib/billing/ai-access", () => ({
+  readHostedAiAccess: mocks.readHostedAiAccess,
+}));
+
 vi.mock("bcryptjs", () => ({
   default: {
     compare: mocks.bcryptCompare,
@@ -82,7 +100,10 @@ vi.mock("bcryptjs", () => ({
 }));
 
 const { authenticateApiKey } = await import("../api-auth");
-const apiAuthSource = readFileSync(new URL("../api-auth.ts", import.meta.url), "utf8");
+const apiAuthSource = readFileSync(
+  new URL("../api-auth.ts", import.meta.url),
+  "utf8",
+);
 
 const INVALID_SHAPED_KEY = "ovpm_AbCdEfGhIjKlMnOpQrStUvWxYz012345";
 const VALID_SHAPED_KEY = "ovpm_ZyXwVuTsRqPoNmLkJiHgFeDcBa987654";
@@ -123,13 +144,18 @@ afterEach(() => {
   mocks.bcryptCompare.mockResolvedValue(false);
   mocks.billingEnforced.mockReturnValue(false);
   mocks.hasHostedFullAccess.mockReturnValue(true);
+  mocks.readHostedAiAccess.mockResolvedValue({
+    allowed: true,
+    reason: "allowed",
+    message: null,
+  });
 });
 
 describe("authenticateApiKey", () => {
   it("rate-limits missing API keys before returning unauthorized", async () => {
     const result = await authenticateApiKey(
       apiRequestWithoutKey(),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -162,7 +188,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequestWithoutKey(),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -172,7 +198,7 @@ describe("authenticateApiKey", () => {
       expect(result.response.headers.get("X-RateLimit-Limit")).toBe("1200");
       expect(result.response.headers.get("X-RateLimit-Remaining")).toBe("0");
       expect(result.response.headers.get("X-RateLimit-Reset")).toBe(
-        "2026-06-27T12:01:00.000Z"
+        "2026-06-27T12:01:00.000Z",
       );
       await expect(result.response.json()).resolves.toEqual({
         error: { message: "Too many API key authentication attempts." },
@@ -212,7 +238,7 @@ describe("authenticateApiKey", () => {
       });
       expect(mocks.db.select).not.toHaveBeenCalled();
       expect(mocks.bcryptCompare).not.toHaveBeenCalled();
-    }
+    },
   );
 
   it("rate-limits presented API keys before lookup or bcrypt comparison", async () => {
@@ -224,7 +250,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(INVALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -256,7 +282,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(INVALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -269,7 +295,7 @@ describe("authenticateApiKey", () => {
     expect(mocks.rateLimit).toHaveBeenCalledTimes(1);
     expect(mocks.bcryptCompare).toHaveBeenCalledWith(
       INVALID_SHAPED_KEY,
-      "stored-hash"
+      "stored-hash",
     );
   });
 
@@ -287,7 +313,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(VALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result).toEqual({
@@ -337,7 +363,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(VALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -347,7 +373,7 @@ describe("authenticateApiKey", () => {
       expect(result.response.headers.get("X-RateLimit-Limit")).toBe("600");
       expect(result.response.headers.get("X-RateLimit-Remaining")).toBe("0");
       expect(result.response.headers.get("X-RateLimit-Reset")).toBe(
-        "2026-06-27T12:01:05.000Z"
+        "2026-06-27T12:01:05.000Z",
       );
       await expect(result.response.json()).resolves.toEqual({
         error: { message: "Rate limit exceeded." },
@@ -367,7 +393,9 @@ describe("authenticateApiKey", () => {
   });
 
   it("returns a shaped error when the per-key request limiter is unavailable", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mocks.selectResults.push([
       {
         id: "key_123",
@@ -389,7 +417,7 @@ describe("authenticateApiKey", () => {
     try {
       const result = await authenticateApiKey(
         apiRequest(VALID_SHAPED_KEY),
-        "clients:read"
+        "clients:read",
       );
 
       expect(result.ok).toBe(false);
@@ -412,7 +440,7 @@ describe("authenticateApiKey", () => {
       expect(mocks.db.update).not.toHaveBeenCalled();
       expect(consoleError).toHaveBeenCalledWith(
         "[api-auth] per-key rate limit failed:",
-        expect.any(Error)
+        expect.any(Error),
       );
     } finally {
       consoleError.mockRestore();
@@ -433,7 +461,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(VALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -461,7 +489,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(VALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -490,7 +518,7 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(VALID_SHAPED_KEY),
-      "clients:read"
+      "clients:read",
     );
 
     expect(result.ok).toBe(false);
@@ -520,18 +548,58 @@ describe("authenticateApiKey", () => {
 
     const result = await authenticateApiKey(
       apiRequest(VALID_SHAPED_KEY),
-      "appointments:write"
+      "appointments:write",
     );
 
     expect(result.ok).toBe(true);
     expect(mocks.hasHostedFullAccess).toHaveBeenCalledWith(
       "cloud",
       "active",
-      null
+      null,
     );
     expect(apiAuthSource).toContain("practice.tier");
     expect(apiAuthSource).not.toContain("practice?.tier");
     expect(apiAuthSource).not.toContain("practice?.billingStatus");
     expect(apiAuthSource).not.toContain("practice?.trialEndsAt");
+  });
+
+  it("blocks agent API keys for card-free hosted trials before request execution", async () => {
+    mocks.billingEnforced.mockReturnValue(true);
+    mocks.selectResults.push([
+      {
+        id: "key_123",
+        practiceId: "practice_123",
+        keyHash: "stored-hash",
+        scopes: ["agent:run"],
+      },
+    ]);
+    mocks.selectResults.push(ACTIVE_PRACTICE);
+    mocks.bcryptCompare.mockResolvedValueOnce(true);
+    mocks.readHostedAiAccess.mockResolvedValueOnce({
+      allowed: false,
+      reason: "billing_setup_required",
+      message:
+        "Add a card to your trial to try OpenVPM AI. The rest of your free trial stays available.",
+    });
+
+    const result = await authenticateApiKey(
+      apiRequest(VALID_SHAPED_KEY),
+      "agent:run",
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.response.status).toBe(403);
+      await expect(result.response.json()).resolves.toEqual({
+        error: {
+          message: expect.stringContaining("Add a card to your trial"),
+        },
+      });
+    }
+    expect(mocks.readHostedAiAccess).toHaveBeenCalledWith(
+      expect.anything(),
+      "practice_123",
+      { enforced: true },
+    );
   });
 });

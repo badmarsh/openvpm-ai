@@ -7,57 +7,80 @@ afterEach(() => {
 });
 
 describe("isAgentConfigured (provider-agnostic)", () => {
-  it("a Gemini model is configured only with a non-blank Google API key", () => {
-    vi.stubEnv("AI_MODEL", " gemini-2.5-flash ");
-    vi.stubEnv("GOOGLE_API_KEY", "");
-    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "");
+  function stubVertexOidcConfiguration() {
+    vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
+    vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
+    vi.stubEnv("GCP_PROJECT_NUMBER", "123456789012");
+    vi.stubEnv(
+      "GCP_SERVICE_ACCOUNT_EMAIL",
+      "vertex@openvpm-ai.iam.gserviceaccount.com",
+    );
+    vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_ID", "vercel");
+    vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", "vercel");
+  }
+
+  function stubVertexServiceAccountConfiguration() {
+    vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
+    vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
+    vi.stubEnv(
+      "GOOGLE_CLIENT_EMAIL",
+      "vertex@openvpm-ai.iam.gserviceaccount.com",
+    );
+    vi.stubEnv("GOOGLE_PRIVATE_KEY", "synthetic-line-one\\nsynthetic-line-two");
+  }
+
+  it("a Gemini model accepts the complete Vertex AI OIDC boundary", () => {
+    vi.stubEnv("AI_MODEL", " gemini-3.5-flash ");
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test"); // wrong provider's key
     expect(isAgentConfigured()).toBe(false);
-    vi.stubEnv("GOOGLE_API_KEY", " AIza-test ");
+
+    stubVertexOidcConfiguration();
     expect(isAgentConfigured()).toBe(true);
   });
 
-  it("falls back to the legacy Google Generative AI key when GOOGLE_API_KEY is blank", () => {
-    vi.stubEnv("AI_MODEL", "google/gemini-2.5-flash");
-    vi.stubEnv("GOOGLE_API_KEY", "   ");
-    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "AIza-fallback");
-    vi.stubEnv("ANTHROPIC_API_KEY", "");
+  it("keeps a complete service account boundary for non-Vercel self-hosting", () => {
+    vi.stubEnv("AI_MODEL", "gemini-3.5-flash");
+    stubVertexServiceAccountConfiguration();
     expect(isAgentConfigured()).toBe(true);
   });
 
-  it("names the Gemini fallback key in the not-configured error", () => {
+  it("names Vertex AI in the not-configured error", () => {
     expect(new AgentNotConfiguredError().message).toContain(
-      "GOOGLE_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY for Gemini"
+      "Google Vertex AI for Gemini",
     );
   });
 
   it("a Claude model is configured only with a non-blank Anthropic API key", () => {
     vi.stubEnv("AI_MODEL", "claude-sonnet-4-6");
     vi.stubEnv("ANTHROPIC_API_KEY", "   ");
-    vi.stubEnv("GOOGLE_API_KEY", "AIza-test"); // wrong provider's key
+    stubVertexOidcConfiguration(); // wrong provider's credentials
     expect(isAgentConfigured()).toBe(false);
     vi.stubEnv("ANTHROPIC_API_KEY", " sk-ant-test ");
     expect(isAgentConfigured()).toBe(true);
   });
 
-  it("defaults to Claude when AI_MODEL/AGENT_MODEL are blank", () => {
+  it("defaults to Gemini on Vertex when AI_MODEL/AGENT_MODEL are blank", () => {
     vi.stubEnv("AI_MODEL", " ");
     vi.stubEnv("AGENT_MODEL", "   ");
-    vi.stubEnv("GOOGLE_API_KEY", "");
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    expect(isAgentConfigured()).toBe(false);
+    stubVertexOidcConfiguration();
     expect(isAgentConfigured()).toBe(true);
   });
 
   it("trims the legacy AGENT_MODEL fallback before choosing the provider", () => {
     vi.stubEnv("AI_MODEL", "");
-    vi.stubEnv("AGENT_MODEL", " google/gemini-2.5-flash ");
-    vi.stubEnv("GOOGLE_API_KEY", "AIza-test");
+    vi.stubEnv("AGENT_MODEL", " google/gemini-3.5-flash ");
+    stubVertexOidcConfiguration();
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     expect(isAgentConfigured()).toBe(true);
   });
 
   it("rethrows stale-practice tool failures instead of returning them to the model", () => {
-    const source = readFileSync(new URL("../runner.ts", import.meta.url), "utf8");
+    const source = readFileSync(
+      new URL("../runner.ts", import.meta.url),
+      "utf8",
+    );
 
     expect(source).toContain("AgentPracticeNotFoundError");
     expect(source).toContain("e instanceof AgentPracticeNotFoundError");
