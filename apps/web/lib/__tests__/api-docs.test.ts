@@ -12,8 +12,9 @@ describe("API reference docs", () => {
     expect(source).toContain("Versioned `/api/v1` REST API");
     expect(source).toContain("read clients/patients/appointments");
     expect(source).toContain("create SOAP notes");
-    expect(source).toContain("GOOGLE_API_KEY");
-    expect(source).toContain("GOOGLE_GENERATIVE_AI_API_KEY");
+    expect(source).toContain(
+      "Google Cloud Vertex AI with Vercel OIDC workload identity federation",
+    );
     expect(source).toContain("/api/v1/agent");
     expect(source).toContain(
       "external integrations use scoped `/api/v1` REST endpoints and signed webhooks",
@@ -98,8 +99,8 @@ describe("API reference docs", () => {
     expect(source).toContain("Date-only filters are interpreted");
     expect(source).toContain("23:59:59.999Z");
     expect(source).toContain("### `GET /api/v1/appointments/:id`");
-    expect(source).toContain("| `records:write` |");
-    expect(source).toContain("| `agent:write` |");
+    expect(source).toMatch(/\| `records:write`\s+\|/);
+    expect(source).toMatch(/\| `agent:write`\s+\|/);
     expect(source).toContain(
       "API key creation rejects `agent:write` unless the key also includes `agent:run`",
     );
@@ -114,9 +115,8 @@ describe("API reference docs", () => {
     expect(source).toContain(
       "the key must also carry that tool's resource scope",
     );
-    expect(source).toContain(
-      "`GOOGLE_API_KEY` or legacy\n`GOOGLE_GENERATIVE_AI_API_KEY` for Gemini",
-    );
+    expect(source).toContain("signed Stripe Checkout");
+    expect(source).toContain("Vertex AI workload identity settings");
     expect(source).not.toContain(
       "Returns `503` if the server has no\n`ANTHROPIC_API_KEY` configured",
     );

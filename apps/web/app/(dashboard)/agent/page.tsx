@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   AlertTriangle,
+  CreditCard,
   Wrench,
   Loader2,
   Sparkles,
@@ -77,10 +78,10 @@ export default function AgentPage() {
     );
   }
 
-  return <AgentRunner />;
+  return <AgentRunner isAdmin={session?.user?.role === "admin"} />;
 }
 
-function AgentRunner() {
+function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const router = useRouter();
   const status = trpc.agent.status.useQuery();
   const run = trpc.agent.run.useMutation();
@@ -111,7 +112,9 @@ function AgentRunner() {
   const configured = verifiedAgentStatus
     ? verifiedAgentStatus.configured
     : false;
-  const canRun = !status.isLoading && configured;
+  const canUseAi = verifiedAgentStatus?.canUseAi ?? false;
+  const needsBillingSetup = verifiedAgentStatus?.needsBillingSetup ?? false;
+  const canRun = !status.isLoading && configured && canUseAi;
   const instructionInvalid =
     instruction.length > 0 && !isAgentInstructionValid(instruction);
   const submitDisabled =
@@ -195,7 +198,7 @@ function AgentRunner() {
           ]);
         },
         onSettled: () => setAllowWrites(false),
-      }
+      },
     );
   }
 
@@ -243,6 +246,37 @@ function AgentRunner() {
         </Button>
       </div>
     </div>
+  ) : needsBillingSetup ? (
+    <div className="mb-4 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+      <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+      <div>
+        <p className="font-medium">Add a card to try AI</p>
+        <p className="mt-1 text-muted-foreground">
+          {verifiedAgentStatus?.accessMessage}
+        </p>
+        {isAdmin ? (
+          <Button
+            size="sm"
+            className="mt-3"
+            onClick={() => router.push("/settings?tab=billing")}
+          >
+            Add a card
+          </Button>
+        ) : (
+          <p className="mt-2 text-muted-foreground">
+            Ask a practice administrator to add the card.
+          </p>
+        )}
+      </div>
+    </div>
+  ) : !canUseAi ? (
+    <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+      <p>
+        {verifiedAgentStatus?.accessMessage ??
+          "OpenVPM AI is not available for this workspace."}
+      </p>
+    </div>
   ) : !configured ? (
     <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -250,16 +284,17 @@ function AgentRunner() {
         // Hosted clinics can't fix a platform key. Keep it human; ops sees
         // the missing config through /api/health checks.
         <p>
-          The agent is not available right now. We are on it. Please check
-          back soon.
+          The agent is not available right now. We are on it. Please check back
+          soon.
         </p>
       ) : (
         <p>
-          Set <code className="break-all font-mono">GOOGLE_API_KEY</code> or{" "}
-          <code className="break-all font-mono">GOOGLE_GENERATIVE_AI_API_KEY</code>{" "}
-          for Gemini, or{" "}
-          <code className="break-all font-mono">ANTHROPIC_API_KEY</code> for
-          Claude, to enable agent runs.
+          Configure Google Vertex AI with{" "}
+          <code className="break-all font-mono">GOOGLE_VERTEX_PROJECT</code>,{" "}
+          <code className="break-all font-mono">GOOGLE_VERTEX_LOCATION</code>,{" "}
+          and service-account credentials for Gemini, or set{" "}
+          <code className="break-all font-mono">ANTHROPIC_API_KEY</code> for an
+          explicit Claude model.
         </p>
       )}
     </div>
@@ -321,7 +356,7 @@ function AgentRunner() {
                 </div>
               ) : (
                 <MessageBubble key={m.id} message={m} />
-              )
+              ),
             )}
             {run.isPending ? <TypingIndicator /> : null}
           </div>
@@ -356,7 +391,9 @@ function AgentRunner() {
             placeholder={
               canRun
                 ? "Ask the agent anything…  (Enter to send, Shift+Enter for a new line)"
-                : "The agent is not available right now."
+                : needsBillingSetup
+                  ? "Add a card to try AI."
+                  : "The agent is not available right now."
             }
             className="max-h-40 w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -414,7 +451,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             ? "bg-primary text-primary-foreground"
             : message.isError
               ? "border border-destructive/30 bg-destructive/5 text-destructive"
-              : "bg-muted text-foreground"
+              : "bg-muted text-foreground",
         )}
       >
         <div className="whitespace-pre-wrap">{message.content}</div>
@@ -444,7 +481,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                       "rounded-md border p-2 font-mono text-xs",
                       call.error
                         ? "border-destructive/30 bg-destructive/5 text-destructive"
-                        : "border-border bg-surface text-muted-foreground"
+                        : "border-border bg-surface text-muted-foreground",
                     )}
                   >
                     <div className="font-semibold text-foreground">
@@ -453,7 +490,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                     <div className="mt-1 break-all">
                       {JSON.stringify(call.input)}
                     </div>
-                    {call.error ? <div className="mt-1">⚠ {call.error}</div> : null}
+                    {call.error ? (
+                      <div className="mt-1">⚠ {call.error}</div>
+                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -932,7 +932,7 @@ const sections: Section[] = [
         name: "POST /api/v1/agent",
         method: "POST",
         description:
-          "Run the OpenVPM Agent from an external automation. Instruction text is trimmed and must be nonblank. Write-enabled runs require agent:write plus each write tool's resource scope.",
+          "Run the OpenVPM Agent from an external automation. Instruction text is trimmed and must be nonblank. Cloud trials require signed Stripe billing-setup evidence before AI is enabled; the rest of the free trial remains available. Write-enabled runs require agent:write plus each write tool's resource scope.",
         input: `{
   instruction: string,
   allow_writes?: boolean

@@ -95,16 +95,23 @@ const HOSTED_SMS_PROVISIONING_PRACTICE_IDS_ENV =
   "MESSAGING_PROVISIONING_PRACTICE_IDS";
 const HOSTED_SMS_SENDING_PRACTICE_IDS_ENV = "MESSAGING_SENDING_PRACTICE_IDS";
 const HOSTED_SMS_SENDING_LOCATION_IDS_ENV = "MESSAGING_SENDING_LOCATION_IDS";
-const HOSTED_GOOGLE_AI_ENV_NAMES = [
-  "GOOGLE_API_KEY",
-  "GOOGLE_GENERATIVE_AI_API_KEY",
+const HOSTED_VERTEX_AI_ENV_NAMES = [
+  "GOOGLE_VERTEX_PROJECT",
+  "GOOGLE_VERTEX_LOCATION",
+  "GCP_PROJECT_NUMBER",
+  "GCP_SERVICE_ACCOUNT_EMAIL",
+  "GCP_WORKLOAD_IDENTITY_POOL_ID",
+  "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID",
 ];
 const HOSTED_ANTHROPIC_AI_ENV_NAMES = ["ANTHROPIC_API_KEY"];
 
 // AI is provider-agnostic: the model is chosen by AI_MODEL and the provider is
-// inferred from the id, so require the matching provider key (Gemini vs Claude).
+// inferred from the id. Hosted Gemini uses Vertex AI so chart context never
+// goes through the Google AI Studio / Gemini Developer API boundary. Hosted
+// authentication is Vercel OIDC -> Google workload identity federation, so no
+// long-lived Google private key is accepted as a complete production setup.
 function activeAiModel(): string {
-  return envValue("AI_MODEL") ?? envValue("AGENT_MODEL") ?? "claude-sonnet-4-6";
+  return envValue("AI_MODEL") ?? envValue("AGENT_MODEL") ?? "gemini-3.5-flash";
 }
 
 function isGeminiModel(model: string): boolean {
@@ -114,13 +121,10 @@ function isGeminiModel(model: string): boolean {
 function hostedAiCheck(): { ok: boolean; detail: string } {
   const model = activeAiModel();
   if (isGeminiModel(model)) {
-    const ok = HOSTED_GOOGLE_AI_ENV_NAMES.some((name) => configured(name));
-    return {
-      ok,
-      detail: ok
-        ? "Hosted AI envs present"
-        : "1 required hosted configuration value is missing",
-    };
+    return hostedEnvCheck(
+      HOSTED_VERTEX_AI_ENV_NAMES,
+      "Hosted Vertex AI envs present",
+    );
   }
 
   return hostedEnvCheck(

@@ -226,7 +226,9 @@ export function WelcomeProvider({ children }: { children: React.ReactNode }) {
   const guideContext: GuideContext = {
     portalClient: welcomeContext.data?.portalClient ?? null,
     demoPatientName: welcomeContext.data?.demoPatientName ?? null,
-    agentConfigured: agentStatus.data?.configured,
+    agentConfigured: Boolean(
+      agentStatus.data?.configured && agentStatus.data?.canUseAi,
+    ),
   };
 
   const headline = isAdmin

@@ -20,6 +20,7 @@ import {
   effectiveTier,
   type Feature,
 } from "@/lib/billing/plans";
+import { readHostedAiAccess } from "@/lib/billing/ai-access";
 
 type UserRole =
   | "admin"
@@ -352,6 +353,30 @@ export function requireFeature(feature: Feature) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
     if (billingEnforced()) {
+      if (feature === "agent") {
+        const access = await readHostedAiAccess(
+          ctx.db,
+          ctx.session.user.practiceId,
+          { enforced: true },
+        );
+        if (!access) {
+          throw practiceNotFound();
+        }
+        if (!access.allowed) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: access.message ?? "OpenVPM AI is not available.",
+          });
+        }
+        return next({
+          ctx: {
+            session: ctx.session,
+            user: ctx.session.user,
+            practiceId: ctx.session.user.practiceId,
+          },
+        });
+      }
+
       const [practice] = await ctx.db
         .select({
           tier: practices.subscriptionTier,
