@@ -112,13 +112,10 @@ describe("consult companion UI states", () => {
   });
 
   it("hides the AI draft affordance behind configuration with a gentle note", () => {
-    expect(soapPage).toContain("agentStatus.data?.configured ?? false");
-    expect(soapPage).toContain(
-      "disabled={!isOnline || !aiConfigured || draftWithAi.isPending}",
-    );
-    expect(soapPage).toContain(
-      "AI is not set up yet. Ask your admin to add an AI key.",
-    );
+    expect(soapPage).toContain("agentStatus.data?.canUseAi ?? false");
+    expect(soapPage).toContain("!canUseAi ||");
+    expect(soapPage).toContain("Add a card to your trial to try AI");
+    expect(soapPage).toContain('router.push("/settings?tab=billing")');
   });
 
   it("keeps consult companion copy free of em dashes", () => {

@@ -6,6 +6,7 @@ import { db } from "@openpims/db/client";
 import { apiKeys, practices } from "@openpims/db";
 import { rateLimit, rateLimitResponseHeaders } from "@/lib/rate-limit";
 import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
+import { readHostedAiAccess } from "@/lib/billing/ai-access";
 import { withSystem } from "@/lib/tenant-db";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { API_KEY_HASH_COST } from "@/lib/auth-hashing";
@@ -74,7 +75,10 @@ function hasApiKeyShape(raw: string): boolean {
   return API_KEY_BODY_PATTERN.test(raw.slice(API_KEY_PREFIX.length));
 }
 
-function err(message: string, status: number): { ok: false; response: NextResponse } {
+function err(
+  message: string,
+  status: number,
+): { ok: false; response: NextResponse } {
   return {
     ok: false,
     response: NextResponse.json({ error: { message } }, { status }),
@@ -85,7 +89,7 @@ function rateLimitErr(
   message: string,
   limit: number,
   remaining: number,
-  resetAt: Date
+  resetAt: Date,
 ): {
   ok: false;
   response: NextResponse;
@@ -97,13 +101,13 @@ function rateLimitErr(
       {
         status: 429,
         headers: rateLimitResponseHeaders(limit, { remaining, resetAt }),
-      }
+      },
     ),
   };
 }
 
 async function enforceApiKeyAuthAttemptLimit(
-  req: Request
+  req: Request,
 ): Promise<AuthResult | null> {
   const ip = clientIpFromRequest(req);
   try {
@@ -118,7 +122,7 @@ async function enforceApiKeyAuthAttemptLimit(
         "Too many API key authentication attempts.",
         AUTH_ATTEMPT_RATE_LIMIT,
         attemptLimit.remaining,
-        attemptLimit.resetAt
+        attemptLimit.resetAt,
       );
     }
   } catch (e) {
@@ -139,14 +143,17 @@ async function enforceApiKeyAuthAttemptLimit(
  */
 export async function authenticateApiKey(
   req: Request,
-  requiredScope: string
+  requiredScope: string,
 ): Promise<AuthResult> {
   const attemptLimit = await enforceApiKeyAuthAttemptLimit(req);
   if (attemptLimit) return attemptLimit;
 
   const raw = extractApiKey(req.headers);
   if (!raw) {
-    return err("Missing API key. Send 'Authorization: Bearer <key>' or 'X-API-Key'.", 401);
+    return err(
+      "Missing API key. Send 'Authorization: Bearer <key>' or 'X-API-Key'.",
+      401,
+    );
   }
 
   if (!hasApiKeyShape(raw)) {
@@ -162,7 +169,7 @@ export async function authenticateApiKey(
       tx
         .select()
         .from(apiKeys)
-        .where(and(eq(apiKeys.keyPrefix, prefix), isNull(apiKeys.deletedAt)))
+        .where(and(eq(apiKeys.keyPrefix, prefix), isNull(apiKeys.deletedAt))),
     );
   } catch (e) {
     console.error("[api-auth] key lookup failed:", e);
@@ -202,10 +209,10 @@ export async function authenticateApiKey(
         .where(
           and(
             eq(practices.id, matched.practiceId),
-            isNull(practices.deletedAt)
-          )
+            isNull(practices.deletedAt),
+          ),
         )
-        .limit(1)
+        .limit(1),
     );
   } catch (e) {
     console.error("[api-auth] practice lookup failed:", e);
@@ -216,7 +223,9 @@ export async function authenticateApiKey(
     return err("Invalid API key.", 401);
   }
 
-  const scopes = Array.isArray(matched.scopes) ? (matched.scopes as string[]) : [];
+  const scopes = Array.isArray(matched.scopes)
+    ? (matched.scopes as string[])
+    : [];
   if (!hasScope(scopes, requiredScope)) {
     return err(`API key missing required scope: ${requiredScope}`, 403);
   }
@@ -232,15 +241,36 @@ export async function authenticateApiKey(
   // Hosted read-only mode still allows read scopes. Write scopes and agent runs
   // require an active trial/subscription. Self-host skips this entirely.
   if (billingEnforced()) {
-    if (writeLikeScope && !hasHostedFullAccess(
-      practice.tier,
-      practice.billingStatus,
-      practice.trialEndsAt
-    )) {
+    if (
+      writeLikeScope &&
+      !hasHostedFullAccess(
+        practice.tier,
+        practice.billingStatus,
+        practice.trialEndsAt,
+      )
+    ) {
       return err(
         "OpenVPM Cloud is read-only until your trial or subscription is active.",
-        403
+        403,
       );
+    }
+
+    if (requiredScope === "agent:run") {
+      let aiAccess;
+      try {
+        aiAccess = await withSystem(db, (tx) =>
+          readHostedAiAccess(tx, matched.practiceId, { enforced: true }),
+        );
+      } catch (e) {
+        console.error("[api-auth] AI entitlement lookup failed:", e);
+        return err("Internal error", 500);
+      }
+      if (!aiAccess) {
+        return err("Invalid API key.", 401);
+      }
+      if (!aiAccess.allowed) {
+        return err(aiAccess.message ?? "OpenVPM AI is not available.", 403);
+      }
     }
   }
 
@@ -262,7 +292,7 @@ export async function authenticateApiKey(
       "Rate limit exceeded.",
       RATE_LIMIT,
       keyLimit.remaining,
-      keyLimit.resetAt
+      keyLimit.resetAt,
     );
   }
 
@@ -271,7 +301,7 @@ export async function authenticateApiKey(
     tx
       .update(apiKeys)
       .set({ lastUsedAt: new Date() })
-      .where(eq(apiKeys.id, matched.id))
+      .where(eq(apiKeys.id, matched.id)),
   ).catch((e) => console.error("[api-auth] lastUsedAt update failed:", e));
 
   return {
@@ -295,7 +325,7 @@ export const API_SCOPES = [
 export type ApiScope = (typeof API_SCOPES)[number];
 
 export function apiScopesHaveValidDependencies(
-  scopes: readonly ApiScope[]
+  scopes: readonly ApiScope[],
 ): boolean {
   return (
     !scopes.includes("agent:write") ||

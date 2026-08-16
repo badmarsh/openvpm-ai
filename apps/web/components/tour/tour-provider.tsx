@@ -157,7 +157,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             ctx.demoPatientName ?? welcomeCtx.data?.demoPatientName,
           demoPatientId: welcomeCtx.data?.demoPatientId,
           demoInvoiceId: welcomeCtx.data?.demoInvoiceId,
-          agentConfigured: ctx.agentConfigured ?? agentStatus.data?.configured,
+          agentConfigured:
+            ctx.agentConfigured ??
+            Boolean(agentStatus.data?.configured && agentStatus.data?.canUseAi),
         });
         prefetchSteps(steps);
         setRun({ recipe, steps, index: 0 });

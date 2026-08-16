@@ -240,9 +240,10 @@ describe("onboarding UI states", () => {
     expect(isAgentInstructionValid(" ".repeat(8))).toBe(false);
 
     expect(tryAgent).toContain('from "@/lib/agent/policy"');
-    expect(tryAgent).toContain(
-      "const canAsk = Boolean(\n    verifiedAgentStatus &&\n    configured &&\n    isAgentInstructionValid(question) &&\n    !run.isPending\n  )",
-    );
+    expect(tryAgent).toContain("const canAsk = Boolean(");
+    expect(tryAgent).toContain("verifiedAgentStatus.canUseAi &&");
+    expect(tryAgent).toContain("isAgentInstructionValid(question) &&");
+    expect(tryAgent).toContain("!run.isPending,");
     expect(tryAgent).toContain("if (!canAsk) return");
     expect(tryAgent).toContain("instruction: question.trim()");
     expect(tryAgent).toContain("maxLength={AGENT_INSTRUCTION_MAX_LENGTH}");

@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => {
     constructor(
       retryAfterSeconds: number,
       limit = 20,
-      resetAt = new Date("2026-06-30T04:45:00.000Z")
+      resetAt = new Date("2026-06-30T04:45:00.000Z"),
     ) {
       super("Too many agent runs. Try again later.");
       this.name = "AgentRateLimitedError";
@@ -47,10 +47,18 @@ const mocks = vi.hoisted(() => {
     }
   }
 
+  class AgentBillingAccessError extends Error {
+    constructor(message = "Add a card to your trial to try OpenVPM AI.") {
+      super(message);
+      this.name = "AgentBillingAccessError";
+    }
+  }
+
   return {
     AgentNotConfiguredError,
     AgentPracticeNotFoundError,
     AgentRecoveryHoldError,
+    AgentBillingAccessError,
     AgentRateLimitedError,
     activePracticeRows,
     activePracticeSelectBuilders,
@@ -59,7 +67,9 @@ const mocks = vi.hoisted(() => {
     tx: {
       kind: "tenant-db",
       select: vi.fn(() => {
-        const result = activePracticeRows.shift() ?? [{ id: "active-practice" }];
+        const result = activePracticeRows.shift() ?? [
+          { id: "active-practice" },
+        ];
         const builder = {
           from: vi.fn(() => builder),
           where: vi.fn(() => builder),
@@ -92,6 +102,7 @@ vi.mock("@/lib/agent", () => ({
   AgentNotConfiguredError: mocks.AgentNotConfiguredError,
   AgentPracticeNotFoundError: mocks.AgentPracticeNotFoundError,
   AgentRecoveryHoldError: mocks.AgentRecoveryHoldError,
+  AgentBillingAccessError: mocks.AgentBillingAccessError,
   AgentRateLimitedError: mocks.AgentRateLimitedError,
 }));
 
@@ -134,8 +145,8 @@ beforeEach(() => {
     async (
       _db: unknown,
       _practiceId: string,
-      fn: (tx: unknown) => Promise<unknown>
-    ) => fn(mocks.tx)
+      fn: (tx: unknown) => Promise<unknown>,
+    ) => fn(mocks.tx),
   );
   mocks.runAgent.mockResolvedValue({
     text: "Done",
@@ -169,7 +180,7 @@ describe("POST /api/v1/agent", () => {
     const response = await POST(
       request({
         instruction: "x".repeat(AGENT_INSTRUCTION_MAX_LENGTH + 1),
-      })
+      }),
     );
     const json = await response.json();
 
@@ -184,7 +195,7 @@ describe("POST /api/v1/agent", () => {
     const response = await POST(
       request({
         instruction: "   \n\t  ",
-      })
+      }),
     );
     const json = await response.json();
 
@@ -199,7 +210,7 @@ describe("POST /api/v1/agent", () => {
     const response = await POST(
       request({
         instruction: "  Summarize today's schedule  ",
-      })
+      }),
     );
     const json = await response.json();
 
@@ -234,12 +245,12 @@ describe("POST /api/v1/agent", () => {
       async (
         _db: unknown,
         _practiceId: string,
-        fn: (tx: unknown) => Promise<unknown>
+        fn: (tx: unknown) => Promise<unknown>,
       ) => {
         const result = await fn(mocks.tx);
         order.push("commit");
         return result;
-      }
+      },
     );
     mocks.runAgent.mockImplementationOnce(async ({ context }) => {
       order.push("agent");
@@ -253,7 +264,7 @@ describe("POST /api/v1/agent", () => {
     });
 
     const response = await POST(
-      request({ instruction: "Book an appointment for tomorrow" })
+      request({ instruction: "Book an appointment for tomorrow" }),
     );
 
     expect(response.status).toBe(200);
@@ -266,7 +277,7 @@ describe("POST /api/v1/agent", () => {
       request({
         instruction: "Book an appointment for tomorrow",
         allow_writes: true,
-      })
+      }),
     );
     const json = await response.json();
 
@@ -292,7 +303,7 @@ describe("POST /api/v1/agent", () => {
       request({
         instruction: "Book an appointment for tomorrow",
         allow_writes: true,
-      })
+      }),
     );
     const json = await response.json();
 
@@ -324,7 +335,7 @@ describe("POST /api/v1/agent", () => {
     const response = await POST(
       request({
         instruction: "Summarize today's schedule",
-      })
+      }),
     );
     const json = await response.json();
 
@@ -339,13 +350,13 @@ describe("POST /api/v1/agent", () => {
   it("maps agent run throttles to a public 429 response", async () => {
     const resetAt = new Date("2026-06-30T04:45:00.000Z");
     mocks.runAgent.mockRejectedValueOnce(
-      new mocks.AgentRateLimitedError(42, 20, resetAt)
+      new mocks.AgentRateLimitedError(42, 20, resetAt),
     );
 
     const response = await POST(
       request({
         instruction: "Summarize today's schedule",
-      })
+      }),
     );
     const json = await response.json();
 
@@ -354,7 +365,7 @@ describe("POST /api/v1/agent", () => {
     expect(response.headers.get("X-RateLimit-Limit")).toBe("20");
     expect(response.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(response.headers.get("X-RateLimit-Reset")).toBe(
-      resetAt.toISOString()
+      resetAt.toISOString(),
     );
     expect(json).toEqual({
       error: { message: "Too many agent runs. Try again later." },
@@ -373,12 +384,14 @@ describe("POST /api/v1/agent", () => {
   });
 
   it("maps stale practice failures from agent tools to 404", async () => {
-    mocks.runAgent.mockRejectedValueOnce(new mocks.AgentPracticeNotFoundError());
+    mocks.runAgent.mockRejectedValueOnce(
+      new mocks.AgentPracticeNotFoundError(),
+    );
 
     const response = await POST(
       request({
         instruction: "Summarize today's schedule",
-      })
+      }),
     );
     const json = await response.json();
 
@@ -388,13 +401,31 @@ describe("POST /api/v1/agent", () => {
     });
   });
 
+  it("maps a provider-boundary entitlement change to 403", async () => {
+    mocks.runAgent.mockRejectedValueOnce(new mocks.AgentBillingAccessError());
+
+    const response = await POST(
+      request({
+        instruction: "Summarize today's schedule",
+      }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(json).toEqual({
+      error: {
+        message: "Add a card to your trial to try OpenVPM AI.",
+      },
+    });
+  });
+
   it("maps missing agent provider configuration to 503", async () => {
     mocks.runAgent.mockRejectedValueOnce(new mocks.AgentNotConfiguredError());
 
     const response = await POST(
       request({
         instruction: "Summarize today's schedule",
-      })
+      }),
     );
     const json = await response.json();
 
