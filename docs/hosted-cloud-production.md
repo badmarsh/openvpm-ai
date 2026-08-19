@@ -88,6 +88,10 @@ STRIPE_PRICE_CLOUD_LOCATION=...
 STRIPE_PRICE_CLOUD_LOCATION_ANNUAL=...
 STRIPE_TAX_ENABLED=true
 
+# Use either a complete S3-compatible group or a dedicated private Vercel Blob
+# store. The primary and replica must never point to the same store.
+FILE_STORAGE_PROVIDER=s3 # or vercel_blob
+BLOB_READ_WRITE_TOKEN= # required only for vercel_blob
 S3_ENDPOINT=...
 S3_ACCESS_KEY=...
 S3_SECRET_KEY=...
@@ -100,6 +104,8 @@ FILE_REPLICA_REQUIRED=false
 FILE_REPLICA_ENABLED=false
 FILE_REPLICA_ALL_PRACTICES=false
 FILE_REPLICA_PRACTICE_IDS=
+FILE_REPLICA_PROVIDER=s3 # or vercel_blob
+FILE_REPLICA_BLOB_READ_WRITE_TOKEN= # dedicated replica token for vercel_blob
 FILE_REPLICA_S3_ENDPOINT=
 FILE_REPLICA_S3_ACCESS_KEY=
 FILE_REPLICA_S3_SECRET_KEY=
