@@ -82,6 +82,17 @@ const HOSTED_STORAGE_ENV_NAMES = [
   "S3_REGION",
 ];
 
+function hostedStorageEnvCheck(): { ok: boolean; detail: string } {
+  if (envValue("FILE_STORAGE_PROVIDER") === "vercel_blob") {
+    return hostedEnvCheck(
+      ["BLOB_READ_WRITE_TOKEN"],
+      "Hosted private Blob storage env present",
+    );
+  }
+
+  return hostedEnvCheck(HOSTED_STORAGE_ENV_NAMES, "Hosted storage envs present");
+}
+
 const HOSTED_EMAIL_ENV_NAMES = [
   "RESEND_API_KEY",
   "RESEND_WEBHOOK_SECRET",
@@ -528,10 +539,7 @@ export async function GET() {
       "Hosted billing envs present",
     );
     checks.hostedSubscriptionTax = hostedSubscriptionTaxCheck();
-    const hostedStorageEnv = hostedEnvCheck(
-      HOSTED_STORAGE_ENV_NAMES,
-      "Hosted storage envs present",
-    );
+    const hostedStorageEnv = hostedStorageEnvCheck();
     checks.hostedStorage = hostedStorageEnv.ok
       ? await checkObjectStorageHealth()
       : hostedStorageEnv;

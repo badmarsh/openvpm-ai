@@ -1013,6 +1013,29 @@ describe("health route", () => {
     expect(body).not.toContain("clinic-private-bucket");
   });
 
+  it("accepts a private Blob primary without requiring S3 credentials", async () => {
+    mocks.billingEnforced.mockReturnValue(true);
+    stubHostedRequiredEnvs();
+    vi.stubEnv("FILE_STORAGE_PROVIDER", "vercel_blob");
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "vercel_blob_rw_test");
+    vi.stubEnv("S3_ENDPOINT", "");
+    vi.stubEnv("S3_ACCESS_KEY", "");
+    vi.stubEnv("S3_SECRET_KEY", "");
+    vi.stubEnv("S3_BUCKET", "");
+    vi.stubEnv("S3_REGION", "");
+
+    const response = await GET();
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mocks.checkObjectStorageHealth).toHaveBeenCalledTimes(1);
+    expect(json.checks.hostedStorage).toEqual({
+      ok: true,
+      detail: "Object storage bucket reachable",
+    });
+    expect(JSON.stringify(json)).not.toContain("vercel_blob_rw_test");
+  });
+
   it("keeps an intentionally absent file replica advisory", async () => {
     mocks.billingEnforced.mockReturnValue(true);
     stubHostedRequiredEnvs();
