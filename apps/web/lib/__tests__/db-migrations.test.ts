@@ -1,6 +1,10 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  selectBaselineSnapshot,
+  type JournalEntry,
+} from "../../../../packages/db/baseline";
 
 const repoRoot = resolve(process.cwd(), "../..");
 
@@ -1295,6 +1299,51 @@ describe("committed Drizzle migrations", () => {
     expect(sql).toContain("'{bookableTypeIds}'");
     expect(sql).toContain("jsonb_array_length(legacy.active_type_ids) = 0");
     expect(sql).toContain("THEN false");
+  });
+
+  it("selects the preceding snapshot for intentional data-only baseline 0052", () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries: JournalEntry[] };
+    const cutoff = journal.entries.findIndex(
+      (entry) => entry.tag === "0052_booking_page_request_types",
+    );
+    const selection = selectBaselineSnapshot(
+      journal.entries,
+      cutoff,
+      (entry) => {
+        const prefix = entry.tag.split("_", 1)[0];
+        return existsSync(
+          resolve(repoRoot, `packages/db/drizzle/meta/${prefix}_snapshot.json`),
+        );
+      },
+    );
+
+    expect(selection.target.tag).toBe("0052_booking_page_request_types");
+    expect(selection.snapshot.tag).toBe("0051_wide_maximus");
+    expect(selection.explanation).toContain("intentional data-only migration");
+    expect(selection.explanation).toContain(
+      "validating schema against preceding snapshot 0051_wide_maximus",
+    );
+  });
+
+  it("refuses an unapproved missing baseline snapshot with a deliberate error", () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries: JournalEntry[] };
+    const cutoff = journal.entries.findIndex(
+      (entry) => entry.tag === "0053_invoice_line_taxability",
+    );
+
+    expect(() =>
+      selectBaselineSnapshot(
+        journal.entries,
+        cutoff,
+        (entry) => entry.tag !== "0053_invoice_line_taxability",
+      ),
+    ).toThrow(
+      "expected snapshot 0053_snapshot.json for 0053_invoice_line_taxability, but it is missing and is not an approved snapshotless migration",
+    );
   });
 
   it("backfills immutable invoice-line and product taxability", () => {
