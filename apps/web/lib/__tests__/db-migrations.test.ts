@@ -15,9 +15,26 @@ function readRepoFile(path: string): string {
 describe("committed Drizzle migrations", () => {
   it("exercises committed migrations in the CI RLS isolation job", () => {
     const ci = readRepoFile(".github/workflows/ci.yml");
+    const migrationIntegrityJob = ci.slice(
+      ci.indexOf("  migration-integrity:"),
+      ci.indexOf("\n  rls:"),
+    );
 
     expect(ci).toContain("pnpm --filter @openpims/db db:migrate");
     expect(ci).not.toContain("drizzle-kit push --force");
+    expect(migrationIntegrityJob).toContain(
+      "MIGRATION_INTEGRITY_EVENT_NAME: ${{ github.event_name }}",
+    );
+    expect(migrationIntegrityJob).toContain(
+      "MIGRATION_INTEGRITY_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}",
+    );
+    expect(migrationIntegrityJob).toContain(
+      "MIGRATION_INTEGRITY_PUSH_BEFORE_SHA: ${{ github.event.before }}",
+    );
+    expect(migrationIntegrityJob).not.toContain("github.sha");
+    expect(migrationIntegrityJob).not.toContain(
+      "MIGRATION_INTEGRITY_BASE_REF:",
+    );
   });
 
   it("includes a baseline migration registered in the Drizzle journal", () => {

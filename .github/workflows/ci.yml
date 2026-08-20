@@ -60,7 +60,9 @@ jobs:
 
       - name: Verify append-only migration history
         env:
-          MIGRATION_INTEGRITY_BASE_REF: ${{ github.event.pull_request.base.sha || github.sha }}
+          MIGRATION_INTEGRITY_EVENT_NAME: ${{ github.event_name }}
+          MIGRATION_INTEGRITY_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MIGRATION_INTEGRITY_PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: pnpm --filter @openpims/db db:migrations:check
 
   rls:
