@@ -274,6 +274,68 @@ function gitText(...args: string[]): string {
   }).trim();
 }
 
+type MigrationIntegrityCiContext = {
+  eventName?: string;
+  pullRequestBaseSha?: string;
+  pushBeforeSha?: string;
+};
+
+function validCommitSha(value: string | undefined, source: string): string {
+  const sha = value?.trim();
+  if (!sha) {
+    throw new Error(
+      `Migration integrity base is missing; expected ${source}. Refusing to compare HEAD to itself.`,
+    );
+  }
+  if (/^0{40}$/.test(sha)) {
+    throw new Error(
+      `Migration integrity base from ${source} is all zeroes. Refusing to compare HEAD to itself; rerun from an event with a real pre-change commit.`,
+    );
+  }
+  if (!/^[0-9a-f]{40}$/i.test(sha)) {
+    throw new Error(
+      `Migration integrity base from ${source} is not a full commit SHA: ${sha}.`,
+    );
+  }
+  return sha;
+}
+
+function selectCiMigrationBaseRef({
+  eventName,
+  pullRequestBaseSha,
+  pushBeforeSha,
+}: MigrationIntegrityCiContext): string {
+  if (eventName === "pull_request") {
+    return validCommitSha(
+      pullRequestBaseSha,
+      "github.event.pull_request.base.sha",
+    );
+  }
+  if (eventName === "push") {
+    return validCommitSha(pushBeforeSha, "github.event.before");
+  }
+  throw new Error(
+    `Migration integrity does not support GitHub event ${eventName ?? "(missing)"}; expected pull_request or push.`,
+  );
+}
+
+function configuredMigrationBaseRef(): string | undefined {
+  const eventName = process.env.MIGRATION_INTEGRITY_EVENT_NAME?.trim();
+  if (eventName) {
+    return selectCiMigrationBaseRef({
+      eventName,
+      pullRequestBaseSha: process.env.MIGRATION_INTEGRITY_PR_BASE_SHA,
+      pushBeforeSha: process.env.MIGRATION_INTEGRITY_PUSH_BEFORE_SHA,
+    });
+  }
+  return process.env.MIGRATION_INTEGRITY_BASE_REF?.trim() || undefined;
+}
+
+const hasConfiguredMigrationBase = Boolean(
+  process.env.MIGRATION_INTEGRITY_EVENT_NAME?.trim() ||
+  process.env.MIGRATION_INTEGRITY_BASE_REF?.trim(),
+);
+
 describe("Drizzle migration journal integrity", () => {
   it("keeps journal, SQL, and snapshot history deterministic and bijective", () => {
     validateIntegrity(loadFixture());
@@ -282,6 +344,32 @@ describe("Drizzle migration journal integrity", () => {
       "0052_booking_page_request_types":
         "intentional data-only migration; it changes rows without changing schema",
     });
+
+    const pullRequestBase = "1".repeat(40);
+    const pushBefore = "2".repeat(40);
+    expect(
+      selectCiMigrationBaseRef({
+        eventName: "pull_request",
+        pullRequestBaseSha: pullRequestBase,
+        pushBeforeSha: pushBefore,
+      }),
+    ).toBe(pullRequestBase);
+    expect(
+      selectCiMigrationBaseRef({
+        eventName: "push",
+        pullRequestBaseSha: pullRequestBase,
+        pushBeforeSha: pushBefore,
+      }),
+    ).toBe(pushBefore);
+    expect(() => selectCiMigrationBaseRef({ eventName: "push" })).toThrow(
+      "expected github.event.before",
+    );
+    expect(() =>
+      selectCiMigrationBaseRef({
+        eventName: "push",
+        pushBeforeSha: "0".repeat(40),
+      }),
+    ).toThrow("github.event.before is all zeroes");
   });
 
   it("keeps intentional migration 0052 data-only and DDL-free", () => {
@@ -337,10 +425,17 @@ describe("Drizzle migration journal integrity", () => {
     );
   });
 
-  it.skipIf(!process.env.MIGRATION_INTEGRITY_BASE_REF)(
+  it.skipIf(!hasConfiguredMigrationBase)(
     "preserves merge-base migration artifacts byte-for-byte and adds only at the tail",
     () => {
-      const baseRef = process.env.MIGRATION_INTEGRITY_BASE_REF!;
+      const baseRef = configuredMigrationBaseRef()!;
+      try {
+        gitText("cat-file", "-e", `${baseRef}^{commit}`);
+      } catch {
+        throw new Error(
+          `Migration integrity base ${baseRef} is unavailable in the checkout. Keep actions/checkout fetch-depth at 0 and verify the event SHA exists.`,
+        );
+      }
       const mergeBase = gitText("merge-base", "HEAD", baseRef);
       const artifactChanges = gitText(
         "diff",
