@@ -2,12 +2,17 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { snapshotlessMigrationReasons } from "../../../../packages/db/baseline";
+import {
+  snapshotlessMigrationPostconditions,
+  snapshotlessMigrationReasons,
+} from "../../../../packages/db/baseline";
 
 type JournalEntry = {
   idx: number;
+  version: string;
   tag: string;
   when: number;
+  breakpoints: boolean;
 };
 
 type Journal = {
@@ -64,15 +69,62 @@ function loadFixture(): MigrationFixture {
 }
 
 function cloneFixture(fixture: MigrationFixture): MigrationFixture {
-  return structuredClone(fixture);
+  return {
+    journal: structuredClone(fixture.journal),
+    sqlFiles: [...fixture.sqlFiles],
+    // Mutation tests only alter top-level lineage IDs. Keep the large table
+    // payloads shared and immutable so each negative case stays deterministic
+    // under hosted-runner load.
+    snapshots: Object.fromEntries(
+      Object.entries(fixture.snapshots).map(([name, snapshot]) => [
+        name,
+        { ...snapshot },
+      ]),
+    ),
+  };
 }
 
+const canonicalFixture = loadFixture();
+
 function validateJournal(journal: Journal): void {
+  if (journal.version !== "7") {
+    throw new Error(`unsupported journal version ${String(journal.version)}`);
+  }
+  if (journal.dialect !== "postgresql") {
+    throw new Error(`unsupported journal dialect ${String(journal.dialect)}`);
+  }
   if (journal.entries.length === 0) throw new Error("journal is empty");
 
   const indexes = new Set<number>();
   const tags = new Set<string>();
   for (const [position, entry] of journal.entries.entries()) {
+    if (!Number.isSafeInteger(entry.idx) || entry.idx < 0) {
+      throw new Error(`invalid journal index ${String(entry.idx)}`);
+    }
+    if (entry.version !== journal.version) {
+      throw new Error(
+        `journal entry ${position} has version ${String(entry.version)}; expected ${journal.version}`,
+      );
+    }
+    if (typeof entry.breakpoints !== "boolean") {
+      throw new Error(
+        `journal entry ${position} has invalid breakpoints ${String(entry.breakpoints)}`,
+      );
+    }
+    if (
+      typeof entry.when !== "number" ||
+      !Number.isSafeInteger(entry.when) ||
+      entry.when <= 0
+    ) {
+      throw new Error(
+        `journal entry ${position} has invalid timestamp ${String(entry.when)}`,
+      );
+    }
+    if (typeof entry.tag !== "string") {
+      throw new Error(
+        `journal entry ${position} has invalid tag ${String(entry.tag)}`,
+      );
+    }
     if (indexes.has(entry.idx)) {
       throw new Error(`duplicate journal index ${entry.idx}`);
     }
@@ -193,11 +245,27 @@ function stripSqlCommentsAndStrings(sql: string): string {
   return sql
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/--.*$/gm, " ")
-    .replace(/'(?:''|[^'])*'/g, "''")
-    .replace(/\$([a-zA-Z0-9_]*)\$[\s\S]*?\$\1\$/g, "$$");
+    .replace(/'(?:''|[^'])*'/g, "''");
 }
 
 function assertDataOnlySql(tag: string, sql: string): void {
+  const withoutComments = sql
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--.*$/gm, " ");
+  const dollarQuote = withoutComments.match(/\$[a-zA-Z0-9_]*\$/);
+  if (dollarQuote) {
+    throw new Error(
+      `${tag} is allowlisted as data-only but contains an unverifiable dollar-quoted body`,
+    );
+  }
+  const proceduralKeyword =
+    stripSqlCommentsAndStrings(sql).match(/\b(?:do|execute)\b/i);
+  if (proceduralKeyword) {
+    throw new Error(
+      `${tag} is allowlisted as data-only but contains procedural keyword ${proceduralKeyword[0]}`,
+    );
+  }
+
   const ddlKeyword = stripSqlCommentsAndStrings(sql).match(
     /\b(?:create|alter|drop|truncate|rename|grant|revoke|comment|reindex|cluster)\b/i,
   );
@@ -338,12 +406,15 @@ const hasConfiguredMigrationBase = Boolean(
 
 describe("Drizzle migration journal integrity", () => {
   it("keeps journal, SQL, and snapshot history deterministic and bijective", () => {
-    validateIntegrity(loadFixture());
+    validateIntegrity(canonicalFixture);
     expect([...sqlBijectionExceptions]).toEqual([]);
     expect(snapshotlessMigrationReasons).toEqual({
       "0052_booking_page_request_types":
         "intentional data-only migration; it changes rows without changing schema",
     });
+    expect(Object.keys(snapshotlessMigrationPostconditions).sort()).toEqual(
+      Object.keys(snapshotlessMigrationReasons).sort(),
+    );
 
     const pullRequestBase = "1".repeat(40);
     const pushBefore = "2".repeat(40);
@@ -372,35 +443,86 @@ describe("Drizzle migration journal integrity", () => {
     ).toThrow("github.event.before is all zeroes");
   });
 
-  it("keeps intentional migration 0052 data-only and DDL-free", () => {
-    const tag = "0052_booking_page_request_types";
-    const sql = readFileSync(resolve(migrationDirectory, `${tag}.sql`), "utf8");
-    expect(() => assertDataOnlySql(tag, sql)).not.toThrow();
-    expect(sql).toMatch(/\bUPDATE\s+booking_pages\b/i);
+  it("keeps every approved snapshotless migration data-only and DDL-free", () => {
+    for (const tag of Object.keys(snapshotlessMigrationReasons)) {
+      const sql = readFileSync(
+        resolve(migrationDirectory, `${tag}.sql`),
+        "utf8",
+      );
+      expect(() => assertDataOnlySql(tag, sql)).not.toThrow();
+    }
+
+    const bookingPageMigration = readFileSync(
+      resolve(migrationDirectory, "0052_booking_page_request_types.sql"),
+      "utf8",
+    );
+    expect(bookingPageMigration).toMatch(/\bUPDATE\s+booking_pages\b/i);
+  });
+
+  it("rejects procedural or dollar-quoted DDL in a data-only migration", () => {
+    expect(() =>
+      assertDataOnlySql(
+        "0091_fixture",
+        "DO $$ BEGIN EXECUTE 'CREATE TABLE unsafe(id int)'; END $$;",
+      ),
+    ).toThrow("unverifiable dollar-quoted body");
   });
 
   it("rejects a duplicate journal index", () => {
-    const fixture = cloneFixture(loadFixture());
+    const fixture = cloneFixture(canonicalFixture);
     fixture.journal.entries[1]!.idx = fixture.journal.entries[0]!.idx;
     expect(() => validateIntegrity(fixture)).toThrow("duplicate journal index");
   });
 
   it("rejects a duplicate journal tag", () => {
-    const fixture = cloneFixture(loadFixture());
+    const fixture = cloneFixture(canonicalFixture);
     fixture.journal.entries[1]!.tag = fixture.journal.entries[0]!.tag;
     expect(() => validateIntegrity(fixture)).toThrow("duplicate journal tag");
   });
 
   it("rejects a journal timestamp regression", () => {
-    const fixture = cloneFixture(loadFixture());
+    const fixture = cloneFixture(canonicalFixture);
     fixture.journal.entries[1]!.when = fixture.journal.entries[0]!.when;
     expect(() => validateIntegrity(fixture)).toThrow(
       "journal timestamps must strictly increase",
     );
   });
 
+  it.each([
+    ["missing", undefined],
+    ["null", null],
+    ["string", "1782547263384"],
+    ["object", { value: 1782547263384 }],
+    ["unsafe integer", Number.MAX_SAFE_INTEGER + 1],
+  ])("rejects a %s journal timestamp", (_label, value) => {
+    const fixture = cloneFixture(canonicalFixture);
+    (fixture.journal.entries[1] as unknown as Record<string, unknown>).when =
+      value;
+    expect(() => validateIntegrity(fixture)).toThrow(
+      "journal entry 1 has invalid timestamp",
+    );
+  });
+
+  it("rejects an invalid journal entry version", () => {
+    const fixture = cloneFixture(canonicalFixture);
+    fixture.journal.entries[1]!.version = "6";
+    expect(() => validateIntegrity(fixture)).toThrow(
+      "journal entry 1 has version 6; expected 7",
+    );
+  });
+
+  it("rejects an invalid journal breakpoint shape", () => {
+    const fixture = cloneFixture(canonicalFixture);
+    (
+      fixture.journal.entries[1] as unknown as Record<string, unknown>
+    ).breakpoints = "true";
+    expect(() => validateIntegrity(fixture)).toThrow(
+      "journal entry 1 has invalid breakpoints true",
+    );
+  });
+
   it("rejects a missing SQL migration", () => {
-    const fixture = cloneFixture(loadFixture());
+    const fixture = cloneFixture(canonicalFixture);
     fixture.sqlFiles = fixture.sqlFiles.filter(
       (name) => name !== "0052_booking_page_request_types.sql",
     );
@@ -410,7 +532,7 @@ describe("Drizzle migration journal integrity", () => {
   });
 
   it("rejects an orphan SQL migration", () => {
-    const fixture = cloneFixture(loadFixture());
+    const fixture = cloneFixture(canonicalFixture);
     fixture.sqlFiles.push("0091_orphan_fixture.sql");
     expect(() => validateIntegrity(fixture)).toThrow(
       "orphan SQL migration 0091_orphan_fixture.sql",
@@ -418,7 +540,7 @@ describe("Drizzle migration journal integrity", () => {
   });
 
   it("rejects broken snapshot lineage", () => {
-    const fixture = cloneFixture(loadFixture());
+    const fixture = cloneFixture(canonicalFixture);
     fixture.snapshots["0053_snapshot.json"]!.prevId = zeroSnapshotId;
     expect(() => validateIntegrity(fixture)).toThrow(
       "broken snapshot lineage at 0053_snapshot.json",
