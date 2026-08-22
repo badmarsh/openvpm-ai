@@ -21,17 +21,15 @@
  * Anything after --through is left for `pnpm db:migrate` to apply normally.
  */
 import { config } from "dotenv";
-config({ path: "../../.env" });
-
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
-import { dirname, join } from "path";
+import { existsSync, readFileSync } from "fs";
+import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
-import postgres from "postgres";
+import postgres, { type Sql } from "postgres";
 import { isPooledDatabaseConnection } from "./connection-policy";
 import { describeDrift, driftIsClean, type SchemaDrift } from "./schema-drift";
 
-type JournalEntry = { idx: number; tag: string; when: number };
+export type JournalEntry = { idx: number; tag: string; when: number };
 type SnapshotTable = {
   name: string;
   schema: string;
@@ -39,41 +37,160 @@ type SnapshotTable = {
 };
 type MigrationSnapshot = { tables: Record<string, SnapshotTable> };
 
-const args = process.argv.slice(2);
-const apply = args.includes("--apply");
-const throughArg = args[args.indexOf("--through") + 1];
-
-if (!args.includes("--through") || !throughArg || throughArg.startsWith("--")) {
-  console.error(
-    "Usage: pnpm db:baseline --through <migration-prefix> [--apply]\n" +
-      "Example: pnpm db:baseline --through 0030 --apply",
-  );
-  process.exit(1);
-}
-
-const url = process.env.DATABASE_URL?.trim();
-if (!url) {
-  console.error("DATABASE_URL not set");
-  process.exit(1);
-}
-
 const here = dirname(fileURLToPath(import.meta.url));
 const journalPath = join(here, "drizzle", "meta", "_journal.json");
-const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
-  entries: JournalEntry[];
+
+/**
+ * Drizzle snapshots describe schema state, so a deliberately data-only SQL
+ * migration does not need to generate one. Keep every such exception explicit:
+ * an unrecognized gap is an integrity error, not a file-system accident.
+ */
+export const snapshotlessMigrationReasons: Readonly<Record<string, string>> = {
+  "0052_booking_page_request_types":
+    "intentional data-only migration; it changes rows without changing schema",
 };
 
-const cutoff = journal.entries.findIndex((e) => e.tag.startsWith(throughArg));
-if (cutoff === -1) {
-  console.error(
-    `No migration in the journal starts with "${throughArg}".\n` +
-      `Known tags: ${journal.entries.map((e) => e.tag).join(", ")}`,
-  );
-  process.exit(1);
+export type SnapshotlessMigrationPostcondition = {
+  /** Held until commit so the verified rows cannot change before ledger writes. */
+  lockSql: string;
+  /** Must return exactly one row with a non-negative integer `violations`. */
+  violationCountSql: string;
+  violationLabel: string;
+};
+
+/**
+ * A schema snapshot cannot prove a data-only migration ran. Each approved
+ * snapshotless migration therefore needs a live, PHI-free postcondition and a
+ * table lock that makes the apply-time proof atomic with the ledger write.
+ */
+export const snapshotlessMigrationPostconditions: Readonly<
+  Record<string, SnapshotlessMigrationPostcondition>
+> = {
+  "0052_booking_page_request_types": {
+    lockSql: "lock table booking_pages, appointment_types in share mode",
+    violationCountSql: `
+      select count(*)::int as violations
+      from booking_pages bp
+      where bp.deleted_at is null
+        and (
+          jsonb_typeof(bp.config -> 'bookableTypeIds') is distinct from 'array'
+          or exists (
+            select 1
+            from jsonb_array_elements(
+              case
+                when jsonb_typeof(bp.config -> 'bookableTypeIds') = 'array'
+                  then bp.config -> 'bookableTypeIds'
+                else '[]'::jsonb
+              end
+            ) selected(value)
+            where jsonb_typeof(selected.value) is distinct from 'string'
+              or (selected.value #>> '{}') !~*
+                '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          )
+          or (
+            bp.published
+            and not exists (
+              select 1
+              from jsonb_array_elements(
+                case
+                  when jsonb_typeof(bp.config -> 'bookableTypeIds') = 'array'
+                    then bp.config -> 'bookableTypeIds'
+                  else '[]'::jsonb
+                end
+              ) selected(value)
+              join appointment_types at
+                on at.id::text = selected.value #>> '{}'
+                and at.practice_id = bp.practice_id
+                and at.deleted_at is null
+            )
+          )
+        )
+    `,
+    violationLabel:
+      "active booking page rows with an invalid requestable-type list or a published list that has no active same-practice appointment type",
+  },
+};
+
+type SnapshotlessPostconditionReader = (
+  entry: JournalEntry,
+  contract: SnapshotlessMigrationPostcondition,
+) => Promise<number>;
+
+/** Verify every data-only migration at or before the selected cutoff. */
+export async function assertSnapshotlessMigrationPostconditions(
+  entries: readonly JournalEntry[],
+  cutoff: number,
+  readViolations: SnapshotlessPostconditionReader,
+): Promise<void> {
+  const target = entries[cutoff];
+  if (!target) throw new Error(`Invalid migration journal cutoff ${cutoff}.`);
+
+  for (const entry of entries.slice(0, cutoff + 1)) {
+    if (!snapshotlessMigrationReasons[entry.tag]) continue;
+
+    const contract = snapshotlessMigrationPostconditions[entry.tag];
+    if (!contract) {
+      throw new Error(
+        `Cannot baseline through ${target.tag}: approved snapshotless migration ${entry.tag} has no live data postcondition.`,
+      );
+    }
+
+    const violations = await readViolations(entry, contract);
+    if (!Number.isSafeInteger(violations) || violations < 0) {
+      throw new Error(
+        `Cannot baseline through ${target.tag}: data postcondition for ${entry.tag} returned invalid violation count ${String(violations)}.`,
+      );
+    }
+    if (violations > 0) {
+      throw new Error(
+        `Cannot baseline through ${target.tag}: data-only migration ${entry.tag} has ${violations} ${contract.violationLabel}. Apply or verify that migration's data repair before writing a baseline ledger.`,
+      );
+    }
+  }
 }
 
-const toMark = journal.entries.slice(0, cutoff + 1);
-const remaining = journal.entries.slice(cutoff + 1);
+export type BaselineSnapshotSelection = {
+  target: JournalEntry;
+  snapshot: JournalEntry;
+  explanation?: string;
+};
+
+export function selectBaselineSnapshot(
+  entries: readonly JournalEntry[],
+  cutoff: number,
+  hasSnapshot: (entry: JournalEntry) => boolean,
+): BaselineSnapshotSelection {
+  const target = entries[cutoff];
+  if (!target) throw new Error(`Invalid migration journal cutoff ${cutoff}.`);
+
+  const skipped: Array<{ entry: JournalEntry; reason: string }> = [];
+  for (let index = cutoff; index >= 0; index--) {
+    const candidate = entries[index]!;
+    if (hasSnapshot(candidate)) {
+      return {
+        target,
+        snapshot: candidate,
+        explanation:
+          skipped.length === 0
+            ? undefined
+            : `Migration ${target.tag} has no snapshot because it is an ${skipped[0]!.reason}; validating schema against preceding snapshot ${candidate.tag} while marking through ${target.tag}.`,
+      };
+    }
+
+    const reason = snapshotlessMigrationReasons[candidate.tag];
+    if (!reason) {
+      const prefix = candidate.tag.split("_", 1)[0];
+      throw new Error(
+        `Cannot baseline through ${target.tag}: expected snapshot ${prefix}_snapshot.json for ${candidate.tag}, but it is missing and is not an approved snapshotless migration.`,
+      );
+    }
+    skipped.push({ entry: candidate, reason });
+  }
+
+  throw new Error(
+    `Cannot baseline through ${target.tag}: no schema snapshot exists at or before the selected migration.`,
+  );
+}
 
 function snapshotPath(entry: JournalEntry): string {
   const prefix = entry.tag.split("_", 1)[0];
@@ -81,7 +198,12 @@ function snapshotPath(entry: JournalEntry): string {
 }
 
 /** Verify the live database contains every table/column at the chosen cutoff. */
-async function findBaselineDrift(entry: JournalEntry): Promise<SchemaDrift> {
+type BaselineSql = Pick<Sql, "unsafe">;
+
+async function findBaselineDrift(
+  client: BaselineSql,
+  entry: JournalEntry,
+): Promise<SchemaDrift> {
   const snapshot = JSON.parse(
     readFileSync(snapshotPath(entry), "utf8"),
   ) as MigrationSnapshot;
@@ -95,11 +217,11 @@ async function findBaselineDrift(entry: JournalEntry): Promise<SchemaDrift> {
     );
   }
 
-  const rows = await client<
+  const rows = await client.unsafe<
     { table_name: string; column_name: string }[]
-  >`select table_name, column_name
+  >(`select table_name, column_name
     from information_schema.columns
-    where table_schema = 'public'`;
+    where table_schema = 'public'`);
   const live = new Map<string, Set<string>>();
   for (const row of rows) {
     const columns = live.get(row.table_name);
@@ -139,9 +261,6 @@ function migrationHash(tag: string): string {
   return createHash("sha256").update(sql).digest("hex");
 }
 
-const pooled = isPooledDatabaseConnection(url);
-const client = postgres(url, { max: 1, prepare: !pooled });
-
 function safeTarget(raw: string): string {
   try {
     const parsed = new URL(raw);
@@ -151,91 +270,189 @@ function safeTarget(raw: string): string {
   }
 }
 
-async function main() {
-  console.log(`Target: ${safeTarget(url!)}`);
-
-  const existing = await client`
+async function assertNoMigrationLedger(client: BaselineSql): Promise<void> {
+  const existing = await client.unsafe<{ n: number }[]>(`
     select count(*)::int as n
     from information_schema.tables
     where table_schema = 'drizzle' and table_name = '__drizzle_migrations'
-  `;
-  const ledgerExists = existing[0]?.n > 0;
+  `);
+  if (existing[0]?.n <= 0) return;
 
-  if (ledgerExists) {
-    const applied = await client`
-      select count(*)::int as n from drizzle."__drizzle_migrations"
-    `;
-    console.log(
-      `A migration ledger already exists with ${applied[0]?.n ?? 0} row(s).`,
-    );
-    console.log(
-      "Baselining is a one-time operation — use `pnpm db:migrate` instead.",
-    );
-    return 1;
-  }
-
-  const target = toMark[toMark.length - 1]!;
-  const drift = await findBaselineDrift(target);
-  if (!driftIsClean(drift)) {
-    console.error(
-      `Cannot baseline through ${target.tag}: the live database does not match that migration snapshot.`,
-    );
-    console.error(describeDrift(drift));
-    console.error(
-      "Apply or push the missing schema changes, then run the baseline again.",
-    );
-    return 1;
-  }
-
-  console.log(`\nWill mark ${toMark.length} migration(s) as already applied:`);
-  for (const entry of toMark) console.log(`  ✓ ${entry.tag}`);
-
-  if (remaining.length > 0) {
-    console.log(
-      `\nWill leave ${remaining.length} migration(s) for \`pnpm db:migrate\`:`,
-    );
-    for (const entry of remaining) console.log(`  → ${entry.tag}`);
-  } else {
-    console.log(
-      "\nNo migrations left over — the selected snapshot is current.",
-    );
-  }
-
-  if (!apply) {
-    console.log("\nDry run. Re-run with --apply to write the ledger.");
-    return 0;
-  }
-
-  await client.begin(async (tx) => {
-    await tx.unsafe("create schema if not exists drizzle");
-    await tx.unsafe(`
-      create table if not exists drizzle."__drizzle_migrations" (
-        id serial primary key,
-        hash text not null,
-        created_at bigint
-      )
-    `);
-    for (const entry of toMark) {
-      await tx.unsafe(
-        `insert into drizzle."__drizzle_migrations" (hash, created_at)
-         values ($1, $2)`,
-        [migrationHash(entry.tag), entry.when],
-      );
-    }
-  });
-
-  console.log(`\nBaseline written. ${toMark.length} migration(s) recorded.`);
-  console.log("Run `pnpm db:migrate` to apply anything outstanding.");
-  return 0;
+  const applied = await client.unsafe<{ n: number }[]>(`
+    select count(*)::int as n from drizzle."__drizzle_migrations"
+  `);
+  throw new Error(
+    `A migration ledger already exists with ${applied[0]?.n ?? 0} row(s). Baselining is a one-time operation; use \`pnpm db:migrate\` instead.`,
+  );
 }
 
-main()
-  .then(async (code) => {
+async function assertBaselineState(
+  client: BaselineSql,
+  entries: readonly JournalEntry[],
+  cutoff: number,
+  selection: BaselineSnapshotSelection,
+  lockPostconditionTables: boolean,
+): Promise<void> {
+  const drift = await findBaselineDrift(client, selection.snapshot);
+  if (!driftIsClean(drift)) {
+    throw new Error(
+      `Cannot baseline through ${selection.target.tag}: the live database does not match snapshot ${selection.snapshot.tag}.\n${describeDrift(drift)}\nApply the missing schema changes, then run the baseline again.`,
+    );
+  }
+
+  await assertSnapshotlessMigrationPostconditions(
+    entries,
+    cutoff,
+    async (_entry, contract) => {
+      if (lockPostconditionTables) await client.unsafe(contract.lockSql);
+      const rows = await client.unsafe<{ violations: number }[]>(
+        contract.violationCountSql,
+      );
+      return Number(rows[0]?.violations);
+    },
+  );
+}
+
+export type BaselineRunOptions = {
+  url: string;
+  through: string;
+  apply: boolean;
+  log?: (message: string) => void;
+};
+
+/** Run a dry-run or atomic one-time baseline against an explicit database. */
+export async function runBaseline({
+  url,
+  through,
+  apply,
+  log = console.log,
+}: BaselineRunOptions): Promise<void> {
+  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
+    entries: JournalEntry[];
+  };
+  const cutoff = journal.entries.findIndex((entry) =>
+    entry.tag.startsWith(through),
+  );
+  if (cutoff === -1) {
+    throw new Error(
+      `No migration in the journal starts with "${through}".\n` +
+        `Known tags: ${journal.entries.map((entry) => entry.tag).join(", ")}`,
+    );
+  }
+
+  const toMark = journal.entries.slice(0, cutoff + 1);
+  const remaining = journal.entries.slice(cutoff + 1);
+  const selection = selectBaselineSnapshot(journal.entries, cutoff, (entry) =>
+    existsSync(snapshotPath(entry)),
+  );
+
+  const pooled = isPooledDatabaseConnection(url);
+  const client = postgres(url, { max: 1, prepare: !pooled });
+  log(`Target: ${safeTarget(url)}`);
+
+  const printPlan = () => {
+    if (selection.explanation) log(selection.explanation);
+    log(`\nWill mark ${toMark.length} migration(s) as already applied:`);
+    for (const entry of toMark) log(`  ✓ ${entry.tag}`);
+
+    if (remaining.length > 0) {
+      log(
+        `\nWill leave ${remaining.length} migration(s) for \`pnpm db:migrate\`:`,
+      );
+      for (const entry of remaining) log(`  → ${entry.tag}`);
+    } else {
+      log("\nNo migrations left over — the selected snapshot is current.");
+    }
+  };
+
+  try {
+    if (!apply) {
+      await assertNoMigrationLedger(client);
+      await assertBaselineState(
+        client,
+        journal.entries,
+        cutoff,
+        selection,
+        false,
+      );
+      printPlan();
+      log("\nDry run. Re-run with --apply to write the ledger.");
+      return;
+    }
+
+    await client.begin(async (tx) => {
+      // Serialize baseline operators, then re-check every condition inside the
+      // same transaction that writes the ledger. Data-table locks are held
+      // through commit so a verified postcondition cannot change underneath us.
+      await tx.unsafe(`select pg_advisory_xact_lock(
+        hashtext('openpims'), hashtext('db:baseline')
+      )`);
+      await assertNoMigrationLedger(tx);
+      await assertBaselineState(tx, journal.entries, cutoff, selection, true);
+      printPlan();
+
+      await tx.unsafe("create schema if not exists drizzle");
+      await tx.unsafe(`
+        create table if not exists drizzle."__drizzle_migrations" (
+          id serial primary key,
+          hash text not null,
+          created_at bigint
+        )
+      `);
+      for (const entry of toMark) {
+        await tx.unsafe(
+          `insert into drizzle."__drizzle_migrations" (hash, created_at)
+           values ($1, $2)`,
+          [migrationHash(entry.tag), entry.when],
+        );
+      }
+    });
+
+    log(`\nBaseline written. ${toMark.length} migration(s) recorded.`);
+    log("Run `pnpm db:migrate` to apply anything outstanding.");
+  } finally {
     await client.end();
-    process.exit(code);
-  })
-  .catch(async (err) => {
+  }
+}
+
+async function main() {
+  config({ path: "../../.env" });
+
+  const args = process.argv.slice(2);
+  const apply = args.includes("--apply");
+  const throughArg = args[args.indexOf("--through") + 1];
+
+  if (
+    !args.includes("--through") ||
+    !throughArg ||
+    throughArg.startsWith("--")
+  ) {
+    console.error(
+      "Usage: pnpm db:baseline --through <migration-prefix> [--apply]\n" +
+        "Example: pnpm db:baseline --through 0030 --apply",
+    );
+    return 1;
+  }
+
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    console.error("DATABASE_URL not set");
+    return 1;
+  }
+
+  try {
+    await runBaseline({ url, through: throughArg, apply });
+    return 0;
+  } catch (err) {
     console.error("Baseline failed:", err instanceof Error ? err.message : err);
-    await client.end();
-    process.exit(1);
-  });
+    return 1;
+  }
+}
+
+const isMainModule =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  main().then((code) => process.exit(code));
+}
