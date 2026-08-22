@@ -20,6 +20,7 @@
     "db:rls:test": "tsx test-rls.ts",
     "db:sms-provider-resolutions:test": "tsx test-sms-provider-event-resolutions.ts",
     "db:migration-runs:test": "tsx test-migration-runs.ts",
+    "db:migrations:check": "pnpm --filter @openpims/web exec vitest run lib/__tests__/migration-journal-integrity.test.ts lib/__tests__/db-migrations.test.ts",
     "db:drift": "tsx check-drift.ts",
     "db:baseline": "tsx baseline.ts",
     "db:studio": "drizzle-kit studio"
