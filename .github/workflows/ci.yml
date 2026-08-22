@@ -15,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
 
@@ -41,6 +43,7 @@ jobs:
   migration-integrity:
     name: Migration history integrity
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -48,6 +51,7 @@ jobs:
           # The append-only check resolves the actual merge base and compares
           # every pre-existing SQL/snapshot byte plus every journal entry.
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
 
@@ -87,6 +91,8 @@ jobs:
       OPENPIMS_APP_DB_PASSWORD: openpims_app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
 
@@ -100,6 +106,14 @@ jobs:
       # Apply committed migrations, apply RLS (+ least-priv role), then prove
       # tenant isolation against a real Postgres on every PR.
       - run: pnpm --filter @openpims/db db:migrate
+
+      # A data-only migration has no schema snapshot to prove it ran. Exercise
+      # the baseline command against a disposable database and prove that exact
+      # and later cutoffs both fail without a ledger until live data is safe.
+      - name: Execute snapshotless baseline safety contract
+        env:
+          BASELINE_POSTCONDITION_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run lib/__tests__/baseline-postconditions.integration.test.ts
 
       # Schema drift guard: if drizzle-kit generate produces anything, a schema
       # change was committed without its migration (or a migration was written

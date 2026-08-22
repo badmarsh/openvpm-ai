@@ -2,7 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  assertSnapshotlessMigrationPostconditions,
   selectBaselineSnapshot,
+  snapshotlessMigrationPostconditions,
   type JournalEntry,
 } from "../../../../packages/db/baseline";
 
@@ -22,6 +24,12 @@ describe("committed Drizzle migrations", () => {
 
     expect(ci).toContain("pnpm --filter @openpims/db db:migrate");
     expect(ci).not.toContain("drizzle-kit push --force");
+    expect(ci).toContain(
+      "lib/__tests__/baseline-postconditions.integration.test.ts",
+    );
+    expect(ci).toContain('BASELINE_POSTCONDITION_DB_INTEGRATION: "1"');
+    expect(migrationIntegrityJob).toContain("timeout-minutes: 15");
+    expect(migrationIntegrityJob).toContain("persist-credentials: false");
     expect(migrationIntegrityJob).toContain(
       "MIGRATION_INTEGRITY_EVENT_NAME: ${{ github.event_name }}",
     );
@@ -1343,6 +1351,87 @@ describe("committed Drizzle migrations", () => {
       "validating schema against preceding snapshot 0051_wide_maximus",
     );
   });
+
+  it("checks snapshotless postconditions at the exact and every later cutoff", async () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries: JournalEntry[] };
+    const cutoff0051 = journal.entries.findIndex(
+      (entry) => entry.tag === "0051_wide_maximus",
+    );
+    const cutoff0052 = journal.entries.findIndex(
+      (entry) => entry.tag === "0052_booking_page_request_types",
+    );
+    const cutoff0053 = journal.entries.findIndex(
+      (entry) => entry.tag === "0053_invoice_line_taxability",
+    );
+    const checked: string[] = [];
+    const reader = async (entry: JournalEntry) => {
+      checked.push(entry.tag);
+      return 0;
+    };
+
+    await assertSnapshotlessMigrationPostconditions(
+      journal.entries,
+      cutoff0051,
+      reader,
+    );
+    expect(checked).toEqual([]);
+
+    await assertSnapshotlessMigrationPostconditions(
+      journal.entries,
+      cutoff0052,
+      reader,
+    );
+    await assertSnapshotlessMigrationPostconditions(
+      journal.entries,
+      cutoff0053,
+      reader,
+    );
+    expect(checked).toEqual([
+      "0052_booking_page_request_types",
+      "0052_booking_page_request_types",
+    ]);
+  });
+
+  it("fails closed when a snapshotless data postcondition is violated", async () => {
+    const journal = JSON.parse(
+      readRepoFile("packages/db/drizzle/meta/_journal.json"),
+    ) as { entries: JournalEntry[] };
+    const cutoff = journal.entries.findIndex(
+      (entry) => entry.tag === "0053_invoice_line_taxability",
+    );
+
+    await expect(
+      assertSnapshotlessMigrationPostconditions(
+        journal.entries,
+        cutoff,
+        async (entry, contract) => {
+          expect(entry.tag).toBe("0052_booking_page_request_types");
+          expect(contract).toBe(snapshotlessMigrationPostconditions[entry.tag]);
+          return 1;
+        },
+      ),
+    ).rejects.toThrow(
+      "Cannot baseline through 0053_invoice_line_taxability: data-only migration 0052_booking_page_request_types has 1 active booking page row",
+    );
+  });
+
+  it.each([Number.NaN, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects invalid snapshotless violation count %s",
+    async (violations) => {
+      const entries: JournalEntry[] = [
+        { idx: 0, tag: "0052_booking_page_request_types", when: 1 },
+      ];
+      await expect(
+        assertSnapshotlessMigrationPostconditions(
+          entries,
+          0,
+          async () => violations,
+        ),
+      ).rejects.toThrow("returned invalid violation count");
+    },
+  );
 
   it("refuses an unapproved missing baseline snapshot with a deliberate error", () => {
     const journal = JSON.parse(
