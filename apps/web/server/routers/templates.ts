@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull, asc, inArray, sql } from "drizzle-orm";
+import { eq, and, isNull, asc, inArray, sql, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
 import {
@@ -35,6 +35,12 @@ import {
   TREATMENT_TEMPLATE_NAME_MAX_LENGTH,
   TREATMENT_TEMPLATE_UNIT_PRICE_PATTERN,
 } from "@/lib/templates/policy";
+import {
+  escapeTemplateCatalogLike,
+  hasDuplicateTemplateCatalogItems,
+  TEMPLATE_CATALOG_RESULT_LIMIT,
+  TEMPLATE_CATALOG_SEARCH_MAX_LENGTH,
+} from "@/lib/templates/catalog-search";
 
 type TemplatesDb = Pick<Database, "select" | "update">;
 
@@ -49,9 +55,12 @@ type TemplateInvoiceItem = {
   quantity: number;
 };
 
-const moneyInput = z.string().trim().refine((value) => {
-  return TREATMENT_TEMPLATE_UNIT_PRICE_PATTERN.test(value);
-}, "Amount must be a valid currency amount.");
+const moneyInput = z
+  .string()
+  .trim()
+  .refine((value) => {
+    return TREATMENT_TEMPLATE_UNIT_PRICE_PATTERN.test(value);
+  }, "Amount must be a valid currency amount.");
 
 const PRODUCT_LINK_REQUIRED_MESSAGE =
   "Every product template item must be linked to an active inventory product.";
@@ -61,7 +70,7 @@ const templateItemBaseInput = z.object({
   itemId: z.string().uuid().optional(),
   description: clinicalTextInput(
     "Template item description",
-    TREATMENT_TEMPLATE_ITEM_DESCRIPTION_MAX_LENGTH
+    TREATMENT_TEMPLATE_ITEM_DESCRIPTION_MAX_LENGTH,
   ),
   defaultQuantity: z
     .number()
@@ -80,7 +89,7 @@ const templateItemBaseInput = z.object({
 
 function refineTemplateItemTotal(
   item: z.infer<typeof templateItemBaseInput>,
-  ctx: z.RefinementCtx
+  ctx: z.RefinementCtx,
 ) {
   if (item.itemType === "product" && !item.itemId) {
     ctx.addIssue({
@@ -101,7 +110,7 @@ function refineTemplateItemTotal(
 }
 
 const templateItemInput = templateItemBaseInput.superRefine(
-  refineTemplateItemTotal
+  refineTemplateItemTotal,
 );
 
 const addTemplateItemInput = templateItemBaseInput
@@ -112,23 +121,33 @@ const templateMutableInput = {
   name: clinicalTextInput("Template name", TREATMENT_TEMPLATE_NAME_MAX_LENGTH),
   description: optionalClinicalTextInput(
     "Template description",
-    TREATMENT_TEMPLATE_DESCRIPTION_MAX_LENGTH
+    TREATMENT_TEMPLATE_DESCRIPTION_MAX_LENGTH,
   ),
   category: optionalClinicalTextInput(
     "Template category",
-    TREATMENT_TEMPLATE_CATEGORY_MAX_LENGTH
+    TREATMENT_TEMPLATE_CATEGORY_MAX_LENGTH,
   ),
 };
 
-const createTemplateInput = z.object({
-  ...templateMutableInput,
-  items: z
-    .array(templateItemInput)
-    .max(
-      TREATMENT_TEMPLATE_MAX_ITEMS,
-      `Templates can include at most ${TREATMENT_TEMPLATE_MAX_ITEMS} items.`
-    ),
-});
+const createTemplateInput = z
+  .object({
+    ...templateMutableInput,
+    items: z
+      .array(templateItemInput)
+      .max(
+        TREATMENT_TEMPLATE_MAX_ITEMS,
+        `Templates can include at most ${TREATMENT_TEMPLATE_MAX_ITEMS} items.`,
+      ),
+  })
+  .superRefine((input, ctx) => {
+    if (hasDuplicateTemplateCatalogItems(input.items)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: "A service or product can only appear once in a template.",
+      });
+    }
+  });
 
 function activePracticeWhere(practiceId: string) {
   return and(eq(practices.id, practiceId), isNull(practices.deletedAt));
@@ -162,7 +181,7 @@ async function assertActivePractice(ctx: TemplatesContext) {
 async function lockActiveTemplateCatalogItems(
   ctx: TemplatesContext,
   items: Array<{ itemType: "service" | "product"; itemId?: string }>,
-  options: { lockProductsForStock?: boolean } = {}
+  options: { lockProductsForStock?: boolean } = {},
 ) {
   if (items.some((item) => item.itemType === "product" && !item.itemId)) {
     throw new TRPCError({
@@ -175,14 +194,14 @@ async function lockActiveTemplateCatalogItems(
     ...new Set(
       items
         .filter((item) => item.itemType === "service" && item.itemId)
-        .map((item) => item.itemId!)
+        .map((item) => item.itemId!),
     ),
   ];
   const productIds = [
     ...new Set(
       items
         .filter((item) => item.itemType === "product" && item.itemId)
-        .map((item) => item.itemId!)
+        .map((item) => item.itemId!),
     ),
   ];
 
@@ -201,8 +220,8 @@ async function lockActiveTemplateCatalogItems(
               inArray(services.id, serviceIds),
               eq(services.practiceId, ctx.practiceId),
               activePracticePredicate(ctx.practiceId),
-              isNull(services.deletedAt)
-            )
+              isNull(services.deletedAt),
+            ),
           )
           .orderBy(asc(services.id))
           .for("share");
@@ -222,8 +241,8 @@ async function lockActiveTemplateCatalogItems(
               inArray(products.id, productIds),
               eq(products.practiceId, ctx.practiceId),
               activePracticePredicate(ctx.practiceId),
-              isNull(products.deletedAt)
-            )
+              isNull(products.deletedAt),
+            ),
           )
           .orderBy(asc(products.id))
           .for(options.lockProductsForStock ? "update" : "share");
@@ -289,7 +308,7 @@ function templateInvoiceTaxTotals(
 
 async function deductTemplateProductStock(
   ctx: TemplatesContext,
-  items: readonly TemplateInvoiceItem[]
+  items: readonly TemplateInvoiceItem[],
 ) {
   const deductions = computeStockDeductions([...items]);
   const trackedRows =
@@ -302,12 +321,12 @@ async function deductTemplateProductStock(
             and(
               inArray(
                 products.id,
-                deductions.map((deduction) => deduction.productId)
+                deductions.map((deduction) => deduction.productId),
               ),
               eq(products.practiceId, ctx.practiceId),
               eq(products.inventoryTracked, true),
-              isNull(products.deletedAt)
-            )
+              isNull(products.deletedAt),
+            ),
           );
   const trackedIds = new Set(trackedRows.map((row) => row.id));
   for (const deduction of deductions) {
@@ -324,8 +343,8 @@ async function deductTemplateProductStock(
           eq(products.inventoryTracked, true),
           activePracticePredicate(ctx.practiceId),
           isNull(products.deletedAt),
-          sql`${products.stockQuantity} >= ${deduction.quantity}`
-        )
+          sql`${products.stockQuantity} >= ${deduction.quantity}`,
+        ),
       )
       .returning({ id: products.id, stockQuantity: products.stockQuantity });
 
@@ -347,21 +366,83 @@ export const templatesRouter = createRouter({
       .where(
         and(
           eq(treatmentTemplates.practiceId, ctx.practiceId),
-          isNull(treatmentTemplates.deletedAt)
-        )
+          isNull(treatmentTemplates.deletedAt),
+        ),
       )
       .orderBy(asc(treatmentTemplates.name));
   }),
 
-  listProducts: protectedProcedure
+  searchCatalog: protectedProcedure
     .use(requireRole("admin"))
-    .query(async ({ ctx }) => {
+    .input(
+      z.object({
+        itemType: z.enum(["service", "product"]),
+        search: z
+          .string()
+          .trim()
+          .max(TEMPLATE_CATALOG_SEARCH_MAX_LENGTH)
+          .default(""),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
-      return ctx.db
+      const escapedSearch = escapeTemplateCatalogLike(input.search);
+      const containsPattern = `%${escapedSearch}%`;
+      const prefixPattern = `${escapedSearch}%`;
+
+      if (input.itemType === "service") {
+        const rows = await ctx.db
+          .select({
+            id: services.id,
+            name: services.name,
+            code: services.code,
+            category: services.category,
+            unitPrice: services.defaultPrice,
+          })
+          .from(services)
+          .where(
+            and(
+              eq(services.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(services.deletedAt),
+              input.search
+                ? or(
+                    sql`${services.name} ilike ${containsPattern} escape '\\'`,
+                    sql`${services.code} ilike ${containsPattern} escape '\\'`,
+                    sql`${services.category} ilike ${containsPattern} escape '\\'`,
+                  )
+                : undefined,
+            ),
+          )
+          .orderBy(
+            ...(input.search
+              ? [
+                  sql`case
+                  when lower(${services.name}) = lower(${input.search}) then 0
+                  when lower(${services.code}) = lower(${input.search}) then 1
+                  when ${services.name} ilike ${prefixPattern} escape '\\' then 2
+                  when ${services.code} ilike ${prefixPattern} escape '\\' then 3
+                  else 4
+                end`,
+                ]
+              : []),
+            sql`lower(${services.name})`,
+            sql`lower(coalesce(${services.code}, ''))`,
+            asc(services.id),
+          )
+          .limit(TEMPLATE_CATALOG_RESULT_LIMIT);
+        return rows.map((row) => ({
+          ...row,
+          itemType: "service" as const,
+        }));
+      }
+
+      const rows = await ctx.db
         .select({
           id: products.id,
           name: products.name,
-          sku: products.sku,
+          code: products.sku,
+          category: products.category,
           unitPrice: products.unitPrice,
         })
         .from(products)
@@ -369,10 +450,34 @@ export const templatesRouter = createRouter({
           and(
             eq(products.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(products.deletedAt)
-          )
+            isNull(products.deletedAt),
+            input.search
+              ? or(
+                  sql`${products.name} ilike ${containsPattern} escape '\\'`,
+                  sql`${products.sku} ilike ${containsPattern} escape '\\'`,
+                  sql`${products.category} ilike ${containsPattern} escape '\\'`,
+                )
+              : undefined,
+          ),
         )
-        .orderBy(asc(products.name), asc(products.id));
+        .orderBy(
+          ...(input.search
+            ? [
+                sql`case
+                when lower(${products.name}) = lower(${input.search}) then 0
+                when lower(${products.sku}) = lower(${input.search}) then 1
+                when ${products.name} ilike ${prefixPattern} escape '\\' then 2
+                when ${products.sku} ilike ${prefixPattern} escape '\\' then 3
+                else 4
+              end`,
+              ]
+            : []),
+          sql`lower(${products.name})`,
+          sql`lower(coalesce(${products.sku}, ''))`,
+          asc(products.id),
+        )
+        .limit(TEMPLATE_CATALOG_RESULT_LIMIT);
+      return rows.map((row) => ({ ...row, itemType: "product" as const }));
     }),
 
   getById: protectedProcedure
@@ -387,8 +492,8 @@ export const templatesRouter = createRouter({
             eq(treatmentTemplates.id, input.id),
             eq(treatmentTemplates.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(treatmentTemplates.deletedAt)
-          )
+            isNull(treatmentTemplates.deletedAt),
+          ),
         )
         .limit(1);
 
@@ -405,8 +510,8 @@ export const templatesRouter = createRouter({
         .where(
           and(
             eq(treatmentTemplateItems.templateId, input.id),
-            isNull(treatmentTemplateItems.deletedAt)
-          )
+            isNull(treatmentTemplateItems.deletedAt),
+          ),
         )
         .orderBy(asc(treatmentTemplateItems.sortOrder));
 
@@ -414,7 +519,7 @@ export const templatesRouter = createRouter({
         ...new Set(
           items
             .filter((item) => item.itemType === "product" && item.itemId)
-            .map((item) => item.itemId!)
+            .map((item) => item.itemId!),
         ),
       ];
       const activeLinkedProducts =
@@ -428,11 +533,11 @@ export const templatesRouter = createRouter({
                   inArray(products.id, linkedProductIds),
                   eq(products.practiceId, ctx.practiceId),
                   activePracticePredicate(ctx.practiceId),
-                  isNull(products.deletedAt)
-                )
+                  isNull(products.deletedAt),
+                ),
               );
       const activeLinkedProductIds = new Set(
-        activeLinkedProducts.map((product) => product.id)
+        activeLinkedProducts.map((product) => product.id),
       );
 
       return {
@@ -441,9 +546,7 @@ export const templatesRouter = createRouter({
           ...item,
           hasActiveProductLink:
             item.itemType === "product"
-              ? Boolean(
-                  item.itemId && activeLinkedProductIds.has(item.itemId)
-                )
+              ? Boolean(item.itemId && activeLinkedProductIds.has(item.itemId))
               : null,
         })),
       };
@@ -461,7 +564,7 @@ export const templatesRouter = createRouter({
         // before the template persists its reference.
         await lockActiveTemplateCatalogItems(
           { db: tx, practiceId: ctx.practiceId },
-          input.items
+          input.items,
         );
 
         const [template] = await tx
@@ -484,7 +587,7 @@ export const templatesRouter = createRouter({
               defaultQuantity: item.defaultQuantity,
               defaultUnitPrice: item.defaultUnitPrice,
               sortOrder: item.sortOrder,
-            }))
+            })),
           );
         }
 
@@ -501,7 +604,7 @@ export const templatesRouter = createRouter({
         description: templateMutableInput.description,
         category: templateMutableInput.category,
         isActive: z.boolean().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
@@ -514,8 +617,8 @@ export const templatesRouter = createRouter({
             eq(treatmentTemplates.id, id),
             eq(treatmentTemplates.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(treatmentTemplates.deletedAt)
-          )
+            isNull(treatmentTemplates.deletedAt),
+          ),
         )
         .returning();
 
@@ -542,8 +645,8 @@ export const templatesRouter = createRouter({
             eq(treatmentTemplates.id, input.id),
             eq(treatmentTemplates.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(treatmentTemplates.deletedAt)
-          )
+            isNull(treatmentTemplates.deletedAt),
+          ),
         )
         .returning();
 
@@ -574,8 +677,8 @@ export const templatesRouter = createRouter({
               eq(treatmentTemplates.id, input.templateId),
               eq(treatmentTemplates.practiceId, ctx.practiceId),
               activePracticePredicate(ctx.practiceId),
-              isNull(treatmentTemplates.deletedAt)
-            )
+              isNull(treatmentTemplates.deletedAt),
+            ),
           )
           .limit(1);
 
@@ -588,7 +691,7 @@ export const templatesRouter = createRouter({
 
         await lockActiveTemplateCatalogItems(
           { db: tx, practiceId: ctx.practiceId },
-          [input]
+          [input],
         );
 
         const [item] = await tx
@@ -622,7 +725,7 @@ export const templatesRouter = createRouter({
         .from(treatmentTemplateItems)
         .innerJoin(
           treatmentTemplates,
-          eq(treatmentTemplateItems.templateId, treatmentTemplates.id)
+          eq(treatmentTemplateItems.templateId, treatmentTemplates.id),
         )
         .where(
           and(
@@ -630,8 +733,8 @@ export const templatesRouter = createRouter({
             eq(treatmentTemplates.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
             isNull(treatmentTemplates.deletedAt),
-            isNull(treatmentTemplateItems.deletedAt)
-          )
+            isNull(treatmentTemplateItems.deletedAt),
+          ),
         )
         .limit(1);
 
@@ -649,8 +752,8 @@ export const templatesRouter = createRouter({
           and(
             eq(treatmentTemplateItems.id, input.id),
             activePracticePredicate(ctx.practiceId),
-            isNull(treatmentTemplateItems.deletedAt)
-          )
+            isNull(treatmentTemplateItems.deletedAt),
+          ),
         )
         .returning();
 
@@ -670,7 +773,7 @@ export const templatesRouter = createRouter({
       z.object({
         templateId: z.string().uuid(),
         invoiceId: z.string().uuid(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
@@ -684,8 +787,8 @@ export const templatesRouter = createRouter({
             eq(treatmentTemplates.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
             isNull(treatmentTemplates.deletedAt),
-            eq(treatmentTemplates.isActive, true)
-          )
+            eq(treatmentTemplates.isActive, true),
+          ),
         )
         .limit(1);
 
@@ -710,8 +813,8 @@ export const templatesRouter = createRouter({
             eq(invoices.id, input.invoiceId),
             eq(invoices.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(invoices.deletedAt)
-          )
+            isNull(invoices.deletedAt),
+          ),
         )
         .limit(1);
 
@@ -730,7 +833,8 @@ export const templatesRouter = createRouter({
       if (moneyToCents(invoice.paidAmount) > 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Cannot apply treatment templates to invoices with payments.",
+          message:
+            "Cannot apply treatment templates to invoices with payments.",
         });
       }
 
@@ -738,7 +842,7 @@ export const templatesRouter = createRouter({
         // Share the invoice serialization key used by direct charge edits so
         // concurrent template applications cannot calculate competing totals.
         await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${input.invoiceId}, 0))`
+          sql`select pg_advisory_xact_lock(hashtextextended(${input.invoiceId}, 0))`,
         );
 
         // Fetch template items
@@ -748,8 +852,8 @@ export const templatesRouter = createRouter({
           .where(
             and(
               eq(treatmentTemplateItems.templateId, input.templateId),
-              isNull(treatmentTemplateItems.deletedAt)
-            )
+              isNull(treatmentTemplateItems.deletedAt),
+            ),
           )
           .orderBy(asc(treatmentTemplateItems.sortOrder));
 
@@ -770,7 +874,7 @@ export const templatesRouter = createRouter({
             itemType: item.itemType,
             itemId: item.itemId ?? undefined,
           })),
-          { lockProductsForStock: !invoice.isEstimate }
+          { lockProductsForStock: !invoice.isEstimate },
         );
 
         const invoiceItemRows = items.map((item) => {
@@ -797,7 +901,7 @@ export const templatesRouter = createRouter({
         if (!invoice.isEstimate) {
           await deductTemplateProductStock(
             { db: tx, practiceId: ctx.practiceId },
-            invoiceItemRows
+            invoiceItemRows,
           );
         }
 
@@ -815,8 +919,8 @@ export const templatesRouter = createRouter({
           .where(
             and(
               eq(invoiceItems.invoiceId, input.invoiceId),
-              isNull(invoiceItems.deletedAt)
-            )
+              isNull(invoiceItems.deletedAt),
+            ),
           );
 
         // Tax rate is configured per practice (region-aware), not hardcoded.
@@ -859,8 +963,8 @@ export const templatesRouter = createRouter({
               eq(invoices.status, invoice.status),
               eq(invoices.paidAmount, invoice.paidAmount ?? "0"),
               eq(invoices.isEstimate, invoice.isEstimate),
-              isNull(invoices.deletedAt)
-            )
+              isNull(invoices.deletedAt),
+            ),
           )
           .returning();
 
