@@ -1,7 +1,4 @@
-import {
-  sendSms,
-  type SmsDispatchResult,
-} from "@/lib/sms-dispatch";
+import { sendSms, type SmsDispatchResult } from "@/lib/sms-dispatch";
 
 export {
   prepareCampaignSmsBody,
@@ -100,4 +97,38 @@ export async function sendVaccinationReminderSms(data: {
     idempotencyKey: data.idempotencyKey,
   });
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Care reminder SMS
+// ---------------------------------------------------------------------------
+
+export async function sendCareReminderSms(data: {
+  to: string;
+  patientName: string;
+  reminderTitle: string;
+  dueDate: string;
+  practiceName: string;
+  practicePhone?: string;
+  practiceId: string;
+  locationId: string;
+  clientId: string;
+  communicationId: string;
+  sourceId: string;
+  idempotencyKey: string;
+}): Promise<SmsDispatchResult> {
+  const contact = data.practicePhone
+    ? `Call ${data.practicePhone} with questions.`
+    : "Contact us with questions.";
+  return sendSms({
+    to: data.to,
+    body: `Reminder for ${data.patientName}: ${data.reminderTitle}. Reminder date: ${data.dueDate}. ${contact}`,
+    practiceId: data.practiceId,
+    locationId: data.locationId,
+    clientId: data.clientId,
+    communicationId: data.communicationId,
+    source: "care_reminder",
+    sourceId: data.sourceId,
+    idempotencyKey: data.idempotencyKey,
+  });
 }

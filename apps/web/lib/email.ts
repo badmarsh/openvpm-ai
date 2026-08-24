@@ -389,6 +389,55 @@ export async function sendVaccinationReminder(data: {
 }
 
 // ---------------------------------------------------------------------------
+// Care reminder
+// ---------------------------------------------------------------------------
+
+export async function sendCareReminder(data: {
+  to: string;
+  clientName: string;
+  patientName: string;
+  reminderTitle: string;
+  dueDate: string;
+  practiceName: string;
+  practicePhone?: string;
+  practiceAddress?: string;
+  idempotencyKey: string;
+}): Promise<{ success: boolean; id?: string; error?: string }> {
+  const body = `
+    <p style="margin:0 0 16px;color:#111827;font-size:15px;line-height:1.6;">Hi ${data.clientName},</p>
+    <p style="margin:0 0 24px;color:#111827;font-size:15px;line-height:1.6;">This is a reminder from our veterinary team about <strong>${data.patientName}</strong>.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background-color:#f0fdfa;border:1px solid #ccfbf1;border-radius:8px;margin-bottom:24px;">
+      <tr>
+        <td style="padding:20px 24px;">
+          <p style="margin:0 0 4px;color:#6b7280;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Reminder</p>
+          <p style="margin:0 0 16px;color:#0f172a;font-size:18px;font-weight:600;">${data.reminderTitle}</p>
+          <p style="margin:0 0 4px;color:#6b7280;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Reminder Date</p>
+          <p style="margin:0;color:#0f172a;font-size:18px;font-weight:600;">${data.dueDate}</p>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0;color:#111827;font-size:15px;line-height:1.6;">Please contact us${data.practicePhone ? ` at <strong>${data.practicePhone}</strong>` : ""} if you have questions or would like to schedule.</p>
+  `;
+
+  const html = emailLayout(
+    data.practiceName,
+    body,
+    practiceFooter({
+      practiceName: data.practiceName,
+      practicePhone: data.practicePhone,
+      practiceAddress: data.practiceAddress,
+    }),
+  );
+  const result = await sendEmail({
+    to: data.to,
+    subject: `Care Reminder for ${data.patientName}`,
+    html,
+    idempotencyKey: data.idempotencyKey,
+  });
+  return { success: result.success, id: result.id, error: result.error };
+}
+
+// ---------------------------------------------------------------------------
 // Invoice email
 // ---------------------------------------------------------------------------
 

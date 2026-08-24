@@ -29,18 +29,35 @@ describe("care reminder safety contract", () => {
     expect(router).toContain("setDismissed");
     expect(router).toContain(".max(100)");
     expect(router).toContain('.for("update")');
-    expect(router).not.toMatch(/send(?:Email|Sms|Reminder)/);
+    expect(router).not.toContain(
+      "eq(careReminders.updatedAt, current.updatedAt)",
+    );
     expect(page).toMatch(/never sends an\s+email or text automatically/);
   });
 
-  it("keeps client outreach deliberate and delegates delivery safeguards", () => {
-    expect(page).toContain("trpc.communications.create.useMutation");
-    expect(page).toContain('direction: "outbound"');
+  it("keeps client outreach deliberate, templated, and safeguarded", () => {
+    expect(page).toContain("trpc.careReminders.sendOutreach.useMutation");
     expect(page).toContain("outreachRequestId.current ??= crypto.randomUUID()");
     expect(page).toContain("clientSmsConsent");
+    expect(page).toContain("Template preview");
+    expect(page).toContain("generated server-side");
     expect(page).toContain(
       "Email suppression, SMS consent, sender, and quiet-hour",
     );
+    expect(router).toContain("sendOutreach: manageProcedure");
+    expect(router).toContain('operation: "care_reminder"');
+    expect(router).toContain("sendCareReminder(");
+    expect(router).toContain("sendCareReminderSms(");
+    expect(router).toContain("withDurableSmsCommunication");
+    expect(router).toContain("ctx.db.transaction(async (tx)");
+    expect(router).toContain("lockPracticeForExternalSideEffects(db");
+    expect(router).toContain("emailSuppressionSendBlockMessage");
+    const outreachSchema = router.slice(
+      router.indexOf("const outreachInput"),
+      router.indexOf("const dismissalInput"),
+    );
+    expect(outreachSchema).not.toContain("content:");
+    expect(outreachSchema).not.toContain("subject:");
     expect(page).not.toContain("useEffect(() => sendOutreach");
   });
 
