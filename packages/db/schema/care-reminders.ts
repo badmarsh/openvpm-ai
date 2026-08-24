@@ -20,6 +20,7 @@ import { users } from "./users";
 export const careReminderStatusEnum = pgEnum("care_reminder_status", [
   "open",
   "completed",
+  "dismissed",
 ]);
 
 /**
@@ -45,6 +46,9 @@ export const careReminders = pgTable(
     createdBy: uuid("created_by"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     completedBy: uuid("completed_by"),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    dismissedBy: uuid("dismissed_by"),
+    dismissalReason: varchar("dismissal_reason", { length: 500 }),
     externalSource: varchar("external_source", { length: 64 }),
     externalId: varchar("external_id", { length: 160 }),
     importFingerprint: varchar("import_fingerprint", { length: 64 }),
@@ -64,6 +68,11 @@ export const careReminders = pgTable(
       columns: [table.practiceId, table.completedBy],
       foreignColumns: [users.practiceId, users.id],
       name: "care_reminders_completer_tenant_fk",
+    }),
+    dismisserTenantFk: foreignKey({
+      columns: [table.practiceId, table.dismissedBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "care_reminders_dismisser_tenant_fk",
     }),
     externalIdUq: uniqueIndex("care_reminders_external_id_uq")
       .on(table.practiceId, table.externalSource, table.externalId)
@@ -92,11 +101,28 @@ export const careReminders = pgTable(
           ${table.status} = 'open'
           and ${table.completedAt} is null
           and ${table.completedBy} is null
+          and ${table.dismissedAt} is null
+          and ${table.dismissedBy} is null
+          and ${table.dismissalReason} is null
         ) or (
           ${table.status} = 'completed'
           and ${table.completedAt} is not null
           and ${table.completedBy} is not null
+          and ${table.dismissedAt} is null
+          and ${table.dismissedBy} is null
+          and ${table.dismissalReason} is null
+        ) or (
+          ${table.status} = 'dismissed'
+          and ${table.completedAt} is null
+          and ${table.completedBy} is null
+          and ${table.dismissedAt} is not null
+          and ${table.dismissedBy} is not null
+          and char_length(btrim(${table.dismissalReason})) between 3 and 500
         )`,
+    ),
+    dismissalReasonCheck: check(
+      "care_reminders_dismissal_reason_check",
+      sql`${table.dismissalReason} is null or char_length(btrim(${table.dismissalReason})) between 3 and 500`,
     ),
     externalIdentityPairCheck: check(
       "care_reminders_external_identity_pair_check",
@@ -144,5 +170,10 @@ export const careRemindersRelations = relations(careReminders, ({ one }) => ({
     fields: [careReminders.completedBy],
     references: [users.id],
     relationName: "careReminderCompleter",
+  }),
+  dismisser: one(users, {
+    fields: [careReminders.dismissedBy],
+    references: [users.id],
+    relationName: "careReminderDismisser",
   }),
 }));

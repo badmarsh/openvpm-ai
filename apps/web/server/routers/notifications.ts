@@ -285,7 +285,7 @@ async function activeReminderSmsSender(
 
 export const notificationsRouter = createRouter({
   sendAppointmentReminder: protectedProcedure
-    .use(requireRole("admin", "front_desk"))
+    .use(requireRole("admin", "veterinarian", "front_desk"))
     .input(z.object({ appointmentId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);

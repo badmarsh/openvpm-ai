@@ -1,4 +1,12 @@
-import { eq, and, isNull, inArray, or, sql, getTableColumns } from "drizzle-orm";
+import {
+  eq,
+  and,
+  isNull,
+  inArray,
+  or,
+  sql,
+  getTableColumns,
+} from "drizzle-orm";
 import { createHash, randomUUID } from "node:crypto";
 import type { Database } from "@openpims/db/client";
 import { withSystem } from "@/lib/tenant-db";
@@ -18,6 +26,7 @@ import {
   auditLog,
   caseEntries,
   cases,
+  careReminders,
   clientContacts,
   clinicalRecordCorrections,
   clinicalNotes,
@@ -186,6 +195,7 @@ export const PRACTICE_EXPORT_SECTIONS = [
   "wellnessEnrollments",
   "patientWeights",
   "patientAllergies",
+  "careReminders",
   "appointments",
   "historicalAppointments",
   "appointmentWaitlist",
@@ -286,6 +296,9 @@ const PRACTICE_EXPORT_OPTIONAL_RESTORE_SECTIONS = [
   "visitTreatmentPlanRevisionLines",
   "visitTreatmentPlanResponses",
   "visitTreatmentPlanResponseLines",
+  // Backward compatibility for backups created before internal care reminders
+  // became a fully owned, auditable restore section.
+  "careReminders",
 ] as const satisfies readonly PracticeExportSection[];
 
 export type PracticeExport = {
@@ -298,7 +311,7 @@ export type PracticeExport = {
   counts: Record<PracticeExportSection, number>;
 } & Record<PracticeExportSection, unknown[]>;
 
-export const PRACTICE_EXPORT_FORMAT_VERSION = 7;
+export const PRACTICE_EXPORT_FORMAT_VERSION = 8;
 export const PRACTICE_RECOVERY_HOLD_REASON =
   "Practice data restore pending owner reconciliation";
 
@@ -510,6 +523,11 @@ const RESTORE_REFERENCE_RULES: RestoreReferenceRule[] = [
   requiredRef("vaccinationRecords", "patientId", "patients"),
   optionalRef("vaccinationRecords", "appointmentId", "appointments"),
   optionalRef("vaccinationRecords", "administeredBy", "users"),
+  optionalRef("vaccinationRecords", "supervisingVeterinarianId", "users"),
+  requiredRef("careReminders", "patientId", "patients"),
+  optionalRef("careReminders", "createdBy", "users"),
+  optionalRef("careReminders", "completedBy", "users"),
+  optionalRef("careReminders", "dismissedBy", "users"),
   requiredRef("labResults", "patientId", "patients"),
   optionalRef("labResults", "appointmentId", "appointments"),
   optionalRef("labResults", "orderedBy", "users"),
@@ -917,7 +935,9 @@ export function validatePracticeExportRestore(data: unknown): {
   }
   if (exportRecord.formatVersion === PRACTICE_EXPORT_FORMAT_VERSION) {
     if (!isRecord(exportRecord.practice)) {
-      pushError("practice recovery metadata is required in backup format v6.");
+      pushError(
+        `practice recovery metadata is required in backup format v${PRACTICE_EXPORT_FORMAT_VERSION}.`,
+      );
     } else if (exportRecord.practice.id !== exportRecord.practiceId) {
       pushError("practice recovery metadata must match practiceId exactly.");
     } else {
@@ -939,7 +959,9 @@ export function validatePracticeExportRestore(data: unknown): {
     }
 
     if (!isRecord(exportRecord.counts)) {
-      pushError("canonical section counts are required in backup format v6.");
+      pushError(
+        `canonical section counts are required in backup format v${PRACTICE_EXPORT_FORMAT_VERSION}.`,
+      );
     } else {
       const countKeys = Object.keys(exportRecord.counts);
       const missingCountKeys = PRACTICE_EXPORT_SECTIONS.filter(
@@ -1001,6 +1023,58 @@ export function validatePracticeExportRestore(data: unknown): {
       }
     });
   }
+
+  rowsFor(data, "careReminders").forEach((row, index) => {
+    const label = `careReminders[${rowLabel(row, index)}]`;
+    const completedFieldsPresent =
+      row.completedAt != null && row.completedBy != null;
+    const completedFieldsClear =
+      row.completedAt == null && row.completedBy == null;
+    const dismissalFieldsPresent =
+      row.dismissedAt != null &&
+      row.dismissedBy != null &&
+      typeof row.dismissalReason === "string" &&
+      row.dismissalReason.trim().length >= 3 &&
+      row.dismissalReason.length <= 500;
+    const dismissalFieldsClear =
+      row.dismissedAt == null &&
+      row.dismissedBy == null &&
+      row.dismissalReason == null;
+    const validState =
+      (row.status === "open" && completedFieldsClear && dismissalFieldsClear) ||
+      (row.status === "completed" &&
+        completedFieldsPresent &&
+        dismissalFieldsClear) ||
+      (row.status === "dismissed" &&
+        completedFieldsClear &&
+        dismissalFieldsPresent);
+    if (!validState) {
+      pushError(
+        `${label} must have a complete and mutually exclusive open, completed, or dismissed state.`,
+      );
+    }
+  });
+
+  rowsFor(data, "vaccinationRecords").forEach((row, index) => {
+    const label = `vaccinationRecords[${rowLabel(row, index)}]`;
+    if (
+      row.doseType != null &&
+      row.doseType !== "initial" &&
+      row.doseType !== "booster"
+    ) {
+      pushError(`${label}.doseType must be initial, booster, or null.`);
+    }
+    if (
+      row.licensedDurationMonths != null &&
+      (!Number.isInteger(row.licensedDurationMonths) ||
+        Number(row.licensedDurationMonths) < 1 ||
+        Number(row.licensedDurationMonths) > 120)
+    ) {
+      pushError(
+        `${label}.licensedDurationMonths must be an integer from 1 through 120.`,
+      );
+    }
+  });
 
   const rowsById = (section: PracticeExportSection) =>
     new Map(
@@ -2543,6 +2617,7 @@ export async function exportPracticeData(
     clientContactRows,
     allPatientRows,
     patientMergeRows,
+    allCareReminderRows,
     allAppointmentRows,
     historicalAppointmentRows,
     appointmentWaitlistRows,
@@ -2611,6 +2686,7 @@ export async function exportPracticeData(
     allPracticeRows(db, clientContacts, practiceId),
     allPracticeRows(db, patients, practiceId),
     allPracticeRows(db, patientMergeEvents, practiceId),
+    allPracticeRows(db, careReminders, practiceId),
     allPracticeRows(db, appointments, practiceId),
     allPracticeRows(db, historicalAppointments, practiceId),
     activeRows(db, appointmentWaitlist, practiceId),
@@ -3025,6 +3101,7 @@ export async function exportPracticeData(
     clientContacts: clientContactRows,
     patients: patientRows,
     patientMergeEvents: patientMergeRows,
+    careReminders: allCareReminderRows,
     insurancePolicies: insurancePolicyRows,
     wellnessPlans: wellnessPlanRows,
     wellnessEnrollments: wellnessEnrollmentRows,
@@ -3319,6 +3396,7 @@ async function restorePracticeDataRows(
   );
   await restorePracticeRows("patients", patients);
   await restorePracticeRows("patientMergeEvents", patientMergeEvents);
+  await restorePracticeRows("careReminders", careReminders);
   await restorePracticeRows("insurancePolicies", insurancePolicies);
   await restorePracticeRows("wellnessPlans", wellnessPlans);
   await restorePracticeRows("wellnessEnrollments", wellnessEnrollments);
@@ -3374,10 +3452,7 @@ async function restorePracticeDataRows(
   );
   await restorePracticeRows("labResultEvents", labResultEvents);
   await restorePracticeRows("externalLabReports", externalLabReports);
-  await restorePracticeRows(
-    "externalLabObservations",
-    externalLabObservations,
-  );
+  await restorePracticeRows("externalLabObservations", externalLabObservations);
   await restorePracticeRows("procedures", procedures);
   await restorePracticeRows("clinicalNotes", clinicalNotes);
   await restorePracticeRows("vitalSigns", vitalSigns);
@@ -3498,10 +3573,7 @@ async function restorePracticeDataRows(
     "legacyFinancialLineItems",
     legacyFinancialLineItems,
   );
-  await restorePracticeRows(
-    "legacyFinancialPayments",
-    legacyFinancialPayments,
-  );
+  await restorePracticeRows("legacyFinancialPayments", legacyFinancialPayments);
   await restorePracticeRows(
     "legacyFinancialAllocations",
     legacyFinancialAllocations,

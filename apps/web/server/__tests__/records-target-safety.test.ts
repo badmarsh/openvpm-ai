@@ -45,6 +45,7 @@ const APPOINTMENT_ID = "00000000-0000-0000-0000-000000000003";
 const RECORD_ID = "00000000-0000-0000-0000-000000000004";
 const FORM_ID = "00000000-0000-0000-0000-000000000005";
 const OTHER_USER_ID = "00000000-0000-0000-0000-000000000006";
+const CERTIFICATE_ID = "00000000-0000-0000-0000-000000000007";
 
 function operationHash(payload: Record<string, unknown>): string {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
@@ -77,7 +78,7 @@ function createDb(opts?: {
       orderBy: vi.fn(() => afterWhere),
       then: (
         resolve: (value: unknown[]) => unknown,
-        reject?: (error: unknown) => unknown
+        reject?: (error: unknown) => unknown,
       ) => Promise.resolve(result).then(resolve, reject),
     };
     const builder = {
@@ -135,7 +136,7 @@ describe("records target safety", () => {
       callerWithDb(db).createSoapNote({
         patientId: PATIENT_ID,
         subjective: "Eating well",
-      } as never)
+      } as never),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -148,7 +149,9 @@ describe("records target safety", () => {
         [
           {
             name: "Neighborhood Veterinary",
+            address: "100 Clinic Way",
             phone: "555-0100",
+            email: "care@example.test",
             timezone: "America/Los_Angeles",
           },
         ],
@@ -157,7 +160,9 @@ describe("records target safety", () => {
 
     await expect(callerWithDb(db).settings()).resolves.toEqual({
       name: "Neighborhood Veterinary",
+      address: "100 Clinic Way",
       phone: "555-0100",
+      email: "care@example.test",
       timezone: "America/Los_Angeles",
     });
 
@@ -186,19 +191,19 @@ describe("records target safety", () => {
     expect(source).not.toContain("practice?.phone");
     expect(source).not.toContain("practice?.timezone");
     expect(
-      source.match(/activePracticePredicate\(ctx\.practiceId\)/g)?.length ?? 0
+      source.match(/activePracticePredicate\(ctx\.practiceId\)/g)?.length ?? 0,
     ).toBeGreaterThanOrEqual(15);
     expect(source).toMatch(
-      /eq\(patients\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(patients\.deletedAt\)/
+      /eq\(patients\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(patients\.deletedAt\)/,
     );
     expect(source).toMatch(
-      /eq\(appointments\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(appointments\.deletedAt\)/
+      /eq\(appointments\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(appointments\.deletedAt\)/,
     );
     expect(source).toMatch(
-      /eq\(problemList\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(problemList\.deletedAt\)/
+      /eq\(problemList\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(problemList\.deletedAt\)/,
     );
     expect(source).toMatch(
-      /eq\(labResults\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(labResults\.deletedAt\)/
+      /eq\(labResults\.practiceId, ctx\.practiceId\),\s+activePracticePredicate\(ctx\.practiceId\),\s+isNull\(labResults\.deletedAt\)/,
     );
   });
 
@@ -210,7 +215,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -226,7 +231,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         name: "Dental cleaning",
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -249,7 +254,7 @@ describe("records target safety", () => {
       callerWithDb(db).createVaccination({
         patientId: PATIENT_ID,
         vaccineName: "Rabies",
-      })
+      }),
     ).resolves.toMatchObject({ id: RECORD_ID, vaccineName: "Rabies" });
 
     expect(insertValues).toHaveBeenCalledWith(
@@ -257,7 +262,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         practiceId: PRACTICE_ID,
         administeredBy: USER_ID,
-      })
+      }),
     );
     expect(mocks.dispatchWebhookEvent).toHaveBeenCalledWith(
       PRACTICE_ID,
@@ -268,7 +273,151 @@ describe("records target safety", () => {
         vaccineName: "Rabies",
         administeredBy: USER_ID,
         source: "dashboard",
-      }
+      },
+    );
+  });
+
+  it("prepares a complete, uniquely identified rabies certificate for staff", async () => {
+    const { db } = createDb({
+      selectResults: [
+        [
+          {
+            practiceName: "Neighborhood Veterinary",
+            practiceAddress: "100 Clinic Way",
+            practicePhone: "555-0100",
+            practiceEmail: "care@example.test",
+            practiceTimezone: "America/New_York",
+            patientId: PATIENT_ID,
+            patientName: "Biscuit",
+            species: "canine",
+            breed: "Mixed breed",
+            sex: "female_spayed",
+            dob: "2020-05-01",
+            color: "Brown",
+            microchipNumber: "985141000000001",
+            clientId: "00000000-0000-0000-0000-000000000008",
+            clientFirstName: "Alex",
+            clientLastName: "Rivera",
+            clientAddress: "10 Main Street",
+            clientCity: "Brooklyn",
+            clientState: "NY",
+            clientZip: "11201",
+            clientPhone: "555-0102",
+          },
+        ],
+        [
+          {
+            id: RECORD_ID,
+            vaccineName: "Rabies",
+            productName: "Defensor 3",
+            lotNumber: "LOT-1",
+            manufacturer: "Zoetis",
+            productExpirationDate: "2027-05-01",
+            doseType: "booster",
+            licensedDurationMonths: 36,
+            rabiesTagNumber: "TAG-9",
+            administeredAt: new Date("2026-08-24T14:00:00.000Z"),
+            nextDueDate: "2029-08-24",
+            administeredByName: "Taylor Tech",
+            administeredByIsVeterinarian: false,
+            administeredByLicenseNumber: null,
+            supervisingVeterinarianName: "Dr. Rivera",
+            supervisingVeterinarianLicenseNumber: "NY-12345",
+          },
+        ],
+        [{ weightKg: "18.250" }],
+      ],
+    });
+
+    await expect(
+      callerWithDb(db, "front_desk").prepareVaccinationCertificate({
+        patientId: PATIENT_ID,
+        kind: "rabies",
+        vaccinationRecordId: RECORD_ID,
+        requestId: CERTIFICATE_ID,
+      }),
+    ).resolves.toMatchObject({
+      id: RECORD_ID,
+      certificateId: CERTIFICATE_ID,
+      kind: "rabies",
+      ready: true,
+      missingFields: [],
+      owner: {
+        name: "Alex Rivera",
+        address: "10 Main Street\nBrooklyn, NY, 11201",
+      },
+      vaccinations: [
+        {
+          id: RECORD_ID,
+          veterinarianName: "Dr. Rivera",
+          veterinarianLicenseNumber: "NY-12345",
+        },
+      ],
+    });
+  });
+
+  it("fails rabies certificate preflight closed when required evidence is missing", async () => {
+    const { db } = createDb({
+      selectResults: [
+        [
+          {
+            practiceName: "Neighborhood Veterinary",
+            practiceTimezone: "America/New_York",
+            patientId: PATIENT_ID,
+            patientName: "Biscuit",
+            species: "canine",
+            breed: null,
+            sex: null,
+            dob: null,
+            color: null,
+            microchipNumber: null,
+            clientId: "00000000-0000-0000-0000-000000000008",
+            clientFirstName: "Alex",
+            clientLastName: "Rivera",
+            clientAddress: null,
+            clientCity: null,
+            clientState: null,
+            clientZip: null,
+            clientPhone: null,
+          },
+        ],
+        [
+          {
+            id: RECORD_ID,
+            vaccineName: "Rabies",
+            administeredAt: new Date("2026-08-24T14:00:00.000Z"),
+            administeredByName: "Taylor Tech",
+            administeredByIsVeterinarian: false,
+          },
+        ],
+        [],
+      ],
+    });
+
+    const result = await callerWithDb(
+      db,
+      "veterinarian",
+    ).prepareVaccinationCertificate({
+      patientId: PATIENT_ID,
+      kind: "rabies",
+      vaccinationRecordId: RECORD_ID,
+      requestId: CERTIFICATE_ID,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.missingFields).toEqual(
+      expect.arrayContaining([
+        "owner address",
+        "owner phone",
+        "patient breed",
+        "current patient weight",
+        "microchip or rabies tag number",
+        "vaccine product name",
+        "vaccine lot number",
+        "next vaccination due date",
+        "supervising veterinarian",
+        "veterinarian license number",
+      ]),
     );
   });
 
@@ -280,7 +429,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         vaccineName: "Rabies",
         nextDueDate: "2026-02-31",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -288,7 +437,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         description: "Chronic otitis",
         onsetDate: "not-a-date",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -328,7 +477,7 @@ describe("records target safety", () => {
       callerWithDb(db).createVaccination({
         patientId: PATIENT_ID,
         vaccineName: "A".repeat(VACCINATION_NAME_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -336,7 +485,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         vaccineName: "Rabies",
         lotNumber: "A".repeat(VACCINATION_LOT_NUMBER_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -344,14 +493,14 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         vaccineName: "Rabies",
         manufacturer: "A".repeat(VACCINATION_MANUFACTURER_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
       callerWithDb(db).createProblem({
         patientId: PATIENT_ID,
         description: "A".repeat(PROBLEM_DESCRIPTION_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -359,7 +508,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         testName: "A".repeat(LAB_TEST_NAME_MAX_LENGTH + 1),
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -368,7 +517,7 @@ describe("records target safety", () => {
         testName: "CBC",
         resultValue: "A".repeat(LAB_RESULT_VALUE_MAX_LENGTH + 1),
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -377,14 +526,14 @@ describe("records target safety", () => {
         testName: "CBC",
         unit: "A".repeat(LAB_UNIT_MAX_LENGTH + 1),
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
       callerWithDb(db).createProcedure({
         patientId: PATIENT_ID,
         name: "A".repeat(PROCEDURE_NAME_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -399,7 +548,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         name: "Dental cleaning",
         description: "A".repeat(PROCEDURE_DESCRIPTION_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -407,7 +556,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         name: "Dental cleaning",
         anesthesiaUsed: "A".repeat(PROCEDURE_ANESTHESIA_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -415,7 +564,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         name: "Dental cleaning",
         durationMinutes: PROCEDURE_DURATION_MAX_MINUTES + 1,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -423,7 +572,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         name: "Dental cleaning",
         notes: "A".repeat(PROCEDURE_NOTES_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -448,7 +597,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
-      })
+      }),
     ).resolves.toMatchObject({ id: RECORD_ID, patientId: PATIENT_ID });
 
     expect(insertValues).toHaveBeenCalledWith(
@@ -472,7 +621,7 @@ describe("records target safety", () => {
         appointmentId: APPOINTMENT_ID,
         authorId: USER_ID,
         source: "dashboard",
-      }
+      },
     );
   });
 
@@ -487,7 +636,7 @@ describe("records target safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "<p><br></p>",
         objective: "<ul><li>&nbsp;</li></ul>",
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -502,7 +651,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         subjective: SOAP_NOTE_TEMPLATES[0]!.sections.subjective,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message:
@@ -522,7 +671,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         subjective: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -530,7 +679,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         objective: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -538,7 +687,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         assessment: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -546,7 +695,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         plan: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -570,7 +719,7 @@ describe("records target safety", () => {
       callerWithDb(db).createProblem({
         patientId: PATIENT_ID,
         description: "Chronic otitis",
-      })
+      }),
     ).resolves.toMatchObject({ id: RECORD_ID, status: "active" });
 
     expect(mocks.dispatchWebhookEvent).toHaveBeenCalledWith(
@@ -581,7 +730,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         status: "active",
         source: "dashboard",
-      }
+      },
     );
   });
 
@@ -610,7 +759,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         testName: "CBC",
         operationId: FORM_ID,
-      })
+      }),
     ).resolves.toMatchObject({ id: RECORD_ID, testName: "CBC" });
 
     expect(mocks.dispatchWebhookEvent).toHaveBeenCalledWith(
@@ -623,7 +772,7 @@ describe("records target safety", () => {
         status: "pending",
         orderedBy: USER_ID,
         source: "dashboard",
-      }
+      },
     );
   });
 
@@ -636,7 +785,7 @@ describe("records target safety", () => {
         testName: "CBC",
         referenceRangeLow: "not numeric",
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(
@@ -646,7 +795,7 @@ describe("records target safety", () => {
         referenceRangeLow: "30.000",
         referenceRangeHigh: "7.000",
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     expect(select).not.toHaveBeenCalled();
@@ -676,7 +825,7 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         name: "Dental cleaning",
-      })
+      }),
     ).resolves.toMatchObject({ id: RECORD_ID, name: "Dental cleaning" });
 
     expect(mocks.dispatchWebhookEvent).toHaveBeenCalledWith(
@@ -689,7 +838,7 @@ describe("records target safety", () => {
         name: "Dental cleaning",
         performedBy: USER_ID,
         source: "dashboard",
-      }
+      },
     );
   });
 
@@ -715,7 +864,7 @@ describe("records target safety", () => {
       callerWithDb(db).updateProblemStatus({
         id: RECORD_ID,
         status: "resolved",
-      })
+      }),
     ).resolves.toMatchObject({
       id: RECORD_ID,
       status: "resolved",
@@ -735,7 +884,7 @@ describe("records target safety", () => {
       callerWithDb(db).updateProblemStatus({
         id: RECORD_ID,
         status: "resolved",
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(updateSet).not.toHaveBeenCalled();
@@ -757,19 +906,17 @@ describe("records target safety", () => {
       callerWithDb(db).updateProblemStatus({
         id: RECORD_ID,
         status: "resolved",
-      })
+      }),
     ).resolves.toMatchObject({
       id: RECORD_ID,
       status: "resolved",
       resolvedDate: "2026-07-01",
     });
 
-    expect(updateSet).toHaveBeenCalledWith(
-      {
+    expect(updateSet).toHaveBeenCalledWith({
         status: "resolved",
         resolvedDate: "2026-07-01",
-      }
-    );
+    });
   });
 
   it("rejects problem status updates that lose a concurrent race", async () => {
@@ -782,7 +929,7 @@ describe("records target safety", () => {
       callerWithDb(db).updateProblemStatus({
         id: RECORD_ID,
         status: "resolved",
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "Problem changed while updating. Refresh and try again.",
@@ -791,7 +938,7 @@ describe("records target safety", () => {
     expect(updateSet).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "resolved",
-      })
+      }),
     );
   });
 
@@ -803,7 +950,7 @@ describe("records target safety", () => {
         id: RECORD_ID,
         status: "reviewed",
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(updateSet).not.toHaveBeenCalled();
@@ -819,13 +966,12 @@ describe("records target safety", () => {
         id: RECORD_ID,
         status: "reviewed",
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "Cannot change lab result status from pending to reviewed.",
     });
     expect(pending.updateSet).not.toHaveBeenCalled();
-
   });
 
   it("returns tenant-scoped immutable lab evidence with value snapshots", async () => {
@@ -937,11 +1083,13 @@ describe("records target safety", () => {
       followUpOutcome: null,
     };
     const { db } = createDb({
-      selectResults: [[
+      selectResults: [
+        [
         assigned,
         { ...assigned, id: FORM_ID, followUpAssignedTo: OTHER_USER_ID },
         { ...assigned, id: APPOINTMENT_ID, followUpStatus: "completed" },
-      ]],
+        ],
+      ],
     });
 
     const result = await callerWithDb(db, "front_desk").listLabReviewInbox({
@@ -995,12 +1143,14 @@ describe("records target safety", () => {
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           status: "completed",
           resultValue: "12.5",
           resultFlag: "abnormal",
           followUpStatus: "not_required",
-        }],
+          },
+        ],
       ],
       updatedRows: [
         {
@@ -1025,7 +1175,7 @@ describe("records target safety", () => {
         id: RECORD_ID,
         status: "reviewed",
         operationId: FORM_ID,
-      })
+      }),
     ).resolves.toMatchObject({
       id: RECORD_ID,
       status: "reviewed",
@@ -1038,7 +1188,7 @@ describe("records target safety", () => {
         reviewedBy: USER_ID,
         reviewedAt: expect.any(Date),
         updatedAt: expect.any(Date),
-      })
+      }),
     );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1051,7 +1201,7 @@ describe("records target safety", () => {
         referenceRangeLow: "8.000",
         referenceRangeHigh: "18.000",
         actorId: USER_ID,
-      })
+      }),
     );
   });
 
@@ -1059,12 +1209,14 @@ describe("records target safety", () => {
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           status: "completed",
           resultValue: "2.1",
           resultFlag: "critical",
           followUpStatus: "not_required",
-        }],
+          },
+        ],
       ],
     });
 
@@ -1076,7 +1228,8 @@ describe("records target safety", () => {
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
-      message: "Assign owned follow-up for this critical result before recording clinical review.",
+      message:
+        "Assign owned follow-up for this critical result before recording clinical review.",
     });
     expect(updateSet).not.toHaveBeenCalled();
     expect(insertValues).not.toHaveBeenCalled();
@@ -1098,11 +1251,13 @@ describe("records target safety", () => {
     };
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
-        [{
+        [
+          {
           labResultId: RECORD_ID,
           eventType: "reviewed",
           operationPayloadHash: payloadHash,
-        }],
+          },
+        ],
         [reviewed],
       ],
     });
@@ -1120,11 +1275,15 @@ describe("records target safety", () => {
 
   it("rejects reuse of a lab operation id for different evidence", async () => {
     const { db, updateSet, insertValues } = createDb({
-      selectResults: [[{
+      selectResults: [
+        [
+          {
         labResultId: RECORD_ID,
         eventType: "reviewed",
         operationPayloadHash: "f".repeat(64),
-      }]],
+          },
+        ],
+      ],
     });
 
     await expect(
@@ -1179,7 +1338,7 @@ describe("records target safety", () => {
         unit: "mmol/L",
         resultFlag: "critical",
         operationId: FORM_ID,
-      })
+      }),
     ).resolves.toMatchObject({ status: "completed", resultFlag: "critical" });
 
     expect(updateSet).toHaveBeenCalledWith(
@@ -1188,7 +1347,7 @@ describe("records target safety", () => {
         status: "completed",
         completedAt: expect.any(Date),
         updatedAt: expect.any(Date),
-      })
+      }),
     );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1200,7 +1359,7 @@ describe("records target safety", () => {
         resultValue: "2.1",
         unit: "mmol/L",
         actorId: USER_ID,
-      })
+      }),
     );
   });
 
@@ -1208,7 +1367,8 @@ describe("records target safety", () => {
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           id: RECORD_ID,
           patientId: PATIENT_ID,
           appointmentId: null,
@@ -1218,7 +1378,8 @@ describe("records target safety", () => {
           followUpStatus: "open",
           followUpAssignedTo: OTHER_USER_ID,
           followUpDueAt: null,
-        }],
+          },
+        ],
       ],
     });
 
@@ -1231,7 +1392,8 @@ describe("records target safety", () => {
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
-      message: "Set a due date on the open follow-up before recording this result as critical.",
+      message:
+        "Set a due date on the open follow-up before recording this result as critical.",
     });
     expect(updateSet).not.toHaveBeenCalled();
     expect(insertValues).not.toHaveBeenCalled();
@@ -1266,7 +1428,7 @@ describe("records target safety", () => {
         dueAt: "2026-08-10T18:00:00.000Z",
         note: "Call the owner today.",
         operationId: FORM_ID,
-      })
+      }),
     ).resolves.toMatchObject({
       followUpStatus: "open",
       followUpAssignedTo: USER_ID,
@@ -1279,7 +1441,7 @@ describe("records target safety", () => {
         followUpDueAt: new Date("2026-08-10T18:00:00.000Z"),
         followUpNote: "Call the owner today.",
         updatedAt: expect.any(Date),
-      })
+      }),
     );
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1288,7 +1450,7 @@ describe("records target safety", () => {
         resultFlag: "critical",
         followUpAssignedTo: USER_ID,
         actorId: USER_ID,
-      })
+      }),
     );
   });
 
@@ -1296,14 +1458,16 @@ describe("records target safety", () => {
     const pending = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           id: RECORD_ID,
           status: "pending",
           resultValue: null,
           resultFlag: "unknown",
           followUpStatus: "not_required",
           followUpAssignedTo: null,
-        }],
+          },
+        ],
       ],
     });
     await expect(
@@ -1322,13 +1486,15 @@ describe("records target safety", () => {
     const laterCritical = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           id: RECORD_ID,
           status: "completed",
           resultValue: "2.1",
           resultFlag: "critical",
           followUpStatus: "not_required",
-        }],
+          },
+        ],
       ],
     });
     await expect(
@@ -1338,7 +1504,8 @@ describe("records target safety", () => {
         operationId: FORM_ID,
       }),
     ).rejects.toMatchObject({
-      message: "Assign owned follow-up for this critical result before recording clinical review.",
+      message:
+        "Assign owned follow-up for this critical result before recording clinical review.",
     });
     expect(laterCritical.updateSet).not.toHaveBeenCalled();
   });
@@ -1404,7 +1571,8 @@ describe("records target safety", () => {
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
-      message: "Front desk follow-up requires actionable instructions from the clinical team.",
+      message:
+        "Front desk follow-up requires actionable instructions from the clinical team.",
     });
     expect(updateSet).not.toHaveBeenCalled();
     expect(insertValues).not.toHaveBeenCalled();
@@ -1427,11 +1595,13 @@ describe("records target safety", () => {
     };
     const { db, updateSet, insertValues } = createDb({
       selectResults: [[], [existing]],
-      updatedRows: [{
+      updatedRows: [
+        {
         ...existing,
         followUpStatus: "completed",
         followUpOutcome: "Owner reached; repeat test booked.",
-      }],
+        },
+      ],
     });
 
     const result = await callerWithDb(db, "front_desk").completeLabFollowUp({
@@ -1439,12 +1609,14 @@ describe("records target safety", () => {
       outcome: "Owner reached; repeat test booked.",
       operationId: FORM_ID,
     });
-    expect(result).toEqual(expect.objectContaining({
+    expect(result).toEqual(
+      expect.objectContaining({
       id: RECORD_ID,
       patientId: PATIENT_ID,
       followUpStatus: "completed",
       followUpAssignedTo: USER_ID,
-    }));
+      }),
+    );
     expect(result).not.toHaveProperty("resultValue");
     expect(result).not.toHaveProperty("referenceRangeLow");
     expect(result).not.toHaveProperty("resultFlag");
@@ -1493,11 +1665,13 @@ describe("records target safety", () => {
     };
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
-        [{
+        [
+          {
           labResultId: RECORD_ID,
           eventType: "follow_up_completed",
           operationPayloadHash: payloadHash,
-        }],
+          },
+        ],
         [completed],
       ],
     });
@@ -1523,14 +1697,16 @@ describe("records target safety", () => {
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           id: RECORD_ID,
           status: "pending",
           resultValue: null,
           resultFlag: "unknown",
           followUpStatus: "open",
           followUpAssignedTo: USER_ID,
-        }],
+          },
+        ],
       ],
     });
 
@@ -1542,7 +1718,8 @@ describe("records target safety", () => {
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
-      message: "Lab follow-up cannot be completed before result values are available.",
+      message:
+        "Lab follow-up cannot be completed before result values are available.",
     });
     expect(updateSet).not.toHaveBeenCalled();
     expect(insertValues).not.toHaveBeenCalled();
@@ -1552,14 +1729,16 @@ describe("records target safety", () => {
     const { db, updateSet, insertValues } = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           id: RECORD_ID,
           resultValue: "2.1",
           resultFlag: "critical",
           status: "reviewed",
           followUpStatus: "open",
           followUpAssignedTo: OTHER_USER_ID,
-        }],
+          },
+        ],
       ],
     });
 
@@ -1596,7 +1775,7 @@ describe("records target safety", () => {
         id: RECORD_ID,
         status: "reviewed",
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
     expect(updateSet).not.toHaveBeenCalled();
@@ -1606,12 +1785,14 @@ describe("records target safety", () => {
     const { db, updateSet } = createDb({
       selectResults: [
         [],
-        [{
+        [
+          {
           status: "completed",
           resultValue: "12.5",
           resultFlag: "normal",
           followUpStatus: "not_required",
-        }],
+          },
+        ],
       ],
       updatedRows: [],
     });
@@ -1621,7 +1802,7 @@ describe("records target safety", () => {
         id: RECORD_ID,
         status: "reviewed",
         operationId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: "Lab result changed while updating. Refresh and try again.",
@@ -1631,7 +1812,7 @@ describe("records target safety", () => {
       expect.objectContaining({
         status: "reviewed",
         reviewedBy: USER_ID,
-      })
+      }),
     );
   });
 });
@@ -1652,12 +1833,8 @@ describe("capture sessions", () => {
     });
 
     expect(result.token).toMatch(/^[0-9a-f]{64}$/);
-    expect(result.url).toMatch(
-      new RegExp(`/capture/${result.token}$`)
-    );
-    expect(result.expiresAt).toEqual(
-      new Date("2026-07-10T12:30:00.000Z")
-    );
+    expect(result.url).toMatch(new RegExp(`/capture/${result.token}$`));
+    expect(result.expiresAt).toEqual(new Date("2026-07-10T12:30:00.000Z"));
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         practiceId: PRACTICE_ID,
@@ -1665,7 +1842,7 @@ describe("capture sessions", () => {
         createdBy: USER_ID,
         token: result.token,
         expiresAt: result.expiresAt,
-      })
+      }),
     );
   });
 
@@ -1681,7 +1858,7 @@ describe("capture sessions", () => {
 
     expect(result.appointmentId).toBe(APPOINTMENT_ID);
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ appointmentId: APPOINTMENT_ID })
+      expect.objectContaining({ appointmentId: APPOINTMENT_ID }),
     );
   });
 
@@ -1698,7 +1875,7 @@ describe("capture sessions", () => {
 
     expect(result.appointmentId).toBe(APPOINTMENT_ID);
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ appointmentId: APPOINTMENT_ID })
+      expect.objectContaining({ appointmentId: APPOINTMENT_ID }),
     );
   });
 
@@ -1711,7 +1888,7 @@ describe("capture sessions", () => {
       callerWithDb(db).createCaptureSession({
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -1729,23 +1906,18 @@ describe("capture sessions", () => {
 
     expect(result.appointmentId).toBeNull();
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ appointmentId: null })
+      expect.objectContaining({ appointmentId: null }),
     );
   });
 
   it("keeps capture links restricted to non-viewer staff roles", async () => {
-    for (const role of [
-      "admin",
-      "veterinarian",
-      "technician",
-      "front_desk",
-    ]) {
+    for (const role of ["admin", "veterinarian", "technician", "front_desk"]) {
       const { db } = createDb({
         selectResults: [patientRow],
         insertedRows: [{ id: RECORD_ID }],
       });
       await expect(
-        callerWithDb(db, role).createCaptureSession({ patientId: PATIENT_ID })
+        callerWithDb(db, role).createCaptureSession({ patientId: PATIENT_ID }),
       ).resolves.toMatchObject({ token: expect.any(String) });
     }
 
@@ -1753,7 +1925,7 @@ describe("capture sessions", () => {
     await expect(
       callerWithDb(db, "viewer").createCaptureSession({
         patientId: PATIENT_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(insertValues).not.toHaveBeenCalled();
   });
@@ -1762,7 +1934,7 @@ describe("capture sessions", () => {
     const { db, insertValues } = createDb({ selectResults: [[]] });
 
     await expect(
-      callerWithDb(db).createCaptureSession({ patientId: PATIENT_ID })
+      callerWithDb(db).createCaptureSession({ patientId: PATIENT_ID }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -1772,7 +1944,7 @@ describe("capture sessions", () => {
     const { db } = createDb({ selectResults: [[]] });
 
     await expect(
-      callerWithDb(db).listCaptureFiles({ patientId: PATIENT_ID })
+      callerWithDb(db).listCaptureFiles({ patientId: PATIENT_ID }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
@@ -1855,7 +2027,7 @@ describe("consent requests", () => {
         expiresAt: result.expiresAt,
         title: "Consent to treatment",
         bodyText: expect.stringContaining("I give this clinic permission"),
-      })
+      }),
     );
   });
 
@@ -1872,7 +2044,7 @@ describe("consent requests", () => {
 
     expect(result.appointmentId).toBe(APPOINTMENT_ID);
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ appointmentId: APPOINTMENT_ID })
+      expect.objectContaining({ appointmentId: APPOINTMENT_ID }),
     );
   });
 
@@ -1890,7 +2062,7 @@ describe("consent requests", () => {
 
     expect(result.appointmentId).toBe(APPOINTMENT_ID);
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ appointmentId: APPOINTMENT_ID })
+      expect.objectContaining({ appointmentId: APPOINTMENT_ID }),
     );
   });
 
@@ -1904,7 +2076,7 @@ describe("consent requests", () => {
         patientId: PATIENT_ID,
         appointmentId: APPOINTMENT_ID,
         formId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -1928,7 +2100,7 @@ describe("consent requests", () => {
         formId: FORM_ID,
         title: "Dental cleaning consent",
         bodyText: "I agree to the dental cleaning we talked about.",
-      })
+      }),
     );
   });
 
@@ -1950,7 +2122,7 @@ describe("consent requests", () => {
       callerWithDb(db).createConsentRequest({
         patientId: PATIENT_ID,
         formId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       message: expect.stringContaining("Fill in every blank"),
@@ -1979,13 +2151,13 @@ describe("consent requests", () => {
         patientId: PATIENT_ID,
         formId: FORM_ID,
         bodyText: "I approve dental extractions up to $850.",
-      })
+      }),
     ).resolves.toMatchObject({ id: RECORD_ID });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         bodyText: "I approve dental extractions up to $850.",
-      })
+      }),
     );
   });
 
@@ -1998,7 +2170,7 @@ describe("consent requests", () => {
       callerWithDb(db).createConsentRequest({
         patientId: PATIENT_ID,
         formId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -2019,7 +2191,7 @@ describe("consent requests", () => {
         callerWithDb(db, role).createConsentRequest({
           patientId: PATIENT_ID,
           formId: FORM_ID,
-        })
+        }),
       ).resolves.toMatchObject({ token: expect.any(String) });
     }
 
@@ -2028,7 +2200,7 @@ describe("consent requests", () => {
       callerWithDb(db, "viewer").createConsentRequest({
         patientId: PATIENT_ID,
         formId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(insertValues).not.toHaveBeenCalled();
   });
@@ -2040,7 +2212,7 @@ describe("consent requests", () => {
       callerWithDb(db).createConsentRequest({
         patientId: PATIENT_ID,
         formId: FORM_ID,
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     expect(insertValues).not.toHaveBeenCalled();
@@ -2050,7 +2222,7 @@ describe("consent requests", () => {
     const { db } = createDb({ selectResults: [[]] });
 
     await expect(
-      callerWithDb(db).listConsents({ patientId: PATIENT_ID })
+      callerWithDb(db).listConsents({ patientId: PATIENT_ID }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
