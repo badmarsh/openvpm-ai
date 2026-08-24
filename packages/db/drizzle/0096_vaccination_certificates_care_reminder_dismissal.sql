@@ -1,11 +1,13 @@
 CREATE TYPE "public"."vaccination_dose_type" AS ENUM('initial', 'booster');--> statement-breakpoint
 ALTER TABLE "care_reminders" DROP CONSTRAINT "care_reminders_state_check";--> statement-breakpoint
+DROP INDEX "care_reminders_open_due_idx";--> statement-breakpoint
 ALTER TABLE "care_reminders" ALTER COLUMN "status" DROP DEFAULT;--> statement-breakpoint
 CREATE TYPE "public"."care_reminder_status_v2" AS ENUM('open', 'completed', 'dismissed');--> statement-breakpoint
 ALTER TABLE "care_reminders" ALTER COLUMN "status" TYPE "public"."care_reminder_status_v2" USING "status"::text::"public"."care_reminder_status_v2";--> statement-breakpoint
 DROP TYPE "public"."care_reminder_status";--> statement-breakpoint
 ALTER TYPE "public"."care_reminder_status_v2" RENAME TO "care_reminder_status";--> statement-breakpoint
 ALTER TABLE "care_reminders" ALTER COLUMN "status" SET DEFAULT 'open';--> statement-breakpoint
+CREATE INDEX "care_reminders_open_due_idx" ON "care_reminders" USING btree ("practice_id","due_date","id") WHERE "care_reminders"."status" = 'open' and "care_reminders"."deleted_at" is null;--> statement-breakpoint
 ALTER TABLE "vaccination_records" ADD COLUMN "product_name" varchar(255);--> statement-breakpoint
 ALTER TABLE "vaccination_records" ADD COLUMN "product_expiration_date" date;--> statement-breakpoint
 ALTER TABLE "vaccination_records" ADD COLUMN "dose_type" "vaccination_dose_type";--> statement-breakpoint

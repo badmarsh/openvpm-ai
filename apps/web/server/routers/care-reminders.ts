@@ -5,6 +5,10 @@ import { alias } from "drizzle-orm/pg-core";
 import {
   careReminders,
   clients,
+  communications,
+  emailSuppressions,
+  locationMessaging,
+  locations,
   patients,
   practices,
   users,
@@ -15,6 +19,21 @@ import {
   clinicalDateInput,
   clinicalTextInput,
 } from "@/lib/records/clinical-inputs";
+import { formatClinicalDate } from "@/lib/records/clinical-dates";
+import { sendCareReminder } from "@/lib/email";
+import { sendCareReminderSms } from "@/lib/sms";
+import {
+  emailSuppressionSendBlockMessage,
+  normalizeEmailSuppressionAddress,
+} from "@/lib/email-suppression";
+import { assertOutboundEmailAllowed } from "@/lib/outbound-email-security";
+import { hasNonBlankMessagingSender } from "@/lib/messaging/sender-query";
+import { isQuietHours } from "@/lib/messaging/reminders";
+import { withDurableSmsCommunication } from "@/lib/messaging/durable-sms-communication";
+import {
+  lockPracticeForExternalSideEffects,
+  RECOVERY_HOLD_BLOCK_MESSAGE,
+} from "@/lib/recovery-hold";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
 
 const manageProcedure = protectedProcedure.use(
@@ -29,6 +48,11 @@ const reminderNotesInput = z
   .transform((value) => value || undefined);
 const expectedUpdatedAtInput = z.string().datetime();
 const careReminderDismisser = alias(users, "care_reminder_dismisser");
+const outreachInput = z.object({
+  reminderId: z.string().uuid(),
+  channel: z.enum(["email", "sms"]),
+  requestId: z.string().uuid(),
+});
 const dismissalInput = z
   .object({
     items: z
@@ -75,6 +99,42 @@ async function activePractice(
     throw new TRPCError({ code: "NOT_FOUND", message: "Practice not found" });
   }
   return practice;
+}
+
+function careReminderOutreachDedupeKey(
+  practiceId: string,
+  channel: "email" | "sms",
+  requestId: string,
+): string {
+  return `${channel}:care-reminder:${practiceId}:${requestId}`;
+}
+
+async function activeCareReminderSmsSender(
+  db: Pick<Database, "select">,
+  practiceId: string,
+): Promise<{ locationId: string } | null> {
+  const senders = await db
+    .select({ locationId: locationMessaging.locationId })
+    .from(locationMessaging)
+    .innerJoin(
+      locations,
+      and(
+        eq(locations.id, locationMessaging.locationId),
+        eq(locations.practiceId, practiceId),
+        isNull(locations.deletedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(locationMessaging.practiceId, practiceId),
+        isNull(locationMessaging.deletedAt),
+        eq(locationMessaging.enabled, true),
+        eq(locationMessaging.registrationStatus, "active"),
+        hasNonBlankMessagingSender(),
+      ),
+    )
+    .limit(2);
+  return senders.length === 1 ? senders[0]! : null;
 }
 
 export const careRemindersRouter = createRouter({
@@ -153,7 +213,7 @@ export const careRemindersRouter = createRouter({
             ? desc(careReminders.completedAt)
             : status === "dismissed"
               ? desc(careReminders.dismissedAt)
-            : asc(careReminders.dueDate),
+              : asc(careReminders.dueDate),
           asc(careReminders.id),
         )
         .limit(input?.limit ?? 500);
@@ -229,6 +289,313 @@ export const careRemindersRouter = createRouter({
       return reminder!;
     }),
 
+  sendOutreach: manageProcedure
+    .input(outreachInput)
+    .mutation(async ({ ctx, input }) => {
+      const outcome = await ctx.db.transaction(async (tx) => {
+        const db = tx as unknown as Database;
+        if (!(await lockPracticeForExternalSideEffects(db, ctx.practiceId))) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: RECOVERY_HOLD_BLOCK_MESSAGE,
+          });
+        }
+
+        const [reminder] = await db
+          .select({
+            id: careReminders.id,
+            title: careReminders.title,
+            dueDate: careReminders.dueDate,
+            status: careReminders.status,
+            patientName: patients.name,
+            clientId: clients.id,
+            clientFirstName: clients.firstName,
+            clientLastName: clients.lastName,
+            clientEmail: clients.email,
+            clientPhone: clients.phone,
+            clientSmsConsent: clients.smsConsent,
+            emailSuppressionReason: emailSuppressions.reason,
+            practiceName: practices.name,
+            practicePhone: practices.phone,
+            practiceAddress: practices.address,
+            practiceTimezone: practices.timezone,
+          })
+          .from(careReminders)
+          .innerJoin(
+            patients,
+            and(
+              eq(careReminders.patientId, patients.id),
+              eq(patients.practiceId, ctx.practiceId),
+              isNull(patients.deletedAt),
+            ),
+          )
+          .innerJoin(
+            clients,
+            and(
+              eq(patients.clientId, clients.id),
+              eq(clients.practiceId, ctx.practiceId),
+              isNull(clients.deletedAt),
+            ),
+          )
+          .innerJoin(
+            practices,
+            and(eq(practices.id, ctx.practiceId), isNull(practices.deletedAt)),
+          )
+          .leftJoin(
+            emailSuppressions,
+            and(
+              eq(emailSuppressions.practiceId, ctx.practiceId),
+              sql`${emailSuppressions.email} = lower(trim(${clients.email}))`,
+              isNull(emailSuppressions.deletedAt),
+            ),
+          )
+          .where(
+            and(
+              eq(careReminders.id, input.reminderId),
+              eq(careReminders.practiceId, ctx.practiceId),
+              isNull(careReminders.deletedAt),
+            ),
+          )
+          .limit(1);
+        if (!reminder) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Care reminder not found",
+          });
+        }
+        if (reminder.status !== "open") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Only open care reminders can be sent to a client.",
+          });
+        }
+
+        const clientName =
+          [reminder.clientFirstName, reminder.clientLastName]
+            .filter(Boolean)
+            .join(" ") || "Client";
+        const dueDate = formatClinicalDate(
+          reminder.dueDate,
+          reminder.practiceTimezone,
+          reminder.dueDate,
+        );
+        const subject = `Care Reminder for ${reminder.patientName}`;
+        const content = `Hello ${clientName},\n\nThis is a reminder from our veterinary team about ${reminder.patientName}: ${reminder.title}. The reminder date is ${dueDate}. Please contact us if you have questions or would like to schedule.`;
+        const dedupeKey = careReminderOutreachDedupeKey(
+          ctx.practiceId,
+          input.channel,
+          input.requestId,
+        );
+
+        let email: string | null = null;
+        let smsSender: { locationId: string } | null = null;
+        if (input.channel === "email") {
+          email = normalizeEmailSuppressionAddress(reminder.clientEmail);
+          if (!email) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Client does not have an email address on file",
+            });
+          }
+          if (reminder.emailSuppressionReason) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: emailSuppressionSendBlockMessage(
+                reminder.emailSuppressionReason,
+              ),
+            });
+          }
+          await assertOutboundEmailAllowed({
+            practiceId: ctx.practiceId,
+            practiceCreatedAt: ctx.user.practiceCreatedAt,
+            userId: ctx.user.id,
+            userEmailVerifiedAt: ctx.user.emailVerifiedAt,
+            ip: ctx.ip,
+            operation: "care_reminder",
+          });
+        } else {
+          if (!reminder.clientPhone || !reminder.clientSmsConsent) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Client does not have an SMS-consented phone number on file",
+            });
+          }
+          if (isQuietHours(new Date(), reminder.practiceTimezone)) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "SMS reminders cannot be sent during quiet hours (9 PM–8 AM local time). Try again after 8 AM.",
+            });
+          }
+          smsSender = await activeCareReminderSmsSender(db, ctx.practiceId);
+          if (!smsSender) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Set up exactly one active clinic texting number before sending care reminders by SMS",
+            });
+          }
+        }
+
+        const insertCommunication = async (
+          db: Pick<Database, "insert" | "select">,
+        ) => {
+          const [inserted] = await db
+            .insert(communications)
+            .values({
+              practiceId: ctx.practiceId,
+              clientId: reminder.clientId,
+              channel: input.channel,
+              direction: "outbound",
+              subject: input.channel === "email" ? subject : null,
+              content,
+              status: "pending",
+              dedupeKey,
+            })
+            .onConflictDoNothing({ target: communications.dedupeKey })
+            .returning();
+          if (inserted) return { communication: inserted, replayed: false };
+
+          const [existing] = await db
+            .select()
+            .from(communications)
+            .where(
+              and(
+                eq(communications.practiceId, ctx.practiceId),
+                eq(communications.dedupeKey, dedupeKey),
+                eq(communications.clientId, reminder.clientId),
+                eq(communications.channel, input.channel),
+                eq(communications.direction, "outbound"),
+                isNull(communications.deletedAt),
+              ),
+            )
+            .limit(1);
+          if (!existing) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Reminder request ID is already in use.",
+            });
+          }
+          if (
+            existing.content !== content ||
+            (existing.subject ?? null) !==
+              (input.channel === "email" ? subject : null)
+          ) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message:
+                "Reminder request ID was already used for different reminder data.",
+            });
+          }
+          return { communication: existing, replayed: true };
+        };
+
+        const durableSms = input.channel === "sms";
+        const claim = durableSms
+          ? await withDurableSmsCommunication(
+              ctx.practiceId,
+              insertCommunication,
+            )
+          : await insertCommunication(db);
+        const communication = claim.communication;
+        if (
+          claim.replayed &&
+          new Set(["sent", "delivered", "read"]).has(communication.status)
+        ) {
+          return { success: true, channel: input.channel, replayed: true };
+        }
+        if (claim.replayed) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              communication.status === "failed"
+                ? "This reminder delivery failed. Start a new send to retry it."
+                : "This reminder delivery is already being processed.",
+          });
+        }
+
+        const result =
+          input.channel === "email"
+            ? await sendCareReminder({
+                to: email!,
+                clientName,
+                patientName: reminder.patientName,
+                reminderTitle: reminder.title,
+                dueDate,
+                practiceName: reminder.practiceName,
+                practicePhone: reminder.practicePhone ?? undefined,
+                practiceAddress: reminder.practiceAddress ?? undefined,
+                idempotencyKey: dedupeKey,
+              })
+            : await sendCareReminderSms({
+                to: reminder.clientPhone!,
+                patientName: reminder.patientName,
+                reminderTitle: reminder.title,
+                dueDate,
+                practiceName: reminder.practiceName,
+                practicePhone: reminder.practicePhone ?? undefined,
+                practiceId: ctx.practiceId,
+                locationId: smsSender!.locationId,
+                clientId: reminder.clientId,
+                communicationId: communication.id,
+                sourceId: reminder.id,
+                idempotencyKey: dedupeKey,
+              });
+
+        if (
+          input.channel === "sms" &&
+          !result.success &&
+          "outcome" in result &&
+          result.outcome === "outcome_unknown"
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "The texting provider outcome is unknown. Do not resend until support confirms the outcome.",
+          });
+        }
+
+        const project = (db: Pick<Database, "update">) =>
+          db
+            .update(communications)
+            .set({
+              status: result.success ? "sent" : "failed",
+              providerMessageId: result.success
+                ? "sid" in result
+                  ? result.sid
+                  : result.id
+                : undefined,
+            })
+            .where(
+              and(
+                eq(communications.id, communication.id),
+                eq(communications.practiceId, ctx.practiceId),
+                eq(communications.status, "pending"),
+                isNull(communications.deletedAt),
+              ),
+            );
+        if (durableSms) {
+          await withDurableSmsCommunication(ctx.practiceId, project);
+        } else {
+          await project(db);
+        }
+        if (!result.success) {
+          return {
+            deliveryError: result.error ?? "Could not send care reminder",
+          } as const;
+        }
+        return { success: true, channel: input.channel, replayed: false };
+      });
+      if ("deliveryError" in outcome) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: outcome.deliveryError,
+        });
+      }
+      return outcome;
+    }),
+
   setCompleted: manageProcedure
     .input(
       z.object({
@@ -292,7 +659,6 @@ export const careRemindersRouter = createRouter({
             and(
               eq(careReminders.id, current.id),
               eq(careReminders.practiceId, ctx.practiceId),
-              eq(careReminders.updatedAt, current.updatedAt),
               isNull(careReminders.deletedAt),
             ),
           )

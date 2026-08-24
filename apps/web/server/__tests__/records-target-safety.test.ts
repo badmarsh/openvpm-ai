@@ -45,7 +45,6 @@ const APPOINTMENT_ID = "00000000-0000-0000-0000-000000000003";
 const RECORD_ID = "00000000-0000-0000-0000-000000000004";
 const FORM_ID = "00000000-0000-0000-0000-000000000005";
 const OTHER_USER_ID = "00000000-0000-0000-0000-000000000006";
-const CERTIFICATE_ID = "00000000-0000-0000-0000-000000000007";
 
 function operationHash(payload: Record<string, unknown>): string {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
@@ -334,11 +333,10 @@ describe("records target safety", () => {
         patientId: PATIENT_ID,
         kind: "rabies",
         vaccinationRecordId: RECORD_ID,
-        requestId: CERTIFICATE_ID,
       }),
     ).resolves.toMatchObject({
       id: RECORD_ID,
-      certificateId: CERTIFICATE_ID,
+      certificateId: expect.any(String),
       kind: "rabies",
       ready: true,
       missingFields: [],
@@ -401,7 +399,6 @@ describe("records target safety", () => {
       patientId: PATIENT_ID,
       kind: "rabies",
       vaccinationRecordId: RECORD_ID,
-      requestId: CERTIFICATE_ID,
     });
 
     expect(result.ready).toBe(false);
@@ -914,8 +911,8 @@ describe("records target safety", () => {
     });
 
     expect(updateSet).toHaveBeenCalledWith({
-        status: "resolved",
-        resolvedDate: "2026-07-01",
+      status: "resolved",
+      resolvedDate: "2026-07-01",
     });
   });
 
@@ -1085,9 +1082,9 @@ describe("records target safety", () => {
     const { db } = createDb({
       selectResults: [
         [
-        assigned,
-        { ...assigned, id: FORM_ID, followUpAssignedTo: OTHER_USER_ID },
-        { ...assigned, id: APPOINTMENT_ID, followUpStatus: "completed" },
+          assigned,
+          { ...assigned, id: FORM_ID, followUpAssignedTo: OTHER_USER_ID },
+          { ...assigned, id: APPOINTMENT_ID, followUpStatus: "completed" },
         ],
       ],
     });
@@ -1145,10 +1142,10 @@ describe("records target safety", () => {
         [],
         [
           {
-          status: "completed",
-          resultValue: "12.5",
-          resultFlag: "abnormal",
-          followUpStatus: "not_required",
+            status: "completed",
+            resultValue: "12.5",
+            resultFlag: "abnormal",
+            followUpStatus: "not_required",
           },
         ],
       ],
@@ -1211,10 +1208,10 @@ describe("records target safety", () => {
         [],
         [
           {
-          status: "completed",
-          resultValue: "2.1",
-          resultFlag: "critical",
-          followUpStatus: "not_required",
+            status: "completed",
+            resultValue: "2.1",
+            resultFlag: "critical",
+            followUpStatus: "not_required",
           },
         ],
       ],
@@ -1253,9 +1250,9 @@ describe("records target safety", () => {
       selectResults: [
         [
           {
-          labResultId: RECORD_ID,
-          eventType: "reviewed",
-          operationPayloadHash: payloadHash,
+            labResultId: RECORD_ID,
+            eventType: "reviewed",
+            operationPayloadHash: payloadHash,
           },
         ],
         [reviewed],
@@ -1278,9 +1275,9 @@ describe("records target safety", () => {
       selectResults: [
         [
           {
-        labResultId: RECORD_ID,
-        eventType: "reviewed",
-        operationPayloadHash: "f".repeat(64),
+            labResultId: RECORD_ID,
+            eventType: "reviewed",
+            operationPayloadHash: "f".repeat(64),
           },
         ],
       ],
@@ -1369,15 +1366,15 @@ describe("records target safety", () => {
         [],
         [
           {
-          id: RECORD_ID,
-          patientId: PATIENT_ID,
-          appointmentId: null,
-          resultValue: null,
-          resultFlag: "unknown",
-          status: "pending",
-          followUpStatus: "open",
-          followUpAssignedTo: OTHER_USER_ID,
-          followUpDueAt: null,
+            id: RECORD_ID,
+            patientId: PATIENT_ID,
+            appointmentId: null,
+            resultValue: null,
+            resultFlag: "unknown",
+            status: "pending",
+            followUpStatus: "open",
+            followUpAssignedTo: OTHER_USER_ID,
+            followUpDueAt: null,
           },
         ],
       ],
@@ -1460,12 +1457,12 @@ describe("records target safety", () => {
         [],
         [
           {
-          id: RECORD_ID,
-          status: "pending",
-          resultValue: null,
-          resultFlag: "unknown",
-          followUpStatus: "not_required",
-          followUpAssignedTo: null,
+            id: RECORD_ID,
+            status: "pending",
+            resultValue: null,
+            resultFlag: "unknown",
+            followUpStatus: "not_required",
+            followUpAssignedTo: null,
           },
         ],
       ],
@@ -1488,11 +1485,11 @@ describe("records target safety", () => {
         [],
         [
           {
-          id: RECORD_ID,
-          status: "completed",
-          resultValue: "2.1",
-          resultFlag: "critical",
-          followUpStatus: "not_required",
+            id: RECORD_ID,
+            status: "completed",
+            resultValue: "2.1",
+            resultFlag: "critical",
+            followUpStatus: "not_required",
           },
         ],
       ],
@@ -1597,9 +1594,9 @@ describe("records target safety", () => {
       selectResults: [[], [existing]],
       updatedRows: [
         {
-        ...existing,
-        followUpStatus: "completed",
-        followUpOutcome: "Owner reached; repeat test booked.",
+          ...existing,
+          followUpStatus: "completed",
+          followUpOutcome: "Owner reached; repeat test booked.",
         },
       ],
     });
@@ -1611,10 +1608,10 @@ describe("records target safety", () => {
     });
     expect(result).toEqual(
       expect.objectContaining({
-      id: RECORD_ID,
-      patientId: PATIENT_ID,
-      followUpStatus: "completed",
-      followUpAssignedTo: USER_ID,
+        id: RECORD_ID,
+        patientId: PATIENT_ID,
+        followUpStatus: "completed",
+        followUpAssignedTo: USER_ID,
       }),
     );
     expect(result).not.toHaveProperty("resultValue");
@@ -1667,9 +1664,9 @@ describe("records target safety", () => {
       selectResults: [
         [
           {
-          labResultId: RECORD_ID,
-          eventType: "follow_up_completed",
-          operationPayloadHash: payloadHash,
+            labResultId: RECORD_ID,
+            eventType: "follow_up_completed",
+            operationPayloadHash: payloadHash,
           },
         ],
         [completed],
@@ -1699,12 +1696,12 @@ describe("records target safety", () => {
         [],
         [
           {
-          id: RECORD_ID,
-          status: "pending",
-          resultValue: null,
-          resultFlag: "unknown",
-          followUpStatus: "open",
-          followUpAssignedTo: USER_ID,
+            id: RECORD_ID,
+            status: "pending",
+            resultValue: null,
+            resultFlag: "unknown",
+            followUpStatus: "open",
+            followUpAssignedTo: USER_ID,
           },
         ],
       ],
@@ -1731,12 +1728,12 @@ describe("records target safety", () => {
         [],
         [
           {
-          id: RECORD_ID,
-          resultValue: "2.1",
-          resultFlag: "critical",
-          status: "reviewed",
-          followUpStatus: "open",
-          followUpAssignedTo: OTHER_USER_ID,
+            id: RECORD_ID,
+            resultValue: "2.1",
+            resultFlag: "critical",
+            status: "reviewed",
+            followUpStatus: "open",
+            followUpAssignedTo: OTHER_USER_ID,
           },
         ],
       ],
@@ -1787,10 +1784,10 @@ describe("records target safety", () => {
         [],
         [
           {
-          status: "completed",
-          resultValue: "12.5",
-          resultFlag: "normal",
-          followUpStatus: "not_required",
+            status: "completed",
+            resultValue: "12.5",
+            resultFlag: "normal",
+            followUpStatus: "not_required",
           },
         ],
       ],

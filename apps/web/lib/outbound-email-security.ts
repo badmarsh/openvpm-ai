@@ -18,6 +18,7 @@ type OutboundEmailOperation =
   | "staff_invite"
   | "appointment_reminder"
   | "invoice"
+  | "care_reminder"
   | "vaccination_recall";
 
 type Quota = {

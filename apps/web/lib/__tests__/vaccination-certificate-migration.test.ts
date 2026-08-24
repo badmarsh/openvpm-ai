@@ -25,6 +25,16 @@ describe("vaccination certificate and reminder dismissal migration", () => {
     ).toBeLessThan(
       migration.indexOf('DROP TYPE "public"."care_reminder_status"'),
     );
+    expect(
+      migration.indexOf('DROP INDEX "care_reminders_open_due_idx"'),
+    ).toBeLessThan(migration.indexOf('ALTER COLUMN "status" TYPE'));
+    expect(
+      migration.indexOf('CREATE INDEX "care_reminders_open_due_idx"'),
+    ).toBeGreaterThan(
+      migration.indexOf(
+        'ALTER TYPE "public"."care_reminder_status_v2" RENAME TO "care_reminder_status"',
+      ),
+    );
   });
 
   it("adds tenant-bound attribution and coherent state constraints", () => {

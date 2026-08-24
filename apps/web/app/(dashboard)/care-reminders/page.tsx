@@ -25,12 +25,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  COMMUNICATION_SUBJECT_MAX_LENGTH,
-  communicationContentMaxLength,
-  isCommunicationContentValid,
-  isCommunicationSubjectValid,
-} from "@/lib/communications/policy";
 
 type ReminderStatusFilter = "open" | "completed" | "dismissed";
 type ReminderDueFilter = "all" | "overdue" | "upcoming";
@@ -38,7 +32,7 @@ type OutreachChannel = "email" | "sms";
 const MAX_DISMISS_SELECTION = 100;
 
 type OutreachTarget = {
-  clientId: string;
+  reminderId: string;
   clientName: string;
   clientEmail: string | null;
   clientPhone: string | null;
@@ -86,8 +80,6 @@ export default function CareRemindersPage() {
   );
   const [outreachChannel, setOutreachChannel] =
     useState<OutreachChannel>("email");
-  const [outreachSubject, setOutreachSubject] = useState("");
-  const [outreachContent, setOutreachContent] = useState("");
   const outreachRequestId = useRef<string | null>(null);
   const query = trpc.careReminders.list.useQuery({ status, due, limit: 1000 });
   const patientSearch = trpc.patients.search.useQuery(
@@ -120,15 +112,21 @@ export default function CareRemindersPage() {
     },
     onError: (error) => toast.error(error.message),
   });
-  const sendOutreach = trpc.communications.create.useMutation({
-    onSuccess: () => {
+  const sendOutreach = trpc.careReminders.sendOutreach.useMutation({
+    onSuccess: (_, variables) => {
       outreachRequestId.current = null;
       setOutreachTarget(null);
-      toast.success("Client message sent and recorded in the inbox");
+      toast.success(
+        `Care reminder sent by ${variables.channel === "sms" ? "text" : "email"} and recorded in the inbox`,
+      );
       utils.communications.listConversations.invalidate();
     },
     onError: (error) => {
-      if (error.data?.code === "BAD_REQUEST") {
+      if (
+        error.data?.code === "BAD_REQUEST" ||
+        error.data?.code === "PRECONDITION_FAILED" ||
+        error.data?.code === "NOT_FOUND"
+      ) {
         outreachRequestId.current = null;
       }
       toast.error(error.message);
@@ -180,13 +178,20 @@ export default function CareRemindersPage() {
 
   const { counts, items, today } = query.data;
   const selectedItems = items.filter((item) => selectedIds.has(item.id));
-  const outreachContentMax = communicationContentMaxLength(outreachChannel);
   const canSendOutreach =
     Boolean(outreachTarget) &&
-    isCommunicationContentValid(outreachContent, outreachChannel) &&
-    (outreachChannel !== "email" ||
-      isCommunicationSubjectValid(outreachSubject)) &&
+    (outreachChannel === "email"
+      ? Boolean(outreachTarget?.clientEmail)
+      : Boolean(
+          outreachTarget?.clientPhone && outreachTarget.clientSmsConsent,
+        )) &&
     !sendOutreach.isPending;
+  const outreachSubject = outreachTarget
+    ? `Care Reminder for ${outreachTarget.patientName}`
+    : "";
+  const outreachContent = outreachTarget
+    ? `Hello ${outreachTarget.clientName},\n\nThis is a reminder from our veterinary team about ${outreachTarget.patientName}: ${outreachTarget.title}. The reminder date is ${displayDate(outreachTarget.dueDate)}. Please contact us if you have questions or would like to schedule.`
+    : "";
 
   function openOutreach(item: (typeof items)[number]) {
     const channel: OutreachChannel = item.clientEmail
@@ -195,7 +200,7 @@ export default function CareRemindersPage() {
         ? "sms"
         : "email";
     setOutreachTarget({
-      clientId: item.clientId,
+      reminderId: item.id,
       clientName: item.clientName,
       clientEmail: item.clientEmail,
       clientPhone: item.clientPhone,
@@ -205,10 +210,6 @@ export default function CareRemindersPage() {
       dueDate: item.dueDate,
     });
     setOutreachChannel(channel);
-    setOutreachSubject(`Care reminder for ${item.patientName}`);
-    setOutreachContent(
-      `Hello ${item.clientName},\n\nThis is a reminder from our veterinary team about ${item.patientName}: ${item.title}. The reminder date is ${displayDate(item.dueDate)}. Please contact us if you have questions or would like to schedule.`,
-    );
     outreachRequestId.current = null;
   }
 
@@ -230,12 +231,12 @@ export default function CareRemindersPage() {
           <Button variant="outline" asChild>
             <Link href="/schedule">Appointment reminders</Link>
           </Button>
-        {manageable ? (
-          <Button className="gap-2" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" /> Add reminder
-          </Button>
-        ) : null}
-      </div>
+          {manageable ? (
+            <Button className="gap-2" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" /> Add reminder
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {showCreate ? (
@@ -527,12 +528,8 @@ export default function CareRemindersPage() {
                 if (!canSendOutreach) return;
                 outreachRequestId.current ??= crypto.randomUUID();
                 sendOutreach.mutate({
-                  clientId: outreachTarget.clientId,
+                  reminderId: outreachTarget.reminderId,
                   channel: outreachChannel,
-                  direction: "outbound",
-                  subject:
-                    outreachChannel === "email" ? outreachSubject : undefined,
-                  content: outreachContent,
                   requestId: outreachRequestId.current,
                 });
               }}
@@ -578,34 +575,23 @@ export default function CareRemindersPage() {
                 </p>
               ) : null}
               {outreachChannel === "email" ? (
-                <label className="block space-y-2 text-sm font-medium">
-                  Subject
-                  <Input
-                    value={outreachSubject}
-                    maxLength={COMMUNICATION_SUBJECT_MAX_LENGTH}
-                    onChange={(event) => {
-                      outreachRequestId.current = null;
-                      setOutreachSubject(event.target.value);
-                    }}
-                  />
-                </label>
+                <div className="space-y-2 text-sm font-medium">
+                  <p>Subject</p>
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2 font-normal">
+                    {outreachSubject}
+                  </div>
+                </div>
               ) : null}
-              <label className="block space-y-2 text-sm font-medium">
-                Message
-                <Textarea
-                  value={outreachContent}
-                  maxLength={outreachContentMax}
-                  onChange={(event) => {
-                    outreachRequestId.current = null;
-                    setOutreachContent(event.target.value);
-                  }}
-                  className="min-h-36"
-                  required
-                />
-                <span className="block text-right text-xs font-normal text-muted-foreground">
-                  {outreachContent.length}/{outreachContentMax}
-                </span>
-              </label>
+              <div className="space-y-2 text-sm font-medium">
+                <p>Template preview</p>
+                <div className="min-h-36 whitespace-pre-wrap rounded-md border border-border bg-muted/30 px-3 py-2 font-normal">
+                  {outreachContent}
+                </div>
+                <p className="text-xs font-normal text-muted-foreground">
+                  Reminder wording is generated server-side and cannot be
+                  changed into free-form external email.
+                </p>
+              </div>
               <div className="flex justify-end">
                 <Button type="submit" disabled={!canSendOutreach}>
                   {sendOutreach.isPending ? (
@@ -881,27 +867,27 @@ export default function CareRemindersPage() {
                                   Restore
                                 </Button>
                               ) : (
-                            <Button
-                              size="sm"
-                              variant={
+                                <Button
+                                  size="sm"
+                                  variant={
                                     item.status === "open"
                                       ? "default"
                                       : "outline"
-                              }
-                              disabled={update.isPending}
-                              onClick={() =>
-                                update.mutate({
-                                  id: item.id,
-                                  completed: item.status === "open",
-                                  expectedUpdatedAt:
-                                    item.updatedAt.toISOString(),
-                                })
-                              }
-                            >
+                                  }
+                                  disabled={update.isPending}
+                                  onClick={() =>
+                                    update.mutate({
+                                      id: item.id,
+                                      completed: item.status === "open",
+                                      expectedUpdatedAt:
+                                        item.updatedAt.toISOString(),
+                                    })
+                                  }
+                                >
                                   {item.status === "open"
                                     ? "Complete"
                                     : "Reopen"}
-                            </Button>
+                                </Button>
                               )}
                               {item.status === "open" &&
                               item.patientStatus === "active" ? (

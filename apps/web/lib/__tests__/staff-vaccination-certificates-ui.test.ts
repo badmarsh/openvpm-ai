@@ -28,7 +28,7 @@ describe("staff vaccination certificates", () => {
     expect(readyAt).toBeGreaterThan(prepareAt);
     expect(importAt).toBeGreaterThan(readyAt);
     expect(downloadSection).not.toMatch(/from ["']@\/lib\/pdf["']/);
-    expect(downloadSection).toContain("crypto.randomUUID()");
+    expect(downloadSection).not.toContain("crypto.randomUUID()");
     expect(downloadSection).toContain(
       "generateVaccinationHistoryCertificatePdf",
     );
@@ -45,15 +45,28 @@ describe("staff vaccination certificates", () => {
     expect(router).toContain('warnings.push("current patient weight")');
     expect(router).toContain('warnings.push("veterinarian license number")');
     expect(router).toContain("isNull(clinicalRecordCorrections.id)");
+    expect(router).toContain("const certificateId = randomUUID()");
+    expect(router).toContain('action: "vaccination_certificate_prepared"');
+    expect(router).toContain("vaccinationRecordIds:");
     expect(patientPage).toContain("Complete these details before issuing");
   });
 
   it("requires audited reasons for certificate-detail corrections", () => {
+    const updateSection = router.slice(
+      router.indexOf("updateVaccinationCertificateDetails"),
+      router.indexOf("prepareVaccinationCertificate"),
+    );
     expect(router).toContain("updateVaccinationCertificateDetails");
     expect(router).toContain('action: "certificate_details_updated"');
     expect(router).toContain("before:");
     expect(router).toContain("after: patch");
     expect(router).toContain("expectedUpdatedAt");
+    expect(updateSection).toContain("notExists(");
+    expect(updateSection).toContain('.for("update")');
+    expect(updateSection).not.toContain(".leftJoin(");
+    expect(updateSection).not.toContain(
+      "eq(vaccinationRecords.updatedAt, current.updatedAt)",
+    );
     expect(patientPage).toContain(
       "Reason for change (required, at least 10 characters)",
     );

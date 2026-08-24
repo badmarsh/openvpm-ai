@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   eq,
   and,
@@ -13,6 +13,7 @@ import {
   ne,
   asc,
   getTableColumns,
+  notExists,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
@@ -1893,7 +1894,7 @@ export const recordsRouter = createRouter({
             eq(vaccinationRecords.administeredBy, users.id),
             eq(users.practiceId, ctx.practiceId),
           ),
-          )
+        )
         .leftJoin(
           vaccinationSupervisorUsers,
           and(
@@ -1912,7 +1913,7 @@ export const recordsRouter = createRouter({
               vaccinationRecords.id,
             ),
             eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
-            ),
+          ),
         )
         .where(
           and(
@@ -1951,23 +1952,26 @@ export const recordsRouter = createRouter({
             updatedAt: vaccinationRecords.updatedAt,
           })
           .from(vaccinationRecords)
-          .leftJoin(
-            clinicalRecordCorrections,
-            and(
-              eq(
-                clinicalRecordCorrections.vaccinationRecordId,
-                vaccinationRecords.id,
-              ),
-              eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
-            ),
-          )
           .where(
             and(
               eq(vaccinationRecords.id, input.recordId),
               eq(vaccinationRecords.patientId, input.patientId),
               eq(vaccinationRecords.practiceId, ctx.practiceId),
               isNull(vaccinationRecords.deletedAt),
-              isNull(clinicalRecordCorrections.id),
+              notExists(
+                tx
+                  .select({ id: clinicalRecordCorrections.id })
+                  .from(clinicalRecordCorrections)
+                  .where(
+                    and(
+                      eq(
+                        clinicalRecordCorrections.vaccinationRecordId,
+                        vaccinationRecords.id,
+                      ),
+                      eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
+                    ),
+                  ),
+              ),
             ),
           )
           .limit(1)
@@ -2008,7 +2012,6 @@ export const recordsRouter = createRouter({
             and(
               eq(vaccinationRecords.id, current.id),
               eq(vaccinationRecords.practiceId, ctx.practiceId),
-              eq(vaccinationRecords.updatedAt, current.updatedAt),
               isNull(vaccinationRecords.deletedAt),
             ),
           )
@@ -2052,7 +2055,6 @@ export const recordsRouter = createRouter({
         patientId: z.string().uuid(),
         kind: z.enum(["vaccination_history", "rabies"]),
         vaccinationRecordId: z.string().uuid().optional(),
-        requestId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -2300,12 +2302,36 @@ export const recordsRouter = createRouter({
         }
       }
 
+      const certificateId = randomUUID();
+      if (warnings.length === 0) {
+        await ctx.db.insert(auditLog).values({
+          practiceId: ctx.practiceId,
+          userId: ctx.user.id,
+          action: "vaccination_certificate_prepared",
+          entityType:
+            input.kind === "rabies" ? "vaccination_record" : "patient",
+          entityId:
+            input.kind === "rabies"
+              ? certificateVaccinations[0]!.id
+              : identity.patientId,
+          changes: {
+            certificateId,
+            kind: input.kind,
+            patientId: identity.patientId,
+            vaccinationRecordIds: certificateVaccinations.map(
+              (vaccination) => vaccination.id,
+            ),
+          },
+          ipAddress: ctx.ip,
+        });
+      }
+
       return {
         id:
           input.kind === "rabies"
             ? certificateVaccinations[0]!.id
             : identity.patientId,
-        certificateId: input.requestId,
+        certificateId,
         kind: input.kind,
         generatedAt: new Date(),
         ready: warnings.length === 0,
