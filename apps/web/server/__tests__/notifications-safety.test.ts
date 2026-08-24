@@ -58,8 +58,7 @@ vi.mock("@/lib/messaging/durable-sms-communication", () => ({
 
 vi.mock("@/lib/recovery-hold", () => ({
   RECOVERY_HOLD_BLOCK_MESSAGE: "recovery hold",
-  lockPracticeForExternalSideEffects:
-    mocks.lockPracticeForExternalSideEffects,
+  lockPracticeForExternalSideEffects: mocks.lockPracticeForExternalSideEffects,
 }));
 
 vi.mock("@/lib/outbound-email-security", () => ({
@@ -1547,6 +1546,16 @@ describe("notification query scoping", () => {
     "utf8",
   );
   const source = `${routerSource}\n${recallSource}`;
+
+  it("allows the operational veterinarian role to send one-off appointment reminders", () => {
+    const procedure = routerSource.slice(
+      routerSource.indexOf("sendAppointmentReminder: protectedProcedure"),
+      routerSource.indexOf("sendInvoiceEmail: protectedProcedure"),
+    );
+    expect(procedure).toContain(
+      'requireRole("admin", "veterinarian", "front_desk")',
+    );
+  });
 
   function expectScopedJoin(
     joinKind: "leftJoin" | "innerJoin",

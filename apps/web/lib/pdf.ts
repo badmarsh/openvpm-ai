@@ -279,7 +279,7 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   // Balance due — prefer the caller's region-formatted value; otherwise derive
   // it from total − paid (legacy callers without a currency context).
   const balanceParts = [data.total, data.paidAmount].map((v) =>
-    parseFloat(v.replace(/[^0-9.-]/g, ""))
+    parseFloat(v.replace(/[^0-9.-]/g, "")),
   );
   const balance =
     data.balanceDue ?? `$${(balanceParts[0]! - balanceParts[1]!).toFixed(2)}`;
@@ -297,7 +297,7 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
     "Thank you for trusting us with your pet's care",
     PAGE_WIDTH / 2,
     pageHeight - 15,
-    { align: "center" }
+    { align: "center" },
   );
 
   return doc;
@@ -324,7 +324,7 @@ export interface PrescriptionLabelData {
 }
 
 export function generatePrescriptionLabelPdf(
-  data: PrescriptionLabelData
+  data: PrescriptionLabelData,
 ): jsPDF {
   // 4" x 2" landscape at 72 DPI  ➜  288 x 144 points
   const doc = new jsPDF({ format: [144, 288], orientation: "landscape" });
@@ -585,22 +585,14 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     doc.setFont(FONT, "bold");
     doc.text("Phone: ", PAGE_MARGIN, y);
     doc.setFont(FONT, "normal");
-    doc.text(
-      data.clientPhone,
-      PAGE_MARGIN + doc.getTextWidth("Phone: "),
-      y
-    );
+    doc.text(data.clientPhone, PAGE_MARGIN + doc.getTextWidth("Phone: "), y);
     y += 6;
   }
   if (data.clientEmail) {
     doc.setFont(FONT, "bold");
     doc.text("Email: ", PAGE_MARGIN, y);
     doc.setFont(FONT, "normal");
-    doc.text(
-      data.clientEmail,
-      PAGE_MARGIN + doc.getTextWidth("Email: "),
-      y
-    );
+    doc.text(data.clientEmail, PAGE_MARGIN + doc.getTextWidth("Email: "), y);
     y += 6;
   }
 
@@ -621,7 +613,11 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
       doc.text(allergy.allergen, PAGE_MARGIN + 2, y);
       doc.setFont(FONT, "normal");
       setColor(doc, COLOR_GRAY);
-      doc.text(`(${allergy.severity})`, PAGE_MARGIN + 2 + doc.getTextWidth(allergy.allergen + " "), y);
+      doc.text(
+        `(${allergy.severity})`,
+        PAGE_MARGIN + 2 + doc.getTextWidth(allergy.allergen + " "),
+        y,
+      );
       y += 5;
       if (allergy.reaction) {
         doc.setFontSize(8);
@@ -706,7 +702,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
           ? `${note.date}  (Finalized imported record)`
           : `${note.date}  (Finalized)`,
         PAGE_MARGIN,
-        y
+        y,
       );
       y += 6;
 
@@ -863,11 +859,16 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
       `Generated on ${generatedDate} — This document is for reference only`,
       PAGE_WIDTH / 2,
       pageHeight - 10,
-      { align: "center" }
+      { align: "center" },
     );
-    doc.text(`Page ${i} of ${pageCount}`, PAGE_WIDTH - PAGE_MARGIN, pageHeight - 10, {
+    doc.text(
+      `Page ${i} of ${pageCount}`,
+      PAGE_WIDTH - PAGE_MARGIN,
+      pageHeight - 10,
+      {
       align: "right",
-    });
+      },
+    );
   }
 
   return doc;
@@ -898,7 +899,7 @@ export interface VaccinationCertificateData {
 }
 
 export function generateVaccinationCertificatePdf(
-  data: VaccinationCertificateData
+  data: VaccinationCertificateData,
 ): jsPDF {
   const doc = new jsPDF();
   let y = PAGE_MARGIN;
@@ -1006,6 +1007,372 @@ export function generateVaccinationCertificatePdf(
   return doc;
 }
 
+export interface StaffVaccinationCertificateData {
+  certificateId: string;
+  generatedDate: string;
+  practice: {
+    name: string;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  };
+  owner: {
+    name: string;
+    address?: string | null;
+    phone?: string | null;
+  };
+  patient: {
+    name: string;
+    species: string;
+    breed?: string | null;
+    sex?: string | null;
+    dob?: string | null;
+    color?: string | null;
+    microchipNumber?: string | null;
+    weightKg?: string | null;
+  };
+  vaccinations: Array<{
+    vaccineName: string;
+    productName?: string | null;
+    administeredAt: string;
+    nextDueDate?: string | null;
+    manufacturer?: string | null;
+    lotNumber?: string | null;
+    administeredByName?: string | null;
+  }>;
+}
+
+export interface RabiesVaccinationCertificateData extends Omit<
+  StaffVaccinationCertificateData,
+  "vaccinations"
+> {
+  vaccination: {
+    vaccineName: string;
+    productName: string;
+    manufacturer: string;
+    lotNumber: string;
+    productExpirationDate: string;
+    doseType: "initial" | "booster";
+    licensedDurationMonths: number;
+    rabiesTagNumber?: string | null;
+    administeredAt: string;
+    nextDueDate: string;
+    administeredByName?: string | null;
+    veterinarianName: string;
+    veterinarianLicenseNumber: string;
+  };
+}
+
+function drawCertificateHeader(
+  doc: jsPDF,
+  data: Pick<StaffVaccinationCertificateData, "practice" | "certificateId">,
+  title: string,
+): number {
+  let y = PAGE_MARGIN;
+  drawPawMark(doc, PAGE_MARGIN, y - 5, 13);
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(18);
+  setColor(doc, COLOR_TEAL);
+  const practiceNameLines = doc.splitTextToSize(
+    data.practice.name || "Veterinary Practice",
+    CONTENT_WIDTH - 18,
+  );
+  doc.text(practiceNameLines, PAGE_MARGIN + 18, y);
+  y += Math.max(practiceNameLines.length, 1) * 6;
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(8);
+  setColor(doc, COLOR_GRAY);
+  const practiceLines = [
+    data.practice.address,
+    [data.practice.phone, data.practice.email].filter(Boolean).join(" • "),
+  ].filter(Boolean) as string[];
+  if (practiceLines.length > 0) {
+    doc.text(practiceLines, PAGE_MARGIN + 18, y);
+  }
+  y += Math.max(practiceLines.length, 1) * 4 + 5;
+
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(15);
+  setColor(doc, COLOR_DARK);
+  doc.text(title, PAGE_MARGIN, y);
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(8);
+  setColor(doc, COLOR_GRAY);
+  doc.text(
+    `Certificate ID: ${data.certificateId}`,
+    PAGE_WIDTH - PAGE_MARGIN,
+    y,
+    { align: "right" },
+  );
+  y += 6;
+  drawLine(doc, y);
+  return y + 8;
+}
+
+function drawCertificateIdentity(
+  doc: jsPDF,
+  data: Pick<StaffVaccinationCertificateData, "owner" | "patient">,
+  y: number,
+): number {
+  const rightX = PAGE_MARGIN + CONTENT_WIDTH / 2 + 4;
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(11);
+  setColor(doc, COLOR_TEAL);
+  doc.text("Patient", PAGE_MARGIN, y);
+  doc.text("Owner", rightX, y);
+  y += 5;
+
+  const patientLines = [
+    data.patient.name,
+    [data.patient.species, data.patient.breed].filter(Boolean).join(" / "),
+    data.patient.sex ? `Sex: ${data.patient.sex}` : undefined,
+    data.patient.dob ? `DOB: ${data.patient.dob}` : undefined,
+    data.patient.color ? `Color/markings: ${data.patient.color}` : undefined,
+    data.patient.microchipNumber
+      ? `Microchip: ${data.patient.microchipNumber}`
+      : undefined,
+    data.patient.weightKg ? `Weight: ${data.patient.weightKg} kg` : undefined,
+  ].filter(Boolean) as string[];
+  const ownerLines = [
+    data.owner.name,
+    ...(data.owner.address?.split("\n") ?? []),
+    data.owner.phone ? `Phone: ${data.owner.phone}` : undefined,
+  ].filter(Boolean) as string[];
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(9);
+  setColor(doc, COLOR_DARK);
+  doc.text(patientLines, PAGE_MARGIN, y);
+  doc.text(ownerLines, rightX, y);
+  return y + Math.max(patientLines.length, ownerLines.length, 1) * 4.5 + 8;
+}
+
+function drawCertificateFooter(
+  doc: jsPDF,
+  certificateId: string,
+  generatedDate: string,
+): void {
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFont(FONT, "italic");
+    doc.setFontSize(7.5);
+    setColor(doc, COLOR_GRAY);
+    doc.text(
+      `Generated ${generatedDate} • Certificate ${certificateId}`,
+      PAGE_MARGIN,
+      pageHeight - 9,
+    );
+    doc.text(
+      `Page ${page} of ${pageCount}`,
+      PAGE_WIDTH - PAGE_MARGIN,
+      pageHeight - 9,
+      {
+        align: "right",
+      },
+    );
+  }
+}
+
+export function generateVaccinationHistoryCertificatePdf(
+  data: StaffVaccinationCertificateData,
+): jsPDF {
+  const doc = new jsPDF();
+  let y = drawCertificateHeader(doc, data, "VACCINATION CERTIFICATE");
+  y = drawCertificateIdentity(doc, data, y);
+
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(11);
+  setColor(doc, COLOR_TEAL);
+  doc.text("Vaccination history", PAGE_MARGIN, y);
+  y += 6;
+
+  const columns = [PAGE_MARGIN, 64, 94, 121, 148];
+  const widths = [42, 28, 25, 25, 42];
+  const drawTableHeader = (headerY: number) => {
+    const headings = [
+      "Vaccine / product",
+      "Given",
+      "Next due",
+      "Lot",
+      "Administered by",
+    ];
+    doc.setFillColor(...hexToRgb(COLOR_LIGHT_GRAY));
+    doc.rect(PAGE_MARGIN, headerY - 4, CONTENT_WIDTH, 7, "F");
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(7.5);
+    setColor(doc, COLOR_DARK);
+    headings.forEach((heading, index) =>
+      doc.text(heading, columns[index]!, headerY),
+    );
+    return headerY + 6;
+  };
+  y = drawTableHeader(y);
+
+  doc.setFontSize(8);
+  for (const vaccination of data.vaccinations) {
+    const rowCells = [
+      [vaccination.vaccineName, vaccination.productName]
+        .filter(Boolean)
+        .join(" / "),
+      vaccination.administeredAt,
+      vaccination.nextDueDate || "—",
+      vaccination.lotNumber || "—",
+      vaccination.administeredByName || "—",
+    ];
+    const wrapped = rowCells.map((value, index) =>
+      doc.splitTextToSize(value, widths[index]!),
+    );
+    const rowHeight =
+      Math.max(...wrapped.map((lines) => lines.length), 1) * 3.8 + 3;
+    if (y + rowHeight + 3 > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      y = PAGE_MARGIN;
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(11);
+      setColor(doc, COLOR_TEAL);
+      doc.text("Vaccination history (continued)", PAGE_MARGIN, y);
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(8);
+      setColor(doc, COLOR_GRAY);
+      doc.text(
+        `Certificate ID: ${data.certificateId}`,
+        PAGE_WIDTH - PAGE_MARGIN,
+        y,
+        { align: "right" },
+      );
+      y += 6;
+      drawLine(doc, y);
+      y = drawTableHeader(y + 8);
+    }
+    doc.setFont(FONT, "normal");
+    setColor(doc, COLOR_DARK);
+    wrapped.forEach((lines, index) => doc.text(lines, columns[index]!, y));
+    y += rowHeight;
+    drawLine(doc, y - 2);
+  }
+
+  y = ensureSpace(doc, y + 5, 14);
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(8);
+  setColor(doc, COLOR_GRAY);
+  doc.text(
+    doc.splitTextToSize(
+      "This document is a record of vaccinations entered in the patient's chart as of the generated date.",
+      CONTENT_WIDTH,
+    ),
+    PAGE_MARGIN,
+    y,
+  );
+  drawCertificateFooter(doc, data.certificateId, data.generatedDate);
+  return doc;
+}
+
+export function generateRabiesVaccinationCertificatePdf(
+  data: RabiesVaccinationCertificateData,
+): jsPDF {
+  const doc = new jsPDF();
+  let y = drawCertificateHeader(doc, data, "RABIES VACCINATION CERTIFICATE");
+  y = drawCertificateIdentity(doc, data, y);
+
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(11);
+  setColor(doc, COLOR_TEAL);
+  doc.text("Rabies vaccination", PAGE_MARGIN, y);
+  y += 6;
+
+  const durationLabel =
+    data.vaccination.licensedDurationMonths % 12 === 0
+      ? `${data.vaccination.licensedDurationMonths / 12} year`
+      : `${data.vaccination.licensedDurationMonths} months`;
+  const details: Array<[string, string]> = [
+    ["Vaccine", data.vaccination.vaccineName],
+    ["Product", data.vaccination.productName],
+    ["Manufacturer", data.vaccination.manufacturer],
+    ["Lot number", data.vaccination.lotNumber],
+    ["Product expiration", data.vaccination.productExpirationDate],
+    ["Dose", data.vaccination.doseType === "initial" ? "Initial" : "Booster"],
+    ["Licensed duration", durationLabel],
+    ["Date administered", data.vaccination.administeredAt],
+    ["Next due", data.vaccination.nextDueDate],
+    [
+      "Rabies tag",
+      data.vaccination.rabiesTagNumber ||
+        "Not assigned (microchip listed above)",
+    ],
+    ["Administered by", data.vaccination.administeredByName || "Not recorded"],
+  ];
+  const half = Math.ceil(details.length / 2);
+  const rightX = PAGE_MARGIN + CONTENT_WIDTH / 2 + 4;
+  const drawDetailsColumn = (
+    rows: Array<[string, string]>,
+    x: number,
+    startY: number,
+  ) => {
+    let columnY = startY;
+    rows.forEach(([label, value]) => {
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      setColor(doc, COLOR_GRAY);
+      doc.text(label.toUpperCase(), x, columnY);
+      columnY += 3.8;
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(9);
+      setColor(doc, COLOR_DARK);
+      const lines = doc.splitTextToSize(value, CONTENT_WIDTH / 2 - 8);
+      doc.text(lines, x, columnY);
+      columnY += Math.max(lines.length, 1) * 4 + 3;
+    });
+    return columnY;
+  };
+  y = Math.max(
+    drawDetailsColumn(details.slice(0, half), PAGE_MARGIN, y),
+    drawDetailsColumn(details.slice(half), rightX, y),
+  );
+
+  y = ensureSpace(doc, y + 6, 40);
+  drawLine(doc, y);
+  y += 8;
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(10);
+  setColor(doc, COLOR_DARK);
+  doc.text(data.vaccination.veterinarianName, PAGE_MARGIN, y);
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(8.5);
+  doc.text(
+    `Veterinarian • License ${data.vaccination.veterinarianLicenseNumber}`,
+    PAGE_MARGIN,
+    y + 5,
+  );
+  doc.line(PAGE_MARGIN + 94, y + 4, PAGE_WIDTH - PAGE_MARGIN, y + 4);
+  doc.setFontSize(7.5);
+  setColor(doc, COLOR_GRAY);
+  doc.text("Veterinarian signature", PAGE_MARGIN + 94, y + 8);
+
+  y += 18;
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(8);
+  setColor(doc, COLOR_DARK);
+  doc.text(
+    "Routine vaccination record — not a travel health certificate",
+    PAGE_MARGIN,
+    y,
+  );
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(7.5);
+  setColor(doc, COLOR_GRAY);
+  doc.text(
+    doc.splitTextToSize(
+      "A handwritten veterinarian signature may be required by the receiving authority. Travel and import documents can require separate accreditation, endorsement, and submission workflows.",
+      CONTENT_WIDTH,
+    ),
+    PAGE_MARGIN,
+    y + 4,
+  );
+  drawCertificateFooter(doc, data.certificateId, data.generatedDate);
+  return doc;
+}
+
 // ---------------------------------------------------------------------------
 // 5. Generic Report PDF
 // ---------------------------------------------------------------------------
@@ -1084,7 +1451,7 @@ export function generateReportPdf(data: ReportPdfData): jsPDF {
 
     for (const row of data.rows) {
       const cellLines = data.columns.map((_, index) =>
-        doc.splitTextToSize(String(row[index] ?? ""), colWidth - 4)
+        doc.splitTextToSize(String(row[index] ?? ""), colWidth - 4),
       );
       const rowHeight =
         Math.max(...cellLines.map((lines) => lines.length), 1) * 4 + 4;
@@ -1142,7 +1509,7 @@ export interface DischargeInstructionsData {
 }
 
 export function generateDischargeInstructions(
-  data: DischargeInstructionsData
+  data: DischargeInstructionsData,
 ): jsPDF {
   const doc = new jsPDF();
   let y = PAGE_MARGIN;
@@ -1237,7 +1604,10 @@ export function generateDischargeInstructions(
       doc.text(`Frequency: ${med.frequency}`, PAGE_MARGIN + 4, y);
       y += 5;
       if (med.instructions) {
-        const instrLines = doc.splitTextToSize(med.instructions, CONTENT_WIDTH - 8);
+        const instrLines = doc.splitTextToSize(
+          med.instructions,
+          CONTENT_WIDTH - 8,
+        );
         setColor(doc, COLOR_DARK);
         doc.text(instrLines, PAGE_MARGIN + 4, y);
         y += instrLines.length * 5;
@@ -1345,7 +1715,7 @@ export function generateDischargeInstructions(
     "If you have any questions or concerns, please contact our office.",
     PAGE_WIDTH / 2,
     pageHeight - 15,
-    { align: "center" }
+    { align: "center" },
   );
   if (data.practicePhone) {
     doc.text(data.practicePhone, PAGE_WIDTH / 2, pageHeight - 10, {

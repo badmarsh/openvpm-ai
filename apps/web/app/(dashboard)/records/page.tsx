@@ -69,13 +69,11 @@ import {
   isLabRequiredTextInputValid,
 } from "@/lib/records/lab-policy";
 import {
-  VACCINATION_LOT_NUMBER_MAX_LENGTH,
-  VACCINATION_MANUFACTURER_MAX_LENGTH,
-  VACCINATION_NAME_MAX_LENGTH,
-  isVaccinationOptionalDateInputValid,
-  isVaccinationOptionalTextInputValid,
-  isVaccinationRequiredTextInputValid,
-} from "@/lib/records/vaccination-policy";
+  VaccinationFormFields,
+  initialVaccinationForm,
+  isVaccinationFormValid,
+  type VaccinationFormState,
+} from "@/components/records/vaccination-form-fields";
 import {
   PROBLEM_DESCRIPTION_MAX_LENGTH,
   PROBLEM_STATUSES,
@@ -298,13 +296,6 @@ type ReplacementPatientOption = {
   clientLastName: string | null;
 };
 
-type VaccinationFormState = {
-  vaccineName: string;
-  lotNumber: string;
-  manufacturer: string;
-  nextDueDate: string;
-};
-
 type ProblemFormState = {
   description: string;
   status: ProblemStatus;
@@ -340,15 +331,6 @@ function initialLabResultForm(): LabResultFormState {
     referenceRangeLow: "",
     referenceRangeHigh: "",
     resultFlag: "unknown",
-  };
-}
-
-function initialVaccinationForm(): VaccinationFormState {
-  return {
-    vaccineName: "",
-    lotNumber: "",
-    manufacturer: "",
-    nextDueDate: "",
   };
 }
 
@@ -740,6 +722,11 @@ function RecordsPageContent() {
   const recordsSettings = trpc.records.settings.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
+  const vaccinationProviders =
+    trpc.records.listVaccinationProviders.useQuery(undefined, {
+      enabled: showVaccinationForm,
+      staleTime: 5 * 60 * 1000,
+    });
   const recordsSettingsError = recordsSettings.error;
   const recordsSettingsLoading = recordsSettings.isLoading;
   const recordsSettingsMissing =
@@ -1162,19 +1149,7 @@ function RecordsPageContent() {
     Boolean(patientId) &&
     isOnline &&
     visitContextMatchesPatient &&
-    isVaccinationRequiredTextInputValid(
-      vaccinationForm.vaccineName,
-      VACCINATION_NAME_MAX_LENGTH
-    ) &&
-    isVaccinationOptionalTextInputValid(
-      vaccinationForm.lotNumber,
-      VACCINATION_LOT_NUMBER_MAX_LENGTH
-    ) &&
-    isVaccinationOptionalTextInputValid(
-      vaccinationForm.manufacturer,
-      VACCINATION_MANUFACTURER_MAX_LENGTH
-    ) &&
-    isVaccinationOptionalDateInputValid(vaccinationForm.nextDueDate) &&
+    isVaccinationFormValid(vaccinationForm) &&
     !createVaccination.isPending;
   const canSubmitProblem =
     Boolean(patientId) &&
@@ -1901,90 +1876,35 @@ function RecordsPageContent() {
                         patientId,
                         appointmentId: linkedAppointmentId || undefined,
                         vaccineName: vaccinationForm.vaccineName.trim(),
+                        productName:
+                          vaccinationForm.productName.trim() || undefined,
                         lotNumber:
                           vaccinationForm.lotNumber.trim() || undefined,
                         manufacturer:
                           vaccinationForm.manufacturer.trim() || undefined,
+                        productExpirationDate:
+                          vaccinationForm.productExpirationDate || undefined,
+                        doseType: vaccinationForm.doseType || undefined,
+                        licensedDurationMonths:
+                          vaccinationForm.licensedDurationMonths
+                            ? Number(vaccinationForm.licensedDurationMonths)
+                            : undefined,
+                        rabiesTagNumber:
+                          vaccinationForm.rabiesTagNumber.trim() || undefined,
+                        supervisingVeterinarianId:
+                          vaccinationForm.supervisingVeterinarianId ||
+                          undefined,
                         nextDueDate:
                           vaccinationForm.nextDueDate.trim() || undefined,
                       });
                     }}
                   >
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                          Vaccine *
-                        </label>
-                        <Input
-                          name="vaccineName"
-                          required
-                          value={vaccinationForm.vaccineName}
-                          maxLength={VACCINATION_NAME_MAX_LENGTH}
-                          onChange={(e) =>
-                            setVaccinationForm((form) => ({
-                              ...form,
-                              vaccineName: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g. Rabies"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                          Next Due
-                        </label>
-                        <Input
-                          name="nextDueDate"
-                          type="date"
-                          value={vaccinationForm.nextDueDate}
-                          aria-invalid={
-                            !isVaccinationOptionalDateInputValid(
-                              vaccinationForm.nextDueDate
-                            )
-                          }
-                          onChange={(e) =>
-                            setVaccinationForm((form) => ({
-                              ...form,
-                              nextDueDate: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                          Lot Number
-                        </label>
-                        <Input
-                          name="lotNumber"
-                          value={vaccinationForm.lotNumber}
-                          maxLength={VACCINATION_LOT_NUMBER_MAX_LENGTH}
-                          onChange={(e) =>
-                            setVaccinationForm((form) => ({
-                              ...form,
-                              lotNumber: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g. RAB-2026-04"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                          Manufacturer
-                        </label>
-                        <Input
-                          name="manufacturer"
-                          value={vaccinationForm.manufacturer}
-                          maxLength={VACCINATION_MANUFACTURER_MAX_LENGTH}
-                          onChange={(e) =>
-                            setVaccinationForm((form) => ({
-                              ...form,
-                              manufacturer: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g. Zoetis"
-                        />
-                      </div>
-                    </div>
+                    <VaccinationFormFields
+                      form={vaccinationForm}
+                      setForm={setVaccinationForm}
+                      providers={vaccinationProviders.data}
+                      currentUserId={session?.user?.id}
+                    />
                     <div className="flex gap-2">
                       <Button
                         type="submit"

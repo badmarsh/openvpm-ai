@@ -231,7 +231,9 @@ describe("schedule appointment form UX", () => {
     expect(source).toContain("function canUpdateAppointmentStatusRole");
     expect(source).toContain('role === "technician"');
     expect(source).toContain("function canSendAppointmentRemindersRole");
-    expect(source).toContain('role === "admin" || role === "front_desk"');
+    expect(source).toContain(
+      'role === "admin" || role === "veterinarian" || role === "front_desk"'
+    );
     expect(source).toContain(
       "const canCreateAppointments = canCreateAppointmentsRole(userRole)"
     );

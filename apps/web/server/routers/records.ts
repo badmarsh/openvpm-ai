@@ -27,9 +27,12 @@ import {
   problemList,
   prescriptions,
   prescriptionEvents,
+  auditLog,
+  clients,
   dispenseChargeQueue,
   drugInteractions,
   patients,
+  patientWeights,
   patientAllergies,
   products,
   users,
@@ -76,9 +79,14 @@ import {
   LAB_UNIT_MAX_LENGTH,
 } from "@/lib/records/lab-policy";
 import {
+  isRabiesVaccineName,
+  VACCINATION_LICENSED_DURATION_MAX_MONTHS,
+  VACCINATION_LICENSED_DURATION_MIN_MONTHS,
   VACCINATION_LOT_NUMBER_MAX_LENGTH,
   VACCINATION_MANUFACTURER_MAX_LENGTH,
   VACCINATION_NAME_MAX_LENGTH,
+  VACCINATION_PRODUCT_NAME_MAX_LENGTH,
+  VACCINATION_RABIES_TAG_MAX_LENGTH,
 } from "@/lib/records/vaccination-policy";
 import {
   PROBLEM_DESCRIPTION_MAX_LENGTH,
@@ -164,7 +172,12 @@ type ProblemStatus = (typeof PROBLEM_STATUSES)[number];
 
 const labStatusValues = ["pending", "completed", "reviewed"] as const;
 type LabStatus = (typeof labStatusValues)[number];
-const labResultFlagValues = ["unknown", "normal", "abnormal", "critical"] as const;
+const labResultFlagValues = [
+  "unknown",
+  "normal",
+  "abnormal",
+  "critical",
+] as const;
 const labFollowUpStatusValues = ["not_required", "open", "completed"] as const;
 
 const patientHistoryDateInput = z.string().refine(isValidClinicalDateInput, {
@@ -245,13 +258,17 @@ function activeLabResultPredicate(practiceId: string) {
 
 async function practiceSettings(ctx: RecordsContext): Promise<{
   name: string;
+  address: string | null;
   phone: string | null;
+  email: string | null;
   timezone: string | null;
 }> {
   const [practice] = await ctx.db
     .select({
       name: practices.name,
+      address: practices.address,
       phone: practices.phone,
+      email: practices.email,
       timezone: practices.timezone,
     })
     .from(practices)
@@ -267,7 +284,9 @@ async function practiceSettings(ctx: RecordsContext): Promise<{
 
   return {
     name: practice.name?.trim() || "Veterinary Practice",
+    address: practice.address ?? null,
     phone: practice.phone ?? null,
+    email: practice.email ?? null,
     timezone: practice.timezone ?? null,
   };
 }
@@ -308,22 +327,81 @@ const createVaccinationInput = z.object({
   patientId: z.string().uuid(),
   appointmentId: z.string().uuid().optional(),
   vaccineName: clinicalTextInput("Vaccine name", VACCINATION_NAME_MAX_LENGTH),
+  productName: optionalClinicalTextInput(
+    "Product name",
+    VACCINATION_PRODUCT_NAME_MAX_LENGTH,
+  ),
   lotNumber: optionalClinicalTextInput(
     "Lot number",
-    VACCINATION_LOT_NUMBER_MAX_LENGTH
+    VACCINATION_LOT_NUMBER_MAX_LENGTH,
   ),
   manufacturer: optionalClinicalTextInput(
     "Manufacturer",
-    VACCINATION_MANUFACTURER_MAX_LENGTH
+    VACCINATION_MANUFACTURER_MAX_LENGTH,
   ),
+  productExpirationDate: clinicalDateInput(
+    "Product expiration date",
+  ).optional(),
+  doseType: z.enum(["initial", "booster"]).optional(),
+  licensedDurationMonths: z
+    .number()
+    .int()
+    .min(VACCINATION_LICENSED_DURATION_MIN_MONTHS)
+    .max(VACCINATION_LICENSED_DURATION_MAX_MONTHS)
+    .optional(),
+  rabiesTagNumber: optionalClinicalTextInput(
+    "Rabies tag number",
+    VACCINATION_RABIES_TAG_MAX_LENGTH,
+  ),
+  supervisingVeterinarianId: z.string().uuid().optional(),
   nextDueDate: clinicalDateInput("Next due date").optional(),
 });
+
+const vaccinationCertificateDetailsInput = z.object({
+  patientId: z.string().uuid(),
+  recordId: z.string().uuid(),
+  expectedUpdatedAt: z.string().datetime(),
+  reason: z.string().trim().min(10).max(500),
+  productName: optionalClinicalTextInput(
+    "Product name",
+    VACCINATION_PRODUCT_NAME_MAX_LENGTH,
+  ),
+  manufacturer: optionalClinicalTextInput(
+    "Manufacturer",
+    VACCINATION_MANUFACTURER_MAX_LENGTH,
+  ),
+  lotNumber: optionalClinicalTextInput(
+    "Lot number",
+    VACCINATION_LOT_NUMBER_MAX_LENGTH,
+  ),
+  productExpirationDate: clinicalDateInput(
+    "Product expiration date",
+  ).optional(),
+  doseType: z.enum(["initial", "booster"]).optional(),
+  licensedDurationMonths: z
+    .number()
+    .int()
+    .min(VACCINATION_LICENSED_DURATION_MIN_MONTHS)
+    .max(VACCINATION_LICENSED_DURATION_MAX_MONTHS)
+    .optional(),
+  rabiesTagNumber: optionalClinicalTextInput(
+    "Rabies tag number",
+    VACCINATION_RABIES_TAG_MAX_LENGTH,
+  ),
+  supervisingVeterinarianId: z.string().uuid().optional(),
+});
+
+const vaccinationSupervisorUsers = alias(users, "vaccination_supervisor_users");
+const vaccinationAdministratorUsers = alias(
+  users,
+  "vaccination_administrator_users",
+);
 
 const createProblemInput = z.object({
   patientId: z.string().uuid(),
   description: clinicalTextInput(
     "Problem description",
-    PROBLEM_DESCRIPTION_MAX_LENGTH
+    PROBLEM_DESCRIPTION_MAX_LENGTH,
   ),
   status: z.enum(PROBLEM_STATUSES).default("active"),
   onsetDate: clinicalDateInput("Onset date").optional(),
@@ -336,12 +414,12 @@ const createPrescriptionInput = z
     operationId: z.string().uuid(),
     medicationName: clinicalTextInput(
       "Medication name",
-      PRESCRIPTION_MEDICATION_NAME_MAX_LENGTH
+      PRESCRIPTION_MEDICATION_NAME_MAX_LENGTH,
     ),
     dosage: clinicalTextInput("Dosage", PRESCRIPTION_DOSAGE_MAX_LENGTH),
     frequency: clinicalTextInput(
       "Frequency",
-      PRESCRIPTION_FREQUENCY_MAX_LENGTH
+      PRESCRIPTION_FREQUENCY_MAX_LENGTH,
     ),
     quantity: z
       .number()
@@ -360,7 +438,7 @@ const createPrescriptionInput = z
     endDate: clinicalDateInput("End date").optional(),
     instructions: optionalClinicalTextInput(
       "Prescription instructions",
-      PRESCRIPTION_INSTRUCTIONS_MAX_LENGTH
+      PRESCRIPTION_INSTRUCTIONS_MAX_LENGTH,
     ),
     acknowledgeSafetyWarnings: z.boolean().default(false),
   })
@@ -384,7 +462,7 @@ const createLabResultInput = z
     testName: clinicalTextInput("Test name", LAB_TEST_NAME_MAX_LENGTH),
     resultValue: optionalClinicalTextInput(
       "Result value",
-      LAB_RESULT_VALUE_MAX_LENGTH
+      LAB_RESULT_VALUE_MAX_LENGTH,
     ),
     unit: optionalClinicalTextInput("Unit", LAB_UNIT_MAX_LENGTH),
     referenceRangeLow: labReferenceInput("Reference range low").optional(),
@@ -398,7 +476,7 @@ const createLabResultInput = z
     if (
       !isOrderedLabReferenceRange(
         input.referenceRangeLow,
-        input.referenceRangeHigh
+        input.referenceRangeHigh,
       )
     ) {
       ctx.addIssue({
@@ -411,7 +489,8 @@ const createLabResultInput = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["resultValue"],
-        message: "A result value is required before a lab result can be completed.",
+        message:
+          "A result value is required before a lab result can be completed.",
       });
     }
     if (input.replacesLabResultId && !input.resultValue?.trim()) {
@@ -433,7 +512,8 @@ const createLabResultInput = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["status"],
-        message: "Pending lab results cannot carry partial values. Complete the result when values are available.",
+        message:
+          "Pending lab results cannot carry partial values. Complete the result when values are available.",
       });
     }
   });
@@ -545,7 +625,8 @@ async function getLabOperationReplay(
   ) {
     throw new TRPCError({
       code: "CONFLICT",
-      message: "This lab operation id was already used for different clinical evidence.",
+      message:
+        "This lab operation id was already used for different clinical evidence.",
     });
   }
   return getLabStatusForUpdate(ctx, event.labResultId);
@@ -567,7 +648,7 @@ function labMutationResultForRole(
 
 async function assertPatientBelongsToPractice(
   ctx: RecordsContext,
-  patientId: string
+  patientId: string,
 ) {
   const [patient] = await ctx.db
     .select({ id: patients.id })
@@ -577,8 +658,8 @@ async function assertPatientBelongsToPractice(
         eq(patients.id, patientId),
         eq(patients.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
-        isNull(patients.deletedAt)
-      )
+        isNull(patients.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -589,10 +670,40 @@ async function assertPatientBelongsToPractice(
   return patient;
 }
 
+async function assertVaccinationSupervisor(
+  ctx: RecordsContext,
+  supervisorId: string | undefined,
+) {
+  if (!supervisorId) return null;
+  const [supervisor] = await ctx.db
+    .select({
+      id: users.id,
+      name: users.name,
+      licenseNumber: users.licenseNumber,
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.id, supervisorId),
+        eq(users.practiceId, ctx.practiceId),
+        eq(users.isVeterinarian, true),
+        isNull(users.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!supervisor) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Choose an active veterinarian from this practice.",
+    });
+  }
+  return supervisor;
+}
+
 async function assertAppointmentBelongsToPatient(
   ctx: RecordsContext,
   appointmentId: string,
-  patientId: string
+  patientId: string,
 ) {
   const [appointment] = await ctx.db
     .select({ id: appointments.id })
@@ -603,8 +714,8 @@ async function assertAppointmentBelongsToPatient(
         eq(appointments.patientId, patientId),
         eq(appointments.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
-        isNull(appointments.deletedAt)
-      )
+        isNull(appointments.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -622,7 +733,7 @@ async function lockOpenAppointmentForClinicalWork(
   ctx: RecordsContext,
   appointmentId: string,
   patientId: string,
-  workLabel: string
+  workLabel: string,
 ) {
   const visit = await lockOpenVisitForClinicalAppend(ctx.db as Database, {
     practiceId: ctx.practiceId,
@@ -630,7 +741,10 @@ async function lockOpenAppointmentForClinicalWork(
     patientId,
   });
   if (!visit.ok && visit.reason === "appointment_not_found") {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Appointment not found" });
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Appointment not found",
+    });
   }
   if (!visit.ok && visit.reason === "visit_not_open") {
     throw new TRPCError({
@@ -657,7 +771,7 @@ type VisitWorkSource =
 async function registerVisitWorkItem(
   ctx: RecordsContext,
   appointmentId: string,
-  source: VisitWorkSource
+  source: VisitWorkSource,
 ) {
   if ("vaccinationRecordId" in source) {
     await ctx.db.execute(sql`
@@ -698,7 +812,7 @@ async function registerVisitWorkItem(
  */
 async function findActiveVisitId(
   ctx: RecordsContext,
-  patientId: string
+  patientId: string,
 ): Promise<string | null> {
   const [visit] = await ctx.db
     .select({ id: appointments.id })
@@ -708,8 +822,8 @@ async function findActiveVisitId(
         eq(appointments.practiceId, ctx.practiceId),
         eq(appointments.patientId, patientId),
         inArray(appointments.status, ["checked_in", "in_exam"]),
-        isNull(appointments.deletedAt)
-      )
+        isNull(appointments.deletedAt),
+      ),
     )
     .orderBy(desc(appointments.startTime))
     .limit(1);
@@ -719,7 +833,7 @@ async function findActiveVisitId(
 async function assessPrescriptionSafety(
   ctx: RecordsContext,
   patientId: string,
-  medicationName: string
+  medicationName: string,
 ) {
   const [allergies, activePrescriptions, interactions] = await Promise.all([
     ctx.db
@@ -746,8 +860,8 @@ async function assessPrescriptionSafety(
             where allergy_correction.practice_id = ${ctx.practiceId}
               and allergy_correction.patient_allergy_id = ${patientAllergies.id}
           )`,
-          isNull(patientAllergies.deletedAt)
-        )
+          isNull(patientAllergies.deletedAt),
+        ),
       ),
     ctx.db
       .select({
@@ -761,14 +875,11 @@ async function assessPrescriptionSafety(
           eq(prescriptions.status, "active"),
           or(
             isNull(prescriptions.endDate),
-            gte(
-              prescriptions.endDate,
-              practiceTodayExpression(ctx.practiceId),
-            )
+            gte(prescriptions.endDate, practiceTodayExpression(ctx.practiceId)),
           ),
           activePracticePredicate(ctx.practiceId),
-          isNull(prescriptions.deletedAt)
-        )
+          isNull(prescriptions.deletedAt),
+        ),
       ),
     ctx.db
       .select({
@@ -791,7 +902,7 @@ async function assessPrescriptionSafety(
 
 async function assertDispensedProductBelongsToPractice(
   ctx: RecordsContext,
-  productId: string
+  productId: string,
 ) {
   const [product] = await ctx.db
     .select({
@@ -807,8 +918,8 @@ async function assertDispensedProductBelongsToPractice(
         eq(products.id, productId),
         eq(products.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
-        isNull(products.deletedAt)
-      )
+        isNull(products.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -873,7 +984,7 @@ async function createDispenseChargeWork(
 async function deductDispensedProductStock(
   ctx: RecordsContext,
   productId: string,
-  quantity: number
+  quantity: number,
 ) {
   const [product] = await ctx.db
     .update(products)
@@ -887,8 +998,8 @@ async function deductDispensedProductStock(
         eq(products.inventoryTracked, true),
         activePracticePredicate(ctx.practiceId),
         isNull(products.deletedAt),
-        sql`${products.stockQuantity} >= ${quantity}`
-      )
+        sql`${products.stockQuantity} >= ${quantity}`,
+      ),
     )
     .returning({ id: products.id, stockQuantity: products.stockQuantity });
 
@@ -913,7 +1024,7 @@ type LockedPrescription = {
 
 async function lockPrescriptionForLifecycle(
   ctx: RecordsContext,
-  prescriptionId: string
+  prescriptionId: string,
 ): Promise<LockedPrescription> {
   const [prescription] = await ctx.db
     .select({
@@ -932,14 +1043,17 @@ async function lockPrescriptionForLifecycle(
         eq(prescriptions.id, prescriptionId),
         eq(prescriptions.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
-        isNull(prescriptions.deletedAt)
-      )
+        isNull(prescriptions.deletedAt),
+      ),
     )
     .limit(1)
     .for("update");
 
   if (!prescription) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Prescription not found" });
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Prescription not found",
+    });
   }
   return prescription;
 }
@@ -952,7 +1066,7 @@ async function lifecycleOperationReplay(
     eventTypes: PrescriptionEventType[];
     reason: string | null;
     appointmentId?: string | null;
-  }
+  },
 ) {
   const [event] = await ctx.db
     .select()
@@ -960,15 +1074,16 @@ async function lifecycleOperationReplay(
     .where(
       and(
         eq(prescriptionEvents.practiceId, ctx.practiceId),
-        eq(prescriptionEvents.operationId, input.operationId)
-      )
+        eq(prescriptionEvents.operationId, input.operationId),
+      ),
     )
     .limit(1);
   if (!event) return null;
   if (event.prescriptionId !== input.prescriptionId) {
     throw new TRPCError({
       code: "CONFLICT",
-      message: "This prescription operation ID was already used for another change.",
+      message:
+        "This prescription operation ID was already used for another change.",
     });
   }
 
@@ -979,12 +1094,15 @@ async function lifecycleOperationReplay(
       and(
         eq(prescriptions.id, input.prescriptionId),
         eq(prescriptions.practiceId, ctx.practiceId),
-        isNull(prescriptions.deletedAt)
-      )
+        isNull(prescriptions.deletedAt),
+      ),
     )
     .limit(1);
   if (!prescription) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Prescription not found" });
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Prescription not found",
+    });
   }
   const expectedEventType =
     input.eventTypes.length === 2
@@ -1029,7 +1147,7 @@ const prescriptionLifecycleReasonInput = z
   .trim()
   .min(
     PRESCRIPTION_LIFECYCLE_REASON_MIN_LENGTH,
-    "Explain the prescription lifecycle change."
+    "Explain the prescription lifecycle change.",
   )
   .max(PRESCRIPTION_LIFECYCLE_REASON_MAX_LENGTH);
 
@@ -1040,14 +1158,14 @@ async function transitionPrescription(
     operationId: string;
     reason: string;
     targetStatus: "completed" | "cancelled";
-  }
+  },
 ) {
   const eventType = input.targetStatus;
   return (ctx.db as Database).transaction(async (tx) => {
     const txCtx = { db: tx, practiceId: ctx.practiceId };
     const operationKey = `prescription-lifecycle:${ctx.practiceId}:${input.operationId}`;
     await tx.execute(
-      sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`
+      sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`,
     );
     const replay = await lifecycleOperationReplay(txCtx, {
       prescriptionId: input.id,
@@ -1079,8 +1197,8 @@ async function transitionPrescription(
           eq(prescriptions.id, prescription.id),
           eq(prescriptions.practiceId, ctx.practiceId),
           eq(prescriptions.status, "active"),
-          isNull(prescriptions.deletedAt)
-        )
+          isNull(prescriptions.deletedAt),
+        ),
       )
       .returning();
     if (!updated) {
@@ -1115,7 +1233,7 @@ async function transitionPrescription(
 
 async function getProblemStatusForUpdate(
   ctx: RecordsContext,
-  id: string
+  id: string,
 ): Promise<{ status: ProblemStatus; resolvedDate: string | null }> {
   const [problem] = await ctx.db
     .select({
@@ -1128,8 +1246,8 @@ async function getProblemStatusForUpdate(
         eq(problemList.id, id),
         eq(problemList.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
-        isNull(problemList.deletedAt)
-      )
+        isNull(problemList.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -1140,10 +1258,7 @@ async function getProblemStatusForUpdate(
   return problem;
 }
 
-async function getLabStatusForUpdate(
-  ctx: RecordsContext,
-  id: string
-) {
+async function getLabStatusForUpdate(ctx: RecordsContext, id: string) {
   const [result] = await ctx.db
     .select(getTableColumns(labResults))
     .from(labResults)
@@ -1310,8 +1425,7 @@ export const recordsRouter = createRouter({
           correctedAt: clinicalRecordCorrections.createdAt,
           correctedBy: clinicalRecordCorrections.correctedBy,
           correctedByName: clinicalRecordCorrections.correctedByName,
-          replacementSoapNoteId:
-            replacementFromSource.replacementSoapNoteId,
+          replacementSoapNoteId: replacementFromSource.replacementSoapNoteId,
           replacementCreatedAt: replacementFromSource.createdAt,
           replacementActorName: replacementFromSource.actorName,
           replacesSoapNoteId: sourceFromReplacement.sourceSoapNoteId,
@@ -1321,8 +1435,8 @@ export const recordsRouter = createRouter({
           clinicalRecordCorrections,
           and(
             eq(clinicalRecordCorrections.soapNoteId, soapNotes.id),
-            eq(clinicalRecordCorrections.practiceId, ctx.practiceId)
-          )
+            eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           replacementFromSource,
@@ -1343,8 +1457,8 @@ export const recordsRouter = createRouter({
             eq(soapNotes.patientId, input.patientId),
             eq(soapNotes.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(soapNotes.deletedAt)
-          )
+            isNull(soapNotes.deletedAt),
+          ),
         )
         .orderBy(desc(soapNotes.createdAt));
 
@@ -1392,7 +1506,7 @@ export const recordsRouter = createRouter({
           .trim()
           .min(CLINICAL_CORRECTION_REASON_MIN_LENGTH)
           .max(CLINICAL_CORRECTION_REASON_MAX_LENGTH),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) =>
       ctx.db.transaction(async (tx) => {
@@ -1479,8 +1593,8 @@ export const recordsRouter = createRouter({
           .where(
             and(
               eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
-              eq(clinicalRecordCorrections.soapNoteId, source.id)
-            )
+              eq(clinicalRecordCorrections.soapNoteId, source.id),
+            ),
           )
           .limit(1);
         if (existing) {
@@ -1498,7 +1612,7 @@ export const recordsRouter = createRouter({
           code: "CONFLICT",
           message: "Clinical correction changed; refresh and retry.",
         });
-      })
+      }),
     ),
 
   replaceSoapNote: protectedProcedure
@@ -1723,6 +1837,25 @@ export const recordsRouter = createRouter({
     }),
 
   // Vaccinations
+  listVaccinationProviders: protectedProcedure.query(async ({ ctx }) =>
+    ctx.db
+      .select({
+        id: users.id,
+        name: users.name,
+        licenseNumber: users.licenseNumber,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.practiceId, ctx.practiceId),
+          eq(users.isVeterinarian, true),
+          isNull(users.deletedAt),
+          activePracticePredicate(ctx.practiceId),
+        ),
+      )
+      .orderBy(asc(users.name), asc(users.id)),
+  ),
+
   listVaccinations: protectedProcedure
     .input(z.object({ patientId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
@@ -1730,11 +1863,22 @@ export const recordsRouter = createRouter({
         .select({
           id: vaccinationRecords.id,
           vaccineName: vaccinationRecords.vaccineName,
+          productName: vaccinationRecords.productName,
           lotNumber: vaccinationRecords.lotNumber,
           manufacturer: vaccinationRecords.manufacturer,
+          productExpirationDate: vaccinationRecords.productExpirationDate,
+          doseType: vaccinationRecords.doseType,
+          licensedDurationMonths: vaccinationRecords.licensedDurationMonths,
+          rabiesTagNumber: vaccinationRecords.rabiesTagNumber,
+          supervisingVeterinarianId:
+            vaccinationRecords.supervisingVeterinarianId,
+          supervisingVeterinarianName: vaccinationSupervisorUsers.name,
+          supervisingVeterinarianLicenseNumber:
+            vaccinationSupervisorUsers.licenseNumber,
           administeredAt: vaccinationRecords.administeredAt,
           nextDueDate: vaccinationRecords.nextDueDate,
           administeredByName: users.name,
+          updatedAt: vaccinationRecords.updatedAt,
           correctionId: clinicalRecordCorrections.id,
           correctionAction: clinicalRecordCorrections.action,
           correctionReason: clinicalRecordCorrections.reason,
@@ -1747,28 +1891,449 @@ export const recordsRouter = createRouter({
           users,
           and(
             eq(vaccinationRecords.administeredBy, users.id),
-            eq(users.practiceId, ctx.practiceId)
+            eq(users.practiceId, ctx.practiceId),
+          ),
           )
+        .leftJoin(
+          vaccinationSupervisorUsers,
+          and(
+            eq(
+              vaccinationRecords.supervisingVeterinarianId,
+              vaccinationSupervisorUsers.id,
+            ),
+            eq(vaccinationSupervisorUsers.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           clinicalRecordCorrections,
           and(
             eq(
               clinicalRecordCorrections.vaccinationRecordId,
-              vaccinationRecords.id
+              vaccinationRecords.id,
             ),
-            eq(clinicalRecordCorrections.practiceId, ctx.practiceId)
-          )
+            eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
+            ),
         )
         .where(
           and(
             eq(vaccinationRecords.patientId, input.patientId),
             eq(vaccinationRecords.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(vaccinationRecords.deletedAt)
-          )
+            isNull(vaccinationRecords.deletedAt),
+          ),
         )
         .orderBy(desc(vaccinationRecords.administeredAt));
+    }),
+
+  updateVaccinationCertificateDetails: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "technician"))
+    .input(vaccinationCertificateDetailsInput)
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const txCtx: RecordsContext = { db: tx, practiceId: ctx.practiceId };
+        await assertPatientBelongsToPractice(txCtx, input.patientId);
+        await assertVaccinationSupervisor(
+          txCtx,
+          input.supervisingVeterinarianId,
+        );
+        const [current] = await tx
+          .select({
+            id: vaccinationRecords.id,
+            productName: vaccinationRecords.productName,
+            manufacturer: vaccinationRecords.manufacturer,
+            lotNumber: vaccinationRecords.lotNumber,
+            productExpirationDate: vaccinationRecords.productExpirationDate,
+            doseType: vaccinationRecords.doseType,
+            licensedDurationMonths: vaccinationRecords.licensedDurationMonths,
+            rabiesTagNumber: vaccinationRecords.rabiesTagNumber,
+            supervisingVeterinarianId:
+              vaccinationRecords.supervisingVeterinarianId,
+            updatedAt: vaccinationRecords.updatedAt,
+          })
+          .from(vaccinationRecords)
+          .leftJoin(
+            clinicalRecordCorrections,
+            and(
+              eq(
+                clinicalRecordCorrections.vaccinationRecordId,
+                vaccinationRecords.id,
+              ),
+              eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
+            ),
+          )
+          .where(
+            and(
+              eq(vaccinationRecords.id, input.recordId),
+              eq(vaccinationRecords.patientId, input.patientId),
+              eq(vaccinationRecords.practiceId, ctx.practiceId),
+              isNull(vaccinationRecords.deletedAt),
+              isNull(clinicalRecordCorrections.id),
+            ),
+          )
+          .limit(1)
+          .for("update");
+        if (!current) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Current vaccination record not found.",
+          });
+        }
+        if (
+          current.updatedAt.getTime() !==
+          new Date(input.expectedUpdatedAt).getTime()
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "This vaccination changed. Refresh before updating certificate details.",
+          });
+        }
+
+        const now = new Date();
+        const patch = {
+          productName: input.productName ?? null,
+          manufacturer: input.manufacturer ?? null,
+          lotNumber: input.lotNumber ?? null,
+          productExpirationDate: input.productExpirationDate ?? null,
+          doseType: input.doseType ?? null,
+          licensedDurationMonths: input.licensedDurationMonths ?? null,
+          rabiesTagNumber: input.rabiesTagNumber ?? null,
+          supervisingVeterinarianId: input.supervisingVeterinarianId ?? null,
+          updatedAt: now,
+        };
+        const [updated] = await tx
+          .update(vaccinationRecords)
+          .set(patch)
+          .where(
+            and(
+              eq(vaccinationRecords.id, current.id),
+              eq(vaccinationRecords.practiceId, ctx.practiceId),
+              eq(vaccinationRecords.updatedAt, current.updatedAt),
+              isNull(vaccinationRecords.deletedAt),
+            ),
+          )
+          .returning();
+        if (!updated) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "This vaccination changed. Refresh before updating certificate details.",
+          });
+        }
+        await tx.insert(auditLog).values({
+          practiceId: ctx.practiceId,
+          userId: ctx.user.id,
+          action: "certificate_details_updated",
+          entityType: "vaccination_record",
+          entityId: current.id,
+          changes: {
+            reason: input.reason,
+            before: {
+              productName: current.productName,
+              manufacturer: current.manufacturer,
+              lotNumber: current.lotNumber,
+              productExpirationDate: current.productExpirationDate,
+              doseType: current.doseType,
+              licensedDurationMonths: current.licensedDurationMonths,
+              rabiesTagNumber: current.rabiesTagNumber,
+              supervisingVeterinarianId: current.supervisingVeterinarianId,
+            },
+            after: patch,
+          },
+        });
+        return updated;
+      }),
+    ),
+
+  prepareVaccinationCertificate: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "technician", "front_desk"))
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+        kind: z.enum(["vaccination_history", "rabies"]),
+        vaccinationRecordId: z.string().uuid().optional(),
+        requestId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.kind === "rabies" && !input.vaccinationRecordId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Choose the rabies vaccination for this certificate.",
+        });
+      }
+
+      const [identityRows, vaccinationRows, weightRows] = await Promise.all([
+        ctx.db
+          .select({
+            practiceName: practices.name,
+            practiceAddress: practices.address,
+            practicePhone: practices.phone,
+            practiceEmail: practices.email,
+            practiceTimezone: practices.timezone,
+            patientId: patients.id,
+            patientName: patients.name,
+            species: patients.species,
+            breed: patients.breed,
+            sex: patients.sex,
+            dob: patients.dob,
+            color: patients.color,
+            microchipNumber: patients.microchipNumber,
+            clientId: clients.id,
+            clientFirstName: clients.firstName,
+            clientLastName: clients.lastName,
+            clientAddress: clients.address,
+            clientCity: clients.city,
+            clientState: clients.state,
+            clientZip: clients.zip,
+            clientPhone: clients.phone,
+          })
+          .from(patients)
+          .innerJoin(
+            clients,
+            and(
+              eq(patients.clientId, clients.id),
+              eq(clients.practiceId, ctx.practiceId),
+              isNull(clients.deletedAt),
+            ),
+          )
+          .innerJoin(
+            practices,
+            and(eq(practices.id, ctx.practiceId), isNull(practices.deletedAt)),
+          )
+          .where(
+            and(
+              eq(patients.id, input.patientId),
+              eq(patients.practiceId, ctx.practiceId),
+              isNull(patients.deletedAt),
+            ),
+          )
+          .limit(1),
+        ctx.db
+          .select({
+            id: vaccinationRecords.id,
+            vaccineName: vaccinationRecords.vaccineName,
+            productName: vaccinationRecords.productName,
+            lotNumber: vaccinationRecords.lotNumber,
+            manufacturer: vaccinationRecords.manufacturer,
+            productExpirationDate: vaccinationRecords.productExpirationDate,
+            doseType: vaccinationRecords.doseType,
+            licensedDurationMonths: vaccinationRecords.licensedDurationMonths,
+            rabiesTagNumber: vaccinationRecords.rabiesTagNumber,
+            administeredAt: vaccinationRecords.administeredAt,
+            nextDueDate: vaccinationRecords.nextDueDate,
+            administeredByName: vaccinationAdministratorUsers.name,
+            administeredByIsVeterinarian:
+              vaccinationAdministratorUsers.isVeterinarian,
+            administeredByLicenseNumber:
+              vaccinationAdministratorUsers.licenseNumber,
+            supervisingVeterinarianName: vaccinationSupervisorUsers.name,
+            supervisingVeterinarianLicenseNumber:
+              vaccinationSupervisorUsers.licenseNumber,
+          })
+          .from(vaccinationRecords)
+          .leftJoin(
+            vaccinationAdministratorUsers,
+            and(
+              eq(
+                vaccinationRecords.administeredBy,
+                vaccinationAdministratorUsers.id,
+              ),
+              eq(vaccinationAdministratorUsers.practiceId, ctx.practiceId),
+              isNull(vaccinationAdministratorUsers.deletedAt),
+            ),
+          )
+          .leftJoin(
+            vaccinationSupervisorUsers,
+            and(
+              eq(
+                vaccinationRecords.supervisingVeterinarianId,
+                vaccinationSupervisorUsers.id,
+              ),
+              eq(vaccinationSupervisorUsers.practiceId, ctx.practiceId),
+              isNull(vaccinationSupervisorUsers.deletedAt),
+            ),
+          )
+          .leftJoin(
+            clinicalRecordCorrections,
+            and(
+              eq(
+                clinicalRecordCorrections.vaccinationRecordId,
+                vaccinationRecords.id,
+              ),
+              eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
+            ),
+          )
+          .where(
+            and(
+              eq(vaccinationRecords.patientId, input.patientId),
+              eq(vaccinationRecords.practiceId, ctx.practiceId),
+              isNull(vaccinationRecords.deletedAt),
+              isNull(clinicalRecordCorrections.id),
+              input.vaccinationRecordId
+                ? eq(vaccinationRecords.id, input.vaccinationRecordId)
+                : undefined,
+            ),
+          )
+          .orderBy(desc(vaccinationRecords.administeredAt)),
+        ctx.db
+          .select({ weightKg: patientWeights.weightKg })
+          .from(patientWeights)
+          .innerJoin(
+            patients,
+            and(
+              eq(patientWeights.patientId, patients.id),
+              eq(patients.practiceId, ctx.practiceId),
+              isNull(patients.deletedAt),
+            ),
+          )
+          .where(
+            and(
+              eq(patientWeights.patientId, input.patientId),
+              isNull(patientWeights.deletedAt),
+              activePracticePredicate(ctx.practiceId),
+            ),
+          )
+          .orderBy(desc(patientWeights.recordedAt), desc(patientWeights.id))
+          .limit(1),
+      ]);
+
+      const identity = identityRows[0];
+      if (!identity) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Patient not found",
+        });
+      }
+      const certificateVaccinations =
+        input.kind === "rabies"
+          ? vaccinationRows.filter((row) =>
+              isRabiesVaccineName(row.vaccineName),
+            )
+          : vaccinationRows;
+      if (certificateVaccinations.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message:
+            input.kind === "rabies"
+              ? "The selected record is not an active rabies vaccination."
+              : "No current vaccination records are available for a certificate.",
+        });
+      }
+
+      const ownerAddress = [
+        identity.clientAddress,
+        [identity.clientCity, identity.clientState, identity.clientZip]
+          .filter(Boolean)
+          .join(", "),
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const vaccinationsForCertificate = certificateVaccinations.map((row) => {
+        const useAdministratorAsVeterinarian =
+          !row.supervisingVeterinarianName &&
+          row.administeredByIsVeterinarian === true;
+        return {
+          id: row.id,
+          vaccineName: row.vaccineName,
+          productName: row.productName,
+          lotNumber: row.lotNumber,
+          manufacturer: row.manufacturer,
+          productExpirationDate: row.productExpirationDate,
+          doseType: row.doseType,
+          licensedDurationMonths: row.licensedDurationMonths,
+          rabiesTagNumber: row.rabiesTagNumber,
+          administeredAt: row.administeredAt,
+          nextDueDate: row.nextDueDate,
+          administeredByName: row.administeredByName,
+          veterinarianName: useAdministratorAsVeterinarian
+            ? row.administeredByName
+            : row.supervisingVeterinarianName,
+          veterinarianLicenseNumber: useAdministratorAsVeterinarian
+            ? row.administeredByLicenseNumber
+            : row.supervisingVeterinarianLicenseNumber,
+        };
+      });
+
+      const warnings: string[] = [];
+      if (input.kind === "rabies") {
+        const rabies = vaccinationsForCertificate[0]!;
+        if (!ownerAddress) warnings.push("owner address");
+        if (!identity.clientPhone) warnings.push("owner phone");
+        if (!identity.breed) warnings.push("patient breed");
+        if (!identity.sex) warnings.push("patient sex");
+        if (!identity.dob) warnings.push("patient date of birth");
+        if (!identity.color) warnings.push("patient color or markings");
+        if (!weightRows[0]?.weightKg) warnings.push("current patient weight");
+        if (!identity.microchipNumber && !rabies.rabiesTagNumber) {
+          warnings.push("microchip or rabies tag number");
+        }
+        if (!rabies.productName) warnings.push("vaccine product name");
+        if (!rabies.manufacturer) warnings.push("vaccine manufacturer");
+        if (!rabies.lotNumber) warnings.push("vaccine lot number");
+        if (!rabies.productExpirationDate) {
+          warnings.push("vaccine product expiration date");
+        }
+        if (!rabies.doseType) warnings.push("initial or booster dose");
+        if (!rabies.licensedDurationMonths) {
+          warnings.push("licensed vaccine duration");
+        }
+        if (!rabies.nextDueDate) warnings.push("next vaccination due date");
+        const administeredDate = formatDateInputForTimeZone(
+          new Date(rabies.administeredAt),
+          identity.practiceTimezone,
+        );
+        if (
+          rabies.productExpirationDate &&
+          rabies.productExpirationDate < administeredDate
+        ) {
+          warnings.push("product expiration on or after administration");
+        }
+        if (rabies.nextDueDate && rabies.nextDueDate <= administeredDate) {
+          warnings.push("next due date after administration");
+        }
+        if (!rabies.veterinarianName) {
+          warnings.push("supervising veterinarian");
+        }
+        if (!rabies.veterinarianLicenseNumber) {
+          warnings.push("veterinarian license number");
+        }
+      }
+
+      return {
+        id:
+          input.kind === "rabies"
+            ? certificateVaccinations[0]!.id
+            : identity.patientId,
+        certificateId: input.requestId,
+        kind: input.kind,
+        generatedAt: new Date(),
+        ready: warnings.length === 0,
+        missingFields: warnings,
+        practice: {
+          name: identity.practiceName?.trim() || "Veterinary Practice",
+          address: identity.practiceAddress,
+          phone: identity.practicePhone,
+          email: identity.practiceEmail,
+          timezone: identity.practiceTimezone,
+        },
+        owner: {
+          name: `${identity.clientFirstName} ${identity.clientLastName}`.trim(),
+          address: ownerAddress || null,
+          phone: identity.clientPhone,
+        },
+        patient: {
+          name: identity.patientName,
+          species: identity.species,
+          breed: identity.breed,
+          sex: identity.sex,
+          dob: identity.dob,
+          color: identity.color,
+          microchipNumber: identity.microchipNumber,
+          weightKg: weightRows[0]?.weightKg ?? null,
+        },
+        vaccinations: vaccinationsForCertificate,
+      };
     }),
 
   markVaccinationEnteredInError: protectedProcedure
@@ -1782,7 +2347,7 @@ export const recordsRouter = createRouter({
           .trim()
           .min(CLINICAL_CORRECTION_REASON_MIN_LENGTH)
           .max(CLINICAL_CORRECTION_REASON_MAX_LENGTH),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) =>
       ctx.db.transaction(async (tx) => {
@@ -1799,8 +2364,8 @@ export const recordsRouter = createRouter({
               eq(vaccinationRecords.patientId, input.patientId),
               eq(vaccinationRecords.practiceId, ctx.practiceId),
               activePracticePredicate(ctx.practiceId),
-              isNull(vaccinationRecords.deletedAt)
-            )
+              isNull(vaccinationRecords.deletedAt),
+            ),
           )
           .limit(1)
           .for("update", { of: vaccinationRecords });
@@ -1847,8 +2412,8 @@ export const recordsRouter = createRouter({
                 eq(visitWorkItems.status, "unresolved"),
                 isNull(visitWorkItems.invoiceId),
                 isNull(visitWorkItems.invoiceItemId),
-                isNull(visitWorkItems.deletedAt)
-              )
+                isNull(visitWorkItems.deletedAt),
+              ),
             );
           return created;
         }
@@ -1859,8 +2424,8 @@ export const recordsRouter = createRouter({
           .where(
             and(
               eq(clinicalRecordCorrections.practiceId, ctx.practiceId),
-              eq(clinicalRecordCorrections.vaccinationRecordId, source.id)
-            )
+              eq(clinicalRecordCorrections.vaccinationRecordId, source.id),
+            ),
           )
           .limit(1);
         if (existing) return existing;
@@ -1869,7 +2434,7 @@ export const recordsRouter = createRouter({
           code: "CONFLICT",
           message: "Clinical correction changed; refresh and retry.",
         });
-      })
+      }),
     ),
 
   createVaccination: protectedProcedure
@@ -1879,12 +2444,16 @@ export const recordsRouter = createRouter({
       const record = await ctx.db.transaction(async (tx) => {
         const txCtx: RecordsContext = { db: tx, practiceId: ctx.practiceId };
         await assertPatientBelongsToPractice(txCtx, input.patientId);
+        await assertVaccinationSupervisor(
+          txCtx,
+          input.supervisingVeterinarianId,
+        );
         if (input.appointmentId) {
           await lockOpenAppointmentForClinicalWork(
             txCtx,
             input.appointmentId,
             input.patientId,
-            "vaccination"
+            "vaccination",
           );
         }
         const [created] = await tx
@@ -1924,8 +2493,8 @@ export const recordsRouter = createRouter({
             eq(problemList.patientId, input.patientId),
             eq(problemList.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(problemList.deletedAt)
-          )
+            isNull(problemList.deletedAt),
+          ),
         )
         .orderBy(desc(problemList.createdAt));
     }),
@@ -1957,7 +2526,7 @@ export const recordsRouter = createRouter({
       z.object({
         id: z.string().uuid(),
         status: z.enum(PROBLEM_STATUSES),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const existing = await getProblemStatusForUpdate(ctx, input.id);
@@ -1980,8 +2549,8 @@ export const recordsRouter = createRouter({
             eq(problemList.status, existing.status),
             activePracticePredicate(ctx.practiceId),
             sql`${problemList.resolvedDate} is not distinct from ${existing.resolvedDate}`,
-            isNull(problemList.deletedAt)
-          )
+            isNull(problemList.deletedAt),
+          ),
         )
         .returning();
       if (!problem) {
@@ -2025,24 +2594,24 @@ export const recordsRouter = createRouter({
           users,
           and(
             eq(prescriptions.prescribedBy, users.id),
-            eq(users.practiceId, ctx.practiceId)
-          )
+            eq(users.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           products,
           and(
             eq(prescriptions.productId, products.id),
             eq(products.practiceId, ctx.practiceId),
-            isNull(products.deletedAt)
-          )
+            isNull(products.deletedAt),
+          ),
         )
         .where(
           and(
             eq(prescriptions.patientId, input.patientId),
             eq(prescriptions.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(prescriptions.deletedAt)
-          )
+            isNull(prescriptions.deletedAt),
+          ),
         )
         .orderBy(desc(prescriptions.createdAt));
     }),
@@ -2072,17 +2641,20 @@ export const recordsRouter = createRouter({
           dispenseChargeQueue,
           and(
             eq(dispenseChargeQueue.prescriptionEventId, prescriptionEvents.id),
-            eq(dispenseChargeQueue.practiceId, ctx.practiceId)
-          )
+            eq(dispenseChargeQueue.practiceId, ctx.practiceId),
+          ),
         )
         .where(
           and(
             eq(prescriptionEvents.practiceId, ctx.practiceId),
             eq(prescriptionEvents.prescriptionId, input.prescriptionId),
-            activePracticePredicate(ctx.practiceId)
-          )
+            activePracticePredicate(ctx.practiceId),
+          ),
         )
-        .orderBy(desc(prescriptionEvents.createdAt), desc(prescriptionEvents.id));
+        .orderBy(
+          desc(prescriptionEvents.createdAt),
+          desc(prescriptionEvents.id),
+        );
     }),
 
   checkPrescriptionSafety: protectedProcedure
@@ -2092,16 +2664,16 @@ export const recordsRouter = createRouter({
         patientId: z.string().uuid(),
         medicationName: clinicalTextInput(
           "Medication name",
-          PRESCRIPTION_MEDICATION_NAME_MAX_LENGTH
+          PRESCRIPTION_MEDICATION_NAME_MAX_LENGTH,
         ),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       await assertPatientBelongsToPractice(ctx, input.patientId);
       return assessPrescriptionSafety(
         ctx,
         input.patientId,
-        input.medicationName
+        input.medicationName,
       );
     }),
 
@@ -2113,7 +2685,7 @@ export const recordsRouter = createRouter({
         const txCtx: RecordsContext = { db: tx, practiceId: ctx.practiceId };
         const operationKey = `dashboard-prescription:${ctx.practiceId}:${input.operationId}`;
         await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`
+          sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`,
         );
 
         const [existing] = await tx
@@ -2140,8 +2712,8 @@ export const recordsRouter = createRouter({
           .where(
             and(
               eq(prescriptions.practiceId, ctx.practiceId),
-              eq(prescriptions.operationId, input.operationId)
-            )
+              eq(prescriptions.operationId, input.operationId),
+            ),
           )
           .limit(1);
         if (existing) {
@@ -2161,7 +2733,8 @@ export const recordsRouter = createRouter({
           if (
             !createdEvent ||
             existing.patientId !== input.patientId ||
-            (existing.appointmentId ?? null) !== (input.appointmentId ?? null) ||
+            (existing.appointmentId ?? null) !==
+              (input.appointmentId ?? null) ||
             existing.medicationName !== input.medicationName ||
             existing.dosage !== input.dosage ||
             existing.frequency !== input.frequency ||
@@ -2191,18 +2764,18 @@ export const recordsRouter = createRouter({
           await assertAppointmentBelongsToPatient(
             txCtx,
             input.appointmentId,
-            input.patientId
+            input.patientId,
           );
         }
         const safety = await assessPrescriptionSafety(
           txCtx,
           input.patientId,
-          input.medicationName
+          input.medicationName,
         );
         if (input.productId) {
           const product = await assertDispensedProductBelongsToPractice(
             txCtx,
-            input.productId
+            input.productId,
           );
           if (!input.quantity || input.quantity <= 0) {
             throw new TRPCError({
@@ -2233,7 +2806,7 @@ export const recordsRouter = createRouter({
             txCtx,
             input.appointmentId,
             input.patientId,
-            "prescriptions"
+            "prescriptions",
           );
         }
 
@@ -2241,7 +2814,7 @@ export const recordsRouter = createRouter({
           await deductDispensedProductStock(
             txCtx,
             input.productId,
-            input.quantity
+            input.quantity,
           );
         }
 
@@ -2327,14 +2900,14 @@ export const recordsRouter = createRouter({
           .trim()
           .max(PRESCRIPTION_LIFECYCLE_REASON_MAX_LENGTH)
           .optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.transaction(async (tx) => {
         const txCtx = { db: tx, practiceId: ctx.practiceId };
         const operationKey = `prescription-lifecycle:${ctx.practiceId}:${input.operationId}`;
         await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`
+          sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`,
         );
         const replay = await lifecycleOperationReplay(txCtx, {
           prescriptionId: input.id,
@@ -2345,7 +2918,10 @@ export const recordsRouter = createRouter({
         });
         if (replay) return replay;
 
-        const prescription = await lockPrescriptionForLifecycle(txCtx, input.id);
+        const prescription = await lockPrescriptionForLifecycle(
+          txCtx,
+          input.id,
+        );
         if (input.appointmentId) {
           await assertAppointmentBelongsToPatient(
             txCtx,
@@ -2391,12 +2967,12 @@ export const recordsRouter = createRouter({
         if (prescription.productId && prescription.quantity) {
           await assertDispensedProductBelongsToPractice(
             txCtx,
-            prescription.productId
+            prescription.productId,
           );
           await deductDispensedProductStock(
             txCtx,
             prescription.productId,
-            prescription.quantity
+            prescription.quantity,
           );
         }
         const [updated] = await tx
@@ -2411,14 +2987,15 @@ export const recordsRouter = createRouter({
               eq(prescriptions.practiceId, ctx.practiceId),
               eq(prescriptions.status, "active"),
               eq(prescriptions.refillsRemaining, prescription.refillsRemaining),
-              isNull(prescriptions.deletedAt)
-            )
+              isNull(prescriptions.deletedAt),
+            ),
           )
           .returning();
         if (!updated) {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "Prescription changed while dispensing. Refresh and try again.",
+            message:
+              "Prescription changed while dispensing. Refresh and try again.",
           });
         }
         const [event] = await tx
@@ -2455,7 +3032,11 @@ export const recordsRouter = createRouter({
             medicationName: prescription.medicationName,
           });
         }
-        return { prescription: updated, event: event!, replayed: false as const };
+        return {
+          prescription: updated,
+          event: event!,
+          replayed: false as const,
+        };
       });
       if (!result.replayed) {
         const webhookEvent =
@@ -2481,12 +3062,12 @@ export const recordsRouter = createRouter({
         id: z.string().uuid(),
         operationId: z.string().uuid(),
         reason: prescriptionLifecycleReasonInput,
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const result = await transitionPrescription(
         { db: ctx.db, practiceId: ctx.practiceId, user: ctx.user },
-        { ...input, targetStatus: "completed" }
+        { ...input, targetStatus: "completed" },
       );
       if (!result.replayed) {
         await dispatchWebhookEvent(ctx.practiceId, "prescription.completed", {
@@ -2505,12 +3086,12 @@ export const recordsRouter = createRouter({
         id: z.string().uuid(),
         operationId: z.string().uuid(),
         reason: prescriptionLifecycleReasonInput,
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const result = await transitionPrescription(
         { db: ctx.db, practiceId: ctx.practiceId, user: ctx.user },
-        { ...input, targetStatus: "cancelled" }
+        { ...input, targetStatus: "cancelled" },
       );
       if (!result.replayed) {
         await dispatchWebhookEvent(ctx.practiceId, "prescription.cancelled", {
@@ -2609,22 +3190,22 @@ export const recordsRouter = createRouter({
           orderedBy,
           and(
             eq(labResults.orderedBy, orderedBy.id),
-            eq(orderedBy.practiceId, ctx.practiceId)
-          )
+            eq(orderedBy.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           reviewedBy,
           and(
             eq(labResults.reviewedBy, reviewedBy.id),
-            eq(reviewedBy.practiceId, ctx.practiceId)
-          )
+            eq(reviewedBy.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           followUpAssignee,
           and(
             eq(labResults.followUpAssignedTo, followUpAssignee.id),
-            eq(followUpAssignee.practiceId, ctx.practiceId)
-          )
+            eq(followUpAssignee.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           clinicalRecordCorrections,
@@ -2638,8 +3219,8 @@ export const recordsRouter = createRouter({
             eq(labResults.patientId, input.patientId),
             eq(labResults.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(labResults.deletedAt)
-          )
+            isNull(labResults.deletedAt),
+          ),
         )
         .orderBy(desc(labResults.createdAt));
       return rows;
@@ -2701,10 +3282,17 @@ export const recordsRouter = createRouter({
       z.object({
         resultId: z.string().uuid().optional(),
         filter: z
-          .enum(["action_required", "awaiting_results", "awaiting_review", "critical", "follow_up", "all"])
+          .enum([
+            "action_required",
+            "awaiting_results",
+            "awaiting_review",
+            "critical",
+            "follow_up",
+            "all",
+          ])
           .default("action_required"),
         limit: z.number().int().min(1).max(100).default(50),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const orderedBy = alias(users, "inbox_lab_ordered_by");
@@ -2729,7 +3317,10 @@ export const recordsRouter = createRouter({
         );
       } else if (!input.resultId && input.filter === "action_required") {
         conditions.push(
-          or(ne(labResults.status, "reviewed"), eq(labResults.followUpStatus, "open"))!
+          or(
+            ne(labResults.status, "reviewed"),
+            eq(labResults.followUpStatus, "open"),
+          )!,
         );
       } else if (!input.resultId && input.filter === "awaiting_results") {
         conditions.push(eq(labResults.status, "pending"));
@@ -2787,43 +3378,43 @@ export const recordsRouter = createRouter({
           patients,
           and(
             eq(labResults.patientId, patients.id),
-            eq(patients.practiceId, ctx.practiceId)
-          )
+            eq(patients.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           appointments,
           and(
             eq(labResults.appointmentId, appointments.id),
-            eq(appointments.practiceId, ctx.practiceId)
-          )
+            eq(appointments.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           clinician,
           and(
             eq(appointments.doctorId, clinician.id),
-            eq(clinician.practiceId, ctx.practiceId)
-          )
+            eq(clinician.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           orderedBy,
           and(
             eq(labResults.orderedBy, orderedBy.id),
-            eq(orderedBy.practiceId, ctx.practiceId)
-          )
+            eq(orderedBy.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           reviewedBy,
           and(
             eq(labResults.reviewedBy, reviewedBy.id),
-            eq(reviewedBy.practiceId, ctx.practiceId)
-          )
+            eq(reviewedBy.practiceId, ctx.practiceId),
+          ),
         )
         .leftJoin(
           assignee,
           and(
             eq(labResults.followUpAssignedTo, assignee.id),
-            eq(assignee.practiceId, ctx.practiceId)
-          )
+            eq(assignee.practiceId, ctx.practiceId),
+          ),
         )
         .where(and(...conditions))
         .orderBy(
@@ -2836,8 +3427,10 @@ export const recordsRouter = createRouter({
             else 'infinity'::timestamptz end`),
           asc(sql`case ${labResults.status}
             when 'completed' then 0 when 'pending' then 1 else 2 end`),
-          asc(sql`coalesce(${labResults.completedAt}, ${labResults.createdAt})`),
-          asc(labResults.id)
+          asc(
+            sql`coalesce(${labResults.completedAt}, ${labResults.createdAt})`,
+          ),
+          asc(labResults.id),
         )
         .limit(input.resultId ? 2 : input.limit + 1);
       const visibleRows = frontDeskMode
@@ -2879,8 +3472,8 @@ export const recordsRouter = createRouter({
             eq(users.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
             ne(users.role, "viewer"),
-            isNull(users.deletedAt)
-          )
+            isNull(users.deletedAt),
+          ),
         )
         .orderBy(asc(users.name));
     }),
@@ -3084,7 +3677,8 @@ export const recordsRouter = createRouter({
           if (existingReplay[0].creationPayloadHash !== creationPayloadHash) {
             throw new TRPCError({
               code: "CONFLICT",
-              message: "This lab creation id was already used for different result data.",
+              message:
+                "This lab creation id was already used for different result data.",
             });
           }
           if (input.replacesLabResultId) {
@@ -3275,7 +3869,10 @@ export const recordsRouter = createRouter({
           followUpStatus: created.followUpStatus,
           actorId: ctx.user.id,
           actorName: ctx.user.name,
-          note: created.status === "completed" ? "Result values available at entry." : null,
+          note:
+            created.status === "completed"
+              ? "Result values available at entry."
+              : null,
           operationId,
           operationPayloadHash: creationPayloadHash,
         });
@@ -3318,11 +3915,14 @@ export const recordsRouter = createRouter({
         id: z.string().uuid(),
         status: z.literal("reviewed"),
         operationId: z.string().uuid(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (input.status === "reviewed" && ctx.user.role === "technician") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "A veterinarian or administrator must review lab results." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "A veterinarian or administrator must review lab results.",
+        });
       }
       const payloadHash = labOperationHash({
         kind: "review",
@@ -3342,7 +3942,10 @@ export const recordsRouter = createRouter({
         const existing = await getLabStatusForUpdate(txCtx, input.id);
         assertLabStatusTransition(existing.status, input.status);
         if (!existing.resultValue?.trim()) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "A lab result cannot be reviewed without recorded values." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "A lab result cannot be reviewed without recorded values.",
+          });
         }
         if (
           existing.resultFlag === "critical" &&
@@ -3350,7 +3953,8 @@ export const recordsRouter = createRouter({
         ) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Assign owned follow-up for this critical result before recording clinical review.",
+            message:
+              "Assign owned follow-up for this critical result before recording clinical review.",
           });
         }
         const occurredAt = new Date();
@@ -3376,7 +3980,8 @@ export const recordsRouter = createRouter({
         if (!updated) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Lab result changed while updating. Refresh and try again.",
+            message:
+              "Lab result changed while updating. Refresh and try again.",
           });
         }
         await tx.insert(labResultEvents).values({
@@ -3412,22 +4017,35 @@ export const recordsRouter = createRouter({
       z
         .object({
           id: z.string().uuid(),
-          resultValue: clinicalTextInput("Result value", LAB_RESULT_VALUE_MAX_LENGTH),
+          resultValue: clinicalTextInput(
+            "Result value",
+            LAB_RESULT_VALUE_MAX_LENGTH,
+          ),
           unit: optionalClinicalTextInput("Unit", LAB_UNIT_MAX_LENGTH),
-          referenceRangeLow: labReferenceInput("Reference range low").optional(),
-          referenceRangeHigh: labReferenceInput("Reference range high").optional(),
+          referenceRangeLow: labReferenceInput(
+            "Reference range low",
+          ).optional(),
+          referenceRangeHigh: labReferenceInput(
+            "Reference range high",
+          ).optional(),
           resultFlag: z.enum(labResultFlagValues).default("unknown"),
           operationId: z.string().uuid(),
         })
         .superRefine((input, refineCtx) => {
-          if (!isOrderedLabReferenceRange(input.referenceRangeLow, input.referenceRangeHigh)) {
+          if (
+            !isOrderedLabReferenceRange(
+              input.referenceRangeLow,
+              input.referenceRangeHigh,
+            )
+          ) {
             refineCtx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["referenceRangeHigh"],
-              message: "Reference range high must be greater than or equal to low.",
+              message:
+                "Reference range high must be greater than or equal to low.",
             });
           }
-        })
+        }),
     )
     .mutation(async ({ ctx, input }) => {
       const payloadHash = labOperationHash({
@@ -3451,7 +4069,11 @@ export const recordsRouter = createRouter({
         if (replay) return replay;
         const existing = await getLabStatusForUpdate(txCtx, input.id);
         if (existing.status !== "pending") {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Only pending lab results can be completed with new values." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Only pending lab results can be completed with new values.",
+          });
         }
         if (
           input.resultFlag === "critical" &&
@@ -3460,7 +4082,8 @@ export const recordsRouter = createRouter({
         ) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Set a due date on the open follow-up before recording this result as critical.",
+            message:
+              "Set a due date on the open follow-up before recording this result as critical.",
           });
         }
         const occurredAt = new Date();
@@ -3488,7 +4111,11 @@ export const recordsRouter = createRouter({
           )
           .returning();
         if (!updated) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Lab result changed while completing. Refresh and try again." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Lab result changed while completing. Refresh and try again.",
+          });
         }
         await tx.insert(labResultEvents).values({
           practiceId: ctx.practiceId,
@@ -3525,7 +4152,7 @@ export const recordsRouter = createRouter({
         dueAt: z.string().datetime().optional(),
         note: z.string().trim().max(1000).optional(),
         operationId: z.string().uuid(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const dueAt = input.dueAt ? new Date(input.dueAt).toISOString() : null;
@@ -3551,7 +4178,8 @@ export const recordsRouter = createRouter({
         if (existing.status === "pending") {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Enter and complete the lab values before assigning follow-up.",
+            message:
+              "Enter and complete the lab values before assigning follow-up.",
           });
         }
         const [assignee] = await tx
@@ -3562,12 +4190,15 @@ export const recordsRouter = createRouter({
               eq(users.id, input.assigneeId),
               eq(users.practiceId, ctx.practiceId),
               ne(users.role, "viewer"),
-              isNull(users.deletedAt)
-            )
+              isNull(users.deletedAt),
+            ),
           )
           .limit(1);
         if (!assignee) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an active clinic teammate." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Choose an active clinic teammate.",
+          });
         }
         if (existing.resultFlag === "critical" && !dueAt) {
           throw new TRPCError({
@@ -3578,7 +4209,8 @@ export const recordsRouter = createRouter({
         if (assignee.role === "front_desk" && !note) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Front desk follow-up requires actionable instructions from the clinical team.",
+            message:
+              "Front desk follow-up requires actionable instructions from the clinical team.",
           });
         }
         const occurredAt = new Date();
@@ -3608,14 +4240,21 @@ export const recordsRouter = createRouter({
           )
           .returning();
         if (!updated) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Lab result changed while assigning follow-up. Refresh and try again." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Lab result changed while assigning follow-up. Refresh and try again.",
+          });
         }
         await tx.insert(labResultEvents).values({
           practiceId: ctx.practiceId,
           labResultId: updated.id,
           patientId: updated.patientId,
           appointmentId: updated.appointmentId,
-          eventType: existing.followUpStatus === "not_required" ? "follow_up_assigned" : "follow_up_reassigned",
+          eventType:
+            existing.followUpStatus === "not_required"
+              ? "follow_up_assigned"
+              : "follow_up_reassigned",
           createdAt: occurredAt,
           statusBefore: updated.status,
           statusAfter: updated.status,
@@ -3666,11 +4305,18 @@ export const recordsRouter = createRouter({
         if (existing.status === "pending") {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Lab follow-up cannot be completed before result values are available.",
+            message:
+              "Lab follow-up cannot be completed before result values are available.",
           });
         }
-        if (existing.followUpStatus !== "open" || !existing.followUpAssignedTo) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "This lab result has no open follow-up." });
+        if (
+          existing.followUpStatus !== "open" ||
+          !existing.followUpAssignedTo
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This lab result has no open follow-up.",
+          });
         }
         if (
           ctx.user.role === "front_desk" &&
@@ -3678,7 +4324,8 @@ export const recordsRouter = createRouter({
         ) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Front desk staff can complete only lab follow-up assigned to them.",
+            message:
+              "Front desk staff can complete only lab follow-up assigned to them.",
           });
         }
         const occurredAt = new Date();
@@ -3704,7 +4351,11 @@ export const recordsRouter = createRouter({
           )
           .returning();
         if (!updated) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Lab follow-up changed while completing. Refresh and try again." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Lab follow-up changed while completing. Refresh and try again.",
+          });
         }
         await tx.insert(labResultEvents).values({
           practiceId: ctx.practiceId,
@@ -3754,16 +4405,16 @@ export const recordsRouter = createRouter({
           users,
           and(
             eq(procedures.performedBy, users.id),
-            eq(users.practiceId, ctx.practiceId)
-          )
+            eq(users.practiceId, ctx.practiceId),
+          ),
         )
         .where(
           and(
             eq(procedures.patientId, input.patientId),
             eq(procedures.practiceId, ctx.practiceId),
             activePracticePredicate(ctx.practiceId),
-            isNull(procedures.deletedAt)
-          )
+            isNull(procedures.deletedAt),
+          ),
         )
         .orderBy(desc(procedures.createdAt));
     }),
@@ -3777,20 +4428,20 @@ export const recordsRouter = createRouter({
         name: clinicalTextInput("Procedure name", PROCEDURE_NAME_MAX_LENGTH),
         description: optionalClinicalTextInput(
           "Procedure description",
-          PROCEDURE_DESCRIPTION_MAX_LENGTH
+          PROCEDURE_DESCRIPTION_MAX_LENGTH,
         ),
         anesthesiaUsed: optionalClinicalTextInput(
           "Anesthesia used",
-          PROCEDURE_ANESTHESIA_MAX_LENGTH
+          PROCEDURE_ANESTHESIA_MAX_LENGTH,
         ),
         durationMinutes: positiveIntegerColumnInput
           .max(PROCEDURE_DURATION_MAX_MINUTES)
           .optional(),
         notes: optionalClinicalTextInput(
           "Procedure notes",
-          PROCEDURE_NOTES_MAX_LENGTH
+          PROCEDURE_NOTES_MAX_LENGTH,
         ),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const procedure = await ctx.db.transaction(async (tx) => {
@@ -3801,7 +4452,7 @@ export const recordsRouter = createRouter({
             txCtx,
             input.appointmentId,
             input.patientId,
-            "procedures"
+            "procedures",
           );
         }
         const [created] = await tx
@@ -3840,7 +4491,7 @@ export const recordsRouter = createRouter({
       z.object({
         patientId: z.string().uuid(),
         appointmentId: z.string().uuid().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertPatientBelongsToPractice(ctx, input.patientId);
@@ -3849,7 +4500,7 @@ export const recordsRouter = createRouter({
             await assertAppointmentBelongsToPatient(
               ctx,
               input.appointmentId,
-              input.patientId
+              input.patientId,
             )
           ).id
         : await findActiveVisitId(ctx, input.patientId);
@@ -3901,8 +4552,8 @@ export const recordsRouter = createRouter({
             like(files.mimeType, "image/%"),
             eq(files.storageStatus, "available"),
             activePracticePredicate(ctx.practiceId),
-            isNull(files.deletedAt)
-          )
+            isNull(files.deletedAt),
+          ),
         )
         .orderBy(desc(files.createdAt))
         .limit(50);
@@ -3919,7 +4570,7 @@ export const recordsRouter = createRouter({
       z.object({
         patientId: z.string().uuid(),
         appointmentId: z.string().uuid().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       await assertPatientBelongsToPractice(ctx, input.patientId);
@@ -3927,7 +4578,7 @@ export const recordsRouter = createRouter({
         await assertAppointmentBelongsToPatient(
           ctx,
           input.appointmentId,
-          input.patientId
+          input.patientId,
         );
       }
       return ctx.db
@@ -3951,8 +4602,8 @@ export const recordsRouter = createRouter({
             eq(consentRequests.fileId, files.id),
             eq(consentRequests.practiceId, ctx.practiceId),
             eq(consentRequests.status, "signed"),
-            isNull(consentRequests.deletedAt)
-          )
+            isNull(consentRequests.deletedAt),
+          ),
         )
         .where(
           and(
@@ -3966,11 +4617,11 @@ export const recordsRouter = createRouter({
             or(
               isNull(files.category),
               ne(files.category, CONSENT_FILE_CATEGORY),
-              eq(consentRequests.status, "signed")
+              eq(consentRequests.status, "signed"),
             ),
             activePracticePredicate(ctx.practiceId),
-            isNull(files.deletedAt)
-          )
+            isNull(files.deletedAt),
+          ),
         )
         .orderBy(desc(files.createdAt))
         .limit(200);
@@ -3999,8 +4650,8 @@ export const recordsRouter = createRouter({
             eq(consentForms.practiceId, ctx.practiceId),
             eq(consentForms.isActive, true),
             activePracticePredicate(ctx.practiceId),
-            isNull(consentForms.deletedAt)
-          )
+            isNull(consentForms.deletedAt),
+          ),
         )
         .orderBy(consentForms.sortOrder)
         .limit(100);
@@ -4017,7 +4668,7 @@ export const recordsRouter = createRouter({
           title: form.title,
           body: form.body,
           sortOrder: form.sortOrder,
-        }))
+        })),
       )
       .onConflictDoNothing();
     return listForms();
@@ -4037,9 +4688,19 @@ export const recordsRouter = createRouter({
         patientId: z.string().uuid(),
         appointmentId: z.string().uuid().optional(),
         formId: z.string().uuid(),
-        title: z.string().trim().min(1).max(CONSENT_TITLE_MAX_LENGTH).optional(),
-        bodyText: z.string().trim().min(1).max(CONSENT_BODY_MAX_LENGTH).optional(),
-      })
+        title: z
+          .string()
+          .trim()
+          .min(1)
+          .max(CONSENT_TITLE_MAX_LENGTH)
+          .optional(),
+        bodyText: z
+          .string()
+          .trim()
+          .min(1)
+          .max(CONSENT_BODY_MAX_LENGTH)
+          .optional(),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertPatientBelongsToPractice(ctx, input.patientId);
@@ -4055,8 +4716,8 @@ export const recordsRouter = createRouter({
             eq(consentForms.id, input.formId),
             eq(consentForms.practiceId, ctx.practiceId),
             eq(consentForms.isActive, true),
-            isNull(consentForms.deletedAt)
-          )
+            isNull(consentForms.deletedAt),
+          ),
         )
         .limit(1);
       if (!form) {
@@ -4082,7 +4743,7 @@ export const recordsRouter = createRouter({
             await assertAppointmentBelongsToPatient(
               ctx,
               input.appointmentId,
-              input.patientId
+              input.patientId,
             )
           ).id
         : await findActiveVisitId(ctx, input.patientId);
@@ -4137,8 +4798,8 @@ export const recordsRouter = createRouter({
             eq(files.patientId, input.patientId),
             eq(files.category, CONSENT_FILE_CATEGORY),
             eq(files.storageStatus, "available"),
-            isNull(files.deletedAt)
-          )
+            isNull(files.deletedAt),
+          ),
         )
         .where(
           and(
@@ -4146,8 +4807,8 @@ export const recordsRouter = createRouter({
             eq(consentRequests.patientId, input.patientId),
             eq(consentRequests.status, "signed"),
             activePracticePredicate(ctx.practiceId),
-            isNull(consentRequests.deletedAt)
-          )
+            isNull(consentRequests.deletedAt),
+          ),
         )
         .orderBy(desc(consentRequests.createdAt))
         .limit(50);
