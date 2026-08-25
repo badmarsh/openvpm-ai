@@ -2863,40 +2863,12 @@ export async function exportPracticeData(
     (product) =>
       product.deletedAt == null || referencedProductIds.has(product.id),
   );
-  const referencedUserIds = new Set(
-    [
-      ...prescriptionEventRows.map((event) => event.actorId),
-      ...prescriptionRows.map((prescription) => prescription.prescribedBy),
-      ...clinicalCorrectionRows.map((correction) => correction.correctedBy),
-      ...labReplacementRows.map((replacement) => replacement.actorId),
-      ...soapNoteRows.map((note) => note.authorId),
-      ...soapNoteRows.map((note) => note.finalizedBy),
-      ...soapNoteAddendumRows.map((addendum) => addendum.authorId),
-      ...vitalRows.map((vital) => vital.recordedBy),
-      ...vaccinationRows.map((vaccination) => vaccination.administeredBy),
-      ...labRows.flatMap((result) => [
-        result.orderedBy,
-        result.reviewedBy,
-        result.followUpAssignedTo,
-        result.followUpCompletedBy,
-      ]),
-      ...labResultEventRows.flatMap((event) => [
-        event.actorId,
-        event.followUpAssignedTo,
-      ]),
-      ...appointmentRows.map((appointment) => appointment.doctorId),
-      ...patientMergeRows.map((event) => event.performedBy),
-      ...smsConsentEventRows.map((event) => event.actorUserId),
-      ...smsSendAttemptRows.map((attempt) => attempt.requestedByUserId),
-      ...smsSendAttemptEventRows.map((event) => event.actorUserId),
-      ...fileRows.map((file) => file.uploadedBy),
-      ...visitTreatmentPlanRows.map((plan) => plan.createdBy),
-      ...visitTreatmentPlanRevisionRows.map((revision) => revision.authoredBy),
-    ].filter((id): id is string => typeof id === "string"),
-  );
-  const userRows = allUserRows.filter(
-    (user) => user.deletedAt == null || referencedUserIds.has(user.id),
-  );
+  // Staff attribution is referenced throughout the clinical, financial,
+  // communication, and audit ledgers. Preserve every soft-deleted staff row
+  // already retained by the source practice so a future reference cannot make
+  // an otherwise complete backup unrestorable. Secrets are still sanitized in
+  // the users export section.
+  const userRows = allUserRows;
   const referencedClientIds = new Set(
     [
       ...patientRows.map((patient) => patient.clientId),

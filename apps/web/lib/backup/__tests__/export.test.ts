@@ -166,6 +166,15 @@ describe("backupKey", () => {
   });
 });
 
+describe("staff attribution retention", () => {
+  it("keeps all source staff rows so historical ledgers remain restorable", () => {
+    const source = readFileSync("lib/backup/export.ts", "utf8");
+
+    expect(source).toContain("const userRows = allUserRows;");
+    expect(source).not.toContain("user.deletedAt == null || referencedUserIds");
+  });
+});
+
 describe("attachment manifest restore safety", () => {
   function manifestBackup() {
     return {
@@ -1003,16 +1012,14 @@ describe("exportPracticeData query scoping", () => {
     expect(source).toContain("patientMergeEvents: patientMergeRows");
   });
 
-  it("exports append-only SMS consent evidence and referenced identities", () => {
+  it("exports append-only SMS consent evidence and its owned identities", () => {
     expect(source).toContain(
       "allPracticeRows(db, smsConsentEvents, practiceId)",
     );
     expect(source).toContain(
       "...smsConsentEventRows.map((event) => event.clientId)",
     );
-    expect(source).toContain(
-      "...smsConsentEventRows.map((event) => event.actorUserId)",
-    );
+    expect(source).toContain("const userRows = allUserRows;");
     expect(source).toContain(
       "...smsConsentEventRows.map((event) => event.locationId)",
     );
