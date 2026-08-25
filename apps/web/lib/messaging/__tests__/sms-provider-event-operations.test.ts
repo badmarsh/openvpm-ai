@@ -48,6 +48,17 @@ describe("SMS provider-event operational gates", () => {
     expect(queueSource).not.toContain('"toE164"');
   });
 
+  it("serializes raw SQL timestamps before they reach postgres-js", () => {
+    expect(source).toContain("input.unresolvedSince?.toISOString()");
+    expect(source).toContain("const nowIso = now.toISOString()");
+    expect(source).toContain(
+      "const staleBeforeIso = staleBefore.toISOString()",
+    );
+    expect(source).not.toContain("${input.unresolvedSince ?? null}");
+    expect(source).not.toContain("${staleBefore}");
+    expect(source).not.toContain("${now}");
+  });
+
   it("fails the final dispatch barrier on an exact durable STOP", async () => {
     const execute = vi.fn(async () => ({ rows: [{ blocked: true }] }));
 

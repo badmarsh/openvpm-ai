@@ -208,6 +208,7 @@ export async function loadSmsProviderEventGateSummaryInTransaction(
     unresolvedSince?: Date;
   },
 ): Promise<SmsProviderEventGateSummary> {
+  const unresolvedSince = input.unresolvedSince?.toISOString() ?? null;
   const result = await tx.execute(sql`
     with relevant_events as (
       select event.*,
@@ -225,8 +226,8 @@ export async function loadSmsProviderEventGateSummaryInTransaction(
           or (
             event.practice_id is null
             and (
-              ${input.unresolvedSince ?? null}::timestamptz is not null
-              and event.received_at >= ${input.unresolvedSince ?? null}::timestamptz
+              ${unresolvedSince}::timestamptz is not null
+              and event.received_at >= ${unresolvedSince}::timestamptz
             )
           )
           or (
@@ -289,8 +290,8 @@ export async function loadSmsProviderEventGateSummaryInTransaction(
           event.practice_id = ${input.practiceId}::uuid
           or (
             event.practice_id is null
-            and ${input.unresolvedSince ?? null}::timestamptz is not null
-            and conflict.received_at >= ${input.unresolvedSince ?? null}::timestamptz
+            and ${unresolvedSince}::timestamptz is not null
+            and conflict.received_at >= ${unresolvedSince}::timestamptz
           )
           or (
             event.practice_id is null
@@ -378,6 +379,8 @@ export async function loadSmsProviderEventQueue(
   const staleBefore = new Date(
     now.getTime() - SMS_PROVIDER_EVENT_STALE_MINUTES * 60 * 1000,
   );
+  const nowIso = now.toISOString();
+  const staleBeforeIso = staleBefore.toISOString();
 
   return withSystem(database, async (tx) => {
     const scope = options.practiceId
@@ -419,8 +422,8 @@ export async function loadSmsProviderEventQueue(
         (select count(*)::int from scoped_conflicts) as conflicts,
         count(*) filter (
           where state in ('pending', 'retry')
-            and received_at <= ${staleBefore}
-            and (next_attempt_at is null or next_attempt_at <= ${now})
+            and received_at <= ${staleBeforeIso}::timestamptz
+            and (next_attempt_at is null or next_attempt_at <= ${nowIso}::timestamptz)
         )::int as stale
       from scoped_events
     `);
@@ -445,8 +448,8 @@ export async function loadSmsProviderEventQueue(
           event.last_error_code as "lastErrorCode",
           (
             event.state in ('pending', 'retry')
-            and event.received_at <= ${staleBefore}
-            and (event.next_attempt_at is null or event.next_attempt_at <= ${now})
+            and event.received_at <= ${staleBeforeIso}::timestamptz
+            and (event.next_attempt_at is null or event.next_attempt_at <= ${nowIso}::timestamptz)
           ) as stale,
           case event.state
             when 'quarantined' then 0

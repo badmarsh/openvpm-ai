@@ -50,6 +50,7 @@ const {
   deleteFile,
   getObject,
   normalizeS3VersionId,
+  normalizeBlobVersionId,
   readPrimaryObject,
   replicaStorageIncludesPractice,
   replicaStoragePracticeScope,
@@ -429,21 +430,21 @@ describe("private Blob storage", () => {
       blob: {
         size: body.byteLength,
         contentType: "application/pdf",
-        etag: "blob-etag-1",
+        etag: 'W/"blob-etag-1"',
       },
     });
 
     await expect(
       readReplicaObject("attachments/file", {
         maxBytes: 10,
-        versionId: "blob-etag-1",
+        versionId: '"blob-etag-1"',
       }),
     ).resolves.toMatchObject({
       status: "available",
       body,
       contentType: "application/pdf",
-      etag: "blob-etag-1",
-      versionId: "blob-etag-1",
+      etag: 'W/"blob-etag-1"',
+      versionId: '"blob-etag-1"',
     });
     expect(mocks.blobGet).toHaveBeenCalledWith(
       "attachments/file",
@@ -453,6 +454,7 @@ describe("private Blob storage", () => {
         useCache: false,
       }),
     );
+    expect(normalizeBlobVersionId('W/"blob-etag-1"')).toBe('"blob-etag-1"');
   });
 
   it("requires a distinct configured private Blob store for replica rollout", () => {
