@@ -154,14 +154,17 @@ interface EmailDispatchOptions {
 async function dispatchEmail(
   options: EmailDispatchOptions,
 ): Promise<EmailProviderEvidence> {
-  const client = getResend();
+  const demoMode = emailDemoMode();
+  // Demo/QA environments must remain non-delivering even when Preview inherits
+  // a real provider key from the hosted project configuration.
+  const client = demoMode ? null : getResend();
   const provider: EmailProvider =
-    client || (billingEnforced() && !emailDemoMode()) ? "resend" : "console";
+    client || (billingEnforced() && !demoMode) ? "resend" : "console";
   const from = defaultEmailFrom(options.from);
   const replyTo = nonBlankEmailValue(options.replyTo);
 
   if (!client) {
-    if (billingEnforced() && !emailDemoMode()) {
+    if (billingEnforced() && !demoMode) {
       return {
         success: false,
         provider,
@@ -278,8 +281,9 @@ async function dispatchEmail(
  * configuration failure); only the explicit local/demo fallback is console.
  */
 export function verificationEmailProvider(): EmailProvider {
+  if (emailDemoMode()) return "console";
   if (getResend()) return "resend";
-  return billingEnforced() && !emailDemoMode() ? "resend" : "console";
+  return billingEnforced() ? "resend" : "console";
 }
 
 export async function sendEmail(

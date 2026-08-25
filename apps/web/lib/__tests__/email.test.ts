@@ -110,13 +110,14 @@ describe("sendEmail", () => {
     consoleLog.mockRestore();
   });
 
-  it("keeps the console fallback available in demo mode", async () => {
+  it("forces the console provider in demo mode even when Resend is configured", async () => {
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", " true ");
+    vi.stubEnv("RESEND_API_KEY", "re_preview_live_key");
     mocks.billingEnforced.mockReturnValue(true);
     const consoleLog = vi
       .spyOn(console, "log")
       .mockImplementation(() => undefined);
-    const { sendEmail } = await loadEmail();
+    const { sendEmail, verificationEmailProvider } = await loadEmail();
 
     await expect(
       sendEmail({
@@ -127,6 +128,9 @@ describe("sendEmail", () => {
     ).resolves.toEqual({ success: true, id: "dev-console" });
 
     expect(consoleLog).toHaveBeenCalled();
+    expect(verificationEmailProvider()).toBe("console");
+    expect(mocks.Resend).not.toHaveBeenCalled();
+    expect(mocks.resendSend).not.toHaveBeenCalled();
     consoleLog.mockRestore();
   });
 
