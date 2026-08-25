@@ -3,6 +3,7 @@
 # Exit 0 skips the build; exit 1 lets it proceed.
 #
 # - Production deployments always build.
+# - An explicit operator-only override can force a protected preview rebuild.
 # - The public demo deployment (NEXT_PUBLIC_DEMO_MODE=true) tracks
 #   production only; its preview builds are skipped as duplicates.
 # - Preview builds are skipped when nothing that ships in the web app
@@ -12,6 +13,10 @@
 set -u
 
 if [ "${VERCEL_ENV:-}" = "production" ]; then
+  exit 1
+fi
+
+if [ "${OPENVPM_FORCE_PREVIEW_BUILD:-}" = "true" ]; then
   exit 1
 fi
 

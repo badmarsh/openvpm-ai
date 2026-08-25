@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { generateMedicalSummaryPdf } from "../pdf";
+import {
+  generateMedicalSummaryPdf,
+  generateRabiesVaccinationCertificatePdf,
+  generateVaccinationHistoryCertificatePdf,
+} from "../pdf";
 
 describe("medical summary header", () => {
   const source = readFileSync("lib/pdf.ts", "utf8");
@@ -8,7 +12,7 @@ describe("medical summary header", () => {
   it("stacks logo, clinic name, then the title so long names cannot collide", () => {
     const headerSection = source.slice(
       source.indexOf("export function generateMedicalSummaryPdf"),
-      source.indexOf('sectionHeading("Patient Information")')
+      source.indexOf('sectionHeading("Patient Information")'),
     );
     const logoAt = headerSection.indexOf("drawPawMark");
     const nameAt = headerSection.indexOf("splitTextToSize(data.practiceName");
@@ -31,7 +35,9 @@ describe("medical summary header", () => {
       clientName: "Jordan Avery",
       allergies: [],
       problems: [],
-      vaccinations: [{ name: "Rabies", date: "2026-05-01", nextDue: "2027-05-01" }],
+      vaccinations: [
+        { name: "Rabies", date: "2026-05-01", nextDue: "2027-05-01" },
+      ],
       recentNotes: [],
       prescriptions: [],
       generatedDate: "7/11/2026",
@@ -93,26 +99,30 @@ describe("pdf generation date labels", () => {
     expect(source).toContain("generatedDate?: string;");
     expect(source).toContain("function formatGeneratedDateUtc()");
     expect(source).toContain(
-      'return new Date().toLocaleDateString("en-US", { timeZone: "UTC" })'
+      'return new Date().toLocaleDateString("en-US", { timeZone: "UTC" })',
     );
     expect(source).toContain(
-      "const generatedDate = data.generatedDate ?? formatGeneratedDateUtc()"
+      "const generatedDate = data.generatedDate ?? formatGeneratedDateUtc()",
     );
     expect(source).toContain("`Generated on ${generatedDate}");
-    expect(source).not.toContain("const today = new Date().toLocaleDateString()");
+    expect(source).not.toContain(
+      "const today = new Date().toLocaleDateString()",
+    );
   });
 
   it("generates vaccination certificates with caller-provided date labels", () => {
     expect(source).toContain("export interface VaccinationCertificateData");
-    expect(source).toContain("export function generateVaccinationCertificatePdf");
-    expect(source).toContain("VACCINATION CERTIFICATE");
-    expect(source).toContain("[\"Vaccine\", data.vaccineName]");
-    expect(source).toContain("[\"Administered\", data.administeredAt]");
-    expect(source).toContain("[\"Next due\", data.nextDueDate]");
-    expect(source).toContain("[\"Manufacturer\", data.manufacturer]");
-    expect(source).toContain("[\"Lot number\", data.lotNumber]");
     expect(source).toContain(
-      "const generatedDate = data.generatedDate ?? formatGeneratedDateUtc()"
+      "export function generateVaccinationCertificatePdf",
+    );
+    expect(source).toContain("VACCINATION CERTIFICATE");
+    expect(source).toContain('["Vaccine", data.vaccineName]');
+    expect(source).toContain('["Administered", data.administeredAt]');
+    expect(source).toContain('["Next due", data.nextDueDate]');
+    expect(source).toContain('["Manufacturer", data.manufacturer]');
+    expect(source).toContain('["Lot number", data.lotNumber]');
+    expect(source).toContain(
+      "const generatedDate = data.generatedDate ?? formatGeneratedDateUtc()",
     );
   });
 
@@ -120,12 +130,87 @@ describe("pdf generation date labels", () => {
     expect(source).toContain("export interface ReportPdfData");
     expect(source).toContain("export function generateReportPdf");
     expect(source).toContain(
-      'orientation: data.columns.length > 4 ? "landscape" : "portrait"'
+      'orientation: data.columns.length > 4 ? "landscape" : "portrait"',
     );
     expect(source).toContain("data.columns.forEach((column, index) =>");
     expect(source).toContain(
-      'doc.text(data.emptyMessage ?? "No report data available.", margin, y)'
+      'doc.text(data.emptyMessage ?? "No report data available.", margin, y)',
     );
     expect(source).toContain("doc.text(`Page ${i} of ${pageCount}`");
+  });
+});
+
+describe("staff vaccination certificate PDFs", () => {
+  const identity = {
+    certificateId: "00000000-0000-0000-0000-000000000001",
+    generatedDate: "Aug 24, 2026",
+    practice: {
+      name: "Neighborhood Veterinary",
+      address: "100 Clinic Way, Brooklyn, NY",
+      phone: "555-0100",
+      email: "care@example.test",
+    },
+    owner: {
+      name: "Alex Rivera",
+      address: "10 Main Street\nBrooklyn, NY, 11201",
+      phone: "555-0102",
+    },
+    patient: {
+      name: "Biscuit",
+      species: "Canine",
+      breed: "Mixed breed",
+      sex: "Female (Spayed)",
+      dob: "May 1, 2020",
+      color: "Brown",
+      microchipNumber: "985141000000001",
+      weightKg: "18.250",
+    },
+  };
+
+  it("renders a multi-page vaccination history with certificate identity", () => {
+    const doc = generateVaccinationHistoryCertificatePdf({
+      ...identity,
+      vaccinations: Array.from({ length: 60 }, (_, index) => ({
+        vaccineName: `Vaccination ${index + 1}`,
+        productName: `Product ${index + 1}`,
+        administeredAt: "Aug 24, 2026",
+        nextDueDate: "Aug 24, 2027",
+        lotNumber: `LOT-${index + 1}`,
+        administeredByName: "Dr. Rivera",
+      })),
+    });
+
+    expect(doc.getNumberOfPages()).toBeGreaterThan(1);
+    expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(10_000);
+  });
+
+  it("renders all required routine rabies evidence and a wet-signature line", () => {
+    const doc = generateRabiesVaccinationCertificatePdf({
+      ...identity,
+      vaccination: {
+        vaccineName: "Rabies",
+        productName: "Defensor 3",
+        manufacturer: "Zoetis",
+        lotNumber: "LOT-123",
+        productExpirationDate: "May 1, 2027",
+        doseType: "booster",
+        licensedDurationMonths: 36,
+        rabiesTagNumber: "TAG-42",
+        administeredAt: "Aug 24, 2026",
+        nextDueDate: "Aug 24, 2029",
+        administeredByName: "Taylor Tech",
+        veterinarianName: "Dr. Rivera",
+        veterinarianLicenseNumber: "NY-12345",
+      },
+    });
+
+    expect(doc.getNumberOfPages()).toBe(1);
+    expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(4_000);
+    const source = readFileSync("lib/pdf.ts", "utf8");
+    expect(source).toContain("Veterinarian signature");
+    expect(source).toContain(
+      "Routine vaccination record — not a travel health certificate",
+    );
+    expect(source).toContain("Certificate ID: ${data.certificateId}");
   });
 });

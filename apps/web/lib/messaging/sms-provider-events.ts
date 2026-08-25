@@ -1629,6 +1629,7 @@ export async function getSmsProviderEventBacklogSummary(
   tx?: Database,
   opts: { practiceId?: string; since?: Date } = {},
 ): Promise<SmsProviderEventBacklogSummary> {
+  const since = opts.since?.toISOString() ?? null;
   const load = async (database: Database) => {
     const result = await database.execute(sql`
       with unresolved_conflicts as (
@@ -1649,7 +1650,7 @@ export async function getSmsProviderEventBacklogSummary(
             )
           )
           and (${opts.practiceId ?? null}::uuid is null or event.practice_id = ${opts.practiceId ?? null}::uuid)
-          and (${opts.since ?? null}::timestamptz is null or conflict.received_at >= ${opts.since ?? null}::timestamptz)
+          and (${since}::timestamptz is null or conflict.received_at >= ${since}::timestamptz)
       )
       select
         count(*) filter (where state = 'pending')::int as pending,
@@ -1668,7 +1669,7 @@ export async function getSmsProviderEventBacklogSummary(
           or not ${smsProviderEventQuarantineIsRemediatedSql}
         )
         and (${opts.practiceId ?? null}::uuid is null or event.practice_id = ${opts.practiceId ?? null}::uuid)
-        and (${opts.since ?? null}::timestamptz is null or event.received_at >= ${opts.since ?? null}::timestamptz)
+        and (${since}::timestamptz is null or event.received_at >= ${since}::timestamptz)
     `);
     const row = rowsFromExecute<BacklogRow>(result)[0];
     const oldest = row?.oldestUnresolvedAt;

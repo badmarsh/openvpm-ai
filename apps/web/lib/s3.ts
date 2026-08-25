@@ -66,6 +66,17 @@ export function normalizeS3VersionId(value: unknown): string | undefined {
     : undefined;
 }
 
+/**
+ * Private Blob origin reads may expose the same entity tag in weak form
+ * (`W/"hash"`) even when put/list returned the strong form (`"hash"`). The
+ * opaque tag still identifies the same immutable bytes, so compare and retain
+ * a canonical strong representation for exact-version evidence.
+ */
+export function normalizeBlobVersionId(value: unknown): string | undefined {
+  const normalized = normalizeS3VersionId(value);
+  return normalized?.startsWith("W/") ? normalized.slice(2) : normalized;
+}
+
 export type ObjectReadResult =
   | {
       status: "available";
@@ -333,7 +344,7 @@ async function putObject(
         etag: result.etag,
         // Private Blob pathnames are immutable because overwrite is disabled.
         // The provider ETag is therefore the exact immutable version evidence.
-        versionId: result.etag,
+        versionId: normalizeBlobVersionId(result.etag),
       };
     }
 
@@ -445,7 +456,11 @@ async function readObject(
       });
       if (!res) return { status: "missing" };
       if (res.statusCode !== 200 || !res.stream) return { status: "failed" };
-      if (requestedVersionId && res.blob.etag !== requestedVersionId) {
+      const responseVersionId = normalizeBlobVersionId(res.blob.etag);
+      if (
+        requestedVersionId &&
+        responseVersionId !== normalizeBlobVersionId(requestedVersionId)
+      ) {
         return { status: "failed" };
       }
       if (
@@ -467,7 +482,7 @@ async function readObject(
         body,
         contentType: res.blob.contentType,
         etag: res.blob.etag,
-        versionId: res.blob.etag,
+        ...(responseVersionId ? { versionId: responseVersionId } : {}),
       };
     }
 

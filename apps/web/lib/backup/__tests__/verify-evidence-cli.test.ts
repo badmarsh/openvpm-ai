@@ -42,7 +42,7 @@ function evidenceFixture(
       sections[section]!.length,
     ]),
   );
-  const formatVersion = options.formatVersion ?? 7;
+  const formatVersion = options.formatVersion ?? 8;
   const objectBody = Buffer.from(
     JSON.stringify({
       formatVersion,
@@ -139,10 +139,10 @@ describe("backup recovery evidence CLI", () => {
   });
 
   it("rejects artifacts outside the one canonical supported export format", () => {
-    const result = run(evidenceFixture({ formatVersion: 6 }));
+    const result = run(evidenceFixture({ formatVersion: 7 }));
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("exportFormatVersion must be 7");
+    expect(result.stderr).toContain("exportFormatVersion must be 8");
   });
 
   it("checks catalog counts against the actual canonical section arrays", () => {

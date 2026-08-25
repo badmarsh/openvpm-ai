@@ -136,7 +136,7 @@ function canUpdateAppointmentStatusRole(role?: string | null): boolean {
 }
 
 function canSendAppointmentRemindersRole(role?: string | null): boolean {
-  return role === "admin" || role === "front_desk";
+  return role === "admin" || role === "veterinarian" || role === "front_desk";
 }
 
 // --- Helpers ---

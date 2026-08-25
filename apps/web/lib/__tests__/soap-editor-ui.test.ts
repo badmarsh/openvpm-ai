@@ -407,6 +407,10 @@ describe("records lab result form UX", () => {
 describe("records vaccination form UX", () => {
   it("adds vaccinations through bounded controls aligned to shared policy", () => {
     const source = readFileSync("app/(dashboard)/records/page.tsx", "utf8");
+    const fieldsSource = readFileSync(
+      "components/records/vaccination-form-fields.tsx",
+      "utf8"
+    );
 
     expect(VACCINATION_NAME_MAX_LENGTH).toBe(255);
     expect(VACCINATION_LOT_NUMBER_MAX_LENGTH).toBe(64);
@@ -421,14 +425,14 @@ describe("records vaccination form UX", () => {
     expect(source).toContain("const canCreateVaccinations =");
     expect(source).toContain("const canSubmitVaccination =");
     expect(source).toContain("Add Vaccination");
-    expect(source).toContain("maxLength={VACCINATION_NAME_MAX_LENGTH}");
-    expect(source).toContain(
+    expect(fieldsSource).toContain("maxLength={VACCINATION_NAME_MAX_LENGTH}");
+    expect(fieldsSource).toContain(
       "maxLength={VACCINATION_LOT_NUMBER_MAX_LENGTH}"
     );
-    expect(source).toContain(
+    expect(fieldsSource).toContain(
       "maxLength={VACCINATION_MANUFACTURER_MAX_LENGTH}"
     );
-    expect(source).toContain("isVaccinationOptionalDateInputValid");
+    expect(fieldsSource).toContain("isVaccinationOptionalDateInputValid");
     expect(source).toContain("vaccinationForm.lotNumber.trim() || undefined");
     expect(source).toContain("disabled={!canSubmitVaccination}");
     expect(source).not.toContain("disabled={createVaccination.isPending}");
