@@ -170,6 +170,11 @@ export default function BillingPage() {
   const [pendingInvoiceVoidId, setPendingInvoiceVoidId] = useState<
     string | null
   >(null);
+  const [pendingEstimateConversion, setPendingEstimateConversion] = useState<{
+    id: string;
+    updatedAt: Date;
+    appointmentId: string | null;
+  } | null>(null);
   const [invoiceVoidReason, setInvoiceVoidReason] = useState("");
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const limit = 25;
@@ -226,11 +231,37 @@ export default function BillingPage() {
 
   const convertEstimate = trpc.billing.convertEstimateToInvoice.useMutation({
     onSuccess: () => {
-      toast.success(t("billing.page.toastEstimateConverted", "Estimate converted to invoice"));
-      utils.billing.listInvoices.invalidate();
+      toast.success(
+        t(
+          "billing.page.toastEstimateConverted",
+          "Estimate converted to draft invoice"
+        )
+      );
     },
     onError: (err) => {
       toast.error(err.message);
+    },
+    onSettled: async (_invoice, _error, variables) => {
+      const appointmentId = pendingEstimateConversion?.appointmentId ?? null;
+      try {
+        await Promise.all([
+          utils.billing.listInvoices.invalidate(),
+          utils.billing.getInvoice.invalidate({ id: variables.id }),
+          utils.billing.listProducts.invalidate(),
+          utils.inventory.list.invalidate(),
+          utils.billing.listDispenseChargeQueue.invalidate(),
+          ...(appointmentId
+            ? [
+                utils.encounters.getCloseout.invalidate({ appointmentId }),
+                utils.encounters.getVisitReconciliation.invalidate({
+                  appointmentId,
+                }),
+              ]
+            : []),
+        ]);
+      } finally {
+        setPendingEstimateConversion(null);
+      }
     },
   });
 
@@ -255,9 +286,33 @@ export default function BillingPage() {
     updateStatus.mutate({ id, status });
   };
 
-  const handleConvertEstimate = (e: React.MouseEvent, id: string) => {
+  const handleConvertEstimate = (
+    e: React.MouseEvent,
+    estimate: {
+      id: string;
+      updatedAt: Date | string;
+      appointmentId: string | null;
+    }
+  ) => {
     e.stopPropagation();
-    convertEstimate.mutate({ id });
+    setPendingEstimateConversion({
+      id: estimate.id,
+      updatedAt: new Date(estimate.updatedAt),
+      appointmentId: estimate.appointmentId,
+    });
+  };
+
+  const closeEstimateConversionDialog = () => {
+    if (convertEstimate.isPending) return;
+    setPendingEstimateConversion(null);
+  };
+
+  const confirmEstimateConversion = () => {
+    if (!pendingEstimateConversion || convertEstimate.isPending) return;
+    convertEstimate.mutate({
+      id: pendingEstimateConversion.id,
+      expectedUpdatedAt: pendingEstimateConversion.updatedAt,
+    });
   };
 
   const handleVoidInvoice = (e: React.MouseEvent, id: string) => {
@@ -555,6 +610,25 @@ export default function BillingPage() {
           }
         />
       )}
+
+      <ActionConfirmationDialog
+        open={pendingEstimateConversion !== null}
+        title={t(
+          "billing.page.dialogConvertEstimateTitle",
+          "Convert estimate to invoice?"
+        )}
+        description={t(
+          "billing.page.dialogConvertEstimateDesc",
+          "This deducts tracked product stock and creates a draft invoice. It does not charge the client or automatically reconcile visit work."
+        )}
+        confirmLabel={t(
+          "billing.page.dialogConvertEstimateConfirm",
+          "Convert to invoice"
+        )}
+        isPending={convertEstimate.isPending}
+        onCancel={closeEstimateConversionDialog}
+        onConfirm={confirmEstimateConversion}
+      />
 
       <ActionConfirmationDialog
         open={pendingInvoiceVoidId !== null}
@@ -1117,6 +1191,7 @@ function InvoiceRow({
     adjustedAmount?: string | null;
     dueDate: string | null;
     createdAt: Date | string | null;
+    updatedAt: Date | string;
     isEstimate: boolean;
     appointmentId: string | null;
     clientFirstName: string | null;
@@ -1130,7 +1205,14 @@ function InvoiceRow({
     id: string,
     status: "sent"
   ) => void;
-  onConvertEstimate: (e: React.MouseEvent, id: string) => void;
+  onConvertEstimate: (
+    e: React.MouseEvent,
+    estimate: {
+      id: string;
+      updatedAt: Date | string;
+      appointmentId: string | null;
+    }
+  ) => void;
   onVoidInvoice: (e: React.MouseEvent, id: string) => void;
   practiceName: string;
   billingTimeZone?: string | null;
@@ -1203,7 +1285,7 @@ function InvoiceRow({
                 variant="ghost"
                 size="sm"
                 disabled={isMutating}
-                onClick={(e) => onConvertEstimate(e, invoice.id)}
+                onClick={(e) => onConvertEstimate(e, invoice)}
                 title={t("billing.row.tooltipConvertToInvoice", "Convert to Invoice")}
               >
                 <ArrowRightLeft className="h-3.5 w-3.5" />
@@ -1337,7 +1419,7 @@ function InvoiceRow({
                         <Button
                           size="sm"
                           disabled={isMutating}
-                          onClick={(e) => onConvertEstimate(e, invoice.id)}
+                          onClick={(e) => onConvertEstimate(e, invoice)}
                         >
                           <CheckCircle className="mr-1 h-3.5 w-3.5" />
                           {t("billing.row.approveAndConvert", "Approve & Convert")}
