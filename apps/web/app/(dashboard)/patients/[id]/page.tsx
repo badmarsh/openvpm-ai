@@ -57,6 +57,7 @@ import {
   formatClinicalDateTime,
 } from "@/lib/records/clinical-dates";
 import { soapSectionText } from "@/lib/records/soap-content";
+import { isRabiesVaccineName } from "@/lib/records/vaccination-policy";
 import {
   patientFileKind,
   patientFileLabel,
@@ -206,6 +207,10 @@ function canCorrectClinicalRecordRole(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian";
 }
 
+function canEditVaccinationCertificateRole(role?: string | null): boolean {
+  return role === "admin" || role === "veterinarian" || role === "technician";
+}
+
 function canSearchPatientHistoryRole(role?: string | null): boolean {
   return (
     role === "admin" ||
@@ -274,6 +279,9 @@ export default function PatientDetailPage() {
   );
   const canRecordVitals = canRecordVitalsRole(session?.user?.role);
   const canCorrectClinicalRecords = canCorrectClinicalRecordRole(
+    session?.user?.role,
+  );
+  const canEditVaccinationCertificate = canEditVaccinationCertificateRole(
     session?.user?.role,
   );
   const canSearchPatientHistory = canSearchPatientHistoryRole(
@@ -1236,6 +1244,8 @@ export default function PatientDetailPage() {
             patientId={patient.id}
             timeZone={recordsTimeZone}
             canCorrectClinicalRecords={canCorrectClinicalRecords}
+            canPrepareCertificate={canManagePatientDetail}
+            canEditCertificate={canEditVaccinationCertificate}
           />
         )}
 
@@ -1593,21 +1603,57 @@ function VitalsTab({
   );
 }
 
+type VaccinationCertificateEditor = {
+  id: string;
+  expectedUpdatedAt: string;
+  productName: string;
+  manufacturer: string;
+  lotNumber: string;
+  productExpirationDate: string;
+  doseType: "" | "initial" | "booster";
+  licensedDurationMonths: string;
+  rabiesTagNumber: string;
+  supervisingVeterinarianId: string;
+  reason: string;
+};
+
 function VaccinationsTab({
   patientId,
   timeZone,
   canCorrectClinicalRecords,
+  canPrepareCertificate,
+  canEditCertificate,
 }: {
   patientId: string;
   timeZone?: string | null;
   canCorrectClinicalRecords: boolean;
+  canPrepareCertificate: boolean;
+  canEditCertificate: boolean;
 }) {
   const utils = trpc.useUtils();
+  const [editor, setEditor] = useState<VaccinationCertificateEditor | null>(
+    null,
+  );
   const {
     data: vaccinations,
     isLoading,
     error,
   } = trpc.records.listVaccinations.useQuery({ patientId });
+  const providers = trpc.records.listVaccinationProviders.useQuery(undefined, {
+    enabled: Boolean(editor),
+    staleTime: 5 * 60 * 1000,
+  });
+  const prepareCertificate =
+    trpc.records.prepareVaccinationCertificate.useMutation();
+  const updateCertificateDetails =
+    trpc.records.updateVaccinationCertificateDetails.useMutation({
+      onSuccess: async () => {
+        setEditor(null);
+        await utils.records.listVaccinations.invalidate({ patientId });
+        toast.success("Certificate details updated with an audit entry");
+      },
+      onError: (err) => toast.error(err.message),
+    });
   const correctVaccination =
     trpc.records.markVaccinationEnteredInError.useMutation({
       onSuccess: async () => {
@@ -1617,6 +1663,109 @@ function VaccinationsTab({
       onError: (err) => toast.error(err.message),
     });
   const vaccinationsMissing = !isLoading && !error && !vaccinations;
+
+  async function downloadCertificate(
+    kind: "vaccination_history" | "rabies",
+    vaccinationRecordId?: string,
+  ) {
+    try {
+      const certificate = await prepareCertificate.mutateAsync({
+        patientId,
+        kind,
+        vaccinationRecordId,
+      });
+      if (!certificate.ready) {
+        toast.error(
+          `Complete these details before issuing the certificate: ${certificate.missingFields.join(
+            ", ",
+          )}.`,
+        );
+        return;
+      }
+      const pdf = await import("@/lib/pdf");
+      const generatedDate = formatClinicalDate(
+        certificate.generatedAt,
+        certificate.practice.timezone,
+        "Unknown date",
+      );
+      const baseData = {
+        certificateId: certificate.certificateId,
+        generatedDate,
+        practice: certificate.practice,
+        owner: certificate.owner,
+        patient: {
+          ...certificate.patient,
+          sex: formatSex(certificate.patient.sex),
+          dob: formatClinicalDate(
+            certificate.patient.dob,
+            certificate.practice.timezone,
+            undefined,
+          ),
+        },
+      };
+      const safePatientName = certificate.patient.name.replace(
+        /[^a-z0-9]+/gi,
+        "_",
+      );
+      if (kind === "vaccination_history") {
+        pdf
+          .generateVaccinationHistoryCertificatePdf({
+            ...baseData,
+            vaccinations: certificate.vaccinations.map((vaccination) => ({
+              ...vaccination,
+              administeredAt: formatClinicalDate(
+                vaccination.administeredAt,
+                certificate.practice.timezone,
+                "Unknown",
+              ),
+              nextDueDate: formatClinicalDate(
+                vaccination.nextDueDate,
+                certificate.practice.timezone,
+                undefined,
+              ),
+            })),
+          })
+          .save(`${safePatientName}_vaccination_certificate.pdf`);
+      } else {
+        const rabies = certificate.vaccinations[0]!;
+        pdf
+          .generateRabiesVaccinationCertificatePdf({
+            ...baseData,
+            vaccination: {
+              ...rabies,
+              productName: rabies.productName!,
+              manufacturer: rabies.manufacturer!,
+              lotNumber: rabies.lotNumber!,
+              productExpirationDate: formatClinicalDate(
+                rabies.productExpirationDate,
+                certificate.practice.timezone,
+                "Unknown",
+              ),
+              doseType: rabies.doseType!,
+              licensedDurationMonths: rabies.licensedDurationMonths!,
+              administeredAt: formatClinicalDate(
+                rabies.administeredAt,
+                certificate.practice.timezone,
+                "Unknown",
+              ),
+              nextDueDate: formatClinicalDate(
+                rabies.nextDueDate,
+                certificate.practice.timezone,
+                "Unknown",
+              ),
+              veterinarianName: rabies.veterinarianName!,
+              veterinarianLicenseNumber: rabies.veterinarianLicenseNumber!,
+            },
+          })
+          .save(`${safePatientName}_rabies_vaccination_certificate.pdf`);
+      }
+      toast.success("Certificate downloaded");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Unable to create certificate",
+      );
+    }
+  }
 
   if (error) {
     return (
@@ -1641,89 +1790,323 @@ function VaccinationsTab({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-muted/50">
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Vaccine Name
-            </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Date Given
-            </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Next Due
-            </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Lot Number
-            </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Administered By
-            </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Status
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {vaccinations.map((vax) => (
-            <tr
-              key={vax.id}
-              className={cn(
-                "border-b border-border last:border-0",
-                vax.correctionId && "bg-destructive/5 text-muted-foreground",
-              )}
+    <div className="space-y-4">
+      {canPrepareCertificate ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium">Vaccination certificates</p>
+            <p className="text-xs text-muted-foreground">
+              Every prepared certificate receives a unique ID and an audit
+              entry. Rabies certificates must pass a required-field check.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            disabled={prepareCertificate.isPending}
+            onClick={() => downloadCertificate("vaccination_history")}
+          >
+            {prepareCertificate.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="mr-2 h-4 w-4" />
+            )}
+            Download vaccination certificate
+          </Button>
+        </div>
+      ) : null}
+
+      {editor ? (
+        <form
+          className="rounded-lg border border-border bg-card p-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (editor.reason.trim().length < 10) return;
+            updateCertificateDetails.mutate({
+              patientId,
+              recordId: editor.id,
+              expectedUpdatedAt: editor.expectedUpdatedAt,
+              reason: editor.reason,
+              productName: editor.productName || undefined,
+              manufacturer: editor.manufacturer || undefined,
+              lotNumber: editor.lotNumber || undefined,
+              productExpirationDate: editor.productExpirationDate || undefined,
+              doseType: editor.doseType || undefined,
+              licensedDurationMonths: editor.licensedDurationMonths
+                ? Number(editor.licensedDurationMonths)
+                : undefined,
+              rabiesTagNumber: editor.rabiesTagNumber || undefined,
+              supervisingVeterinarianId:
+                editor.supervisingVeterinarianId || undefined,
+            });
+          }}
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">Edit certificate details</p>
+              <p className="text-xs text-muted-foreground">
+                Clinical history is preserved. A reason is recorded with every
+                change.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setEditor(null)}
             >
-              <td className="px-4 py-3 font-medium">{vax.vaccineName}</td>
-              <td className="px-4 py-3">
-                {formatClinicalDate(vax.administeredAt, timeZone, "\u2014")}
-              </td>
-              <td className="px-4 py-3">
-                {formatClinicalDate(vax.nextDueDate, timeZone, "\u2014")}
-              </td>
-              <td className="px-4 py-3">{vax.lotNumber ?? "\u2014"}</td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {vax.administeredByName ?? "\u2014"}
-              </td>
-              <td className="px-4 py-3">
-                {vax.correctionId ? (
-                  <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
-                    Entered in error
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    Recorded
-                  </span>
-                )}
-                <ClinicalCorrectionControl
-                  correction={
-                    vax.correctionId && vax.correctionReason && vax.correctedAt
-                      ? {
-                          id: vax.correctionId,
-                          reason: vax.correctionReason,
-                          correctedAt: vax.correctedAt,
-                          correctedByName: vax.correctedByName,
-                        }
-                      : null
+              Cancel
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                ["Product name", "productName"],
+                ["Manufacturer", "manufacturer"],
+                ["Lot number", "lotNumber"],
+                ["Product expiration", "productExpirationDate"],
+                ["Rabies tag", "rabiesTagNumber"],
+              ] as const
+            ).map(([label, field]) => (
+              <label
+                key={field}
+                className="space-y-1 text-xs font-medium text-muted-foreground"
+              >
+                {label}
+                <input
+                  type={field === "productExpirationDate" ? "date" : "text"}
+                  value={editor[field]}
+                  onChange={(event) =>
+                    setEditor({ ...editor, [field]: event.target.value })
                   }
-                  canCorrect={canCorrectClinicalRecords}
-                  isPending={
-                    correctVaccination.isPending &&
-                    correctVaccination.variables?.recordId === vax.id
-                  }
-                  onCorrect={(reason) =>
-                    correctVaccination.mutateAsync({
-                      patientId,
-                      recordId: vax.id,
-                      reason,
-                    })
-                  }
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
                 />
-              </td>
+              </label>
+            ))}
+            <label className="space-y-1 text-xs font-medium text-muted-foreground">
+              Dose type
+              <select
+                value={editor.doseType}
+                onChange={(event) =>
+                  setEditor({
+                    ...editor,
+                    doseType: event.target.value as "" | "initial" | "booster",
+                  })
+                }
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+              >
+                <option value="">Not recorded</option>
+                <option value="initial">Initial</option>
+                <option value="booster">Booster</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-medium text-muted-foreground">
+              Licensed duration
+              <select
+                value={editor.licensedDurationMonths}
+                onChange={(event) =>
+                  setEditor({
+                    ...editor,
+                    licensedDurationMonths: event.target.value,
+                  })
+                }
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+              >
+                <option value="">Not recorded</option>
+                <option value="12">1 year</option>
+                <option value="36">3 years</option>
+                <option value="48">4 years</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-medium text-muted-foreground">
+              Supervising veterinarian
+              <select
+                value={editor.supervisingVeterinarianId}
+                onChange={(event) =>
+                  setEditor({
+                    ...editor,
+                    supervisingVeterinarianId: event.target.value,
+                  })
+                }
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+              >
+                <option value="">Not recorded</option>
+                {providers.data?.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name}
+                    {provider.licenseNumber
+                      ? ` — ${provider.licenseNumber}`
+                      : " — license missing"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-medium text-muted-foreground sm:col-span-2 lg:col-span-4">
+              Reason for change (required, at least 10 characters)
+              <textarea
+                value={editor.reason}
+                minLength={10}
+                maxLength={500}
+                required
+                onChange={(event) =>
+                  setEditor({ ...editor, reason: event.target.value })
+                }
+                className="min-h-20 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              />
+            </label>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="submit"
+              disabled={
+                editor.reason.trim().length < 10 ||
+                updateCertificateDetails.isPending
+              }
+            >
+              {updateCertificateDetails.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Save audited changes
+            </Button>
+          </div>
+        </form>
+      ) : null}
+
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full min-w-[960px] text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Vaccine Name
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Date Given
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Next Due
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Product / Lot
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Administered By
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Certificate
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                Status
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {vaccinations.map((vax) => (
+              <tr
+                key={vax.id}
+                className={cn(
+                  "border-b border-border align-top last:border-0",
+                  vax.correctionId && "bg-destructive/5 text-muted-foreground",
+                )}
+              >
+                <td className="px-4 py-3 font-medium">{vax.vaccineName}</td>
+                <td className="px-4 py-3">
+                  {formatClinicalDate(vax.administeredAt, timeZone, "\u2014")}
+                </td>
+                <td className="px-4 py-3">
+                  {formatClinicalDate(vax.nextDueDate, timeZone, "\u2014")}
+                </td>
+                <td className="px-4 py-3">
+                  <span>{vax.productName ?? "—"}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Lot {vax.lotNumber ?? "—"}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {vax.administeredByName ?? "\u2014"}
+                </td>
+                <td className="px-4 py-3">
+                  {!vax.correctionId &&
+                  canPrepareCertificate &&
+                  isRabiesVaccineName(vax.vaccineName) ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={prepareCertificate.isPending}
+                      onClick={() => downloadCertificate("rabies", vax.id)}
+                    >
+                      Rabies PDF
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                  {!vax.correctionId && canEditCertificate ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="mt-1 block"
+                      onClick={() =>
+                        setEditor({
+                          id: vax.id,
+                          expectedUpdatedAt: vax.updatedAt.toISOString(),
+                          productName: vax.productName ?? "",
+                          manufacturer: vax.manufacturer ?? "",
+                          lotNumber: vax.lotNumber ?? "",
+                          productExpirationDate:
+                            vax.productExpirationDate ?? "",
+                          doseType: vax.doseType ?? "",
+                          licensedDurationMonths:
+                            vax.licensedDurationMonths?.toString() ?? "",
+                          rabiesTagNumber: vax.rabiesTagNumber ?? "",
+                          supervisingVeterinarianId:
+                            vax.supervisingVeterinarianId ?? "",
+                          reason: "",
+                        })
+                      }
+                    >
+                      Edit details
+                    </Button>
+                  ) : null}
+                </td>
+                <td className="px-4 py-3">
+                  {vax.correctionId ? (
+                    <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
+                      Entered in error
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Recorded
+                    </span>
+                  )}
+                  <ClinicalCorrectionControl
+                    correction={
+                      vax.correctionId &&
+                      vax.correctionReason &&
+                      vax.correctedAt
+                        ? {
+                            id: vax.correctionId,
+                            reason: vax.correctionReason,
+                            correctedAt: vax.correctedAt,
+                            correctedByName: vax.correctedByName,
+                          }
+                        : null
+                    }
+                    canCorrect={canCorrectClinicalRecords}
+                    isPending={
+                      correctVaccination.isPending &&
+                      correctVaccination.variables?.recordId === vax.id
+                    }
+                    onCorrect={(reason) =>
+                      correctVaccination.mutateAsync({
+                        patientId,
+                        recordId: vax.id,
+                        reason,
+                      })
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1781,212 +2164,219 @@ function MedicalRecordsTab({
           />
         ) : (
           notes.map((note) => {
-        const hasOtherCurrentAppointmentSoap = Boolean(
-          note.appointmentId &&
-          notes.some(
-            (candidate) =>
-              candidate.id !== note.id &&
-              candidate.appointmentId === note.appointmentId &&
-              candidate.status === "finalized" &&
-              !candidate.correctionId,
-          ),
-        );
-        const hasAppointmentSoapDraft = Boolean(
-          note.appointmentId &&
-          notes.some(
-            (candidate) =>
-              candidate.id !== note.id &&
-              candidate.appointmentId === note.appointmentId &&
-              candidate.status === "draft",
-          ),
-        );
-        return (
-          <div
-            key={note.id}
-            id={`soap-note-${note.id}`}
-            className={cn(
-              "rounded-lg border border-border bg-card p-4",
-              note.correctionId && "border-destructive/40 bg-destructive/5",
-            )}
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">
-                  {note.createdAt
-                    ? formatClinicalDate(note.createdAt, timeZone, "Unknown")
-                    : "Unknown"}
-                </p>
-                {note.imported ? (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                    Imported
-                  </span>
-                ) : null}
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                    note.status === "draft"
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-                  )}
-                >
-                  {note.status === "draft" ? "Draft" : "Finalized"}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {note.imported
-                  ? note.authorName
-                    ? `Imported by ${note.authorName}`
-                    : "Imported record"
-                  : (note.authorName ?? "Unknown author")}
-              </p>
-            </div>
-            {note.status === "finalized" ? (
-              <p className="mb-3 text-xs text-muted-foreground">
-                Finalized by {note.finalizerName ?? "Unknown clinician"}
-                {note.finalizedAt
-                  ? ` on ${formatClinicalDateTime(note.finalizedAt, timeZone)}`
-                  : ""}
-              </p>
-            ) : note.appointmentId && canCorrectClinicalRecords ? (
-              <a
-                href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
-                className="mb-3 inline-flex text-xs font-medium text-primary hover:underline"
+            const hasOtherCurrentAppointmentSoap = Boolean(
+              note.appointmentId &&
+              notes.some(
+                (candidate) =>
+                  candidate.id !== note.id &&
+                  candidate.appointmentId === note.appointmentId &&
+                  candidate.status === "finalized" &&
+                  !candidate.correctionId,
+              ),
+            );
+            const hasAppointmentSoapDraft = Boolean(
+              note.appointmentId &&
+              notes.some(
+                (candidate) =>
+                  candidate.id !== note.id &&
+                  candidate.appointmentId === note.appointmentId &&
+                  candidate.status === "draft",
+              ),
+            );
+            return (
+              <div
+                key={note.id}
+                id={`soap-note-${note.id}`}
+                className={cn(
+                  "rounded-lg border border-border bg-card p-4",
+                  note.correctionId && "border-destructive/40 bg-destructive/5",
+                )}
               >
-                Resume draft
-              </a>
-            ) : null}
-            {note.replacesSoapNoteId ? (
-              <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
-                <p className="font-medium text-primary">
-                  Current replacement SOAP
-                </p>
-                <a
-                  href={`#soap-note-${note.replacesSoapNoteId}`}
-                  className="mt-1 inline-flex text-xs font-medium text-primary hover:underline"
-                >
-                  View retained original
-                </a>
-              </div>
-            ) : null}
-            <dl className="grid gap-3 sm:grid-cols-2">
-              {(
-                [
-                  ["Subjective", note.subjective],
-                  ["Objective", note.objective],
-                  ["Assessment", note.assessment],
-                  ["Plan", note.plan],
-                ] as const
-              ).map(([label, value]) =>
-                value ? (
-                  <div key={label}>
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {label}
-                    </dt>
-                    <dd className="mt-1 whitespace-pre-wrap text-sm">
-                      {soapSectionText(value)}
-                    </dd>
-                  </div>
-                ) : null,
-              )}
-            </dl>
-            {note.addenda.length > 0 ? (
-              <div className="mt-4 space-y-2 border-t border-border pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Addenda
-                </p>
-                {note.addenda.map((addendum) => (
-                  <div key={addendum.id} className="rounded-md bg-muted/40 p-3">
-                    <p className="text-xs font-medium">
-                      {addendum.authorName} -{" "}
-                      {formatClinicalDateTime(addendum.createdAt, timeZone)}
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">
+                      {note.createdAt
+                        ? formatClinicalDate(
+                            note.createdAt,
+                            timeZone,
+                            "Unknown",
+                          )
+                        : "Unknown"}
                     </p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm">
-                      {soapSectionText(addendum.content)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {note.status === "finalized" && !note.correctionId ? (
-              <SoapAddendumControl
-                patientId={patientId}
-                noteId={note.id}
-                enabled={canCorrectClinicalRecords}
-              />
-            ) : null}
-            {note.status === "finalized" ? (
-              <>
-                <ClinicalCorrectionControl
-                  correction={
-                    note.correctionId &&
-                    note.correctionReason &&
-                    note.correctedAt
-                      ? {
-                          id: note.correctionId,
-                          reason: note.correctionReason,
-                          correctedAt: note.correctedAt,
-                          correctedByName: note.correctedByName,
-                        }
-                      : null
-                  }
-                  triggerLabel="Void without replacement"
-                  description="The original stays in permanent chart history but leaves current clinical summaries immediately. If its content needs correction, cancel and use Replace finalized SOAP. Use void alone only when no replacement belongs on this encounter; closeout will require a documented reason."
-                  canCorrect={canCorrectClinicalRecords}
-                  isPending={
-                    correctSoap.isPending &&
-                    correctSoap.variables?.recordId === note.id
-                  }
-                  onCorrect={(reason) =>
-                    correctSoap.mutateAsync({
-                      patientId,
-                      recordId: note.id,
-                      reason,
-                    })
-                  }
-                />
-                {note.replacementSoapNoteId ? (
-                  <div className="mt-3 flex justify-end">
-                    <a
-                      href={`#soap-note-${note.replacementSoapNoteId}`}
-                      className="text-sm font-medium text-primary hover:underline"
+                    {note.imported ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                        Imported
+                      </span>
+                    ) : null}
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        note.status === "draft"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+                      )}
                     >
-                      View signed replacement
+                      {note.status === "draft" ? "Draft" : "Finalized"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {note.imported
+                      ? note.authorName
+                        ? `Imported by ${note.authorName}`
+                        : "Imported record"
+                      : (note.authorName ?? "Unknown author")}
+                  </p>
+                </div>
+                {note.status === "finalized" ? (
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Finalized by {note.finalizerName ?? "Unknown clinician"}
+                    {note.finalizedAt
+                      ? ` on ${formatClinicalDateTime(note.finalizedAt, timeZone)}`
+                      : ""}
+                  </p>
+                ) : note.appointmentId && canCorrectClinicalRecords ? (
+                  <a
+                    href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
+                    className="mb-3 inline-flex text-xs font-medium text-primary hover:underline"
+                  >
+                    Resume draft
+                  </a>
+                ) : null}
+                {note.replacesSoapNoteId ? (
+                  <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+                    <p className="font-medium text-primary">
+                      Current replacement SOAP
+                    </p>
+                    <a
+                      href={`#soap-note-${note.replacesSoapNoteId}`}
+                      className="mt-1 inline-flex text-xs font-medium text-primary hover:underline"
+                    >
+                      View retained original
                     </a>
                   </div>
-                ) : canCorrectClinicalRecords &&
-                  (!note.correctionId ||
-                    (!hasOtherCurrentAppointmentSoap &&
-                      !hasAppointmentSoapDraft)) ? (
-                  <div className="mt-3 flex justify-end">
-                    <Button asChild size="sm">
-                      <Link
-                        href={`/records/replace-soap/${encodeURIComponent(patientId)}?sourceNoteId=${encodeURIComponent(note.id)}&return=patient`}
-                      >
-                        {note.correctionId
-                          ? "Create missing replacement"
-                          : "Replace finalized SOAP"}
-                      </Link>
-                    </Button>
-                  </div>
-                ) : hasAppointmentSoapDraft && note.appointmentId ? (
-                  <div className="mt-3 flex justify-end">
-                    <Button asChild size="sm" variant="outline">
-                      <a
-                        href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
-                      >
-                        Review encounter SOAP draft
-                      </a>
-                    </Button>
-                  </div>
-                ) : note.correctionId && hasOtherCurrentAppointmentSoap ? (
-                  <p className="mt-3 text-right text-xs text-muted-foreground">
-                    This encounter already has a current finalized SOAP.
-                  </p>
                 ) : null}
-              </>
-            ) : null}
-          </div>
-        );
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      ["Subjective", note.subjective],
+                      ["Objective", note.objective],
+                      ["Assessment", note.assessment],
+                      ["Plan", note.plan],
+                    ] as const
+                  ).map(([label, value]) =>
+                    value ? (
+                      <div key={label}>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {label}
+                        </dt>
+                        <dd className="mt-1 whitespace-pre-wrap text-sm">
+                          {soapSectionText(value)}
+                        </dd>
+                      </div>
+                    ) : null,
+                  )}
+                </dl>
+                {note.addenda.length > 0 ? (
+                  <div className="mt-4 space-y-2 border-t border-border pt-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Addenda
+                    </p>
+                    {note.addenda.map((addendum) => (
+                      <div
+                        key={addendum.id}
+                        className="rounded-md bg-muted/40 p-3"
+                      >
+                        <p className="text-xs font-medium">
+                          {addendum.authorName} -{" "}
+                          {formatClinicalDateTime(addendum.createdAt, timeZone)}
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm">
+                          {soapSectionText(addendum.content)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {note.status === "finalized" && !note.correctionId ? (
+                  <SoapAddendumControl
+                    patientId={patientId}
+                    noteId={note.id}
+                    enabled={canCorrectClinicalRecords}
+                  />
+                ) : null}
+                {note.status === "finalized" ? (
+                  <>
+                    <ClinicalCorrectionControl
+                      correction={
+                        note.correctionId &&
+                        note.correctionReason &&
+                        note.correctedAt
+                          ? {
+                              id: note.correctionId,
+                              reason: note.correctionReason,
+                              correctedAt: note.correctedAt,
+                              correctedByName: note.correctedByName,
+                            }
+                          : null
+                      }
+                      triggerLabel="Void without replacement"
+                      description="The original stays in permanent chart history but leaves current clinical summaries immediately. If its content needs correction, cancel and use Replace finalized SOAP. Use void alone only when no replacement belongs on this encounter; closeout will require a documented reason."
+                      canCorrect={canCorrectClinicalRecords}
+                      isPending={
+                        correctSoap.isPending &&
+                        correctSoap.variables?.recordId === note.id
+                      }
+                      onCorrect={(reason) =>
+                        correctSoap.mutateAsync({
+                          patientId,
+                          recordId: note.id,
+                          reason,
+                        })
+                      }
+                    />
+                    {note.replacementSoapNoteId ? (
+                      <div className="mt-3 flex justify-end">
+                        <a
+                          href={`#soap-note-${note.replacementSoapNoteId}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          View signed replacement
+                        </a>
+                      </div>
+                    ) : canCorrectClinicalRecords &&
+                      (!note.correctionId ||
+                        (!hasOtherCurrentAppointmentSoap &&
+                          !hasAppointmentSoapDraft)) ? (
+                      <div className="mt-3 flex justify-end">
+                        <Button asChild size="sm">
+                          <Link
+                            href={`/records/replace-soap/${encodeURIComponent(patientId)}?sourceNoteId=${encodeURIComponent(note.id)}&return=patient`}
+                          >
+                            {note.correctionId
+                              ? "Create missing replacement"
+                              : "Replace finalized SOAP"}
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : hasAppointmentSoapDraft && note.appointmentId ? (
+                      <div className="mt-3 flex justify-end">
+                        <Button asChild size="sm" variant="outline">
+                          <a
+                            href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
+                          >
+                            Review encounter SOAP draft
+                          </a>
+                        </Button>
+                      </div>
+                    ) : note.correctionId && hasOtherCurrentAppointmentSoap ? (
+                      <p className="mt-3 text-right text-xs text-muted-foreground">
+                        This encounter already has a current finalized SOAP.
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            );
           })
         )
       ) : null}

@@ -537,7 +537,9 @@ export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
       "care_reminders_patient_tenant_fk",
       "care_reminders_creator_tenant_fk",
       "care_reminders_completer_tenant_fk",
+      "care_reminders_dismisser_tenant_fk",
       "care_reminders_state_check",
+      "care_reminders_dismissal_reason_check",
       "care_reminders_import_identity_check",
     ].map((name) => ({
       kind: "constraint" as const,
@@ -558,6 +560,15 @@ export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
       table: "care_reminders",
       name: "tenant_isolation",
     },
+    ...[
+      "vaccination_records_supervising_veterinarian_id_users_id_fk",
+      "vaccination_records_supervisor_practice_fk",
+      "vaccination_records_licensed_duration_check",
+    ].map((name) => ({
+      kind: "constraint" as const,
+      table: "vaccination_records",
+      name,
+    })),
     ...[
       "services_import_identity_check",
       "services_import_fingerprint_check",

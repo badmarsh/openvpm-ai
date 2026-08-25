@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 
 const MAX_CATALOG_BYTES = 1_000_000;
 const MAX_BACKUP_BYTES = 50_000_000;
-const SUPPORTED_EXPORT_FORMAT_VERSION = 7;
+const SUPPORTED_EXPORT_FORMAT_VERSION = 8;
 const PRACTICE_EXPORT_SECTIONS = [
   "locations",
   "locationMessaging",
@@ -34,6 +34,7 @@ const PRACTICE_EXPORT_SECTIONS = [
   "wellnessEnrollments",
   "patientWeights",
   "patientAllergies",
+  "careReminders",
   "appointments",
   "historicalAppointments",
   "appointmentWaitlist",

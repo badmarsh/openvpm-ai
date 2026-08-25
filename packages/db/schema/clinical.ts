@@ -70,6 +70,11 @@ export const soapNoteStatusEnum = pgEnum("soap_note_status", [
   "finalized",
 ]);
 
+export const vaccinationDoseTypeEnum = pgEnum("vaccination_dose_type", [
+  "initial",
+  "booster",
+]);
+
 export const soapNotes = pgTable(
   "soap_notes",
   {
@@ -253,9 +258,17 @@ export const vaccinationRecords = pgTable(
     vaccineName: varchar("vaccine_name", { length: 255 }).notNull(),
     // Import-only dose identity. Normal administered doses keep this null.
     importFingerprint: varchar("import_fingerprint", { length: 64 }),
+    productName: varchar("product_name", { length: 255 }),
     lotNumber: varchar("lot_number", { length: 64 }),
     manufacturer: varchar("manufacturer", { length: 128 }),
+    productExpirationDate: date("product_expiration_date"),
+    doseType: vaccinationDoseTypeEnum("dose_type"),
+    licensedDurationMonths: integer("licensed_duration_months"),
+    rabiesTagNumber: varchar("rabies_tag_number", { length: 64 }),
     administeredBy: uuid("administered_by").references(() => users.id),
+    supervisingVeterinarianId: uuid("supervising_veterinarian_id").references(
+      () => users.id,
+    ),
     administeredAt: timestamp("administered_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -302,6 +315,15 @@ export const vaccinationRecords = pgTable(
       foreignColumns: [appointments.practiceId, appointments.id],
       name: "vaccination_records_practice_appointment_fk",
     }),
+    supervisorPracticeFk: foreignKey({
+      columns: [table.practiceId, table.supervisingVeterinarianId],
+      foreignColumns: [users.practiceId, users.id],
+      name: "vaccination_records_supervisor_practice_fk",
+    }),
+    licensedDurationCheck: check(
+      "vaccination_records_licensed_duration_check",
+      sql`${table.licensedDurationMonths} is null or ${table.licensedDurationMonths} between 1 and 120`,
+    ),
   }),
 );
 
@@ -820,6 +842,12 @@ export const vaccinationRecordsRelations = relations(
     administeredByUser: one(users, {
       fields: [vaccinationRecords.administeredBy],
       references: [users.id],
+      relationName: "vaccinationAdministrator",
+    }),
+    supervisingVeterinarian: one(users, {
+      fields: [vaccinationRecords.supervisingVeterinarianId],
+      references: [users.id],
+      relationName: "vaccinationSupervisor",
     }),
   }),
 );

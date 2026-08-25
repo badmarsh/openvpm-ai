@@ -166,6 +166,15 @@ describe("backupKey", () => {
   });
 });
 
+describe("staff attribution retention", () => {
+  it("keeps all source staff rows so historical ledgers remain restorable", () => {
+    const source = readFileSync("lib/backup/export.ts", "utf8");
+
+    expect(source).toContain("const userRows = allUserRows;");
+    expect(source).not.toContain("user.deletedAt == null || referencedUserIds");
+  });
+});
+
 describe("attachment manifest restore safety", () => {
   function manifestBackup() {
     return {
@@ -523,6 +532,7 @@ describe("summarizePracticeExport", () => {
     expect(PRACTICE_EXPORT_SECTIONS).toContain("webhooks");
     expect(PRACTICE_EXPORT_SECTIONS).toContain("apiKeys");
     expect(PRACTICE_EXPORT_SECTIONS).toContain("auditLog");
+    expect(PRACTICE_EXPORT_SECTIONS).toContain("careReminders");
   });
 
   it("requires replacement lineage in current backups but accepts its legacy absence", () => {
@@ -1002,16 +1012,14 @@ describe("exportPracticeData query scoping", () => {
     expect(source).toContain("patientMergeEvents: patientMergeRows");
   });
 
-  it("exports append-only SMS consent evidence and referenced identities", () => {
+  it("exports append-only SMS consent evidence and its owned identities", () => {
     expect(source).toContain(
       "allPracticeRows(db, smsConsentEvents, practiceId)",
     );
     expect(source).toContain(
       "...smsConsentEventRows.map((event) => event.clientId)",
     );
-    expect(source).toContain(
-      "...smsConsentEventRows.map((event) => event.actorUserId)",
-    );
+    expect(source).toContain("const userRows = allUserRows;");
     expect(source).toContain(
       "...smsConsentEventRows.map((event) => event.locationId)",
     );
@@ -1041,7 +1049,9 @@ describe("independent recovery metadata", () => {
 
     expect(
       validatePracticeExportRestore({ ...backup, practice: undefined }).errors,
-    ).toContain("practice recovery metadata is required in backup format v6.");
+    ).toContain(
+      `practice recovery metadata is required in backup format v${PRACTICE_EXPORT_FORMAT_VERSION}.`,
+    );
     expect(
       validatePracticeExportRestore({
         ...backup,
@@ -1066,7 +1076,9 @@ describe("independent recovery metadata", () => {
         ...backup,
         formatVersion: PRACTICE_EXPORT_FORMAT_VERSION + 1,
       }).errors,
-    ).toContain("backup format v8 is newer than this release supports.");
+    ).toContain(
+      `backup format v${PRACTICE_EXPORT_FORMAT_VERSION + 1} is newer than this release supports.`,
+    );
     expect(
       validatePracticeExportRestore({
         ...backup,
@@ -1078,13 +1090,76 @@ describe("independent recovery metadata", () => {
         ...backup,
         counts: undefined,
       }).errors,
-    ).toContain("canonical section counts are required in backup format v6.");
+    ).toContain(
+      `canonical section counts are required in backup format v${PRACTICE_EXPORT_FORMAT_VERSION}.`,
+    );
     expect(
       validatePracticeExportRestore({
         ...backup,
         counts: { ...backup.counts, unexpected: 0 },
       }).errors,
     ).toContain("backup counts contain unsupported sections: unexpected.");
+  });
+});
+
+describe("care reminder recovery", () => {
+  function backupWithReminder(reminder: Record<string, unknown>) {
+    const practiceId = "00000000-0000-4000-8000-000000000060";
+    const userId = "00000000-0000-4000-8000-000000000061";
+    const clientId = "00000000-0000-4000-8000-000000000062";
+    const patientId = "00000000-0000-4000-8000-000000000063";
+    return withCanonicalCounts({
+      formatVersion: PRACTICE_EXPORT_FORMAT_VERSION,
+      practiceId,
+      practice: { id: practiceId, name: "Recovery Clinic" },
+      ...emptyBackup(),
+      users: [{ id: userId, practiceId }],
+      clients: [{ id: clientId, practiceId }],
+      patients: [{ id: patientId, practiceId, clientId }],
+      careReminders: [
+        {
+          id: "00000000-0000-4000-8000-000000000064",
+          practiceId,
+          patientId,
+          title: "Review imported reminder",
+          dueDate: "2026-08-24",
+          createdBy: userId,
+          deletedAt: null,
+          ...reminder,
+        },
+      ],
+    });
+  }
+
+  it("accepts an attributed dismissed reminder", () => {
+    const backup = backupWithReminder({
+      status: "dismissed",
+      completedAt: null,
+      completedBy: null,
+      dismissedAt: "2026-08-24T18:00:00.000Z",
+      dismissedBy: "00000000-0000-4000-8000-000000000061",
+      dismissalReason: "Duplicate imported reminder",
+    });
+
+    expect(validatePracticeExportRestore(backup)).toEqual({
+      valid: true,
+      errors: [],
+    });
+  });
+
+  it("rejects partial or contradictory reminder states before restore", () => {
+    const backup = backupWithReminder({
+      status: "dismissed",
+      completedAt: "2026-08-24T17:00:00.000Z",
+      completedBy: "00000000-0000-4000-8000-000000000061",
+      dismissedAt: "2026-08-24T18:00:00.000Z",
+      dismissedBy: null,
+      dismissalReason: "x",
+    });
+
+    expect(validatePracticeExportRestore(backup).errors).toContain(
+      "careReminders[00000000-0000-4000-8000-000000000064] must have a complete and mutually exclusive open, completed, or dismissed state.",
+    );
   });
 });
 
