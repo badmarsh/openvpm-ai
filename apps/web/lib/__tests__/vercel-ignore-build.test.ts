@@ -8,6 +8,7 @@ function ignoredBuildStatus(overrides: Record<string, string>): number | null {
   return spawnSync("bash", [ignoreBuildScript], {
     cwd: process.cwd(),
     env: {
+      NODE_ENV: "test",
       PATH: process.env.PATH,
       VERCEL_ENV: "preview",
       NEXT_PUBLIC_DEMO_MODE: "true",
