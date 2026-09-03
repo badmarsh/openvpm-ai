@@ -119,6 +119,9 @@ const aSoapDeletedRestoreAddendum = randomUUID();
 const aSoapDraft = randomUUID();
 const aPatient = randomUUID();
 const bPatient = randomUUID();
+const aRecentClinicalItem = randomUUID();
+const bRecentClinicalItem = randomUUID();
+const crossTenantRecentClinicalItem = randomUUID();
 const aFile = randomUUID();
 const bFile = randomUUID();
 const aReplica = randomUUID();
@@ -725,6 +728,77 @@ try {
     (${aSoapDraftFinalAppointment}, ${aId}, ${aLocation}, ${aClient}, ${aPatient}, now(), now() + interval '30 minutes', 'in_exam'),
     (${aSoapDoubleFinalAppointment}, ${aId}, ${aLocation}, ${aClient}, ${aPatient}, now(), now() + interval '30 minutes', 'in_exam'),
     (${aSoapDiscardAppointment}, ${aId}, ${aLocation}, ${aClient}, ${aPatient}, now(), now() + interval '30 minutes', 'in_exam')`;
+
+  await owner`insert into recent_clinical_items
+    (id, practice_id, user_id, patient_id, appointment_id)
+    values (${bRecentClinicalItem}, ${bId}, ${bUser}, ${bPatient}, ${bSoapLegalAppointment})`;
+  const insertedRecentClinicalItem = await appTransaction(async (tx) => {
+    await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+    return tx`insert into recent_clinical_items
+      (id, practice_id, user_id, patient_id, appointment_id)
+      values (${aRecentClinicalItem}, ${aId}, ${aUser}, ${aPatient}, ${aSoapLegalAppointment})
+      returning id`;
+  });
+  check(
+    "tenant A can insert its own recent clinical item",
+    insertedRecentClinicalItem.length === 1 &&
+      insertedRecentClinicalItem[0]!.id === aRecentClinicalItem,
+  );
+
+  let crossTenantRecentClinicalInsertBlocked = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+      await tx`insert into recent_clinical_items
+        (id, practice_id, user_id, patient_id, appointment_id)
+        values (${crossTenantRecentClinicalItem}, ${bId}, ${bUser}, ${bPatient}, ${bSoapLegalAppointment})`;
+    });
+  } catch {
+    crossTenantRecentClinicalInsertBlocked = true;
+  }
+  check(
+    "tenant A cannot insert a recent clinical item for tenant B",
+    crossTenantRecentClinicalInsertBlocked,
+  );
+
+  const tenantARecentClinicalItems = await appTransaction(async (tx) => {
+    await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+    return tx`select id, practice_id from recent_clinical_items
+      where id in (${aRecentClinicalItem}, ${bRecentClinicalItem})`;
+  });
+  check(
+    "tenant A sees only its own recent clinical items",
+    tenantARecentClinicalItems.length === 1 &&
+      tenantARecentClinicalItems[0]!.id === aRecentClinicalItem &&
+      tenantARecentClinicalItems[0]!.practice_id === aId,
+  );
+
+  const crossTenantRecentClinicalUpdate = await appTransaction(async (tx) => {
+    await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+    return tx`update recent_clinical_items
+      set viewed_at = now()
+      where id = ${bRecentClinicalItem}
+      returning id`;
+  });
+  check(
+    "tenant A cannot update tenant B's recent clinical items",
+    crossTenantRecentClinicalUpdate.length === 0,
+  );
+
+  let recentClinicalDeleteBlocked = false;
+  try {
+    await appTransaction(async (tx) => {
+      await tx`select set_config('app.current_practice_id', ${aId}, true)`;
+      await tx`delete from recent_clinical_items
+        where id = ${aRecentClinicalItem}`;
+    });
+  } catch {
+    recentClinicalDeleteBlocked = true;
+  }
+  check(
+    "application role cannot delete its own recent clinical items",
+    recentClinicalDeleteBlocked,
+  );
 
   let correctedReplacementTransactionAllowed = false;
   try {
@@ -4688,6 +4762,8 @@ try {
     await cleanup`delete from clinic_pilots where id = ${clinicPilotId}`;
     await cleanup`delete from invoices where id in (${aInvoice}, ${bInvoice})`;
     await cleanup`delete from migration_runs where id in (${aMigrationRun}, ${bMigrationRun})`;
+    await cleanup`delete from recent_clinical_items
+      where id in (${aRecentClinicalItem}, ${bRecentClinicalItem}, ${crossTenantRecentClinicalItem})`;
     await cleanup`delete from appointments where id in (${aAppointment}, ${bAppointment}, ${aSoapLegalAppointment}, ${bSoapLegalAppointment}, ${aSoapDraftFinalAppointment}, ${aSoapDoubleFinalAppointment}, ${aSoapDiscardAppointment})`;
     await cleanup`delete from rooms where id in (${aRoom}, ${bRoom})`;
     await cleanup`delete from prescriptions where id in (${aPrescription}, ${bPrescription})`;

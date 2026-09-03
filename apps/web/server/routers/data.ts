@@ -112,6 +112,12 @@ const importSpeciesInput = z.enum([
   "rabbit",
   "reptile",
   "equine",
+  "bovine",
+  "ovine",
+  "caprine",
+  "porcine",
+  "poultry",
+  "camelid",
   "other",
 ]);
 const importSexInput = z

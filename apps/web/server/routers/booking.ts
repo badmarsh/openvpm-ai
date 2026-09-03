@@ -303,6 +303,12 @@ const petInput = z.object({
     "rabbit",
     "reptile",
     "equine",
+    "bovine",
+    "ovine",
+    "caprine",
+    "porcine",
+    "poultry",
+    "camelid",
     "other",
   ]),
 });

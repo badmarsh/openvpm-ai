@@ -12,18 +12,10 @@ import {
   preflightOnlineBookingAppointmentNote,
   type PrevisitIntake,
 } from "@/lib/booking/previsit-intake";
-
-const SPECIES_OPTIONS = [
-  { value: "canine", label: "Dog" },
-  { value: "feline", label: "Cat" },
-  { value: "avian", label: "Bird" },
-  { value: "rabbit", label: "Rabbit" },
-  { value: "reptile", label: "Reptile" },
-  { value: "equine", label: "Horse" },
-  { value: "other", label: "Other" },
-] as const;
-
-type SpeciesValue = (typeof SPECIES_OPTIONS)[number]["value"];
+import {
+  PATIENT_SPECIES_OPTIONS,
+  type PatientSpecies,
+} from "@/lib/patients/species";
 
 function dateInputValue(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -57,7 +49,7 @@ export default function PublicBookingPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [petName, setPetName] = useState("");
-  const [species, setSpecies] = useState<SpeciesValue>("canine");
+  const [species, setSpecies] = useState<PatientSpecies>("canine");
   const [reason, setReason] = useState("");
   const [intake, setIntake] = useState<PrevisitIntake>({});
   // Honeypot: hidden from humans, filled by bots.
@@ -537,10 +529,10 @@ export default function PublicBookingPage() {
               <select
                 id={speciesFieldId}
                 value={species}
-                onChange={(e) => setSpecies(e.target.value as SpeciesValue)}
+                onChange={(e) => setSpecies(e.target.value as PatientSpecies)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
               >
-                {SPECIES_OPTIONS.map((s) => (
+                {PATIENT_SPECIES_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
