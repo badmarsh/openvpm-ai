@@ -28,6 +28,7 @@ const TIMEZONES = [
   "America/Anchorage",
   "Pacific/Honolulu",
   "America/Toronto",
+  "Europe/Bratislava",
   "Europe/London",
   "Europe/Dublin",
   "Australia/Sydney",

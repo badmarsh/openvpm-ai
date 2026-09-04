@@ -59,6 +59,11 @@ describe("regionDefaults", () => {
       taxRatePercent: "20.00",
       timezone: "Europe/London",
     });
+    expect(regionDefaults("SK")).toMatchObject({
+      currency: "eur",
+      taxRatePercent: "20.00",
+      timezone: "Europe/Bratislava",
+    });
   });
 });
 

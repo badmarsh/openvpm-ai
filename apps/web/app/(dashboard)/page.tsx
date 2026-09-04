@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { formatCurrency } from "@/lib/locale/format";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
+import { useI18n } from "@/lib/i18n";
 
 function DashboardChartsChunkLoading() {
   return (
@@ -168,6 +169,7 @@ function AppointmentRowSkeleton() {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const stats = trpc.dashboard.getStats.useQuery();
   const charts = trpc.dashboard.getCharts.useQuery();
   const pendingFollowUps = trpc.encounters.listPendingFollowUps.useQuery();
@@ -292,14 +294,16 @@ export default function DashboardPage() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{kpi.label}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t(`dashboard.kpi.${kpi.key}.label`, kpi.label)}
+                    </p>
                     <p className="font-heading text-2xl font-bold">
                       {kpi.isCurrency ? fmtMoney(value) : String(value)}
                     </p>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {kpi.description}
+                  {t(`dashboard.kpi.${kpi.key}.description`, kpi.description)}
                 </p>
               </div>
             );
@@ -395,13 +399,13 @@ export default function DashboardPage() {
       <div className="rounded-lg border border-border bg-card">
         <div className="border-b border-border px-6 py-4">
           <h2 className="font-heading text-lg font-semibold">
-            Upcoming Appointments
+            {t("dashboard.upcoming.title", "Upcoming Appointments")}
           </h2>
         </div>
         <div className="space-y-2 p-4">
           {upcomingError || isUpcomingMissing ? (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-              Unable to load upcoming appointments.
+              {t("dashboard.upcoming.error", "Unable to load upcoming appointments.")}
               {upcomingError ? ` ${upcomingError.message}` : " Please retry."}
             </div>
           ) : isUpcomingLoading ? (
@@ -412,10 +416,16 @@ export default function DashboardPage() {
             <EmptyState
               className="border-0 bg-transparent py-8"
               icon={Calendar}
-              title="No visits booked yet"
-              description="Book your first visit and it shows up here."
+              title={t("dashboard.upcoming.empty.title", "No visits booked yet")}
+              description={t(
+                "dashboard.upcoming.empty.description",
+                "Book your first visit and it shows up here.",
+              )}
               action={{
-                label: "Book your first visit",
+                label: t(
+                  "dashboard.upcoming.empty.action",
+                  "Book your first visit",
+                ),
                 onClick: () => router.push("/schedule"),
                 icon: CalendarPlus,
               }}

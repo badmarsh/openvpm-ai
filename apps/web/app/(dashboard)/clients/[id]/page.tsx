@@ -38,6 +38,7 @@ import {
   formatClinicalDateTime,
 } from "@/lib/records/clinical-dates";
 import { communicationStatusLabel } from "@/lib/communications/status";
+import { useI18n } from "@/lib/i18n";
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
 
@@ -78,10 +79,11 @@ function CommunicationChannelIcon({
 }
 
 function ClientDetailLoadingPanel() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      Loading client...
+      {t("clients.detail.loadingClient", "Loading client...")}
     </div>
   );
 }
@@ -89,6 +91,7 @@ function ClientDetailLoadingPanel() {
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const { data: session } = useSession();
   const [confirmRotatePortal, setConfirmRotatePortal] = useState(false);
@@ -111,7 +114,12 @@ export default function ClientDetailPage() {
       setIssuedPortalToken(result.accessToken);
       utils.clients.getById.invalidate({ id: params.id });
       setConfirmRotatePortal(false);
-      toast.success("One-time portal link created");
+      toast.success(
+        t(
+          "clients.detail.portalLinkCreated",
+          "One-time portal link created",
+        ),
+      );
     },
     onError: (err) => {
       toast.error(err.message);
@@ -126,13 +134,16 @@ export default function ClientDetailPage() {
     return (
       <EmptyState
         icon={AlertCircle}
-        title="Unable to load client"
+        title={t("clients.detail.unableToLoadClient", "Unable to load client")}
         description={
           error?.message ??
-          "Choose a client from the Clients list before opening the detail page."
+          t(
+            "clients.detail.chooseClientFromList",
+            "Choose a client from the Clients list before opening the detail page.",
+          )
         }
         action={{
-          label: "Back to Clients",
+          label: t("clients.actions.backToClients", "Back to Clients"),
           onClick: () => router.push("/clients"),
           icon: ArrowLeft,
         }}
@@ -153,10 +164,17 @@ export default function ClientDetailPage() {
       await navigator.clipboard.writeText(
         `${window.location.origin}${portalPath}`
       );
-      toast.success("Portal link copied");
+      toast.success(
+        t("clients.detail.portalLinkCopied", "Portal link copied"),
+      );
       emitGuideSignal(GUIDE_SIGNALS.portalLinkCopied);
     } catch {
-      toast.error("Could not copy portal link");
+      toast.error(
+        t(
+          "clients.detail.portalLinkCopyError",
+          "Could not copy portal link",
+        ),
+      );
     }
   };
 
@@ -178,7 +196,7 @@ export default function ClientDetailPage() {
         className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Clients
+        {t("clients.actions.backToClients", "Back to Clients")}
       </Button>
 
       <div className="rounded-lg border border-border bg-card p-6">
@@ -214,7 +232,7 @@ export default function ClientDetailPage() {
               size="sm"
               onClick={() => router.push(`/clients/${client.id}/edit`)}
             >
-              Edit
+              {t("clients.actions.editClient", "Edit")}
             </Button>
           )}
         </div>
@@ -227,15 +245,20 @@ export default function ClientDetailPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h3 className="font-heading text-lg font-semibold">
-              Client Portal
+              {t("clients.detail.portalAccess", "Client Portal")}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a private, one-time link so the client can start a secure
-              portal session. Links expire after 15 minutes.
+              {t(
+                "clients.detail.portalLinksHelp",
+                "Create a private, one-time link so the client can start a secure portal session. Links expire after 15 minutes.",
+              )}
             </p>
             {!canManageClientDetails ? (
               <p className="mt-3 text-sm text-muted-foreground">
-                Portal links are available to staff with client write access.
+                {t(
+                  "clients.detail.portalStaffOnly",
+                  "Portal links are available to staff with client write access.",
+                )}
               </p>
             ) : portalPath ? (
               <div className="mt-3 break-all rounded-md border border-border bg-muted px-3 py-2 text-sm">
@@ -244,18 +267,32 @@ export default function ClientDetailPage() {
             ) : (
               <p className="mt-3 text-sm text-muted-foreground">
                 {client.portalAccessState === "ready"
-                  ? "A one-time link is active, but its secret is no longer displayed. Reset access to create another."
+                  ? t(
+                      "clients.detail.portalActive",
+                      "A one-time link is active, but its secret is no longer displayed. Reset access to create another.",
+                    )
                   : client.portalAccessState === "consumed"
-                    ? "The client has used their latest link. Reset access only if they need a new session."
+                    ? t(
+                        "clients.detail.portalConsumed",
+                        "The client has used their latest link. Reset access only if they need a new session.",
+                      )
                     : client.portalAccessState === "expired"
-                      ? "The latest one-time link has expired."
-                      : "No portal link has been issued for this client yet."}
+                      ? t(
+                          "clients.detail.portalExpired",
+                          "The latest one-time link has expired.",
+                        )
+                      : t(
+                          "clients.detail.portalNotIssued",
+                          "No portal link has been issued for this client yet.",
+                        )}
               </p>
             )}
             {confirmRotatePortal ? (
               <p className="mt-2 text-xs text-amber-700">
-                Resetting access invalidates the previous link and signs this
-                client out of every active portal session.
+                {t(
+                  "clients.detail.portalConfirmWarning",
+                  "Resetting access invalidates the previous link and signs this client out of every active portal session.",
+                )}
               </p>
             ) : null}
           </div>
@@ -269,7 +306,7 @@ export default function ClientDetailPage() {
                   className="gap-2"
                 >
                   <Copy className="h-4 w-4" />
-                  Copy
+                  {t("clients.detail.copy", "Copy")}
                 </Button>
                 <Button
                   variant="outline"
@@ -279,7 +316,7 @@ export default function ClientDetailPage() {
                 >
                   <a href={portalPath} target="_blank" rel="noreferrer">
                     <ExternalLink className="h-4 w-4" />
-                    Open
+                    {t("clients.detail.open", "Open")}
                   </a>
                 </Button>
               </>
@@ -294,12 +331,12 @@ export default function ClientDetailPage() {
               >
                 <RefreshCw className="h-4 w-4" />
                 {rotatePortalToken.isPending
-                  ? "Updating..."
+                  ? t("clients.detail.updating", "Updating...")
                   : client.portalAccessState !== "not_issued"
                     ? confirmRotatePortal
-                      ? "Confirm Reset"
-                      : "Reset Access"
-                    : "Create Link"}
+                      ? t("clients.detail.confirmReset", "Confirm Reset")
+                      : t("clients.detail.resetAccess", "Reset Access")
+                    : t("clients.detail.createLink", "Create Link")}
               </Button>
             )}
             {canManageClientDetails && confirmRotatePortal ? (
@@ -308,7 +345,7 @@ export default function ClientDetailPage() {
                 size="sm"
                 onClick={() => setConfirmRotatePortal(false)}
               >
-                Cancel
+                {t("clients.actions.cancel", "Cancel")}
               </Button>
             ) : null}
           </div>
@@ -324,7 +361,9 @@ export default function ClientDetailPage() {
 
       <div className="mt-6">
         <h3 className="font-heading text-lg font-semibold mb-4">
-          Patients ({client.patients.length})
+          {t("clients.detail.patientsCount", "Patients ({count})", {
+            count: client.patients.length,
+          })}
         </h3>
         {client.patients.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -356,7 +395,11 @@ export default function ClientDetailPage() {
                           : "bg-amber-100 text-amber-700"
                     }`}
                   >
-                    {patient.status ?? "active"}
+                    {patient.status === "active"
+                      ? t("patients.form.statusActive", "Active")
+                      : patient.status === "deceased"
+                        ? t("patients.form.statusDeceased", "Deceased")
+                        : t("patients.form.statusInactive", "Inactive")}
                   </span>
                 </div>
               </div>
@@ -365,11 +408,18 @@ export default function ClientDetailPage() {
         ) : (
           <EmptyState
             icon={PawPrint}
-            title="No patients for this client yet"
+            title={
+              /* title="No patients for this client yet" */
+              t(
+                "clients.detail.noPatientsForClient",
+                "No patients for this client yet",
+              )
+            }
             action={
               canManageClientDetails
                 ? {
-                    label: "Add patient",
+                    /* label: "Add patient" */
+                    label: t("clients.detail.addPatientAction", "Add patient"),
                     onClick: () => {
                       const ownerName = `${client.firstName} ${client.lastName}`;
                       router.push(
@@ -388,6 +438,7 @@ export default function ClientDetailPage() {
 }
 
 function CommunicationLogPanel({ clientId }: { clientId: string }) {
+  const { t } = useI18n();
   const {
     data: communicationSettings,
     isLoading: settingsLoading,
@@ -419,22 +470,31 @@ function CommunicationLogPanel({ clientId }: { clientId: string }) {
     <div className="mt-6 rounded-lg border border-border bg-card p-6">
       <div>
         <h3 className="font-heading text-lg font-semibold">
-          Communication Log
+          {t("clients.detail.communicationLog", "Communication Log")}
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Calls, texts, emails, and portal requests linked to this client.
+          {t(
+            "clients.detail.communicationLogDesc",
+            "Calls, texts, emails, and portal requests linked to this client.",
+          )}
         </p>
       </div>
 
       {communicationLogError || communicationLogMissing ? (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
           {communicationLogError?.message ??
-            "Unable to load communication log. Please retry."}
+            t(
+              "common.error_retry",
+              "Unable to load communication log. Please retry.",
+            )}
         </div>
       ) : isCommunicationLogLoading ? (
         <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading communication log...
+          {t(
+            "clients.detail.loadingCommLog",
+            "Loading communication log...",
+          )}
         </div>
       ) : verifiedCommunicationSettings &&
         communications &&
@@ -443,8 +503,18 @@ function CommunicationLogPanel({ clientId }: { clientId: string }) {
           {communications.map((message) => {
             const channel =
               message.channel as keyof typeof communicationChannelLabels;
+            const channelLabel =
+              channel === "sms"
+                ? t("clients.detail.channelSms", "SMS")
+                : channel === "email"
+                  ? t("clients.detail.channelEmail", "Email")
+                  : channel === "portal"
+                    ? t("clients.detail.channelPortal", "Portal")
+                    : t("clients.detail.channelPhone", "Phone");
             const directionLabel =
-              message.direction === "outbound" ? "Outbound" : "Inbound";
+              message.direction === "outbound"
+                ? t("clients.detail.outbound", "Outbound")
+                : t("clients.detail.inbound", "Inbound");
             const statusLabel = communicationStatusLabel(message);
 
             return (
@@ -454,7 +524,7 @@ function CommunicationLogPanel({ clientId }: { clientId: string }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className="gap-1.5">
                         <CommunicationChannelIcon channel={channel} />
-                        {communicationChannelLabels[channel]}
+                        {channelLabel}
                       </Badge>
                       <span className="text-xs font-medium uppercase text-muted-foreground">
                         {directionLabel}
@@ -467,7 +537,8 @@ function CommunicationLogPanel({ clientId }: { clientId: string }) {
                       <p className="text-sm font-medium">{message.subject}</p>
                     ) : null}
                     <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                      {message.content?.trim() || "No content"}
+                      {message.content?.trim() ||
+                        t("clients.detail.noContent", "No content")}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -486,8 +557,14 @@ function CommunicationLogPanel({ clientId }: { clientId: string }) {
         <EmptyState
           className="mt-4"
           icon={MessageSquare}
-          title="No communication log yet"
-          description="Messages, calls, and portal requests linked to this client will appear here."
+          title={t(
+            "clients.detail.noCommLog",
+            "No communication log yet",
+          )}
+          description={t(
+            "clients.detail.noCommLogDesc",
+            "Messages, calls, and portal requests linked to this client will appear here.",
+          )}
         />
       )}
     </div>
@@ -509,6 +586,7 @@ function WellnessEnrollmentPanel({
   };
   canManageWellnessMemberships: boolean;
 }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const { data: plans, isLoading, error } = trpc.wellness.listPlans.useQuery();
@@ -544,7 +622,12 @@ function WellnessEnrollmentPanel({
   );
   const enroll = trpc.wellness.enroll.useMutation({
     onSuccess: () => {
-      toast.success("Wellness enrollment created");
+      toast.success(
+        t(
+          "clients.detail.wellnessEnrollmentCreated",
+          "Wellness enrollment created",
+        ),
+      );
       utils.wellness.listEnrollments.invalidate({
         clientId: client.id,
         status: "active",
@@ -558,7 +641,12 @@ function WellnessEnrollmentPanel({
   });
   const cancelEnrollment = trpc.wellness.cancel.useMutation({
     onSuccess: () => {
-      toast.success("Wellness enrollment cancelled");
+      toast.success(
+        t(
+          "clients.detail.wellnessEnrollmentCancelled",
+          "Wellness enrollment cancelled",
+        ),
+      );
       utils.wellness.listEnrollments.invalidate({
         clientId: client.id,
         status: "active",
@@ -571,7 +659,15 @@ function WellnessEnrollmentPanel({
   });
 
   const handleCancelEnrollment = (enrollmentId: string) => {
-    if (!window.confirm("Cancel this wellness enrollment?")) return;
+    if (
+      !window.confirm(
+        t(
+          "clients.detail.confirmCancelWellness",
+          "Cancel this wellness enrollment?",
+        ),
+      )
+    )
+      return;
     cancelEnrollment.mutate({ enrollmentId });
   };
   const canCreateEnrollment =
@@ -588,24 +684,41 @@ function WellnessEnrollmentPanel({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-heading text-lg font-semibold">
-                Wellness Membership
+                {t(
+                  "clients.detail.wellnessMembership",
+                  "Wellness Membership",
+                )}
               </h3>
-              <Badge variant="secondary">Invoice schedule</Badge>
+              <Badge variant="secondary">
+                {t("clients.detail.invoiceSchedule", "Invoice schedule")}
+              </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {isLoading
-                ? "Loading plans..."
+                ? t("clients.detail.loadingWellness", "Loading plans...")
                 : error
                 ? error.message
                 : plansMissing
-                ? "Unable to load wellness plans. Please retry."
+                ? t(
+                    "common.error_retry",
+                    "Unable to load wellness plans. Please retry.",
+                  )
                 : activePlans.length === 0
-                ? "No active wellness plans configured."
-                : `${activePlans.length} active plan${activePlans.length === 1 ? "" : "s"}`}
+                ? t(
+                    "clients.detail.noWellnessPlans",
+                    "No active wellness plans configured.",
+                  )
+                : t(
+                    "clients.detail.activePlansCount",
+                    `${activePlans.length} active plan${activePlans.length === 1 ? "" : "s"}`,
+                    { count: activePlans.length },
+                  )}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Enrollment creates scheduled invoices; saved cards are not
-              auto-charged.
+              {t(
+                "clients.detail.wellnessDisclaimer",
+                "Enrollment creates scheduled invoices; saved cards are not auto-charged.",
+              )}
             </p>
           </div>
         </div>
@@ -618,7 +731,9 @@ function WellnessEnrollmentPanel({
               onChange={(e) => setSelectedPlanId(e.target.value)}
               disabled={enroll.isPending || !enrollmentsReady}
             >
-              <option value="">Select plan</option>
+              <option value="">
+                {t("clients.detail.selectPlan", "Select plan")}
+              </option>
               {activePlans.map((plan) => (
                 <option key={plan.id} value={plan.id}>
                   {plan.name}
@@ -631,7 +746,9 @@ function WellnessEnrollmentPanel({
               onChange={(e) => setSelectedPatientId(e.target.value)}
               disabled={enroll.isPending || !enrollmentsReady}
             >
-              <option value="">Client account</option>
+              <option value="">
+                {t("clients.detail.clientAccount", "Client account")}
+              </option>
               {activePatients.map((patient) => (
                 <option key={patient.id} value={patient.id}>
                   {patient.name}
@@ -654,7 +771,7 @@ function WellnessEnrollmentPanel({
               ) : (
                 <HeartPulse className="mr-2 h-4 w-4" />
               )}
-              Enroll
+              {t("clients.detail.enroll", "Enroll")}
             </Button>
           </div>
         )}
@@ -665,26 +782,41 @@ function WellnessEnrollmentPanel({
         </div>
       ) : enrollmentsMissing ? (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          Unable to load wellness memberships. Please retry.
+          {t(
+            "clients.detail.wellnessMembershipsError",
+            "Unable to load wellness memberships. Please retry.",
+          )}
         </div>
       ) : enrollmentsQuery.isLoading ? (
         <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading memberships...
+          {t(
+            "clients.detail.loadingWellnessMemberships",
+            "Loading memberships...",
+          )}
         </div>
       ) : activeEnrollments.length > 0 ? (
         <div className="mt-4 overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">Plan</th>
-                <th className="px-4 py-3 text-left font-medium">Patient</th>
                 <th className="px-4 py-3 text-left font-medium">
-                  Next Invoice
+                  {t("clients.detail.plan", "Plan")}
                 </th>
-                <th className="px-4 py-3 text-right font-medium">Price</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("clients.detail.patient", "Patient")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("clients.detail.nextInvoice", "Next Invoice")}
+                </th>
                 <th className="px-4 py-3 text-right font-medium">
-                  {canManageWellnessMemberships ? "Actions" : "Access"}
+                  {t("clients.detail.price", "Price")}
+                </th>
+                <th className="px-4 py-3 text-right font-medium">
+                  {/* {canManageWellnessMemberships ? "Actions" : "Access"} */}
+                  {canManageWellnessMemberships
+                    ? t("clients.detail.actions", "Actions")
+                    : t("clients.detail.access", "Access")}
                 </th>
               </tr>
             </thead>
@@ -698,7 +830,8 @@ function WellnessEnrollmentPanel({
                     {enrollment.planName}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {enrollment.patientName || "Client account"}
+                    {enrollment.patientName ||
+                      t("clients.detail.clientAccount", "Client account")}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatClinicalDate(
@@ -719,7 +852,10 @@ function WellnessEnrollmentPanel({
                         onClick={() =>
                           handleCancelEnrollment(enrollment.enrollmentId)
                         }
-                        title="Cancel enrollment"
+                        title={t(
+                          "clients.detail.cancelEnrollmentTitle",
+                          "Cancel enrollment",
+                        )}
                       >
                         {cancelEnrollment.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -729,7 +865,7 @@ function WellnessEnrollmentPanel({
                       </Button>
                     ) : (
                       <span className="text-xs text-muted-foreground">
-                        Read-only
+                        {t("clients.detail.readOnly", "Read-only")}
                       </span>
                     )}
                   </td>

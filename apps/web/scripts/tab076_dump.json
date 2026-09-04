@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "name": "Veterinárne osvedčenie o vyšetrení zdravotného stavu zvieraťa, ktoré poranilo človeka alebo iné zviera",
+    "reportFile": "rep201",
+    "panelClassName": "eu.vetsoftware.forms.MadnessPanel",
+    "prefix": "h376",
+    "text1": "Ja dole podpísaný/ná vlastník/držiteľ zvieraťa, beriem na vedomie, že zviera musí byť po dobu 14-tich dní izolované tak aby nemohlo uniknúť ani poraniť človeka alebo zviera. Každú zmenu v správaní, prípadne stratu alebo uhynutie zvieraťa bezodkladne oznámim ošetrujúcemu veterinárnemu lekárovi a príslušnej regionálnej veterinárnej a potravinovej správe.",
+    "text2": "Besnota je nebezpečná choroba, prenosná na všetky teplokrvné stavovce vrátane človeka. Po prepuknutí príznakov má vždy smrteľný priebeh a je neliečiteľná. U zvierat sa z počiatku prejavuje hlavne zmenou správania (nekľud, neposlušnosť, nutkavé správanie). U psov sa prejavuje vydávaním chrapľavých zvukov, snahou uniknúť, zvrátenou chuťou (požieranie slamy, kameňov, dreva, hliny a pod.). Neskôr sa môže prejaviť zúrivosť, kúsavosť, snahou napadnúť iné zviera alebo človeka, vrátane vlastníka a jeho rodiny, prípadne zmenou pohľadu alebo koordinácie pohybu. U mačiek sa prejavuje vyhľadávaním a ukrývaním sa v tmavých a kľudných miestach. Postupom priebehu choroby dochádza k ochrnutiu dolnej čeľuste a jazyka, k nemožnosti hltania, výtoku ťahavých slín, ochrnutiu iných častí tela až uhynutiu udusením. V zmysle § 17 zákona č. 39 / 2007 Z.z. o veterinárnej starostlivosti a o zmene niektorých zákonov je vlastník alebo držiteľ zvieraťa okrem iného povinný : a) hlásiť orgánu veterinárnej správy podozrenie alebo výskyt besnoty (zoonóza – choroba prenosná zo zvieraťa na človeka), b) zabezpečiť pri vnímavých mäsožravcov vakcináciu proti besnote, c) bez meškania zabezpečiť veterinárne vyšetrenie zvieraťa, ktoré poranilo človeka. V zmysle § 4 ods. 4 zákona č. 282/2002 Z.z., ktorým sa upravujú niektoré podmienky držania psov je držiteľ psa alebo osoba, ktorá psa vedie, povinná povedať svoje meno, priezvisko a adresu trvalého pobytu a meno, priezvisko a adresu trvalého pobytu vlastníka psa osobe, ktorú pes pohrýzol. Súčasne je povinná oznámiť obci, kde je pes evidovaný, skutočnosť, že pes pohrýzol človeka bez toho, aby bol sám napadnutý alebo vyprovokovaný, ak sa nepoužil v nutnej obrane alebo krajnej núdzi. Veterinárne osvedčenie o vyšetrení zdravotného stavu zvieraťa, ktoré poranilo človeka alebo zviera ihneď odovzdať ošetrujúcemu lekárovi poranenej osoby! V prípade potreby odoslania k veterinárnemu vyšetreniu do iného okresu, veterinárny lekár, ktorý vykonal vyšetrenie zvieraťa, ohlási príslušnej regionálnej veterinárnej a potravinovej správe túto skutočnosť vrátane údajov z oddielu č. 1 a vlastník/držiteľ zvieraťa predloží toto veterinárne osvedčenie o vyšetrení zdravotného stavu zvieraťa, ktoré poranilo človeka alebo zviera potvrdené veterinárnym lekárom.",
+    "text3": "Nariaďuje sa izolovanie a pozorovanie zvieraťa po dobu nasledujúcich 9 dní!",
+    "text4": "Nariaďuje sa izolovanie a pozorovanie zvieraťa po dobu nasledujúcich 14 dní!",
+    "text5": null
+  },
+  {
+    "id": 2,
+    "name": "Súhlas s eutanáziou",
+    "reportFile": "rep202",
+    "panelClassName": "eu.vetsoftware.forms.EutanazieProtokolPanel",
+    "prefix": "h377",
+    "text1": "Beriem na vedomie, že v prípade akýchkoľvek otázok ohľadne nasledujúcich prehlásení sa môžem MVDr. Martina Sýkoru opýtať na ich význam. \n - Potvrdzujem, že som výlučný vlastník alebo osoba zodpovedná za horeuvedené zviera a že som oprávnený rozhodnúť o jeho eutanázii (usmrtení).\n - Potvrdzujem, že horeuvedené zviera v posledných pätnástich (15) dňoch nepohrýzlo ani neporanilo človeka alebo zviera.\n - Prehlasujem, že podľa mojich vedomostí nebolo horeuvedené zviera v posledných pätnástich (15) dňoch poranené iným zvieraťom podozrivým alebo chorým na besnotu.\n - Prehlasujem, že zviera nie je poistené a ak áno, že poisťovňa bola o rozhodnutí o eutanázii upovedomená.\n - Dávam MVDr. Martin Sýkora súhlas a oprávnenie na eutanáziu (usmrtenie) horeuvedeného zvieraťa s predchádzajúcim zbavením jeho vedomia. \n - Zbavujem MVDr. Martin Sýkora akejkoľvek zodpovednosti za eutanáziu a asanáciu horeuvedeného zvieraťa. \n\nPo eutanázii si žiadam zviera vziať domov na pochovanie/asanáciu.",
+    "text2": "",
+    "text3": "Tento súhlas slúži aj ako potvrdenie na odhlásenie popísaného zvieraťa z evidencie príslušného MÚ.",
+    "text4": null,
+    "text5": null
+  },
+  {
+    "id": 3,
+    "name": "Lekárska správa",
+    "reportFile": "rep203",
+    "panelClassName": "eu.vetsoftware.forms.MedReportPanel",
+    "prefix": "h378",
+    "text1": null,
+    "text2": null,
+    "text3": null,
+    "text4": null,
+    "text5": null
+  },
+  {
+    "id": 4,
+    "name": "Súhlas s hospitalizáciou-vyšetrením-zákrokom-terapiou",
+    "reportFile": "rep204",
+    "panelClassName": "eu.vetsoftware.forms.HospitProtokolPanel",
+    "prefix": "h379",
+    "text1": "Já, dolu podpísaný(á) majiteľ(ka) uvedeného zvieraťa súhlasím s vyššie uvedenými veterinárnymi úkonmi, ako aj s ďalšími neuvedenými úkonmi, ktoré by sa počas pobytu vo veterinárnom zariadení javili ako opodstatnené a nevyhnutné. Bol(a) som poučený(á) o súčasnom stave zvieraťa o účele zákroku, ako i o možných komplikáciách, rizikách a následkoch zákroku. Som si vedomý(á) skutočnosti, že počas  pobytu môjho zvieraťa vo veterinárnom zariadení môžu nastať situácie, kedy nebude možné so mnou konzultovať stav zvieraťa a oprávňujem pracovníkov konať podľa aktuálneho zdravotného stavu v prospech  života a zdravia zvereného zvieraťa. Som si vedomý(á) skutočnosti, že biologické zákonitosti, ktorými sa riadi živý organizmus nie sú vždy úspešne ovplyvniteľné ani správne vykonanými diagnostickými a terapeutickými postupmi. Náklady spojené s hospitalizáciou, vyšetrením, zákrokom, terapiou uhradím pri prevzatí zvieraťa, pokiaľ nie je vopred dohodnuté inak. Neuhradením dohodnutých nákladov vyhlasujem zviera za nechcené podľa znenia zákona. Právo na vymáhanie takto vzniknutej pohľadávky zostáva nechcením zvieraťa nedotknuté. V prípade, že majiteľa zastupujem, preberám plnú zodpovednosť za rozhodnutia vykonané v mene majiteľa.\nAko majiteľ zvieraťa alebo osoba zodpovedná za toto zviera prehlasujem, že mi boli ešte pred zákrokom vysvetlené riziká anestézie a horeuvedeného zákroku, a uvedomujem si, že jeho výsledok nemôže byť zaručený. Som si vedomý, že pri vykonávaní zákroku sa môžu vyskytnúť nepredvídané skutočnosti, ktoré môžu vyžadovať prekročenie rozsahu plánovaného zákroku a tým navýšenie celkovej ceny zákroku. Rovnako som si vedomý, že pri anestézii dochádza k zmene fyziologických a biologických procesov v organizme, ktoré môžu, najmä z dôvodu existujúcich skrytých vád organizmu, viesť k vzniku nepredvídaných životoohrozujúcich stavov, ktoré nie vždy môžu byť ovplyvniteľné zásahom veterinárneho lekára alebo podávaním liekov, a preto môžu viesť k smrti zvieraťa. Boli mi ponúknuté predanestetické vyšetrenia a vnútrožilné podávanie roztokov počas anestézie a svoju voľbu som vyššie označil. Súhlasím s vykonaním horeuvedeného zákroku a oprávňujem MVDr. Martina Sýkoru k vykonaniu horeuvedeného zákroku spôsobom, ktorý ponechávam na odbornom posúdení veterinárneho lekára, a očakávam primeranú obozretnosť na zaistenie bezpečnosti môjho zvieraťa.",
+    "text2": null,
+    "text3": null,
+    "text4": null,
+    "text5": null
+  },
+  {
+    "id": 5,
+    "name": "Žiadanka na laboratórne vyšetrenia",
+    "reportFile": "rep205",
+    "panelClassName": "eu.vetsoftware.forms.LaboratoryOrderPanel",
+    "prefix": "h380",
+    "text1": null,
+    "text2": null,
+    "text3": null,
+    "text4": null,
+    "text5": null
+  },
+  {
+    "id": 6,
+    "name": "Potvrdenie o kontrole totožnosti psa",
+    "reportFile": "rep207",
+    "panelClassName": "eu.vetsoftware.forms.KontrolaPesPanel",
+    "prefix": "h840",
+    "text1": "Číslo tetovania/mikročipu sa",
+    "text2": "s číslom uvedeným v preukaze o pôvode",
+    "text3": "",
+    "text4": "",
+    "text5": ""
+  },
+  {
+    "id": 7,
+    "name": "Súhlas so spracovaním osobných údajov",
+    "reportFile": "rep208",
+    "panelClassName": "eu.vetsoftware.forms.OsobniSouhlas",
+    "prefix": "h841",
+    "text1": "Týmto ako dotknutá osoba dávam výslovne a dobrovoľne súhlas v zmysle ust. § 7 a nasl. z. č. 428/2002 Z. z. o ochrane osobných údajov znení neskorších predpisov, aby moje osobné údaje uvedené v tomto dokumente boli spracované Komorou veterinárnych lekárov Slovenskej republiky IČO: 173 178 94, Botanická 17, 841 04 Bratislava, Zriadená zákonom č. 442/ 2004 Z.z.  (KVL SR) a použité pre prevádzkovanie Slovenského registra zvierat (SRZ) a počítačovej databázy pre centrálny register spoločenských zvierat (CRSZ). Rovnako súhlasím so sprístupnením týchto osobných údajov všetkým orgánom veterinárnej správy, v rámci plnenia svojich kontrolných funkcií, v zmysle zákona č. 39/2007 Z. z. o veterinárnej starostlivosti. Rovnako súhlasím so sprístupnením týchto osobných údajov ďalším oprávneným osobám v zmysle vyhlášky Ministerstva pôdohospodárstva Slovenskej republiky č. 123/2008 Z.z. o podrobnostiach o ochrane spoločenských zvierat a o požiadavkách na karanténne stanice a útulky pre zvieratá (vyhláška)tak, aby tieto osoby mali prístup k týmto osobným údajom v prípade straty alebo nálezu môjho zvieraťa, a aby tieto osobné údaje použili v súlade s ust. §9 ods. 10 a ust. §10 ods. 10 vyhlášky a aby ich spracúvali vo svojich informačných systémoch. Rovnako súhlasím s tým, aby ďalšie osoby na území Slovenskej republiky ako aj v zahraničí, mali prístup k týmto osobným údajom v prípade straty alebo nálezu môjho zvieraťa a aby tieto využili k zisteniu a kontaktovaniu vlastníka zvieraťa.\nTento súhlas so spracovaním osobných údajov udeľujem na dobu neurčitú. Som si vedomá/ý, že svoj súhlas so spracovaním mojich osobných údajov môžem kedykoľvek písomne odvolať, okrem prípadov, keď zákon č. 428/2002 Z. z. o ochrane osobných údajov v znení neskorších predpisov ustanovuje inak. \nPrehlasujem, že všetky údaje, ktoré som uviedol/a pre účely evidencie a registrácie môjho spoločenského zvieraťa sú pravdivé.",
+    "text2": "",
+    "text3": "",
+    "text4": "",
+    "text5": ""
+  }
+]

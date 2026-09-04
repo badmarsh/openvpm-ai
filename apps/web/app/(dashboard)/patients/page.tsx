@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { TableSkeleton } from "@/components/common/loading";
 import { PATIENT_SEARCH_MAX_LENGTH } from "@/lib/patients/policy";
+import { useI18n } from "@/lib/i18n";
 import {
   PATIENT_SPECIES_EMOJI,
   PATIENT_SPECIES_OPTIONS,
@@ -47,6 +48,7 @@ function formatSex(sex: string | null): string {
 
 export default function PatientsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
   const [species, setSpecies] = useState<SpeciesFilter>("");
@@ -68,9 +70,11 @@ export default function PatientsPage() {
     <div>
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-heading text-xl font-semibold">Patients</h2>
+          <h2 className="font-heading text-xl font-semibold">
+            {t("patients.title", "Patients")}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Manage patient records
+            {t("patients.subtitle", "Manage patient records")}
           </p>
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -81,7 +85,7 @@ export default function PatientsPage() {
               className="h-11 w-full sm:h-10 sm:w-auto"
             >
               <GitMerge className="mr-2 h-4 w-4" />
-              Review duplicates
+              {t("patients.actions.reviewDuplicates", "Review duplicates")}
             </Button>
           ) : null}
           {canManagePatients && (
@@ -90,7 +94,7 @@ export default function PatientsPage() {
               className="h-11 w-full sm:h-10 sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
-              New Patient
+              {t("patients.new_patient", "New Patient")}
             </Button>
           )}
         </div>
@@ -100,7 +104,10 @@ export default function PatientsPage() {
         <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search patients or owners..."
+            placeholder={t(
+              "patients.search_placeholder",
+              "Search patients or owners...",
+            )}
             value={search}
             maxLength={PATIENT_SEARCH_MAX_LENGTH}
             onChange={(e) => setSearch(e.target.value)}
@@ -114,20 +121,26 @@ export default function PatientsPage() {
         >
           {speciesOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {opt.value
+                ? t(`patients.species_${opt.value}`, opt.label)
+                : t("patients.species_all", "All Species")}
             </option>
           ))}
         </select>
         {data && (
           <p className="text-sm text-muted-foreground sm:shrink-0">
-            {data.total} patient{data.total !== 1 ? "s" : ""}
+            {data.total === 1
+              ? t("patients.plural_one", "{count} patient", { count: data.total })
+              : data.total >= 2 && data.total <= 4
+                ? t("patients.plural_few", "{count} patients", { count: data.total })
+                : t("patients.plural_other", "{count} patients", { count: data.total })}
           </p>
         )}
       </div>
 
       {error || patientsMissing ? (
         <div className="mt-6 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {error?.message ?? "Unable to load patients. Please retry."}
+          {error?.message ?? t("common.error_retry", "Unable to load patients. Please retry.")}
         </div>
       ) : isLoading ? (
         <TableSkeleton rows={8} cols={5} />
@@ -138,7 +151,14 @@ export default function PatientsPage() {
               const ownerName =
                 patient.clientFirstName && patient.clientLastName
                   ? `${patient.clientFirstName} ${patient.clientLastName}`
-                  : "Owner not listed";
+                  : t("patients.profile.noOwner", "Owner not listed");
+
+              const patientStatusText =
+                patient.status === "active"
+                  ? t("patients.status_active", "active")
+                  : patient.status === "deceased"
+                    ? t("patients.status_deceased", "deceased")
+                    : t("patients.status_inactive", "inactive");
 
               return (
                 <button
@@ -164,18 +184,20 @@ export default function PatientsPage() {
                             : "bg-amber-100 text-amber-700"
                       }`}
                     >
-                      {patient.status ?? "active"}
+                      {patientStatusText}
                     </span>
                   </span>
                   <span className="mt-2 block min-w-0 space-y-1 text-sm text-muted-foreground">
                     <span className="block truncate">
                       {[patient.breed, patient.species]
                         .filter(Boolean)
-                        .join(" · ") || "Breed and species not listed"}
+                        .join(" · ") || t("patients.profile.unknownBreed", "Breed and species not listed")}
                     </span>
-                    <span className="block truncate">Owner: {ownerName}</span>
+                    <span className="block truncate">
+                      {t("patients.profile.owner", "Owner")}: {ownerName}
+                    </span>
                     <span className="block text-xs">
-                      Sex: {formatSex(patient.sex)}
+                      {t("patients.column_sex", "Sex")}: {formatSex(patient.sex)}
                     </span>
                   </span>
                 </button>
@@ -188,62 +210,71 @@ export default function PatientsPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Name
+                    {t("patients.column_name", "Name")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Breed
+                    {t("patients.column_breed", "Breed")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Owner
+                    {t("patients.column_owner", "Owner")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Sex
+                    {t("patients.column_sex", "Sex")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Status
+                    {t("patients.column_status", "Status")}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((patient) => (
-                  <tr
-                    key={patient.id}
-                    onClick={() => router.push(`/patients/${patient.id}`)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3 font-medium">
-                      <span className="mr-1.5">
-                        {speciesEmoji[patient.species ?? "other"] ??
-                          "\uD83D\uDC3E"}
-                      </span>
-                      {patient.name}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {patient.breed || "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {patient.clientFirstName && patient.clientLastName
-                        ? `${patient.clientFirstName} ${patient.clientLastName}`
-                        : "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatSex(patient.sex)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          patient.status === "active"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : patient.status === "deceased"
-                              ? "bg-gray-100 text-gray-600"
-                              : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {patient.status ?? "active"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {data.items.map((patient) => {
+                  const patientStatusText =
+                    patient.status === "active"
+                      ? t("patients.status_active", "active")
+                      : patient.status === "deceased"
+                        ? t("patients.status_deceased", "deceased")
+                        : t("patients.status_inactive", "inactive");
+
+                  return (
+                    <tr
+                      key={patient.id}
+                      onClick={() => router.push(`/patients/${patient.id}`)}
+                      className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        <span className="mr-1.5">
+                          {speciesEmoji[patient.species ?? "other"] ??
+                            "\uD83D\uDC3E"}
+                        </span>
+                        {patient.name}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {patient.breed || "\u2014"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {patient.clientFirstName && patient.clientLastName
+                          ? `${patient.clientFirstName} ${patient.clientLastName}`
+                          : t("patients.profile.noOwner", "Owner not listed")}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatSex(patient.sex)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            patient.status === "active"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : patient.status === "deceased"
+                                ? "bg-gray-100 text-gray-600"
+                                : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {patientStatusText}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -253,17 +284,28 @@ export default function PatientsPage() {
           className="mt-6"
           icon={PawPrint}
           title={
-            hasFilters ? "No patients match your filters" : "No patients yet"
+            hasFilters
+              ? t(
+                  "patients.empty_filter_title",
+                  "No patients match your filters",
+                )
+              : t("patients.empty_title", "No patients yet")
           }
           description={
             hasFilters
-              ? "Clear the search or species filter to broaden the list."
-              : "Create a patient record once the owner client is in OpenVPM."
+              ? t(
+                  "patients.empty_filter_desc",
+                  "Clear the search or species filter to broaden the list.",
+                )
+              : t(
+                  "patients.empty_desc",
+                  "Create a patient record once the owner client is in OpenVPM.",
+                )
           }
           action={
             !hasFilters && canManagePatients
               ? {
-                  label: "Add your first patient",
+                  label: t("patients.empty_action", "Add your first patient"),
                   onClick: () => router.push("/patients/new"),
                   icon: Plus,
                 }

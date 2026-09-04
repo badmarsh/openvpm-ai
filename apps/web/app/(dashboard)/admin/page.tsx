@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageLoading } from "@/components/common/loading";
 import { SmsRecoveryConsole } from "@/components/admin/sms-recovery-console";
@@ -84,6 +85,7 @@ function recoveryLabel(value: string) {
 }
 
 export default function AdminPage() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const [messagingHistorySelection, setMessagingHistorySelection] = useState<{
     practiceId: string;
@@ -210,9 +212,9 @@ export default function AdminPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="font-heading text-xl font-semibold">Access Denied</h2>
+        <h2 className="font-heading text-xl font-semibold">{t("admin.accessDenied.title", "Access Denied")} {/* Access Denied */}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          This area is for OpenVPM platform operators only.
+          {t("admin.accessDenied.desc", "This area is for OpenVPM platform operators only.")}
         </p>
       </div>
     );
@@ -247,22 +249,31 @@ export default function AdminPage() {
   const kpis = [
     {
       label: "Practices",
+      displayLabel: t("admin.kpi.practices", "Practices"),
       value: String(data.totals.practices),
       icon: Building2,
     },
     {
       label: "Est. MRR",
+      displayLabel: t("admin.kpi.estMrr", "Est. MRR"),
       value: formatUsd(data.totals.estimatedMrr),
       icon: DollarSign,
     },
     {
       label: "Active trials",
+      displayLabel: t("admin.kpi.activeTrials", "Active trials"),
       value: String(data.totals.activeTrials),
       icon: Clock,
     },
-    { label: "Active", value: String(data.totals.active), icon: CheckCircle },
+    {
+      label: "Active",
+      displayLabel: t("admin.kpi.active", "Active"),
+      value: String(data.totals.active),
+      icon: CheckCircle
+    },
     {
       label: "Past due",
+      displayLabel: t("admin.kpi.pastDue", "Past due"),
       value: String(data.totals.pastDue),
       icon: AlertTriangle,
     },
@@ -271,9 +282,9 @@ export default function AdminPage() {
   return (
     <div>
       <div>
-        <h2 className="font-heading text-xl font-semibold">Platform Admin</h2>
+        <h2 className="font-heading text-xl font-semibold">{t("admin.header.title", "Platform Admin")}</h2>
         <p className="text-sm text-muted-foreground">
-          Cross-tenant operations overview
+          {t("admin.header.subtitle", "Cross-tenant operations overview")}
         </p>
       </div>
 
@@ -288,7 +299,7 @@ export default function AdminPage() {
             >
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Icon className="h-4 w-4" />
-                <span className="text-sm">{k.label}</span>
+                <span className="text-sm">{k.displayLabel ?? k.label}</span>
               </div>
               <p className="mt-2 font-heading text-2xl font-bold">{k.value}</p>
             </div>

@@ -31,6 +31,7 @@ import { trpc } from "@/lib/trpc";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 import { PatientHistorySearch } from "@/components/patients/patient-history-search";
 import { CapturePhotos } from "@/components/records/capture-photos";
 import { ConsentSign } from "@/components/records/consent-sign";
@@ -143,19 +144,31 @@ const VitalsTrendChart = dynamic(
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
 
-function formatSex(sex: string | null): string {
-  if (!sex) return "Unknown";
-  const labels: Record<string, string> = {
-    male: "Male (Intact)",
-    female: "Female (Intact)",
-    male_neutered: "Male (Neutered)",
-    female_spayed: "Female (Spayed)",
+function formatSex(
+  sex: string | null,
+  t?: (key: string, fallback: string) => string,
+): string {
+  if (!sex) return t ? t("patients.profile.notRecorded", "Unknown") : "Unknown";
+  const labels: Record<string, { key: string; label: string }> = {
+    male: { key: "sexMale", label: "Male (Intact)" },
+    female: { key: "sexFemale", label: "Female (Intact)" },
+    male_neutered: { key: "sexMaleNeutered", label: "Male (Neutered)" },
+    female_spayed: { key: "sexFemaleSpayed", label: "Female (Spayed)" },
   };
-  return labels[sex] ?? sex;
+  const match = labels[sex];
+  if (!match) return sex;
+  return t ? t(`patients.form.${match.key}`, match.label) : match.label;
 }
 
-function calculateAge(dob: string | null): string {
-  if (!dob) return "Unknown";
+function calculateAge(
+  dob: string | null,
+  t?: (
+    key: string,
+    fallback: string,
+    params?: Record<string, string | number>,
+  ) => string,
+): string {
+  if (!dob) return t ? t("patients.profile.notRecorded", "Unknown") : "Unknown";
   const birth = new Date(dob);
   const now = new Date();
   const years = now.getFullYear() - birth.getFullYear();
@@ -164,12 +177,26 @@ function calculateAge(dob: string | null): string {
   const adjustedYears = months < 0 ? years - 1 : years;
 
   if (adjustedYears === 0) {
-    return `${adjustedMonths} month${adjustedMonths !== 1 ? "s" : ""}`;
+    return t
+      ? t(
+          "patients.profile.monthsOld",
+          `${adjustedMonths} month${adjustedMonths !== 1 ? "s" : ""}`,
+          { count: adjustedMonths },
+        )
+      : `${adjustedMonths} month${adjustedMonths !== 1 ? "s" : ""}`;
   }
   if (adjustedMonths === 0) {
-    return `${adjustedYears} year${adjustedYears !== 1 ? "s" : ""}`;
+    return t
+      ? t(
+          "patients.profile.yearsOld",
+          `${adjustedYears} year${adjustedYears !== 1 ? "s" : ""}`,
+          { count: adjustedYears },
+        )
+      : `${adjustedYears} year${adjustedYears !== 1 ? "s" : ""}`;
   }
-  return `${adjustedYears}y ${adjustedMonths}m`;
+  return t
+    ? `${t("patients.profile.yearsOld", `${adjustedYears}y`, { count: adjustedYears })} ${t("patients.profile.monthsOld", `${adjustedMonths}m`, { count: adjustedMonths })}`
+    : `${adjustedYears}y ${adjustedMonths}m`;
 }
 
 type Tab =
@@ -182,16 +209,6 @@ type Tab =
   | "vaccinations"
   | "invoices";
 
-const tabs: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "records", label: "Medical Records" },
-  { id: "documents", label: "Documents" },
-  { id: "appointments", label: "Appointments" },
-  { id: "weight", label: "Weight History" },
-  { id: "vitals", label: "Vitals" },
-  { id: "vaccinations", label: "Vaccinations" },
-  { id: "invoices", label: "Invoices" },
-];
 
 function canManagePatientDetailRole(role?: string | null): boolean {
   return (
@@ -303,11 +320,26 @@ function PatientDetailLoadingPanel({ label }: { label: string }) {
 }
 
 export default function PatientDetailPage() {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [fieldVisitLocationId, setFieldVisitLocationId] = useState("");
+
+  const tabs: { id: Tab; label: string }[] = useMemo(
+    () => [
+      { id: "overview", label: t("patients.tabs.overview", "Overview") },
+      { id: "records", label: t("patients.tabs.records", "Medical Records") },
+      { id: "documents", label: t("patients.tabs.documents", "Documents") },
+      { id: "appointments", label: t("patients.tabs.appointments", "Appointments") },
+      { id: "weight", label: t("patients.tabs.weight", "Weight History") },
+      { id: "vitals", label: t("patients.tabs.vitals", "Vitals") },
+      { id: "vaccinations", label: t("patients.tabs.vaccinations", "Vaccinations") },
+      { id: "invoices", label: t("patients.tabs.invoices", "Invoices") },
+    ],
+    [t],
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoUploadAttemptRef = useRef<ManagedUploadAttempt | null>(null);
@@ -567,7 +599,11 @@ export default function PatientDetailPage() {
   const isPageLoading = !loadError && (isLoading || recordsSettingsLoading);
 
   if (isPageLoading) {
-    return <PatientDetailLoadingPanel label="Loading patient..." />;
+    return (
+      <PatientDetailLoadingPanel
+        label={t("patients.profile.loading", "Loading patient...")}
+      />
+    );
   }
 
   if (
@@ -579,15 +615,21 @@ export default function PatientDetailPage() {
     return (
       <EmptyState
         icon={AlertTriangle}
-        title="Unable to load patient"
+        title={t("patients.form.loadError", "Unable to load patient")}
         description={
           loadError?.message ??
           (recordsSettingsMissing || !verifiedRecordsSettings
-            ? "Unable to load clinical settings. Please retry."
-            : "Choose a patient from the Patients list before opening the detail page.")
+            ? t(
+                "common.error_retry",
+                "Unable to load clinical settings. Please retry.",
+              )
+            : t(
+                "patients.profile.patientNotFoundDesc",
+                "Choose a patient from the Patients list before opening the detail page.",
+              ))
         }
         action={{
-          label: "Back to Patients",
+          label: t("patients.actions.backToPatients", "Back to Patients"),
           onClick: () => router.push("/patients"),
           icon: ArrowLeft,
         }}
@@ -874,7 +916,7 @@ export default function PatientDetailPage() {
         className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Patients
+        {t("patients.actions.backToPatients", "Back to Patients")}
       </Button>
 
       <RecentClinicalItems
@@ -888,19 +930,34 @@ export default function PatientDetailPage() {
             <GitMerge className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p className="font-semibold">
-                Opened the canonical chart for a merged patient identity
+                {t(
+                  "patients.duplicates.canonicalChartOpened",
+                  "Opened the canonical chart for a merged patient identity",
+                )}
               </p>
               <p className="mt-1">
-                {patient.mergeMetadata.sourceSnapshot.name} was merged into this
-                chart by {patient.mergeMetadata.performedByName} on{" "}
-                {formatClinicalDateTime(
-                  patient.mergeMetadata.createdAt,
-                  recordsTimeZone,
+                {t(
+                  "patients.duplicates.mergedIntoNotice",
+                  `${patient.mergeMetadata.sourceSnapshot.name} was merged into this chart by ${patient.mergeMetadata.performedByName} on ${formatClinicalDateTime(
+                    patient.mergeMetadata.createdAt,
+                    recordsTimeZone,
+                  )}.`,
+                  {
+                    name: patient.mergeMetadata.sourceSnapshot.name,
+                    performedBy: patient.mergeMetadata.performedByName,
+                    date: formatClinicalDateTime(
+                      patient.mergeMetadata.createdAt,
+                      recordsTimeZone,
+                    ),
+                  },
                 )}
-                .
               </p>
               <p className="mt-1 text-blue-800 dark:text-blue-200">
-                Reason: {patient.mergeMetadata.reason}
+                {t(
+                  "patients.duplicates.reasonPrefix",
+                  `Reason: ${patient.mergeMetadata.reason}`,
+                  { reason: patient.mergeMetadata.reason },
+                )}
               </p>
             </div>
           </div>
@@ -931,7 +988,7 @@ export default function PatientDetailPage() {
                       disabled={uploadingPhoto}
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-wait"
-                      title="Upload photo"
+                      title={t("patients.profile.uploadPhoto", "Upload photo")}
                     >
                       {uploadingPhoto ? (
                         <Loader2 className="h-5 w-5 animate-spin text-white" />
@@ -956,7 +1013,7 @@ export default function PatientDetailPage() {
                   onClick={() => void uploadPatientPhoto()}
                   className="whitespace-nowrap text-xs font-medium text-destructive underline underline-offset-2 disabled:opacity-50"
                 >
-                  Try photo again
+                  {t("patients.profile.tryPhotoAgain", "Try photo again")}
                 </button>
               ) : null}
             </div>
@@ -975,18 +1032,38 @@ export default function PatientDetailPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {patient.species &&
-                  patient.species.charAt(0).toUpperCase() +
-                    patient.species.slice(1)}
+                  (patient.species in PATIENT_SPECIES_EMOJI
+                    ? t(
+                        `patients.species_${patient.species}`,
+                        patient.species.charAt(0).toUpperCase() +
+                          patient.species.slice(1),
+                      )
+                    : patient.species.charAt(0).toUpperCase() +
+                      patient.species.slice(1))}
                 {patient.breed ? ` \u00B7 ${patient.breed}` : ""}
                 {" \u00B7 "}
-                {calculateAge(patient.dob)}
+                {calculateAge(patient.dob, t)}
                 {" \u00B7 "}
-                {formatSex(patient.sex)}
+                {formatSex(patient.sex, t)}
               </p>
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {patient.color && <span>Color: {patient.color}</span>}
+                {patient.color && (
+                  <span>
+                    {t(
+                      "patients.profile.colorPrefix",
+                      `Color: ${patient.color}`,
+                      { color: patient.color },
+                    )}
+                  </span>
+                )}
                 {patient.microchipNumber && (
-                  <span>Microchip: {patient.microchipNumber}</span>
+                  <span>
+                    {t(
+                      "patients.profile.microchipPrefix",
+                      `Microchip: ${patient.microchipNumber}`,
+                      { microchip: patient.microchipNumber },
+                    )}
+                  </span>
                 )}
               </div>
               {patient.clientFirstName && (
@@ -1008,9 +1085,17 @@ export default function PatientDetailPage() {
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {fieldVisitLocations.length > 1 ? (
                     <label>
-                      <span className="sr-only">Field visit location</span>
+                      <span className="sr-only">
+                        {t(
+                          "patients.actions.fieldVisitLocation",
+                          "Field visit location",
+                        )}
+                      </span>
                       <select
-                        aria-label="Field visit location"
+                        aria-label={t(
+                          "patients.actions.fieldVisitLocation",
+                          "Field visit location",
+                        )}
                         value={selectedFieldVisitLocationId}
                         disabled={
                           fieldVisitLocationsUnavailable ||
@@ -1021,7 +1106,12 @@ export default function PatientDetailPage() {
                         }
                         className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                       >
-                        <option value="">Select location...</option>
+                        <option value="">
+                          {t(
+                            "patients.actions.selectLocation",
+                            "Select location...",
+                          )}
+                        </option>
                         {fieldVisitLocations.map((location) => (
                           <option key={location.id} value={location.id}>
                             {location.name}
@@ -1051,8 +1141,11 @@ export default function PatientDetailPage() {
                       <Stethoscope className="mr-2 h-4 w-4" />
                     )}
                     {startFieldVisit.isPending
-                      ? "Starting visit..."
-                      : "Start field visit"}
+                      ? t("patients.actions.startingVisit", "Starting visit...")
+                      : t(
+                          "patients.actions.fieldVisit",
+                          "Start field visit",
+                        )}
                   </Button>
                 </div>
                 {fieldVisitLocationsQuery.error ||
@@ -1066,7 +1159,10 @@ export default function PatientDetailPage() {
                 ) : fieldVisitLocations.length > 1 &&
                   !selectedFieldVisitLocationId ? (
                   <p className="text-xs text-muted-foreground">
-                    Choose where this field visit is managed.
+                    {t(
+                      "patients.actions.chooseLocationHelp",
+                      "Choose where this field visit is managed.",
+                    )}
                   </p>
                 ) : null}
               </div>
@@ -1079,7 +1175,10 @@ export default function PatientDetailPage() {
             )}
             <Button variant="outline" size="sm" onClick={handleDownloadSummary}>
               <FileDown className="mr-2 h-4 w-4" />
-              Download Summary
+              {t(
+                "patients.actions.downloadMedicalSummary",
+                "Download Summary",
+              )}
             </Button>
             {canManagePatientDetail && (
               <Button
@@ -1087,7 +1186,7 @@ export default function PatientDetailPage() {
                 size="sm"
                 onClick={() => router.push(`/patients/${patient.id}/edit`)}
               >
-                Edit
+                {t("patients.actions.editPatient", "Edit")}
               </Button>
             )}
           </div>
@@ -1098,13 +1197,20 @@ export default function PatientDetailPage() {
         <section className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold">Patient snapshot</h3>
+              <h3 className="text-sm font-semibold">
+                {t("patients.profile.snapshotTitle", "Patient snapshot")}
+              </h3>
               <p className="text-xs text-muted-foreground">
-                The field essentials before treatment begins.
+                {t(
+                  "patients.profile.snapshotSubtitle",
+                  "The field essentials before treatment begins.",
+                )}
               </p>
             </div>
             <span className="text-xs font-medium text-muted-foreground">
-              Latest weight: {latestWeight}
+              {t("patients.profile.latestWeight", `Latest weight: ${latestWeight}`, {
+                weight: latestWeight,
+              })}
             </span>
           </div>
           {problemsQuery.isLoading ||
@@ -1114,7 +1220,7 @@ export default function PatientDetailPage() {
           vaccinationsQuery.isLoading ? (
             <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading clinical snapshot...
+              {t("patients.profile.loadingSnapshot", "Loading clinical snapshot...")}
             </div>
           ) : problemsQuery.error ||
             prescriptionsQuery.error ||
@@ -1127,66 +1233,68 @@ export default function PatientDetailPage() {
             !snapshotVitalsQuery.data ||
             !vaccinationsQuery.data ? (
             <p className="mt-3 text-sm text-destructive">
-              The complete clinical snapshot could not be verified. Open the
-              chart sections below before relying on history.
+              {t(
+                "patients.profile.snapshotError",
+                "The complete clinical snapshot could not be verified. Open the chart sections below before relying on history.",
+              )}
             </p>
           ) : (
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-6">
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Allergies
+                  {t("patients.profile.allergies", "Allergies")}
                 </dt>
                 <dd className="mt-1">
                   {patient.allergies.length
                     ? patient.allergies
                         .map((allergy) => allergy.allergen)
                         .join(", ")
-                    : "None recorded"}
+                    : t("patients.profile.noneRecorded", "None recorded")}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Active problems
+                  {t("patients.profile.activeProblems", "Active problems")}
                 </dt>
                 <dd className="mt-1">
                   {activeProblems.length
                     ? activeProblems
                         .map((problem) => problem.description)
                         .join(", ")
-                    : "None recorded"}
+                    : t("patients.profile.noneRecorded", "None recorded")}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Active medications
+                  {t("patients.profile.activeMedications", "Active medications")}
                 </dt>
                 <dd className="mt-1">
                   {activePrescriptions.length
                     ? activePrescriptions
                         .map((prescription) => prescription.medicationName)
                         .join(", ")
-                    : "None recorded"}
+                    : t("patients.profile.noneRecorded", "None recorded")}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Last visit
+                  {t("patients.profile.lastVisit", "Last visit")}
                 </dt>
                 <dd className="mt-1">
                   {latestVisit
-                    ? `${formatClinicalDate(latestVisit.startTime, recordsTimeZone)} · ${latestVisit.origin === "field" ? "Field visit" : (latestVisit.typeName ?? "Appointment")}`
-                    : "No prior visits"}
+                    ? `${formatClinicalDate(latestVisit.startTime, recordsTimeZone)} · ${latestVisit.origin === "field" ? t("patients.profile.fieldVisitOrigin", "Field visit") : (latestVisit.typeName ?? t("patients.profile.appointmentOrigin", "Appointment"))}`
+                    : t("patients.profile.noPriorVisits", "No prior visits")}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Latest vitals
+                  {t("patients.profile.latestVitals", "Latest vitals")}
                 </dt>
                 <dd className="mt-1">{latestVitalsSummary}</dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  BCS / vaccines
+                  {t("patients.profile.bcsVaccines", "BCS / vaccines")}
                 </dt>
                 <dd className="mt-1">
                   BCS{" "}
@@ -1197,7 +1305,7 @@ export default function PatientDetailPage() {
                       {latestSnapshotBcs.bodyConditionScale}
                     </>
                   ) : (
-                    "not recorded"
+                    t("patients.profile.notRecorded", "not recorded")
                   )}
                   {" · "}
                   {vaccinationSummary}
@@ -1214,7 +1322,7 @@ export default function PatientDetailPage() {
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-              Allergies
+              {t("patients.profile.allergies", "Allergies")}
             </p>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
               {patient.allergies.map((allergy) => (
@@ -1236,14 +1344,28 @@ export default function PatientDetailPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs">
-                    Reaction: {allergy.reaction || "Not documented"}
+                    {t(
+                      "patients.profile.reactionPrefix",
+                      `Reaction: ${allergy.reaction || "Not documented"}`,
+                      {
+                        reaction:
+                          allergy.reaction ||
+                          t("patients.profile.notDocumented", "Not documented"),
+                      },
+                    )}
                   </p>
                   <ClinicalCorrectionControl
                     correction={null}
                     canCorrect={canCorrectClinicalRecords}
                     isPending={correctAllergy.isPending}
-                    triggerLabel="Mark allergy entered in error"
-                    description="The original allergy and this permanent reason remain in staff chart history. The allergy will stop feeding current alerts, prescription safety, AI context, PDF summaries, and the client portal."
+                    triggerLabel={t(
+                      "patients.profile.markAllergyError",
+                      "Mark allergy entered in error",
+                    )}
+                    description={t(
+                      "patients.profile.markAllergyErrorDesc",
+                      "The original allergy and this permanent reason remain in staff chart history. The allergy will stop feeding current alerts, prescription safety, AI context, PDF summaries, and the client portal.",
+                    )}
                     timeZone={recordsTimeZone}
                     onCorrect={(reason) =>
                       correctAllergy.mutateAsync({
@@ -1264,7 +1386,7 @@ export default function PatientDetailPage() {
                   className="inline-flex items-center gap-1 rounded-full border border-dashed border-red-300 px-2.5 py-0.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
                 >
                   <Plus className="h-3 w-3" />
-                  Add
+                  {t("patients.profile.add", "Add")}
                 </button>
               ) : null}
             </div>
@@ -1301,14 +1423,19 @@ export default function PatientDetailPage() {
             />
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-              <span>No known allergies recorded.</span>
+              <span>
+                {t(
+                  "patients.profile.noAllergies",
+                  "No known allergies recorded.",
+                )}
+              </span>
               <button
                 type="button"
                 onClick={() => setShowAllergyForm(true)}
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add allergy
+                {t("patients.profile.addAllergy", "Add allergy")}
               </button>
             </div>
           )}
@@ -1321,7 +1448,10 @@ export default function PatientDetailPage() {
       ) ? (
         <details className="mt-3 rounded-lg border border-border bg-card px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium">
-            Allergy correction history
+            {t(
+              "patients.profile.allergyHistory",
+              "Allergy correction history",
+            )}
           </summary>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             {patient.allergyHistory
@@ -1341,7 +1471,15 @@ export default function PatientDetailPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Reaction: {allergy.reaction || "Not documented"}
+                    {t(
+                      "patients.profile.reactionPrefix",
+                      `Reaction: ${allergy.reaction || "Not documented"}`,
+                      {
+                        reaction:
+                          allergy.reaction ||
+                          t("patients.profile.notDocumented", "Not documented"),
+                      },
+                    )}
                   </p>
                   {allergy.correctionId &&
                   allergy.correctionReason &&
@@ -1360,9 +1498,10 @@ export default function PatientDetailPage() {
                     />
                   ) : (
                     <div className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                      Legacy removal retained. This predates permanent allergy
-                      correction attribution, so no reason or clinician is
-                      available.
+                      {t(
+                        "patients.profile.legacyAllergyRemoval",
+                        "Legacy removal retained. This predates permanent allergy correction attribution, so no reason or clinician is available.",
+                      )}
                     </div>
                   )}
                 </div>
@@ -1413,68 +1552,94 @@ export default function PatientDetailPage() {
         {activeTab === "overview" && (
           <div className="rounded-lg border border-border bg-card p-6">
             <h3 className="font-heading text-base font-semibold mb-4">
-              Basic Information
+              {t("patients.profile.basicInfo", "Basic Information")}
             </h3>
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-sm text-muted-foreground">Name</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.form.name", "Name")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">{patient.name}</dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Species</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.form.species", "Species")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {patient.species
-                    ? patient.species.charAt(0).toUpperCase() +
-                      patient.species.slice(1)
+                    ? patient.species in PATIENT_SPECIES_EMOJI
+                      ? t(
+                          `patients.species_${patient.species}`,
+                          patient.species.charAt(0).toUpperCase() +
+                            patient.species.slice(1),
+                        )
+                      : patient.species.charAt(0).toUpperCase() +
+                        patient.species.slice(1)
                     : "\u2014"}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Breed</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.form.breed", "Breed")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {patient.breed || "\u2014"}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Sex</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.form.sex", "Sex")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
-                  {formatSex(patient.sex)}
+                  {formatSex(patient.sex, t)}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Date of Birth</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.profile.dob", "Date of Birth")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {formatClinicalDate(patient.dob, recordsTimeZone, "\u2014")}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Age</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.profile.age", "Age")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
-                  {calculateAge(patient.dob)}
+                  {calculateAge(patient.dob, t)}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Color</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.form.color", "Color")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {patient.color || "\u2014"}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">
-                  Microchip Number
+                  {t("patients.form.microchipNumber", "Microchip Number")}
                 </dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {patient.microchipNumber || "\u2014"}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Status</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.form.status", "Status")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium capitalize">
-                  {patient.status ?? "active"}
+                  {patient.status
+                    ? t(`patients.status_${patient.status}`, patient.status)
+                    : t("patients.status_active", "Active")}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">Owner</dt>
+                <dt className="text-sm text-muted-foreground">
+                  {t("patients.profile.owner", "Owner")}
+                </dt>
                 <dd className="mt-0.5 text-sm font-medium">
                   {patient.clientFirstName
                     ? `${patient.clientFirstName} ${patient.clientLastName}`
@@ -1495,8 +1660,16 @@ export default function PatientDetailPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div className="w-full sm:max-w-xs">
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                      Weight (
-                      {chartMeasurementSystem === "us_customary" ? "lb" : "kg"})
+                      {t(
+                        "patients.weight.weightUnit",
+                        `Weight (${chartMeasurementSystem === "us_customary" ? "lb" : "kg"})`,
+                        {
+                          unit:
+                            chartMeasurementSystem === "us_customary"
+                              ? "lb"
+                              : "kg",
+                        },
+                      )}
                     </label>
                     <input
                       type="number"
@@ -1533,7 +1706,9 @@ export default function PatientDetailPage() {
                     ) : (
                       <Plus className="mr-2 h-4 w-4" />
                     )}
-                    {addWeight.isPending ? "Saving..." : "Record weight"}
+                    {addWeight.isPending
+                      ? t("patients.actions.saving", "Saving...")
+                      : t("patients.weight.recordWeight", "Record weight")}
                   </Button>
                 </div>
               </form>
@@ -1549,17 +1724,22 @@ export default function PatientDetailPage() {
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Date
+                          {t("patients.weight.date", "Date")}
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Weight (
-                          {chartMeasurementSystem === "us_customary"
-                            ? "lb"
-                            : "kg"}
-                          )
+                          {t(
+                            "patients.weight.weightCol",
+                            `Weight (${chartMeasurementSystem === "us_customary" ? "lb" : "kg"})`,
+                            {
+                              unit:
+                                chartMeasurementSystem === "us_customary"
+                                  ? "lb"
+                                  : "kg",
+                            },
+                          )}
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Recorded By
+                          {t("patients.weight.recordedBy", "Recorded By")}
                         </th>
                       </tr>
                     </thead>
@@ -1592,7 +1772,10 @@ export default function PatientDetailPage() {
                 </div>
               </>
             ) : (
-              <EmptyState icon={Activity} title="No weight records yet" />
+              <EmptyState
+                icon={Activity}
+                title={t("patients.weight.empty", "No weight records yet")}
+              />
             )}
           </div>
         )}
@@ -1656,6 +1839,7 @@ function VitalsTab({
   canRecordVitals: boolean;
   canCorrectClinicalRecords: boolean;
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const {
     data: vitals,
@@ -1673,7 +1857,7 @@ function VitalsTab({
   );
   const record = trpc.vitals.record.useMutation({
     onSuccess: () => {
-      toast.success("Vitals recorded");
+      toast.success(t("patients.vitals.saveVitals", "Vitals recorded"));
       utils.vitals.listByPatient.invalidate({ patientId });
       setForm(initialVitalsForm());
     },
@@ -1681,7 +1865,12 @@ function VitalsTab({
   });
   const correctVital = trpc.vitals.markEnteredInError.useMutation({
     onSuccess: async () => {
-      toast.success("Vital signs retained and marked entered in error");
+      toast.success(
+        t(
+          "patients.vitals.markedErrorSuccess",
+          "Vital signs retained and marked entered in error",
+        ),
+      );
       await utils.vitals.listByPatient.invalidate({ patientId });
     },
     onError: (err) => toast.error(err.message),
@@ -1757,7 +1946,10 @@ function VitalsTab({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Temp ({measurementSystem === "us_customary" ? "F" : "C"})
+                {t(
+                  "patients.vitals.temperature",
+                  `Temp (${measurementSystem === "us_customary" ? "F" : "C"})`,
+                )}
               </label>
               <input
                 type="number"
@@ -1786,7 +1978,7 @@ function VitalsTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                HR (bpm)
+                {t("patients.vitals.heartRate", "HR (bpm)")}
               </label>
               <input
                 type="number"
@@ -1803,7 +1995,7 @@ function VitalsTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                RR (bpm)
+                {t("patients.vitals.respiratoryRate", "RR (bpm)")}
               </label>
               <input
                 type="number"
@@ -1822,7 +2014,10 @@ function VitalsTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Weight ({measurementSystem === "us_customary" ? "lb" : "kg"})
+                {t(
+                  "patients.vitals.weight",
+                  `Weight (${measurementSystem === "us_customary" ? "lb" : "kg"})`,
+                )}
               </label>
               <input
                 type="number"
@@ -1850,7 +2045,10 @@ function VitalsTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                BCS (1-{bodyConditionScale})
+                {t(
+                  "patients.vitals.bodyCondition",
+                  `BCS (1-${bodyConditionScale})`,
+                )}
               </label>
               <input
                 type="number"
@@ -1870,7 +2068,7 @@ function VitalsTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Pain (0-10)
+                {t("patients.vitals.painScore", "Pain (0-10)")}
               </label>
               <input
                 type="number"
@@ -1887,7 +2085,7 @@ function VitalsTab({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                CRT (sec)
+                {t("patients.vitals.capillaryRefill", "CRT (sec)")}
               </label>
               <input
                 type="number"
@@ -1906,14 +2104,17 @@ function VitalsTab({
             </div>
             <div className="col-span-2">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Mucous Membrane
+                {t("patients.vitals.mucousMembranes", "Mucous Membrane")}
               </label>
               <input
                 type="text"
                 value={form.mucousMembrane}
                 maxLength={VITALS_MUCOUS_MEMBRANE_MAX_LENGTH}
                 onChange={set("mucousMembrane")}
-                placeholder="e.g. Pink and moist"
+                placeholder={t(
+                  "patients.vitals.mucousMembranesPlaceholder",
+                  "e.g. Pink and moist",
+                )}
                 className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
@@ -1923,12 +2124,17 @@ function VitalsTab({
             value={form.notes ?? ""}
             maxLength={VITALS_NOTES_MAX_LENGTH}
             onChange={set("notes")}
-            placeholder="Notes (optional)"
+            placeholder={t(
+              "patients.vitals.notesPlaceholder",
+              "Notes (optional)",
+            )}
             className="mt-3 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
           <div className="mt-3 flex justify-end">
             <Button type="submit" disabled={!canSubmitVitals}>
-              {record.isPending ? "Saving..." : "Record vitals"}
+              {record.isPending
+                ? t("patients.actions.saving", "Saving...")
+                : t("patients.vitals.saveVitals", "Record vitals")}
             </Button>
           </div>
         </form>
@@ -1936,14 +2142,24 @@ function VitalsTab({
 
       {error ? (
         <PatientDetailErrorPanel
-          message={`Unable to load vitals. ${error.message}`}
+          message={`${t("patients.vitals.loadError", "Unable to load vitals.")} ${error.message}`}
         />
       ) : vitalsMissing ? (
-        <PatientDetailErrorPanel message="Unable to load vitals. Please retry." />
+        <PatientDetailErrorPanel
+          message={t(
+            "patients.vitals.loadErrorRetry",
+            "Unable to load vitals. Please retry.",
+          )}
+        />
       ) : isLoading ? (
-        <PatientDetailLoadingPanel label="Loading vitals..." />
+        <PatientDetailLoadingPanel
+          label={t("patients.vitals.loading", "Loading vitals...")}
+        />
       ) : !vitals || vitals.length === 0 ? (
-        <EmptyState icon={Activity} title="No vitals recorded yet" />
+        <EmptyState
+          icon={Activity}
+          title={t("patients.vitals.empty", "No vitals recorded yet")}
+        />
       ) : (
         <>
           {measurementSystem === "metric" && bodyConditionScale === 9 ? (
@@ -1953,14 +2169,30 @@ function VitalsTab({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Temp</th>
-                  <th className="px-3 py-2 font-medium">HR</th>
-                  <th className="px-3 py-2 font-medium">RR</th>
-                  <th className="px-3 py-2 font-medium">Weight</th>
-                  <th className="px-3 py-2 font-medium">BCS</th>
-                  <th className="px-3 py-2 font-medium">Pain</th>
-                  <th className="px-3 py-2 font-medium">Chart status</th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.weight.date", "Date")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colTemp", "Temp")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colHr", "HR")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colRr", "RR")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colWeight", "Weight")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colBcs", "BCS")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colPain", "Pain")}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t("patients.vitals.colStatus", "Chart status")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -2060,6 +2292,7 @@ function VaccinationsTab({
   canPrepareCertificate: boolean;
   canEditCertificate: boolean;
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const [editor, setEditor] = useState<VaccinationCertificateEditor | null>(
     null,
@@ -2080,14 +2313,24 @@ function VaccinationsTab({
       onSuccess: async () => {
         setEditor(null);
         await utils.records.listVaccinations.invalidate({ patientId });
-        toast.success("Certificate details updated with an audit entry");
+        toast.success(
+          t(
+            "patients.vaccinations.certUpdatedSuccess",
+            "Certificate details updated with an audit entry",
+          ),
+        );
       },
       onError: (err) => toast.error(err.message),
     });
   const correctVaccination =
     trpc.records.markVaccinationEnteredInError.useMutation({
       onSuccess: async () => {
-        toast.success("Vaccination retained and marked entered in error");
+        toast.success(
+          t(
+            "patients.vaccinations.markedErrorSuccess",
+            "Vaccination retained and marked entered in error",
+          ),
+        );
         await utils.records.listVaccinations.invalidate({ patientId });
       },
       onError: (err) => toast.error(err.message),
@@ -2125,7 +2368,7 @@ function VaccinationsTab({
         owner: certificate.owner,
         patient: {
           ...certificate.patient,
-          sex: formatSex(certificate.patient.sex),
+          sex: formatSex(certificate.patient.sex, t),
           dob: formatClinicalDate(
             certificate.patient.dob,
             certificate.practice.timezone,
@@ -2189,7 +2432,12 @@ function VaccinationsTab({
           })
           .save(`${safePatientName}_rabies_vaccination_certificate.pdf`);
       }
-      toast.success("Certificate downloaded");
+      toast.success(
+        t(
+          "patients.vaccinations.certDownloadedSuccess",
+          "Certificate downloaded",
+        ),
+      );
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Unable to create certificate",
@@ -2200,23 +2448,40 @@ function VaccinationsTab({
   if (error) {
     return (
       <PatientDetailErrorPanel
-        message={`Unable to load vaccination records. ${error.message}`}
+        message={`${t("patients.vaccinations.loadError", "Unable to load vaccination records.")} ${error.message}`}
       />
     );
   }
 
   if (vaccinationsMissing) {
     return (
-      <PatientDetailErrorPanel message="Unable to load vaccination records. Please retry." />
+      <PatientDetailErrorPanel
+        message={t(
+          "patients.vaccinations.loadErrorRetry",
+          "Unable to load vaccination records. Please retry.",
+        )}
+      />
     );
   }
 
   if (isLoading) {
-    return <PatientDetailLoadingPanel label="Loading vaccinations..." />;
+    return (
+      <PatientDetailLoadingPanel
+        label={t("patients.vaccinations.loading", "Loading vaccinations...")}
+      />
+    );
   }
 
   if (!vaccinations || vaccinations.length === 0) {
-    return <EmptyState icon={Shield} title="No vaccination records yet" />;
+    return (
+      <EmptyState
+        icon={Shield}
+        title={t(
+          "patients.vaccinations.empty",
+          "No vaccination records yet",
+        )}
+      />
+    );
   }
 
   return (
@@ -2224,10 +2489,17 @@ function VaccinationsTab({
       {canPrepareCertificate ? (
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-medium">Vaccination certificates</p>
+            <p className="font-medium">
+              {t(
+                "patients.vaccinations.certificatesTitle",
+                "Vaccination certificates",
+              )}
+            </p>
             <p className="text-xs text-muted-foreground">
-              Every prepared certificate receives a unique ID and an audit
-              entry. Rabies certificates must pass a required-field check.
+              {t(
+                "patients.vaccinations.certificatesSubtitle",
+                "Every prepared certificate receives a unique ID and an audit entry. Rabies certificates must pass a required-field check.",
+              )}
             </p>
           </div>
           <Button
@@ -2240,7 +2512,10 @@ function VaccinationsTab({
             ) : (
               <FileDown className="mr-2 h-4 w-4" />
             )}
-            Download vaccination certificate
+            {t(
+              "patients.vaccinations.downloadCertificate",
+              "Download vaccination certificate",
+            )}
           </Button>
         </div>
       ) : null}
@@ -2272,10 +2547,17 @@ function VaccinationsTab({
         >
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <p className="font-medium">Edit certificate details</p>
+              <p className="font-medium">
+                {t(
+                  "patients.vaccinations.editCertificateTitle",
+                  "Edit certificate details",
+                )}
+              </p>
               <p className="text-xs text-muted-foreground">
-                Clinical history is preserved. A reason is recorded with every
-                change.
+                {t(
+                  "patients.vaccinations.editCertificateSubtitle",
+                  "Clinical history is preserved. A reason is recorded with every change.",
+                )}
               </p>
             </div>
             <Button
@@ -2283,17 +2565,35 @@ function VaccinationsTab({
               variant="ghost"
               onClick={() => setEditor(null)}
             >
-              Cancel
+              {t("patients.actions.cancel", "Cancel")}
             </Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [
-                ["Product name", "productName"],
-                ["Manufacturer", "manufacturer"],
-                ["Lot number", "lotNumber"],
-                ["Product expiration", "productExpirationDate"],
-                ["Rabies tag", "rabiesTagNumber"],
+                [
+                  t("patients.vaccinations.productName", "Product name"),
+                  "productName",
+                ],
+                [
+                  t("patients.vaccinations.manufacturer", "Manufacturer"),
+                  "manufacturer",
+                ],
+                [
+                  t("patients.vaccinations.batchNumber", "Lot number"),
+                  "lotNumber",
+                ],
+                [
+                  t(
+                    "patients.vaccinations.expiresAt",
+                    "Product expiration",
+                  ),
+                  "productExpirationDate",
+                ],
+                [
+                  t("patients.vaccinations.rabiesTag", "Rabies tag"),
+                  "rabiesTagNumber",
+                ],
               ] as const
             ).map(([label, field]) => (
               <label
@@ -2312,7 +2612,7 @@ function VaccinationsTab({
               </label>
             ))}
             <label className="space-y-1 text-xs font-medium text-muted-foreground">
-              Dose type
+              {t("patients.vaccinations.doseType", "Dose type")}
               <select
                 value={editor.doseType}
                 onChange={(event) =>
@@ -2323,13 +2623,22 @@ function VaccinationsTab({
                 }
                 className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
               >
-                <option value="">Not recorded</option>
-                <option value="initial">Initial</option>
-                <option value="booster">Booster</option>
+                <option value="">
+                  {t("patients.profile.notRecorded", "Not recorded")}
+                </option>
+                <option value="initial">
+                  {t("patients.vaccinations.doseInitial", "Initial")}
+                </option>
+                <option value="booster">
+                  {t("patients.vaccinations.doseBooster", "Booster")}
+                </option>
               </select>
             </label>
             <label className="space-y-1 text-xs font-medium text-muted-foreground">
-              Licensed duration
+              {t(
+                "patients.vaccinations.licensedDuration",
+                "Licensed duration",
+              )}
               <select
                 value={editor.licensedDurationMonths}
                 onChange={(event) =>
@@ -2340,14 +2649,25 @@ function VaccinationsTab({
                 }
                 className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
               >
-                <option value="">Not recorded</option>
-                <option value="12">1 year</option>
-                <option value="36">3 years</option>
-                <option value="48">4 years</option>
+                <option value="">
+                  {t("patients.profile.notRecorded", "Not recorded")}
+                </option>
+                <option value="12">
+                  {t("patients.vaccinations.oneYear", "1 year")}
+                </option>
+                <option value="36">
+                  {t("patients.vaccinations.threeYears", "3 years")}
+                </option>
+                <option value="48">
+                  {t("patients.vaccinations.fourYears", "4 years")}
+                </option>
               </select>
             </label>
             <label className="space-y-1 text-xs font-medium text-muted-foreground">
-              Supervising veterinarian
+              {t(
+                "patients.vaccinations.supervisingVet",
+                "Supervising veterinarian",
+              )}
               <select
                 value={editor.supervisingVeterinarianId}
                 onChange={(event) =>
@@ -2358,7 +2678,9 @@ function VaccinationsTab({
                 }
                 className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
               >
-                <option value="">Not recorded</option>
+                <option value="">
+                  {t("patients.profile.notRecorded", "Not recorded")}
+                </option>
                 {providers.data?.map((provider) => (
                   <option key={provider.id} value={provider.id}>
                     {provider.name}
@@ -2370,7 +2692,10 @@ function VaccinationsTab({
               </select>
             </label>
             <label className="space-y-1 text-xs font-medium text-muted-foreground sm:col-span-2 lg:col-span-4">
-              Reason for change (required, at least 10 characters)
+              {t(
+                "patients.vaccinations.reasonChange",
+                "Reason for change (required, at least 10 characters)",
+              )}
               <textarea
                 value={editor.reason}
                 minLength={10}
@@ -2394,7 +2719,10 @@ function VaccinationsTab({
               {updateCertificateDetails.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Save audited changes
+              {t(
+                "patients.vaccinations.saveAuditedChanges",
+                "Save audited changes",
+              )}
             </Button>
           </div>
         </form>
@@ -2405,25 +2733,25 @@ function VaccinationsTab({
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Vaccine Name
+                {t("patients.vaccinations.vaccineName", "Vaccine Name")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Date Given
+                {t("patients.vaccinations.administeredAt", "Date Given")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Next Due
+                {t("patients.vaccinations.expiresAt", "Next Due")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Product / Lot
+                {t("patients.vaccinations.productLot", "Product / Lot")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Administered By
+                {t("patients.vaccinations.administeredBy", "Administered By")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Certificate
+                {t("patients.vaccinations.certificate", "Certificate")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                Status
+                {t("patients.form.status", "Status")}
               </th>
             </tr>
           </thead>
@@ -2462,7 +2790,7 @@ function VaccinationsTab({
                       disabled={prepareCertificate.isPending}
                       onClick={() => downloadCertificate("rabies", vax.id)}
                     >
-                      Rabies PDF
+                      {t("patients.vaccinations.rabiesPdf", "Rabies PDF")}
                     </Button>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
@@ -2491,18 +2819,21 @@ function VaccinationsTab({
                         })
                       }
                     >
-                      Edit details
+                      {t("patients.vaccinations.editDetails", "Edit details")}
                     </Button>
                   ) : null}
                 </td>
                 <td className="px-4 py-3">
                   {vax.correctionId ? (
                     <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
-                      Entered in error
+                      {t(
+                        "patients.vaccinations.enteredInError",
+                        "Entered in error",
+                      )}
                     </span>
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      Recorded
+                      {t("patients.vaccinations.recorded", "Recorded")}
                     </span>
                   )}
                   <ClinicalCorrectionControl
@@ -2552,6 +2883,7 @@ function MedicalRecordsTab({
   canCorrectClinicalRecords: boolean;
   canSearchPatientHistory: boolean;
 }) {
+  const { t } = useI18n();
   const [historySearchActive, setHistorySearchActive] = useState(false);
   const utils = trpc.useUtils();
   const {
@@ -2561,7 +2893,12 @@ function MedicalRecordsTab({
   } = trpc.records.listSoapNotes.useQuery({ patientId });
   const correctSoap = trpc.records.markSoapNoteEnteredInError.useMutation({
     onSuccess: async () => {
-      toast.success("SOAP note retained and marked entered in error");
+      toast.success(
+        t(
+          "patients.recordsTab.voidSoapSuccess",
+          "SOAP note retained and marked entered in error",
+        ),
+      );
       await utils.records.listSoapNotes.invalidate({ patientId });
     },
     onError: (err) => toast.error(err.message),
@@ -2583,14 +2920,30 @@ function MedicalRecordsTab({
             message={`Unable to load medical records. ${error.message}`}
           />
         ) : notesMissing ? (
-          <PatientDetailErrorPanel message="Unable to load medical records. Please retry." />
+          <PatientDetailErrorPanel
+            message={t(
+              "common.error_retry",
+              "Unable to load medical records. Please retry.",
+            )}
+          />
         ) : isLoading ? (
-          <PatientDetailLoadingPanel label="Loading medical records..." />
+          <PatientDetailLoadingPanel
+            label={t(
+              "patients.recordsTab.loading",
+              "Loading medical records...",
+            )}
+          />
         ) : !notes || notes.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="No medical records yet"
-            description="SOAP notes written in Records will show up here."
+            title={t(
+              "patients.recordsTab.empty",
+              "No medical records yet",
+            )}
+            description={t(
+              "patients.recordsTab.emptyDesc",
+              "SOAP notes written in Records will show up here.",
+            )}
           />
         ) : (
           notes.map((note) => {
@@ -2635,7 +2988,7 @@ function MedicalRecordsTab({
                     </p>
                     {note.imported ? (
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                        Imported
+                        {t("patients.recordsTab.imported", "Imported")}
                       </span>
                     ) : null}
                     <span
@@ -2646,52 +2999,100 @@ function MedicalRecordsTab({
                           : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
                       )}
                     >
-                      {note.status === "draft" ? "Draft" : "Finalized"}
+                      {note.status === "draft"
+                        ? t("patients.recordsTab.draft", "Draft")
+                        : t("patients.recordsTab.finalized", "Finalized")}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {note.imported
                       ? note.authorName
-                        ? `Imported by ${note.authorName}`
-                        : "Imported record"
-                      : (note.authorName ?? "Unknown author")}
+                        ? t("patients.recordsTab.importedBy", "Imported by {author}", {
+                            author: note.authorName,
+                          })
+                        : t("patients.recordsTab.importedRecord", "Imported record")
+                      : (note.authorName ??
+                        t("patients.recordsTab.unknownAuthor", "Unknown author"))}
                   </p>
                 </div>
                 {note.status === "finalized" ? (
                   <p className="mb-3 text-xs text-muted-foreground">
-                    Finalized by {note.finalizerName ?? "Unknown clinician"}
                     {note.finalizedAt
-                      ? ` on ${formatClinicalDateTime(note.finalizedAt, timeZone)}`
-                      : ""}
+                      ? t(
+                          "patients.recordsTab.finalizedByOn",
+                          "Finalized by {clinician} on {date}",
+                          {
+                            clinician:
+                              note.finalizerName ??
+                              t(
+                                "patients.recordsTab.unknownClinician",
+                                "Unknown clinician",
+                              ),
+                            date: formatClinicalDateTime(
+                              note.finalizedAt,
+                              timeZone,
+                            ),
+                          },
+                        )
+                      : t(
+                          "patients.recordsTab.finalizedBy",
+                          "Finalized by {clinician}",
+                          {
+                            clinician:
+                              note.finalizerName ??
+                              t(
+                                "patients.recordsTab.unknownClinician",
+                                "Unknown clinician",
+                              ),
+                          },
+                        )}
                   </p>
                 ) : note.appointmentId && canCorrectClinicalRecords ? (
                   <a
                     href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
                     className="mb-3 inline-flex text-xs font-medium text-primary hover:underline"
                   >
-                    Resume draft
+                    {t("patients.recordsTab.resumeDraft", "Resume draft")}
                   </a>
                 ) : null}
                 {note.replacesSoapNoteId ? (
                   <div className="mb-3 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
                     <p className="font-medium text-primary">
-                      Current replacement SOAP
+                      {t(
+                        "patients.recordsTab.currentReplacement",
+                        "Current replacement SOAP",
+                      )}
                     </p>
                     <a
                       href={`#soap-note-${note.replacesSoapNoteId}`}
                       className="mt-1 inline-flex text-xs font-medium text-primary hover:underline"
                     >
-                      View retained original
+                      {t(
+                        "patients.recordsTab.viewRetainedOriginal",
+                        "View retained original",
+                      )}
                     </a>
                   </div>
                 ) : null}
                 <dl className="grid gap-3 sm:grid-cols-2">
                   {(
                     [
-                      ["Subjective", note.subjective],
-                      ["Objective", note.objective],
-                      ["Assessment", note.assessment],
-                      ["Plan", note.plan],
+                      [
+                        t("patients.recordsTab.subjective", "Subjective"),
+                        note.subjective,
+                      ],
+                      [
+                        t("patients.recordsTab.objective", "Objective"),
+                        note.objective,
+                      ],
+                      [
+                        t("patients.recordsTab.assessment", "Assessment"),
+                        note.assessment,
+                      ],
+                      [
+                        t("patients.recordsTab.plan", "Plan"),
+                        note.plan,
+                      ],
                     ] as const
                   ).map(([label, value]) =>
                     value ? (
@@ -2709,7 +3110,7 @@ function MedicalRecordsTab({
                 {note.addenda.length > 0 ? (
                   <div className="mt-4 space-y-2 border-t border-border pt-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Addenda
+                      {t("patients.recordsTab.addenda", "Addenda")}
                     </p>
                     {note.addenda.map((addendum) => (
                       <div
@@ -2749,7 +3150,10 @@ function MedicalRecordsTab({
                             }
                           : null
                       }
-                      triggerLabel="Void without replacement"
+                      triggerLabel={t(
+                        "patients.recordsTab.voidSoap",
+                        "Void without replacement",
+                      )}
                       description="The original stays in permanent chart history but leaves current clinical summaries immediately. If its content needs correction, cancel and use Replace finalized SOAP. Use void alone only when no replacement belongs on this encounter; closeout will require a documented reason."
                       canCorrect={canCorrectClinicalRecords}
                       isPending={
@@ -2770,7 +3174,10 @@ function MedicalRecordsTab({
                           href={`#soap-note-${note.replacementSoapNoteId}`}
                           className="text-sm font-medium text-primary hover:underline"
                         >
-                          View signed replacement
+                          {t(
+                            "patients.recordsTab.viewSignedReplacement",
+                            "View signed replacement",
+                          )}
                         </a>
                       </div>
                     ) : canCorrectClinicalRecords &&
@@ -2783,8 +3190,14 @@ function MedicalRecordsTab({
                             href={`/records/replace-soap/${encodeURIComponent(patientId)}?sourceNoteId=${encodeURIComponent(note.id)}&return=patient`}
                           >
                             {note.correctionId
-                              ? "Create missing replacement"
-                              : "Replace finalized SOAP"}
+                              ? t(
+                                  "patients.recordsTab.createMissingReplacement",
+                                  "Create missing replacement",
+                                )
+                              : t(
+                                  "patients.recordsTab.replaceFinalizedSoap",
+                                  "Replace finalized SOAP",
+                                )}
                           </Link>
                         </Button>
                       </div>
@@ -2794,13 +3207,19 @@ function MedicalRecordsTab({
                           <a
                             href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
                           >
-                            Review encounter SOAP draft
+                            {t(
+                              "patients.recordsTab.reviewEncounterSoapDraft",
+                              "Review encounter SOAP draft",
+                            )}
                           </a>
                         </Button>
                       </div>
                     ) : note.correctionId && hasOtherCurrentAppointmentSoap ? (
                       <p className="mt-3 text-right text-xs text-muted-foreground">
-                        This encounter already has a current finalized SOAP.
+                        {t(
+                          "patients.recordsTab.encounterHasSoap",
+                          "This encounter already has a current finalized SOAP.",
+                        )}
                       </p>
                     ) : null}
                   </>
@@ -2823,6 +3242,7 @@ function SoapAddendumControl({
   noteId: string;
   enabled: boolean;
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
@@ -2832,7 +3252,12 @@ function SoapAddendumControl({
       setContent("");
       setOpen(false);
       setOperationId(crypto.randomUUID());
-      toast.success("Addendum added to the finalized record");
+      toast.success(
+        t(
+          "patients.recordsTab.addendumSuccess",
+          "Addendum added to the finalized record",
+        ),
+      );
       await utils.records.listSoapNotes.invalidate({ patientId });
     },
     onError: (error) => toast.error(error.message),
@@ -2851,17 +3276,23 @@ function SoapAddendumControl({
         }}
       >
         <Plus className="mr-2 h-4 w-4" />
-        Add addendum
+        {t("patients.recordsTab.addAddendum", "Add addendum")}
       </Button>
     );
   }
   return (
     <div className="mt-4 rounded-md border border-border p-3">
       <label className="text-sm font-medium" htmlFor={`addendum-${noteId}`}>
-        Add attributed addendum
+        {t(
+          "patients.recordsTab.addAttributedAddendum",
+          "Add attributed addendum",
+        )}
       </label>
       <p className="mt-1 text-xs text-muted-foreground">
-        Addenda cannot be edited or deleted after saving.
+        {t(
+          "patients.recordsTab.addendaNotice",
+          "Addenda cannot be edited or deleted after saving.",
+        )}
       </p>
       <textarea
         id={`addendum-${noteId}`}
@@ -2885,7 +3316,9 @@ function SoapAddendumControl({
             })
           }
         >
-          {addendum.isPending ? "Saving..." : "Save addendum"}
+          {addendum.isPending
+            ? t("common.saving", "Saving...")
+            : t("patients.recordsTab.saveAddendum", "Save addendum")}
         </Button>
         <Button
           type="button"
@@ -2898,7 +3331,7 @@ function SoapAddendumControl({
             setOperationId(crypto.randomUUID());
           }}
         >
-          Cancel
+          {t("common.cancel", "Cancel")}
         </Button>
       </div>
     </div>
@@ -2922,6 +3355,7 @@ function AppointmentsTab({
   patientId: string;
   timeZone?: string | null;
 }) {
+  const { t } = useI18n();
   const {
     data: visits,
     isLoading,
@@ -2939,18 +3373,36 @@ function AppointmentsTab({
   }
   if (visitsMissing) {
     return (
-      <PatientDetailErrorPanel message="Unable to load appointments. Please retry." />
+      <PatientDetailErrorPanel
+        message={t(
+          "common.error_retry",
+          "Unable to load appointments. Please retry.",
+        )}
+      />
     );
   }
   if (isLoading) {
-    return <PatientDetailLoadingPanel label="Loading appointments..." />;
+    return (
+      <PatientDetailLoadingPanel
+        label={t(
+          "patients.appointmentsTab.loading",
+          "Loading appointments...",
+        )}
+      />
+    );
   }
   if (!visits || visits.length === 0) {
     return (
       <EmptyState
         icon={CalendarDays}
-        title="No appointments yet"
-        description="Visits booked on the schedule will show up here."
+        title={t(
+          "patients.appointmentsTab.empty",
+          "No appointments yet",
+        )}
+        description={t(
+          "patients.appointmentsTab.emptyDesc",
+          "Visits booked on the schedule will show up here.",
+        )}
       />
     );
   }
@@ -2961,22 +3413,24 @@ function AppointmentsTab({
         <thead>
           <tr className="border-b border-border bg-muted/50">
             <th className="w-10 px-2 py-3">
-              <span className="sr-only">Documents</span>
+              <span className="sr-only">
+                {t("patients.documentsTab.title", "Documents")}
+              </span>
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              When
+              {t("patients.appointmentsTab.colWhen", "When")}
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Type
+              {t("patients.appointmentsTab.colType", "Type")}
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Doctor
+              {t("patients.appointmentsTab.colDoctor", "Doctor")}
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Status
+              {t("patients.appointmentsTab.colStatus", "Status")}
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Notes
+              {t("patients.appointmentsTab.colNotes", "Notes")}
             </th>
           </tr>
         </thead>
@@ -2995,8 +3449,14 @@ function AppointmentsTab({
                       aria-expanded={expanded}
                       aria-label={
                         expanded
-                          ? "Hide documents for this visit"
-                          : "Show documents for this visit"
+                          ? t(
+                              "patients.appointmentsTab.hideDocs",
+                              "Hide documents for this visit",
+                            )
+                          : t(
+                              "patients.appointmentsTab.showDocs",
+                              "Show documents for this visit",
+                            )
                       }
                       className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
                     >
@@ -3110,6 +3570,7 @@ function PatientFileRows({
   files: PatientFile[];
   timeZone?: string | null;
 }) {
+  const { t } = useI18n();
   return (
     <ul className="divide-y divide-border">
       {files.map((file) => {
@@ -3123,12 +3584,17 @@ function PatientFileRows({
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {kind === "consent"
-                  ? `Signed consent${
-                      file.consentSignerName
-                        ? ` · Signed by ${file.consentSignerName}`
-                        : ""
-                    }`
-                  : "Document"}
+                  ? file.consentSignerName
+                    ? t(
+                        "patients.documentsTab.signedConsent",
+                        "Signed consent · Signed by {signer}",
+                        { signer: file.consentSignerName },
+                      )
+                    : t(
+                        "patients.documentsTab.signedConsentSimple",
+                        "Signed consent",
+                      )
+                  : t("patients.documentsTab.document", "Document")}
                 {" · "}
                 {formatClinicalDateTime(file.createdAt, timeZone, "Unknown")}
               </p>
@@ -3140,7 +3606,7 @@ function PatientFileRows({
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary hover:underline"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              View
+              {t("patients.documentsTab.view", "View")}
             </a>
             <a
               href={file.fileUrl}
@@ -3148,7 +3614,7 @@ function PatientFileRows({
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary hover:underline"
             >
               <Download className="h-3.5 w-3.5" />
-              Download
+              {t("patients.documentsTab.download", "Download")}
             </a>
           </li>
         );
@@ -3166,6 +3632,7 @@ function VisitDocuments({
   appointmentId: string;
   timeZone?: string | null;
 }) {
+  const { t } = useI18n();
   const { data, isLoading, error } = trpc.records.listPatientFiles.useQuery({
     patientId,
     appointmentId,
@@ -3175,14 +3642,17 @@ function VisitDocuments({
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Loading documents...
+        {t("patients.documentsTab.loading", "Loading documents...")}
       </div>
     );
   }
   if (error || !data) {
     return (
       <p className="text-xs text-destructive">
-        Unable to load documents for this visit.
+        {t(
+          "patients.documentsTab.loadError",
+          "Unable to load documents for this visit.",
+        )}
       </p>
     );
   }
@@ -3193,8 +3663,10 @@ function VisitDocuments({
   if (photos.length === 0 && documents.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        Nothing attached to this visit yet. Photos and consents captured during
-        the visit show up here.
+        {t(
+          "patients.documentsTab.emptyVisit",
+          "Nothing attached to this visit yet. Photos and consents captured during the visit show up here.",
+        )}
       </p>
     );
   }
@@ -3228,11 +3700,27 @@ function VisitDocuments({
   );
 }
 
-const documentFilters: { id: PatientFileKind | "all"; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "photo", label: "Photos" },
-  { id: "consent", label: "Consents" },
-  { id: "document", label: "Documents" },
+const documentFilters: {
+  id: PatientFileKind | "all";
+  labelKey: string;
+  defaultLabel: string;
+}[] = [
+  { id: "all", labelKey: "patients.documentsTab.filterAll", defaultLabel: "All" },
+  {
+    id: "photo",
+    labelKey: "patients.documentsTab.filterPhotos",
+    defaultLabel: "Photos",
+  },
+  {
+    id: "consent",
+    labelKey: "patients.documentsTab.filterConsents",
+    defaultLabel: "Consents",
+  },
+  {
+    id: "document",
+    labelKey: "patients.documentsTab.filterDocuments",
+    defaultLabel: "Documents",
+  },
 ];
 
 function DocumentsTab({
@@ -3242,6 +3730,7 @@ function DocumentsTab({
   patientId: string;
   timeZone?: string | null;
 }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<PatientFileKind | "all">("all");
   const { data, isLoading, error } = trpc.records.listPatientFiles.useQuery({
     patientId,
@@ -3266,18 +3755,30 @@ function DocumentsTab({
   }
   if (filesMissing) {
     return (
-      <PatientDetailErrorPanel message="Unable to load documents. Please retry." />
+      <PatientDetailErrorPanel
+        message={t(
+          "common.error_retry",
+          "Unable to load documents. Please retry.",
+        )}
+      />
     );
   }
   if (isLoading) {
-    return <PatientDetailLoadingPanel label="Loading documents..." />;
+    return (
+      <PatientDetailLoadingPanel
+        label={t("patients.documentsTab.loading", "Loading documents...")}
+      />
+    );
   }
   if (!data || data.length === 0) {
     return (
       <EmptyState
         icon={Paperclip}
-        title="No documents yet"
-        description="Photos you capture and consents that get signed show up here."
+        title={t("patients.documentsTab.empty", "No documents yet")}
+        description={t(
+          "patients.documentsTab.emptyDesc",
+          "Photos you capture and consents that get signed show up here.",
+        )}
       />
     );
   }
@@ -3303,20 +3804,25 @@ function DocumentsTab({
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >
-            {option.label} ({counts[option.id]})
+            {t(option.labelKey, option.defaultLabel)} ({counts[option.id]})
           </button>
         ))}
       </div>
 
       {visible.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          Nothing here yet for this filter.
+          {t(
+            "patients.documentsTab.emptyFilter",
+            "Nothing here yet for this filter.",
+          )}
         </div>
       ) : (
         <div className="space-y-4">
           {photos.length > 0 && (
             <div className="rounded-lg border border-border bg-card p-4">
-              <h3 className="mb-3 text-sm font-medium">Photos</h3>
+              <h3 className="mb-3 text-sm font-medium">
+                {t("patients.documentsTab.photosTitle", "Photos")}
+              </h3>
               <PatientPhotoGrid photos={photos} />
             </div>
           )}
@@ -3340,6 +3846,7 @@ const invoiceStatusStyles: Record<string, string> = {
 };
 
 function InvoicesTab({ patientId }: { patientId: string }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const { data, isLoading, error } = trpc.billing.listInvoices.useQuery({
     patientId,
@@ -3356,18 +3863,30 @@ function InvoicesTab({ patientId }: { patientId: string }) {
   }
   if (invoicesMissing) {
     return (
-      <PatientDetailErrorPanel message="Unable to load invoices. Please retry." />
+      <PatientDetailErrorPanel
+        message={t(
+          "common.error_retry",
+          "Unable to load invoices. Please retry.",
+        )}
+      />
     );
   }
   if (isLoading) {
-    return <PatientDetailLoadingPanel label="Loading invoices..." />;
+    return (
+      <PatientDetailLoadingPanel
+        label={t("patients.invoicesTab.loading", "Loading invoices...")}
+      />
+    );
   }
   if (!data || data.items.length === 0) {
     return (
       <EmptyState
         icon={Receipt}
-        title="No invoices yet"
-        description="Invoices created in Billing for this patient will show up here."
+        title={t("patients.invoicesTab.empty", "No invoices yet")}
+        description={t(
+          "patients.invoicesTab.emptyDesc",
+          "Invoices created in Billing for this patient will show up here.",
+        )}
       />
     );
   }
@@ -3378,16 +3897,16 @@ function InvoicesTab({ patientId }: { patientId: string }) {
         <thead>
           <tr className="border-b border-border bg-muted/50">
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Created
+              {t("patients.invoicesTab.colCreated", "Created")}
             </th>
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-              Total
+              {t("patients.invoicesTab.colTotal", "Total")}
             </th>
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-              Paid
+              {t("patients.invoicesTab.colDue", "Paid")}
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              Status
+              {t("patients.invoicesTab.colStatus", "Status")}
             </th>
             <th className="px-4 py-3" />
           </tr>
@@ -3426,7 +3945,7 @@ function InvoicesTab({ patientId }: { patientId: string }) {
                   href="/billing"
                   className="text-xs font-medium text-primary hover:underline"
                 >
-                  Open in Billing
+                  {t("patients.invoicesTab.openInBilling", "Open in Billing")}
                 </Link>
               </td>
             </tr>
@@ -3460,6 +3979,7 @@ function AllergyForm({
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <form onSubmit={onSubmit} className="mt-3 flex flex-wrap items-end gap-2">
       <div className="w-full sm:w-44">
@@ -3467,7 +3987,7 @@ function AllergyForm({
           htmlFor="allergy-allergen"
           className="mb-1 block text-xs font-medium text-muted-foreground"
         >
-          Allergen
+          {t("patients.profile.allergen", "Allergen")}
         </label>
         <input
           id="allergy-allergen"
@@ -3485,7 +4005,7 @@ function AllergyForm({
           htmlFor="allergy-severity"
           className="mb-1 block text-xs font-medium text-muted-foreground"
         >
-          Severity
+          {t("patients.profile.severity", "Severity")}
         </label>
         <select
           id="allergy-severity"
@@ -3497,9 +4017,15 @@ function AllergyForm({
           }
           className="rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
         >
-          <option value="mild">Mild</option>
-          <option value="moderate">Moderate</option>
-          <option value="severe">Severe</option>
+          <option value="mild">
+            {t("patients.profile.severityMild", "Mild")}
+          </option>
+          <option value="moderate">
+            {t("patients.profile.severityModerate", "Moderate")}
+          </option>
+          <option value="severe">
+            {t("patients.profile.severitySevere", "Severe")}
+          </option>
         </select>
       </div>
       <div className="w-full sm:w-56">
@@ -3507,7 +4033,7 @@ function AllergyForm({
           htmlFor="allergy-reaction"
           className="mb-1 block text-xs font-medium text-muted-foreground"
         >
-          Reaction (optional)
+          {t("patients.profile.reactionOptional", "Reaction (optional)")}
         </label>
         <input
           id="allergy-reaction"
@@ -3526,10 +4052,12 @@ function AllergyForm({
           ) : (
             <Plus className="mr-1.5 h-3.5 w-3.5" />
           )}
-          {isPending ? "Saving..." : "Save allergy"}
+          {isPending
+            ? t("common.saving", "Saving...")
+            : t("patients.profile.saveAllergy", "Save allergy")}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {t("common.cancel", "Cancel")}
         </Button>
       </div>
     </form>

@@ -21,15 +21,21 @@ import {
   CalendarClock,
   Pill,
   Undo2,
+  ReceiptText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { ActionConfirmationDialog } from "@/components/common/action-confirmation-dialog";
+import {
+  EkasaReceiptDialog,
+  type EkasaReceiptModalData,
+} from "@/components/ekasa/ekasa-receipt-dialog";
 import { TableSkeleton } from "@/components/common/loading";
 import { TableScroll } from "@/components/common/table-scroll";
 import {
@@ -42,13 +48,13 @@ import {
 import { isSafeCheckoutRedirectUrl } from "@/lib/checkout-redirect";
 
 const STATUS_TABS = [
-  { label: "All", value: undefined, isEstimate: false as const },
-  { label: "Draft", value: "draft", isEstimate: false as const },
-  { label: "Sent", value: "sent", isEstimate: false as const },
-  { label: "Paid", value: "paid", isEstimate: false as const },
-  { label: "Overdue", value: "overdue", isEstimate: false as const },
-  { label: "Void", value: "void", isEstimate: false as const },
-  { label: "Estimates", value: undefined, isEstimate: true as const },
+  { key: "all", label: "All", value: undefined, isEstimate: false as const },
+  { key: "draft", label: "Draft", value: "draft", isEstimate: false as const },
+  { key: "sent", label: "Sent", value: "sent", isEstimate: false as const },
+  { key: "paid", label: "Paid", value: "paid", isEstimate: false as const },
+  { key: "overdue", label: "Overdue", value: "overdue", isEstimate: false as const },
+  { key: "void", label: "Void", value: "void", isEstimate: false as const },
+  { key: "estimates", label: "Estimates", value: undefined, isEstimate: true as const },
 ] as const;
 
 const STATUS_STYLES: Record<string, string> = {
@@ -63,12 +69,12 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const PAYMENT_METHODS = [
-  { label: "Cash", value: "cash" },
-  { label: "Credit Card", value: "credit_card" },
-  { label: "Debit Card", value: "debit_card" },
-  { label: "Check", value: "check" },
-  { label: "Online", value: "online" },
-  { label: "Other", value: "other" },
+  { key: "cash", label: "Cash", value: "cash" },
+  { key: "credit_card", label: "Credit Card", value: "credit_card" },
+  { key: "debit_card", label: "Debit Card", value: "debit_card" },
+  { key: "check", label: "Check", value: "check" },
+  { key: "online", label: "Online", value: "online" },
+  { key: "other", label: "Other", value: "other" },
 ] as const;
 
 const BILLING_ACTION_REASON_MIN_LENGTH = 5;
@@ -149,6 +155,7 @@ function getDisplayStatus(invoice: {
 
 export default function BillingPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { data: session } = useSession();
   const formatCurrency = useCurrencyFormatter();
   const canManageBilling = canManageBillingRole(session?.user?.role);
@@ -203,7 +210,7 @@ export default function BillingPage() {
 
   const updateStatus = trpc.billing.updateInvoiceStatus.useMutation({
     onSuccess: () => {
-      toast.success("Invoice status updated");
+      toast.success(t("billing.page.toastStatusUpdated", "Invoice status updated"));
       utils.billing.listInvoices.invalidate();
       utils.billing.getInvoice.invalidate();
     },
@@ -214,7 +221,7 @@ export default function BillingPage() {
 
   const convertEstimate = trpc.billing.convertEstimateToInvoice.useMutation({
     onSuccess: () => {
-      toast.success("Estimate converted to invoice");
+      toast.success(t("billing.page.toastEstimateConverted", "Estimate converted to invoice"));
       utils.billing.listInvoices.invalidate();
     },
     onError: (err) => {
@@ -224,7 +231,7 @@ export default function BillingPage() {
 
   const voidInvoice = trpc.billing.voidInvoice.useMutation({
     onSuccess: () => {
-      toast.success("Invoice voided");
+      toast.success(t("billing.page.toastInvoiceVoided", "Invoice voided"));
       utils.billing.listInvoices.invalidate();
       utils.billing.getInvoice.invalidate();
       utils.billing.listDispenseChargeQueue.invalidate();
@@ -283,16 +290,18 @@ export default function BillingPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-heading text-xl font-semibold">Billing</h2>
+          <h2 className="font-heading text-xl font-semibold">
+            {t("billing.page.title", "Billing")}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Invoices and payments
+            {t("billing.page.subtitle", "Invoices and payments")}
           </p>
         </div>
         {canManageBilling && (
           <Button asChild>
             <Link href="/billing/new">
               <Plus className="mr-1 h-4 w-4" />
-              New Invoice
+              {t("billing.page.newInvoice", "New Invoice")}
             </Link>
           </Button>
         )}
@@ -314,7 +323,9 @@ export default function BillingPage() {
       {/* Accounts receivable at a glance */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Outstanding</p>
+          <p className="text-sm text-muted-foreground">
+            {t("billing.page.kpiOutstanding", "Outstanding")}
+          </p>
           <p className="mt-1 font-heading text-2xl font-semibold">
             {arSummary.isError
               ? "—"
@@ -324,7 +335,9 @@ export default function BillingPage() {
           </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Overdue</p>
+          <p className="text-sm text-muted-foreground">
+            {t("billing.page.kpiOverdue", "Overdue")}
+          </p>
           <p
             className={`mt-1 font-heading text-2xl font-semibold ${
               arSummary.data && Number(arSummary.data.overdue) > 0
@@ -340,7 +353,9 @@ export default function BillingPage() {
           </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Collected this month</p>
+          <p className="text-sm text-muted-foreground">
+            {t("billing.page.kpiCollectedMtd", "Collected this month")}
+          </p>
           <p className="mt-1 font-heading text-2xl font-semibold">
             {arSummary.isError
               ? "—"
@@ -353,9 +368,9 @@ export default function BillingPage() {
 
       {/* Status filter tabs */}
       <div className="mt-6 flex items-center gap-1 border-b border-border">
-        {STATUS_TABS.map((t, idx) => (
+        {STATUS_TABS.map((tTab, idx) => (
           <button
-            key={t.label}
+            key={tTab.label}
             onClick={() => {
               setActiveTab(idx);
               setOffset(0);
@@ -366,14 +381,15 @@ export default function BillingPage() {
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t.label}
+            {t(`billing.status_${tTab.key}`, tTab.label)}
           </button>
         ))}
       </div>
 
       {listError || billingListMissing ? (
         <div className="mt-6 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {listError?.message ?? "Unable to load invoices. Please retry."}
+          {listError?.message ??
+            t("billing.page.loadInvoicesError", "Unable to load invoices. Please retry.")}
         </div>
       ) : isListLoading ? (
         <TableSkeleton rows={8} cols={7} />
@@ -385,28 +401,28 @@ export default function BillingPage() {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="w-8 px-2 py-3" />
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Client
+                    {t("billing.page.tableClient", "Client")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Patient
+                    {t("billing.page.tablePatient", "Patient")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Status
+                    {t("billing.page.tableStatus", "Status")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Total
+                    {t("billing.page.tableTotal", "Total")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Paid
+                    {t("billing.page.tablePaid", "Paid")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Due Date
+                    {t("billing.page.tableDueDate", "Due Date")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Created
+                    {t("billing.page.tableCreated", "Created")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Actions
+                    {t("billing.page.tableActions", "Actions")}
                   </th>
                 </tr>
               </thead>
@@ -441,8 +457,15 @@ export default function BillingPage() {
           {/* Pagination */}
           <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <p>
-              Showing {offset + 1}--{Math.min(offset + limit, data.total)} of{" "}
-              {data.total}
+              {t(
+                "billing.page.showingPagination",
+                `Showing ${offset + 1}--${Math.min(offset + limit, data.total)} of ${data.total}`,
+                {
+                  from: offset + 1,
+                  to: Math.min(offset + limit, data.total),
+                  total: data.total,
+                }
+              )}
             </p>
             <div className="flex gap-2">
               <Button
@@ -451,7 +474,7 @@ export default function BillingPage() {
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - limit))}
               >
-                Previous
+                {t("billing.page.previous", "Previous")}
               </Button>
               <Button
                 variant="outline"
@@ -459,7 +482,7 @@ export default function BillingPage() {
                 disabled={offset + limit >= data.total}
                 onClick={() => setOffset(offset + limit)}
               >
-                Next
+                {t("billing.page.next", "Next")}
               </Button>
             </div>
           </div>
@@ -470,22 +493,33 @@ export default function BillingPage() {
           icon={FileText}
           title={
             tab.isEstimate
-              ? "No estimates yet"
+              ? t("billing.page.emptyEstimatesTitle", "No estimates yet")
               : statusFilter
-                ? "No invoices with this status"
-                : "No invoices yet"
+                ? t("billing.page.emptyStatusTitle", "No invoices with this status")
+                : t("billing.page.emptyInvoicesTitle", "No invoices yet")
           }
           description={
             tab.isEstimate
-              ? "Create an estimate when a client needs approval before services are performed."
+              ? t(
+                  "billing.page.emptyEstimatesDesc",
+                  "Create an estimate when a client needs approval before services are performed."
+                )
               : statusFilter
-                ? "Choose another status tab or create a new invoice."
-                : "Create invoices from services, products, or treatment templates before recording payments."
+                ? t(
+                    "billing.page.emptyStatusDesc",
+                    "Choose another status tab or create a new invoice."
+                  )
+                : t(
+                    "billing.page.emptyInvoicesDesc",
+                    "Create invoices from services, products, or treatment templates before recording payments."
+                  )
           }
           action={
             canManageBilling
               ? {
-                  label: tab.isEstimate ? "Create estimate" : "Create invoice",
+                  label: tab.isEstimate
+                    ? t("billing.page.actionCreateEstimate", "Create estimate")
+                    : t("billing.page.actionCreateInvoice", "Create invoice"),
                   onClick: () => router.push("/billing/new"),
                   icon: Plus,
                 }
@@ -496,16 +530,22 @@ export default function BillingPage() {
 
       <ActionConfirmationDialog
         open={pendingInvoiceVoidId !== null}
-        title="Void invoice?"
-        description="This cannot be undone. Any dispensed medication charges on this invoice will return to the billing work queue; inventory will not move again."
-        confirmLabel="Void invoice"
+        title={t("billing.page.dialogVoidTitle", "Void invoice?")} /* title="Void invoice?" */
+        description={t(
+          "billing.page.dialogVoidDesc",
+          "This cannot be undone. Any dispensed medication charges on this invoice will return to the billing work queue; inventory will not move again."
+        )}
+        confirmLabel={t("billing.page.dialogVoidConfirm", "Void invoice")}
         confirmVariant="destructive"
         isPending={voidInvoice.isPending}
         reason={{
-          label: "Reason for voiding",
+          label: t("billing.page.dialogVoidReasonLabel", "Reason for voiding"), /* label: "Reason for voiding" */
           value: invoiceVoidReason,
           onChange: setInvoiceVoidReason,
-          placeholder: "Explain the correction for the audit trail",
+          placeholder: t(
+            "billing.page.dialogVoidReasonPlaceholder",
+            "Explain the correction for the audit trail"
+          ),
           minLength: BILLING_ACTION_REASON_MIN_LENGTH,
           maxLength: BILLING_ACTION_REASON_MAX_LENGTH,
         }}
@@ -528,6 +568,7 @@ function DispenseChargeQueuePanel({
   onInvoiceCreated: (invoiceId: string) => void;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const [waiveTargetId, setWaiveTargetId] = useState<string | null>(null);
@@ -546,7 +587,12 @@ function DispenseChargeQueuePanel({
   );
   const createInvoice = trpc.billing.createDispenseChargeInvoice.useMutation({
     onSuccess: async ({ invoiceId }) => {
-      toast.success("Medication dispense added to a draft invoice");
+      toast.success(
+        t(
+          "billing.dispense.toastDraftCreated",
+          "Medication dispense added to a draft invoice"
+        )
+      );
       onInvoiceCreated(invoiceId);
       await Promise.all([
         utils.billing.listDispenseChargeQueue.invalidate(),
@@ -558,14 +604,24 @@ function DispenseChargeQueuePanel({
   });
   const waiveCharge = trpc.billing.waiveDispenseCharge.useMutation({
     onSuccess: async () => {
-      toast.success("Medication charge waived with an audit record");
+      toast.success(
+        t(
+          "billing.dispense.toastWaived",
+          "Medication charge waived with an audit record"
+        )
+      );
       await utils.billing.listDispenseChargeQueue.invalidate();
     },
     onError: (error) => toast.error(error.message),
   });
   const reopenCharge = trpc.billing.reopenDispenseCharge.useMutation({
     onSuccess: async () => {
-      toast.success("Medication charge returned to the work queue");
+      toast.success(
+        t(
+          "billing.dispense.toastReopened",
+          "Medication charge returned to the work queue"
+        )
+      );
       await utils.billing.listDispenseChargeQueue.invalidate();
     },
     onError: (error) => toast.error(error.message),
@@ -634,7 +690,7 @@ function DispenseChargeQueuePanel({
           <div className="flex items-center gap-2">
             <Pill className="h-4 w-4 text-primary" />
             <h3 className="font-heading font-semibold">
-              Unbilled medication dispenses
+              {t("billing.dispense.title", "Unbilled medication dispenses")}
             </h3>
             {pending.data ? (
               <Badge
@@ -645,20 +701,23 @@ function DispenseChargeQueuePanel({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Every clinic-stock fill stays here until billing creates a draft
-            invoice or an admin records why it is no-charge. Inventory has
-            already been deducted and will not move again.
+            {t(
+              "billing.dispense.subtitle",
+              "Every clinic-stock fill stays here until billing creates a draft invoice or an admin records why it is no-charge. Inventory has already been deducted and will not move again."
+            )}
           </p>
         </div>
       </div>
       {pending.isError ? (
         <div className="p-4 text-sm text-destructive">
-          Unable to load medication billing work. {pending.error.message}
+          {t("billing.dispense.loadError", `Unable to load medication billing work. ${pending.error.message}`, {
+            message: pending.error.message,
+          })}
         </div>
       ) : pending.isLoading ? (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading medication billing work...
+          {t("billing.dispense.loading", "Loading medication billing work...")}
         </div>
       ) : pending.data && pending.data.items.length > 0 ? (
         <div className="divide-y divide-border">
@@ -671,7 +730,9 @@ function DispenseChargeQueuePanel({
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">{item.description}</p>
                   {item.legacyReview ? (
-                    <Badge variant="outline">Legacy review</Badge>
+                    <Badge variant="outline">
+                      {t("billing.dispense.legacyReviewBadge", "Legacy review")}
+                    </Badge>
                   ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -686,11 +747,11 @@ function DispenseChargeQueuePanel({
                         href={`/encounters/${item.appointmentId}#charge-capture`}
                         className="underline underline-offset-2"
                       >
-                        Open visit
+                        {t("billing.dispense.openVisit", "Open visit")}
                       </Link>
                     </>
                   ) : (
-                    <> · Standalone refill</>
+                    <> · {t("billing.dispense.standaloneRefill", "Standalone refill")}</>
                   )}
                 </p>
               </div>
@@ -701,7 +762,9 @@ function DispenseChargeQueuePanel({
                     disabled={isMutating}
                     onClick={() => createDraftForDispense(item)}
                   >
-                    {item.legacyReview ? "Review & create" : "Create draft"}
+                    {item.legacyReview
+                      ? t("billing.dispense.reviewAndCreate", "Review & create")
+                      : t("billing.dispense.createDraft", "Create draft")}
                   </Button>
                   {canWaive ? (
                     <Button
@@ -710,7 +773,7 @@ function DispenseChargeQueuePanel({
                       disabled={isMutating}
                       onClick={() => openWaiveDialog(item.id)}
                     >
-                      Waive
+                      {t("billing.dispense.waive", "Waive")}
                     </Button>
                   ) : null}
                 </div>
@@ -721,13 +784,20 @@ function DispenseChargeQueuePanel({
       ) : (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          No clinic-stock dispenses are waiting for billing.
+          {t(
+            "billing.dispense.noDispensesWaiting",
+            "No clinic-stock dispenses are waiting for billing."
+          )}
         </div>
       )}
       {canWaive && waived.data && waived.data.items.length > 0 ? (
         <details className="border-t border-border p-4">
           <summary className="cursor-pointer text-sm font-medium">
-            Recently waived ({waived.data.total})
+            {t(
+              "billing.dispense.recentlyWaived",
+              `Recently waived (${waived.data.total})`,
+              { count: waived.data.total }
+            )}
           </summary>
           <div className="mt-3 space-y-3">
             {waived.data.items.map((item) => (
@@ -748,7 +818,7 @@ function DispenseChargeQueuePanel({
                   onClick={() => reopenCharge.mutate({ id: item.id })}
                 >
                   <Undo2 className="mr-1 h-3.5 w-3.5" />
-                  Reopen
+                  {t("billing.dispense.reopen", "Reopen")}
                 </Button>
               </div>
             ))}
@@ -757,9 +827,12 @@ function DispenseChargeQueuePanel({
       ) : null}
       <ActionConfirmationDialog
         open={legacyReviewTargetId !== null}
-        title="Review legacy dispense"
-        description="This dispense predates the billing ledger. Verify it was not already billed before creating a draft invoice."
-        confirmLabel="Verified — create draft"
+        title={t("billing.dispense.dialogReviewLegacyTitle", "Review legacy dispense")} /* title="Review legacy dispense" */
+        description={t(
+          "billing.dispense.dialogReviewLegacyDesc",
+          "This dispense predates the billing ledger. Verify it was not already billed before creating a draft invoice."
+        )}
+        confirmLabel={t("billing.dispense.dialogReviewLegacyConfirm", "Verified — create draft")} /* confirmLabel="Verified — create draft" */
         isPending={createInvoice.isPending}
         onCancel={closeLegacyReviewDialog}
         onConfirm={confirmLegacyReview}
@@ -767,16 +840,22 @@ function DispenseChargeQueuePanel({
 
       <ActionConfirmationDialog
         open={waiveTargetId !== null}
-        title="Waive medication charge?"
-        description="No invoice will be created. Inventory remains deducted, and the reason is saved to the audit trail so an admin can review or reopen this charge later."
-        confirmLabel="Waive charge"
+        title={t("billing.dispense.dialogWaiveTitle", "Waive medication charge?")} /* title="Waive medication charge?" */
+        description={t(
+          "billing.dispense.dialogWaiveDesc",
+          "No invoice will be created. Inventory remains deducted, and the reason is saved to the audit trail so an admin can review or reopen this charge later."
+        )}
+        confirmLabel={t("billing.dispense.dialogWaiveConfirm", "Waive charge")}
         confirmVariant="destructive"
         isPending={waiveCharge.isPending}
         reason={{
-          label: "Reason for no charge",
+          label: t("billing.dispense.dialogWaiveReasonLabel", "Reason for no charge"), /* label: "Reason for no charge" */
           value: waiveReason,
           onChange: setWaiveReason,
-          placeholder: "Explain why this dispense should not be billed",
+          placeholder: t(
+            "billing.dispense.dialogWaiveReasonPlaceholder",
+            "Explain why this dispense should not be billed"
+          ),
           minLength: BILLING_ACTION_REASON_MIN_LENGTH,
           maxLength: BILLING_ACTION_REASON_MAX_LENGTH,
         }}
@@ -797,6 +876,7 @@ function WellnessBillingPanel({
   settingsReady: boolean;
   canManageBilling: boolean;
 }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const dueQuery = trpc.wellness.listDue.useQuery(undefined, {
@@ -822,7 +902,13 @@ function WellnessBillingPanel({
   const generateInvoices = trpc.wellness.generateDueInvoices.useMutation({
     onSuccess: (result) => {
       const label = result.generated === 1 ? "invoice" : "invoices";
-      toast.success(`${result.generated} wellness ${label} generated`);
+      toast.success(
+        t(
+          "billing.wellness.toastGenerated",
+          `${result.generated} wellness ${label} generated`,
+          { count: result.generated, label }
+        )
+      );
       utils.wellness.listDue.invalidate();
       utils.billing.listInvoices.invalidate();
     },
@@ -854,8 +940,12 @@ function WellnessBillingPanel({
           <CalendarClock className="mt-0.5 h-5 w-5 text-primary" />
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-medium">Wellness invoices due</h3>
-              <Badge variant="secondary">Invoice schedule</Badge>
+              <h3 className="font-medium">
+                {t("billing.wellness.title", "Wellness invoices due")}
+              </h3>
+              <Badge variant="secondary">
+                {t("billing.wellness.badgeSchedule", "Invoice schedule")}
+              </Badge>
             </div>
             <p
               className={`text-sm ${
@@ -865,19 +955,29 @@ function WellnessBillingPanel({
               }`}
             >
               {dueQuery.isLoading
-                ? "Checking due memberships..."
+                ? t("billing.wellness.checkingMemberships", "Checking due memberships...")
                 : dueQuery.error
                 ? dueQuery.error.message
                 : dueMembershipsMissing
-                ? "Unable to load due wellness memberships. Please retry."
-                : `${dueMemberships.length} scheduled invoice${
-                    dueMemberships.length === 1 ? "" : "s"
-                  } due, ${formatCurrency(totalDue)} before tax`}
+                ? t("billing.wellness.loadError", "Unable to load due wellness memberships. Please retry.")
+                : t(
+                    "billing.wellness.dueSummary",
+                    `${dueMemberships.length} scheduled invoice${
+                      dueMemberships.length === 1 ? "" : "s"
+                    } due, ${formatCurrency(totalDue)} before tax`,
+                    {
+                      count: dueMemberships.length,
+                      suffix: dueMemberships.length === 1 ? "" : "s",
+                      total: formatCurrency(totalDue),
+                    }
+                  )}
             </p>
             {!dueMembershipsUnavailable && !dueQuery.isLoading && (
               <p className="mt-1 text-xs text-muted-foreground">
-                OpenVPM generates invoices for each billing date; staff still
-                collect payment on each invoice.
+                {t(
+                  "billing.wellness.hint",
+                  "OpenVPM generates invoices for each billing date; staff still collect payment on each invoice."
+                )}
               </p>
             )}
           </div>
@@ -902,7 +1002,7 @@ function WellnessBillingPanel({
             ) : (
               <FileText className="mr-2 h-4 w-4" />
             )}
-            Generate invoices
+            {t("billing.wellness.generateInvoices", "Generate invoices")}
           </Button>
         )}
       </div>
@@ -912,19 +1012,19 @@ function WellnessBillingPanel({
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Client
+                  {t("billing.wellness.tableClient", "Client")}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Patient
+                  {t("billing.wellness.tablePatient", "Patient")}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Plan
+                  {t("billing.wellness.tablePlan", "Plan")}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Due
+                  {t("billing.wellness.tableDue", "Due")}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                  Amount
+                  {t("billing.wellness.tableAmount", "Amount")}
                 </th>
               </tr>
             </thead>
@@ -1004,6 +1104,7 @@ function InvoiceRow({
   canManageBilling: boolean;
   isMutating: boolean;
 }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const detail = trpc.billing.getInvoice.useQuery(
     { id: invoice.id },
@@ -1046,7 +1147,9 @@ function InvoiceRow({
           <span>{formatCurrency(invoice.paidAmount)}</span>
           {adjustedAmount > 0 && (
             <span className="block text-xs text-muted-foreground">
-              Adj {formatCurrency(adjustedAmount)}
+              {t("billing.row.adjPrefix", `Adj ${formatCurrency(adjustedAmount)}`, {
+                amount: formatCurrency(adjustedAmount),
+              })}
             </span>
           )}
         </td>
@@ -1068,7 +1171,7 @@ function InvoiceRow({
                 size="sm"
                 disabled={isMutating}
                 onClick={(e) => onConvertEstimate(e, invoice.id)}
-                title="Convert to Invoice"
+                title={t("billing.row.tooltipConvertToInvoice", "Convert to Invoice")}
               >
                 <ArrowRightLeft className="h-3.5 w-3.5" />
               </Button>
@@ -1081,7 +1184,7 @@ function InvoiceRow({
                 size="sm"
                 disabled={isMutating}
                 onClick={(e) => onStatusChange(e, invoice.id, "sent")}
-                title="Mark as Sent"
+                title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
               >
                 <Send className="h-3.5 w-3.5" />
               </Button>
@@ -1096,7 +1199,7 @@ function InvoiceRow({
                       size="sm"
                       disabled={isMutating}
                       onClick={(e) => onStatusChange(e, invoice.id, "sent")}
-                      title="Mark as Sent"
+                      title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
                     >
                       <Send className="h-3.5 w-3.5" />
                     </Button>
@@ -1111,7 +1214,7 @@ function InvoiceRow({
                   size="sm"
                   disabled={isMutating}
                   onClick={(e) => onVoidInvoice(e, invoice.id)}
-                  title="Void Invoice"
+                  title={t("billing.row.tooltipVoidInvoice", "Void Invoice")}
                 >
                   <Ban className="h-3.5 w-3.5" />
                 </Button>
@@ -1125,7 +1228,7 @@ function InvoiceRow({
             {detail.isLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading invoice details...
+                {t("billing.row.loadingDetails", "Loading invoice details...")}
               </div>
             ) : detail.data ? (
               <div className="space-y-4">
@@ -1134,7 +1237,7 @@ function InvoiceRow({
                     <Link
                       href={`/encounters/${encodeURIComponent(detail.data.appointmentId)}#charge-capture`}
                     >
-                      Back to visit
+                      {t("billing.row.backToVisit", "Back to visit")}
                     </Link>
                   </Button>
                 ) : null}
@@ -1145,7 +1248,7 @@ function InvoiceRow({
                     <div className="flex items-center gap-2">
                       <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                       <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
-                        This is an estimate
+                        {t("billing.row.estimateBannerTitle", "This is an estimate")}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1195,7 +1298,7 @@ function InvoiceRow({
                         }}
                       >
                         <Download className="mr-1 h-3.5 w-3.5" />
-                        Present to Client
+                        {t("billing.row.presentToClient", "Present to Client")}
                       </Button>
                       {canManageBilling && (
                         <Button
@@ -1204,7 +1307,7 @@ function InvoiceRow({
                           onClick={(e) => onConvertEstimate(e, invoice.id)}
                         >
                           <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                          Approve &amp; Convert
+                          {t("billing.row.approveAndConvert", "Approve & Convert")}
                         </Button>
                       )}
                     </div>
@@ -1213,7 +1316,7 @@ function InvoiceRow({
 
                 <div className="flex items-center gap-6 text-sm">
                   <span className="text-muted-foreground">
-                    Client:{" "}
+                    {t("billing.row.labelClient", "Client:")}{" "}
                     <span className="text-foreground font-medium">
                       {detail.data.clientFirstName}{" "}
                       {detail.data.clientLastName}
@@ -1231,19 +1334,19 @@ function InvoiceRow({
                     <thead>
                       <tr className="border-b border-border">
                         <th className="py-2 text-left font-medium text-muted-foreground">
-                          Description
+                          {t("billing.row.colDescription", "Description")}
                         </th>
                         <th className="py-2 text-left font-medium text-muted-foreground">
-                          Type
+                          {t("billing.row.colType", "Type")}
                         </th>
                         <th className="py-2 text-right font-medium text-muted-foreground">
-                          Qty
+                          {t("billing.row.colQty", "Qty")}
                         </th>
                         <th className="py-2 text-right font-medium text-muted-foreground">
-                          Unit Price
+                          {t("billing.row.colUnitPrice", "Unit Price")}
                         </th>
                         <th className="py-2 text-right font-medium text-muted-foreground">
-                          Total
+                          {t("billing.row.colTotal", "Total")}
                         </th>
                       </tr>
                     </thead>
@@ -1255,7 +1358,7 @@ function InvoiceRow({
                         >
                           <td className="py-2">{item.description}</td>
                           <td className="py-2 capitalize text-muted-foreground">
-                            {item.itemType} · {item.taxable ? "taxable" : "not taxable"}
+                            {item.itemType} · {item.taxable ? t("billing.row.taxable", "taxable") : t("billing.row.notTaxable", "not taxable")}
                           </td>
                           <td className="py-2 text-right tabular-nums">
                             {item.quantity}
@@ -1272,7 +1375,7 @@ function InvoiceRow({
                     <tfoot>
                       <tr className="border-t border-border">
                         <td colSpan={4} className="py-2 text-right font-medium">
-                          Subtotal
+                          {t("billing.row.subtotal", "Subtotal")}
                         </td>
                         <td className="py-2 text-right tabular-nums">
                           {formatCurrency(detail.data.subtotal)}
@@ -1280,7 +1383,7 @@ function InvoiceRow({
                       </tr>
                       <tr>
                         <td colSpan={4} className="py-1 text-right text-muted-foreground">
-                          Tax
+                          {t("billing.row.tax", "Tax")}
                         </td>
                         <td className="py-1 text-right tabular-nums text-muted-foreground">
                           {formatCurrency(detail.data.tax)}
@@ -1288,7 +1391,7 @@ function InvoiceRow({
                       </tr>
                       <tr className="font-semibold">
                         <td colSpan={4} className="py-2 text-right">
-                          Total
+                          {t("billing.row.total", "Total")}
                         </td>
                         <td className="py-2 text-right tabular-nums">
                           {formatCurrency(detail.data.total)}
@@ -1299,7 +1402,7 @@ function InvoiceRow({
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No line items on this invoice.
+                    {t("billing.row.noLineItems", "No line items on this invoice.")}
                   </p>
                 )}
 
@@ -1308,27 +1411,27 @@ function InvoiceRow({
                   <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm">
                     <div className="flex items-center gap-6">
                       <span>
-                        Total:{" "}
+                        {t("billing.row.summaryTotal", "Total:")}{" "}
                         <span className="font-semibold">
                           {formatCurrency(detail.data.total)}
                         </span>
                       </span>
                       <span>
-                        Paid:{" "}
+                        {t("billing.row.summaryPaid", "Paid:")}{" "}
                         <span className="font-semibold text-green-600">
                           {formatCurrency(detail.data.paidAmount)}
                         </span>
                       </span>
                       {Number(detail.data.adjustedAmount ?? 0) > 0 && (
                         <span>
-                          Adjusted:{" "}
+                          {t("billing.row.summaryAdjusted", "Adjusted:")}{" "}
                           <span className="font-semibold text-teal-600">
                             {formatCurrency(detail.data.adjustedAmount)}
                           </span>
                         </span>
                       )}
                       <span>
-                        Balance:{" "}
+                        {t("billing.row.summaryBalance", "Balance:")}{" "}
                         <span className="font-semibold text-red-600">
                           {formatCurrency(detail.data.balanceDue)}
                         </span>
@@ -1381,7 +1484,7 @@ function InvoiceRow({
                         }}
                       >
                         <Download className="mr-1 h-3.5 w-3.5" />
-                        Download PDF
+                        {t("billing.row.downloadPdf", "Download PDF")}
                       </Button>
                       {canManageBilling &&
                         (invoice.status === "sent" ||
@@ -1408,7 +1511,7 @@ function InvoiceRow({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Failed to load invoice details.
+                {t("billing.row.failedToLoad", "Failed to load invoice details.")}
               </p>
             )}
           </td>
@@ -1419,9 +1522,10 @@ function InvoiceRow({
 }
 
 function EmailInvoiceButton({ invoiceId }: { invoiceId: string }) {
+  const { t } = useI18n();
   const sendInvoiceEmail = trpc.notifications.sendInvoiceEmail.useMutation({
     onSuccess: () => {
-      toast.success("Invoice emailed");
+      toast.success(t("billing.row.toastEmailed", "Invoice emailed"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -1443,8 +1547,55 @@ function EmailInvoiceButton({ invoiceId }: { invoiceId: string }) {
       ) : (
         <Mail className="mr-1 h-3.5 w-3.5" />
       )}
-      Email Invoice
+      {t("billing.row.emailInvoice", "Email Invoice")}
     </Button>
+  );
+}
+
+function PaymentEkasaBadge({
+  paymentId,
+  invoiceId,
+}: {
+  paymentId: string;
+  invoiceId: string;
+}) {
+  const { data: receipt } = trpc.ekasa.getReceiptForPayment.useQuery(
+    { paymentId, invoiceId },
+    { staleTime: 30_000 }
+  );
+  const [open, setOpen] = useState(false);
+
+  if (!receipt) return null;
+
+  return (
+    <>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 transition-colors"
+        title="Zobraziť a vytlačiť e-Kasa doklad"
+      >
+        <ReceiptText className="h-3 w-3 text-emerald-600" />
+        e-Kasa #{receipt.receiptNumber.split("-")[1] ?? receipt.receiptNumber}
+      </button>
+
+      <EkasaReceiptDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        receipt={{
+          receiptId: receipt.id,
+          receiptNumber: receipt.receiptNumber,
+          amountTotal: receipt.amountTotal,
+          status: receipt.status,
+          okp: receipt.okp,
+          pkp: receipt.pkp,
+          uid: receipt.uid,
+          qrUrl: `https://ekasa.financnasprava.sk/mdu/verifikacia?dic=${receipt.okp}&cislo=${receipt.receiptNumber}`,
+        }}
+      />
+    </>
   );
 }
 
@@ -1467,12 +1618,17 @@ function PaymentSection({
   billingTimeZone?: string | null;
   canManageBilling: boolean;
 }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [autoEkasa, setAutoEkasa] = useState(true);
+  const [ekasaReceiptOpen, setEkasaReceiptOpen] = useState(false);
+  const [ekasaReceiptData, setEkasaReceiptData] =
+    useState<EkasaReceiptModalData | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<"credit" | "write_off">(
     "credit"
   );
@@ -1496,12 +1652,40 @@ function PaymentSection({
     staleTime: 60_000,
   });
 
+  const ekasaReceiptMutation = trpc.ekasa.createReceiptFromPayment.useMutation({
+    onSuccess: (res) => {
+      toast.success(`e-Kasa doklad #${res.receiptNumber} vystavený!`);
+      setEkasaReceiptData(res);
+      setEkasaReceiptOpen(true);
+      utils.ekasa.getReceiptForPayment.invalidate();
+    },
+    onError: (err) => {
+      console.warn("e-Kasa automatická evidencia:", err.message);
+    },
+  });
+
   const recordPayment = trpc.billing.recordPayment.useMutation({
-    onSuccess: () => {
-      toast.success("Payment recorded");
+    onSuccess: (paymentResult) => {
+      toast.success(t("billing.payments.toastPaymentRecorded", "Payment recorded"));
       utils.billing.listPayments.invalidate({ invoiceId });
       utils.billing.listInvoices.invalidate();
       utils.billing.getInvoice.invalidate({ id: invoiceId });
+
+      // Automatické vystavenie e-Kasa dokladu pre hotovosť a platobnú kartu (Zero-Touch)
+      if (
+        autoEkasa &&
+        (paymentMethod === "cash" ||
+          paymentMethod === "credit_card" ||
+          paymentMethod === "debit_card")
+      ) {
+        ekasaReceiptMutation.mutate({
+          invoiceId,
+          paymentId: paymentResult?.id,
+          amount: paymentAmount,
+          paymentMethod,
+        });
+      }
+
       setShowPaymentForm(false);
       setPaymentAmount("");
       setPaymentMethod("cash");
@@ -1515,7 +1699,7 @@ function PaymentSection({
 
   const applyAdjustment = trpc.billing.applyInvoiceAdjustment.useMutation({
     onSuccess: () => {
-      toast.success("Invoice adjustment applied");
+      toast.success(t("billing.payments.toastAdjustmentApplied", "Invoice adjustment applied"));
       utils.billing.listAdjustments.invalidate({ invoiceId });
       utils.billing.listInvoices.invalidate();
       utils.billing.getInvoice.invalidate({ id: invoiceId });
@@ -1533,7 +1717,12 @@ function PaymentSection({
   const cardCheckout = trpc.billing.createCardPaymentCheckout.useMutation({
     onSuccess: ({ url }) => {
       if (!isSafeCheckoutRedirectUrl(url)) {
-        toast.error("Card checkout is unavailable. Please try again.");
+        toast.error(
+          t(
+            "billing.payments.cardCheckoutUnavailable",
+            "Card checkout is unavailable. Please try again."
+          )
+        );
         return;
       }
       window.location.href = url;
@@ -1545,7 +1734,7 @@ function PaymentSection({
 
   const refundPayment = trpc.billing.refundPayment.useMutation({
     onSuccess: () => {
-      toast.success("Payment refunded");
+      toast.success(t("billing.payments.toastPaymentRefunded", "Payment refunded"));
       setRefundTarget(null);
       setRefundReason("");
       setRefundDueDate("");
@@ -1657,7 +1846,9 @@ function PaymentSection({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h4 className="text-sm font-medium">Payments &amp; Adjustments</h4>
+        <h4 className="text-sm font-medium">
+          {t("billing.payments.title", "Payments & Adjustments")}
+        </h4>
         {canCollect && (
           <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-3">
             <Button
@@ -1667,7 +1858,7 @@ function PaymentSection({
               onClick={handleOpenForm}
             >
               <DollarSign className="mr-1 h-3.5 w-3.5" />
-              Record Payment
+              {t("billing.payments.recordPayment", "Record Payment")}
             </Button>
             <Button
               variant="outline"
@@ -1681,8 +1872,8 @@ function PaymentSection({
               onClick={() => cardCheckout.mutate({ invoiceId })}
               title={
                 cardPaymentsUnavailable
-                  ? "Card payments are not configured"
-                  : "Take card payment"
+                  ? t("billing.payments.tooltipNotConfigured", "Card payments are not configured")
+                  : t("billing.payments.tooltipTakeCard", "Take card payment")
               }
             >
               {cardCheckout.isPending ? (
@@ -1690,7 +1881,7 @@ function PaymentSection({
               ) : (
                 <CreditCard className="mr-1 h-3.5 w-3.5" />
               )}
-              Take Card
+              {t("billing.payments.takeCard", "Take Card")}
             </Button>
             <Button
               variant="outline"
@@ -1699,7 +1890,7 @@ function PaymentSection({
               onClick={handleOpenAdjustmentForm}
             >
               <DollarSign className="mr-1 h-3.5 w-3.5" />
-              Credit / Write Off
+              {t("billing.payments.creditWriteOff", "Credit / Write Off")}
             </Button>
           </div>
         )}
@@ -1707,14 +1898,26 @@ function PaymentSection({
 
       {canCollect && cardPaymentsUnavailable && (
         <p className="text-xs text-muted-foreground">
-          Card payments are not configured.
+          {t("billing.payments.cardPaymentsNotConfigured", "Card payments are not configured.")}
         </p>
       )}
 
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <span>Paid {formatCurrency(invoicePaidAmount)}</span>
-        <span>Adjusted {formatCurrency(invoiceAdjustedAmount)}</span>
-        <span>Balance {formatCurrency(invoiceBalanceDue)}</span>
+        <span>
+          {t("billing.payments.statPaid", `Paid ${formatCurrency(invoicePaidAmount)}`, {
+            amount: formatCurrency(invoicePaidAmount),
+          })}
+        </span>
+        <span>
+          {t("billing.payments.statAdjusted", `Adjusted ${formatCurrency(invoiceAdjustedAmount)}`, {
+            amount: formatCurrency(invoiceAdjustedAmount),
+          })}
+        </span>
+        <span>
+          {t("billing.payments.statBalance", `Balance ${formatCurrency(invoiceBalanceDue)}`, {
+            amount: formatCurrency(invoiceBalanceDue),
+          })}
+        </span>
       </div>
 
       {/* Payment form */}
@@ -1723,7 +1926,7 @@ function PaymentSection({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Amount
+                {t("billing.payments.labelAmount", "Amount")}
               </label>
               <Input
                 type="number"
@@ -1737,7 +1940,7 @@ function PaymentSection({
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Method
+                {t("billing.payments.labelMethod", "Method")}
               </label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -1746,22 +1949,44 @@ function PaymentSection({
               >
                 {PAYMENT_METHODS.map((m) => (
                   <option key={m.value} value={m.value}>
-                    {m.label}
+                    {t(`billing.method_${m.key}`, m.label)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Notes (optional)
+                {t("billing.payments.labelNotes", "Notes (optional)")}
               </label>
               <Input
                 value={paymentNotes}
                 maxLength={BILLING_NOTES_MAX_LENGTH}
                 onChange={(e) => setPaymentNotes(e.target.value)}
-                placeholder="Reference, check #, etc."
+                placeholder={t(
+                  "billing.payments.notesPlaceholder",
+                  "Reference, check #, etc."
+                )}
               />
             </div>
+          </div>
+          <div className="flex items-center gap-2 py-1">
+            <input
+              type="checkbox"
+              id="auto-ekasa"
+              checked={autoEkasa}
+              onChange={(e) => setAutoEkasa(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <label
+              htmlFor="auto-ekasa"
+              className="text-xs font-medium text-foreground cursor-pointer flex items-center gap-1.5"
+            >
+              <ReceiptText className="h-3.5 w-3.5 text-emerald-600" />
+              {t(
+                "billing.payments.autoEkasaLabel",
+                "Automaticky zaevidovať v e-Kasa (Finančná správa SR)"
+              )}
+            </label>
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
             <Button
@@ -1770,7 +1995,9 @@ function PaymentSection({
               onClick={handleRecordPayment}
               disabled={!canRecordPayment}
             >
-              {recordPayment.isPending ? "Recording..." : "Record Payment"}
+              {recordPayment.isPending
+                ? t("billing.payments.recording", "Recording...")
+                : t("billing.payments.recordPayment", "Record Payment")}
             </Button>
             <Button
               variant="ghost"
@@ -1781,7 +2008,7 @@ function PaymentSection({
                 setShowPaymentForm(false);
               }}
             >
-              Cancel
+              {t("billing.payments.cancel", "Cancel")}
             </Button>
           </div>
           {recordPayment.isError && (
@@ -1797,7 +2024,7 @@ function PaymentSection({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Type
+                {t("billing.payments.labelType", "Type")}
               </label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -1806,13 +2033,17 @@ function PaymentSection({
                   setAdjustmentType(e.target.value as "credit" | "write_off")
                 }
               >
-                <option value="credit">Credit</option>
-                <option value="write_off">Write-off</option>
+                <option value="credit">
+                  {t("billing.payments.typeCredit", "Credit")}
+                </option>
+                <option value="write_off">
+                  {t("billing.payments.typeWriteOff", "Write-off")}
+                </option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Amount
+                {t("billing.payments.labelAmount", "Amount")}
               </label>
               <Input
                 type="number"
@@ -1826,13 +2057,16 @@ function PaymentSection({
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Reason
+                {t("billing.payments.labelReason", "Reason")}
               </label>
               <Input
                 value={adjustmentReason}
                 maxLength={BILLING_ADJUSTMENT_REASON_MAX_LENGTH}
                 onChange={(e) => setAdjustmentReason(e.target.value)}
-                placeholder="Discount, courtesy, bad debt"
+                placeholder={t(
+                  "billing.payments.reasonPlaceholder",
+                  "Discount, courtesy, bad debt"
+                )}
               />
             </div>
           </div>
@@ -1843,7 +2077,9 @@ function PaymentSection({
               onClick={handleApplyAdjustment}
               disabled={!canApplyAdjustment}
             >
-              {applyAdjustment.isPending ? "Applying..." : "Apply Adjustment"}
+              {applyAdjustment.isPending
+                ? t("billing.payments.applying", "Applying...")
+                : t("billing.payments.applyAdjustment", "Apply Adjustment")}
             </Button>
             <Button
               variant="ghost"
@@ -1854,7 +2090,7 @@ function PaymentSection({
                 setShowAdjustmentForm(false);
               }}
             >
-              Cancel
+              {t("billing.payments.cancel", "Cancel")}
             </Button>
           </div>
           {applyAdjustment.isError && (
@@ -1867,26 +2103,28 @@ function PaymentSection({
 
       {/* Payment list */}
       {paymentsQuery.isLoading ? (
-        <p className="text-xs text-muted-foreground">Loading payments...</p>
+        <p className="text-xs text-muted-foreground">
+          {t("billing.payments.loadingPayments", "Loading payments...")}
+        </p>
       ) : paymentsQuery.data && paymentsQuery.data.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Date
+                {t("billing.payments.colDate", "Date")}
               </th>
               <th className="py-2 text-right font-medium text-muted-foreground">
-                Amount
+                {t("billing.payments.colAmount", "Amount")}
               </th>
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Method
+                {t("billing.payments.colMethod", "Method")}
               </th>
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Received By
+                {t("billing.payments.colReceivedBy", "Received By")}
               </th>
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Notes
+                {t("billing.payments.colNotes", "Notes")}
               </th>
               {canRefund && <th className="py-2" />}
             </tr>
@@ -1921,7 +2159,13 @@ function PaymentSection({
                   {payment.receivedByName ?? "\u2014"}
                 </td>
                 <td className="py-2 text-muted-foreground">
-                  {payment.notes || "\u2014"}
+                  <div className="flex items-center gap-2">
+                    <span>{payment.notes || "\u2014"}</span>
+                    <PaymentEkasaBadge
+                      paymentId={payment.id}
+                      invoiceId={invoiceId}
+                    />
+                  </div>
                 </td>
                 {canRefund && (
                   <td className="py-2 text-right">
@@ -1940,7 +2184,7 @@ function PaymentSection({
                           });
                         }}
                       >
-                        Refund
+                        {t("billing.payments.btnRefund", "Refund")}
                       </Button>
                     )}
                   </td>
@@ -1951,30 +2195,34 @@ function PaymentSection({
           </table>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No payments recorded.</p>
+        <p className="text-xs text-muted-foreground">
+          {t("billing.payments.noPaymentsRecorded", "No payments recorded.")}
+        </p>
       )}
 
       {adjustmentsQuery.isLoading ? (
-        <p className="text-xs text-muted-foreground">Loading adjustments...</p>
+        <p className="text-xs text-muted-foreground">
+          {t("billing.payments.loadingAdjustments", "Loading adjustments...")}
+        </p>
       ) : adjustmentsQuery.data && adjustmentsQuery.data.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Date
+                {t("billing.payments.colDate", "Date")}
               </th>
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Type
+                {t("billing.payments.colTypeHeader", "Type")}
               </th>
               <th className="py-2 text-right font-medium text-muted-foreground">
-                Amount
+                {t("billing.payments.colAmount", "Amount")}
               </th>
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Created By
+                {t("billing.payments.colCreatedBy", "Created By")}
               </th>
               <th className="py-2 text-left font-medium text-muted-foreground">
-                Reason
+                {t("billing.payments.colReason", "Reason")}
               </th>
             </tr>
           </thead>
@@ -2011,21 +2259,28 @@ function PaymentSection({
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          No credits or write-offs recorded.
+          {t("billing.payments.noAdjustmentsRecorded", "No credits or write-offs recorded.")}
         </p>
       )}
       <ActionConfirmationDialog
         open={refundTarget !== null}
-        title="Refund payment?"
-        description={`Refund ${formatCurrency(refundTarget?.amount ?? "0")}? Card payments are refunded through Stripe.`}
-        confirmLabel="Refund payment"
+        title={t("billing.payments.dialogRefundTitle", "Refund payment?")} /* title="Refund payment?" */
+        description={t(
+          "billing.payments.dialogRefundDesc",
+          `Refund ${formatCurrency(refundTarget?.amount ?? "0")}? Card payments are refunded through Stripe.`,
+          { amount: formatCurrency(refundTarget?.amount ?? "0") }
+        )}
+        confirmLabel={t("billing.payments.dialogRefundConfirm", "Refund payment")} /* confirmLabel="Refund payment" */
         confirmVariant="destructive"
         isPending={refundPayment.isPending}
         reason={{
-          label: "Reason for refund",
+          label: t("billing.payments.dialogRefundReasonLabel", "Reason for refund"),
           value: refundReason,
           onChange: setRefundReason,
-          placeholder: "Explain the refund for the audit trail",
+          placeholder: t(
+            "billing.payments.dialogRefundReasonPlaceholder",
+            "Explain the refund for the audit trail"
+          ),
           minLength: BILLING_ACTION_REASON_MIN_LENGTH,
           maxLength: BILLING_ACTION_REASON_MAX_LENGTH,
         }}
@@ -2036,7 +2291,10 @@ function PaymentSection({
           htmlFor={`refund-due-date-${invoiceId}`}
           className="text-sm font-medium"
         >
-          Due date if this refund reopens the visit balance
+          {t(
+            "billing.payments.dialogRefundDueDateLabel",
+            "Due date if this refund reopens the visit balance"
+          )}
         </label>
         <Input
           id={`refund-due-date-${invoiceId}`}
@@ -2047,9 +2305,18 @@ function PaymentSection({
           onChange={(event) => setRefundDueDate(event.target.value)}
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          Required when a completed, paid visit becomes accounts receivable.
+          {t(
+            "billing.payments.dialogRefundDueDateHint",
+            "Required when a completed, paid visit becomes accounts receivable."
+          )}
         </p>
       </ActionConfirmationDialog>
+
+      <EkasaReceiptDialog
+        open={ekasaReceiptOpen}
+        receipt={ekasaReceiptData}
+        onClose={() => setEkasaReceiptOpen(false)}
+      />
     </div>
   );
 }

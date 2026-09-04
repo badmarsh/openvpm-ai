@@ -10,6 +10,10 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { getVercelOidcToken } from "@vercel/oidc";
 import { ExternalAccountClient } from "google-auth-library";
 import {
+  hasInferenceProxyConfiguration,
+  inferenceProxyModel,
+} from "./inference-proxy";
+import {
   AGENT_TOOLS,
   AgentPracticeNotFoundError,
   type AgentTool,
@@ -175,6 +179,9 @@ function hasVertexConfiguration(): boolean {
 }
 
 function hasProviderConfiguration(modelId: string): boolean {
+  // An explicit AI_BASE_URL proxy holds its own upstream credentials, so no
+  // Google or Anthropic boundary is required for any model id.
+  if (hasInferenceProxyConfiguration()) return true;
   return isGoogleModel(modelId)
     ? hasVertexConfiguration()
     : Boolean(anthropicApiKey());
@@ -198,6 +205,7 @@ export function configuredModel(): LanguageModel {
 
 /** Build an AI SDK model instance for the given model id. */
 function resolveModel(modelId: string) {
+  if (hasInferenceProxyConfiguration()) return inferenceProxyModel(modelId);
   if (isGoogleModel(modelId)) {
     const googleAuthOptions = hasVertexOidcConfiguration()
       ? vertexOidcAuthOptions()

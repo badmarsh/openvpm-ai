@@ -1,4 +1,4 @@
-export const CLINIC_REGION_CODES = ["US", "CA", "GB", "IE", "AU"] as const;
+export const CLINIC_REGION_CODES = ["SK", "US", "CA", "GB", "IE", "AU"] as const;
 
 export type ClinicRegionCode = (typeof CLINIC_REGION_CODES)[number];
 export type JurisdictionSelectionSource =
@@ -10,6 +10,7 @@ export const CLINIC_REGION_OPTIONS: ReadonlyArray<{
   code: ClinicRegionCode;
   label: string;
 }> = [
+  { code: "SK", label: "Slovensko (Slovakia)" },
   { code: "US", label: "United States" },
   { code: "CA", label: "Canada" },
   { code: "GB", label: "United Kingdom" },

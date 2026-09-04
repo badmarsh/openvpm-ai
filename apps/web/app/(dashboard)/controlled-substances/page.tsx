@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
@@ -96,10 +97,11 @@ function InlineLookupError({ message }: { message: string }) {
 }
 
 function LogEntryForm({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const createMutation = trpc.controlledSubstances.create.useMutation({
     onSuccess: () => {
-      toast.success("Log entry recorded");
+      toast.success(t("controlledSubstances.logEntryRecorded", "Log entry recorded"));
       utils.controlledSubstances.list.invalidate();
       utils.controlledSubstances.summary.invalidate();
       onClose();
@@ -178,7 +180,10 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       toast.error(
         patientsQuery.error?.message ??
           (patientsMissing
-            ? "Patient lookup is unavailable. Please retry."
+            ? t(
+                "controlledSubstances.errors.patientUnavailable",
+                "Patient lookup is unavailable. Please retry.",
+              )
             : "Patient lookup is still loading")
       );
       return;
@@ -187,17 +192,30 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       toast.error(
         witnessesQuery.error?.message ??
           (witnessesMissing
-            ? "Witness lookup is unavailable. Please retry."
+            ? t(
+                "controlledSubstances.errors.witnessUnavailable",
+                "Witness lookup is unavailable. Please retry.",
+              )
             : "Witness lookup is still loading")
       );
       return;
     }
     if (form.action === "administered" && !form.patientId) {
-      toast.error("Patient is required for administered entries");
+      toast.error(
+        t(
+          "controlledSubstances.errors.patientRequired",
+          "Patient is required for administered entries",
+        )
+      );
       return;
     }
     if (form.action === "wasted" && !form.witnessedBy) {
-      toast.error("Witness is required for wasted entries");
+      toast.error(
+        t(
+          "controlledSubstances.errors.witnessRequired",
+          "Witness is required for wasted entries",
+        )
+      );
       return;
     }
     createMutation.mutate({
@@ -218,14 +236,16 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       onSubmit={handleSubmit}
       className="mt-4 rounded-lg border border-border bg-card p-4 space-y-3"
     >
-      <h3 className="font-medium text-sm">New Log Entry</h3>
+      <h3 className="font-medium text-sm">
+        {t("controlledSubstances.newLogEntry", "New Log Entry")}
+      </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Drug Name *
+            {t("controlledSubstances.drugNameRequired", "Drug Name *")}
           </label>
           <Input
-            placeholder="Drug name"
+            placeholder={t("controlledSubstances.drugNamePlaceholder", "Drug name")}
             value={form.drugName}
             maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
             onChange={(e) => setForm({ ...form, drugName: e.target.value })}
@@ -234,7 +254,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            DEA Schedule
+            {t("controlledSubstances.deaSchedule", "DEA Schedule")}
           </label>
           <select
             value={form.deaSchedule}
@@ -243,14 +263,14 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
           >
             {DEA_SCHEDULES.map((s) => (
               <option key={s.value} value={s.value}>
-                {s.label}
+                {t(`controlledSubstances.schedules.schedule${s.value}`, s.label)}
               </option>
             ))}
           </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Action
+            {t("controlledSubstances.action", "Action")}
           </label>
           <select
             value={form.action}
@@ -259,7 +279,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
           >
             {ACTIONS.map((a) => (
               <option key={a.value} value={a.value}>
-                {a.label}
+                {t(`controlledSubstances.actions.${a.value}`, a.label)}
               </option>
             ))}
           </select>
@@ -267,14 +287,14 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Quantity *
+              {t("controlledSubstances.quantityRequired", "Quantity *")}
             </label>
             <Input
               type="number"
               step={CONTROLLED_SUBSTANCE_QUANTITY_STEP}
               min={CONTROLLED_SUBSTANCE_QUANTITY_MIN}
               max={CONTROLLED_SUBSTANCE_QUANTITY_MAX}
-              placeholder="Qty"
+              placeholder={t("controlledSubstances.qtyPlaceholder", "Qty")}
               value={form.quantity}
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
               required
@@ -282,7 +302,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Unit
+              {t("controlledSubstances.unit", "Unit")}
             </label>
             <select
               value={form.unit}
@@ -291,7 +311,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             >
               {UNITS.map((u) => (
                 <option key={u.value} value={u.value}>
-                  {u.label}
+                  {t(`controlledSubstances.units.${u.value}`, u.label)}
                 </option>
               ))}
             </select>
@@ -301,7 +321,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Patient {form.action === "administered" && "*"}
+            {t("controlledSubstances.patient", "Patient")} {form.action === "administered" && "*"}
           </label>
           <select
             value={form.patientId}
@@ -318,11 +338,12 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             ].join(" ")}
           >
             <option value="">
+              {/* : "No patient" */}
               {patientsQuery.error || patientsMissing
-                ? "Unable to load patients"
+                ? t("controlledSubstances.errors.unableToLoadPatients", "Unable to load patients")
                 : patientsQuery.isLoading
-                  ? "Loading patients..."
-                  : "No patient"}
+                  ? t("controlledSubstances.errors.patientLoading", "Loading patients...")
+                  : t("controlledSubstances.errors.noPatient", "No patient")}
             </option>
             {patientOptions.map((patient) => (
               <option key={patient.id} value={patient.id}>
@@ -339,14 +360,17 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             <InlineLookupError
               message={
                 patientsQuery.error?.message ??
-                "Patient lookup returned no data. Please retry before recording an administered dose."
+                t(
+                  "controlledSubstances.errors.patientLookupNoData",
+                  "Patient lookup returned no data. Please retry before recording an administered dose.",
+                )
               }
             />
           ) : null}
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Witness {form.action === "wasted" && "*"}
+            {t("controlledSubstances.witness", "Witness")} {form.action === "wasted" && "*"}
           </label>
           <select
             value={form.witnessedBy}
@@ -363,11 +387,12 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             ].join(" ")}
           >
             <option value="">
+              {/* : "No witness" */}
               {witnessesQuery.error || witnessesMissing
-                ? "Unable to load witnesses"
+                ? t("controlledSubstances.errors.unableToLoadWitnesses", "Unable to load witnesses")
                 : witnessesQuery.isLoading
-                  ? "Loading witnesses..."
-                  : "No witness"}
+                  ? t("controlledSubstances.errors.witnessLoading", "Loading witnesses...")
+                  : t("controlledSubstances.errors.noWitness", "No witness")}
             </option>
             {witnessOptions.map((user) => (
               <option key={user.id} value={user.id}>
@@ -379,17 +404,20 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             <InlineLookupError
               message={
                 witnessesQuery.error?.message ??
-                "Witness lookup returned no data. Please retry before recording wasted inventory."
+                t(
+                  "controlledSubstances.errors.witnessLookupNoData",
+                  "Witness lookup returned no data. Please retry before recording wasted inventory.",
+                )
               }
             />
           ) : null}
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Lot Number
+            {t("controlledSubstances.lotNumber", "Lot Number")}
           </label>
           <Input
-            placeholder="Lot #"
+            placeholder={t("controlledSubstances.lotPlaceholder", "Lot #")}
             value={form.lotNumber}
             maxLength={CONTROLLED_SUBSTANCE_LOT_NUMBER_MAX_LENGTH}
             onChange={(e) => setForm({ ...form, lotNumber: e.target.value })}
@@ -397,10 +425,10 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            Notes
+            {t("controlledSubstances.notes", "Notes")}
           </label>
           <Input
-            placeholder="Optional notes"
+            placeholder={t("controlledSubstances.notesPlaceholder", "Optional notes")}
             value={form.notes}
             maxLength={CONTROLLED_SUBSTANCE_NOTES_MAX_LENGTH}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -409,10 +437,12 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={!canSubmit}>
-          {createMutation.isPending ? "Submitting..." : "Submit Entry"}
+          {createMutation.isPending
+            ? t("controlledSubstances.submitting", "Submitting...")
+            : t("controlledSubstances.submitEntry", "Submit Entry")}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          Cancel
+          {t("controlledSubstances.cancel", "Cancel")}
         </Button>
       </div>
       {createMutation.error && (
@@ -425,6 +455,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
 }
 
 function SummarySection() {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const { data, isLoading, error } = trpc.controlledSubstances.summary.useQuery({});
   const summaryMissing = !isLoading && !error && !data;
@@ -435,7 +466,7 @@ function SummarySection() {
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/30 transition-colors"
       >
-        <span>Drug Balance Summary</span>
+        <span>{t("controlledSubstances.summary.title", "Drug Balance Summary")}</span>
         {expanded ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
@@ -447,12 +478,15 @@ function SummarySection() {
           {error || summaryMissing ? (
             <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
               {error?.message ??
-                "Unable to load controlled-substance balances. Please retry."}
+                t(
+                  "controlledSubstances.errors.loadBalancesError",
+                  "Unable to load controlled-substance balances. Please retry.",
+                )}
             </div>
           ) : isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading summary...
+              {t("controlledSubstances.summary.loading", "Loading summary...")}
             </div>
           ) : data && data.length > 0 ? (
             <TableScroll>
@@ -460,22 +494,22 @@ function SummarySection() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="py-2 text-left font-medium text-muted-foreground">
-                      Drug
+                      {t("controlledSubstances.summary.columns.drug", "Drug")}
                     </th>
                     <th className="py-2 text-right font-medium text-muted-foreground">
-                      Received
+                      {t("controlledSubstances.summary.columns.received", "Received")}
                     </th>
                     <th className="py-2 text-right font-medium text-muted-foreground">
-                      Administered
+                      {t("controlledSubstances.summary.columns.administered", "Administered")}
                     </th>
                     <th className="py-2 text-right font-medium text-muted-foreground">
-                      Wasted
+                      {t("controlledSubstances.summary.columns.wasted", "Wasted")}
                     </th>
                     <th className="py-2 text-right font-medium text-muted-foreground">
-                      Returned
+                      {t("controlledSubstances.summary.columns.returned", "Returned")}
                     </th>
                     <th className="py-2 text-right font-medium text-muted-foreground">
-                      Net Balance
+                      {t("controlledSubstances.summary.columns.netBalance", "Net Balance")}
                     </th>
                   </tr>
                 </thead>
@@ -510,8 +544,11 @@ function SummarySection() {
             <EmptyState
               className="border-0 bg-transparent py-6"
               icon={ShieldAlert}
-              title="No balance data yet"
-              description="Balance totals will appear once controlled-substance entries are logged."
+              title={t("controlledSubstances.summary.noDataTitle", "No balance data yet")}
+              description={t(
+                "controlledSubstances.summary.noDataDesc",
+                "Balance totals will appear once controlled-substance entries are logged.",
+              )}
             />
           )}
         </div>
@@ -523,13 +560,14 @@ function SummarySection() {
 export default function ControlledSubstancesPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useI18n();
 
   if (status === "loading") {
     return (
       <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Checking controlled-substance access...
+          {t("controlledSubstances.checkingAccess", "Checking controlled-substance access...")}
         </div>
       </div>
     );
@@ -539,10 +577,13 @@ export default function ControlledSubstancesPage() {
     return (
       <EmptyState
         icon={ShieldAlert}
-        title="Controlled substance log is restricted"
-        description="Only administrators and veterinarians can view or record controlled-substance activity."
+        title={t("controlledSubstances.restrictedTitle", "Controlled substance log is restricted")}
+        description={t(
+          "controlledSubstances.restrictedDesc",
+          "Only administrators and veterinarians can view or record controlled-substance activity.",
+        )}
         action={{
-          label: "Back to dashboard",
+          label: t("controlledSubstances.backToDashboard", "Back to dashboard"),
           onClick: () => router.push("/"),
         }}
       />
@@ -553,6 +594,7 @@ export default function ControlledSubstancesPage() {
 }
 
 function ControlledSubstancesLogPage() {
+  const { t } = useI18n();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
@@ -592,10 +634,10 @@ function ControlledSubstancesLogPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-heading text-xl font-semibold">
-            Controlled Substance Log
+            {t("controlledSubstances.title", "Controlled Substance Log")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            DEA-required tracking for scheduled drugs
+            {t("controlledSubstances.subtitle", "DEA-required tracking for scheduled drugs")}
           </p>
         </div>
         <Button
@@ -606,7 +648,7 @@ function ControlledSubstancesLogPage() {
           }}
         >
           <Plus className="mr-1 h-4 w-4" />
-          Log Entry
+          {t("controlledSubstances.logEntry", "Log Entry")}
         </Button>
       </div>
 
@@ -624,7 +666,7 @@ function ControlledSubstancesLogPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Filter by drug name..."
+            placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name...")}
             value={search}
             maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
             onChange={(e) => {
@@ -639,16 +681,22 @@ function ControlledSubstancesLogPage() {
       {logError || controlledSubstanceLogMissing ? (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
           {logError?.message ??
-            "Unable to load controlled-substance entries. Please retry."}
+            t(
+              "controlledSubstances.errors.loadEntriesError",
+              "Unable to load controlled-substance entries. Please retry.",
+            )}
         </div>
       ) : isLogLoading ? (
         <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading controlled-substance entries...
+          {t("controlledSubstances.loadingEntries", "Loading controlled-substance entries...")}
         </div>
       ) : !verifiedLogPayload ? (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          Unable to load controlled-substance entries. Please retry.
+          {t(
+            "controlledSubstances.errors.loadEntriesError",
+            "Unable to load controlled-substance entries. Please retry.",
+          )}
         </div>
       ) : verifiedLogPayload.log.items.length > 0 ? (
         <>
@@ -657,31 +705,31 @@ function ControlledSubstancesLogPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Date/Time
+                    {t("controlledSubstances.table.dateTime", "Date/Time")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Drug Name
+                    {t("controlledSubstances.table.drugName", "Drug Name")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Schedule
+                    {t("controlledSubstances.table.schedule", "Schedule")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Action
+                    {t("controlledSubstances.table.action", "Action")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Qty/Unit
+                    {t("controlledSubstances.table.qtyUnit", "Qty/Unit")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Patient
+                    {t("controlledSubstances.table.patient", "Patient")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Performed By
+                    {t("controlledSubstances.table.performedBy", "Performed By")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Witness
+                    {t("controlledSubstances.table.witness", "Witness")}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Notes
+                    {t("controlledSubstances.table.notes", "Notes")}
                   </th>
                 </tr>
               </thead>
@@ -711,11 +759,11 @@ function ControlledSubstancesLogPage() {
                           ACTION_STYLES[entry.action] ?? "bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {entry.action}
+                        {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      {entry.quantity} {entry.unit}
+                      {entry.quantity} {t(`controlledSubstances.units.${entry.unit}`, entry.unit)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {entry.patientName || "\u2014"}
@@ -749,7 +797,7 @@ function ControlledSubstancesLogPage() {
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - limit))}
               >
-                Previous
+                {t("controlledSubstances.pagination.previous", "Previous")}
               </Button>
               <Button
                 variant="outline"
@@ -757,7 +805,7 @@ function ControlledSubstancesLogPage() {
                 disabled={offset + limit >= verifiedLogPayload.log.total}
                 onClick={() => setOffset(offset + limit)}
               >
-                Next
+                {t("controlledSubstances.pagination.next", "Next")}
               </Button>
             </div>
           </div>
@@ -768,19 +816,22 @@ function ControlledSubstancesLogPage() {
           icon={ShieldAlert}
           title={
             search
-              ? "No entries match your filter"
-              : "No controlled substance entries yet"
+              ? t("controlledSubstances.empty.filterTitle", "No entries match your filter")
+              : t("controlledSubstances.empty.noEntriesTitle", "No controlled substance entries yet")
           }
           description={
             search
-              ? "Try a different drug name or clear the filter."
-              : "Record each received, administered, wasted, or returned scheduled-drug event here."
+              ? t("controlledSubstances.empty.filterDesc", "Try a different drug name or clear the filter.")
+              : t(
+                  "controlledSubstances.empty.noEntriesDesc",
+                  "Record each received, administered, wasted, or returned scheduled-drug event here.",
+                )
           }
           action={
             search
               ? undefined
               : {
-                  label: "Log first entry",
+                  label: t("controlledSubstances.empty.logFirst", "Log first entry"),
                   onClick: () => {
                     if (!canRecordControlledSubstance) return;
                     setShowForm(true);

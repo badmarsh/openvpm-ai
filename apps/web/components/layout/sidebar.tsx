@@ -29,6 +29,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { PawMark } from "@/components/brand/paw-mark";
+import { customNavItems } from "@/config/custom-nav";
+import { useI18n } from "@/lib/i18n";
 
 type UserRole =
   | "admin"
@@ -52,66 +54,75 @@ function isUserRole(role?: string | null): role is UserRole {
 const navItems: {
   href: string;
   label: string;
+  i18nKey?: string;
   icon: React.ElementType;
   roles: UserRole[];
 }[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: allRoles },
-  { href: "/patients", label: "Patients", icon: PawPrint, roles: allRoles },
-  { href: "/clients", label: "Clients", icon: Users, roles: allRoles },
-  { href: "/schedule", label: "Schedule", icon: Calendar, roles: allRoles },
-  { href: "/records", label: "Records", icon: FileText, roles: allRoles },
+  { href: "/", label: "Dashboard", i18nKey: "nav.dashboard", icon: LayoutDashboard, roles: allRoles },
+  { href: "/patients", label: "Patients", i18nKey: "nav.patients", icon: PawPrint, roles: allRoles },
+  { href: "/clients", label: "Clients", i18nKey: "nav.clients", icon: Users, roles: allRoles },
+  { href: "/schedule", label: "Schedule", i18nKey: "nav.schedule", icon: Calendar, roles: allRoles },
+  { href: "/records", label: "Records", i18nKey: "nav.records", icon: FileText, roles: allRoles },
   {
     href: "/lab-results",
     label: "Lab Inbox",
+    i18nKey: "nav.labResults",
     icon: FlaskConical,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
   },
-  { href: "/billing", label: "Billing", icon: Receipt, roles: allRoles },
-  { href: "/inventory", label: "Inventory", icon: Package, roles: allRoles },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare, roles: allRoles },
+  { href: "/billing", label: "Billing", i18nKey: "nav.billing", icon: Receipt, roles: allRoles },
+  { href: "/inventory", label: "Inventory", i18nKey: "nav.inventory", icon: Package, roles: allRoles },
+  { href: "/inbox", label: "Inbox", i18nKey: "nav.inbox", icon: MessageSquare, roles: allRoles },
   {
     href: "/recalls",
     label: "Recalls",
+    i18nKey: "nav.recalls",
     icon: Syringe,
     roles: ["admin", "veterinarian", "front_desk"],
   },
   {
     href: "/care-reminders",
     label: "Care Reminders",
+    i18nKey: "nav.careReminders",
     icon: BellRing,
     roles: allRoles,
   },
   {
     href: "/migration-archive",
     label: "Imported History",
+    i18nKey: "nav.migrationArchive",
     icon: Archive,
     roles: allRoles,
   },
   {
     href: "/whiteboard",
     label: "Whiteboard",
+    i18nKey: "nav.whiteboard",
     icon: ClipboardList,
     roles: allRoles,
   },
   {
     href: "/agent",
     label: "Agent",
+    i18nKey: "nav.agent",
     icon: Bot,
     roles: ["admin", "veterinarian"],
   },
   {
     href: "/controlled-substances",
     label: "Controlled Substances",
+    i18nKey: "nav.controlledSubstances",
     icon: ShieldAlert,
     roles: ["admin", "veterinarian"],
   },
   {
     href: "/reports",
     label: "Reports",
+    i18nKey: "nav.reports",
     icon: BarChart3,
     roles: ["admin", "veterinarian"],
   },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] },
+  { href: "/settings", label: "Settings", i18nKey: "nav.settings", icon: Settings, roles: ["admin"] },
 ];
 
 type SidebarProps = {
@@ -127,6 +138,7 @@ export function Sidebar({
   onNavigate,
   width = "fixed",
 }: SidebarProps = {}) {
+  const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
@@ -142,8 +154,9 @@ export function Sidebar({
       retry: false,
     },
   );
+  const allNavItems = [...navItems, ...customNavItems];
   const visibleNavItems = canShowNav
-    ? navItems.filter((item) => item.roles.includes(role))
+    ? allNavItems.filter((item) => item.roles.includes(role))
     : [];
   const unreadInboxCount = Math.max(0, Number(unreadInbox?.total ?? 0));
   const unreadInboxLabel =
@@ -217,7 +230,9 @@ export function Sidebar({
                     ) : null}
                   </span>
                   {!isCollapsed && (
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">
+                      {item.i18nKey ? t(item.i18nKey, item.label) : item.label}
+                    </span>
                   )}
                   {!isCollapsed &&
                   item.href === "/inbox" &&
@@ -251,13 +266,16 @@ export function Sidebar({
               <p className="truncate text-sm font-medium">
                 {session.user.name}
               </p>
-              <p className="truncate text-xs text-muted-foreground capitalize">
-                {session.user.role?.replace("_", " ")}
+              <p className="truncate text-xs text-muted-foreground">
+                {session.user.role
+                  ? t(`roles.${session.user.role}`, session.user.role.replace("_", " "))
+                  : ""}
               </p>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              aria-label="Sign out"
+              aria-label={t("common.signOut", "Sign out")}
+              title={t("common.signOut", "Sign out")}
               className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <LogOut className="h-4 w-4" />
