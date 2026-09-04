@@ -109,5 +109,32 @@ describe("e-Kasa Service & Calculations", () => {
       expect(html).toContain("20260904-0001");
       expect(html).toContain("max-width: 80mm");
     });
+
+    it("renders valid 58mm thermal receipt HTML with custom paper width", () => {
+      const html = generateReceiptHtml(
+        {
+          receiptNumber: "20260904-0002",
+          amountBase: "10.00",
+          amountVat: "2.30",
+          amountTotal: "12.30",
+          vatRate: "STANDARD_23",
+          paymentMethod: "CARD",
+          status: "CONFIRMED",
+          issuedAt: new Date("2026-09-04T15:00:00.000Z"),
+        },
+        {
+          clinicName: "Ambulancia MVDr. Novák",
+          dic: "2020293057",
+          pokladnicaId: "88812345678900001",
+          paperWidth: "58mm",
+        }
+      );
+
+      expect(html).toContain("max-width: 58mm");
+      expect(html).toContain("size: 58mm auto");
+      expect(html).toContain("font-size: 10px");
+      expect(html).toContain("12,30 €");
+      expect(html).toContain("Platobná karta");
+    });
   });
 });
