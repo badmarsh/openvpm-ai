@@ -35,7 +35,11 @@ import {
 } from "@/lib/recovery-hold";
 
 const MAX_FILE_NAME_LENGTH = 255;
-const DASHBOARD_UPLOAD_CATEGORIES = ["branding", "patient-photos"] as const;
+const DASHBOARD_UPLOAD_CATEGORIES = [
+  "branding",
+  "patient-photos",
+  "imaging",
+] as const;
 const IDEMPOTENCY_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const USER_UPLOAD_LIMIT = 30;
@@ -242,14 +246,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       const patientId =
-        dashboardCategory === "patient-photos" &&
+        (dashboardCategory === "patient-photos" ||
+          dashboardCategory === "imaging") &&
         typeof patientIdValue === "string" &&
         IDEMPOTENCY_KEY_PATTERN.test(patientIdValue)
           ? patientIdValue
           : null;
-      if (dashboardCategory === "patient-photos" && !patientId) {
+      if (
+        (dashboardCategory === "patient-photos" ||
+          dashboardCategory === "imaging") &&
+        !patientId
+      ) {
         return NextResponse.json(
-          { error: "A canonical patientId is required for patient photos" },
+          {
+            error:
+              "A canonical patientId is required for patient uploads",
+          },
           { status: 400 },
         );
       }
@@ -289,7 +301,10 @@ export async function POST(req: NextRequest) {
 
       const checksumSha256 = checksumSha256Hex(buffer);
       const reservation = await withTenant(db, practiceId, async (tx) => {
-        if (dashboardCategory === "patient-photos") {
+        if (
+          dashboardCategory === "patient-photos" ||
+          dashboardCategory === "imaging"
+        ) {
           const [activePatient] = await tx
             .select({ id: patients.id })
             .from(patients)
@@ -316,10 +331,16 @@ export async function POST(req: NextRequest) {
           source:
             dashboardCategory === "branding"
               ? "practice_logo"
-              : "profile_photo",
+              : dashboardCategory === "imaging"
+                ? "medical_imaging"
+                : "profile_photo",
           entityType: dashboardCategory === "branding" ? "practice" : "patient",
           entityId: dashboardCategory === "branding" ? practiceId : patientId!,
-          patientId: dashboardCategory === "patient-photos" ? patientId : null,
+          patientId:
+            dashboardCategory === "patient-photos" ||
+            dashboardCategory === "imaging"
+              ? patientId
+              : null,
         });
       });
       if (!reservation) {
@@ -376,7 +397,7 @@ export async function POST(req: NextRequest) {
           .where(and(eq(practices.id, practiceId), isNull(practices.deletedAt)))
           .returning({ id: practices.id });
         if (!linked) throw new Error("Practice disappeared during upload");
-      } else {
+      } else if (dashboardCategory === "patient-photos") {
         const [linked] = await leaseTx
           .update(patients)
           .set({ photoUrl: reservation.fileUrl, updatedAt: new Date() })
