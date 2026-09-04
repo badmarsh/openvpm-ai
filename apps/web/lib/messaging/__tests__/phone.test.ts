@@ -22,6 +22,21 @@ describe("normalizeE164", () => {
     expect(normalizeE164("+44 20 7946 0958")).toBe("+442079460958");
   });
 
+  it("normalises Slovak 10-digit national numbers (09xx xxx xxx)", () => {
+    expect(normalizeE164("0905 123 456")).toBe("+421905123456");
+    expect(normalizeE164("0911234567")).toBe("+421911234567");
+    expect(normalizeE164("02 1234 5678")).toBe("+421212345678");
+  });
+
+  it("normalises Slovak numbers with 00421 prefix", () => {
+    expect(normalizeE164("00421 905 123 456")).toBe("+421905123456");
+  });
+
+  it("normalises Slovak 9-digit mobile numbers without leading zero", () => {
+    expect(normalizeE164("905 123 456")).toBe("+421905123456");
+    expect(normalizeE164("948111222")).toBe("+421948111222");
+  });
+
   it("rejects plus-prefixed numbers with an invalid zero country code", () => {
     expect(normalizeE164("+05555550123")).toBeNull();
     expect(normalizeE164("+0 555 555 0123")).toBeNull();

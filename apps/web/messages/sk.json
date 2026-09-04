@@ -3137,5 +3137,11 @@
   "statutory.exportCsv": "Exportovať CSV",
   "statutory.print": "Tlačiť",
   "statutory.rabies.searchPlaceholder": "Hľadať pacienta, čip alebo majiteľa...",
-  "statutory.treatment.searchPlaceholder": "Hľadať diagnózu, lieky, pacienta alebo lekára..."
+  "statutory.treatment.searchPlaceholder": "Hľadať diagnózu, lieky, pacienta alebo lekára...",
+  "billing.page.title": "Fakturácia a platby",
+  "billing.page.subtitle": "Prehľad faktúr, dokladov a platieb",
+  "billing.page.newInvoice": "Nová faktúra",
+  "billing.page.fastPos": "Pultový predaj (Pokladňa)",
+  "billing.page.kpiOutstanding": "Neuhradené",
+  "billing.page.kpiOverdue": "Po splatnosti"
 }

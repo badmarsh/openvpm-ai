@@ -13,6 +13,8 @@ import {
   practices,
   invoiceItems,
   invoices,
+  products,
+  clients,
 } from "@openpims/db";
 import {
   processEkasaReceipt,
@@ -527,6 +529,225 @@ export const ekasaRouter = createRouter({
       });
 
       return receipt ?? null;
+    }),
+
+  /**
+   * Pultový predaj a rýchla pokladňa (Walk-in POS checkout s e-Kasou).
+   * Okamžitý nákup liekov, krmív a antiparazitík na recepcii s automatickým
+   * odpisom tovaru zo skladu a vystavením e-Kasa dokladu (80mm / 58mm).
+   */
+  createPosSale: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        items: z
+          .array(
+            z.object({
+              productId: z.string().uuid().optional(),
+              description: z.string().min(1, "Názov položky je povinný"),
+              quantity: z.number().int().min(1),
+              unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/, "Neplatná cena"),
+              vatRate: z
+                .enum(["ZERO", "REDUCED_5", "REDUCED_19", "STANDARD_23"])
+                .default("STANDARD_23"),
+            })
+          )
+          .min(1, "Košík musí obsahovať aspoň 1 položku"),
+        paymentMethod: z.enum(["CASH", "CARD"]),
+        clientId: z.string().uuid().optional(),
+        patientId: z.string().uuid().optional(),
+        paperWidth: z.enum(["58mm", "80mm"]).default("80mm"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Over e-Kasa konfiguráciu
+      const config = await ctx.db.query.ekasaConfig.findFirst({
+        where: and(
+          eq(ekasaConfig.practiceId, ctx.practiceId),
+          isNull(ekasaConfig.deletedAt)
+        ),
+      });
+
+      if (!config) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "e-Kasa nie je pre túto kliniku nakonfigurovaná. Nastavte ju v Nastavenia -> e-Kasa.",
+        });
+      }
+
+      // 1b. Získaj alebo vytvor klienta (ak je anonymný pultový nákup)
+      let resolvedClientId = input.clientId;
+      if (!resolvedClientId) {
+        const existingWalkIn = await ctx.db.query.clients.findFirst({
+          where: and(
+            eq(clients.practiceId, ctx.practiceId),
+            eq(clients.firstName, "Pultový"),
+            eq(clients.lastName, "Zákazník"),
+            isNull(clients.deletedAt)
+          ),
+        });
+
+        if (existingWalkIn) {
+          resolvedClientId = existingWalkIn.id;
+        } else {
+          const [created] = await ctx.db
+            .insert(clients)
+            .values({
+              practiceId: ctx.practiceId,
+              firstName: "Pultový",
+              lastName: "Zákazník",
+            })
+            .returning({ id: clients.id });
+          resolvedClientId = created!.id;
+        }
+      }
+
+      // 2. Vypočítaj celkovú sumu
+      let totalNum = 0;
+      for (const it of input.items) {
+        totalNum += Number(it.unitPrice) * it.quantity;
+      }
+      const totalStr = totalNum.toFixed(2);
+
+      // 3. Vytvor faktúru so statusom 'paid'
+      const [invoice] = await ctx.db
+        .insert(invoices)
+        .values({
+          practiceId: ctx.practiceId,
+          clientId: resolvedClientId,
+          patientId: input.patientId,
+          status: "paid",
+          isEstimate: false,
+          subtotal: totalStr,
+          total: totalStr,
+          paidAmount: totalStr,
+        })
+        .returning();
+
+      if (!invoice) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Nepodarilo sa vytvoriť faktúru pre pultový predaj",
+        });
+      }
+
+      // 4. Vlož položky a zníž skladové zásoby
+      for (const it of input.items) {
+        await ctx.db.insert(invoiceItems).values({
+          invoiceId: invoice.id,
+          description: it.description,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          total: (Number(it.unitPrice) * it.quantity).toFixed(2),
+          itemType: it.productId ? "product" : "service",
+          itemId: it.productId ?? null,
+        });
+
+        if (it.productId) {
+          await ctx.db
+            .update(products)
+            .set({
+              stockQuantity: sql`greatest(0, coalesce(${products.stockQuantity}, 0) - ${it.quantity})`,
+            })
+            .where(
+              and(
+                eq(products.id, it.productId),
+                eq(products.practiceId, ctx.practiceId)
+              )
+            );
+        }
+      }
+
+      // 5. Spracuj e-Kasa doklad
+      const dominantVatRate = (input.items[0]?.vatRate ?? "STANDARD_23") as EkasaVatRateType;
+      const vatAmounts = calculateVatAmounts(totalNum, dominantVatRate);
+      const mappedItems = input.items.map((it) => ({
+        name: it.description,
+        qty: it.quantity,
+        unitPrice: it.unitPrice,
+        vatRate: it.vatRate,
+      }));
+
+      const receiptResult = await processEkasaReceipt(
+        {
+          practiceId: ctx.practiceId,
+          invoiceId: invoice.id,
+          amountBase: vatAmounts.base,
+          amountVat: vatAmounts.vat,
+          amountTotal: totalStr,
+          paymentMethod: input.paymentMethod,
+          vatRate: dominantVatRate,
+          items: mappedItems,
+        },
+        {
+          dic: config.dic,
+          icDph: config.icDph,
+          pokladnicaId: config.pokladnicaId,
+          ekasaApiUrl: config.ekasaApiUrl,
+          offlineModeEnabled: config.offlineModeEnabled,
+        }
+      );
+
+      const savedReceipt = await ctx.db.query.ekasaReceipts.findFirst({
+        where: eq(ekasaReceipts.id, receiptResult.receiptId),
+      });
+
+      if (!savedReceipt) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Nepodarilo sa načítať vytvorený doklad",
+        });
+      }
+
+      // 6. Generuj HTML pre tlač
+      const practice = await ctx.db.query.practices.findFirst({
+        where: eq(practices.id, ctx.practiceId),
+      });
+
+      const qrUrl = generateQrCodeData({
+        uid: savedReceipt.uid,
+        dic: config.dic,
+        amountTotal: savedReceipt.amountTotal,
+        receiptNumber: savedReceipt.receiptNumber,
+      });
+
+      const html = generateReceiptHtml(
+        {
+          receiptNumber: savedReceipt.receiptNumber,
+          uid: savedReceipt.uid,
+          okp: savedReceipt.okp,
+          pkp: savedReceipt.pkp,
+          amountBase: savedReceipt.amountBase,
+          amountVat: savedReceipt.amountVat,
+          amountTotal: savedReceipt.amountTotal,
+          vatRate: savedReceipt.vatRate,
+          paymentMethod: savedReceipt.paymentMethod,
+          status: savedReceipt.status,
+          issuedAt: savedReceipt.issuedAt,
+          items: mappedItems,
+        },
+        {
+          clinicName: practice?.name ?? "Veterinárna ambulancia",
+          address: practice?.address ?? null,
+          phone: practice?.phone ?? null,
+          dic: config.dic,
+          icDph: config.icDph,
+          pokladnicaId: config.pokladnicaId,
+          paperWidth: input.paperWidth,
+        }
+      );
+
+      return {
+        receiptId: savedReceipt.id,
+        receiptNumber: savedReceipt.receiptNumber,
+        amountTotal: savedReceipt.amountTotal,
+        status: savedReceipt.status,
+        uid: savedReceipt.uid ?? undefined,
+        okp: savedReceipt.okp ?? undefined,
+        qrUrl,
+        html,
+      };
     }),
 
   /** Živý sumár dennej tržby pre daný dátum */

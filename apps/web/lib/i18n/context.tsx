@@ -33,6 +33,7 @@ function getNestedValue(
   obj: Record<string, any>,
   path: string
 ): string | undefined {
+  if (obj && typeof obj[path] === "string") return obj[path];
   const parts = path.split(".");
   let current: any = obj;
   for (const part of parts) {

@@ -1810,4 +1810,51 @@ describe("durable SMS dispatch", () => {
     });
     expect(mocks.providerSend).toHaveBeenCalledOnce();
   });
+
+  describe("Slovak reminder message formatting", () => {
+    it("formats appointment reminder SMS in Slovak when recipient has +421 prefix", async () => {
+      mocks.providerSend.mockResolvedValueOnce({ status: "accepted", id: "sms-sk-1" });
+
+      await sendAppointmentReminderSms({
+        to: "+421905123456",
+        patientName: "Blesk",
+        appointmentDate: "12.09.2026",
+        appointmentTime: "10:30",
+        practiceName: "Veterinárna klinika MVDr. Sýkora",
+        practicePhone: "+421 905 123 456",
+        practiceId: PRACTICE_ID,
+        locationId: LOCATION_ID,
+        clientId: CLIENT_ID,
+      });
+
+      expect(mocks.providerSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "+421905123456",
+          body: expect.stringContaining("Pripomienka: Blesk ma termin vysetrenia 12.09.2026 o 10:30."),
+        })
+      );
+    });
+
+    it("formats vaccination reminder SMS in Slovak when recipient has +421 prefix", async () => {
+      mocks.providerSend.mockResolvedValueOnce({ status: "accepted", id: "sms-sk-2" });
+
+      await sendVaccinationReminderSms({
+        to: "+421905123456",
+        patientName: "Luna",
+        vaccineName: "Biocan R (Besnota)",
+        practiceName: "Veterinárna klinika MVDr. Sýkora",
+        practicePhone: "+421 905 123 456",
+        practiceId: PRACTICE_ID,
+        locationId: LOCATION_ID,
+        clientId: CLIENT_ID,
+      });
+
+      expect(mocks.providerSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "+421905123456",
+          body: expect.stringContaining("Pripomienka ockovania: Blizi sa termin ockovania (Biocan R (Besnota)) pre pacienta Luna."),
+        })
+      );
+    });
+  });
 });
