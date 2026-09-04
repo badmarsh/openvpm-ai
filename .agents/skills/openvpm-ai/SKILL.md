@@ -7,6 +7,17 @@ description: Architectural guidelines, zero-conflict upstream sync, strict i18n 
 
 This skill enforces core architectural rules, zero-conflict upstream synchronization, multilingual stability, and veterinary clinical safety gates for OpenVPM AI.
 
+## Development Environment & Reference Instance
+
+- **Primary Project (Active Development):**
+  - Path: `./openvpm-ai` (`C:\Users\marek\Documents\Vet\openvpm-ai`)
+  - Dev Server Port: **3001** (`http://localhost:3001`)
+  - All new features, Slovak localization, statutory compliance, e-Kasa, and AI extensions are built and committed here.
+- **Reference Project (Vanilla / Upstream Inspiration):**
+  - Path: `../OpenVPM` (`C:\Users\marek\Documents\Vet\OpenVPM`)
+  - Dev Server Port: **3005** (`http://localhost:3005`)
+  - Use this vanilla instance as a live baseline to inspect original workflows, component patterns, and upstream behavior before introducing custom extensions.
+
 ## 1. Architectural Guardrails (Zero-Conflict Upstream Sync)
 
 - **Do NOT modify vanilla tables directly:**

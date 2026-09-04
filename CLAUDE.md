@@ -2,6 +2,10 @@
 
 Instructions for Claude Code agents working in this repo.
 
+## Development Environment & Ports
+- **Primary Project (Active Development):** `./openvpm-ai` running on **port 3001** (`http://localhost:3001`). All customizations, Slovak features, e-Kasa, and AI modules are built and committed here.
+- **Reference Project (Vanilla / Upstream Inspiration):** `../OpenVPM` running on **port 3005** (`http://localhost:3005`). Use as a live baseline to inspect original workflows, component patterns, and upstream behavior before introducing custom extensions.
+
 ## OpenVPM AI Architectural Skill & Guardrails
 All agents working in this repository MUST follow the skill defined in [`.claude/skills/openvpm-ai/SKILL.md`](.claude/skills/openvpm-ai/SKILL.md):
 - **Zero-Conflict Upstream Sync:** Never modify upstream schema files in `packages/db/schema/*.ts`. Add all new tables into `packages/db/schema/ext_*.ts`.
