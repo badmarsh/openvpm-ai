@@ -39,6 +39,7 @@ export function EkasaReceiptDialog({
   onClose: () => void;
 }) {
   const [printing, setPrinting] = useState(false);
+  const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("80mm");
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const utils = trpc.useUtils();
 
@@ -65,9 +66,10 @@ export function EkasaReceiptDialog({
     setPrinting(true);
     try {
       let html = receipt.html;
-      if (!html && receipt.receiptId) {
+      if (receipt.receiptId) {
         const res = await utils.ekasa.printReceipt.fetch({
           receiptId: receipt.receiptId,
+          paperWidth,
         });
         html = res.html;
       }
@@ -202,26 +204,53 @@ export function EkasaReceiptDialog({
         )}
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <Button variant="outline" onClick={onClose} ref={closeBtnRef}>
-            Zavrieť
-          </Button>
-
-          {(receipt.html || receipt.receiptId) && (
-            <Button
-              variant="default"
-              onClick={handlePrint}
-              disabled={printing}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1 rounded-md border border-border bg-muted/40 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setPaperWidth("80mm")}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                paperWidth === "80mm"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              {printing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Printer className="h-4 w-4" />
-              )}
-              Tlačiť doklad (80mm)
+              80 mm
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaperWidth("58mm")}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                paperWidth === "58mm"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              58 mm
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onClose} ref={closeBtnRef}>
+              Zavrieť
             </Button>
-          )}
+
+            {(receipt.html || receipt.receiptId) && (
+              <Button
+                variant="default"
+                onClick={handlePrint}
+                disabled={printing}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+              >
+                {printing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Printer className="h-4 w-4" />
+                )}
+                Tlačiť doklad ({paperWidth})
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>,

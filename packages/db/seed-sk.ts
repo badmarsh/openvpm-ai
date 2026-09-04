@@ -14,6 +14,7 @@ import {
   products,
   ekasaConfig,
   wellnessPlans,
+  consentForms,
 } from "./schema/index";
 import {
   usersData as skUsers,
@@ -294,6 +295,115 @@ async function seedSlovak() {
     }
     console.log(`✓ Wellness plans: ${skWellnessPlans.length} packages created`);
   }
+
+  // 9. Slovak Statutory Consent Forms (ŠVPS SR / KVL SR)
+  const STATUTORY_FORMS = [
+    {
+      slug: "vysetrenie-besnota",
+      title: "Veterinárne osvedčenie o vyšetrení zvieraťa (poranenie človeka / besnota)",
+      sortOrder: 1,
+      body: [
+        "Ja, dolu podpísaný(á) vlastník/držiteľ zvieraťa beriem na vedomie, že zviera musí byť po dobu 14 dní izolované tak, aby nemohlo uniknúť ani poraniť človeka alebo iné zviera. Každú zmenu v správaní, prípadne stratu alebo úhyn zvieraťa bezodkladne oznámim ošetrujúcemu veterinárnemu lekárovi a príslušnej Regionálnej veterinárnej a potravinovej správe (RVPS).",
+        "",
+        "Poučenie o nákaze a zákonné povinnosti:",
+        "Besnota je nebezpečná nákazlivá choroba, prenosná na všetky teplokrvné stavovce vrátane človeka. Po prepuknutí príznakov má vždy smrteľný priebeh a je neliečiteľná. V zmysle § 17 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti je vlastník alebo držiteľ zvieraťa povinný:",
+        "a) hlásiť orgánu veterinárnej správy podozrenie alebo výskyt besnoty,",
+        "b) zabezpečiť pri vnímavých mäsožravcoch vakcináciu proti besnote,",
+        "c) bez meškania zabezpečiť veterinárne vyšetrenie zvieraťa, ktoré poranilo človeka.",
+        "",
+        "Nariadené opatrenie:",
+        "Izolovanie a klinické pozorovanie zvieraťa po dobu 14 dní.",
+        "Dátum 1. vyšetrenia (deň poranenia / nahlásenia): ____",
+        "Dátum 2. kontrolného vyšetrenia (5. deň): ____",
+        "Dátum 3. záverečného vyšetrenia (14. deň): ____",
+        "Výsledok vyšetrenia: Zviera neprejavuje žiadne klinické príznaky besnoty ani nervového ochorenia.",
+      ].join("\n"),
+    },
+    {
+      slug: "suhlas-eutanazia",
+      title: "Súhlas s eutanáziou a asanáciou",
+      sortOrder: 2,
+      body: [
+        "Beriem na vedomie, že v prípade akýchkoľvek otázok ohľadne nasledujúcich prehlásení sa môžem ošetrujúceho veterinárneho lekára opýtať na ich význam.",
+        "",
+        "- Potvrdzujem, že som výlučný vlastník alebo oprávnená osoba zodpovedná za horeuvedené zviera a že som oprávnený(á) rozhodnúť o jeho eutanázii (humanitárnom usmrtení).",
+        "- Potvrdzujem, že horeuvedené zviera v posledných pätnástich (15) dňoch nepohrýzlo ani neporanilo človeka alebo iné zviera.",
+        "- Prehlasujem, že podľa mojich vedomostí nebolo horeuvedené zviera v posledných pätnástich (15) dňoch poranené iným zvieraťom podozrivým alebo chorým na besnotu.",
+        "- Dávam ošetrujúcemu veterinárnemu lekárovi súhlas a oprávnenie na eutanáziu horeuvedeného zvieraťa s predchádzajúcim zbavením vedomia (sedácia/narkóza).",
+        "- Zbavujem veterinárne pracovisko a lekára akejkoľvek zodpovednosti za eutanáziu vykonanú v zmysle tohto rozhodnutia.",
+        "",
+        "Naloženie s telom zvieraťa po eutanázii (vyberte): ____",
+        "(Možnosti: individuálna kremácia / hromadná kremácia / zvoz kafilérnou službou / vlastné pochovanie v súlade s predpismi)",
+        "",
+        "Tento súhlas a osvedčenie slúži aj ako doklad pre odhlásenie zvieraťa z evidencie príslušného mestského alebo obecného úradu.",
+      ].join("\n"),
+    },
+    {
+      slug: "suhlas-zakrok-anestezia",
+      title: "Súhlas s hospitalizáciou, zákrokom a anestéziou",
+      sortOrder: 3,
+      body: [
+        "Ja, dolu podpísaný(á) majiteľ(ka) alebo poverená osoba uvedeného zvieraťa súhlasím s navrhnutými veterinárnymi úkonmi, hospitalizáciou, ako aj s ďalšími úkonmi, ktoré by sa počas pobytu vo veterinárnom zariadení javili ako opodstatnené a nevyhnutné na záchranu života a zdravia zvieraťa.",
+        "",
+        "Plánovaný zákrok / vyšetrenie: ____",
+        "",
+        "Bol(a) som riadne poučený(á) o súčasnom zdravotnom stave zvieraťa, o účele zákroku, ako aj o možných komplikáciách a rizikách zákroku vrátane celkovej anestézie. Som si vedomý(á), že biologické procesy živého organizmu nie sú vždy ovplyvniteľné ani správne vykonanými diagnostickými a terapeutickými postupmi.",
+        "",
+        "Kardiopulmonálna resuscitácia (KPR) v prípade zlyhania vitálnych funkcií:",
+        "Voľba majiteľa: ÁNO - resuscitovať / NIE - neresuscitovať (DNR).",
+        "",
+        "Telefónny kontakt pre dnešný deň: ____",
+        "",
+        "Náklady spojené s hospitalizáciou, vyšetrením a terapiou uhradím pri prevzatí zvieraťa.",
+      ].join("\n"),
+    },
+    {
+      slug: "suhlas-gdpr-crsz",
+      title: "Súhlas so spracovaním osobných údajov (GDPR / CRSZ)",
+      sortOrder: 4,
+      body: [
+        "Týmto ako dotknutá osoba dávam výslovný a dobrovoľný súhlas v zmysle Nariadenia Európskeho parlamentu a Rady (EÚ) 2016/679 (GDPR) a zákona č. 18/2018 Z. z. o ochrane osobných údajov, aby moje osobné údaje uvedené v tomto dokumente boli spracúvané veterinárnym pracoviskom pre účely vedenia zdravotnej dokumentácie a poskytovania veterinárnej starostlivosti.",
+        "",
+        "Zároveň udeľujem súhlas, aby tieto údaje boli poskytnuté a spracované Komorou veterinárnych lekárov Slovenskej republiky (KVL SR) a Štátnou veterinárnou a potravinovou správou SR (ŠVPS SR) pre účely prevádzkovania Centrálneho registra spoločenských zvierat (CRSZ) v zmysle zákona č. 39/2007 Z. z. o veterinárnej starostlivosti.",
+      ].join("\n"),
+    },
+    {
+      slug: "kontrola-totoznosti",
+      title: "Potvrdenie o kontrole totožnosti zvieraťa (čip / tetovanie)",
+      sortOrder: 5,
+      body: [
+        "POTVRDENIE O KONTROLE TOTOŽNOSTI ZVIERAŤA",
+        "",
+        "Druh a plemeno: ____",
+        "Meno zvieraťa: ____",
+        "Číslo pasu spoločenského zvieraťa: ____",
+        "",
+        "Výsledok odpočtu elektronického transpondéra / tetovania:",
+        "Zistené číslo mikročipu / tetovania: ____",
+        "Umiestnenie čipu: ľavá strana krku / iné: ____",
+        "",
+        "Vyhlásenie ošetrujúceho veterinárneho lekára:",
+        "Týmto potvrdzujem, že číslo zisteného mikročipu / tetovania sa ZHOĎUJE s číslom uvedeným v pase spoločenského zvieraťa. Funkčnosť a čitateľnosť transpondéra bola riadne overená čítacím zariadením.",
+      ].join("\n"),
+    },
+  ];
+
+  for (const sf of STATUTORY_FORMS) {
+    const existing = await db.query.consentForms.findFirst({
+      where: eq(consentForms.slug, sf.slug),
+    });
+    if (!existing) {
+      await db.insert(consentForms).values({
+        practiceId,
+        slug: sf.slug,
+        title: sf.title,
+        body: sf.body,
+        sortOrder: sf.sortOrder,
+        isActive: true,
+      });
+    }
+  }
+  console.log(`✓ Statutory consent forms: ${STATUTORY_FORMS.length} templates verified`);
 
   console.log("\nSlovak seed completed successfully in openvpm_ai database!");
 }

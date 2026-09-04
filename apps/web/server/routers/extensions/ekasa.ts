@@ -260,9 +260,14 @@ export const ekasaRouter = createRouter({
       return { success: apiResult.success, status: newStatus, uid: apiResult.uid };
     }),
 
-  /** Generuje HTML pre tlač dokladu na termálnej tlačiarni (80mm) */
+  /** Generuje HTML pre tlač dokladu na termálnej tlačiarni (58mm / 80mm) */
   printReceipt: protectedProcedure
-    .input(z.object({ receiptId: z.string().uuid() }))
+    .input(
+      z.object({
+        receiptId: z.string().uuid(),
+        paperWidth: z.enum(["58mm", "80mm"]).optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const receipt = await ctx.db.query.ekasaReceipts.findFirst({
         where: and(
@@ -299,6 +304,7 @@ export const ekasaRouter = createRouter({
         dic: config?.dic ?? "0000000000",
         icDph: config?.icDph,
         pokladnicaId: config?.pokladnicaId ?? "ORP-00000",
+        paperWidth: input.paperWidth ?? "80mm",
       });
 
       return { html };

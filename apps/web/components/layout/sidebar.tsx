@@ -19,6 +19,7 @@ import {
   BellRing,
   ClipboardList,
   BarChart3,
+  BookOpen,
   Settings,
   ShieldAlert,
   Bot,
@@ -113,6 +114,13 @@ const navItems: {
     label: "Controlled Substances",
     i18nKey: "nav.controlledSubstances",
     icon: ShieldAlert,
+    roles: ["admin", "veterinarian"],
+  },
+  {
+    href: "/statutory",
+    label: "Statutory Registers",
+    i18nKey: "nav.statutory",
+    icon: BookOpen,
     roles: ["admin", "veterinarian"],
   },
   {

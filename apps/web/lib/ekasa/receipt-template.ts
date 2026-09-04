@@ -10,6 +10,7 @@ export interface ReceiptConfig {
   dic: string;
   icDph?: string | null;
   pokladnicaId: string;
+  paperWidth?: "58mm" | "80mm";
 }
 
 export interface ReceiptData {
@@ -64,12 +65,17 @@ function formatAmount(a: string | number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Main function — generates a complete HTML string for 80mm thermal printing
+// Main function — generates a complete HTML string for 80mm / 58mm thermal printing
 // ---------------------------------------------------------------------------
 export function generateReceiptHtml(
   receipt: ReceiptData,
   config: ReceiptConfig
 ): string {
+  const width = config.paperWidth ?? "80mm";
+  const is58mm = width === "58mm";
+  const baseFontSize = is58mm ? "10px" : "12px";
+  const padding = is58mm ? "3mm 2mm" : "4mm 3mm";
+
   const qrData = generateQrCodeData({
     uid: receipt.uid,
     dic: config.dic,
@@ -115,13 +121,13 @@ export function generateReceiptHtml(
 
     body {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 12px;
+      font-size: ${baseFontSize};
       line-height: 1.4;
       color: #000;
       background: #fff;
-      width: 80mm;
-      max-width: 80mm;
-      padding: 4mm 3mm;
+      width: ${width};
+      max-width: ${width};
+      padding: ${padding};
     }
 
     .center { text-align: center; }
@@ -182,11 +188,11 @@ export function generateReceiptHtml(
 
     @media print {
       @page {
-        size: 80mm auto;
+        size: ${width} auto;
         margin: 0;
       }
       body {
-        width: 80mm;
+        width: ${width};
         padding: 2mm;
       }
       .no-print { display: none !important; }
