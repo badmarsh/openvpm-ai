@@ -2,6 +2,15 @@
 
 Instructions for Claude Code agents working in this repo.
 
+## OpenVPM AI Architectural Skill & Guardrails
+All agents working in this repository MUST follow the skill defined in [`.claude/skills/openvpm-ai/SKILL.md`](.claude/skills/openvpm-ai/SKILL.md):
+- **Zero-Conflict Upstream Sync:** Never modify upstream schema files in `packages/db/schema/*.ts`. Add all new tables into `packages/db/schema/ext_*.ts`.
+- **Database Migrations:** Exclusively use `pnpm db:push` to keep `_journal.json` clean.
+- **tRPC Extensions:** Mount extensions under `extensions: extensionsRouter` in `apps/web/server/routers/_app.ts`.
+- **Navigation:** Extend navigation via `apps/web/config/custom-nav.ts`.
+- **i18n:** No `app/[locale]/...` URL route prefixes. Maintain 100% dictionary symmetry between `en.json` and `sk.json`.
+- **Clinical Sympathy Flow:** Hard-block all SMS reminders and review asks for deceased/euthanized patients.
+
 ## Project management — Jira (OpenVPM)
 
 We run the OpenVPM build lifecycle on Jira. **Agents coordinate through the board:

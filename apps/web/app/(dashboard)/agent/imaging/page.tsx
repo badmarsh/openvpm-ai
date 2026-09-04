@@ -127,7 +127,7 @@ export default function ImagingPage() {
 
     const formData = new FormData();
     formData.append("file", selectedFile);
-    formData.append("category", "patient-photos");
+    formData.append("category", "imaging");
     formData.append("patientId", selectedPatient.id);
 
     setUploading(true);
