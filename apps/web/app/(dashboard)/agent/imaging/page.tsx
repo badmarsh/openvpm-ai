@@ -98,7 +98,7 @@ export default function ImagingPage() {
 
   // History
   const historyQuery = trpc.extensions.imaging.listByPatient.useQuery(
-    { patientId: selectedPatient!.id },
+    { patientId: selectedPatient?.id ?? "" },
     { enabled: !!selectedPatient },
   );
 
