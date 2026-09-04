@@ -1,6 +1,7 @@
 import { createRouter } from "../../trpc";
 import { ekasaRouter } from "./ekasa";
 import { v2ImportRouter } from "./v2-import";
+import { imagingRouter } from "./imaging";
 
 /**
  * Root router for all OpenVPM custom extensions.
@@ -9,6 +10,7 @@ import { v2ImportRouter } from "./v2-import";
 export const extensionsRouter = createRouter({
   ekasa: ekasaRouter,
   v2Import: v2ImportRouter,
+  imaging: imagingRouter,
 });
 
-export { ekasaRouter, v2ImportRouter };
+export { ekasaRouter, v2ImportRouter, imagingRouter };

@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { ReceiptText, Megaphone, Newspaper, Tv, HeartHandshake, Database } from "lucide-react";
+import { ReceiptText, Megaphone, Newspaper, Tv, HeartHandshake, Database, Image as ImageIcon } from "lucide-react";
 
 export type UserRole =
   | "admin"
@@ -55,5 +55,12 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: "nav.waitingRoom",
     icon: Tv,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
+  },
+  {
+    href: "/agent/imaging",
+    label: "Analýza Snímkov",
+    i18nKey: "nav.agentImaging",
+    icon: ImageIcon,
+    roles: ["admin", "veterinarian"],
   },
 ];
