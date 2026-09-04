@@ -42,11 +42,18 @@ export async function sendAppointmentReminderSms(data: {
   sourceId?: string;
   idempotencyKey?: string;
 }): Promise<SmsDispatchResult> {
-  const phoneInfo = data.practicePhone
-    ? `Call ${data.practicePhone} to reschedule.`
-    : "Contact us to reschedule.";
+  const isSlovak = data.to.startsWith("+421");
+  const phoneInfo = isSlovak
+    ? data.practicePhone
+      ? `Pre zmenu terminu volajte ${data.practicePhone}.`
+      : "V pripade otazok nas kontaktujte."
+    : data.practicePhone
+      ? `Call ${data.practicePhone} to reschedule.`
+      : "Contact us to reschedule.";
 
-  const body = `Reminder: ${data.patientName} has an appointment on ${data.appointmentDate} at ${data.appointmentTime}. ${phoneInfo}`;
+  const body = isSlovak
+    ? `Pripomienka: ${data.patientName} ma termin vysetrenia ${data.appointmentDate} o ${data.appointmentTime}. ${phoneInfo}`
+    : `Reminder: ${data.patientName} has an appointment on ${data.appointmentDate} at ${data.appointmentTime}. ${phoneInfo}`;
 
   const result = await sendSms({
     to: data.to,
@@ -79,11 +86,18 @@ export async function sendVaccinationReminderSms(data: {
   sourceId?: string;
   idempotencyKey?: string;
 }): Promise<SmsDispatchResult> {
-  const phoneInfo = data.practicePhone
-    ? `Call ${data.practicePhone} to schedule.`
-    : "Contact us to schedule.";
+  const isSlovak = data.to.startsWith("+421");
+  const phoneInfo = isSlovak
+    ? data.practicePhone
+      ? `Pre termin volajte ${data.practicePhone}.`
+      : "Pre dohodnutie terminu nas kontaktujte."
+    : data.practicePhone
+      ? `Call ${data.practicePhone} to schedule.`
+      : "Contact us to schedule.";
 
-  const body = `${data.patientName} is due for their ${data.vaccineName} vaccination. ${phoneInfo}`;
+  const body = isSlovak
+    ? `Pripomienka ockovania: Blizi sa termin ockovania (${data.vaccineName}) pre pacienta ${data.patientName}. ${phoneInfo}`
+    : `${data.patientName} is due for their ${data.vaccineName} vaccination. ${phoneInfo}`;
 
   const result = await sendSms({
     to: data.to,
@@ -117,12 +131,22 @@ export async function sendCareReminderSms(data: {
   sourceId: string;
   idempotencyKey: string;
 }): Promise<SmsDispatchResult> {
-  const contact = data.practicePhone
-    ? `Call ${data.practicePhone} with questions.`
-    : "Contact us with questions.";
+  const isSlovak = data.to.startsWith("+421");
+  const contact = isSlovak
+    ? data.practicePhone
+      ? `V pripade otazok volajte ${data.practicePhone}.`
+      : "V pripade otazok nas kontaktujte."
+    : data.practicePhone
+      ? `Call ${data.practicePhone} with questions.`
+      : "Contact us with questions.";
+
+  const body = isSlovak
+    ? `Zdravotna pripomienka pre ${data.patientName}: ${data.reminderTitle}. Datum: ${data.dueDate}. ${contact}`
+    : `Reminder for ${data.patientName}: ${data.reminderTitle}. Reminder date: ${data.dueDate}. ${contact}`;
+
   return sendSms({
     to: data.to,
-    body: `Reminder for ${data.patientName}: ${data.reminderTitle}. Reminder date: ${data.dueDate}. ${contact}`,
+    body,
     practiceId: data.practiceId,
     locationId: data.locationId,
     clientId: data.clientId,

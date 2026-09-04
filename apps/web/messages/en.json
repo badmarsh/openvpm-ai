@@ -3137,5 +3137,11 @@
   "statutory.exportCsv": "Export to CSV",
   "statutory.print": "Print",
   "statutory.rabies.searchPlaceholder": "Search patient, microchip or client...",
-  "statutory.treatment.searchPlaceholder": "Search diagnosis, medication, patient or veterinarian..."
+  "statutory.treatment.searchPlaceholder": "Search diagnosis, medication, patient or veterinarian...",
+  "billing.page.title": "Billing",
+  "billing.page.subtitle": "Invoices and payments",
+  "billing.page.newInvoice": "New Invoice",
+  "billing.page.fastPos": "Fast Checkout (POS)",
+  "billing.page.kpiOutstanding": "Outstanding",
+  "billing.page.kpiOverdue": "Overdue"
 }

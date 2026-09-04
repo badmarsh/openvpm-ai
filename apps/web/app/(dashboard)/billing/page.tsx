@@ -22,6 +22,7 @@ import {
   Pill,
   Undo2,
   ReceiptText,
+  Receipt,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -298,12 +299,20 @@ export default function BillingPage() {
           </p>
         </div>
         {canManageBilling && (
-          <Button asChild>
-            <Link href="/billing/new">
-              <Plus className="mr-1 h-4 w-4" />
-              {t("billing.page.newInvoice", "New Invoice")}
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/billing/pos">
+                <Receipt className="mr-1 h-4 w-4" />
+                {t("billing.page.fastPos", "Fast Checkout (POS)")}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/billing/new">
+                <Plus className="mr-1 h-4 w-4" />
+                {t("billing.page.newInvoice", "New Invoice")}
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 
