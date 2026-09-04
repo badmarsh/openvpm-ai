@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useEffect, useId, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -19,6 +19,7 @@ import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 // --- Types ---
 
@@ -138,7 +139,10 @@ function getSpeciesEmoji(species: string | null): string {
   return SPECIES_EMOJI[species.toLowerCase()] || "\uD83D\uDC3E";
 }
 
-function getTimeAgo(startTime: Date | string): string {
+function getTimeAgo(
+  startTime: Date | string,
+  t: (key: string, fallback?: string, params?: Record<string, string | number>) => string
+): string {
   const start = new Date(startTime);
   const now = new Date();
   const diffMs = now.getTime() - start.getTime();
@@ -146,16 +150,16 @@ function getTimeAgo(startTime: Date | string): string {
 
   if (diffMin < 0) {
     const absMin = Math.abs(diffMin);
-    if (absMin < 60) return `in ${absMin} min`;
+    if (absMin < 60) return t("whiteboard.time.inMinutes", `in ${absMin} min`, { count: absMin });
     const hours = Math.floor(absMin / 60);
-    return `in ${hours}h ${absMin % 60}m`;
+    return t("whiteboard.time.inHoursMinutes", `in ${hours}h ${absMin % 60}m`, { hours, minutes: absMin % 60 });
   }
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffMin < 1) return t("whiteboard.time.justNow", "just now");
+  if (diffMin < 60) return t("whiteboard.time.minutesAgo", `${diffMin} min ago`, { count: diffMin });
   const hours = Math.floor(diffMin / 60);
   const mins = diffMin % 60;
-  if (mins === 0) return `${hours}h ago`;
-  return `${hours}h ${mins}m ago`;
+  if (mins === 0) return t("whiteboard.time.hoursAgo", `${hours}h ago`, { count: hours });
+  return t("whiteboard.time.hoursMinutesAgo", `${hours}h ${mins}m ago`, { hours, minutes: mins });
 }
 
 function formatCurrentTime(date: Date, timeZone?: string | null): string {
@@ -214,13 +218,14 @@ function formatAppointmentTime(date: Date, timeZone?: string | null): string {
 // --- Components ---
 
 function LiveIndicator() {
+  const { t } = useI18n();
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
       <span className="relative flex h-2 w-2">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
       </span>
-      Live
+      {t("whiteboard.live", "Live")}
     </span>
   );
 }
@@ -241,6 +246,7 @@ function WhiteboardCard({
   appointment: WhiteboardAppointment;
   onClick: () => void;
 }) {
+  const { t } = useI18n();
   const clientName = [appointment.clientFirstName, appointment.clientLastName]
     .filter(Boolean)
     .join(" ");
@@ -257,7 +263,7 @@ function WhiteboardCard({
           {getSpeciesEmoji(appointment.patientSpecies)}
         </span>
         <span className="font-medium text-sm truncate">
-          {appointment.patientName || "Unknown Patient"}
+          {appointment.patientName || t("whiteboard.unknownPatient", "Unknown Patient")}
         </span>
         <StatusDot status={appointment.status} />
       </div>
@@ -274,7 +280,7 @@ function WhiteboardCard({
         {appointment.doctorName && (
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
-            Dr. {appointment.doctorName}
+            {t("whiteboard.doctor", "Dr. {name}", { name: appointment.doctorName })}
           </span>
         )}
         {(appointment.locationName || appointment.roomName) && (
@@ -304,7 +310,7 @@ function WhiteboardCard({
         )}
         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
           <Clock className="h-2.5 w-2.5" />
-          {getTimeAgo(appointment.startTime)}
+          {getTimeAgo(appointment.startTime, t)}
         </span>
       </div>
     </button>
@@ -326,6 +332,7 @@ function AppointmentDetailModal({
   canUpdateStatus: boolean;
   isUpdating: boolean;
 }) {
+  const { t } = useI18n();
   const modalRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const restoreFocusRef = useRef(true);
@@ -406,11 +413,24 @@ function AppointmentDetailModal({
   const clientName =
     [appointment.clientFirstName, appointment.clientLastName]
       .filter(Boolean)
-      .join(" ") || "Unknown Client";
+      .join(" ") || t("whiteboard.unknownClient", "Unknown Client");
 
   const current = appointment.status as AppointmentStatus;
   const missingClinicalTarget =
     !appointment.patientId || !appointment.clientId;
+
+  const getStatusLabel = (status: AppointmentStatus) => {
+    switch (status) {
+      case "scheduled": return t("whiteboard.status.scheduled", "Scheduled");
+      case "confirmed": return t("whiteboard.status.confirmed", "Confirmed");
+      case "checked_in": return t("whiteboard.status.checkedIn", "Checked In");
+      case "in_exam": return t("whiteboard.status.inExam", "In Exam");
+      case "checked_out": return t("whiteboard.status.checkedOut", "Checked Out");
+      case "no_show": return t("whiteboard.status.noShow", "No Show");
+      case "cancelled": return t("whiteboard.status.cancelled", "Cancelled");
+      default: return status;
+    }
+  };
 
   const statusActions: {
     label: string;
@@ -419,11 +439,11 @@ function AppointmentDetailModal({
   }[] = [];
 
   if (current === "confirmed") {
-    statusActions.push({ label: "Check In", status: "checked_in", variant: "default" });
-    statusActions.push({ label: "No Show", status: "no_show", variant: "outline" });
-    statusActions.push({ label: "Cancel", status: "cancelled", variant: "destructive" });
+    statusActions.push({ label: t("whiteboard.actions.checkIn", "Check In"), status: "checked_in", variant: "default" });
+    statusActions.push({ label: t("whiteboard.actions.noShow", "No Show"), status: "no_show", variant: "outline" });
+    statusActions.push({ label: t("whiteboard.actions.cancel", "Cancel"), status: "cancelled", variant: "destructive" });
   } else if (current === "checked_in") {
-    statusActions.push({ label: "Start Exam", status: "in_exam", variant: "default" });
+    statusActions.push({ label: t("whiteboard.actions.startExam", "Start Exam"), status: "in_exam", variant: "default" });
   }
   const visibleStatusActions = canUpdateStatus ? statusActions : [];
 
@@ -442,12 +462,12 @@ function AppointmentDetailModal({
           <div className="flex items-center gap-2">
             <StatusDot status={appointment.status} />
             <span className="text-sm font-medium">
-              {STATUS_LABELS[current] || appointment.status}
+              {getStatusLabel(current)}
             </span>
           </div>
           <button
             type="button"
-            aria-label="Close appointment details"
+            aria-label={t("whiteboard.closeDetails", "Close appointment details")}
             onClick={onClose}
             className="rounded-md p-1 hover:bg-muted transition-colors"
           >
@@ -463,7 +483,7 @@ function AppointmentDetailModal({
             </span>
             <div>
               <h3 id={dialogTitleId} className="font-semibold text-base">
-                {appointment.patientName || "Unknown Patient"}
+                {appointment.patientName || t("whiteboard.unknownPatient", "Unknown Patient")}
               </h3>
               {appointment.patientSpecies && (
                 <p className="text-xs text-muted-foreground capitalize">
@@ -476,19 +496,19 @@ function AppointmentDetailModal({
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="h-3.5 w-3.5" />
-              <span>Client: {clientName}</span>
+              <span>{t("whiteboard.clientPrefix", "Client: {name}", { name: clientName })}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
               <span>
                 {formatAppointmentTime(start, timeZone)}{" "}
-                ({getTimeAgo(appointment.startTime)})
+                ({getTimeAgo(appointment.startTime, t)})
               </span>
             </div>
             {appointment.doctorName && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-3.5 w-3.5" />
-                <span>Dr. {appointment.doctorName}</span>
+                <span>{t("whiteboard.doctor", "Dr. {name}", { name: appointment.doctorName })}</span>
               </div>
             )}
             {appointment.typeName && (
@@ -538,8 +558,8 @@ function AppointmentDetailModal({
                 }}
               >
                  {current === "in_exam"
-                   ? "Review closeout"
-                   : "Open visit"}
+                   ? t("whiteboard.reviewCloseout", "Review closeout")
+                   : t("whiteboard.openVisit", "Open visit")}
               </Link>
             </Button>
             {visibleStatusActions.map((action) => (
@@ -553,7 +573,7 @@ function AppointmentDetailModal({
                 }
                 title={
                   action.status === "in_exam" && missingClinicalTarget
-                    ? "Open the visit and attach an active patient before starting the exam."
+                    ? t("whiteboard.attachPatientWarning", "Open the visit and attach an active patient before starting the exam.")
                     : undefined
                 }
                 onClick={() => onStatusChange(appointment.id, action.status)}
@@ -574,6 +594,7 @@ function AppointmentDetailModal({
 // --- Main Page ---
 
 export default function WhiteboardPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const { data: session } = useSession();
   const canUpdateStatus = canUpdateWhiteboardStatusRole(session?.user?.role);
@@ -624,7 +645,7 @@ export default function WhiteboardPage() {
   const utils = trpc.useUtils();
   const updateStatus = trpc.whiteboard.updateStatus.useMutation({
     onSuccess: () => {
-      toast.success("Status updated");
+      toast.success(t("whiteboard.toasts.statusUpdated", "Status updated"));
       setSelectedAppointment(null);
       utils.whiteboard.getActive.invalidate();
     },
@@ -662,12 +683,42 @@ export default function WhiteboardPage() {
   ]);
 
   // Group appointments into columns
-  const columnData = COLUMNS.map((col) => {
-    const items = (verifiedActiveAppointments ?? []).filter((appt) =>
-      (col.statuses as readonly string[]).includes(appt.status as string)
-    );
-    return { ...col, items };
-  });
+  const columnData = useMemo(() => {
+    const columns = [
+      {
+        key: "waiting",
+        label: t("whiteboard.columns.waiting", "Waiting"),
+        statuses: ["confirmed"],
+        color: "bg-blue-500",
+        headerBg: "bg-blue-500/10",
+        headerText: "text-blue-700 dark:text-blue-400",
+      },
+      {
+        key: "in_progress",
+        label: t("whiteboard.columns.inProgress", "In Progress"),
+        statuses: ["checked_in", "in_exam"],
+        color: "bg-amber-500",
+        headerBg: "bg-amber-500/10",
+        headerText: "text-amber-700 dark:text-amber-400",
+      },
+      {
+        key: "completed",
+        label: t("whiteboard.columns.completed", "Completed"),
+        statuses: ["checked_out"],
+        color: "bg-green-500",
+        headerBg: "bg-green-500/10",
+        headerText: "text-green-700 dark:text-green-400",
+      },
+    ] as const;
+
+    return columns.map((col) => {
+      const items = (verifiedActiveAppointments ?? []).filter((appt) =>
+        (col.statuses as readonly string[]).includes(appt.status as string)
+      );
+      return { ...col, items };
+    });
+  }, [t, verifiedActiveAppointments]);
+
   const hasWhiteboardPatients = columnData.some((col) => col.items.length > 0);
 
   return (
@@ -677,12 +728,12 @@ export default function WhiteboardPage() {
         <div>
           <div className="flex items-center gap-3">
             <h2 className="font-heading text-xl font-semibold">
-              Practice Whiteboard
+              {t("whiteboard.title", "Practice Whiteboard")}
             </h2>
             <LiveIndicator />
           </div>
           <p className="text-sm text-muted-foreground">
-            Live patient status board
+            {t("whiteboard.subtitle", "Live patient status board")}
           </p>
         </div>
         <div className="text-right">
@@ -703,12 +754,13 @@ export default function WhiteboardPage() {
       <div data-tour="whiteboard-board">
       {pageError || pageMissing ? (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {pageError?.message ?? "Unable to load whiteboard. Please retry."}
+          {/* {pageError?.message ?? "Unable to load whiteboard. Please retry."} */}
+          {pageError?.message ?? t("whiteboard.errorFallback", "Unable to load whiteboard. Please retry.")}
         </div>
       ) : isPageLoading ? (
         <div className="mt-12 flex items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading whiteboard...
+          {t("whiteboard.loading", "Loading whiteboard...")}
         </div>
       ) : hasWhiteboardPatients ? (
         /* Kanban columns */
@@ -753,7 +805,7 @@ export default function WhiteboardPage() {
               <div className="space-y-3 p-3" style={{ minHeight: 120 }}>
                 {col.items.length === 0 ? (
                   <div className="flex h-20 items-center justify-center">
-                    <p className="text-xs text-muted-foreground">No patients</p>
+                    <p className="text-xs text-muted-foreground">{t("whiteboard.noPatients", "No patients")}</p>
                   </div>
                 ) : (
                   col.items.map((appt) => (
@@ -772,10 +824,10 @@ export default function WhiteboardPage() {
         <EmptyState
           className="mt-6"
           icon={ClipboardList}
-          title="No patients on the whiteboard"
-          description="Checked-in and in-progress appointments will appear here as the day moves."
+          title={t("whiteboard.emptyState.title", "No patients on the whiteboard")}
+          description={t("whiteboard.emptyState.description", "Checked-in and in-progress appointments will appear here as the day moves.")}
           action={{
-            label: "Open schedule",
+            label: t("whiteboard.emptyState.action", "Open schedule"),
             onClick: () => router.push("/schedule"),
             icon: CalendarPlus,
           }}

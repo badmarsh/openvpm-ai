@@ -16,6 +16,7 @@ import {
   type VitalTrendPoint,
   type WeightTrendPoint,
 } from "@/lib/records/clinical-trends";
+import { useI18n } from "@/lib/i18n";
 
 function ChartTooltip({
   active,
@@ -53,12 +54,17 @@ function ChartTooltip({
 }
 
 export function WeightTrendChart({ data }: { data: WeightTrendPoint[] }) {
+  const { t } = useI18n();
+
   if (data.length < 2) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
         <Activity className="mx-auto h-8 w-8 text-muted-foreground/50" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Not enough weight history for a trend yet.
+          {t(
+            "patients.weight.empty",
+            "Not enough weight history for a trend yet.",
+          )}
         </p>
       </div>
     );
@@ -68,9 +74,14 @@ export function WeightTrendChart({ data }: { data: WeightTrendPoint[] }) {
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h3 className="font-heading text-base font-semibold">Weight Trend</h3>
+          <h3 className="font-heading text-base font-semibold">
+            {t("patients.weight.trend", "Weight Trend")}
+          </h3>
           <p className="text-sm text-muted-foreground">
-            {data[0]!.weightKg} kg to {data[data.length - 1]!.weightKg} kg
+            {t("patients.weight.trendFromTo", "{from} kg to {to} kg", {
+              from: data[0]!.weightKg,
+              to: data[data.length - 1]!.weightKg,
+            })}
           </p>
         </div>
       </div>
@@ -95,7 +106,7 @@ export function WeightTrendChart({ data }: { data: WeightTrendPoint[] }) {
             <Line
               type="monotone"
               dataKey="weightKg"
-              name="Weight kg"
+              name={t("patients.weight.weightKg", "Weight kg")}
               stroke="hsl(var(--primary))"
               strokeWidth={2}
               dot={{ r: 3 }}
@@ -110,6 +121,7 @@ export function WeightTrendChart({ data }: { data: WeightTrendPoint[] }) {
 }
 
 export function VitalsTrendChart({ data }: { data: VitalTrendPoint[] }) {
+  const { t } = useI18n();
   const hasTemp = hasTrendValues(data, ["temperatureC"]);
   const hasRates = hasTrendValues(data, ["heartRateBpm", "respiratoryRateBpm"]);
   const hasScores = hasTrendValues(data, ["bodyConditionScore", "painScore"]);
@@ -119,7 +131,10 @@ export function VitalsTrendChart({ data }: { data: VitalTrendPoint[] }) {
       <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
         <Activity className="mx-auto h-8 w-8 text-muted-foreground/50" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Not enough vitals history for trends yet.
+          {t(
+            "patients.vitals.notEnoughTrend",
+            "Not enough vitals history for trends yet.",
+          )}
         </p>
       </div>
     );
@@ -129,7 +144,9 @@ export function VitalsTrendChart({ data }: { data: VitalTrendPoint[] }) {
     <div className="grid gap-4 lg:grid-cols-2">
       {hasTemp && (
         <div className="rounded-lg border border-border bg-card p-4">
-          <h3 className="font-heading text-base font-semibold">Temperature</h3>
+          <h3 className="font-heading text-base font-semibold">
+            {t("patients.vitals.temperature", "Temperature")}
+          </h3>
           <div className="mt-3 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -137,7 +154,7 @@ export function VitalsTrendChart({ data }: { data: VitalTrendPoint[] }) {
                 <XAxis dataKey="dateLabel" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "hsl(var(--border))" }} />
                 <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "hsl(var(--border))" }} domain={["dataMin - 0.5", "dataMax + 0.5"]} />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="temperatureC" name="Temp C" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line type="monotone" dataKey="temperatureC" name="Temp °C" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -146,7 +163,9 @@ export function VitalsTrendChart({ data }: { data: VitalTrendPoint[] }) {
 
       {hasRates && (
         <div className="rounded-lg border border-border bg-card p-4">
-          <h3 className="font-heading text-base font-semibold">Heart / Respiratory Rate</h3>
+          <h3 className="font-heading text-base font-semibold">
+            {t("patients.vitals.heartRate", "Heart Rate")} / {t("patients.vitals.respiratoryRate", "Respiratory Rate")}
+          </h3>
           <div className="mt-3 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -164,7 +183,9 @@ export function VitalsTrendChart({ data }: { data: VitalTrendPoint[] }) {
 
       {hasScores && (
         <div className="rounded-lg border border-border bg-card p-4 lg:col-span-2">
-          <h3 className="font-heading text-base font-semibold">Body / Pain Scores</h3>
+          <h3 className="font-heading text-base font-semibold">
+            {t("patients.vitals.bodyCondition", "Body Condition (1-9)")} / {t("patients.vitals.painScore", "Pain Score (0-4)")}
+          </h3>
           <div className="mt-3 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>

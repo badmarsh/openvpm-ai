@@ -23,24 +23,27 @@ import {
 } from "@/lib/patients/policy";
 import { PATIENT_SPECIES_OPTIONS } from "@/lib/patients/species";
 
+import { useI18n } from "@/lib/i18n";
+
 const speciesOptions = PATIENT_SPECIES_OPTIONS;
 
 const sexOptions = [
-  { value: "male", label: "Male (Intact)" },
-  { value: "female", label: "Female (Intact)" },
-  { value: "male_neutered", label: "Male (Neutered)" },
-  { value: "female_spayed", label: "Female (Spayed)" },
+  { value: "male", key: "sexMale", label: "Male (Intact)" },
+  { value: "female", key: "sexFemale", label: "Female (Intact)" },
+  { value: "male_neutered", key: "sexMaleNeutered", label: "Male (Neutered)" },
+  { value: "female_spayed", key: "sexFemaleSpayed", label: "Female (Spayed)" },
 ] as const;
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { data: session, status } = useSession();
 
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Checking patient access...
+        {t("patients.form.checkingAccess", "Checking patient access...")}
       </div>
     );
   }
@@ -55,14 +58,17 @@ export default function NewPatientPage() {
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Patients
+          {t("patients.actions.backToPatients", "Back to Patients")}
         </Button>
         <EmptyState
           icon={AlertCircle}
-          title="Patient actions are read-only"
-          description="Only staff roles with patient write access can create patients."
+          title={t("patients.form.readOnlyNotice", "Patient actions are read-only")}
+          description={t(
+            "patients.form.readOnlyDesc",
+            "Only staff roles with patient write access can create patients.",
+          )}
           action={{
-            label: "Back to Patients",
+            label: t("patients.actions.backToPatients", "Back to Patients"),
             onClick: () => router.push("/patients"),
           }}
         />
@@ -75,7 +81,7 @@ export default function NewPatientPage() {
       fallback={
         <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading patient form...
+          {t("patients.profile.loading", "Loading patient form...")}
         </div>
       }
     >
@@ -95,6 +101,7 @@ function canManagePatientFormRole(role?: string | null): boolean {
 
 function NewPatientForm() {
   const router = useRouter();
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({
     clientId: "",
@@ -151,7 +158,7 @@ function NewPatientForm() {
 
   const createPatient = trpc.patients.create.useMutation({
     onSuccess: (patient) => {
-      toast.success("Patient created");
+      toast.success(t("patients.form.createdSuccess", "Patient created"));
       if (firstClinicDay) {
         router.push(
           `/schedule?setup=first-visit&patient=${encodeURIComponent(patient.name)}`,
@@ -185,15 +192,15 @@ function NewPatientForm() {
         ?.value ?? form.dob;
 
     if (!form.clientId) {
-      setError("Please select an owner (client).");
+      setError(t("patients.form.ownerSelectError", "Please select an owner (client)."));
       return;
     }
     if (!form.name.trim()) {
-      setError("Patient name is required.");
+      setError(t("patients.form.patientNameRequired", "Patient name is required."));
       return;
     }
     if (!canSubmit) {
-      setError("Check required fields and field lengths.");
+      setError(t("common.error_retry", "Check required fields and field lengths."));
       return;
     }
 
@@ -233,14 +240,16 @@ function NewPatientForm() {
         className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Patients
+        {t("patients.actions.backToPatients", "Back to Patients")}
       </Button>
 
-      <h2 className="font-heading text-xl font-semibold">New Patient</h2>
+      <h2 className="font-heading text-xl font-semibold">
+        {t("patients.form.titleNew", "New Patient")}
+      </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {firstClinicDay
           ? "First clinic day, step 2 of 3: add this owner's pet. Booking is next."
-          : "Add a new patient record"}
+          : t("patients.form.subtitleNew", "Add a new patient record")}
       </p>
 
       {error && (
@@ -252,7 +261,9 @@ function NewPatientForm() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {/* Client Search */}
         <div>
-          <label className="text-sm font-medium">Owner (Client) *</label>
+          <label className="text-sm font-medium">
+            {t("patients.form.ownerRequired", "Owner (Client) *")}
+          </label>
           {selectedClientName ? (
             <div className="mt-1 flex items-center gap-2">
               <div className="flex h-10 flex-1 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
@@ -268,13 +279,16 @@ function NewPatientForm() {
                   setSelectedClientName("");
                 }}
               >
-                Change
+                {t("patients.actions.change", "Change")}
               </Button>
             </div>
           ) : (
             <div className="relative mt-1">
               <Input
-                placeholder="Search clients by name or email..."
+                placeholder={t(
+                  "patients.form.searchOwnerPlaceholder",
+                  "Search clients by name or email...",
+                )}
                 value={clientSearch}
                 maxLength={CLIENT_SEARCH_MAX_LENGTH}
                 onChange={(e) => {
@@ -292,12 +306,15 @@ function NewPatientForm() {
                   {clientSearchError || clientSearchMissing ? (
                     <div className="p-3 text-sm text-destructive">
                       {clientSearchError?.message ??
-                        "Unable to search clients. Please retry."}
+                        t(
+                          "common.error_retry",
+                          "Unable to search clients. Please retry.",
+                        )}
                     </div>
                   ) : isSearchingClients ? (
                     <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Searching clients...
+                      {t("patients.form.searchingOwners", "Searching clients...")}
                     </div>
                   ) : clientResults && clientResults.length > 0 ? (
                     clientResults.map((client) => (
@@ -318,7 +335,7 @@ function NewPatientForm() {
                     ))
                   ) : (
                     <div className="p-3 text-center text-sm text-muted-foreground">
-                      No clients found
+                      {t("patients.form.noOwnersFound", "No clients found")}
                     </div>
                   )}
                 </div>
@@ -329,13 +346,13 @@ function NewPatientForm() {
 
         <div>
           <label className="text-sm font-medium" htmlFor="name">
-            Patient Name *
+            {t("patients.form.patientNameRequired", "Patient Name *")}
           </label>
           <Input
             id="name"
             value={form.name}
             onChange={(e) => updateField("name", e.target.value)}
-            placeholder="Patient name"
+            placeholder={t("patients.form.patientNamePlaceholder", "Patient name")}
             className="mt-1"
             maxLength={PATIENT_NAME_MAX_LENGTH}
             required
@@ -345,7 +362,7 @@ function NewPatientForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium" htmlFor="species">
-              Species *
+              {t("patients.form.speciesRequired", "Species *")}
             </label>
             <select
               id="species"
@@ -355,20 +372,22 @@ function NewPatientForm() {
             >
               {speciesOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.value
+                    ? t(`patients.species_${opt.value}`, opt.label)
+                    : opt.label}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className="text-sm font-medium" htmlFor="breed">
-              Breed
+              {t("patients.form.breed", "Breed")}
             </label>
             <Input
               id="breed"
               value={form.breed}
               onChange={(e) => updateField("breed", e.target.value)}
-              placeholder="Breed"
+              placeholder={t("patients.form.breedPlaceholder", "Breed")}
               className="mt-1"
               maxLength={PATIENT_BREED_MAX_LENGTH}
             />
@@ -378,7 +397,7 @@ function NewPatientForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium" htmlFor="sex">
-              Sex
+              {t("patients.form.sex", "Sex")}
             </label>
             <select
               id="sex"
@@ -386,17 +405,17 @@ function NewPatientForm() {
               onChange={(e) => updateField("sex", e.target.value)}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Select sex...</option>
+              <option value="">{t("patients.form.selectSex", "Select sex...")}</option>
               {sexOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(`patients.form.${opt.key}`, opt.label)}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className="text-sm font-medium" htmlFor="dob">
-              Date of Birth
+              {t("patients.form.dob", "Date of Birth")}
             </label>
             <Input
               id="dob"
@@ -412,26 +431,26 @@ function NewPatientForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="text-sm font-medium" htmlFor="color">
-              Color/Markings
+              {t("patients.form.color", "Color/Markings")}
             </label>
             <Input
               id="color"
               value={form.color}
               onChange={(e) => updateField("color", e.target.value)}
-              placeholder="e.g., Black and white"
+              placeholder={t("patients.form.colorPlaceholder", "e.g., Black and white")}
               className="mt-1"
               maxLength={PATIENT_COLOR_MAX_LENGTH}
             />
           </div>
           <div>
             <label className="text-sm font-medium" htmlFor="microchipNumber">
-              Microchip Number
+              {t("patients.form.microchip", "Microchip Number")}
             </label>
             <Input
               id="microchipNumber"
               value={form.microchipNumber}
               onChange={(e) => updateField("microchipNumber", e.target.value)}
-              placeholder="Microchip ID"
+              placeholder={t("patients.form.microchipPlaceholder", "Microchip ID")}
               className="mt-1"
               maxLength={PATIENT_MICROCHIP_NUMBER_MAX_LENGTH}
             />
@@ -443,14 +462,16 @@ function NewPatientForm() {
             type="submit"
             disabled={!canSubmit || createPatient.isPending}
           >
-            {createPatient.isPending ? "Creating..." : "Create Patient"}
+            {createPatient.isPending
+              ? t("patients.actions.creating", "Creating...")
+              : t("patients.form.titleNew", "Create Patient")}
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={() => router.push("/patients")}
           >
-            Cancel
+            {t("patients.actions.cancel", "Cancel")}
           </Button>
         </div>
       </form>

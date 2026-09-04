@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -219,13 +220,28 @@ function getAppointmentColor(appointment: Appointment): string {
   return appointment.typeColor || DEFAULT_APPOINTMENT_COLOR;
 }
 
-function appointmentStatusLabel(appointment: Appointment): string {
+function appointmentStatusLabel(
+  appointment: Appointment,
+  t?: (key: string, fallback?: string, params?: Record<string, string | number>) => string
+): string {
   if (
     appointment.status === "scheduled" &&
     (appointment.notes?.startsWith("[Online request]") ||
       appointment.notes?.startsWith("[Portal request]"))
   ) {
-    return "Needs confirmation";
+    return t ? t("schedule.needsConfirmation", "Needs confirmation") : "Needs confirmation";
+  }
+  if (t) {
+    const statusKeys: Record<AppointmentStatus, string> = {
+      scheduled: t("schedule.statusScheduled", "Scheduled"),
+      confirmed: t("schedule.statusConfirmed", "Confirmed"),
+      checked_in: t("schedule.statusCheckedIn", "Checked In"),
+      in_exam: t("schedule.statusInExam", "In Exam"),
+      checked_out: t("schedule.statusCheckedOut", "Checked Out"),
+      no_show: t("schedule.statusNoShow", "No Show"),
+      cancelled: t("schedule.statusCancelled", "Cancelled"),
+    };
+    return statusKeys[appointment.status as AppointmentStatus] || appointment.status;
   }
   return (
     STATUS_LABELS[appointment.status as AppointmentStatus] || appointment.status
@@ -258,7 +274,9 @@ function buildOverlapLayout(
  * Unassigned appointments (tech work like nail trims) share a Team lane.
  */
 function buildDayLanes(
-  appointments: Appointment[]
+  appointments: Appointment[],
+  teamLabel = "Team",
+  doctorFallback = "Doctor"
 ): { key: string; label: string; appointments: Appointment[] }[] {
   const byDoctor = new Map<string, { label: string; appointments: Appointment[] }>();
   for (const appt of appointments) {
@@ -268,7 +286,7 @@ function buildDayLanes(
       existing.appointments.push(appt);
     } else {
       byDoctor.set(key, {
-        label: appt.doctorId ? appt.doctorName ?? "Doctor" : "Team",
+        label: appt.doctorId ? appt.doctorName ?? doctorFallback : teamLabel,
         appointments: [appt],
       });
     }
@@ -451,6 +469,7 @@ function AppointmentBlock({
   onClick: () => void;
   position?: OverlapPosition;
 }) {
+  const { t } = useI18n();
   const start = new Date(appointment.startTime);
   const end = new Date(appointment.endTime);
   const { top, height } = getAppointmentLayout(start, end, timeZone);
@@ -476,11 +495,11 @@ function AppointmentBlock({
     >
       <div className="flex items-center gap-1.5 font-medium text-foreground truncate">
         <StatusDot status={appointment.status} />
-        <span className="truncate">{appointment.patientName || "Unknown Patient"}</span>
+        <span className="truncate">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
       </div>
       {height >= 36 && (
         <div className="text-muted-foreground truncate mt-0.5">
-          {appointment.typeName || "Appointment"} &middot;{" "}
+          {appointment.typeName || t("schedule.appointmentFallback", "Appointment")} &middot;{" "}
           {formatTime(start, timeZone)} - {formatTime(end, timeZone)}
           {appointment.locationName ? ` · ${appointment.locationName}` : ""}
         </div>
@@ -504,10 +523,15 @@ function DayCalendar({
   onSlotClick?: (y: number) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
+  const { t } = useI18n();
   // A real clinic day: one lane per doctor (plus a Team lane for
   // unassigned/tech work). With one provider or none it stays the single
   // clean column it always was.
-  const lanes = buildDayLanes(appointments);
+  const lanes = buildDayLanes(
+    appointments,
+    t("schedule.teamLane", "Team"),
+    t("schedule.doctorLaneFallback", "Doctor")
+  );
   const showLanes = lanes.length > 1;
 
   const laneColumn = (laneAppointments: Appointment[], key: string) => {
@@ -571,8 +595,11 @@ function DayCalendar({
                 >
                   <p className="truncate text-sm font-medium">{lane.label}</p>
                   <p className="text-xs text-muted-foreground">
-                    {lane.appointments.length} appointment
-                    {lane.appointments.length !== 1 ? "s" : ""}
+                    {lane.appointments.length === 1
+                      ? t("schedule.appointmentCountOne", "1 appointment")
+                      : t("schedule.appointmentCountMany", "{count} appointments", {
+                          count: lane.appointments.length,
+                        })}
                   </p>
                 </div>
               ))}
@@ -609,7 +636,7 @@ function DayCalendar({
                   <div className="text-center">
                     <Calendar className="mx-auto h-8 w-8 text-muted-foreground/40" />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      No appointments for this day
+                      {t("schedule.noAppointmentsDay", "No appointments for this day")}
                     </p>
                   </div>
                 </div>
@@ -621,8 +648,15 @@ function DayCalendar({
 
       {appointments.length > 0 && (
         <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-          {appointments.length} appointment{appointments.length !== 1 ? "s" : ""}
-          {showLanes && ` · ${lanes.length} lanes`}
+          {appointments.length === 1
+            ? t("schedule.appointmentCountOne", "1 appointment")
+            : t("schedule.appointmentCountMany", "{count} appointments", {
+                count: appointments.length,
+              })}
+          {showLanes &&
+            t("schedule.lanesCount", " · {count} lanes", {
+              count: lanes.length,
+            })}
         </div>
       )}
     </div>
@@ -640,6 +674,7 @@ function PhoneAgenda({
   view: CalendarView;
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
+  const { t } = useI18n();
   const appointmentsByDay = new Map<string, Appointment[]>();
 
   for (const appointment of appointments) {
@@ -653,27 +688,36 @@ function PhoneAgenda({
   }
 
   const rangeLabel =
-    view === "day" ? "Day" : view === "week" ? "Week" : "Month";
+    view === "day"
+      ? t("schedule.viewDay", "Day")
+      : view === "week"
+        ? t("schedule.viewWeek", "Week")
+        : t("schedule.viewMonth", "Month");
 
   return (
     <section
-      aria-label={`${rangeLabel} appointment agenda`}
+      aria-label={t("schedule.agendaAria", "{range} appointment agenda", { range: rangeLabel })}
       className="mt-4 max-w-full space-y-4 overflow-hidden sm:hidden"
     >
       <div className="flex items-center justify-between gap-3">
-        <h4 className="text-sm font-semibold">{rangeLabel} agenda</h4>
+        <h4 className="text-sm font-semibold">{t("schedule.agendaTitle", "{range} agenda", { range: rangeLabel })}</h4>
         <span className="text-xs text-muted-foreground">
-          {appointments.length} appointment
-          {appointments.length !== 1 ? "s" : ""}
+          {appointments.length === 1
+            ? t("schedule.appointmentCountOne", "1 appointment")
+            : t("schedule.appointmentCountMany", "{count} appointments", {
+                count: appointments.length,
+              })}
         </span>
       </div>
 
       {appointments.length === 0 ? (
         <div className="rounded-lg border border-border bg-card px-4 py-8 text-center">
           <Calendar className="mx-auto h-8 w-8 text-muted-foreground/40" />
-          <p className="mt-2 text-sm font-medium">No appointments</p>
+          <p className="mt-2 text-sm font-medium">{t("schedule.noAppointmentsAgenda", "No appointments")}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            The selected {view} is clear.
+            {t("schedule.agendaClear", "The selected {view} is clear.", {
+              view: rangeLabel.toLowerCase(),
+            })}
           </p>
         </div>
       ) : (
@@ -696,7 +740,7 @@ function PhoneAgenda({
                 const start = new Date(appointment.startTime);
                 const end = new Date(appointment.endTime);
                 const patientName =
-                  appointment.patientName || "Unknown Patient";
+                  appointment.patientName || t("schedule.unknownPatient", "Unknown Patient");
                 const clientName = [
                   appointment.clientFirstName,
                   appointment.clientLastName,
@@ -704,8 +748,8 @@ function PhoneAgenda({
                   .filter(Boolean)
                   .join(" ");
                 const careTeam = appointment.doctorName
-                  ? `Dr. ${appointment.doctorName}`
-                  : "Team";
+                  ? t("schedule.drPrefix", "Dr. {name}", { name: appointment.doctorName })
+                  : t("schedule.teamLane", "Team");
                 const place = [
                   appointment.locationName,
                   appointment.roomName,
@@ -718,7 +762,7 @@ function PhoneAgenda({
                     key={appointment.id}
                     type="button"
                     onClick={() => onAppointmentClick(appointment)}
-                    aria-label={`Open ${patientName} appointment at ${formatTime(start, timeZone)}`}
+                    aria-label={t("schedule.openAppointmentAria", "Open {patientName} appointment at {time}", { patientName, time: formatTime(start, timeZone) })}
                     className="min-h-11 w-full overflow-hidden rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     style={{
                       borderLeftColor: getAppointmentColor(appointment),
@@ -737,14 +781,14 @@ function PhoneAgenda({
                       </span>
                       <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
                         <StatusDot status={appointment.status} />
-                        {appointmentStatusLabel(appointment)}
+                        {appointmentStatusLabel(appointment, t)}
                       </span>
                     </span>
                     <span className="mt-2 block min-w-0 space-y-1 text-xs text-muted-foreground">
                       <span className="flex min-w-0 items-center gap-1.5">
                         <User className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate">
-                          {clientName || "Client not listed"}
+                          {clientName || t("schedule.clientNotListed", "Client not listed")}
                           {appointment.patientSpecies
                             ? ` · ${appointment.patientSpecies}`
                             : ""}
@@ -758,7 +802,7 @@ function PhoneAgenda({
                         </span>
                       </span>
                       <span className="block truncate font-medium text-foreground">
-                        {appointment.typeName || "Appointment"}
+                        {appointment.typeName || t("schedule.appointmentFallback", "Appointment")}
                       </span>
                     </span>
                   </button>
@@ -898,6 +942,7 @@ function AppointmentChip({
   timeZone?: string | null;
   onClick: () => void;
 }) {
+  const { t } = useI18n();
   const start = new Date(appointment.startTime);
   const color = getAppointmentColor(appointment);
 
@@ -916,7 +961,7 @@ function AppointmentChip({
         style={{ backgroundColor: color }}
       />
       <span className="min-w-0 flex-1 truncate">
-        {formatTime(start, timeZone)} {appointment.patientName || "Unknown"}
+        {formatTime(start, timeZone)} {appointment.patientName || t("schedule.unknownPatient", "Unknown")}
         {appointment.locationName ? ` · ${appointment.locationName}` : ""}
       </span>
     </button>
@@ -944,6 +989,7 @@ function MonthCalendar({
   onDayOpen: (date: Date) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
+  const { t } = useI18n();
   const weekLabels = buildWeekDays(currentDate).map((day) =>
     day.toLocaleDateString("en-US", { weekday: "short" })
   );
@@ -996,9 +1042,11 @@ function MonthCalendar({
                     type="button"
                     className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     onClick={() => onCreateClick(day.date)}
-                    aria-label={`Create appointment on ${day.date.toLocaleDateString(
-                      "en-US"
-                    )}`}
+                    aria-label={t(
+                      "schedule.createAppointmentOnAria",
+                      "Create appointment on {date}",
+                      { date: day.date.toLocaleDateString("en-US") }
+                    )}
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
@@ -1020,7 +1068,7 @@ function MonthCalendar({
                     className="w-full rounded-md px-2 py-1 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
                     onClick={() => onDayOpen(day.date)}
                   >
-                    +{hiddenCount} more
+                    {t("schedule.moreAppointments", "+{count} more", { count: hiddenCount })}
                   </button>
                 )}
               </div>
@@ -1070,6 +1118,7 @@ function AppointmentDetailPopover({
   isRescheduling: boolean;
   isCancellingSeries: boolean;
 }) {
+  const { t } = useI18n();
   const popoverRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const restoreFocusRef = useRef(true);
@@ -1216,7 +1265,7 @@ function AppointmentDetailPopover({
 
   const clientName = [appointment.clientFirstName, appointment.clientLastName]
     .filter(Boolean)
-    .join(" ") || "Unknown Client";
+    .join(" ") || t("schedule.unknownPatient", "Unknown Client");
 
   const statusActions: {
     label: string;
@@ -1240,44 +1289,81 @@ function AppointmentDetailPopover({
 
   if (current === "scheduled") {
     statusActions.push({
-      label: "Confirm",
+      label: t("schedule.statusConfirm", "Confirm"), /* label: "Confirm", */
       status: "confirmed",
       variant: "default",
       disabled: doctorRequiredForAdvance,
       disabledReason: doctorRequiredForAdvance
-        ? "Assign a doctor before confirming this appointment."
+        ? t(
+            "schedule.assignDoctorConfirm",
+            "Assign a doctor before confirming this appointment."
+          )
         : undefined,
     });
     statusActions.push({
-      label: "Check In",
+      label: t("schedule.statusCheckIn", "Check In"),
       status: "checked_in",
       variant: "outline",
       disabled: doctorRequiredForAdvance,
       disabledReason: doctorRequiredForAdvance
-        ? "Assign a doctor before checking in this appointment."
+        ? t(
+            "schedule.assignDoctorCheckIn",
+            "Assign a doctor before checking in this appointment."
+          )
         : undefined,
     });
-    statusActions.push({ label: "No Show", status: "no_show", variant: "outline" });
-    statusActions.push({ label: "Cancel", status: "cancelled", variant: "destructive" });
+    statusActions.push({
+      label: t("schedule.statusNoShowAction", "No Show"),
+      status: "no_show",
+      variant: "outline",
+    });
+    statusActions.push({
+      label: t("schedule.statusCancelAction", "Cancel"),
+      status: "cancelled",
+      variant: "destructive",
+    });
   } else if (current === "confirmed") {
-    statusActions.push({ label: "Check In", status: "checked_in", variant: "default" });
-    statusActions.push({ label: "No Show", status: "no_show", variant: "outline" });
-    statusActions.push({ label: "Cancel", status: "cancelled", variant: "destructive" });
+    statusActions.push({
+      label: t("schedule.statusCheckIn", "Check In"),
+      status: "checked_in",
+      variant: "default",
+    });
+    statusActions.push({
+      label: t("schedule.statusNoShowAction", "No Show"),
+      status: "no_show",
+      variant: "outline",
+    });
+    statusActions.push({
+      label: t("schedule.statusCancelAction", "Cancel"),
+      status: "cancelled",
+      variant: "destructive",
+    });
   } else if (current === "checked_in") {
     const missingClinicalTarget =
       !appointment.patientId || !appointment.clientId;
     statusActions.push({
-      label: "In Exam",
+      label: t("schedule.statusInExamAction", "In Exam"),
       status: "in_exam",
       variant: "default",
       disabled: missingClinicalTarget,
       disabledReason: missingClinicalTarget
-        ? "Open the visit and attach a patient before starting the exam."
+        ? t(
+            "schedule.missingClinicalTarget",
+            "Open the visit and attach a patient before starting the exam."
+          )
         : undefined,
     });
-    statusActions.push({ label: "No Show", status: "no_show", variant: "outline" });
+    statusActions.push({
+      label: t("schedule.statusNoShowAction", "No Show"),
+      status: "no_show",
+      variant: "outline",
+    });
   } else if (current === "no_show" || current === "cancelled") {
-    statusActions.push({ label: "Reopen", status: "scheduled", variant: "outline" });
+    statusActions.push({
+      label: t("schedule.statusReopen", "Reopen"), /* label: "Reopen", status: "scheduled" */
+      status: "scheduled",
+      variant: "outline",
+    });
   }
   const visibleStatusActions = canUpdateStatus ? statusActions : [];
   const canSubmitReschedule =
@@ -1319,12 +1405,12 @@ function AppointmentDetailPopover({
           <div className="flex items-center gap-2">
             <StatusDot status={appointment.status} />
             <span className="text-sm font-medium">
-              {appointmentStatusLabel(appointment)}
+              {appointmentStatusLabel(appointment, t)}
             </span>
           </div>
           <button
             type="button"
-            aria-label="Close appointment details"
+            aria-label={t("schedule.closeDetailsAria", "Close appointment details")}
             onClick={onClose}
             className="rounded-md p-1 hover:bg-muted transition-colors"
           >
@@ -1336,7 +1422,7 @@ function AppointmentDetailPopover({
         <div className="px-4 py-3 space-y-3">
           <div>
             <h3 id={dialogTitleId} className="font-semibold text-base">
-              {appointment.patientName || "Unknown Patient"}
+              {appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}
             </h3>
             {appointment.patientSpecies && (
               <p className="text-xs text-muted-foreground">{appointment.patientSpecies}</p>
@@ -1346,7 +1432,7 @@ function AppointmentDetailPopover({
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="h-3.5 w-3.5" />
-              <span>Client: {clientName}</span>
+              <span>{t("schedule.clientLabel", "Client: {name}", { name: clientName })}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
@@ -1357,7 +1443,7 @@ function AppointmentDetailPopover({
             {appointment.doctorName && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-3.5 w-3.5" />
-                <span>Dr. {appointment.doctorName}</span>
+                <span>{t("schedule.drPrefix", "Dr. {name}", { name: appointment.doctorName })}</span>
               </div>
             )}
             {appointment.locationName && (
@@ -1375,7 +1461,7 @@ function AppointmentDetailPopover({
             {appointment.recurringSeriesId && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Repeat2 className="h-3.5 w-3.5" />
-                <span>Recurring series</span>
+                <span>{t("schedule.recurringSeriesLabel", "Recurring series")}</span>
               </div>
             )}
             {appointment.roomName && (
@@ -1391,8 +1477,10 @@ function AppointmentDetailPopover({
             )}
             {doctorRequiredForAdvance && (
               <p className="rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900">
-                Assign a doctor before confirming or checking in this appointment
-                request.
+                {t(
+                  "schedule.assignDoctorAdvance",
+                  "Assign a doctor before confirming or checking in this appointment request."
+                )}
               </p>
             )}
           </div>
@@ -1406,7 +1494,7 @@ function AppointmentDetailPopover({
                   htmlFor={rescheduleDateId}
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Date
+                  {t("schedule.labelDate", "Date")}
                 </label>
                 <Input
                   id={rescheduleDateId}
@@ -1422,7 +1510,7 @@ function AppointmentDetailPopover({
                   htmlFor={rescheduleTimeId}
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Time
+                  {t("schedule.labelTime", "Time")}
                 </label>
                 <select
                   id={rescheduleTimeId}
@@ -1442,7 +1530,7 @@ function AppointmentDetailPopover({
                   htmlFor={rescheduleDurationId}
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Duration
+                  {t("schedule.labelDuration", "Duration")}
                 </label>
                 <Input
                   id={rescheduleDurationId}
@@ -1459,9 +1547,10 @@ function AppointmentDetailPopover({
             </div>
             {current === "confirmed" ? (
               <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900">
-                Changing the date, time, duration, or clinic location returns
-                this appointment to requested status. Contact the client and
-                record confirmation again before reminders can be sent.
+                {t(
+                  "schedule.rescheduleWarning",
+                  "Changing the date, time, duration, or clinic location returns this appointment to requested status. Contact the client and record confirmation again before reminders can be sent."
+                )}
               </p>
             ) : null}
             <div className="mt-3">
@@ -1469,7 +1558,7 @@ function AppointmentDetailPopover({
                 htmlFor={rescheduleLocationFieldId}
                 className="text-xs font-medium text-muted-foreground"
               >
-                Clinic Location
+                {t("schedule.labelClinicLocation", "Clinic Location")}
               </label>
               <select
                 id={rescheduleLocationFieldId}
@@ -1481,7 +1570,7 @@ function AppointmentDetailPopover({
                 disabled={locationsQuery.isLoading || Boolean(locationsQuery.error)}
                 className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
               >
-                <option value="">Select location...</option>
+                <option value="">{t("schedule.selectLocationPlaceholder", "Select location...")}</option>
                 {(locationsQuery.data ?? []).map((location) => (
                   <option key={location.id} value={location.id}>
                     {location.name}
@@ -1495,7 +1584,7 @@ function AppointmentDetailPopover({
                   htmlFor={rescheduleDoctorFieldId}
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Doctor
+                  {t("schedule.labelDoctor", "Doctor")}
                 </label>
                 <select
                   id={rescheduleDoctorFieldId}
@@ -1504,10 +1593,10 @@ function AppointmentDetailPopover({
                   disabled={resourceOptionsUnavailable}
                   className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{t("schedule.unassigned", "Unassigned")}</option>
                   {eligibleRescheduleDoctors.map((doctor) => (
                     <option key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.name}
+                      {t("schedule.drPrefix", "Dr. {name}", { name: doctor.name })}
                     </option>
                   ))}
                 </select>
@@ -1517,7 +1606,7 @@ function AppointmentDetailPopover({
                   htmlFor={rescheduleRoomFieldId}
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Room
+                  {t("schedule.labelRoom", "Room")}
                 </label>
                 <select
                   id={rescheduleRoomFieldId}
@@ -1526,7 +1615,7 @@ function AppointmentDetailPopover({
                   disabled={resourceOptionsUnavailable}
                   className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{t("schedule.unassigned", "Unassigned")}</option>
                   {(roomsQuery.data ?? []).map((room) => (
                     <option key={room.id} value={room.id}>
                       {room.name}
@@ -1538,8 +1627,10 @@ function AppointmentDetailPopover({
             {(locationsQuery.error || doctorsQuery.error || roomsQuery.error) && (
               <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-destructive/10 px-2.5 py-2">
                 <p className="text-xs text-destructive">
-                  Location, doctor, or room options could not be loaded. Retry before
-                  changing this appointment.
+                  {t(
+                    "schedule.errorLoadingResources",
+                    "Location, doctor, or room options could not be loaded. Retry before changing this appointment."
+                  )}
                 </p>
                 <Button
                   type="button"
@@ -1553,7 +1644,7 @@ function AppointmentDetailPopover({
                     ]);
                   }}
                 >
-                  Retry options
+                  {t("schedule.btnRetryOptions", "Retry options")}
                 </Button>
               </div>
             )}
@@ -1563,7 +1654,7 @@ function AppointmentDetailPopover({
                 variant="outline"
                 onClick={() => setShowRescheduleForm(false)}
               >
-                Cancel
+                {t("schedule.btnCancel", "Cancel")}
               </Button>
               <Button
                 size="sm"
@@ -1573,7 +1664,7 @@ function AppointmentDetailPopover({
                 {isRescheduling && (
                   <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 )}
-                Save changes
+                {t("schedule.btnSaveChanges", "Save changes")}
               </Button>
             </div>
           </div>
@@ -1583,11 +1674,13 @@ function AppointmentDetailPopover({
           <div className="border-t border-border px-4 py-3">
             <fieldset>
               <legend className="text-sm font-semibold">
-                Record client confirmation
+                {t("schedule.recordConfirmationTitle", "Record client confirmation")}
               </legend>
               <p className="mt-1 text-xs text-muted-foreground">
-                Contact the client first. This records how they agreed to the
-                appointment; it does not send a message.
+                {t(
+                  "schedule.recordConfirmationDesc",
+                  "Contact the client first. This records how they agreed to the appointment; it does not send a message."
+                )}
               </p>
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label
@@ -1605,10 +1698,10 @@ function AppointmentDetailPopover({
                     className="mt-0.5 h-4 w-4"
                   />
                   <span>
-                    Phone
+                    {t("schedule.methodPhone", "Phone")}
                     {!appointment.clientPhone ? (
                       <span className="block text-xs text-muted-foreground">
-                        No phone on file
+                        {t("schedule.noPhoneOnFile", "No phone on file")}
                       </span>
                     ) : null}
                   </span>
@@ -1628,10 +1721,10 @@ function AppointmentDetailPopover({
                     className="mt-0.5 h-4 w-4"
                   />
                   <span>
-                    Email
+                    {t("schedule.methodEmail", "Email")}
                     {!appointment.clientEmail ? (
                       <span className="block text-xs text-muted-foreground">
-                        No email on file
+                        {t("schedule.noEmailOnFile", "No email on file")}
                       </span>
                     ) : null}
                   </span>
@@ -1648,7 +1741,7 @@ function AppointmentDetailPopover({
                   setConfirmationContactMethod("");
                 }}
               >
-                Cancel
+                {t("schedule.btnCancel", "Cancel")}
               </Button>
               <Button
                 type="button"
@@ -1666,7 +1759,7 @@ function AppointmentDetailPopover({
                 {isUpdating ? (
                   <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 ) : null}
-                Record confirmation
+                {t("schedule.btnRecordConfirmation", "Record confirmation")}
               </Button>
             </div>
           </div>
@@ -1697,8 +1790,8 @@ function AppointmentDetailPopover({
               >
                 <Stethoscope className="mr-1.5 h-3 w-3" />
                 {current === "in_exam"
-                  ? "Review closeout"
-                  : "Open visit"}
+                  ? t("schedule.btnReviewCloseout", "Review closeout")
+                  : t("schedule.btnOpenVisit", "Open visit")}
               </Link>
             </Button>
             {appointment.patientId && (
@@ -1709,7 +1802,7 @@ function AppointmentDetailPopover({
                     restoreFocusRef.current = false;
                   }}
                 >
-                  View chart
+                  {t("schedule.btnViewChart", "View chart")}
                 </Link>
               </Button>
             )}
@@ -1721,7 +1814,7 @@ function AppointmentDetailPopover({
                 onClick={() => setShowRescheduleForm((show) => !show)}
               >
                 <Clock className="mr-1.5 h-3 w-3" />
-                Edit appointment
+                {t("schedule.btnEditAppointment", "Edit appointment")}
               </Button>
             )}
             {canSendReminders && current === "confirmed" && (
@@ -1739,7 +1832,7 @@ function AppointmentDetailPopover({
                 ) : (
                   <Repeat2 className="mr-1.5 h-3 w-3" />
                 )}
-                Cancel Future Series
+                {t("schedule.btnCancelFutureSeries", "Cancel Future Series")}
               </Button>
             )}
             {visibleStatusActions.map((action) => (
@@ -1772,9 +1865,10 @@ function AppointmentDetailPopover({
 }
 
 function SendReminderButton({ appointmentId }: { appointmentId: string }) {
+  const { t } = useI18n();
   const sendReminder = trpc.notifications.sendAppointmentReminder.useMutation({
     onSuccess: () => {
-      toast.success("Reminder sent");
+      toast.success(t("schedule.toastReminderSent", "Reminder sent"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -1793,7 +1887,7 @@ function SendReminderButton({ appointmentId }: { appointmentId: string }) {
       ) : (
         <Mail className="mr-1.5 h-3 w-3" />
       )}
-      Send Reminder
+      {t("schedule.btnSendReminder", "Send Reminder")}
     </Button>
   );
 }
@@ -1841,6 +1935,7 @@ function BookingForm({
   defaultPatientSearch?: string;
   timeZone?: string | null;
 }) {
+  const { t } = useI18n();
   const modalRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
@@ -1941,9 +2036,9 @@ function BookingForm({
 
   const createAppointment = trpc.appointments.create.useMutation({
     onSuccess: (appointment) => {
-      toast.success("Appointment created", {
+      toast.success(t("schedule.toastAppointmentCreated", "Appointment created"), { /* toast.success("Appointment created", { */
         action: {
-          label: "Open visit",
+          label: t("schedule.btnOpenVisit", "Open visit"), /* label: "Open visit" */
           onClick: () =>
             window.location.assign(`/encounters/${appointment.id}`),
         },
@@ -1959,9 +2054,17 @@ function BookingForm({
   const createRecurringAppointment = trpc.appointments.createRecurring.useMutation({
     onSuccess: (result) => {
       const skippedMessage =
-        result.skipped > 0 ? `; skipped ${result.skipped} conflicts` : "";
+        result.skipped > 0
+          ? t("schedule.skippedConflicts", "; skipped {count} conflicts", {
+              count: result.skipped,
+            })
+          : "";
       toast.success(
-        `Created ${result.created} recurring appointments${skippedMessage}`
+        t(
+          "schedule.toastRecurringCreated",
+          "Created {count} recurring appointments{skipped}", /* Created ${result.created} recurring appointments */
+          { count: result.created, skipped: skippedMessage }
+        )
       );
       utils.appointments.list.invalidate();
       onClose();
@@ -2069,7 +2172,7 @@ function BookingForm({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h3 className="text-sm font-semibold">New Appointment</h3>
+          <h3 className="text-sm font-semibold">{t("schedule.modalNewAppointment", "New Appointment")}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -2086,7 +2189,7 @@ function BookingForm({
               htmlFor="new-appointment-location"
               className="text-xs font-medium text-muted-foreground"
             >
-              Clinic Location
+              {t("schedule.labelClinicLocation", "Clinic Location")}
             </label>
             <select
               id="new-appointment-location"
@@ -2101,8 +2204,8 @@ function BookingForm({
             >
               <option value="">
                 {locationsUnavailable
-                  ? "Locations unavailable"
-                  : "Select location..."}
+                  ? t("schedule.locationsUnavailable", "Locations unavailable")
+                  : t("schedule.selectLocationPlaceholder", "Select location...")}
               </option>
               {locations?.map((location) => (
                 <option key={location.id} value={location.id}>
@@ -2113,14 +2216,17 @@ function BookingForm({
             {locationsQuery.error || locationsMissing ? (
               <p className="mt-1 text-xs text-destructive">
                 {locationsQuery.error?.message ??
-                  "Unable to load clinic locations. Please retry."}
+                  t(
+                    "schedule.errorLoadingLocations",
+                    "Unable to load clinic locations. Please retry."
+                  )}
               </p>
             ) : null}
           </div>
 
           {/* Patient search */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Patient</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.labelPatient", "Patient")}</label>
             {selectedPatient ? (
               <div className="mt-1 flex items-center gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
                 <span className="flex-1">
@@ -2143,7 +2249,7 @@ function BookingForm({
             ) : (
               <div className="relative mt-1">
                 <Input
-                  placeholder="Search patients or owners..."
+                  placeholder={t("schedule.searchPatientsPlaceholder", "Search patients or owners...")}
                   value={patientSearch}
                   maxLength={APPOINTMENT_PATIENT_SEARCH_MAX_LENGTH}
                   aria-invalid={!canSearchPatients}
@@ -2165,11 +2271,14 @@ function BookingForm({
                     {patientSearchError || patientSearchMissing ? (
                       <div className="px-3 py-2 text-sm text-destructive">
                         {patientSearchError?.message ??
-                          "Unable to search patients. Please retry."}
+                          t(
+                            "schedule.errorSearchingPatients",
+                            "Unable to search patients. Please retry."
+                          )}
                       </div>
                     ) : isSearchingPatients ? (
                       <div className="px-3 py-2 text-sm text-muted-foreground">
-                        Searching patients...
+                        {t("schedule.searchingPatients", "Searching patients...")}
                       </div>
                     ) : searchResults && searchResults.length > 0 ? (
                       searchResults.map((p) => (
@@ -2187,14 +2296,14 @@ function BookingForm({
                           <div className="text-xs text-muted-foreground">
                             {p.species}
                             {(p.clientFirstName || p.clientLastName) && (
-                              <> &middot; Owner: {[p.clientFirstName, p.clientLastName].filter(Boolean).join(" ")}</>
+                              <> &middot; {t("schedule.ownerLabel", "Owner: {name}", { name: [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ") })}</>
                             )}
                           </div>
                         </button>
                       ))
                     ) : (
                       <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No patients found
+                        {t("schedule.noPatientsFound", "No patients found")}
                       </div>
                     )}
                   </div>
@@ -2202,13 +2311,13 @@ function BookingForm({
               </div>
             )}
             {clientName && (
-              <p className="mt-1 text-xs text-muted-foreground">Client: {clientName}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("schedule.clientLabel", "Client: {name}", { name: clientName })}</p>
             )}
           </div>
 
           {/* Appointment Type */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Appointment Type</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.appointmentType", "Appointment Type")}</label>
             <select
               value={typeId}
               onChange={(e) => setTypeId(e.target.value)}
@@ -2217,30 +2326,33 @@ function BookingForm({
             >
               <option value="">
                 {appointmentTypesUnavailable
-                  ? "Appointment types unavailable"
-                  : "Select type..."}
+                  ? t("schedule.appointmentTypesUnavailable", "Appointment types unavailable")
+                  : t("schedule.selectTypePlaceholder", "Select type...")}
               </option>
-              {appointmentTypes?.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.durationMinutes} min)
+              {appointmentTypes?.map((tItem) => (
+                <option key={tItem.id} value={tItem.id}>
+                  {tItem.name} ({t("schedule.durationMin", "{minutes} min", { minutes: tItem.durationMinutes })})
                 </option>
               ))}
             </select>
             {appointmentTypesQuery.error || appointmentTypesMissing ? (
               <p className="mt-1 text-xs text-destructive">
                 {appointmentTypesQuery.error?.message ??
-                  "Unable to load appointment types. Please retry."}
+                  t(
+                    "schedule.errorLoadingTypes",
+                    "Unable to load appointment types. Please retry."
+                  )}
               </p>
             ) : appointmentTypesQuery.isLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Loading appointment types...
+                {t("schedule.loadingTypes", "Loading appointment types...")}
               </p>
             ) : null}
           </div>
 
           {/* Doctor */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Doctor</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.labelDoctor", "Doctor")}</label>
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
@@ -2248,29 +2360,34 @@ function BookingForm({
               className="mt-1 h-9 w-full appearance-none rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">
-                {doctorsUnavailable ? "Doctors unavailable" : "Select doctor..."}
+                {doctorsUnavailable
+                  ? t("schedule.doctorsUnavailable", "Doctors unavailable")
+                  : t("schedule.selectDoctorPlaceholder", "Select doctor...")}
               </option>
               {eligibleDoctors?.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  Dr. {doc.name}
+                  {t("schedule.drPrefix", "Dr. {name}", { name: doc.name })}
                 </option>
               ))}
             </select>
             {doctorsQuery.error || doctorsMissing ? (
               <p className="mt-1 text-xs text-destructive">
                 {doctorsQuery.error?.message ??
-                  "Unable to load doctors. Please retry."}
+                  t(
+                    "schedule.errorLoadingDoctors",
+                    "Unable to load doctors. Please retry."
+                  )}
               </p>
             ) : doctorsQuery.isLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Loading doctors...
+                {t("schedule.loadingDoctors", "Loading doctors...")}
               </p>
             ) : null}
           </div>
 
           {/* Room */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Room</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.labelRoom", "Room")}</label>
             <select
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
@@ -2278,7 +2395,9 @@ function BookingForm({
               className="mt-1 h-9 w-full appearance-none rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">
-                {roomsUnavailable ? "Rooms unavailable" : "Select room..."}
+                {roomsUnavailable
+                  ? t("schedule.roomsUnavailable", "Rooms unavailable")
+                  : t("schedule.selectRoomPlaceholder", "Select room...")}
               </option>
               {roomsList?.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -2289,18 +2408,21 @@ function BookingForm({
             {roomsQuery.error || roomsMissing ? (
               <p className="mt-1 text-xs text-destructive">
                 {roomsQuery.error?.message ??
-                  "Unable to load rooms. Please retry."}
+                  t(
+                    "schedule.errorLoadingRooms",
+                    "Unable to load rooms. Please retry."
+                  )}
               </p>
             ) : roomsQuery.isLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Loading rooms...
+                {t("schedule.loadingRooms", "Loading rooms...")}
               </p>
             ) : null}
           </div>
 
           {/* Date */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Date</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.labelDate", "Date")}</label>
             <Input
               type="date"
               value={date}
@@ -2312,7 +2434,7 @@ function BookingForm({
 
           {/* Start Time */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Start Time</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.labelStartTime", "Start Time")}</label>
             <select
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
@@ -2328,7 +2450,7 @@ function BookingForm({
 
           {/* Duration */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Duration (minutes)</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.labelDuration", "Duration (minutes)")}</label>
             <Input
               type="number"
               min={APPOINTMENT_DURATION_MIN_MINUTES}
@@ -2349,13 +2471,13 @@ function BookingForm({
                 onChange={(e) => setIsRecurring(e.target.checked)}
               />
               <Repeat2 className="h-3.5 w-3.5 text-muted-foreground" />
-              Repeat appointment
+              {t("schedule.repeatAppointment", "Repeat appointment")}
             </label>
             {isRecurring && (
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">
-                    Frequency
+                    {t("schedule.frequency", "Frequency")}
                   </label>
                   <select
                     value={recurrenceFrequency}
@@ -2364,14 +2486,14 @@ function BookingForm({
                     }
                     className="mt-1 h-9 w-full appearance-none rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="annual">Annual</option>
+                    <option value="weekly">{t("schedule.frequencyWeekly", "Weekly")}</option>
+                    <option value="monthly">{t("schedule.frequencyMonthly", "Monthly")}</option>
+                    <option value="annual">{t("schedule.frequencyAnnual", "Annual")}</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">
-                    Every
+                    {t("schedule.every", "Every")}
                   </label>
                   <Input
                     type="number"
@@ -2386,7 +2508,7 @@ function BookingForm({
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">
-                    Occurrences
+                    {t("schedule.occurrences", "Occurrences")}
                   </label>
                   <Input
                     type="number"
@@ -2403,7 +2525,10 @@ function BookingForm({
                 </div>
                 {!hasRecurringPatient && (
                   <p className="sm:col-span-3 text-xs text-destructive">
-                    Select a patient for recurring appointments.
+                    {t(
+                      "schedule.selectPatientForRecurring",
+                      "Select a patient for recurring appointments."
+                    )}
                   </p>
                 )}
               </div>
@@ -2412,7 +2537,7 @@ function BookingForm({
 
           {/* Notes */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Notes</label>
+            <label className="text-xs font-medium text-muted-foreground">{t("schedule.notes", "Notes")}</label>
             <textarea
               value={notes}
               maxLength={APPOINTMENT_NOTES_MAX_LENGTH}
@@ -2420,7 +2545,7 @@ function BookingForm({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-              placeholder="Optional notes..."
+              placeholder={t("schedule.optionalNotesPlaceholder", "Optional notes...")}
             />
           </div>
         </div>
@@ -2428,7 +2553,7 @@ function BookingForm({
         {/* Footer */}
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
           <Button variant="outline" size="sm" onClick={onClose}>
-            Cancel
+            {t("schedule.btnCancel", "Cancel")}
           </Button>
           <Button
             size="sm"
@@ -2439,7 +2564,7 @@ function BookingForm({
               createRecurringAppointment.isPending) && (
               <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
             )}
-            Save
+            {t("schedule.btnSave", "Save")}
           </Button>
         </div>
       </div>
@@ -2449,22 +2574,26 @@ function BookingForm({
 
 // --- Main Page ---
 
+function ScheduleLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      {t("schedule.loadingSchedule", "Loading schedule...")}
+    </div>
+  );
+}
+
 export default function SchedulePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading schedule...
-        </div>
-      }
-    >
+    <Suspense fallback={<ScheduleLoading />}>
       <SchedulePageContent />
     </Suspense>
   );
 }
 
 function SchedulePageContent() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const userRole = session?.user?.role;
@@ -2588,7 +2717,7 @@ function SchedulePageContent() {
 
   const updateStatus = trpc.appointments.updateStatus.useMutation({
     onSuccess: () => {
-      toast.success("Appointment status updated");
+      toast.success(t("schedule.toastStatusUpdated", "Appointment status updated"));
       setSelectedAppointment(null);
     },
     onError: (err) => {
@@ -2602,8 +2731,11 @@ function SchedulePageContent() {
     onSuccess: (result) => {
       toast.success(
         result.confirmationRequired
-          ? "Appointment moved; contact the client and confirm the new time"
-          : "Appointment updated"
+          ? t(
+              "schedule.toastRescheduleConfirmation",
+              "Appointment moved; contact the client and confirm the new time"
+            )
+          : t("schedule.toastRescheduleUpdated", "Appointment updated")
       );
       setSelectedAppointment(null);
       utils.appointments.list.invalidate();
@@ -2617,10 +2749,20 @@ function SchedulePageContent() {
     onSuccess: (result) => {
       const message =
         result.cancelledCount === 0
-          ? "Recurring series ended; no future appointments needed cancellation"
+          ? t(
+              "schedule.toastSeriesEndedNoFuture",
+              "Recurring series ended; no future appointments needed cancellation"
+            )
           : result.cancelledCount === 1
-            ? "Cancelled 1 future appointment in the recurring series"
-            : `Cancelled ${result.cancelledCount} future appointments in the recurring series`;
+            ? t(
+                "schedule.toastSeriesCancelledOne",
+                "Cancelled 1 future appointment in the recurring series"
+              )
+            : t(
+                "schedule.toastSeriesCancelledMany",
+                "Cancelled {count} future appointments in the recurring series",
+                { count: result.cancelledCount }
+              );
       toast.success(message);
       setSelectedAppointment(null);
       utils.appointments.list.invalidate();
@@ -2659,7 +2801,10 @@ function SchedulePageContent() {
   const handleCancelRecurringSeries = (seriesId: string) => {
     if (
       !window.confirm(
-        "Cancel future appointments in this recurring series? Past, completed, and in-progress appointments will stay unchanged."
+        t(
+          "schedule.confirmCancelSeries",
+          "Cancel future appointments in this recurring series? Past, completed, and in-progress appointments will stay unchanged."
+        )
       )
     ) {
       return;
@@ -2725,9 +2870,9 @@ function SchedulePageContent() {
   ]);
 
   const viewOptions: { id: CalendarView; label: string }[] = [
-    { id: "day", label: "Day" },
-    { id: "week", label: "Week" },
-    { id: "month", label: "Month" },
+    { id: "day", label: t("schedule.viewDay", "Day") },
+    { id: "week", label: t("schedule.viewWeek", "Week") },
+    { id: "month", label: t("schedule.viewMonth", "Month") },
   ];
 
   // Current time indicator position
@@ -2745,22 +2890,24 @@ function SchedulePageContent() {
       {firstClinicDay ? (
         <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-            First clinic day · Step 3 of 3
+            {t("schedule.firstVisitStep", "First clinic day · Step 3 of 3")}
           </p>
           <p className="mt-1 text-sm font-semibold text-foreground">
-            Book the pet&apos;s first real appointment.
+            {t("schedule.firstVisitTitle", "Book the pet's first real appointment.")}
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Choose the pet, time, location, and visit type. Your current PIMS
-            can stay in place while the team validates this visit end to end.
+            {t(
+              "schedule.firstVisitDesc",
+              "Choose the pet, time, location, and visit type. Your current PIMS can stay in place while the team validates this visit end to end."
+            )}
           </p>
         </div>
       ) : null}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="font-heading text-xl font-semibold">Schedule</h2>
-          <p className="text-sm text-muted-foreground">Appointment calendar</p>
+          <h2 className="font-heading text-xl font-semibold">{t("schedule.title", "Schedule")}</h2>
+          <p className="text-sm text-muted-foreground">{t("schedule.subtitle", "Appointment calendar")}</p>
         </div>
         <CalendarSubscribe />
       </div>
@@ -2775,7 +2922,7 @@ function SchedulePageContent() {
               size="icon"
               onClick={goPrev}
               className="h-11 w-11 sm:h-9 sm:w-9"
-              aria-label="Previous date range"
+              aria-label={t("schedule.prevRangeAria", "Previous date range")}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -2785,14 +2932,14 @@ function SchedulePageContent() {
               onClick={goToday}
               className="h-11 sm:h-9"
             >
-              Today
+              {t("schedule.today", "Today")}
             </Button>
             <Button
               variant="outline"
               size="icon"
               onClick={goNext}
               className="h-11 w-11 sm:h-9 sm:w-9"
-              aria-label="Next date range"
+              aria-label={t("schedule.nextRangeAria", "Next date range")}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -2831,7 +2978,7 @@ function SchedulePageContent() {
             <div className="relative min-w-0 flex-1 sm:flex-none">
               <MapPin className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select
-                aria-label="Filter schedule by clinic location"
+                aria-label={t("schedule.filterLocationAria", "Filter schedule by clinic location")} /* aria-label="Filter schedule by clinic location" */
                 value={locationFilter}
                 onChange={(event) => {
                   setLocationFilter(event.target.value);
@@ -2839,7 +2986,7 @@ function SchedulePageContent() {
                 }}
                 className="h-11 w-full min-w-0 appearance-none rounded-md border border-input bg-background pl-8 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-ring sm:h-9 sm:w-auto"
               >
-                <option value="all">All Locations</option>
+                <option value="all">{t("schedule.allLocations", "All Locations")}</option>
                 {scheduleLocations.map((location) => (
                   <option key={location.id} value={location.id}>
                     {location.name}
@@ -2856,10 +3003,10 @@ function SchedulePageContent() {
               onChange={(e) => setDoctorFilter(e.target.value)}
               className="h-11 w-full min-w-0 appearance-none rounded-md border border-input bg-background pl-8 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-ring sm:h-9 sm:w-auto"
             >
-              <option value="all">All Doctors</option>
+              <option value="all">{t("schedule.allDoctors", "All Doctors")}</option>
               {doctors?.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  Dr. {doc.name}
+                  {t("schedule.drPrefix", "Dr. {name}", { name: doc.name })}
                 </option>
               ))}
             </select>
@@ -2876,7 +3023,7 @@ function SchedulePageContent() {
               }}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Appointment
+              {t("schedule.btnNewAppointment", "New Appointment")}
             </Button>
           )}
         </div>
@@ -2886,12 +3033,12 @@ function SchedulePageContent() {
       <div data-tour="schedule-calendar">
       {scheduleError || scheduleMissing ? (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {scheduleError?.message ?? "Unable to load schedule. Please retry."}
+          {scheduleError?.message ?? t("schedule.errorLoadingSchedule", "Unable to load schedule. Please retry.")} {/* {scheduleError?.message ?? "Unable to load schedule. Please retry."} */}
         </div>
       ) : isScheduleLoading ? (
         <div className="mt-6 flex items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading appointments...
+          {t("schedule.loadingAppointments", "Loading appointments...")}
         </div>
       ) : (
         <>
@@ -2922,8 +3069,11 @@ function SchedulePageContent() {
           <>
             <EmptyState
               icon={Calendar}
-              title="No appointments this week"
-              description="The selected schedule is clear for this week."
+              title={t("schedule.noAppointmentsWeekTitle", "No appointments this week")}
+              description={t(
+                "schedule.noAppointmentsWeekDesc",
+                "The selected schedule is clear for this week."
+              )}
               className="mt-4"
             />
             <WeekCalendar
@@ -2962,8 +3112,11 @@ function SchedulePageContent() {
           <>
             <EmptyState
               icon={Calendar}
-              title="No appointments in this month"
-              description="The selected schedule is clear for this month."
+              title={t("schedule.noAppointmentsMonthTitle", "No appointments in this month")}
+              description={t(
+                "schedule.noAppointmentsMonthDesc",
+                "The selected schedule is clear for this month."
+              )}
               className="mt-4"
             />
             <MonthCalendar

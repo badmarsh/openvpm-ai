@@ -24,7 +24,9 @@ const LOGIN_IP_LIMIT = 40;
 export const LOGIN_EMAIL_MAX_LENGTH = AUTH_EMAIL_MAX_LENGTH;
 const DUMMY_PASSWORD_HASH =
   "$2a$12$952CXRCtzm0M4qmcFoZkteQvA5Tdh.CIhvCabrgb5qUbk.VcE35va";
-const DEMO_PRACTICE_NAME = "Neighborhood Veterinary";
+const DEMO_PRACTICE_NAME =
+  process.env.DEMO_PRACTICE_NAME ||
+  "Súkromná veterinárna klinika MVDr. Martin Sýkora";
 
 const loginCredentialsInput = z.object({
   email: z

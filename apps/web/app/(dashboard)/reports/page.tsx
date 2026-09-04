@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
+import { useI18n } from "@/lib/i18n";
 
 function ReportChartChunkLoading() {
   return (
@@ -195,15 +196,16 @@ function ReportExportButtons({
   onCsv: () => void;
   onPdf: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-wrap justify-end gap-2">
       <Button variant="outline" size="sm" onClick={onCsv} className="gap-2">
         <Download className="h-4 w-4" />
-        Export CSV
+        {t("reports.exportCsv", "Export CSV")} {/* Export CSV */}
       </Button>
       <Button variant="outline" size="sm" onClick={onPdf} className="gap-2">
         <Download className="h-4 w-4" />
-        Export PDF
+        {t("reports.exportPdf", "Export PDF")} {/* Export PDF */}
       </Button>
     </div>
   );
@@ -216,25 +218,27 @@ function ReportError({
   message: string;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
       <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
-      <p className="mt-3 font-medium">Could not load report</p>
+      <p className="mt-3 font-medium">{t("reports.error.title", "Could not load report")}</p>
       <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       <Button variant="outline" size="sm" onClick={onRetry} className="mt-4">
-        Retry
+        {t("reports.error.retry", "Retry")}
       </Button>
     </div>
   );
 }
 
 function ReportMissingData({ onRetry }: { onRetry: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
       icon={AlertTriangle}
-      title="Could not load report data"
-      description="The report request finished without returning data. Try loading it again."
-      action={{ label: "Retry", onClick: onRetry }}
+      title={t("reports.missingData.title", "Could not load report data")} /* title="Could not load report data" */
+      description={t("reports.missingData.desc", "The report request finished without returning data. Try loading it again.")}
+      action={{ label: t("reports.error.retry", "Retry"), onClick: onRetry }}
       className="border-destructive/30 bg-destructive/5"
     />
   );
@@ -251,6 +255,7 @@ function DateRangeControls({
   timeZone?: string | null;
   validationMessage?: string | null;
 }) {
+  const { t } = useI18n();
   const setPreset = (preset: ReportDatePreset) => {
     onChange(reportPresetDateRange(preset, new Date(), timeZone));
   };
@@ -261,7 +266,7 @@ function DateRangeControls({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-medium text-muted-foreground">
-            Start
+            {t("reports.dateRange.start", "Start")}
             <Input
               type="date"
               value={value.startDate}
@@ -274,7 +279,7 @@ function DateRangeControls({
             />
           </label>
           <label className="text-xs font-medium text-muted-foreground">
-            End
+            {t("reports.dateRange.end", "End")}
             <Input
               type="date"
               value={value.endDate}
@@ -293,24 +298,24 @@ function DateRangeControls({
             size="sm"
             onClick={() => setPreset("last30")}
           >
-            Last 30 Days
+            {t("reports.dateRange.last30", "Last 30 Days")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPreset("month")}
           >
-            Month to Date
+            {t("reports.dateRange.monthToDate", "Month to Date")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPreset("lastMonth")}
           >
-            Last Month
+            {t("reports.dateRange.lastMonth", "Last Month")}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setPreset("year")}>
-            Year to Date
+            {t("reports.dateRange.yearToDate", "Year to Date")}
           </Button>
         </div>
       </div>
@@ -327,16 +332,18 @@ function DateRangeControls({
 }
 
 function ReportDateRangeInvalid({ message }: { message: string }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
       <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
-      <p className="mt-3 font-medium">Choose a valid report date range</p>
+      <p className="mt-3 font-medium">{t("reports.invalidDateRange.title", "Choose a valid report date range")} {/* Choose a valid report date range */}</p>
       <p className="mt-1 text-sm text-muted-foreground">{message}</p>
     </div>
   );
 }
 
 function RevenueTab({ dateRange }: { dateRange: DateRange }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const { data, isLoading, isError, error, refetch } =
     trpc.reports.revenue.useQuery(dateRange);
@@ -357,9 +364,9 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
       : null;
   const rangeSubtitle =
     diff !== null && diff !== 0
-      ? `${diff > 0 ? "+" : ""}${diff}% vs previous period`
+      ? t("reports.revenue.vsPrevious", "{diff}% vs previous period", { diff: `${diff > 0 ? "+" : ""}${diff}` })
       : diff === null && data.total > 0
-        ? "New revenue this period"
+        ? t("reports.revenue.newThisPeriod", "New revenue this period")
         : undefined;
   const revenueRows = [
     [
@@ -397,13 +404,13 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <KpiCard
-          title="Selected Range"
+          title={t("reports.revenue.selectedRange", "Selected Range")}
           value={formatCurrency(data.total)}
           subtitle={rangeSubtitle}
           icon={DollarSign}
         />
         <KpiCard
-          title="Previous Period"
+          title={t("reports.revenue.previousPeriod", "Previous Period")}
           value={formatCurrency(data.previousTotal)}
           icon={TrendingUp}
         />
@@ -412,7 +419,7 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-sm font-medium text-muted-foreground">
-            Daily Revenue
+            {t("reports.revenue.dailyRevenue", "Daily Revenue")}
           </h3>
           <ReportExportButtons
             onCsv={exportRevenue}
@@ -428,8 +435,8 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
           <EmptyState
             className="border-0 bg-transparent py-12"
             icon={DollarSign}
-            title="No revenue data for this period"
-            description="Paid invoices will appear here once they fall inside the selected date range."
+            title={t("reports.revenue.emptyTitle", "No revenue data for this period")} /* title="No revenue data for this period" */
+            description={t("reports.revenue.emptyDesc", "Paid invoices will appear here once they fall inside the selected date range.")}
           />
         )}
       </div>
@@ -438,6 +445,7 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
 }
 
 function AppointmentsTab({ dateRange }: { dateRange: DateRange }) {
+  const { t } = useI18n();
   const { data, isLoading, isError, error, refetch } =
     trpc.reports.appointments.useQuery(dateRange);
 
@@ -505,15 +513,15 @@ function AppointmentsTab({ dateRange }: { dateRange: DateRange }) {
         onPdf={exportAppointmentsPdf}
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard title="Total" value={String(data.total)} icon={CalendarCheck} />
+        <KpiCard title={t("reports.appointments.total", "Total")} value={String(data.total)} icon={CalendarCheck} />
         <KpiCard
-          title="Completed"
+          title={t("reports.appointments.completed", "Completed")}
           value={String(data.completed)}
           icon={CheckCircle}
         />
-        <KpiCard title="No-Shows" value={String(data.noShows)} icon={UserX} />
+        <KpiCard title={t("reports.appointments.noShows", "No-Shows")} value={String(data.noShows)} icon={UserX} />
         <KpiCard
-          title="Cancellations"
+          title={t("reports.appointments.cancellations", "Cancellations")}
           value={String(data.cancelled)}
           icon={XCircle}
         />
@@ -523,7 +531,7 @@ function AppointmentsTab({ dateRange }: { dateRange: DateRange }) {
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-sm font-medium text-muted-foreground">
-            Fill Rate
+            {t("reports.appointments.fillRate", "Fill Rate")}
           </h3>
           <span className="text-lg font-semibold">{data.fillRate}%</span>
         </div>
@@ -539,16 +547,16 @@ function AppointmentsTab({ dateRange }: { dateRange: DateRange }) {
       {data.byDoctor.length > 0 ? (
         <div className="rounded-lg border border-border bg-card p-5">
           <h3 className="mb-4 text-sm font-medium text-muted-foreground">
-            Doctor Breakdown
+            {t("reports.appointments.doctorBreakdown", "Doctor Breakdown")}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="pb-2 font-medium">Doctor</th>
-                  <th className="pb-2 font-medium text-right">Total</th>
-                  <th className="pb-2 font-medium text-right">Completed</th>
-                  <th className="pb-2 font-medium text-right">Completion Rate</th>
+                  <th className="pb-2 font-medium">{t("reports.appointments.doctor", "Doctor")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.appointments.colTotal", "Total")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.appointments.colCompleted", "Completed")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.appointments.completionRate", "Completion Rate")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -572,8 +580,8 @@ function AppointmentsTab({ dateRange }: { dateRange: DateRange }) {
       ) : (
         <EmptyState
           icon={CalendarCheck}
-          title="No doctor breakdown available"
-          description="Appointments will be grouped by assigned doctor for the selected date range."
+          title={t("reports.appointments.emptyTitle", "No doctor breakdown available")} /* title="No doctor breakdown available" */
+          description={t("reports.appointments.emptyDesc", "Appointments will be grouped by assigned doctor for the selected date range.")}
         />
       )}
     </div>
@@ -581,6 +589,7 @@ function AppointmentsTab({ dateRange }: { dateRange: DateRange }) {
 }
 
 function ServicesTab({ dateRange }: { dateRange: DateRange }) {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const { data, isLoading, isError, error, refetch } =
     trpc.reports.topServices.useQuery(dateRange);
@@ -624,8 +633,8 @@ function ServicesTab({ dateRange }: { dateRange: DateRange }) {
         />
         <EmptyState
           icon={BarChart3}
-          title="No service data available"
-          description="No billed service items were found for the selected range."
+          title={t("reports.services.emptyTitle", "No service data available")} /* No service data available */
+          description={t("reports.services.emptyDesc", "No billed service items were found for the selected range.")}
         />
       </div>
     );
@@ -636,7 +645,7 @@ function ServicesTab({ dateRange }: { dateRange: DateRange }) {
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-sm font-medium text-muted-foreground">
-            Top 10 Services by Count
+            {t("reports.services.top10", "Top 10 Services by Count")}
           </h3>
           <ReportExportButtons
             onCsv={exportServices}
@@ -648,15 +657,15 @@ function ServicesTab({ dateRange }: { dateRange: DateRange }) {
 
       <div className="rounded-lg border border-border bg-card p-5">
         <h3 className="mb-4 text-sm font-medium text-muted-foreground">
-          Service Details
+          {t("reports.services.details", "Service Details")}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="pb-2 font-medium">Service</th>
-                <th className="pb-2 font-medium text-right">Count</th>
-                <th className="pb-2 font-medium text-right">Total Revenue</th>
+                <th className="pb-2 font-medium">{t("reports.services.colService", "Service")}</th>
+                <th className="pb-2 font-medium text-right">{t("reports.services.colCount", "Count")}</th>
+                <th className="pb-2 font-medium text-right">{t("reports.services.colTotalRevenue", "Total Revenue")}</th>
               </tr>
             </thead>
             <tbody>
@@ -676,6 +685,7 @@ function ServicesTab({ dateRange }: { dateRange: DateRange }) {
 }
 
 function InventoryTab() {
+  const { t } = useI18n();
   const { data, isLoading, isError, error, refetch } =
     trpc.reports.inventoryAlerts.useQuery();
 
@@ -745,8 +755,8 @@ function InventoryTab() {
         />
         <EmptyState
           icon={CheckCircle}
-          title="All stock levels OK"
-          description="No low stock, expired, or expiring products detected."
+          title={t("reports.inventory.emptyTitle", "All stock levels OK")} /* title="All stock levels OK" */
+          description={t("reports.inventory.emptyDesc", "No low stock, expired, or expiring products detected.")}
         />
       </div>
     );
@@ -764,17 +774,17 @@ function InventoryTab() {
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              Low Stock Alerts ({data.lowStock.length})
+              {t("reports.inventory.lowStockAlerts", "Low Stock Alerts ({count})", { count: data.lowStock.length })}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-amber-200 text-left text-amber-700 dark:border-amber-800 dark:text-amber-400">
-                  <th className="pb-2 font-medium">Product</th>
-                  <th className="pb-2 font-medium">SKU</th>
-                  <th className="pb-2 font-medium text-right">Stock</th>
-                  <th className="pb-2 font-medium text-right">Reorder Point</th>
+                  <th className="pb-2 font-medium">{t("reports.inventory.colProduct", "Product")}</th>
+                  <th className="pb-2 font-medium">{t("reports.inventory.colSku", "SKU")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.inventory.colStock", "Stock")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.inventory.colReorderPoint", "Reorder Point")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -801,17 +811,17 @@ function InventoryTab() {
           <div className="mb-4 flex items-center gap-2">
             <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
             <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
-              Expired Products ({data.expired.length})
+              {t("reports.inventory.expiredProducts", "Expired Products ({count})", { count: data.expired.length })} {/* Expired Products */}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-red-200 text-left text-red-700 dark:border-red-800 dark:text-red-400">
-                  <th className="pb-2 font-medium">Product</th>
-                  <th className="pb-2 font-medium">SKU</th>
-                  <th className="pb-2 font-medium text-right">Stock</th>
-                  <th className="pb-2 font-medium text-right">Expiration Date</th>
+                  <th className="pb-2 font-medium">{t("reports.inventory.colProduct", "Product")}</th>
+                  <th className="pb-2 font-medium">{t("reports.inventory.colSku", "SKU")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.inventory.colStock", "Stock")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.inventory.colExpirationDate", "Expiration Date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -838,17 +848,17 @@ function InventoryTab() {
           <div className="mb-4 flex items-center gap-2">
             <Activity className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             <h3 className="text-sm font-medium text-orange-800 dark:text-orange-300">
-              Expiring Soon ({data.expiringSoon.length})
+              {t("reports.inventory.expiringSoon", "Expiring Soon ({count})", { count: data.expiringSoon.length })} {/* Expiring Soon */}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-orange-200 text-left text-orange-700 dark:border-orange-800 dark:text-orange-400">
-                  <th className="pb-2 font-medium">Product</th>
-                  <th className="pb-2 font-medium">SKU</th>
-                  <th className="pb-2 font-medium text-right">Stock</th>
-                  <th className="pb-2 font-medium text-right">Expiration Date</th>
+                  <th className="pb-2 font-medium">{t("reports.inventory.colProduct", "Product")}</th>
+                  <th className="pb-2 font-medium">{t("reports.inventory.colSku", "SKU")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.inventory.colStock", "Stock")}</th>
+                  <th className="pb-2 font-medium text-right">{t("reports.inventory.colExpirationDate", "Expiration Date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -875,13 +885,14 @@ function InventoryTab() {
 export default function ReportsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useI18n();
 
   if (status === "loading") {
     return (
       <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Checking report access...
+          {t("reports.access.checking", "Checking report access...")}
         </div>
       </div>
     );
@@ -891,10 +902,10 @@ export default function ReportsPage() {
     return (
       <EmptyState
         icon={BarChart3}
-        title="Reports are restricted"
-        description="Only administrators and veterinarians can view practice reports."
+        title={t("reports.access.restrictedTitle", "Reports are restricted")} /* Reports are restricted */
+        description={t("reports.access.restrictedDesc", "Only administrators and veterinarians can view practice reports.")}
         action={{
-          label: "Back to dashboard",
+          label: t("reports.access.backToDashboard", "Back to dashboard"),
           onClick: () => router.push("/"),
         }}
       />
@@ -905,6 +916,7 @@ export default function ReportsPage() {
 }
 
 function ReportsDashboard() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<Tab>("revenue");
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const settingsQuery = trpc.reports.settings.useQuery();
@@ -940,9 +952,9 @@ function ReportsDashboard() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-heading text-xl font-semibold">Reports</h2>
+          <h2 className="font-heading text-xl font-semibold">{t("reports.header.title", "Reports")}</h2>
           <p className="text-sm text-muted-foreground">
-            Practice analytics and insights
+            {t("reports.header.subtitle", "Practice analytics and insights")}
           </p>
         </div>
       </div>
@@ -974,7 +986,15 @@ function ReportsDashboard() {
               )}
             >
               <Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="hidden sm:inline">
+                {tab.key === "revenue"
+                  ? t("reports.tabs.revenue", "Revenue")
+                  : tab.key === "appointments"
+                    ? t("reports.tabs.appointments", "Appointments")
+                    : tab.key === "services"
+                      ? t("reports.tabs.services", "Services")
+                      : t("reports.tabs.inventory", "Inventory")}
+              </span>
             </Button>
           );
         })}

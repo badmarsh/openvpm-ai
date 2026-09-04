@@ -9,10 +9,10 @@ export const DEMO_ACCESS_COOKIE_NAME = "openvpm_demo_access";
 export const DEMO_ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export const DEMO_ROLE_EMAILS = {
-  admin: "admin@neighborhoodvet.example.com",
-  veterinarian: "sarah.chen@neighborhoodvet.example.com",
-  technician: "jamie.torres@neighborhoodvet.example.com",
-  front_desk: "morgan.bailey@neighborhoodvet.example.com",
+  admin: "martin.sykora@vetsykora.sk",
+  veterinarian: "zuzana.horvathova@vetsykora.sk",
+  technician: "jan.molnar@vetsykora.sk",
+  front_desk: "monika.balazova@vetsykora.sk",
 } as const;
 
 export type DemoRole = keyof typeof DEMO_ROLE_EMAILS;

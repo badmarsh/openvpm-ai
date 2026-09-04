@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/empty-state";
 import {
@@ -28,11 +29,23 @@ import {
 } from "@/lib/agent/policy";
 
 const SUGGESTIONS = [
-  "Which patients are overdue for vaccinations?",
-  "Summarize today's appointments.",
-  "What's the carprofen dose for a 12 kg dog?",
-  "Pull a clinical summary for the next patient checked in.",
-];
+  {
+    key: "agent.suggestions.vaccinations",
+    fallback: "Which patients are overdue for vaccinations?",
+  },
+  {
+    key: "agent.suggestions.appointments",
+    fallback: "Summarize today's appointments.",
+  },
+  {
+    key: "agent.suggestions.carprofen",
+    fallback: "What's the carprofen dose for a 12 kg dog?",
+  },
+  {
+    key: "agent.suggestions.clinicalSummary",
+    fallback: "Pull a clinical summary for the next patient checked in.",
+  },
+] as const;
 
 type ToolCall = { name: string; input: unknown; error?: string | null };
 type ChatMessage = {
@@ -50,13 +63,14 @@ function canRunAgentRole(role?: string | null): boolean {
 export default function AgentPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useI18n();
 
   if (status === "loading") {
     return (
       <div className="mx-auto max-w-3xl rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Checking agent access...
+          {t("agent.checkingAccess", "Checking agent access...")}
         </div>
       </div>
     );
@@ -67,10 +81,13 @@ export default function AgentPage() {
       <div className="mx-auto max-w-3xl">
         <EmptyState
           icon={Bot}
-          title="Agent access is restricted"
-          description="Only administrators and veterinarians can run the OpenVPM Agent."
+          title={t("agent.accessRestricted", "Agent access is restricted")}
+          description={t(
+            "agent.accessRestrictedDesc",
+            "Only administrators and veterinarians can run the OpenVPM Agent.",
+          )}
           action={{
-            label: "Back to dashboard",
+            label: t("agent.backToDashboard", "Back to dashboard"),
             onClick: () => router.push("/"),
           }}
         />
@@ -83,6 +100,7 @@ export default function AgentPage() {
 
 function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const router = useRouter();
+  const { t } = useI18n();
   const status = trpc.agent.status.useQuery();
   const run = trpc.agent.run.useMutation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -210,13 +228,15 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const statusBanner = status.isLoading ? (
     <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      Checking agent configuration…
+      {t("agent.status.checkingConfig", "Checking agent configuration…")}
     </div>
   ) : status.error ? (
     <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
       <div>
-        <p className="font-medium">Could not check agent status</p>
+        <p className="font-medium">
+          {t("agent.status.checkError", "Could not check agent status")}
+        </p>
         <p className="mt-1">{status.error.message}</p>
         <Button
           variant="outline"
@@ -224,7 +244,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
           className="mt-3"
           onClick={() => void status.refetch()}
         >
-          Retry
+          {t("agent.status.retry", "Retry")}
         </Button>
       </div>
     </div>
@@ -232,9 +252,14 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
       <div>
-        <p className="font-medium">Agent status is unavailable</p>
+        <p className="font-medium">
+          {t("agent.status.unavailable", "Agent status is unavailable")}
+        </p>
         <p className="mt-1">
-          We could not confirm the agent is ready. Retry before running.
+          {t(
+            "agent.status.unavailableDesc",
+            "We could not confirm the agent is ready. Retry before running.",
+          )}
         </p>
         <Button
           variant="outline"
@@ -242,7 +267,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
           className="mt-3"
           onClick={() => void status.refetch()}
         >
-          Retry
+          {t("agent.status.retry", "Retry")}
         </Button>
       </div>
     </div>
@@ -250,7 +275,9 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     <div className="mb-4 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
       <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
       <div>
-        <p className="font-medium">Add a card to try AI</p>
+        <p className="font-medium">
+          {t("agent.status.addCardTitle", "Add a card to try AI")}
+        </p>
         <p className="mt-1 text-muted-foreground">
           {verifiedAgentStatus?.accessMessage}
         </p>
@@ -260,11 +287,14 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
             className="mt-3"
             onClick={() => router.push("/settings?tab=billing")}
           >
-            Add a card
+            {t("agent.status.addCardButton", "Add a card")}
           </Button>
         ) : (
           <p className="mt-2 text-muted-foreground">
-            Ask a practice administrator to add the card.
+            {t(
+              "agent.status.askAdminCard",
+              "Ask a practice administrator to add the card.",
+            )}
           </p>
         )}
       </div>
@@ -274,7 +304,10 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
       <p>
         {verifiedAgentStatus?.accessMessage ??
-          "OpenVPM AI is not available for this workspace."}
+          t(
+            "agent.status.notAvailable",
+            "OpenVPM AI is not available for this workspace.",
+          )}
       </p>
     </div>
   ) : !configured ? (
@@ -284,17 +317,28 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
         // Hosted clinics can't fix a platform key. Keep it human; ops sees
         // the missing config through /api/health checks.
         <p>
-          The agent is not available right now. We are on it. Please check back
-          soon.
+          {t(
+            "agent.status.hostedUnavailable",
+            "The agent is not available right now. We are on it. Please check back soon.",
+          )}
         </p>
       ) : (
         <p>
-          Configure Google Vertex AI with{" "}
+          {t(
+            "agent.status.configVertexPrefix",
+            "Configure Google Vertex AI with",
+          )}{" "}
           <code className="break-all font-mono">GOOGLE_VERTEX_PROJECT</code>,{" "}
           <code className="break-all font-mono">GOOGLE_VERTEX_LOCATION</code>,{" "}
-          and service-account credentials for Gemini, or set{" "}
-          <code className="break-all font-mono">ANTHROPIC_API_KEY</code> for an
-          explicit Claude model.
+          {t(
+            "agent.status.configVertexMid",
+            "and service-account credentials for Gemini, or set",
+          )}{" "}
+          <code className="break-all font-mono">ANTHROPIC_API_KEY</code>{" "}
+          {t(
+            "agent.status.configVertexSuffix",
+            "for an explicit Claude model.",
+          )}
         </p>
       )}
     </div>
@@ -308,10 +352,14 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
           <Bot className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-heading text-2xl font-semibold">OpenVPM Agent</h1>
+          <h1 className="font-heading text-2xl font-semibold">
+            {t("agent.title", "OpenVPM Agent")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Ask about your clinic. It can look things up and, with your okay, do
-            the work.
+            {t(
+              "agent.subtitle",
+              "Ask about your clinic. It can look things up and, with your okay, do the work.",
+            )}
           </p>
         </div>
       </div>
@@ -326,22 +374,24 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
               <Sparkles className="h-6 w-6" />
             </div>
             <h2 className="mt-4 font-heading text-xl font-semibold">
-              What can I help you with?
+              {t("agent.welcome.title", "What can I help you with?")}
             </h2>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              AI is built into OpenVPM. Ask a question in plain words, or start
-              with one of these.
+              {t(
+                "agent.welcome.subtitle",
+                "AI is built into OpenVPM. Ask a question in plain words, or start with one of these.",
+              )}
             </p>
             <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((s) => (
                 <button
-                  key={s}
+                  key={s.key}
                   type="button"
-                  onClick={() => pickSuggestion(s)}
+                  onClick={() => pickSuggestion(t(s.key, s.fallback))}
                   disabled={!canRun}
                   className="rounded-xl border border-border bg-card p-3 text-left text-sm text-foreground transition-colors hover:border-primary/40 hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {s}
+                  {t(s.key, s.fallback)}
                 </button>
               ))}
             </div>
@@ -390,10 +440,19 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
             disabled={!canRun || run.isPending}
             placeholder={
               canRun
-                ? "Ask the agent anything…  (Enter to send, Shift+Enter for a new line)"
+                ? t(
+                    "agent.composer.placeholder",
+                    "Ask the agent anything…  (Enter to send, Shift+Enter for a new line)",
+                  )
                 : needsBillingSetup
-                  ? "Add a card to try AI."
-                  : "The agent is not available right now."
+                  ? t(
+                      "agent.composer.placeholderNoCard",
+                      "Add a card to try AI.",
+                    )
+                  : t(
+                      "agent.composer.placeholderUnavailable",
+                      "The agent is not available right now.",
+                    )
             }
             className="max-h-40 w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -406,14 +465,17 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                 disabled={!canRun || run.isPending}
                 className="h-3.5 w-3.5 rounded border-border"
               />
-              Allow writes: appointments and patient vitals
+              {t(
+                "agent.composer.allowWrites",
+                "Allow writes: appointments and patient vitals",
+              )}
             </label>
             <Button
               type="button"
               size="icon"
               onClick={submit}
               disabled={submitDisabled}
-              aria-label="Send"
+              aria-label={t("agent.composer.send", "Send")}
               className="h-8 w-8 rounded-full"
             >
               {run.isPending ? (
@@ -428,8 +490,10 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
           <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <p>
-              Write mode can create appointments or record patient vitals. It
-              turns off automatically after this run.
+              {t(
+                "agent.composer.writeWarning",
+                "Write mode can create appointments or record patient vitals. It turns off automatically after this run.",
+              )}
             </p>
           </div>
         ) : null}
@@ -438,7 +502,21 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+function toolCallsCountLabel(
+  count: number,
+  t: (key: string, fallback: string, params?: Record<string, any>) => string,
+) {
+  if (count === 1) {
+    return t("agent.trace.toolCallSingular", "1 tool call", { count });
+  }
+  if (count >= 2 && count <= 4) {
+    return t("agent.trace.toolCallFew", `${count} tool calls`, { count });
+  }
+  return t("agent.trace.toolCallMany", `${count} tool calls`, { count });
+}
+
 function MessageBubble({ message }: { message: ChatMessage }) {
+  const { t } = useI18n();
   const [traceOpen, setTraceOpen] = useState(false);
   const isUser = message.role === "user";
 
@@ -469,8 +547,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 <ChevronRight className="h-3.5 w-3.5" />
               )}
               <Wrench className="h-3.5 w-3.5" />
-              {message.toolCalls.length} tool call
-              {message.toolCalls.length === 1 ? "" : "s"}
+              {toolCallsCountLabel(message.toolCalls.length, t)}
             </button>
             {traceOpen ? (
               <ul className="mt-2 space-y-2">

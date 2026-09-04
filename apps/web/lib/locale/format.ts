@@ -5,6 +5,7 @@
  */
 
 const COUNTRY_LOCALE: Record<string, string> = {
+  SK: "sk-SK",
   US: "en-US",
   GB: "en-GB",
   IE: "en-IE",
@@ -54,6 +55,8 @@ export interface RegionDefaults {
 /** Defaults applied when a practice picks a country (onboarding / settings). */
 export function regionDefaults(country?: string | null): RegionDefaults {
   switch ((country ?? "US").toUpperCase()) {
+    case "SK":
+      return { currency: "eur", taxRatePercent: "20.00", timezone: "Europe/Bratislava" };
     case "GB":
       return { currency: "gbp", taxRatePercent: "20.00", timezone: "Europe/London" };
     case "IE":

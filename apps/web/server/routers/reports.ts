@@ -14,6 +14,11 @@ import {
   appointments,
   users,
   practices,
+  vaccinationRecords,
+  patients,
+  clients,
+  soapNotes,
+  legacyFinancialDocuments,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import {
@@ -374,5 +379,325 @@ export const reportsRouter = createRouter({
     ]);
 
     return { lowStock, expired, expiringSoon };
+  }),
+
+  /**
+   * Zákonný register očkovania proti besnote (RVPS report).
+   */
+  rabiesRegister: reportProcedure
+    .input(
+      z
+        .object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          search: z.string().optional(),
+          limit: z.number().int().min(1).max(500).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const search = input?.search?.trim().toLowerCase();
+      const whereConds = [
+        eq(vaccinationRecords.practiceId, ctx.practiceId),
+        isNull(vaccinationRecords.deletedAt),
+        sql`(
+          lower(${vaccinationRecords.vaccineName}) LIKE '%rab%' 
+          OR lower(${vaccinationRecords.vaccineName}) LIKE '%besnot%'
+          OR lower(${vaccinationRecords.vaccineName}) LIKE '%biocan r%'
+          OR lower(${vaccinationRecords.vaccineName}) LIKE '%rabisin%'
+          OR lower(${vaccinationRecords.vaccineName}) LIKE '%nobivac r%'
+          OR lower(${vaccinationRecords.vaccineName}) LIKE '%defensor%'
+        )`,
+      ];
+
+      if (input?.startDate) {
+        whereConds.push(gte(vaccinationRecords.administeredAt, new Date(input.startDate)));
+      }
+      if (input?.endDate) {
+        whereConds.push(lte(vaccinationRecords.administeredAt, new Date(input.endDate)));
+      }
+      if (search) {
+        whereConds.push(
+          sql`(
+            lower(${patients.name}) LIKE ${`%${search}%`}
+            OR lower(coalesce(${patients.microchipNumber}, '')) LIKE ${`%${search}%`}
+            OR lower(${clients.lastName}) LIKE ${`%${search}%`}
+            OR lower(coalesce(${clients.firstName}, '')) LIKE ${`%${search}%`}
+          )`
+        );
+      }
+
+      const rows = await ctx.db
+        .select({
+          id: vaccinationRecords.id,
+          administeredAt: vaccinationRecords.administeredAt,
+          vaccineName: vaccinationRecords.vaccineName,
+          productName: vaccinationRecords.productName,
+          lotNumber: vaccinationRecords.lotNumber,
+          productExpirationDate: vaccinationRecords.productExpirationDate,
+          nextDueDate: vaccinationRecords.nextDueDate,
+          rabiesTagNumber: vaccinationRecords.rabiesTagNumber,
+          patientId: patients.id,
+          patientName: patients.name,
+          species: patients.species,
+          breed: patients.breed,
+          microchipNumber: patients.microchipNumber,
+          clientId: clients.id,
+          clientFirstName: clients.firstName,
+          clientLastName: clients.lastName,
+          clientAddress: clients.address,
+          clientCity: clients.city,
+          clientPhone: clients.phone,
+        })
+        .from(vaccinationRecords)
+        .innerJoin(
+          patients,
+          and(
+            eq(vaccinationRecords.patientId, patients.id),
+            eq(patients.practiceId, ctx.practiceId)
+          )
+        )
+        .innerJoin(
+          clients,
+          and(
+            eq(patients.clientId, clients.id),
+            eq(clients.practiceId, ctx.practiceId)
+          )
+        )
+        .where(and(...whereConds))
+        .orderBy(sql`${vaccinationRecords.administeredAt} DESC`)
+        .limit(input?.limit ?? 100)
+        .offset(input?.offset ?? 0);
+
+      const [totalCountResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(vaccinationRecords)
+        .innerJoin(
+          patients,
+          and(
+            eq(vaccinationRecords.patientId, patients.id),
+            eq(patients.practiceId, ctx.practiceId)
+          )
+        )
+        .innerJoin(
+          clients,
+          and(
+            eq(patients.clientId, clients.id),
+            eq(clients.practiceId, ctx.practiceId)
+          )
+        )
+        .where(and(...whereConds));
+
+      return {
+        items: rows,
+        totalCount: totalCountResult?.count ?? 0,
+      };
+    }),
+
+  /**
+   * Klinický denník ošetrených zvierat (Kniha ošetrení).
+   */
+  treatmentDiary: reportProcedure
+    .input(
+      z
+        .object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          search: z.string().optional(),
+          limit: z.number().int().min(1).max(500).default(50),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const search = input?.search?.trim().toLowerCase();
+      const whereConds = [
+        eq(soapNotes.practiceId, ctx.practiceId),
+        isNull(soapNotes.deletedAt),
+      ];
+
+      if (input?.startDate) {
+        whereConds.push(gte(soapNotes.createdAt, new Date(input.startDate)));
+      }
+      if (input?.endDate) {
+        whereConds.push(lte(soapNotes.createdAt, new Date(input.endDate)));
+      }
+      if (search) {
+        whereConds.push(
+          sql`(
+            lower(${patients.name}) LIKE ${`%${search}%`}
+            OR lower(${clients.lastName}) LIKE ${`%${search}%`}
+            OR lower(coalesce(${soapNotes.assessment}, '')) LIKE ${`%${search}%`}
+            OR lower(coalesce(${soapNotes.plan}, '')) LIKE ${`%${search}%`}
+          )`
+        );
+      }
+
+      const rows = await ctx.db
+        .select({
+          id: soapNotes.id,
+          createdAt: soapNotes.createdAt,
+          authorName: soapNotes.authorName,
+          subjective: soapNotes.subjective,
+          objective: soapNotes.objective,
+          assessment: soapNotes.assessment,
+          plan: soapNotes.plan,
+          imported: soapNotes.imported,
+          patientId: patients.id,
+          patientName: patients.name,
+          species: patients.species,
+          breed: patients.breed,
+          microchipNumber: patients.microchipNumber,
+          clientId: clients.id,
+          clientFirstName: clients.firstName,
+          clientLastName: clients.lastName,
+          clientPhone: clients.phone,
+        })
+        .from(soapNotes)
+        .innerJoin(
+          patients,
+          and(
+            eq(soapNotes.patientId, patients.id),
+            eq(patients.practiceId, ctx.practiceId)
+          )
+        )
+        .innerJoin(
+          clients,
+          and(
+            eq(patients.clientId, clients.id),
+            eq(clients.practiceId, ctx.practiceId)
+          )
+        )
+        .where(and(...whereConds))
+        .orderBy(sql`${soapNotes.createdAt} DESC`)
+        .limit(input?.limit ?? 50)
+        .offset(input?.offset ?? 0);
+
+      const [totalCountResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(soapNotes)
+        .innerJoin(
+          patients,
+          and(
+            eq(soapNotes.patientId, patients.id),
+            eq(patients.practiceId, ctx.practiceId)
+          )
+        )
+        .innerJoin(
+          clients,
+          and(
+            eq(patients.clientId, clients.id),
+            eq(clients.practiceId, ctx.practiceId)
+          )
+        )
+        .where(and(...whereConds));
+
+      return {
+        items: rows,
+        totalCount: totalCountResult?.count ?? 0,
+      };
+    }),
+
+  /**
+   * Register eutanázií a asanovaných tiel.
+   */
+  euthanasiaRegister: reportProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(500).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const whereConds = [
+        eq(patients.practiceId, ctx.practiceId),
+        eq(patients.status, "deceased"),
+        isNull(patients.deletedAt),
+      ];
+
+      const rows = await ctx.db
+        .select({
+          id: patients.id,
+          name: patients.name,
+          species: patients.species,
+          breed: patients.breed,
+          microchipNumber: patients.microchipNumber,
+          updatedAt: patients.updatedAt,
+          clientId: clients.id,
+          clientFirstName: clients.firstName,
+          clientLastName: clients.lastName,
+          clientAddress: clients.address,
+          clientCity: clients.city,
+          clientPhone: clients.phone,
+        })
+        .from(patients)
+        .innerJoin(
+          clients,
+          and(
+            eq(patients.clientId, clients.id),
+            eq(clients.practiceId, ctx.practiceId)
+          )
+        )
+        .where(and(...whereConds))
+        .orderBy(sql`${patients.updatedAt} DESC`)
+        .limit(input?.limit ?? 100)
+        .offset(input?.offset ?? 0);
+
+      const [totalCountResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(patients)
+        .where(and(...whereConds));
+
+      return {
+        items: rows,
+        totalCount: totalCountResult?.count ?? 0,
+      };
+    }),
+
+  /**
+   * Finančný prehľad dokladov z VetSoftware V2.
+   */
+  legacyFinancialSummary: reportProcedure.query(async ({ ctx }) => {
+    const [totalStats] = await ctx.db
+      .select({
+        totalDocuments: sql<number>`count(*)::int`,
+        totalRevenue: sql<string>`coalesce(sum(${legacyFinancialDocuments.total}::numeric), 0)`,
+      })
+      .from(legacyFinancialDocuments)
+      .where(
+        and(
+          eq(legacyFinancialDocuments.practiceId, ctx.practiceId),
+          isNull(legacyFinancialDocuments.deletedAt)
+        )
+      );
+
+    const byYear = await ctx.db
+      .select({
+        year: sql<string>`coalesce(to_char(${legacyFinancialDocuments.issuedAt}, 'YYYY'), 'Unknown')`,
+        count: sql<number>`count(*)::int`,
+        total: sql<string>`coalesce(sum(${legacyFinancialDocuments.total}::numeric), 0)`,
+      })
+      .from(legacyFinancialDocuments)
+      .where(
+        and(
+          eq(legacyFinancialDocuments.practiceId, ctx.practiceId),
+          isNull(legacyFinancialDocuments.deletedAt)
+        )
+      )
+      .groupBy(sql`to_char(${legacyFinancialDocuments.issuedAt}, 'YYYY')`)
+      .orderBy(sql`to_char(${legacyFinancialDocuments.issuedAt}, 'YYYY') DESC`);
+
+    return {
+      totalDocuments: totalStats?.totalDocuments ?? 0,
+      totalRevenue: parseFloat(totalStats?.totalRevenue ?? "0"),
+      byYear: byYear.map((y) => ({
+        year: y.year,
+        count: y.count,
+        total: parseFloat(y.total),
+      })),
+    };
   }),
 });
