@@ -160,7 +160,7 @@ export function AccountingExportDialog({
                 <FileCode className="h-5 w-5 text-primary" />
                 <div>
                   <div className="text-sm font-medium">STORMWARE Pohoda</div>
-                  <div className="text-xs text-muted-foreground">XML formát 2.0</div>
+                  <div className="text-xs text-muted-foreground">{t("accounting.xmlFormat", "XML format 2.0")}</div>
                 </div>
               </label>
 

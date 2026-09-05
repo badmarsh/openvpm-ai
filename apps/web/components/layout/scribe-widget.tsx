@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n";
 
 function useDebounce<T>(value: T, delayMs = 300): T {
   const [debounced, setDebounced] = useState<T>(value);
@@ -19,6 +20,7 @@ function useDebounce<T>(value: T, delayMs = 300): T {
 
 export function ScribeWidget() {
   const router = useRouter();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -45,7 +47,7 @@ export function ScribeWidget() {
         <Button
           size="lg"
           className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center z-50 text-primary-foreground focus:outline-none focus:ring-4 focus:ring-primary/25"
-          title="AI Voice Scribe - Hlasová konzultácia"
+          title={t("scribe.title", "AI Voice Scribe - Voice Consultation")}
           aria-label="AI Voice Scribe"
         >
           <Mic className="h-6 w-6 text-primary-foreground" />
@@ -76,7 +78,7 @@ export function ScribeWidget() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Vyhľadajte pacienta pre začatie hlasovej konzultácie a generovanie SOAP.
+            {t("scribe.description", "Search for a patient to start a voice consultation and generate SOAP notes.")}
           </p>
         </div>
 
@@ -85,7 +87,7 @@ export function ScribeWidget() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Vyhľadať pacienta..."
+              placeholder={t("scribe.searchPlaceholder", "Search patient...")}
               className="pl-9 h-9 text-xs bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -98,15 +100,15 @@ export function ScribeWidget() {
         <div className="max-h-64 overflow-y-auto p-2 flex flex-col gap-1">
           {debouncedSearch.trim().length < 2 ? (
             <div className="text-center py-6 px-4 text-xs text-muted-foreground">
-              Zadajte aspoň 2 znaky pre vyhľadanie pacienta
+              {t("scribe.minCharsHint", "Enter at least 2 characters to search for a patient")}
             </div>
           ) : isLoading ? (
             <div className="text-center py-6 px-4 text-xs text-muted-foreground">
-              Hľadám v kartotéke...
+              {t("scribe.searching", "Searching records...")}
             </div>
           ) : !patients || patients.length === 0 ? (
             <div className="text-center py-6 px-4 text-xs text-muted-foreground">
-              Žiadni pacienti neboli nájdení.
+              {t("scribe.noPatientsFound", "No patients found.")}
             </div>
           ) : (
             patients.map((patient) => {
@@ -146,7 +148,7 @@ export function ScribeWidget() {
             className="w-full text-xs text-primary hover:text-primary hover:bg-primary/10 justify-center gap-1.5 h-8 font-medium"
             onClick={() => startConsultation()}
           >
-            <span>Prejsť na diktovanie bez výberu</span>
+            <span>{t("scribe.startWithoutPatient", "Start dictation without selection")}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>

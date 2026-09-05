@@ -29,16 +29,17 @@ import {
 import { AccentColorPicker } from "@/components/brand/accent-color-picker";
 import { cn, initials } from "@/lib/utils";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 
 const SECONDARY_PRESETS = [
-  { hex: "#f5f5f4", label: "Piesok" },
-  { hex: "#fafaf9", label: "Krémová" },
-  { hex: "#f0fdf4", label: "Mäta" },
-  { hex: "#eff6ff", label: "Ľadová" },
-  { hex: "#fef3c7", label: "Medová" },
-  { hex: "#fdf2f8", label: "Ružová" },
-  { hex: "#1f2937", label: "Uhlíková" },
-  { hex: "#374151", label: "Grafit" },
+  { hex: "#f5f5f4", i18nKey: "brandKit.colorSand" },
+  { hex: "#fafaf9", i18nKey: "brandKit.colorCream" },
+  { hex: "#f0fdf4", i18nKey: "brandKit.colorMint" },
+  { hex: "#eff6ff", i18nKey: "brandKit.colorIce" },
+  { hex: "#fef3c7", i18nKey: "brandKit.colorHoney" },
+  { hex: "#fdf2f8", i18nKey: "brandKit.colorRose" },
+  { hex: "#1f2937", i18nKey: "brandKit.colorCarbon" },
+  { hex: "#374151", i18nKey: "brandKit.colorGraphite" },
 ];
 
 const THEME_PRESETS = [
@@ -94,35 +95,36 @@ const THEME_PRESETS = [
 
 const TONE_PRESETS = [
   {
-    label: "Fear-Free",
-    value: "Fear-Free, empatický, profesionálny",
+    i18nKey: "brandKit.toneFearFree",
+    value: "brandKit.toneFearFreeValue",
     icon: "🛡️",
   },
   {
-    label: "Priateľský",
-    value: "Priateľský, teplý, komunitne orientovaný",
+    i18nKey: "brandKit.toneFriendly",
+    value: "brandKit.toneFriendlyValue",
     icon: "😊",
   },
   {
-    label: "Náučný",
-    value: "Náučný, jasný, založený na dôkazoch",
+    i18nKey: "brandKit.toneEducational",
+    value: "brandKit.toneEducationalValue",
     icon: "🎓",
   },
   {
-    label: "Hravý",
-    value: "Hravý, ľahký, s humorom a emojis",
+    i18nKey: "brandKit.tonePlayful",
+    value: "brandKit.tonePlayfulValue",
     icon: "🎨",
   },
 ];
 
 export function BrandKitTab() {
   const utils = trpc.useUtils();
+  const { t } = useI18n();
   const { data, isLoading } = trpc.settings.getBrandKit.useQuery();
   const mutation = trpc.settings.updateBrandKit.useMutation({
     onSuccess: () => {
       utils.settings.getBrandKit.invalidate();
       utils.settings.getBranding.invalidate();
-      toast.success("Brand Kit uložený");
+      toast.success(t("brandKit.saved", "Brand Kit saved"));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     },
@@ -218,7 +220,7 @@ export function BrandKitTab() {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          {saved ? "Uložené" : "Uložiť Brand Kit"}
+          {saved ? t("brandKit.savedLabel", "Saved") : t("brandKit.save", "Save Brand Kit")}
         </Button>
       </div>
 
@@ -244,9 +246,9 @@ export function BrandKitTab() {
                   <Palette className="h-4.5 w-4.5" style={{ color: brandColor }} />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Farebná paleta</CardTitle>
+                  <CardTitle className="text-base">{t("brandKit.colorPalette", "Color Palette")}</CardTitle>
                   <CardDescription className="text-xs">
-                    Primárna a sekundárna farba kliniky
+                    {t("brandKit.colorPaletteDesc", "Primary and secondary clinic colors")}
                   </CardDescription>
                 </div>
               </div>
@@ -254,7 +256,7 @@ export function BrandKitTab() {
             <CardContent className="space-y-5">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Primárna
+                  {t("brandKit.primary", "Primary")}
                 </label>
                 <AccentColorPicker
                   value={brandColor}
@@ -264,7 +266,7 @@ export function BrandKitTab() {
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Sekundárna
+                  {t("brandKit.secondary", "Secondary")}
                 </label>
                 <div className="flex flex-wrap items-center gap-2">
                   {SECONDARY_PRESETS.map((p) => {
@@ -280,7 +282,7 @@ export function BrandKitTab() {
                             ? "border-foreground shadow-sm"
                             : "border-transparent hover:border-border hover:shadow-xs",
                         )}
-                        title={p.label}
+                        title={t(p.i18nKey)}
                       >
                         <span
                           className={cn(
@@ -290,7 +292,7 @@ export function BrandKitTab() {
                           style={{ backgroundColor: p.hex }}
                         />
                         <span className="text-[9px] text-muted-foreground">
-                          {p.label}
+                          {t(p.i18nKey)}
                         </span>
                       </button>
                     );
@@ -303,7 +305,7 @@ export function BrandKitTab() {
                       className="h-6 w-6 cursor-pointer rounded-md border-0 p-0"
                     />
                     <span className="text-[9px] text-muted-foreground">
-                      Vlastná
+                      {t("brandKit.custom", "Custom")}
                     </span>
                   </label>
                 </div>
@@ -312,7 +314,7 @@ export function BrandKitTab() {
               {/* Theme Presets */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Témy
+                  {t("brandKit.themes", "Themes")}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {THEME_PRESETS.map((theme) => {
@@ -398,9 +400,9 @@ export function BrandKitTab() {
                   <MessageSquareText className="h-4.5 w-4.5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Tón komunikácie</CardTitle>
+                  <CardTitle className="text-base">{t("brandKit.toneOfVoice", "Tone of Voice")}</CardTitle>
                   <CardDescription className="text-xs">
-                    Ako značka hovorí s klientmi a na sociálnych sieťach
+                    {t("brandKit.toneOfVoiceDesc", "How the brand speaks to clients and on social media")}
                   </CardDescription>
                 </div>
               </div>
@@ -409,16 +411,16 @@ export function BrandKitTab() {
               {/* Tone presets */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Rýchle predvoľby
+                  {t("brandKit.quickPresets", "Quick presets")}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {TONE_PRESETS.map((p) => {
-                    const active = toneOfVoice === p.value;
+                    const active = toneOfVoice === t(p.value);
                     return (
                       <button
                         key={p.value}
                         type="button"
-                        onClick={() => setToneOfVoice(p.value)}
+                        onClick={() => setToneOfVoice(t(p.value))}
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all",
                           active
@@ -427,7 +429,7 @@ export function BrandKitTab() {
                         )}
                       >
                         <span>{p.icon}</span>
-                        <span>{p.label}</span>
+                        <span>{t(p.i18nKey)}</span>
                       </button>
                     );
                   })}
@@ -436,7 +438,7 @@ export function BrandKitTab() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Popis tónu</label>
+                  <label className="text-sm font-medium">{t("brandKit.toneDescription", "Tone description")}</label>
                   <span className="text-[10px] tabular-nums text-muted-foreground">
                     {toneOfVoice.length}/500
                   </span>
@@ -446,7 +448,7 @@ export function BrandKitTab() {
                   onChange={(e) => setToneOfVoice(e.target.value)}
                   maxLength={500}
                   rows={2}
-                  placeholder="Napr. Súcitný, jasný, upokojujúci, komunitne orientovaný."
+                  placeholder={t("brandKit.tonePlaceholder", "e.g. Compassionate, clear, calming, community-oriented.")}
                   className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 />
               </div>
@@ -454,10 +456,10 @@ export function BrandKitTab() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">
-                    Pokyny pre AI generátor
+                    {t("brandKit.aiInstructions", "AI Generator Instructions")}
                   </label>
                   <Badge variant="outline" className="text-[9px]">
-                    Voliteľné
+                    {t("brandKit.optional", "Optional")}
                   </Badge>
                 </div>
                 <textarea
@@ -467,7 +469,7 @@ export function BrandKitTab() {
                   }
                   maxLength={2000}
                   rows={4}
-                  placeholder="Detailné inštrukcie pre AI. Napr. 'Nikdy nepoužívaj lekárske termíny bez vysvetlenia. Vždy pridaj CTA na objednanie. Vyhni sa slovu lacný.'"
+                  placeholder={t("brandKit.aiInstructionsPlaceholder", "Detailed instructions for AI. e.g. 'Never use medical terms without explanation. Always add a booking CTA. Avoid the word cheap.'")}
                   className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground placeholder:font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 />
                 <div className="flex justify-end">
@@ -487,9 +489,9 @@ export function BrandKitTab() {
                   <ShieldAlert className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Disclaimer</CardTitle>
+                  <CardTitle className="text-base">{t("brandKit.disclaimer", "Disclaimer")}</CardTitle>
                   <CardDescription className="text-xs">
-                    Automaticky sa pridáva na edukačné príspevky
+                    {t("brandKit.disclaimerDesc", "Automatically added to educational posts")}
                   </CardDescription>
                 </div>
               </div>
@@ -500,7 +502,7 @@ export function BrandKitTab() {
                 onChange={(e) => setDisclaimer(e.target.value)}
                 maxLength={500}
                 rows={2}
-                placeholder="Len pre všeobecné informácie o zdraví zvierat."
+                placeholder={t("brandKit.disclaimerPlaceholder", "For general animal health information only.")}
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </CardContent>
@@ -514,9 +516,9 @@ export function BrandKitTab() {
                   <Share2 className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Sociálne siete</CardTitle>
+                  <CardTitle className="text-base">{t("brandKit.socialMedia", "Social Media")}</CardTitle>
                   <CardDescription className="text-xs">
-                    Profily kliniky na sociálnych platformách
+                    {t("brandKit.socialMediaDesc", "Clinic profiles on social platforms")}
                   </CardDescription>
                 </div>
               </div>
@@ -593,11 +595,10 @@ export function BrandKitTab() {
                 </div>
                 <div>
                   <CardTitle className="text-base">
-                    Predvolené hashtagy
+                    {t("brandKit.defaultHashtags", "Default hashtags")}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    {defaultHashtags.length}/20 · Pridávajú sa k AI
-                    príspevkom
+                    {t("brandKit.hashtagsCount", "{count}/20 · Added to AI posts", { count: defaultHashtags.length })}
                   </CardDescription>
                 </div>
               </div>
@@ -635,7 +636,7 @@ export function BrandKitTab() {
                         addHashtag();
                       }
                     }}
-                    placeholder="pridať hashtag"
+                    placeholder={t("brandKit.addHashtag", "Add hashtag")}
                     maxLength={64}
                     className="h-9 pl-8 font-mono text-sm"
                   />
@@ -649,7 +650,7 @@ export function BrandKitTab() {
                   className="h-9 gap-1"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Pridať
+                  {t("brandKit.add", "Add")}
                 </Button>
               </div>
             </CardContent>
@@ -687,7 +688,7 @@ export function BrandKitTab() {
                       className="h-3.5 w-3.5"
                       style={{ color: brandColor }}
                     />
-                    <span className="font-semibold">Náhľad príspevku</span>
+                    <span className="font-semibold">{t("brandKit.postPreview", "Post Preview")}</span>
                   </div>
                   <Badge variant="outline" className="text-[9px]">
                     Instagram
@@ -737,8 +738,9 @@ export function BrandKitTab() {
                   {/* Post caption */}
                   <div className="space-y-1.5 p-2.5">
                     <p className="text-[10px] leading-relaxed text-foreground/80">
-                      Vaše zvieratko si zaslúži najlepšiu starostlivosť.
-                      Objednajte sa ešte dnes!
+                      {t("brandKit.previewText", "Your pet deserves the best care.")}
+                      {" "}
+                      {t("brandKit.previewCta", "Book an appointment today!")}
                     </p>
                     {defaultHashtags.length > 0 && (
                       <p className="text-[9px] font-medium" style={{ color: brandColor }}>
@@ -777,7 +779,7 @@ export function BrandKitTab() {
                   style={{ backgroundColor: brandColor }}
                 />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-medium">Primárna</p>
+                  <p className="text-[10px] font-medium">{t("brandKit.primary", "Primary")}</p>
                   <p className="truncate font-mono text-[9px] text-muted-foreground">
                     {brandColor}
                   </p>
@@ -789,7 +791,7 @@ export function BrandKitTab() {
                   style={{ backgroundColor: secondaryColor }}
                 />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-medium">Sekundárna</p>
+                  <p className="text-[10px] font-medium">{t("brandKit.secondary", "Secondary")}</p>
                   <p className="truncate font-mono text-[9px] text-muted-foreground">
                     {secondaryColor}
                   </p>

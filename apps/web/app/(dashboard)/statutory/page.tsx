@@ -90,7 +90,7 @@ function getRabiesComplianceStatus(
   if (!administeredAt) {
     return {
       status: "unknown",
-      label: "Neznáme",
+      labelKey: "statutory.complianceUnknown",
       badgeClass: "bg-muted text-muted-foreground border-border",
     };
   }
@@ -103,14 +103,15 @@ function getRabiesComplianceStatus(
   if (diffDays <= 3) {
     return {
       status: "compliant",
-      label: "V lehote (≤ 3 dni)",
+      labelKey: "statutory.complianceCompliant",
       badgeClass:
         "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
     };
   } else {
     return {
       status: "overdue",
-      label: `Po lehote (${diffDays} d.)`,
+      labelKey: "statutory.complianceOverdue",
+      labelParams: { days: diffDays },
       badgeClass:
         "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
     };
@@ -422,7 +423,7 @@ export default function StatutoryPage() {
               {t("statutory.title", "Zákonné knihy a registre")}
             </h1>
             <Badge variant="outline" className="text-xs font-normal border-primary/40 text-primary">
-              ŠVPS SR / KVL SR
+              {t("statutory.badgeKvlSvps")}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -565,7 +566,7 @@ function RabiesRegisterTab() {
         `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
         `${item.clientAddress || ""}, ${item.clientCity || ""}`.trim(),
         item.clientPhone || "—",
-        comp.label,
+        t(comp.labelKey, comp.labelKey, comp.labelParams ?? {}),
       ];
     });
     downloadStatutoryCsv(
@@ -599,7 +600,7 @@ function RabiesRegisterTab() {
         formatDate(item.nextDueDate),
         `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
         `${item.clientAddress || ""}, ${item.clientCity || ""} (${item.clientPhone || "—"})`.trim(),
-        comp.label,
+        t(comp.labelKey, comp.labelKey, comp.labelParams ?? {}),
       ];
     });
     openInspectionPrintView({
@@ -634,7 +635,7 @@ function RabiesRegisterTab() {
               onChange={(e) => setStartDate(e.target.value)}
               className="h-9 w-36 text-xs"
             />
-            <span>do</span>
+            <span>{t("statutory.dateRangeTo")}</span>
             <Input
               type="date"
               value={endDate}
@@ -663,7 +664,7 @@ function RabiesRegisterTab() {
             className="gap-2"
           >
             <Printer className="h-4 w-4" />
-            <span>Tlačiť úradný výkaz</span>
+            <span>{t("statutory.rabies.printInspection")}</span>
           </Button>
           <Button
             variant="default"
@@ -689,7 +690,7 @@ function RabiesRegisterTab() {
             className="gap-2 bg-rose-600 hover:bg-rose-700 text-white"
           >
             <ShieldAlert className="h-4 w-4" />
-            <span>Hlásenie poranenia (RVPS)</span>
+            <span>{t("statutory.rabies.biteReport")}</span>
           </Button>
         </div>
       </div>
@@ -703,7 +704,7 @@ function RabiesRegisterTab() {
             className="h-7 text-xs px-2.5 rounded-lg"
             onClick={() => setComplianceFilter("all")}
           >
-            Všetky ({data?.items?.length ?? 0})
+            {t("statutory.rabies.allFilter", "All", { count: data?.items?.length ?? 0 })}
           </Button>
           <Button
             variant={complianceFilter === "compliant" ? "default" : "outline"}
@@ -711,7 +712,7 @@ function RabiesRegisterTab() {
             className="h-7 text-xs px-2.5 rounded-lg"
             onClick={() => setComplianceFilter("compliant")}
           >
-            V lehote (≤ 3 dni)
+            {t("statutory.rabies.compliantFilter")}
           </Button>
           <Button
             variant={complianceFilter === "overdue" ? "default" : "outline"}
@@ -719,16 +720,16 @@ function RabiesRegisterTab() {
             className="h-7 text-xs px-2.5 rounded-lg"
             onClick={() => setComplianceFilter("overdue")}
           >
-            Po lehote (&gt; 3 dni)
+            {t("statutory.rabies.overdueFilter")}
           </Button>
         </div>
         <div className="text-xs text-muted-foreground">
-          Zobrazených: <strong>{filteredItems.length}</strong> záznamov
+          {t("statutory.rabies.shownRecords", "Showing: {count} records", { count: filteredItems.length })}
         </div>
       </div>
 
       <div className="rounded-md border border-blue-200 bg-blue-50/50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-300">
-        <strong>Zákonná povinnosť:</strong> Podľa § 17 ods. 1 písm. b) zákona č. 39/2007 Z. z. je vlastník alebo držiteľ vnímavých mäsožravcov povinný zabezpečiť vakcináciu proti besnote. Veterinárny lekár nahlasuje vakcináciu do CRSZ a RVPS do 3 pracovných dní od aplikácie.
+        {t("statutory.rabies.legalNotice")}
       </div>
 
       {/* Table */}
@@ -739,22 +740,22 @@ function RabiesRegisterTab() {
           </div>
         ) : !filteredItems.length ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            Nenašli sa žiadne záznamy o vakcinácii proti besnote podľa zadaných kritérií.
+            {t("statutory.rabies.noRecords")}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/60 text-muted-foreground">
                 <tr>
-                  <th className="p-3">Dátum</th>
-                  <th className="p-3">Pacient</th>
-                  <th className="p-3">Číslo mikročipu</th>
-                  <th className="p-3">Vakcína / Šarža</th>
-                  <th className="p-3">Revakcinácia</th>
-                  <th className="p-3">Majiteľ</th>
-                  <th className="p-3">Kontakt</th>
-                  <th className="p-3">Lehota RVPS (3 dni)</th>
-                  <th className="p-3 text-right">RVPS Tlač</th>
+                  <th className="p-3">{t("statutory.rabies.dateColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.patientColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.chipColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.vaccineColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.revaccColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.ownerColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.contactColumn")}</th>
+                  <th className="p-3">{t("statutory.rabies.complianceColumn")}</th>
+                  <th className="p-3 text-right">{t("statutory.rabies.printColumn")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -775,14 +776,14 @@ function RabiesRegisterTab() {
                         {r.microchipNumber ? (
                           <span className="text-foreground">{r.microchipNumber}</span>
                         ) : (
-                          <span className="text-amber-600 font-medium">Nečipovaný</span>
+                          <span className="text-amber-600 font-medium">{t("statutory.rabies.notChipped")}</span>
                         )}
                       </td>
                       <td className="p-3">
                         <div className="font-medium text-foreground">{r.vaccineName}</div>
                         {r.lotNumber && (
                           <div className="text-[11px] text-muted-foreground">
-                            Šarža: {r.lotNumber}
+                            {t("statutory.rabies.lotLabel")} {r.lotNumber}
                           </div>
                         )}
                       </td>
@@ -811,14 +812,14 @@ function RabiesRegisterTab() {
                           variant="outline"
                           className={cn("text-[10px] font-medium border", comp.badgeClass)}
                         >
-                          {comp.label}
+                          {t(comp.labelKey, comp.labelKey, comp.labelParams ?? {})}
                         </Badge>
                       </td>
                       <td className="p-3 whitespace-nowrap text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          title="Tlačiť Hlásenie o poranení človeka (RVPS)"
+                          title={t("statutory.rabies.printBiteReport")}
                           onClick={() =>
                             printRabiesBiteInspectionReport({
                               patientName: r.patientName,
@@ -848,7 +849,7 @@ function RabiesRegisterTab() {
         )}
       </div>
       <div className="text-right text-xs text-muted-foreground">
-        Celkovo záznamov: {filteredItems.length}
+        {t("statutory.rabies.totalRecords", "Total records: {count}", { count: filteredItems.length })}
       </div>
     </div>
   );
@@ -954,7 +955,7 @@ function TreatmentDiaryTab() {
               onChange={(e) => setStartDate(e.target.value)}
               className="h-9 w-36 text-xs"
             />
-            <span>do</span>
+            <span>{t("statutory.dateRangeTo")}</span>
             <Input
               type="date"
               value={endDate}
@@ -983,7 +984,7 @@ function TreatmentDiaryTab() {
             className="gap-2"
           >
             <Printer className="h-4 w-4" />
-            <span>Tlačiť úradný výkaz</span>
+            <span>{t("statutory.treatment.printInspection")}</span>
           </Button>
         </div>
       </div>
@@ -995,18 +996,18 @@ function TreatmentDiaryTab() {
           </div>
         ) : !data?.items?.length ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            Nenašli sa žiadne záznamy v denníku ošetrených zvierat.
+            {t("statutory.treatment.noRecords")}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/60 text-muted-foreground">
                 <tr>
-                  <th className="p-3">Dátum / Čas</th>
-                  <th className="p-3">Pacient & Majiteľ</th>
-                  <th className="p-3">Ošetrujúci lekár</th>
-                  <th className="p-3">Diagnóza (Nález)</th>
-                  <th className="p-3">Terapia / Použité liečivá</th>
+                  <th className="p-3">{t("statutory.treatment.dateColumn")}</th>
+                  <th className="p-3">{t("statutory.treatment.patientOwnerColumn")}</th>
+                  <th className="p-3">{t("statutory.treatment.doctorColumn")}</th>
+                  <th className="p-3">{t("statutory.treatment.diagnosisColumn")}</th>
+                  <th className="p-3">{t("statutory.treatment.therapyColumn")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -1022,7 +1023,7 @@ function TreatmentDiaryTab() {
                       </div>
                     </td>
                     <td className="p-3 font-medium text-foreground whitespace-nowrap">
-                      {item.authorName || "Veterinárny lekár"}
+                      {item.authorName || t("statutory.treatment.doctorColumn")}
                     </td>
                     <td className="p-3 max-w-xs truncate text-muted-foreground" title={item.assessment ?? ""}>
                       {item.assessment || "—"}
@@ -1038,7 +1039,7 @@ function TreatmentDiaryTab() {
         )}
       </div>
       <div className="text-right text-xs text-muted-foreground">
-        Celkovo ošetrení: {data?.totalCount ?? 0}
+        {t("statutory.treatment.totalTreatments", "Total treatments: {count}", { count: data?.totalCount ?? 0 })}
       </div>
     </div>
   );
@@ -1114,9 +1115,9 @@ function EuthanasiaRegisterTab() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-border bg-card p-4 gap-3">
         <div>
-          <h3 className="font-semibold text-sm">Register eutanázií a asanovaných tiel</h3>
+          <h3 className="font-semibold text-sm">{t("statutory.euthanasia.title")}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Zákonná evidencia uhynutých a eutanazovaných zvierat pre odhlásenie z CRSZ a evidencie obcí.
+            {t("statutory.euthanasia.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1138,7 +1139,7 @@ function EuthanasiaRegisterTab() {
             className="gap-2"
           >
             <Printer className="h-4 w-4" />
-            <span>Tlačiť úradný výkaz</span>
+            <span>{t("statutory.euthanasia.printInspection")}</span>
           </Button>
         </div>
       </div>
@@ -1150,19 +1151,19 @@ function EuthanasiaRegisterTab() {
           </div>
         ) : !data?.items?.length ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            Žiadne záznamy v registri eutanázií.
+            {t("statutory.euthanasia.noRecords")}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/60 text-muted-foreground">
                 <tr>
-                  <th className="p-3">Dátum</th>
-                  <th className="p-3">Pacient</th>
-                  <th className="p-3">Číslo mikročipu</th>
-                  <th className="p-3">Majiteľ</th>
-                  <th className="p-3">Bydlisko / Mesto</th>
-                  <th className="p-3">Telefón</th>
+                  <th className="p-3">{t("statutory.euthanasia.dateColumn")}</th>
+                  <th className="p-3">{t("statutory.euthanasia.patientColumn")}</th>
+                  <th className="p-3">{t("statutory.euthanasia.chipColumn")}</th>
+                  <th className="p-3">{t("statutory.euthanasia.ownerColumn")}</th>
+                  <th className="p-3">{t("statutory.euthanasia.addressColumn")}</th>
+                  <th className="p-3">{t("statutory.euthanasia.phoneColumn")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -1325,10 +1326,10 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-amber-500" />
-              <h3 className="font-semibold text-base">Kontrolované látky</h3>
+              <h3 className="font-semibold text-base">{t("statutory.narcotics.title")}</h3>
             </div>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              Vedená v zmysle zákona č. 139/1998 Z. z. Každý príjem, podanie pacientovi a likvidácia zvyškov musí byť evidovaná s menom lekára, šaržou a svedkom.
+              {t("statutory.narcotics.subtitle")}
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -1339,11 +1340,11 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
               className="gap-2"
             >
               <Printer className="h-4 w-4" />
-              <span>Tlačiť OPK výkaz</span>
+              <span>{t("statutory.narcotics.printOpk")}</span>
             </Button>
             <Link href="/controlled-substances">
               <Button size="sm" className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
-                <span>Plná evidencia</span>
+                <span>{t("statutory.narcotics.fullRecords")}</span>
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </Link>
@@ -1371,13 +1372,13 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
               <div key={`${row.drugName}-${row.unit}`} className="rounded-lg border border-border bg-card p-4">
                 <div className="font-semibold text-sm">{row.drugName}</div>
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">Príjem:</span>
+                  <span className="text-muted-foreground">{t("statutory.narcotics.received")}</span>
                   <span className="text-right font-mono">{row.totalReceived} {row.unit}</span>
-                  <span className="text-muted-foreground">Podania:</span>
+                  <span className="text-muted-foreground">{t("statutory.narcotics.administered")}</span>
                   <span className="text-right font-mono">{row.totalAdministered} {row.unit}</span>
-                  <span className="text-muted-foreground">Zlikvidované:</span>
+                  <span className="text-muted-foreground">{t("statutory.narcotics.destroyed")}</span>
                   <span className="text-right font-mono">{row.totalWasted} {row.unit}</span>
-                  <span className="text-muted-foreground font-semibold">Zostatok:</span>
+                  <span className="text-muted-foreground font-semibold">{t("statutory.narcotics.balance")}</span>
                   <span className={cn(
                     "text-right font-mono font-semibold",
                     balance < 0 ? "text-destructive" : "text-foreground"
@@ -1399,22 +1400,22 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
           </div>
         ) : !data?.items?.length ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            Žiadne záznamy v knihe omamných látok.{" "}
-            <Link href="/controlled-substances" className="text-primary underline">Pridať záznam</Link>
+            {t("statutory.narcotics.noRecords")}{" "}
+            <Link href="/controlled-substances" className="text-primary underline">{t("statutory.narcotics.addRecord")}</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/60 text-muted-foreground">
                 <tr>
-                  <th className="p-3">Dátum</th>
-                  <th className="p-3">Liečivo (Zoznam)</th>
-                  <th className="p-3">Druh pohybu</th>
-                  <th className="p-3 text-right">Množstvo</th>
-                  <th className="p-3">Šarža</th>
-                  <th className="p-3">Pacient</th>
-                  <th className="p-3">Lekár</th>
-                  <th className="p-3">Svedok</th>
+                  <th className="p-3">{t("statutory.narcotics.dateColumn")}</th>
+                  <th className="p-3">{t("statutory.narcotics.drugColumn")}</th>
+                  <th className="p-3">{t("statutory.narcotics.actionColumn")}</th>
+                  <th className="p-3 text-right">{t("statutory.narcotics.qtyColumn")}</th>
+                  <th className="p-3">{t("statutory.narcotics.lotColumn")}</th>
+                  <th className="p-3">{t("statutory.narcotics.patientColumn")}</th>
+                  <th className="p-3">{t("statutory.narcotics.doctorColumn")}</th>
+                  <th className="p-3">{t("statutory.narcotics.witnessColumn")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -1423,7 +1424,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
                     <td className="p-3 whitespace-nowrap font-medium">{formatDate(item.performedAt)}</td>
                     <td className="p-3">
                       <span className="font-semibold">{item.drugName}</span>
-                      <span className="ml-1 text-muted-foreground">(Zoz. {item.deaSchedule})</span>
+                      <span className="ml-1 text-muted-foreground">({t("statutory.narcotics.scheduleLabel")} {item.deaSchedule})</span>
                     </td>
                     <td className="p-3">
                       <span className={cn(
@@ -1433,7 +1434,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
                         item.action === "wasted" && "bg-amber-100 text-amber-700",
                         item.action === "returned" && "bg-gray-100 text-gray-700",
                       )}>
-                        {ACTION_LABEL_SK[item.action] ?? item.action}
+                        {t(`statutory.narcotics.action${item.action.charAt(0).toUpperCase() + item.action.slice(1)}`, ACTION_LABEL_SK[item.action] ?? item.action)}
                       </span>
                     </td>
                     <td className="p-3 text-right font-mono">{item.quantity} {item.unit}</td>
@@ -1452,19 +1453,19 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
       {/* Legal footer cards */}
       <div className="grid gap-4 sm:grid-cols-3 text-xs">
         <div className="rounded-lg border border-border bg-muted/40 p-4">
-          <div className="text-muted-foreground">Legislatívny rámec</div>
+          <div className="text-muted-foreground">{t("statutory.narcotics.legalFramework")}</div>
           <div className="mt-1 font-semibold text-sm">Zákon č. 139/1998 Z. z.</div>
           <div className="mt-1 text-muted-foreground">ŠÚKL &amp; ŠVPS SR</div>
         </div>
         <div className="rounded-lg border border-border bg-muted/40 p-4">
-          <div className="text-muted-foreground">Archivačná lehota</div>
-          <div className="mt-1 font-semibold text-sm">5 rokov od posledného záznamu</div>
+          <div className="text-muted-foreground">{t("statutory.narcotics.archivePeriod")}</div>
+          <div className="mt-1 font-semibold text-sm">{t("statutory.narcotics.archivePeriodValue")}</div>
           <div className="mt-1 text-muted-foreground">§ 22 ods. 3 zák. č. 139/1998 Z. z.</div>
         </div>
         <div className="rounded-lg border border-border bg-muted/40 p-4">
-          <div className="text-muted-foreground">Likvidácia odpadu</div>
-          <div className="mt-1 font-semibold text-sm">Vyžaduje svedka + protokol</div>
-          <div className="mt-1 text-muted-foreground">Každý odpad evidovať s dôvodom</div>
+          <div className="text-muted-foreground">{t("statutory.narcotics.wasteDisposal")}</div>
+          <div className="mt-1 font-semibold text-sm">{t("statutory.narcotics.wasteDisposalValue")}</div>
+          <div className="mt-1 text-muted-foreground">{t("statutory.narcotics.wasteDisposalNote")}</div>
         </div>
       </div>
     </div>
@@ -1518,15 +1519,15 @@ function ProtocolsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
         <div>
-          <h3 className="font-semibold text-sm">Slovenské veterinárne protokoly a informované súhlasy</h3>
+          <h3 className="font-semibold text-sm">{t("statutory.protocols.title")}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Oficiálne znenia formulárov podľa štandardov KVL SR pre tlač a podpis klientom.
+            {t("statutory.protocols.subtitle")}
           </p>
         </div>
         {activeForm && (
           <Button size="sm" onClick={handlePrintProtocol} className="gap-2">
             <Printer className="h-4 w-4" />
-            <span>Tlačiť čistý protokol</span>
+            <span>{t("statutory.protocols.printProtocol")}</span>
           </Button>
         )}
       </div>
@@ -1537,7 +1538,7 @@ function ProtocolsTab() {
         </div>
       ) : !forms?.length ? (
         <div className="p-8 text-center text-muted-foreground text-sm">
-          Žiadne formuláre nie sú k dispozícii.
+          {t("statutory.protocols.noForms")}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-3">
@@ -1571,7 +1572,7 @@ function ProtocolsTab() {
                 <div className="border-b border-border pb-3">
                   <h4 className="font-bold text-base text-foreground">{activeForm.title}</h4>
                   <span className="font-mono text-xs text-muted-foreground">
-                    Identifikátor šablóny: {activeForm.slug}
+                    {t("statutory.protocols.templateId", "Template ID: {slug}", { slug: activeForm.slug })}
                   </span>
                 </div>
                 <div className="rounded-md bg-muted/30 p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap max-h-[500px] overflow-y-auto text-foreground/90">

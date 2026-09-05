@@ -63,8 +63,8 @@ export default function ReviewsPage() {
       <div>
         <Tabs value={unansweredOnly ? "unanswered" : "all"} onValueChange={(v) => setUnansweredOnly(v === "unanswered")}>
           <TabsList>
-            <TabsTrigger value="all">Všetky</TabsTrigger>
-            <TabsTrigger value="unanswered">Bez odpovede</TabsTrigger>
+            <TabsTrigger value="all">{t("marketing.reviews.all", "All")}</TabsTrigger>
+            <TabsTrigger value="unanswered">{t("marketing.reviews.unanswered", "Unanswered")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -113,7 +113,7 @@ export default function ReviewsPage() {
                         onClick={() => toggleExpand(review.id)}
                         className="text-xs text-blue-600 hover:underline mt-1"
                       >
-                        {isExpanded ? "Zobraziť menej" : "Zobraziť viac"}
+                        {isExpanded ? t("marketing.reviews.showLess", "Show less") : t("marketing.reviews.showMore", "Show more")}
                       </button>
                     )}
                   </div>
@@ -123,7 +123,7 @@ export default function ReviewsPage() {
                   <div className="mt-4 rounded-lg bg-muted/50 p-4 border-l-2 border-primary">
                     <div className="flex items-center gap-2 mb-2">
                       <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-semibold">Vaša odpoveď</span>
+                      <span className="text-xs font-semibold">{t("marketing.reviews.yourReply", "Your reply")}</span>
                     </div>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{review.replyText}</p>
                   </div>
@@ -131,22 +131,22 @@ export default function ReviewsPage() {
                   <div className="mt-4 pt-4 border-t">
                     {replyingTo === review.id ? (
                       <div className="space-y-3">
-                        <Textarea 
-                          rows={3} 
-                          placeholder="Napíšte odpoveď..." 
+                        <Textarea
+                          rows={3}
+                          placeholder={t("marketing.reviews.replyPlaceholder", "Write a reply...")}
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
                         />
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={() => setReplyingTo(null)}>
-                            Zrušiť
+                            {t("common.cancel", "Cancel")}
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             disabled={!replyText.trim() || replyMutation.isPending}
                             onClick={() => replyMutation.mutate({ id: review.id, replyText })}
                           >
-                            Odoslať
+                            {t("marketing.reviews.send", "Send")}
                           </Button>
                         </div>
                       </div>

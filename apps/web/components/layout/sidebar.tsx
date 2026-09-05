@@ -465,7 +465,7 @@ export function Sidebar({
         {collapsible && (
           <button
             onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? t("nav.expandMenu", "Expand menu") : t("nav.collapseMenu", "Collapse menu")}
             className="flex w-full items-center justify-center gap-2 rounded-lg p-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
           >
             {collapsed ? (
@@ -473,7 +473,7 @@ export function Sidebar({
             ) : (
               <>
                 <ChevronLeft className="h-4 w-4" />
-                <span>Zbaliť menu</span>
+                <span>{t("nav.collapseMenu", "Zbaliť menu")}</span>
               </>
             )}
           </button>

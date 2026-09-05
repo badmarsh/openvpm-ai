@@ -222,7 +222,7 @@ export default function WaitingRoomPage() {
             <div className="hidden items-center gap-1.5 text-[10px] text-muted-foreground sm:flex">
               <RefreshCw className="h-3 w-3" />
               <span>
-                {locale === "sk" ? "Aktualizované" : "Updated"}{" "}
+                {t("waitingRoom.updated", "Updated")}{" "}
                 {formatShortTime(lastRefreshed)}
               </span>
             </div>
@@ -239,12 +239,8 @@ export default function WaitingRoomPage() {
             onClick={() => setSoundEnabled((v) => !v)}
             title={
               soundEnabled
-                ? locale === "sk"
-                  ? "Vypnúť zvukové upozornenia"
-                  : "Mute sound notifications"
-                : locale === "sk"
-                  ? "Zapnúť zvukové upozornenia"
-                  : "Enable sound notifications"
+                ? t("waitingRoom.muteSound", "Mute sound notifications")
+                : t("waitingRoom.enableSound", "Enable sound notifications")
             }
             className="h-9 w-9 p-0"
           >
@@ -265,14 +261,14 @@ export default function WaitingRoomPage() {
               <>
                 <Minimize2 className="h-4 w-4" />
                 <span className="hidden sm:inline">
-                  {locale === "sk" ? "Ukončiť TV mód" : "Exit TV Mode"}
+                  {t("waitingRoom.exitTvMode", "Exit TV Mode")}
                 </span>
               </>
             ) : (
               <>
                 <Maximize2 className="h-4 w-4" />
                 <span className="hidden sm:inline">
-                  {locale === "sk" ? "Celá obrazovka (TV)" : "Fullscreen (TV)"}
+                  {t("waitingRoom.fullscreenTv", "Fullscreen (TV)")}
                 </span>
               </>
             )}
@@ -284,25 +280,25 @@ export default function WaitingRoomPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatChip
           icon={<PawPrint className="h-4 w-4 text-emerald-500" />}
-          label={locale === "sk" ? "V ordinácii" : "In Exam"}
+          label={t("waitingRoom.inExam", "In Exam")}
           value={inExam.length}
           color="emerald"
         />
         <StatChip
           icon={<Clock className="h-4 w-4 text-amber-500" />}
-          label={locale === "sk" ? "V čakárni" : "Waiting"}
+          label={t("waitingRoom.waiting", "Waiting")}
           value={checkedIn.length}
           color="amber"
         />
         <StatChip
           icon={<Timer className="h-4 w-4 text-blue-500" />}
-          label={locale === "sk" ? "Naplánované" : "Upcoming"}
+          label={t("waitingRoom.upcoming", "Upcoming")}
           value={upcoming.length}
           color="blue"
         />
         <StatChip
           icon={<CheckCircle2 className="h-4 w-4 text-slate-400" />}
-          label={locale === "sk" ? "Dokončené" : "Done"}
+          label={t("waitingRoom.done", "Done")}
           value={completedToday.length}
           color="slate"
         />
@@ -319,7 +315,7 @@ export default function WaitingRoomPage() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span>
                 </span>
-                {locale === "sk" ? "Práve v ordinácii" : "Now in Exam"}
+                {t("waitingRoom.nowInExam", "Now in Exam")}
               </CardTitle>
               <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs">
                 {inExam.length}
@@ -330,9 +326,7 @@ export default function WaitingRoomPage() {
             {inExam.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 <PawPrint className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                {locale === "sk"
-                  ? "Ordinácia je pripravená na ďalšieho pacienta"
-                  : "Exam room ready for next patient"}
+                {t("waitingRoom.examRoomReady", "Exam room ready for next patient")}
               </div>
             ) : (
               inExam.map((apt) => (
@@ -345,14 +339,12 @@ export default function WaitingRoomPage() {
                       <span className="text-2xl">{getEmoji(apt.patientSpecies)}</span>
                       <div>
                         <p className="text-base font-bold text-foreground">
-                          {apt.patientName || (locale === "sk" ? "Pacient" : "Patient")}
+                          {apt.patientName || t("waitingRoom.patient", "Patient")}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {apt.clientLastName
                             ? `${apt.clientLastName} (${apt.clientFirstName?.[0] || ""}.)`
-                            : locale === "sk"
-                              ? "Klient"
-                              : "Client"}
+                            : t("waitingRoom.client", "Client")}
                         </p>
                       </div>
                     </div>
@@ -386,7 +378,7 @@ export default function WaitingRoomPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-amber-700 dark:text-amber-400">
                 <Clock className="h-4 w-4" />
-                {locale === "sk" ? "Pripravte sa / V čakárni" : "Get Ready / Waiting"}
+                {t("waitingRoom.getReadyWaiting", "Get Ready / Waiting")}
               </CardTitle>
               <Badge className="bg-amber-600 text-white hover:bg-amber-700 text-xs">
                 {checkedIn.length}
@@ -397,9 +389,7 @@ export default function WaitingRoomPage() {
             {checkedIn.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 <CalendarCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                {locale === "sk"
-                  ? "Žiadni pacienti momentálne nečakajú v čakárni"
-                  : "No patients currently waiting"}
+                {t("waitingRoom.noPatientsWaiting", "No patients currently waiting")}
               </div>
             ) : (
               checkedIn.map((apt, idx) => (
@@ -414,20 +404,18 @@ export default function WaitingRoomPage() {
                     <span className="text-2xl">{getEmoji(apt.patientSpecies)}</span>
                     <div>
                       <p className="text-sm font-bold text-foreground">
-                        {apt.patientName || (locale === "sk" ? "Pacient" : "Patient")}
+                        {apt.patientName || t("waitingRoom.patient", "Patient")}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {apt.clientLastName
                           ? `${apt.clientLastName} (${apt.clientFirstName?.[0] || ""}.)`
-                          : locale === "sk"
-                            ? "Klient"
-                            : "Client"}
+                          : t("waitingRoom.client", "Client")}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge variant="secondary" className="text-xs font-semibold">
-                      {apt.typeName || (locale === "sk" ? "Vyšetrenie" : "Exam")}
+                      {apt.typeName || t("waitingRoom.exam", "Exam")}
                     </Badge>
                     <span className="font-mono text-[10px] text-muted-foreground">
                       {formatShortTime(apt.startTime)}
@@ -446,7 +434,7 @@ export default function WaitingRoomPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm font-bold text-primary">
                 <Sparkles className="h-4 w-4" />
-                {locale === "sk" ? "Oznamy kliniky & Zdravotné tipy" : "Clinic Announcements & Health Tips"}
+                {t("waitingRoom.announcementsTitle", "Clinic Announcements & Health Tips")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3.5 text-xs text-muted-foreground">
@@ -457,20 +445,18 @@ export default function WaitingRoomPage() {
                 >
                   <div className="flex items-center gap-2 font-semibold text-foreground">
                     {a.icon}
-                    {a.title}
+                    {t(a.titleKey)}
                   </div>
-                  <p className="mt-1 leading-relaxed">{a.body}</p>
+                  <p className="mt-1 leading-relaxed">{t(a.bodyKey)}</p>
                 </div>
               ))}
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-primary">
                 <p className="font-semibold">
-                  {locale === "sk" ? "Pohotovosť a objednávanie:" : "Urgent care & booking:"}
+                  {t("waitingRoom.urgentCareBooking", "Urgent care & booking:")}
                 </p>
                 <p className="mt-0.5 text-[11px] text-foreground/80">
-                  {locale === "sk"
-                    ? "Pre objednanie termínu využite klientsky portál alebo kontaktujte recepciu."
-                    : "Book appointments via the client portal or contact reception."}
+                  {t("waitingRoom.bookingHelp", "Book appointments via the client portal or contact reception.")}
                 </p>
               </div>
             </CardContent>
@@ -483,7 +469,7 @@ export default function WaitingRoomPage() {
                 <CardTitle className="flex items-center justify-between text-xs font-bold text-violet-700 dark:text-violet-400">
                   <span className="flex items-center gap-2">
                     <ListOrdered className="h-3.5 w-3.5" />
-                    {locale === "sk" ? "Poradovník" : "Waitlist"}
+                    {t("waitingRoom.waitlist", "Waitlist")}
                   </span>
                   <Badge className="bg-violet-600 text-white text-[10px]">
                     {waitlistEntries.length}
@@ -502,7 +488,7 @@ export default function WaitingRoomPage() {
                       </span>
                       <div>
                         <p className="font-semibold text-foreground">
-                          {(entry as any).patient?.name || (locale === "sk" ? "Pacient" : "Patient")}
+                          {(entry as any).patient?.name || t("waitingRoom.patient", "Patient")}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
                           {(entry as any).client
@@ -527,9 +513,7 @@ export default function WaitingRoomPage() {
             <Card className="border border-border bg-card shadow-sm">
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-xs font-semibold text-muted-foreground">
-                  {locale === "sk"
-                    ? `Plánované termíny dnes (${upcoming.length})`
-                    : `Scheduled today (${upcoming.length})`}
+                  {t("waitingRoom.scheduledToday", "Scheduled today ({count})", { count: upcoming.length })}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 pt-1">
@@ -564,9 +548,7 @@ export default function WaitingRoomPage() {
         <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
           <span>
-            {locale === "sk"
-              ? `Dnes dokončených vyšetrení: ${completedToday.length}`
-              : `Completed today: ${completedToday.length}`}
+            {t("waitingRoom.completedToday", "Completed today: {count}", { count: completedToday.length })}
           </span>
         </div>
       )}
@@ -610,30 +592,30 @@ function StatChip({
 // ---------------------------------------------------------------------------
 // Announcement data
 // ---------------------------------------------------------------------------
-const ANNOUNCEMENTS: Array<{ icon: React.ReactNode; title: string; body: string }> = [
+const ANNOUNCEMENTS: Array<{ icon: React.ReactNode; titleKey: string; bodyKey: string }> = [
   {
     icon: <ShieldAlert className="h-4 w-4 text-amber-500" />,
-    title: "Kliešťová sezóna je v plnom prúde",
-    body: "Nezabudnite na účinnú ochranu proti kliešťom a blchám (pipety, obojky, tablety). Chráňte svojich miláčikov pred boreliózou a anaplazmózou.",
+    titleKey: "waitingRoom.announcement.tickTitle",
+    bodyKey: "waitingRoom.announcement.tickBody",
   },
   {
     icon: <HeartPulse className="h-4 w-4 text-rose-500" />,
-    title: "Zubná hygiena & prevencia",
-    body: "Zápach z tlamy zvieraťa často signalizuje zubný kameň alebo zápal ďasien. Spýtajte sa lekára na bezplatnú kontrolu chrupu.",
+    titleKey: "waitingRoom.announcement.dentalTitle",
+    bodyKey: "waitingRoom.announcement.dentalBody",
   },
   {
     icon: <PawPrint className="h-4 w-4 text-blue-500" />,
-    title: "Pravidelné očkovanie",
-    body: "Očkovanie proti besnote je zákonná povinnosť. Skontrolujte si platnosť očkovania vášho psíka alebo mačky v očkovacom preukaze.",
+    titleKey: "waitingRoom.announcement.vaccineTitle",
+    bodyKey: "waitingRoom.announcement.vaccineBody",
   },
   {
     icon: <HeartPulse className="h-4 w-4 text-violet-500" />,
-    title: "Seniorsky skríning (7+ rokov)",
-    body: "Starší psi a mačky profitujú z preventívneho krvného rozboru a kontroly obličiek a pečene. Včasné odhalenie predlžuje život.",
+    titleKey: "waitingRoom.announcement.seniorTitle",
+    bodyKey: "waitingRoom.announcement.seniorBody",
   },
   {
     icon: <ShieldAlert className="h-4 w-4 text-orange-500" />,
-    title: "Antiparazitiká celoročne",
-    body: "Odčervovanie a antiparazitárna prevencia nie sú len letnou záležitosťou. Poradíme vám s vhodným programom na mieru.",
+    titleKey: "waitingRoom.announcement.parasiteTitle",
+    bodyKey: "waitingRoom.announcement.parasiteBody",
   },
 ];

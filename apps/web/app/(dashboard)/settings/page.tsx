@@ -1943,6 +1943,7 @@ function ClientPaymentProcessingSection({
   onRefresh: () => void;
   onDashboard: () => void;
 }) {
+  const { t } = useI18n();
   const status = data?.enabled
     ? "ready"
     : data?.status === "action_required" || data?.status === "disabled"
@@ -2115,6 +2116,7 @@ function PlanGrid({
   onChoose: (tier: "cloud") => void;
   busyTier: string | null;
 }) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {plans.map((p) => {
@@ -3275,6 +3277,7 @@ function importPreviewRequestKey(
 }
 // ── Data Tab ─────────────────────────────────────────────────
 function DataTab() {
+  const { t } = useI18n();
   const [exportingType, setExportingType] = useState<string | null>(null);
   const [importMode, setImportMode] = useState<ImportMode | null>(null);
   const [migrationSource, setMigrationSource] = useState<

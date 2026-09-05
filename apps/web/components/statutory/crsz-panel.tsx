@@ -56,7 +56,7 @@ export function CrszPanel() {
       }
     },
     onError: (err: any) => {
-      toast.error(err.message || "Nepodarilo sa vygenerovať potvrdenie KVL SR");
+      toast.error(err.message || t("crsz.generateError"));
     },
   });
 
@@ -151,13 +151,13 @@ export function CrszPanel() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
-                    <th className="px-4 py-3">Číslo mikročipu (ISO)</th>
-                    <th className="px-4 py-3">Zviera</th>
-                    <th className="px-4 py-3">Majiteľ</th>
-                    <th className="px-4 py-3">Dátum aplikácie</th>
-                    <th className="px-4 py-3">Umiestnenie</th>
-                    <th className="px-4 py-3">Stav CRSZ</th>
-                    <th className="px-4 py-3 text-right">Potvrdenie KVL SR</th>
+                    <th className="px-4 py-3">{t("crsz.chipColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.animalColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.ownerColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.dateColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.locationColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.statusColumn")}</th>
+                    <th className="px-4 py-3 text-right">{t("crsz.certificateColumn")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -194,12 +194,12 @@ export function CrszPanel() {
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {item.location === "LEFT_NECK"
-                            ? "Ľavá strana krku"
+                            ? t("crsz.leftNeck")
                             : item.location === "INTERSCAPULAR"
-                            ? "Medzi lopatkami"
+                            ? t("crsz.interscapular")
                             : item.location === "RIGHT_NECK"
-                            ? "Pravá strana krku"
-                            : item.location}
+                            ? t("crsz.rightNeck")
+                            : t("crsz.other")}
                         </td>
                         <td className="px-4 py-3">
                           <Badge
@@ -213,12 +213,12 @@ export function CrszPanel() {
                             }
                           >
                             {item.crszStatus === "REGISTERED"
-                              ? "V CRSZ"
+                              ? t("crsz.registered")
                               : item.crszStatus === "PENDING_SUBMISSION"
-                              ? "Čaká"
+                              ? t("crsz.pending")
                               : item.crszStatus === "NOT_REGISTERED"
-                              ? "Nezaevidované"
-                              : "Zamietnuté"}
+                              ? t("crsz.notRegisteredLabel")
+                              : t("crsz.rejectedLabel")}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -230,7 +230,7 @@ export function CrszPanel() {
                             disabled={printCertMutation.isPending}
                           >
                             <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>Tlačiť potvrdenie</span>
+                            <span>{t("crsz.printCertificate")}</span>
                           </Button>
                         </td>
                       </tr>
@@ -269,11 +269,11 @@ export function CrszPanel() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
-                    <th className="px-4 py-3">Číslo PetPassu</th>
-                    <th className="px-4 py-3">Zviera & Majiteľ</th>
-                    <th className="px-4 py-3">Dátum vystavenia</th>
-                    <th className="px-4 py-3">Vakcinácia proti besnote</th>
-                    <th className="px-4 py-3">Vycestovanie (EÚ 576/2013)</th>
+                    <th className="px-4 py-3">{t("crsz.passportColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.petOwnerColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.issueDateColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.rabiesColumn")}</th>
+                    <th className="px-4 py-3">{t("crsz.travelColumn")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -300,27 +300,27 @@ export function CrszPanel() {
                             <div>
                               <div>{new Date(p.rabiesAdministeredAt).toLocaleDateString("sk-SK")}</div>
                               <div className="text-muted-foreground">
-                                Platí do: {p.rabiesValidUntil ? new Date(p.rabiesValidUntil).toLocaleDateString("sk-SK") : "—"}
+                                {t("crsz.validUntil")}: {p.rabiesValidUntil ? new Date(p.rabiesValidUntil).toLocaleDateString("sk-SK") : "—"}
                               </div>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground">Bez vakcíny</span>
+                            <span className="text-muted-foreground">{t("crsz.noVaccine")}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           {isEligible ? (
                             <Badge variant="outline" className="border-emerald-500/40 bg-emerald-50 text-emerald-700 text-xs gap-1">
                               <CheckCircle2 className="h-3 w-3" />
-                              <span>Spôsobilé na cestu</span>
+                              <span>{t("crsz.travelReady")}</span>
                             </Badge>
                           ) : p.travelEligibleFrom ? (
                             <Badge variant="outline" className="border-amber-500/40 bg-amber-50 text-amber-700 text-xs gap-1">
                               <Clock className="h-3 w-3" />
-                              <span>Lehota do {new Date(p.travelEligibleFrom).toLocaleDateString("sk-SK")}</span>
+                              <span>{t("crsz.travelDeadline", "Deadline {date}", { date: new Date(p.travelEligibleFrom).toLocaleDateString("sk-SK") })}</span>
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-xs text-muted-foreground">
-                              Neúplné údaje
+                              {t("crsz.incompleteData")}
                             </Badge>
                           )}
                         </td>
@@ -385,7 +385,7 @@ function RegisterMicrochipModal({
       onSuccess();
     },
     onError: (err: any) => {
-      toast.error(err.message || "Chyba pri registrácii mikročipu");
+      toast.error(err.message || t("crsz.registerChipError"));
     },
   });
 
@@ -394,11 +394,11 @@ function RegisterMicrochipModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatientId) {
-      toast.error("Vyberte pacienta");
+      toast.error(t("crsz.selectPatient"));
       return;
     }
     if (!validation.valid) {
-      toast.error(validation.error || "Neplatné číslo mikročipu");
+      toast.error(validation.error || t("crsz.invalidChipNumber"));
       return;
     }
 
@@ -417,7 +417,7 @@ function RegisterMicrochipModal({
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">Zaevidovať mikročip (CRSZ)</h3>
+            <h3 className="font-semibold text-base">{t("crsz.registerTitle")}</h3>
           </div>
           <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
             <X className="h-4 w-4" />
@@ -426,9 +426,9 @@ function RegisterMicrochipModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-medium block mb-1">Vyhľadať pacienta *</label>
+            <label className="text-xs font-medium block mb-1">{t("crsz.searchPatientLabel")}</label>
             <Input
-              placeholder="Napíšte aspoň 2 znaky mena pacienta..."
+              placeholder={t("crsz.searchPatientPlaceholder")}
               value={patientSearch}
               onChange={(e) => setPatientSearch(e.target.value)}
               className="mb-2"
@@ -454,7 +454,7 @@ function RegisterMicrochipModal({
           </div>
 
           <div>
-            <label className="text-xs font-medium block mb-1">15-miestny kód mikročipu (ISO 11784/11785) *</label>
+            <label className="text-xs font-medium block mb-1">{t("crsz.microchipLabel")}</label>
             <Input
               placeholder="Napr. 703098100123456"
               value={microchipNumber}
@@ -466,22 +466,22 @@ function RegisterMicrochipModal({
               {validation.valid ? (
                 <span className="text-emerald-600 flex items-center gap-1 font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Platný ISO transpondér {validation.isSlovakNationalCode ? "(Slovenský kód 703)" : validation.countryOrManufacturer ? "(" + validation.countryOrManufacturer + ")" : ""}
+                  {t("crsz.validTransponder")} {validation.isSlovakNationalCode ? "(" + t("crsz.slovakCode") + ")" : validation.countryOrManufacturer ? "(" + validation.countryOrManufacturer + ")" : ""}
                 </span>
               ) : microchipNumber.length > 0 ? (
                 <span className="text-rose-600 flex items-center gap-1">
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  {validation.error} ({microchipNumber.replace(/\D/g, "").length}/15 číslic)
+                  {validation.error} ({t("crsz.digitsCount", "{count}/15 digits", { count: microchipNumber.replace(/\D/g, "").length })})
                 </span>
               ) : (
-                <span className="text-muted-foreground">Vyžaduje presne 15 číslic</span>
+                <span className="text-muted-foreground">{t("crsz.requiresDigits")}</span>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium block mb-1">Dátum aplikácie *</label>
+              <label className="text-xs font-medium block mb-1">{t("crsz.implantDateLabel")}</label>
               <Input
                 type="date"
                 value={implantedAt}
@@ -490,27 +490,27 @@ function RegisterMicrochipModal({
               />
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1">Umiestnenie čipu</label>
+              <label className="text-xs font-medium block mb-1">{t("crsz.chipLocationLabel")}</label>
               <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value as any)}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs"
               >
-                <option value="LEFT_NECK">Ľavá strana krku</option>
-                <option value="INTERSCAPULAR">Medzi lopatkami</option>
-                <option value="RIGHT_NECK">Pravá strana krku</option>
-                <option value="OTHER">Iné</option>
+                <option value="LEFT_NECK">{t("crsz.leftNeck")}</option>
+                <option value="INTERSCAPULAR">{t("crsz.interscapular")}</option>
+                <option value="RIGHT_NECK">{t("crsz.rightNeck")}</option>
+                <option value="OTHER">{t("crsz.other")}</option>
               </select>
             </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Zrušiť
+              {t("common.cancel")}
             </Button>
             <Button type="submit" size="sm" disabled={registerMutation.isPending || !validation.valid}>
               {registerMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Zaevidovať v CRSZ
+              {t("crsz.registerInCRSZ")}
             </Button>
           </div>
         </form>
@@ -545,14 +545,14 @@ function IssuePassportModal({
       onSuccess();
     },
     onError: (err: any) => {
-      toast.error(err.message || "Chyba pri vystavení pasu");
+      toast.error(err.message || t("crsz.petpassError"));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatientId) {
-      toast.error("Vyberte pacienta");
+      toast.error(t("crsz.selectPatient"));
       return;
     }
     issueMutation.mutate({
@@ -570,7 +570,7 @@ function IssuePassportModal({
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <Plane className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">Vystaviť PetPass zvieraťa</h3>
+            <h3 className="font-semibold text-base">{t("crsz.passportTitle")}</h3>
           </div>
           <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
             <X className="h-4 w-4" />
@@ -579,9 +579,9 @@ function IssuePassportModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-medium block mb-1">Vyhľadať pacienta *</label>
+            <label className="text-xs font-medium block mb-1">{t("crsz.searchPatientLabel")}</label>
             <Input
-              placeholder="Napíšte aspoň 2 znaky mena pacienta..."
+              placeholder={t("crsz.searchPatientPlaceholder")}
               value={patientSearch}
               onChange={(e) => setPatientSearch(e.target.value)}
               className="mb-2"
@@ -608,7 +608,7 @@ function IssuePassportModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium block mb-1">Číslo PetPassu *</label>
+              <label className="text-xs font-medium block mb-1">{t("crsz.passportNumberLabel")}</label>
               <Input
                 placeholder="SK-12345678"
                 value={passportNumber}
@@ -617,7 +617,7 @@ function IssuePassportModal({
               />
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1">Dátum vystavenia *</label>
+              <label className="text-xs font-medium block mb-1">{t("crsz.issueDateLabel")}</label>
               <Input
                 type="date"
                 value={issuedAt}
@@ -629,7 +629,7 @@ function IssuePassportModal({
 
           <div className="rounded-lg border border-border p-3 space-y-3 bg-muted/20">
             <div>
-              <label className="text-xs font-medium block mb-1">Dátum vakcinácie proti besnote</label>
+              <label className="text-xs font-medium block mb-1">{t("crsz.rabiesDateLabel")}</label>
               <Input
                 type="date"
                 value={rabiesDate}
@@ -644,17 +644,17 @@ function IssuePassportModal({
                 onChange={(e) => setIsBooster(e.target.checked)}
                 className="rounded border-input text-primary h-4 w-4"
               />
-              <span>Ide o revakcináciu (booster v platnosti - bez 21-dňovej lehoty)</span>
+              <span>{t("crsz.isBooster")}</span>
             </label>
           </div>
 
           <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Zrušiť
+              {t("common.cancel")}
             </Button>
             <Button type="submit" size="sm" disabled={issueMutation.isPending}>
               {issueMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Vystaviť pas
+              {t("crsz.issuePassport")}
             </Button>
           </div>
         </form>
