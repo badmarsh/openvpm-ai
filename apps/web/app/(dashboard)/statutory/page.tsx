@@ -18,6 +18,7 @@ import {
   Calendar,
   ExternalLink,
   ShieldCheck,
+  Clock,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -27,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { CrszPanel } from "@/components/statutory/crsz-panel";
 
-type StatutoryTab = "rabies" | "treatment" | "euthanasia" | "narcotics" | "protocols" | "crsz";
+type StatutoryTab = "rabies" | "treatment" | "withdrawals" | "euthanasia" | "narcotics" | "protocols" | "crsz";
 
 function downloadStatutoryCsv(
   filename: string,
@@ -456,6 +457,15 @@ export default function StatutoryPage() {
           <span>{t("statutory.tabs.treatment", "Kniha ošetrení")}</span>
         </Button>
         <Button
+          variant={activeTab === "withdrawals" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("withdrawals")}
+          className="gap-2"
+        >
+          <Clock className="h-4 w-4" />
+          <span>{t("statutory.tabs.withdrawals", "Ochranné lehoty")}</span>
+        </Button>
+        <Button
           variant={activeTab === "euthanasia" ? "default" : "ghost"}
           size="sm"
           onClick={() => setActiveTab("euthanasia")}
@@ -497,6 +507,7 @@ export default function StatutoryPage() {
       <div>
         {activeTab === "rabies" && <RabiesRegisterTab />}
         {activeTab === "treatment" && <TreatmentDiaryTab />}
+        {activeTab === "withdrawals" && <WithdrawalPeriodsTab />}
         {activeTab === "euthanasia" && <EuthanasiaRegisterTab />}
         {activeTab === "narcotics" && <NarcoticsTab />}
         {activeTab === "protocols" && <ProtocolsTab />}
@@ -1040,6 +1051,249 @@ function TreatmentDiaryTab() {
       </div>
       <div className="text-right text-xs text-muted-foreground">
         {t("statutory.treatment.totalTreatments", "Total treatments: {count}", { count: data?.totalCount ?? 0 })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 2b. Withdrawal Periods Register (Kniha ochranných lehôt pre potravinové zvieratá)
+// Zákon č. 39/2007 Z. z. a Zákon č. 139/1998 Z. z.
+// ---------------------------------------------------------------------------
+function WithdrawalPeriodsTab() {
+  const { t } = useI18n();
+  const [activeOnly, setActiveOnly] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = trpc.extensions.statutory.listWithdrawalPeriods.useQuery({
+    activeOnly,
+    limit: 100,
+  });
+
+  const filteredItems = useMemo(() => {
+    if (!data?.items) return [];
+    if (!search.trim()) return data.items;
+    const q = search.toLowerCase();
+    return (data.items as any[]).filter(
+      (i: any) =>
+        i.patientName.toLowerCase().includes(q) ||
+        i.species.toLowerCase().includes(q) ||
+        i.medicationName.toLowerCase().includes(q) ||
+        (i.clientLastName && i.clientLastName.toLowerCase().includes(q)) ||
+        (i.batchNumber && i.batchNumber.toLowerCase().includes(q))
+    );
+  }, [data?.items, search]);
+
+  const handleExportCsv = () => {
+    if (!filteredItems.length) return;
+    const now = new Date();
+    const headers = [
+      "Dátum podania",
+      "Pacient",
+      "Druh",
+      "Kategória",
+      "Mikročip",
+      "Vlastník zvieraťa",
+      "Telefón",
+      "Liečivo",
+      "Šarža",
+      "OL Mäso (dní)",
+      "OL Mlieko (dní)",
+      "Bezpečné od (dátum)",
+      "Aktuálny stav",
+    ];
+    const rows = (filteredItems as any[]).map((i: any) => {
+      const isRunning = new Date(i.safeUntil) > now;
+      return [
+        formatDate(i.administeredAt),
+        i.patientName,
+        i.species,
+        i.targetAnimalType,
+        i.microchipNumber || "—",
+        `${i.clientFirstName || ""} ${i.clientLastName || ""}`.trim(),
+        i.clientPhone || "—",
+        i.medicationName,
+        i.batchNumber || "—",
+        i.meatWithdrawalDays ?? 0,
+        i.milkWithdrawalDays ?? 0,
+        formatDate(i.safeUntil),
+        isRunning ? "V OCHRANNEJ LEHOTE (ZÁKAZ PORÁŽKY/KONZUMU)" : "Uplynula (bezpečná konzumácia)",
+      ];
+    });
+    downloadStatutoryCsv(
+      `ochranne_lehoty_potravinove_zvierata_${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows
+    );
+  };
+
+  const handlePrintInspection = () => {
+    if (!filteredItems.length) return;
+    const now = new Date();
+    const headers = [
+      "Dátum podania",
+      "Pacient & Druh",
+      "Vlastník & Kontakt",
+      "Podané liečivo / Šarža",
+      "OL Mäso / Mlieko",
+      "Koniec ochrannej lehoty",
+      "Stav",
+    ];
+    const rows = (filteredItems as any[]).map((i: any) => {
+      const isRunning = new Date(i.safeUntil) > now;
+      return [
+        formatDate(i.administeredAt),
+        `${i.patientName} (${i.species})`,
+        `${i.clientFirstName || ""} ${i.clientLastName || ""} (${i.clientPhone || "—"})`.trim(),
+        `${i.medicationName}${i.batchNumber ? ` (šarža: ${i.batchNumber})` : ""}`,
+        `Mäso: ${i.meatWithdrawalDays ?? 0} d | Mlieko: ${i.milkWithdrawalDays ?? 0} d`,
+        formatDate(i.safeUntil),
+        isRunning ? "V OCHRANNEJ LEHOTE" : "Uplynula",
+      ];
+    });
+    openInspectionPrintView({
+      title: "Evidencia Ochranných Lehôt Potravinových Zvierat",
+      statutoryReference: "Evidencia v zmysle § 22 zákona č. 39/2007 Z. z. a zákona č. 139/1998 Z. z.",
+      subtitle: "Úradný záznam o aplikácii liečiv a dodržaní ochranných lehôt pre mäso a mlieko hospodárskych zvierat",
+      headers,
+      rows,
+      summaryNotes: "Zákaz porážky alebo dodávky živočíšnych produktov na ľudskú spotrebu pred uplynutím stanovenej ochrannej lehoty. V zmysle kontrol ŠVPS SR.",
+    });
+  };
+
+  const now = new Date();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 flex-wrap items-center gap-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("statutory.withdrawals.searchPlaceholder", "Hľadať zviera, liečivo, šaržu alebo majiteľa...")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={activeOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveOnly(!activeOnly)}
+              className="h-9 text-xs"
+            >
+              <Clock className="h-3.5 w-3.5 mr-1" />
+              <span>{activeOnly ? "Len aktívne lehoty" : "Všetky záznamy"}</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={!filteredItems.length}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintInspection}
+            disabled={!filteredItems.length}
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            <span>{t("statutory.print", "Tlačiť inšpekčný záznam")}</span>
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        {isLoading ? (
+          <div className="flex h-48 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : !filteredItems.length ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            Žiadne záznamy o ochranných lehotách neboli nájdené.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-border bg-muted/60 text-muted-foreground">
+                <tr>
+                  <th className="p-3">Dátum podania</th>
+                  <th className="p-3">Zviera & Vlastník</th>
+                  <th className="p-3">Liečivo & Šarža</th>
+                  <th className="p-3">OL Mäso</th>
+                  <th className="p-3">OL Mlieko</th>
+                  <th className="p-3">Koniec lehoty</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {(filteredItems as any[]).map((row: any) => {
+                  const isRunning = new Date(row.safeUntil) > now;
+                  return (
+                    <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-3 font-medium whitespace-nowrap">
+                        {formatDate(row.administeredAt)}
+                      </td>
+                      <td className="p-3">
+                        <div className="font-semibold text-foreground">{row.patientName}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {row.species} • {row.clientFirstName} {row.clientLastName}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="font-medium text-foreground">{row.medicationName}</div>
+                        {row.batchNumber && (
+                          <div className="text-[11px] text-muted-foreground">
+                            Šarža: {row.batchNumber}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className="font-medium">{row.meatWithdrawalDays ?? 0} dní</span>
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className="font-medium">{row.milkWithdrawalDays ?? 0} dní</span>
+                      </td>
+                      <td className="p-3 whitespace-nowrap font-medium">
+                        {formatDate(row.safeUntil)}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        {isRunning ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-[10px]"
+                          >
+                            V OCHRANNEJ LEHOTE
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-[10px]"
+                          >
+                            Uplynula
+                          </Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <div className="text-right text-xs text-muted-foreground">
+        Celkom záznamov: {filteredItems.length}
       </div>
     </div>
   );

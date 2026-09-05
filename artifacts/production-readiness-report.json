@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0.0",
+  "gitCommitSha": "de23d49",
+  "branchName": "arena/01a071dd-openvpm-ai",
+  "timestamp": "2026-09-05T12:00:00+02:00",
+  "toolchain": {
+    "node": "v22.22.3",
+    "pnpm": "not available on PATH in audit environment",
+    "packageManagerField": "pnpm@9.15.0"
+  },
+  "commandsRun": [
+    {
+      "command": "node -v",
+      "result": "v22.22.3"
+    },
+    {
+      "command": "which pnpm",
+      "result": "not found (exit 1)"
+    },
+    {
+      "command": "test -d node_modules",
+      "result": "missing"
+    },
+    {
+      "command": "pnpm install --frozen-lockfile",
+      "result": "not executed"
+    },
+    {
+      "command": "pnpm type-check",
+      "result": "not executed"
+    },
+    {
+      "command": "pnpm test",
+      "result": "not executed"
+    },
+    {
+      "command": "pnpm build",
+      "result": "not executed"
+    },
+    {
+      "command": "pnpm db:migrate",
+      "result": "not executed"
+    },
+    {
+      "command": "pnpm test:e2e",
+      "result": "not executed"
+    }
+  ],
+  "qualityGates": {
+    "installFrozenLockfile": "not_run",
+    "format": "not_configured_as_standalone_gate",
+    "lint": "bundled_in_next_build_not_run",
+    "typecheck": "not_run",
+    "unitAndIntegrationTests": "not_run",
+    "productionBuild": "not_run",
+    "migrationValidation": "not_run",
+    "e2eCriticalPath": "not_run",
+    "dependencyAudit": "not_run",
+    "secretScan": "verify-oss-release_defined_not_run",
+    "schemaArtifacts": "ci_job_defined_not_run"
+  },
+  "testCounts": {
+    "trackedTestFilesApproximate": 480,
+    "note": "file count from find; not a vitest summary"
+  },
+  "migrationVerification": "not_run",
+  "e2eCriticalPathResult": "not_run",
+  "securityScanResults": {
+    "verifyOssRelease": "defined",
+    "pnpmAuditProdHigh": "defined_in_ci_not_run",
+    "gitleaks": "not_present"
+  },
+  "unresolvedFindings": {
+    "P0": [
+      "R-P0-001 e-Kasa PKP is HMAC placeholder, not FR SR RSA",
+      "R-P0-002 quality gates not executed in this environment",
+      "R-P0-003 exhaustive public /api handler auth inventory not completed"
+    ],
+    "P1": [
+      "R-P1-001 no prior git tags; version 0.1.0",
+      "R-P1-002 restore drill not in CI",
+      "R-P1-004 Playwright not in ci.yml",
+      "R-P1-006 AI subprocessors require DPA",
+      "R-P1-007 multi-location not production-validated"
+    ],
+    "P2": [
+      "R-P2-001 CLAUDE.md db:push vs migrate",
+      "R-P2-002 i18n symmetry not in CI"
+    ]
+  },
+  "blockedItems": [
+    {
+      "item": "Full clean verification from fresh environment",
+      "reason": "pnpm and node_modules unavailable in sandbox",
+      "owner": "engineering",
+      "expiry": "2026-09-19"
+    }
+  ],
+  "assumptions": [
+    "RPO/RTO not operator-accepted",
+    "Hosted production env completeness unknown",
+    "GitHub branch protection unknown",
+    "No GitHub Release published by this work"
+  ],
+  "releaseRecommendation": "GO FOR PILOT",
+  "releaseRecommendationRationale": "Core PIMS has substantial tenant, RLS, health, and messaging fail-closed design in source and CI definitions. This checkout could not re-run those gates. Slovak e-Kasa must stay disabled. Not GO FOR GENERAL AVAILABILITY. Not 10/10.",
+  "tenOutOfTen": false
+}
