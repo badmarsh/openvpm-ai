@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { ReceiptText, Megaphone, Newspaper, Tv, HeartHandshake, Database, Image as ImageIcon, Mic } from "lucide-react";
+import { ReceiptText, Megaphone, Newspaper, Tv, HeartHandshake, Database, Image as ImageIcon, Mic, Palette } from "lucide-react";
 
 export type UserRole =
   | "admin"
@@ -40,6 +40,13 @@ export const customNavItems: CustomNavItem[] = [
     label: "Marketing Studio",
     i18nKey: "nav.marketing",
     icon: Megaphone,
+    roles: ["admin", "veterinarian"],
+  },
+  {
+    href: "/marketing/brand-kit",
+    label: "Brand Kit",
+    i18nKey: "nav.marketingBrandKit",
+    icon: Palette,
     roles: ["admin", "veterinarian"],
   },
   {

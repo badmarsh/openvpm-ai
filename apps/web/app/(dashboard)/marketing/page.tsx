@@ -180,7 +180,7 @@ export default function MarketingStudioPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/settings">
+          <Link href="/marketing/brand-kit">
             <Button
               variant="outline"
               size="sm"
