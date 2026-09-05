@@ -27,6 +27,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
+import { EkasaReceiptsSkeleton } from "@/components/ui/content-skeletons";
+import { ThermalReceiptDrawer } from "@/components/ekasa/thermal-receipt-drawer";
 
 type ReceiptStatus = "PENDING" | "SENT" | "CONFIRMED" | "FAILED" | "OFFLINE_STORED";
 type ActiveTab = "receipts" | "closures" | "accountant";
@@ -95,6 +98,7 @@ function EkasaReceiptsContent() {
   const [offset, setOffset] = useState(0);
   const [statusFilter, setStatusFilter] = useState<ReceiptStatus | undefined>();
   const [printingId, setPrintingId] = useState<string | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
 
   // Filter for accountant export
   const now = new Date();
@@ -102,6 +106,7 @@ function EkasaReceiptsContent() {
   const [exportMonth, setExportMonth] = useState<number>(now.getMonth() + 1);
 
   const utils = trpc.useUtils();
+  const { data: ekasaConfig } = trpc.ekasa.getConfig.useQuery();
 
   // Queries
   const {
@@ -326,8 +331,8 @@ function EkasaReceiptsContent() {
           {/* Table */}
           <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
             {isLoadingReceipts ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <div className="p-4">
+                <EkasaReceiptsSkeleton />
               </div>
             ) : !receipts || receipts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -365,18 +370,28 @@ function EkasaReceiptsContent() {
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {receipts.map((r) => {
-                      const statusCfg =
-                        STATUS_CONFIG[r.status as ReceiptStatus] ??
-                        STATUS_CONFIG.PENDING;
-                      const StatusIcon = statusCfg.icon;
+                      const statusVariant =
+                        r.status === "CONFIRMED"
+                          ? "confirmed"
+                          : r.status === "OFFLINE_STORED"
+                          ? "offline"
+                          : r.status === "FAILED"
+                          ? "failed"
+                          : "pending";
                       const isPrintingThis = printingId === r.id;
 
                       return (
-                        <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+                        <tr
+                          key={r.id}
+                          onClick={() => setSelectedReceipt(r)}
+                          className="hover:bg-muted/30 cursor-pointer transition-colors group"
+                        >
                           <td className="px-4 py-3 font-mono font-medium text-xs">
-                            {r.receiptNumber}
+                            <span className="group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
+                              {r.receiptNumber}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap font-mono tabular-nums">
                             {r.issuedAt
                               ? new Date(r.issuedAt).toLocaleString("sk-SK", {
                                   dateStyle: "short",
@@ -384,28 +399,56 @@ function EkasaReceiptsContent() {
                                 })
                               : "—"}
                           </td>
-                          <td className="px-4 py-3 font-semibold tabular-nums text-foreground">
+                          <td className="px-4 py-3 font-semibold font-mono tabular-nums text-foreground">
                             {Number(r.amountTotal).toFixed(2)} €
                           </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                          <td className="px-4 py-3 text-xs text-muted-foreground font-mono tabular-nums">
                             {VAT_LABEL[r.vatRate] ?? r.vatRate}
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">
                             {PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}
                           </td>
                           <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusCfg.color}`}
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {statusCfg.label}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <StatusPulseBadge
+                                variant={statusVariant}
+                                label={STATUS_CONFIG[r.status as ReceiptStatus]?.label}
+                              />
+                              {r.status === "OFFLINE_STORED" && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    retryMutation.mutate({ receiptId: r.id });
+                                  }}
+                                  disabled={retryMutation.isPending}
+                                  title="Synchronizovať offline doklad s Finančnou správou"
+                                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-500/25 transition-all shadow-2xs"
+                                >
+                                  <RefreshCw
+                                    className={`h-2.5 w-2.5 ${
+                                      retryMutation.isPending ? "animate-spin" : ""
+                                    }`}
+                                  />
+                                  <span>Sync FS</span>
+                                </button>
+                              )}
+                            </div>
                           </td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground max-w-[120px] truncate">
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground max-w-[120px] truncate tabular-nums">
                             {r.uid ?? "—"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setSelectedReceipt(r)}
+                                title="Náhľad termálneho dokladu"
+                                className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors"
+                              >
+                                <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+                                Náhľad
+                              </button>
+
                               <button
                                 onClick={() => handlePrint(r.id)}
                                 disabled={isPrintingThis}
@@ -420,8 +463,7 @@ function EkasaReceiptsContent() {
                                 Tlačiť
                               </button>
 
-                              {(r.status === "FAILED" ||
-                                r.status === "OFFLINE_STORED") && (
+                              {r.status === "FAILED" && (
                                 <button
                                   onClick={() => retryMutation.mutate({ receiptId: r.id })}
                                   disabled={retryMutation.isPending}
@@ -771,6 +813,22 @@ function EkasaReceiptsContent() {
           )}
         </div>
       )}
+
+      {/* Thermal Receipt Inspection Drawer */}
+      <ThermalReceiptDrawer
+        receipt={selectedReceipt}
+        open={Boolean(selectedReceipt)}
+        onClose={() => setSelectedReceipt(null)}
+        onPrint={handlePrint}
+        onRetry={async (id) => {
+          await retryMutation.mutateAsync({ receiptId: id });
+        }}
+        isPrinting={printingId === selectedReceipt?.id}
+        isRetrying={retryMutation.isPending}
+        dic={ekasaConfig?.dic}
+        icDph={ekasaConfig?.icDph}
+        pokladnicaId={ekasaConfig?.pokladnicaId}
+      />
     </div>
   );
 }
@@ -779,8 +837,8 @@ export default function EkasaReceiptsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="p-6">
+          <EkasaReceiptsSkeleton />
         </div>
       }
     >

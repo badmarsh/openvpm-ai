@@ -2045,7 +2045,10 @@
       "reactionOptional": "Reaction (optional)",
       "saveAllergy": "Save allergy",
       "add": "Add",
-      "legacyAllergyRemoval": "Legacy removal retained. This predates permanent allergy correction attribution, so no reason or clinician is available."
+      "legacyAllergyRemoval": "Legacy removal retained. This predates permanent allergy correction attribution, so no reason or clinician is available.",
+      "microchipCopied": "Microchip copied to clipboard",
+      "copyMicrochip": "Click to copy microchip",
+      "callClient": "Call client"
     },
     "vitals": {
       "title": "Vitals",
@@ -2286,6 +2289,16 @@
         "current": "Current",
         "corrected": "Corrected / retained"
       }
+    },
+    "sympathy": {
+      "inMemoriam": "In Memoriam",
+      "gateActive": "Sympathy Gate Active",
+      "notice": "This patient is marked as deceased. Automated reminders, vaccination alerts, marketing, and client portal notifications are respectfully suppressed."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "deceased": "Deceased"
     }
   },
   "recalls": {
@@ -2463,7 +2476,15 @@
     "performedBy": "Performed by",
     "anesthesia": "Anesthesia",
     "noProceduresRecorded": "No procedures recorded",
-    "searchPatientTop": "Search for a patient above to view their medical records"
+    "searchPatientTop": "Search for a patient above to view their medical records",
+    "soap": {
+      "clinicianApproved": "Clinician Approved",
+      "vitalsSnapshot": "Vitals Snapshot",
+      "subjective": "Subjective (S)",
+      "objective": "Objective (O)",
+      "assessment": "Assessment (A)",
+      "plan": "Plan (P)"
+    }
   },
   "records.backToVisit": "Back to visit",
   "records.changePatient": "Change Patient",
@@ -4698,5 +4719,23 @@
   },
   "button": {
     "copy": "Copy"
+  },
+  "ekasa": {
+    "drawer": {
+      "title": "Thermal e-Kasa Receipt",
+      "subtitle": "Official Slovak Financial Administration receipt preview",
+      "securityHeader": "e-Kasa Security Block",
+      "registered": "REGISTERED ONLINE",
+      "offline": "STORED OFFLINE",
+      "printAction": "Print Thermal Receipt",
+      "closeAction": "Close",
+      "vatSchedule": "VAT Breakdown",
+      "total": "TOTAL",
+      "cashRegisterCode": "Cash Register Code",
+      "receiptNumber": "Receipt No."
+    },
+    "syncFs": "Sync FS",
+    "syncPending": "Syncing...",
+    "viewReceipt": "View receipt"
   }
 }

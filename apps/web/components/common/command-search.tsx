@@ -23,9 +23,14 @@ import {
   FlaskConical,
   BellRing,
   Archive,
+  Receipt,
+  Shield,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
+import { useGuiTheme } from "@/lib/theme/theme-context";
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
 
@@ -90,6 +95,18 @@ const navigationItems: CommandItemConfig[] = [
     Icon: Archive,
     roles: allRoles,
   },
+  {
+    label: "e-Kasa Terminal",
+    href: "/billing/ekasa",
+    Icon: Receipt,
+    roles: allRoles,
+  },
+  {
+    label: "Controlled Substances",
+    href: "/controlled-substances",
+    Icon: Shield,
+    roles: ["admin", "veterinarian"],
+  },
   { label: "Settings", href: "/settings", Icon: Settings, roles: ["admin"] },
 ];
 
@@ -107,10 +124,34 @@ const quickActionItems: CommandItemConfig[] = [
     roles: ["admin", "veterinarian", "technician", "front_desk"],
   },
   {
+    label: "New Appointment",
+    href: "/schedule?new=1",
+    Icon: Calendar,
+    roles: ["admin", "veterinarian", "technician", "front_desk"],
+  },
+  {
+    label: "New SOAP Note",
+    href: "/records?tab=soap&new=1",
+    Icon: FileText,
+    roles: ["admin", "veterinarian", "technician"],
+  },
+  {
     label: "New Invoice",
     href: "/billing/new",
     Icon: Euro,
     roles: ["admin", "front_desk"],
+  },
+  {
+    label: "Issue Receipt",
+    href: "/billing/new",
+    Icon: Receipt,
+    roles: ["admin", "front_desk"],
+  },
+  {
+    label: "Open e-Kasa",
+    href: "/billing/ekasa",
+    Icon: Receipt,
+    roles: ["admin", "veterinarian", "front_desk"],
   },
 ];
 
@@ -127,6 +168,7 @@ export function CommandSearch({
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { setMode } = useGuiTheme();
   const role = isUserRole(session?.user?.role) ? session.user.role : undefined;
   const canUseCommandSearch = status === "authenticated" && role !== undefined;
   const [search, setSearch] = useState("");
@@ -186,15 +228,15 @@ export function CommandSearch({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] p-4 animate-in fade-in duration-150"
       role="dialog"
       aria-label="Search"
       aria-modal="true"
     >
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative mx-4 w-full max-w-2xl rounded-lg border border-border bg-background shadow-elevated">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={onClose} />
+      <div className="relative mx-auto w-full max-w-2xl overflow-hidden rounded-xl border border-border/80 bg-background/95 backdrop-blur-md shadow-2xl ring-1 ring-black/5 dark:ring-white/10 animate-in zoom-in-95 duration-150">
         <Command className="flex flex-col" shouldFilter={!hasQuery}>
-          <div className="flex items-center border-b border-border px-3">
+          <div className="flex items-center border-b border-border/70 px-3 bg-muted/10">
             {isSearching ? (
               <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
             ) : (
@@ -203,18 +245,18 @@ export function CommandSearch({
             <Command.Input
               value={search}
               onValueChange={setSearch}
-              placeholder="Search patients, clients, or navigate..."
-              className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+              placeholder="Search patients by name, chip, owner phone, or navigate..."
+              className="flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground font-medium"
             />
             <button
               onClick={onClose}
-              className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+              className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          <Command.List className="max-h-80 overflow-y-auto p-2">
+          <Command.List className="max-h-96 overflow-y-auto p-2">
             {searchUnavailable && (
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                 <AlertCircle className="mx-auto mb-2 h-5 w-5 text-destructive" />
@@ -270,24 +312,38 @@ export function CommandSearch({
                     key={patient.id}
                     value={`patient-${patient.id}`}
                     onSelect={() => navigate(`/patients/${patient.id}`)}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm aria-selected:bg-accent"
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
                   >
-                    <span className="text-base">
-                      {speciesEmoji[patient.species ?? "other"] ??
-                        "\uD83D\uDC3E"}
-                    </span>
-                    <span className="font-medium">{patient.name}</span>
-                    {patient.breed && (
-                      <span className="text-muted-foreground">
-                        {patient.breed}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-base shrink-0">
+                        {speciesEmoji[patient.species ?? "other"] ??
+                          "\uD83D\uDC3E"}
                       </span>
-                    )}
-                    {(patient.clientFirstName || patient.clientLastName) && (
-                      <span className="text-muted-foreground">
-                        Owner:{" "}
-                        {[patient.clientFirstName, patient.clientLastName]
-                          .filter(Boolean)
-                          .join(" ")}
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">{patient.name}</span>
+                          {patient.breed && (
+                            <span className="text-xs text-muted-foreground truncate">
+                              {patient.breed}
+                            </span>
+                          )}
+                        </div>
+                        {(patient.clientFirstName || patient.clientLastName) && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            Owner:{" "}
+                            {[patient.clientFirstName, patient.clientLastName]
+                              .filter(Boolean)
+                              .join(" ")}
+                            {patient.clientPhone && (
+                              <span className="font-mono tabular-nums"> · {patient.clientPhone}</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {patient.microchipNumber && (
+                      <span className="shrink-0 rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground tabular-nums">
+                        Chip: {patient.microchipNumber}
                       </span>
                     )}
                   </Command.Item>
@@ -305,19 +361,76 @@ export function CommandSearch({
                     key={client.id}
                     value={`client-${client.id}`}
                     onSelect={() => navigate(`/clients/${client.id}`)}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm aria-selected:bg-accent"
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
                   >
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {client.firstName} {client.lastName}
-                    </span>
-                    {client.email && (
-                      <span className="text-muted-foreground">
-                        {client.email}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-foreground">
+                          {client.firstName} {client.lastName}
+                        </span>
+                        {client.email && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            {client.email}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {client.phone && (
+                      <span className="font-mono text-xs text-muted-foreground tabular-nums shrink-0">
+                        {client.phone}
                       </span>
                     )}
                   </Command.Item>
                 ))}
+              </Command.Group>
+            )}
+
+            {/* Quick Actions (shown when no search query) */}
+            {!hasQuery && visibleQuickActionItems.length > 0 && (
+              <Command.Group
+                heading="Quick Actions"
+                className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+              >
+                {visibleQuickActionItems.map(({ label, href, Icon }) => (
+                  <Command.Item
+                    key={href + label}
+                    onSelect={() => navigate(href)}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                  >
+                    <Icon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-medium">{label}</span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
+
+            {/* Theme Actions */}
+            {!hasQuery && (
+              <Command.Group
+                heading="Appearance & Theme"
+                className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+              >
+                <Command.Item
+                  onSelect={() => {
+                    setMode("light");
+                    onClose();
+                  }}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                >
+                  <Sun className="h-4 w-4 text-amber-500 shrink-0" />
+                  <span>Switch to Light Theme</span>
+                </Command.Item>
+                <Command.Item
+                  onSelect={() => {
+                    setMode("dark");
+                    onClose();
+                  }}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                >
+                  <Moon className="h-4 w-4 text-primary shrink-0" />
+                  <span>Switch to Dark Theme</span>
+                </Command.Item>
               </Command.Group>
             )}
 
@@ -331,33 +444,28 @@ export function CommandSearch({
                   <Command.Item
                     key={href}
                     onSelect={() => navigate(href)}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm aria-selected:bg-accent"
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
                   >
-                    <Icon className="h-4 w-4" />
-                    {label}
-                  </Command.Item>
-                ))}
-              </Command.Group>
-            )}
-
-            {!hasQuery && visibleQuickActionItems.length > 0 && (
-              <Command.Group
-                heading="Quick Actions"
-                className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
-              >
-                {visibleQuickActionItems.map(({ label, href, Icon }) => (
-                  <Command.Item
-                    key={href}
-                    onSelect={() => navigate(href)}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm aria-selected:bg-accent"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {label}
+                    <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{label}</span>
                   </Command.Item>
                 ))}
               </Command.Group>
             )}
           </Command.List>
+
+          {/* Footer Shortcuts Bar */}
+          <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">↑↓</kbd>
+              <span>to navigate</span>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">↵</kbd>
+              <span>to select</span>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">esc</kbd>
+              <span>to close</span>
+            </div>
+            <span className="font-mono text-[10px] opacity-70">Cmd+K Spotlight</span>
+          </div>
         </Command>
       </div>
     </div>

@@ -192,8 +192,10 @@ function patientOwnerSearchConditions(value: string): SQL[] {
       or(
         literalPatientSearchMatch(patients.name, token),
         literalPatientSearchMatch(patients.breed, token),
+        literalPatientSearchMatch(patients.microchipNumber, token),
         literalPatientSearchMatch(clients.firstName, token),
         literalPatientSearchMatch(clients.lastName, token),
+        literalPatientSearchMatch(clients.phone, token),
       )!,
   );
 }
@@ -938,8 +940,10 @@ export const patientsRouter = createRouter({
           name: patients.name,
           species: patients.species,
           breed: patients.breed,
+          microchipNumber: patients.microchipNumber,
           clientFirstName: clients.firstName,
           clientLastName: clients.lastName,
+          clientPhone: clients.phone,
         })
         .from(patients)
         .leftJoin(

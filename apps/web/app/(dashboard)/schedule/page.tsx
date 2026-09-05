@@ -218,6 +218,49 @@ function getAppointmentLayout(
 }
 
 function getAppointmentColor(appointment: Appointment): string {
+  if (
+    appointment.typeColor &&
+    appointment.typeColor !== DEFAULT_APPOINTMENT_COLOR
+  ) {
+    return appointment.typeColor;
+  }
+  const typeLower = (appointment.typeName ?? "").toLowerCase();
+  if (
+    typeLower.includes("well") ||
+    typeLower.includes("prevent") ||
+    typeLower.includes("vakc") ||
+    typeLower.includes("vacc") ||
+    typeLower.includes("očkov") ||
+    typeLower.includes("checkup")
+  ) {
+    return "#10b981"; // Emerald/teal (Wellness)
+  }
+  if (
+    typeLower.includes("surg") ||
+    typeLower.includes("oper") ||
+    typeLower.includes("chirurg") ||
+    typeLower.includes("dent") ||
+    typeLower.includes("zákrok")
+  ) {
+    return "#8b5cf6"; // Purple/violet (Surgery)
+  }
+  if (
+    typeLower.includes("urg") ||
+    typeLower.includes("emerg") ||
+    typeLower.includes("akút") ||
+    typeLower.includes("pohot") ||
+    typeLower.includes("stat") ||
+    typeLower.includes("urgent")
+  ) {
+    return "#f43f5e"; // Rose/amber (Urgent/Emergency)
+  }
+  if (
+    typeLower.includes("follow") ||
+    typeLower.includes("kontr") ||
+    typeLower.includes("recheck")
+  ) {
+    return "#0284c7"; // Sky/indigo (Follow-up)
+  }
   return appointment.typeColor || DEFAULT_APPOINTMENT_COLOR;
 }
 
@@ -420,7 +463,7 @@ function TimeSlots() {
         className="relative"
         style={{ height: hour < END_HOUR ? HOUR_HEIGHT : 0 }}
       >
-        <span className="absolute -top-3 right-3 text-xs text-muted-foreground select-none">
+        <span className="absolute -top-3 right-3 text-xs text-muted-foreground select-none font-mono tabular-nums">
           {label}
         </span>
       </div>
@@ -484,24 +527,24 @@ function AppointmentBlock({
     <button
       type="button"
       onClick={onClick}
-      className="absolute rounded-md px-2 py-1 text-left text-xs overflow-hidden cursor-pointer transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+      className="group absolute rounded-lg px-2.5 py-1 text-left text-xs overflow-hidden cursor-pointer transition-all duration-150 hover:brightness-95 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 border border-border/40"
       style={{
         top,
         height,
         left: `calc(${leftPct}% + 3px)`,
         width: `calc(${widthPct}% - 6px)`,
-        backgroundColor: `${bgColor}20`,
-        borderLeft: `3px solid ${bgColor}`,
+        backgroundColor: `${bgColor}18`,
+        borderLeft: `3.5px solid ${bgColor}`,
       }}
     >
       <div className="flex items-center gap-1.5 font-medium text-foreground truncate">
         <StatusDot status={appointment.status} />
-        <span className="truncate">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
+        <span className="truncate font-semibold tracking-tight">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
       </div>
       {height >= 36 && (
-        <div className="text-muted-foreground truncate mt-0.5">
-          {appointment.typeName || t("schedule.appointmentFallback", "Appointment")} &middot;{" "}
-          {formatTime(start, timeZone)} - {formatTime(end, timeZone)}
+        <div className="text-muted-foreground truncate mt-0.5 font-mono tabular-nums text-[11px]">
+          <span className="font-sans font-medium text-foreground/80">{appointment.typeName || t("schedule.appointmentFallback", "Appointment")}</span> &middot;{" "}
+          <span>{formatTime(start, timeZone)} - {formatTime(end, timeZone)}</span>
           {appointment.locationName ? ` · ${appointment.locationName}` : ""}
         </div>
       )}
@@ -556,11 +599,14 @@ function DayCalendar({
 
         {showNowLine && (
           <div
-            className="absolute left-0 right-0 z-10 flex items-center"
+            className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
             style={{ top: nowTop }}
           >
-            <div className="h-2.5 w-2.5 rounded-full bg-red-500 -ml-1" />
-            <div className="flex-1 border-t-2 border-red-500" />
+            <div className="relative flex h-3 w-3 -ml-1.5 items-center justify-center">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)]" />
+            </div>
+            <div className="flex-1 border-t-2 border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.7)]" />
           </div>
         )}
 
@@ -907,11 +953,14 @@ function WeekCalendar({
                     <GridLines />
                     {showNowLine && isToday && (
                       <div
-                        className="absolute left-0 right-0 z-10 flex items-center"
+                        className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
                         style={{ top: nowTop }}
                       >
-                        <div className="h-2.5 w-2.5 rounded-full bg-red-500 -ml-1" />
-                        <div className="flex-1 border-t-2 border-red-500" />
+                        <div className="relative flex h-3 w-3 -ml-1.5 items-center justify-center">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)]" />
+                        </div>
+                        <div className="flex-1 border-t-2 border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.7)]" />
                       </div>
                     )}
                     {dayAppointments.map((appt) => (

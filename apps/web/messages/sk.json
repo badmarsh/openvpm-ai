@@ -2045,7 +2045,10 @@
       "reactionOptional": "Reakcia (voliteľné)",
       "saveAllergy": "Uložiť alergiu",
       "add": "Pridať",
-      "legacyAllergyRemoval": "Pôvodné odstránenie zachované bez detailov autora a dôvodu."
+      "legacyAllergyRemoval": "Pôvodné odstránenie zachované bez detailov autora a dôvodu.",
+      "microchipCopied": "Číslo čipu bolo skopírované do schránky",
+      "copyMicrochip": "Kliknutím skopírujete číslo čipu",
+      "callClient": "Zavolať majiteľovi"
     },
     "vitals": {
       "title": "Vitálne funkcie",
@@ -2286,6 +2289,16 @@
         "current": "Aktuálne",
         "corrected": "Opravené / zachované"
       }
+    },
+    "sympathy": {
+      "inMemoriam": "V spomienke",
+      "gateActive": "Sympathy Gate aktívna",
+      "notice": "Tento pacient je vedený ako zosnulý. Automatické pripomienky, upozornenia na očkovanie, marketing a klientske notifikácie sú s rešpektom pozastavené."
+    },
+    "status": {
+      "active": "Aktívny",
+      "inactive": "Neaktívny",
+      "deceased": "Zosnulý"
     }
   },
   "recalls": {
@@ -2463,7 +2476,15 @@
     "performedBy": "Účinkuje",
     "anesthesia": "Anestézia",
     "noProceduresRecorded": "Neboli zaznamenané žiadne postupy",
-    "searchPatientTop": "Vyhľadajte pacienta vyššie a pozrite si jeho lekárske záznamy"
+    "searchPatientTop": "Vyhľadajte pacienta vyššie a pozrite si jeho lekárske záznamy",
+    "soap": {
+      "clinicianApproved": "Schválené lekárom",
+      "vitalsSnapshot": "Prehľad vitálnych funkcií",
+      "subjective": "Subjektívne (S)",
+      "objective": "Objektívne (O)",
+      "assessment": "Posúdenie (A)",
+      "plan": "Plán (P)"
+    }
   },
   "records.backToVisit": "Späť na návštevu",
   "records.changePatient": "Zmeniť pacienta",
@@ -4698,5 +4719,23 @@
   },
   "button": {
     "copy": "Kopírovať"
+  },
+  "ekasa": {
+    "drawer": {
+      "title": "Pokladničný doklad e-Kasa",
+      "subtitle": "Náhľad oficiálneho dokladu Finančnej správy SR",
+      "securityHeader": "Bezpečnostný blok e-Kasa",
+      "registered": "REGISTROVANÉ ONLINE",
+      "offline": "ULOŽENÉ OFFLINE",
+      "printAction": "Vytlačiť pokladničný doklad",
+      "closeAction": "Zavrieť",
+      "vatSchedule": "Rozpis DPH",
+      "total": "SPOLU",
+      "cashRegisterCode": "Kód pokladnice",
+      "receiptNumber": "Číslo dokladu"
+    },
+    "syncFs": "Odoslať na FS",
+    "syncPending": "Odosiela sa...",
+    "viewReceipt": "Zobraziť doklad"
   }
 }
