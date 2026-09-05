@@ -14,7 +14,6 @@ import {
   FileText,
   Receipt,
   Package,
-  MessageSquare,
   Syringe,
   BellRing,
   ClipboardList,
@@ -139,13 +138,6 @@ const vanillaSections: NavSection[] = [
         roles: allRoles,
       },
       {
-        href: "/inbox",
-        label: "Schránka",
-        i18nKey: "nav.inbox",
-        icon: MessageSquare,
-        roles: allRoles,
-      },
-      {
         href: "/recalls",
         label: "Pripomienky",
         i18nKey: "nav.recalls",
@@ -158,34 +150,6 @@ const vanillaSections: NavSection[] = [
         i18nKey: "nav.careReminders",
         icon: BellRing,
         roles: allRoles,
-      },
-      {
-        href: "/whiteboard",
-        label: "Prevádzková tabuľa",
-        i18nKey: "nav.whiteboard",
-        icon: ClipboardList,
-        roles: allRoles,
-      },
-      {
-        href: "/controlled-substances",
-        label: "Omamné látky",
-        i18nKey: "nav.controlledSubstances",
-        icon: ShieldAlert,
-        roles: ["admin", "veterinarian"],
-      },
-      {
-        href: "/statutory",
-        label: "Zákonné registre",
-        i18nKey: "nav.statutory",
-        icon: BookOpen,
-        roles: ["admin", "veterinarian"],
-      },
-      {
-        href: "/reports",
-        label: "Prehľady",
-        i18nKey: "nav.reports",
-        icon: BarChart3,
-        roles: ["admin", "veterinarian"],
       },
     ],
   },
@@ -216,6 +180,34 @@ const vanillaSections: NavSection[] = [
     titleKey: "nav.sectionSettings",
     titleFallback: "Správa Kliniky",
     items: [
+      {
+        href: "/whiteboard",
+        label: "Prevádzková tabuľa",
+        i18nKey: "nav.whiteboard",
+        icon: ClipboardList,
+        roles: allRoles,
+      },
+      {
+        href: "/controlled-substances",
+        label: "Omamné látky",
+        i18nKey: "nav.controlledSubstances",
+        icon: ShieldAlert,
+        roles: ["admin", "veterinarian"],
+      },
+      {
+        href: "/statutory",
+        label: "Zákonné registre",
+        i18nKey: "nav.statutory",
+        icon: BookOpen,
+        roles: ["admin", "veterinarian"],
+      },
+      {
+        href: "/reports",
+        label: "Prehľady",
+        i18nKey: "nav.reports",
+        icon: BarChart3,
+        roles: ["admin", "veterinarian"],
+      },
       {
         href: "/settings",
         label: "Nastavenia",
@@ -248,19 +240,6 @@ export function Sidebar({
   const { data: branding } = trpc.settings.getBranding.useQuery();
   const isCollapsed = collapsible && collapsed;
   const canShowNav = status === "authenticated" && role !== undefined;
-  const { data: unreadInbox } =
-    trpc.communications.listConversations.useQuery(
-      { inboxFilter: "unread", limit: 1, offset: 0 },
-      {
-        enabled: canShowNav,
-        refetchInterval: 60000,
-        refetchOnWindowFocus: false,
-        retry: false,
-      },
-    );
-  const unreadInboxCount = Math.max(0, Number(unreadInbox?.total ?? 0));
-  const unreadInboxLabel =
-    unreadInboxCount > 99 ? "99+" : String(unreadInboxCount);
 
   // Merge customNavItems into their declared sections
   const sections: NavSection[] = vanillaSections.map((section) => {
@@ -377,14 +356,6 @@ export function Sidebar({
                                   : "text-muted-foreground",
                               )}
                             />
-                            {isCollapsed &&
-                            item.href === "/inbox" &&
-                            unreadInboxCount > 0 ? (
-                              <span
-                                aria-label={`${unreadInboxCount} unread inbox conversations`}
-                                className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-surface"
-                              />
-                            ) : null}
                           </span>
 
                           {!isCollapsed && (
@@ -394,17 +365,6 @@ export function Sidebar({
                                 : item.label}
                             </span>
                           )}
-
-                          {!isCollapsed &&
-                            item.href === "/inbox" &&
-                            unreadInboxCount > 0 && (
-                              <span
-                                aria-label={`${unreadInboxCount} unread inbox conversations`}
-                                className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground"
-                              >
-                                {unreadInboxLabel}
-                              </span>
-                            )}
 
                           {!isCollapsed && item.badge && (
                             <span
