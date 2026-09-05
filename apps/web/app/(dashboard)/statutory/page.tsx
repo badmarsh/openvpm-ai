@@ -237,6 +237,147 @@ function openInspectionPrintView({
   }, 400);
 }
 
+function printRabiesBiteInspectionReport(opts?: {
+  patientName?: string;
+  species?: string;
+  breed?: string;
+  microchipNumber?: string;
+  clientName?: string;
+  clientAddress?: string;
+  clientPhone?: string;
+  vaccineName?: string;
+  lotNumber?: string;
+  administeredAt?: string | Date | null;
+}) {
+  const printWindow = window.open("", "_blank", "width=850,height=950");
+  if (!printWindow) return;
+
+  const todayStr = new Date().toLocaleDateString("sk-SK", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const lastVax = opts?.administeredAt ? formatDate(opts.administeredAt) : "________________";
+  const patientDesc = [opts?.species, opts?.breed].filter(Boolean).join(" • ") || "Pes / Mačka";
+
+  printWindow.document.write(`<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <title>Hlásenie o vyšetrení zvieraťa po poranení človeka - RVPS</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 11px; line-height: 1.45; color: #000; margin: 0; padding: 12px; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+    .org-title { font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    h1 { font-size: 13.5px; text-transform: uppercase; margin: 6px 0 2px 0; letter-spacing: 0.5px; }
+    .law-ref { font-size: 9.5px; font-style: italic; color: #333; }
+    .section-title { font-size: 10.5px; font-weight: bold; text-transform: uppercase; background: #eaeaea; padding: 3px 6px; border: 1px solid #000; margin-top: 10px; margin-bottom: 6px; }
+    table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    table.data-table td { padding: 4px 6px; border: 1px solid #999; font-size: 10px; }
+    table.data-table td.label { font-weight: bold; width: 35%; background: #f9f9f9; }
+    .box { border: 1px solid #000; padding: 8px; border-radius: 2px; margin-bottom: 8px; }
+    .sig-row { display: flex; justify-content: space-between; margin-top: 25px; }
+    .sig-box { width: 45%; border-top: 1px dotted #000; text-align: center; font-size: 9.5px; padding-top: 4px; }
+    .notice { font-size: 9px; color: #444; border-left: 3px solid #000; padding-left: 6px; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="org-title">Štátna veterinárna a potravinová správa Slovenskej republiky</div>
+    <div style="font-size: 10px; font-weight: bold;">Regionálna veterinárna a potravinová správa (RVPS)</div>
+    <h1>Oznámenie a záznam o klinickom vyšetrení zvieraťa, ktoré poranilo človeka</h1>
+    <div class="law-ref">V zmysle § 17 ods. 1 písm. b) a § 19 ods. 1 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti</div>
+  </div>
+
+  <div class="notice">
+    <strong>Zákonná lehota:</strong> Držiteľ je povinný dať zviera vyšetriť veterinárnym lekárom v 1. deň po poranení a opakovane v 5. a 14. deň pozorovania. Výsledok vyšetrenia sa bezodkladne zasiela ošetrujúcemu lekárovi poškodeného a príslušnej RVPS.
+  </div>
+
+  <div class="section-title">I. Identifikácia vyšetrovaného zvieraťa</div>
+  <table class="data-table">
+    <tr><td class="label">Meno zvieraťa:</td><td><strong>${opts?.patientName || "________________"}</strong></td><td class="label">Druh a plemeno:</td><td>${patientDesc}</td></tr>
+    <tr><td class="label">Číslo mikročipu:</td><td><strong>${opts?.microchipNumber || "________________"}</strong></td><td class="label">Pohlavie a vek:</td><td>________________</td></tr>
+    <tr><td class="label">Číslo PetPassu / známky:</td><td>________________</td><td class="label">Farba:</td><td>________________</td></tr>
+  </table>
+
+  <div class="section-title">II. Vlastník / Držiteľ zvieraťa</div>
+  <table class="data-table">
+    <tr><td class="label">Meno a priezvisko:</td><td><strong>${opts?.clientName || "________________"}</strong></td></tr>
+    <tr><td class="label">Trvalé bydlisko:</td><td>${opts?.clientAddress || "________________"}</td></tr>
+    <tr><td class="label">Telefónny kontakt:</td><td>${opts?.clientPhone || "________________"}</td></tr>
+  </table>
+
+  <div class="section-title">III. Údaje o poranenej osobe a udalosti</div>
+  <table class="data-table">
+    <tr><td class="label">Meno a priezvisko poranenej osoby:</td><td>________________________________________________</td></tr>
+    <tr><td class="label">Bydlisko a kontakt poraneného:</td><td>________________________________________________</td></tr>
+    <tr><td class="label">Dátum, čas a miesto poranenia:</td><td>Dátum: ______________ o ______ hod., Miesto: ____________________</td></tr>
+    <tr><td class="label">Charakter poranenia / lokalizácia:</td><td>pohryznutie / poškriabanie: ________________________________</td></tr>
+    <tr><td class="label">Ošetrujúci lekár (zdravotnícke zariadenie):</td><td>________________________________________________</td></tr>
+  </table>
+
+  <div class="section-title">IV. Predchádzajúca vakcinácia zvieraťa proti besnote</div>
+  <table class="data-table">
+    <tr><td class="label">Dátum posledného očkovania:</td><td><strong>${lastVax}</strong></td><td class="label">Názov vakcíny a šarža:</td><td>${opts?.vaccineName || "________________"} ${opts?.lotNumber ? `(šarža: ${opts.lotNumber})` : ""}</td></tr>
+  </table>
+
+  <div class="section-title">V. Protokol o klinickom pozorovaní zvieraťa (14-dňová lehota)</div>
+  <table class="data-table">
+    <tr>
+      <th style="border: 1px solid #999; padding: 4px; background: #f2f2f2; width: 25%;">Etapa vyšetrenia</th>
+      <th style="border: 1px solid #999; padding: 4px; background: #f2f2f2; width: 20%;">Dátum vyšetrenia</th>
+      <th style="border: 1px solid #999; padding: 4px; background: #f2f2f2; width: 15%;">Teplota (°C)</th>
+      <th style="border: 1px solid #999; padding: 4px; background: #f2f2f2; width: 40%;">Klinický nález a správanie</th>
+    </tr>
+    <tr>
+      <td><strong>1. vyšetrenie</strong> (1. deň / nahlásenie)</td>
+      <td>${todayStr}</td>
+      <td>_____ °C</td>
+      <td>Zviera klinicky zdravé, bez príznakov zmeny správania alebo nervových porúch.</td>
+    </tr>
+    <tr>
+      <td><strong>2. vyšetrenie</strong> (5. deň pozorovania)</td>
+      <td>________________</td>
+      <td>_____ °C</td>
+      <td>Zviera klinicky zdravé, normálny príjem potravy a vody, bez slintania či kŕčov.</td>
+    </tr>
+    <tr>
+      <td><strong>3. vyšetrenie</strong> (14. deň – záver)</td>
+      <td>________________</td>
+      <td>_____ °C</td>
+      <td>Ukončenie pozorovania: Zviera živé, zdravé, neprejavuje príznaky besnoty.</td>
+    </tr>
+  </table>
+
+  <div class="box" style="margin-top: 8px;">
+    <strong>ZÁVER VETERINÁRNEHO LEKÁRA:</strong><br/>
+    Vyšetrené zviera v čase vyšetrenia <strong>neprejavuje klinické príznaky podozrenia z ochorenia na besnotu</strong>.
+    Držiteľovi bolo nariadené domáce izolované pozorovanie zvieraťa s povinnosťou predviesť ho na kontrolné vyšetrenia.
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      Vlastník / Držiteľ zvieraťa<br/>(podpis potvrdzujúci prevzatie poučenia)
+    </div>
+    <div class="sig-box">
+      Ošetrujúci veterinárny lekár<br/>(odtlačok úradnej pečiatky a podpis)
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; font-size: 8.5px; text-align: center; color: #555;">
+    Kópia: 1x Vlastník zvieraťa | 1x Zdravotnícke zariadenie ošetrujúceho lekára | 1x Príslušná RVPS SR | 1x Archív veterinárneho lekára
+  </div>
+</body>
+</html>`);
+
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+  }, 400);
+}
+
 export default function StatutoryPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -524,6 +665,32 @@ function RabiesRegisterTab() {
             <Printer className="h-4 w-4" />
             <span>Tlačiť úradný výkaz</span>
           </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() =>
+              printRabiesBiteInspectionReport(
+                filteredItems[0]
+                  ? {
+                      patientName: filteredItems[0].patientName,
+                      species: filteredItems[0].species,
+                      breed: filteredItems[0].breed ?? undefined,
+                      microchipNumber: filteredItems[0].microchipNumber ?? undefined,
+                      clientName: `${filteredItems[0].clientFirstName || ""} ${filteredItems[0].clientLastName}`.trim(),
+                      clientAddress: `${filteredItems[0].clientAddress || ""}, ${filteredItems[0].clientCity || ""}`.trim(),
+                      clientPhone: filteredItems[0].clientPhone ?? undefined,
+                      vaccineName: filteredItems[0].vaccineName,
+                      lotNumber: filteredItems[0].lotNumber ?? undefined,
+                      administeredAt: filteredItems[0].administeredAt,
+                    }
+                  : undefined,
+              )
+            }
+            className="gap-2 bg-rose-600 hover:bg-rose-700 text-white"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            <span>Hlásenie poranenia (RVPS)</span>
+          </Button>
         </div>
       </div>
 
@@ -587,6 +754,7 @@ function RabiesRegisterTab() {
                   <th className="p-3">Majiteľ</th>
                   <th className="p-3">Kontakt</th>
                   <th className="p-3">Lehota RVPS (3 dni)</th>
+                  <th className="p-3 text-right">RVPS Tlač</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -645,6 +813,31 @@ function RabiesRegisterTab() {
                         >
                           {comp.label}
                         </Badge>
+                      </td>
+                      <td className="p-3 whitespace-nowrap text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Tlačiť Hlásenie o poranení človeka (RVPS)"
+                          onClick={() =>
+                            printRabiesBiteInspectionReport({
+                              patientName: r.patientName,
+                              species: r.species,
+                              breed: r.breed ?? undefined,
+                              microchipNumber: r.microchipNumber ?? undefined,
+                              clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
+                              clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
+                              clientPhone: r.clientPhone ?? undefined,
+                              vaccineName: r.vaccineName,
+                              lotNumber: r.lotNumber ?? undefined,
+                              administeredAt: r.administeredAt,
+                            })
+                          }
+                          className="h-7 gap-1 px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                        >
+                          <Printer className="h-3 w-3" />
+                          <span>RVPS</span>
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -1010,54 +1203,268 @@ function EuthanasiaRegisterTab() {
 // ---------------------------------------------------------------------------
 // 4. Narcotics Tab (Kniha omamných a psychotropných látok)
 // ---------------------------------------------------------------------------
+const ACTION_LABEL_SK: Record<string, string> = {
+  received: "Príjem",
+  administered: "Podanie pacientovi",
+  wasted: "Likvidácia (odpad)",
+  returned: "Vrátenie dodávateľovi",
+};
+
 function NarcoticsTab() {
   const { t } = useI18n();
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const { data, isLoading } = trpc.controlledSubstances.list.useQuery({
+    limit: 100,
+    offset: 0,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+
+  const { data: summary } = trpc.controlledSubstances.summary.useQuery({
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+
+  const handlePrintOPK = () => {
+    if (!data?.items?.length && !summary?.length) return;
+    const todayStr = new Date().toLocaleDateString("sk-SK", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+    });
+    const printWindow = window.open("", "_blank", "width=900,height=1000");
+    if (!printWindow) return;
+
+    const summaryRows = summary
+      ?.map((row) => {
+        const bal = (
+          parseFloat(String(row.totalReceived)) -
+          parseFloat(String(row.totalAdministered)) -
+          parseFloat(String(row.totalWasted)) -
+          parseFloat(String(row.totalReturned))
+        ).toFixed(3);
+        return `<tr>
+          <td>${row.drugName}</td><td>${row.unit}</td>
+          <td style="text-align:right;font-family:monospace">${row.totalReceived}</td>
+          <td style="text-align:right;font-family:monospace">${row.totalAdministered}</td>
+          <td style="text-align:right;font-family:monospace">${row.totalWasted}</td>
+          <td style="text-align:right;font-family:monospace">${row.totalReturned}</td>
+          <td style="text-align:right;font-family:monospace;font-weight:bold">${bal}</td>
+        </tr>`;
+      })
+      .join("") ?? "";
+
+    const ledgerRows = data?.items
+      ?.map((item, idx) => `<tr>
+        <td style="text-align:center">${idx + 1}</td>
+        <td>${formatDate(item.performedAt)}</td>
+        <td><strong>${item.drugName}</strong> (Zoz. ${item.deaSchedule})</td>
+        <td>${ACTION_LABEL_SK[item.action] ?? item.action}</td>
+        <td style="text-align:right;font-family:monospace">${item.quantity} ${item.unit}</td>
+        <td>${item.lotNumber || "—"}</td>
+        <td>${item.patientName || "—"}</td>
+        <td>${item.performerName || "—"}</td>
+        <td>${item.witnessName || "—"}</td>
+        <td>${item.notes || "—"}</td>
+      </tr>`)
+      .join("") ?? "";
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html lang="sk"><head><meta charset="UTF-8">
+<title>OPK – Kniha omamných a psychotropných látok</title>
+<style>
+@page{size:A4 landscape;margin:10mm}
+body{font-family:Arial,sans-serif;font-size:9px;color:#000;margin:0;padding:8px}
+h1{font-size:12px;text-align:center;text-transform:uppercase;margin:0 0 2px}
+.stat-ref{font-size:8.5px;text-align:center;font-weight:bold;margin-bottom:4px}
+.meta{display:flex;justify-content:space-between;font-size:8px;margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:4px}
+h2{font-size:10px;margin:10px 0 4px;border-left:3px solid #333;padding-left:6px}
+table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:8.5px}
+th{background:#ddd;border:1px solid #666;padding:3px 4px;text-align:left;font-size:7.5px;text-transform:uppercase}
+td{border:1px solid #999;padding:3px 4px;vertical-align:top}
+.sigs{display:flex;justify-content:space-between;margin-top:16px;gap:8px}
+.sig-box{flex:1;border:1px solid #555;border-radius:3px;padding:6px;height:60px;font-size:8px;position:relative}
+.sig-line{position:absolute;bottom:5px;left:6px;right:6px;border-top:1px dotted #000;text-align:center;padding-top:2px;font-size:7.5px}
+.footer{font-size:7.5px;color:#555;margin-top:6px;font-style:italic;text-align:center}
+</style></head><body>
+<h1>Kniha Omamných a Psychotropných Látok (OPK)</h1>
+<div class="stat-ref">Vedená v zmysle zákona č. 139/1998 Z. z. | ŠÚKL / ŠVPS SR</div>
+<div class="meta">
+  <span><strong>Veterinárne pracovisko:</strong> ___________________________</span>
+  <span><strong>Zodpovedná osoba (IFA):</strong> ___________________________</span>
+  <span><strong>Vytlačené:</strong> ${todayStr}</span>
+</div>
+<h2>I. Súhrnné zostatky (fyzická inventúra)</h2>
+<table><thead><tr>
+  <th>Liečivo</th><th>J.</th><th style="text-align:right">Príjem</th>
+  <th style="text-align:right">Podania</th><th style="text-align:right">Odpad</th>
+  <th style="text-align:right">Vrátenie</th><th style="text-align:right">Zostatok</th>
+</tr></thead><tbody>${summaryRows || '<tr><td colspan="7" style="text-align:center;padding:8px">Žiadne záznamy</td></tr>'}</tbody></table>
+<p style="font-size:8px">Fyzicky preverené dňa: ________________ Zostatok zodpovedá evidencii: ☐ ÁNO &nbsp; ☐ NIE (rozdiel: ______)</p>
+<h2>II. Podrobný pohybový denník</h2>
+<table><thead><tr>
+  <th style="width:24px">P.č.</th><th>Dátum</th><th>Liečivo</th><th>Pohyb</th>
+  <th style="text-align:right">Množstvo</th><th>Šarža</th><th>Pacient</th><th>Lekár</th><th>Svedok</th><th>Poznámka</th>
+</tr></thead><tbody>${ledgerRows || '<tr><td colspan="10" style="text-align:center;padding:8px">Žiadne záznamy</td></tr>'}</tbody></table>
+<div class="sigs">
+  <div class="sig-box"><strong>Vedúci pracoviska / IFA:</strong><div class="sig-line">Meno, podpis a dátum overenia</div></div>
+  <div class="sig-box"><strong>Inšpektor ŠÚKL / ŠVPS SR:</strong><div class="sig-line">Meno, č. inšpektora, dátum</div></div>
+  <div class="sig-box"><strong>Regionálna veterinárna správa (RVPS):</strong><div class="sig-line">Záznam o overení / podpis</div></div>
+</div>
+<div class="footer">Kópia: 1× Veterinárne pracovisko (archív 5 rokov) | 1× RVPS | 1× ŠÚKL na vyžiadanie</div>
+</body></html>`);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 400);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-border bg-card p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-amber-500" />
-              <h3 className="font-semibold text-lg">
-                Kniha omamných a psychotropných látok (Opiáty)
-              </h3>
+              <h3 className="font-semibold text-base">Kniha omamných a psychotropných látok (Opiáty)</h3>
             </div>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              Vedená v zmysle zákona č. 139/1998 Z. z. o omamných látkach, psychotropných látkach a prípravkoch v znení neskorších predpisov. Každý príjem, podanie pacientovi (anestézia, analgézia) a likvidácia zvyškov (odpad) musí byť evidovaný s menom lekára, šaržou a svedkom.
+              Vedená v zmysle zákona č. 139/1998 Z. z. Každý príjem, podanie pacientovi a likvidácia zvyškov musí byť evidovaná s menom lekára, šaržou a svedkom.
             </p>
           </div>
-          <Link href="/controlled-substances">
-            <Button className="gap-2 bg-amber-600 hover:bg-amber-700">
-              <span>Otvoriť knihu omamných látok</span>
-              <ExternalLink className="h-4 w-4" />
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline" size="sm"
+              onClick={handlePrintOPK}
+              disabled={!data?.items?.length && !summary?.length}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Tlačiť OPK výkaz</span>
             </Button>
-          </Link>
+            <Link href="/controlled-substances">
+              <Button size="sm" className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+                <span>Plná evidencia</span>
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
+        {/* Date range filter */}
+        <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 w-36 text-xs" />
+          <span>do</span>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-8 w-36 text-xs" />
+        </div>
+      </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-border bg-muted/40 p-4">
-            <div className="text-xs text-muted-foreground">Legislatívny rámec</div>
-            <div className="mt-1 font-semibold text-sm">Zákon č. 139/1998 Z. z.</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Štátny ústav pre kontrolu liečiv (ŠÚKL) & ŠVPS SR
-            </div>
+      {/* Summary balance cards */}
+      {summary && summary.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {summary.map((row) => {
+            const balance =
+              parseFloat(String(row.totalReceived)) -
+              parseFloat(String(row.totalAdministered)) -
+              parseFloat(String(row.totalWasted)) -
+              parseFloat(String(row.totalReturned));
+            return (
+              <div key={`${row.drugName}-${row.unit}`} className="rounded-lg border border-border bg-card p-4">
+                <div className="font-semibold text-sm">{row.drugName}</div>
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <span className="text-muted-foreground">Príjem:</span>
+                  <span className="text-right font-mono">{row.totalReceived} {row.unit}</span>
+                  <span className="text-muted-foreground">Podania:</span>
+                  <span className="text-right font-mono">{row.totalAdministered} {row.unit}</span>
+                  <span className="text-muted-foreground">Zlikvidované:</span>
+                  <span className="text-right font-mono">{row.totalWasted} {row.unit}</span>
+                  <span className="text-muted-foreground font-semibold">Zostatok:</span>
+                  <span className={cn(
+                    "text-right font-mono font-semibold",
+                    balance < 0 ? "text-destructive" : "text-foreground"
+                  )}>
+                    {balance.toFixed(3)} {row.unit}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Ledger table */}
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        {isLoading ? (
+          <div className="flex h-48 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-          <div className="rounded-lg border border-border bg-muted/40 p-4">
-            <div className="text-xs text-muted-foreground">Najčastejšie substancie</div>
-            <div className="mt-1 font-semibold text-sm">Ketamín, Butorfanol, Metadón</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Zoznam II a III omamných látok
-            </div>
+        ) : !data?.items?.length ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            Žiadne záznamy v knihe omamných látok.{" "}
+            <Link href="/controlled-substances" className="text-primary underline">Pridať záznam</Link>
           </div>
-          <div className="rounded-lg border border-border bg-muted/40 p-4">
-            <div className="text-xs text-muted-foreground">Povinnosti pri kontrole</div>
-            <div className="mt-1 font-semibold text-sm">Fyzická inventúra & Zostatky</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Kontrola súladu fyzického stavu v trezore
-            </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-border bg-muted/60 text-muted-foreground">
+                <tr>
+                  <th className="p-3">Dátum</th>
+                  <th className="p-3">Liečivo (Zoznam)</th>
+                  <th className="p-3">Druh pohybu</th>
+                  <th className="p-3 text-right">Množstvo</th>
+                  <th className="p-3">Šarža</th>
+                  <th className="p-3">Pacient</th>
+                  <th className="p-3">Lekár</th>
+                  <th className="p-3">Svedok</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {data.items.map((item) => (
+                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="p-3 whitespace-nowrap font-medium">{formatDate(item.performedAt)}</td>
+                    <td className="p-3">
+                      <span className="font-semibold">{item.drugName}</span>
+                      <span className="ml-1 text-muted-foreground">(Zoz. {item.deaSchedule})</span>
+                    </td>
+                    <td className="p-3">
+                      <span className={cn(
+                        "inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium",
+                        item.action === "received" && "bg-blue-100 text-blue-700",
+                        item.action === "administered" && "bg-green-100 text-green-700",
+                        item.action === "wasted" && "bg-amber-100 text-amber-700",
+                        item.action === "returned" && "bg-gray-100 text-gray-700",
+                      )}>
+                        {ACTION_LABEL_SK[item.action] ?? item.action}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-mono">{item.quantity} {item.unit}</td>
+                    <td className="p-3 font-mono text-[11px] text-muted-foreground">{item.lotNumber || "—"}</td>
+                    <td className="p-3">{item.patientName || "—"}</td>
+                    <td className="p-3 whitespace-nowrap">{item.performerName || "—"}</td>
+                    <td className="p-3 whitespace-nowrap">{item.witnessName || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )}
+      </div>
+
+      {/* Legal footer cards */}
+      <div className="grid gap-4 sm:grid-cols-3 text-xs">
+        <div className="rounded-lg border border-border bg-muted/40 p-4">
+          <div className="text-muted-foreground">Legislatívny rámec</div>
+          <div className="mt-1 font-semibold text-sm">Zákon č. 139/1998 Z. z.</div>
+          <div className="mt-1 text-muted-foreground">ŠÚKL &amp; ŠVPS SR</div>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/40 p-4">
+          <div className="text-muted-foreground">Archivačná lehota</div>
+          <div className="mt-1 font-semibold text-sm">5 rokov od posledného záznamu</div>
+          <div className="mt-1 text-muted-foreground">§ 22 ods. 3 zák. č. 139/1998 Z. z.</div>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/40 p-4">
+          <div className="text-muted-foreground">Likvidácia odpadu</div>
+          <div className="mt-1 font-semibold text-sm">Vyžaduje svedka + protokol</div>
+          <div className="mt-1 text-muted-foreground">Každý odpad evidovať s dôvodom</div>
         </div>
       </div>
     </div>

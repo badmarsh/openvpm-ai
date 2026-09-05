@@ -30,22 +30,9 @@ export function VerifyEmailBanner() {
 
   if (dismissed) return null;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-6 py-2.5 text-sm text-amber-900">
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-        <p className="flex-1">Checking email verification status...</p>
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Dismiss"
-          className="rounded p-1 text-amber-700 hover:bg-amber-100"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    );
-  }
+  // Don't flash a loading state – wait silently until auth.me resolves.
+  // If verification is needed the banner renders after hydration.
+  if (isLoading) return null;
 
   if (error || !data) {
     return (

@@ -156,3 +156,89 @@ export async function sendCareReminderSms(data: {
     idempotencyKey: data.idempotencyKey,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Patient Ready for Pickup SMS (Pooperačné prebudenie)
+// ---------------------------------------------------------------------------
+
+export async function sendReadyForPickupSms(data: {
+  to: string;
+  patientName: string;
+  pickupTime?: string;
+  practiceName: string;
+  practicePhone?: string;
+  practiceId: string;
+  locationId?: string;
+  clientId?: string;
+  communicationId?: string;
+  idempotencyKey?: string;
+}): Promise<SmsDispatchResult> {
+  const isSlovak = data.to.startsWith("+421");
+  const timeInfo = data.pickupTime
+    ? isSlovak
+      ? `Mozete si po neho prist v case: ${data.pickupTime}.`
+      : `You may pick them up at: ${data.pickupTime}.`
+    : isSlovak
+      ? "Mozete si po neho prist."
+      : "You may pick them up.";
+
+  const phoneInfo = data.practicePhone
+    ? isSlovak
+      ? `Otazky na ${data.practicePhone}.`
+      : `Questions: ${data.practicePhone}.`
+    : "";
+
+  const body = isSlovak
+    ? `Dobry den, pacient ${data.patientName} je po zakroku prebudeny a pripraveny na vyzdvihnutie. ${timeInfo} ${phoneInfo}`.trim()
+    : `Hello, ${data.patientName} is awake from their procedure and ready for pickup. ${timeInfo} ${phoneInfo}`.trim();
+
+  return sendSms({
+    to: data.to,
+    body,
+    practiceId: data.practiceId,
+    locationId: data.locationId,
+    clientId: data.clientId,
+    communicationId: data.communicationId,
+    source: "ready_for_pickup",
+    idempotencyKey: data.idempotencyKey,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Post-op Follow-up / Check-in SMS
+// ---------------------------------------------------------------------------
+
+export async function sendPostOpFollowupSms(data: {
+  to: string;
+  patientName: string;
+  practiceName: string;
+  practicePhone?: string;
+  practiceId: string;
+  locationId?: string;
+  clientId?: string;
+  communicationId?: string;
+  idempotencyKey?: string;
+}): Promise<SmsDispatchResult> {
+  const isSlovak = data.to.startsWith("+421");
+  const phoneInfo = data.practicePhone
+    ? isSlovak
+      ? `V pripade otazok ci zmien volajte ${data.practicePhone}.`
+      : `Call ${data.practicePhone} if you have questions.`
+    : "";
+
+  const body = isSlovak
+    ? `Dobry den, kontrolujeme stav pacienta ${data.patientName} po zakroku. Verime, ze rekonvalescencia prebieha v poriadku. ${phoneInfo}`.trim()
+    : `Hello, checking in on ${data.patientName} following their procedure. We hope their recovery is going well. ${phoneInfo}`.trim();
+
+  return sendSms({
+    to: data.to,
+    body,
+    practiceId: data.practiceId,
+    locationId: data.locationId,
+    clientId: data.clientId,
+    communicationId: data.communicationId,
+    source: "post_op_followup",
+    idempotencyKey: data.idempotencyKey,
+  });
+}
+

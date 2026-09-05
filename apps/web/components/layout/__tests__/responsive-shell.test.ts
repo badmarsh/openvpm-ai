@@ -61,7 +61,7 @@ describe("responsive dashboard shell", () => {
     expect(source).toContain(
       'const canShowNav = status === "authenticated" && role !== undefined'
     );
-    expect(source).toContain("const visibleNavItems = canShowNav");
+    expect(source).toContain("const visibleItems = section.items.filter");
     expect(source).not.toContain('?? "front_desk"');
   });
 
@@ -73,7 +73,7 @@ describe("responsive dashboard shell", () => {
     );
     expect(source).toContain('{ inboxFilter: "unread", limit: 1, offset: 0 }');
     expect(source).toContain("enabled: canShowNav");
-    expect(source).toContain("refetchInterval: 30000");
+    expect(source).toContain("refetchInterval: 60000");
     expect(source).toContain("const unreadInboxCount =");
     expect(source).toContain('item.href === "/inbox"');
     expect(source).toContain("unreadInboxCount > 0");

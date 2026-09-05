@@ -308,6 +308,7 @@ export const careRemindersRouter = createRouter({
             dueDate: careReminders.dueDate,
             status: careReminders.status,
             patientName: patients.name,
+            patientStatus: patients.status,
             clientId: clients.id,
             clientFirstName: clients.firstName,
             clientLastName: clients.lastName,
@@ -367,6 +368,12 @@ export const careRemindersRouter = createRouter({
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
             message: "Only open care reminders can be sent to a client.",
+          });
+        }
+        if (reminder.patientStatus === "deceased") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Sympathy Gate: Reminders cannot be sent for a deceased patient.",
           });
         }
 

@@ -234,6 +234,7 @@ async function loadVaccinationRecallRecipients(
         eq(patients.practiceId, ctx.practiceId),
         activePracticePredicate(ctx.practiceId),
         isNull(patients.deletedAt),
+        sql`${patients.status} is distinct from 'deceased'`,
       ),
     )
     .innerJoin(
