@@ -30,15 +30,15 @@ export async function GET(req: NextRequest): Promise<Response> {
  * In production, replace with a dedicated WebSocket server
  * or use a managed service like LiveKit/Pusher.
  */
-export interface SignalingRoom {
+interface SignalingRoom {
   peers: Map<string, { ws: WebSocket; role: string }>;
   createdAt: Date;
 }
 
 // Simple in-memory signaling for dev (single-process only)
-export const devRooms = new Map<string, SignalingRoom>();
+const devRooms = new Map<string, SignalingRoom>();
 
-export function getOrCreateRoom(sessionId: string): SignalingRoom {
+function getOrCreateRoom(sessionId: string): SignalingRoom {
   if (!devRooms.has(sessionId)) {
     devRooms.set(sessionId, {
       peers: new Map(),
@@ -48,7 +48,7 @@ export function getOrCreateRoom(sessionId: string): SignalingRoom {
   return devRooms.get(sessionId)!;
 }
 
-export function broadcastToRoom(
+function broadcastToRoom(
   sessionId: string,
   message: unknown,
   senderId?: string
