@@ -158,7 +158,8 @@ export function Sidebar({
     { inboxFilter: "unread", limit: 1, offset: 0 },
     {
       enabled: canShowNav,
-      refetchInterval: 30000,
+      refetchInterval: 60000,
+      refetchOnWindowFocus: false,
       retry: false,
     },
   );
@@ -180,7 +181,7 @@ export function Sidebar({
     >
       {/* Logo */}
       <div className="flex h-14 items-center border-b border-border px-4">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" prefetch={false} className="flex items-center gap-2">
           {branding?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -216,6 +217,7 @@ export function Sidebar({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  prefetch={false}
                   data-tour={`nav-${item.href}`}
                   aria-current={isActive ? "page" : undefined}
                   onClick={onNavigate}

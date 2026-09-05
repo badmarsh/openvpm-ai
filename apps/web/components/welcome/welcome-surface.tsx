@@ -3,6 +3,7 @@
 import { PawPrint, X } from "lucide-react";
 import type { GuideContext } from "@/components/tour/guide-recipes";
 import type { WelcomeCardId } from "@/lib/welcome/cards";
+import { useI18n } from "@/lib/i18n";
 import { WELCOME_COPY } from "./welcome-copy";
 import { PolaroidCard, type WelcomeVariant } from "./polaroid-card";
 import { AiVignette } from "./vignettes/ai-vignette";
@@ -48,6 +49,7 @@ export function WelcomeSurface({
   onSkip: () => void;
   onSetupInstead: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       role="dialog"
@@ -79,7 +81,7 @@ export function WelcomeSurface({
           {headline}
         </h1>
         <p className="mt-3 max-w-xl text-base leading-7 text-slate-600">
-          {WELCOME_COPY.subline}
+          {t("welcome.subline", WELCOME_COPY.subline)}
         </p>
 
         <div className="mt-10 flex flex-wrap items-start justify-center gap-6">
@@ -136,16 +138,16 @@ export function WelcomeSurface({
             onClick={onSkip}
             className="text-sm font-medium text-slate-600 underline-offset-4 hover:underline"
           >
-            {WELCOME_COPY.skip}
+            {t("welcome.skip", WELCOME_COPY.skip)}
           </button>
-          <p className="text-xs text-slate-500">{WELCOME_COPY.reopenHint}</p>
+          <p className="text-xs text-slate-500">{t("welcome.reopenHint", WELCOME_COPY.reopenHint)}</p>
           {showSetupLink ? (
             <button
               type="button"
               onClick={onSetupInstead}
               className="mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline"
             >
-              {WELCOME_COPY.setupInstead}
+              {t("welcome.setupInstead", WELCOME_COPY.setupInstead)}
             </button>
           ) : null}
         </div>

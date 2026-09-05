@@ -38,6 +38,7 @@ import { WelcomeSurface } from "./welcome-surface";
 import type { WelcomeVariant } from "./polaroid-card";
 import { WELCOME_COPY } from "./welcome-copy";
 import { stripDemoRoleSwitchMarker } from "@/lib/demo-role-switcher";
+import { useI18n } from "@/lib/i18n";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE?.trim() === "true";
 
@@ -231,13 +232,23 @@ export function WelcomeProvider({ children }: { children: React.ReactNode }) {
     ),
   };
 
+  const { t } = useI18n();
+
+  const practiceName =
+    welcomeContext.data?.practiceName ?? t("welcome.yourClinic", "your clinic");
   const headline = isAdmin
-    ? WELCOME_COPY.headlineAdmin(
-        welcomeContext.data?.practiceName ?? "your clinic",
+    ? t(
+        "welcome.headlineAdmin",
+        WELCOME_COPY.headlineAdmin(practiceName),
+        { practiceName }
       )
     : session?.user?.name
-      ? WELCOME_COPY.headlineStaff(session.user.name.split(" ")[0]!)
-      : WELCOME_COPY.headlineFallback;
+      ? t(
+          "welcome.headlineStaff",
+          WELCOME_COPY.headlineStaff(session.user.name.split(" ")[0]!),
+          { firstName: session.user.name.split(" ")[0]! }
+        )
+      : t("welcome.headlineFallback", WELCOME_COPY.headlineFallback);
 
   const completed = new Set(Object.keys(readWelcomeState(userId).guides ?? {}));
 
@@ -294,6 +305,7 @@ function SetupOffer({
   onAccept: () => void;
   onLater: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-900/50 p-4">
       <div
@@ -305,17 +317,17 @@ function SetupOffer({
           <PartyPopper className="h-5 w-5" aria-hidden="true" />
         </span>
         <h2 className="mt-3 font-heading text-lg font-semibold">
-          {WELCOME_COPY.allDone.title}
+          {t("welcome.allDone.title", WELCOME_COPY.allDone.title)}
         </h2>
         <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-          {WELCOME_COPY.allDone.body}
+          {t("welcome.allDone.body", WELCOME_COPY.allDone.body)}
         </p>
         <div className="mt-5 flex items-center justify-center gap-2">
           <Button variant="ghost" size="sm" onClick={onLater}>
-            {WELCOME_COPY.allDone.later}
+            {t("welcome.allDone.later", WELCOME_COPY.allDone.later)}
           </Button>
           <Button size="sm" onClick={onAccept}>
-            {WELCOME_COPY.allDone.accept}
+            {t("welcome.allDone.accept", WELCOME_COPY.allDone.accept)}
           </Button>
         </div>
       </div>

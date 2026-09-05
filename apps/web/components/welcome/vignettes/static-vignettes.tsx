@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarPlus, ClipboardList, Globe, PawPrint } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 /**
  * Static faux-UI Polaroid images: tiny mock scenes of the real product
@@ -11,14 +12,16 @@ import { CalendarPlus, ClipboardList, Globe, PawPrint } from "lucide-react";
 
 /** Mini day sheet: today's schedule with a live visit and a checked-in pet. */
 export function DayVignette() {
+  const { t } = useI18n();
+
   return (
     <div
       className="vignette-stagger flex h-full w-full flex-col justify-center gap-1.5 bg-gradient-to-br from-orange-50 to-violet-50 p-3"
-      aria-label="Example: today's schedule with Biscuit checked in at 9:00"
+      aria-label={`Example: today's schedule with ${t("welcome.vignettes.day.visit1", "Biscuit · Wellness")} checked in at 9:00`}
     >
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         <ClipboardList className="h-3 w-3" aria-hidden="true" />
-        Today
+        {t("welcome.vignettes.day.today", "Today")}
       </div>
       <div className="flex items-center gap-2">
         <span className="w-8 text-right text-[10px] tabular-nums text-muted-foreground">
@@ -26,9 +29,9 @@ export function DayVignette() {
         </span>
         <span className="flex flex-1 items-center gap-1.5 rounded-md bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
           <PawPrint className="h-3 w-3" aria-hidden="true" />
-          Biscuit · Wellness
+          {t("welcome.vignettes.day.visit1", "Biscuit · Wellness")}
           <span className="ml-auto rounded-full bg-white px-1.5 py-0.5 text-[9px] font-semibold text-primary shadow-sm">
-            Here
+            {t("welcome.vignettes.day.here", "Here")}
           </span>
         </span>
       </div>
@@ -37,7 +40,7 @@ export function DayVignette() {
           11:30
         </span>
         <span className="flex-1 rounded-md bg-white px-2 py-1 text-xs text-foreground shadow-sm">
-          Luna · Vaccines
+          {t("welcome.vignettes.day.visit2", "Luna · Vaccines")}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -45,7 +48,7 @@ export function DayVignette() {
           2:00
         </span>
         <span className="flex-1 rounded-md border border-dashed border-border bg-white/60 px-2 py-1 text-xs text-muted-foreground">
-          Open slot
+          {t("welcome.vignettes.day.openSlot", "Open slot")}
         </span>
       </div>
     </div>
@@ -54,6 +57,13 @@ export function DayVignette() {
 
 /** Mini portal: what a pet parent sees from their private link. */
 export function PortalVignette() {
+  const { t } = useI18n();
+  const tabs = [
+    t("welcome.vignettes.portal.visits", "Visits"),
+    t("welcome.vignettes.portal.vaccines", "Vaccines"),
+    t("welcome.vignettes.portal.bills", "Bills"),
+  ];
+
   return (
     <div
       className="vignette-stagger flex h-full w-full flex-col justify-center gap-2 bg-gradient-to-br from-pink-50 to-emerald-50 p-3"
@@ -64,9 +74,11 @@ export function PortalVignette() {
           <PawPrint className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
         <div className="leading-tight">
-          <p className="text-xs font-semibold">Biscuit</p>
+          <p className="text-xs font-semibold">
+            {t("welcome.vignettes.portal.pet", "Biscuit")}
+          </p>
           <p className="text-[10px] text-muted-foreground">
-            Jordan&apos;s portal
+            {t("welcome.vignettes.portal.client", "Jordan's portal")}
           </p>
         </div>
         <Globe
@@ -75,7 +87,7 @@ export function PortalVignette() {
         />
       </div>
       <div className="flex gap-1.5">
-        {["Visits", "Vaccines", "Bills"].map((tab, i) => (
+        {tabs.map((tab, i) => (
           <span
             key={tab}
             className={
@@ -89,9 +101,9 @@ export function PortalVignette() {
         ))}
       </div>
       <div className="rounded-md bg-white px-2 py-1.5 text-[11px] leading-4 text-foreground shadow-sm">
-        Next visit: Tuesday 9:00
+        {t("welcome.vignettes.portal.nextVisit", "Next visit: Tuesday 9:00")}
         <span className="mt-0.5 block text-[10px] text-muted-foreground">
-          Request a new visit any time
+          {t("welcome.vignettes.portal.requestVisit", "Request a new visit any time")}
         </span>
       </div>
     </div>
@@ -100,6 +112,7 @@ export function PortalVignette() {
 
 /** Mini month calendar with a clinic event landed in it. */
 export function CalendarVignette() {
+  const { t } = useI18n();
   const days = Array.from({ length: 28 }, (_, i) => i + 1);
   return (
     <div
@@ -108,7 +121,7 @@ export function CalendarVignette() {
     >
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         <CalendarPlus className="h-3 w-3" aria-hidden="true" />
-        Your calendar
+        {t("welcome.vignettes.calendar.title", "Your calendar")}
       </div>
       <div className="grid grid-cols-7 gap-1">
         {days.map((d) => (
@@ -129,7 +142,7 @@ export function CalendarVignette() {
           className="h-2 w-2 rounded-full bg-primary"
           aria-hidden="true"
         />
-        Biscuit · Wellness · 9:00
+        {t("welcome.vignettes.calendar.event", "Biscuit · Wellness · 9:00")}
       </div>
     </div>
   );
