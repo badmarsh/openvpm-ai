@@ -72,14 +72,44 @@ DECLARE
     'visit_treatment_plan_presentations','visit_treatment_plan_response_lines','visit_treatment_plan_responses','visit_treatment_plan_revision_lines','visit_treatment_plan_revisions','visit_treatment_plans',
     'visit_closeouts','visit_work_items','vital_signs','webhooks','wellness_enrollments','wellness_plans'
   ];
+  ext_tbls text[];
 BEGIN
+  SELECT coalesce(array_agg(c.relname::text), array[]::text[])
+  INTO ext_tbls
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relkind IN ('r', 'p')
+    AND (
+      c.relname LIKE 'ext_%'
+      OR c.relname LIKE 'ekasa_%'
+      OR c.relname IN (
+        'ai_imaging_analyses',
+        'discharge_reports',
+        'lab_analyzer_reports',
+        'microchip_registrations',
+        'pet_passports',
+        'voice_dictations'
+      )
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM pg_attribute a
+      WHERE a.attrelid = c.oid
+        AND a.attname = 'practice_id'
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    );
+
+  tbls := tbls || ext_tbls;
+
   FOREACH t IN ARRAY tbls LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
     EXECUTE format(
       'CREATE POLICY tenant_isolation ON %I '
-      'USING (app_rls_bypass() OR practice_id = app_current_practice_id()) '
-      'WITH CHECK (app_rls_bypass() OR practice_id = app_current_practice_id())',
+      'USING (app_rls_bypass() OR practice_id::text = app_current_practice_id()::text) '
+      'WITH CHECK (app_rls_bypass() OR practice_id::text = app_current_practice_id()::text)',
       t
     );
   END LOOP;
@@ -633,6 +663,17 @@ GRANT SELECT, INSERT ON platform_email_identity TO openpims_app;
 GRANT SELECT, INSERT ON platform_email_identity_aliases TO openpims_app;
 GRANT SELECT, INSERT, UPDATE ON platform_email_preferences TO openpims_app;
 GRANT SELECT, INSERT ON platform_email_preference_events TO openpims_app;
+
+DROP POLICY IF EXISTS tenant_isolation ON funnel_events;
+DROP POLICY IF EXISTS tenant_isolation ON clinic_pilots;
+DROP POLICY IF EXISTS tenant_isolation ON clinic_pilot_events;
+DROP POLICY IF EXISTS tenant_isolation ON file_object_replicas;
+DROP POLICY IF EXISTS tenant_isolation ON file_storage_events;
+DROP POLICY IF EXISTS tenant_isolation ON practice_conversion_milestones;
+DROP POLICY IF EXISTS tenant_isolation ON sms_delivery_event_history;
+DROP POLICY IF EXISTS tenant_isolation ON sms_provider_events;
+DROP POLICY IF EXISTS tenant_isolation ON sms_provider_event_resolutions;
+DROP POLICY IF EXISTS tenant_isolation ON auth_email_attempts;
 
 -- Product-funnel events are global operational telemetry. Browser writes go
 -- through the bounded ingestion route; tenant sessions never query it.

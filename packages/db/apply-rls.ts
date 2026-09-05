@@ -45,7 +45,7 @@ try {
     console.log("✓ created openpims_app role");
   } else if (appPw) {
     const q = appPw.replace(/'/g, "''");
-    await sql.unsafe(`ALTER ROLE openpims_app PASSWORD '${q}'`);
+    await sql.unsafe(`ALTER ROLE openpims_app WITH LOGIN PASSWORD '${q}'`);
     console.log("✓ rotated openpims_app password");
   }
 

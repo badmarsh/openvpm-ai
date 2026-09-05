@@ -106,9 +106,12 @@ export function generateReceiptHtml(
       : `<tr><td colspan="3" class="center">Veterinárne služby</td></tr>`;
 
   const isConfirmed = receipt.status === "CONFIRMED";
-  const statusNote = isConfirmed
-    ? ""
-    : `<div class="offline-note">⚠ DOKLAD NIE JE OVERENÝ v systéme FR SR (${receipt.status})</div>`;
+  const isEmulated = !receipt.uid || receipt.uid.startsWith("MOCK-UID");
+  const statusNote = !isConfirmed
+    ? `<div class="offline-note">⚠ DOKLAD NIE JE OVERENÝ v systéme FR SR (${receipt.status})</div>`
+    : isEmulated
+      ? `<div class="offline-note">⚠ PREDCERTIFIKAČNÁ EMULÁCIA — NEDAŇOVÝ DOKLAD (PILOT)</div>`
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="sk">

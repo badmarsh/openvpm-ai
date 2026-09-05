@@ -256,6 +256,9 @@ function check(name: string, ok: boolean) {
 
 try {
   // Arrange (as owner — bypasses RLS).
+  await owner`delete from platform_email_identity_aliases where current_identity_key_fingerprint = ${platformEmailIdentityFingerprint}`;
+  await owner`delete from platform_email_preference_events where email_hash = ${platformEmailHash}`;
+  await owner`delete from platform_email_preferences where email_hash = ${platformEmailHash}`;
   await owner`insert into practices (id, name) values (${aId}, 'RLS Test A'), (${bId}, 'RLS Test B')`;
   const insertedPlatformEmailIdentity =
     await owner`insert into platform_email_identity
@@ -4733,7 +4736,7 @@ try {
       where id in (${aSmsProviderConflict}, ${resolutionBaseConflict})`;
     await cleanup`delete from sms_provider_events
       where id in (${aSmsProviderEvent}, ${aAttributedSmsProviderEvent}, ${resolutionBaseEvent}, ${resolutionGlobalDeliveryEvent})`;
-    await cleanup`delete from sms_delivery_event_history where id in (${aSmsDeliveryHistory}, ${bSmsDeliveryHistory}, ${bSmsDeliveryConflictHistory})`;
+    await cleanup`delete from sms_delivery_event_history where delivery_event_id in (${aSmsDeliveryEvent}, ${bSmsDeliveryEvent}, ${unmatchedSmsDeliveryEvent}) or id in (${aSmsDeliveryHistory}, ${bSmsDeliveryHistory}, ${bSmsDeliveryConflictHistory})`;
     await cleanup`delete from sms_delivery_events where id in (${aSmsDeliveryEvent}, ${bSmsDeliveryEvent}, ${unmatchedSmsDeliveryEvent})`;
     await cleanup`delete from lab_result_events where id in (${aLabResultEvent}, ${bLabResultEvent})`;
     await cleanup`delete from lab_result_replacements where id in (${aLabReplacement}, ${bLabReplacement})`;

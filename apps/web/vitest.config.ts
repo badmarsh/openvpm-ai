@@ -10,7 +10,7 @@ export default defineConfig({
     environment: "node",
     // Unit tests only — pure logic (mappers, auth helpers). The Playwright
     // e2e suite lives under /e2e and is run separately via `pnpm test:e2e`.
-    include: ["**/*.test.ts"],
+    include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules", ".next", "../../e2e/**"],
   },
 });
