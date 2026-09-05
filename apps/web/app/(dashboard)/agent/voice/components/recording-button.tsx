@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface RecordingButtonProps {
   onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
   onInterimText?: (text: string) => void;
+  onCommandDetected?: (actionKey: string, phrase: string) => void;
   disabled?: boolean;
   size?: "default" | "large";
 }
@@ -15,6 +16,7 @@ interface RecordingButtonProps {
 export function RecordingButton({
   onRecordingComplete,
   onInterimText,
+  onCommandDetected,
   disabled = false,
   size = "default",
 }: RecordingButtonProps) {
@@ -36,6 +38,7 @@ export function RecordingButton({
   // Web Speech API for real-time interim transcription
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const speechRecognizerRef = useRef<any>(null);
+  const stopRecordingRef = useRef<() => void>(() => {});
 
   const isLarge = size === "large";
 
@@ -135,6 +138,43 @@ export function RecordingButton({
             if (interim) {
               setInterimTranscript(interim);
               onInterimText?.(interim);
+
+              // Live voice commands detection
+              const norm = interim.toLowerCase().trim();
+              if (
+                norm.includes("ukončiť poznámku") ||
+                norm.includes("ukoncit poznamku") ||
+                norm.includes("zastaviť nahrávanie") ||
+                norm.includes("zastavit nahravanie")
+              ) {
+                onCommandDetected?.("end_note", "Ukončiť poznámku");
+                stopRecordingRef.current();
+              } else if (
+                norm.includes("nový odsek") ||
+                norm.includes("novy odsek")
+              ) {
+                onCommandDetected?.("new_paragraph", "Nový odsek");
+              } else if (
+                norm.includes("odrážka") ||
+                norm.includes("odrazka")
+              ) {
+                onCommandDetected?.("bullet_point", "Odrážka");
+              } else if (
+                norm.includes("číslovaný zoznam") ||
+                norm.includes("cislovany zoznam")
+              ) {
+                onCommandDetected?.("numbered_list", "Číslovaný zoznam");
+              } else if (
+                norm.includes("tučný text") ||
+                norm.includes("tucny text")
+              ) {
+                onCommandDetected?.("bold_text", "Tučný text");
+              } else if (
+                norm.includes("uložiť dokument") ||
+                norm.includes("ulozit dokument")
+              ) {
+                onCommandDetected?.("save_document", "Uložiť dokument");
+              }
             }
           };
 
@@ -211,6 +251,8 @@ export function RecordingButton({
     }
     setIsRecording(false);
   }, []);
+
+  stopRecordingRef.current = stopRecording;
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)

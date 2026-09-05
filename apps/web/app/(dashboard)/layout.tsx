@@ -14,6 +14,7 @@ import { VerifyEmailBanner } from "@/components/layout/verify-email-banner";
 import { DemoConversionBar } from "@/components/demo/demo-conversion-bar";
 import { DemoFunnelTracker } from "@/components/demo/demo-funnel-tracker";
 import { RecoveryReviewBanner } from "@/components/layout/recovery-review-banner";
+import { ScribeWidget } from "@/components/layout/scribe-widget";
 
 export default function DashboardLayout({
   children,
@@ -96,6 +97,7 @@ export default function DashboardLayout({
             open={searchOpen}
             onClose={() => setSearchOpen(false)}
           />
+          <ScribeWidget />
         </div>
         </WelcomeProvider>
       </OnboardingJourneyProvider>

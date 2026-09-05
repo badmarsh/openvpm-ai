@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Mic,
   Sparkles,
@@ -17,6 +18,7 @@ import {
   CheckCircle2,
   Volume2,
   Sliders,
+  MessageSquare,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -26,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { RecordingButton } from "./components/recording-button";
 import { AudioPlayer } from "./components/audio-player";
 import { ClinicalTemplatesModal } from "./components/clinical-templates";
+import { VoiceCommandsModal } from "./components/voice-commands";
 import { PatientSelector } from "./components/patient-selector";
 import { SoapPreview, type SoapSectionsData } from "./components/soap-preview";
 import { HistoryList, type Dictation } from "./components/history-list";
@@ -41,7 +44,10 @@ type DictationStatus =
 
 type ViewMode = "main" | "history" | "results";
 
-export default function VoiceDictationPage() {
+function VoiceDictationContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const patientIdParam = searchParams.get("patientId");
   const utils = trpc.useUtils();
 
   // Patient
@@ -51,6 +57,32 @@ export default function VoiceDictationPage() {
     species?: string | null;
     clientName: string;
   } | null>(null);
+
+  // Auto-select patient from query param
+  const isValidUuid = (val: string | null): val is string => {
+    if (!val) return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+  };
+  const isParamValidUuid = isValidUuid(patientIdParam);
+
+  const patientQuery = trpc.patients.getById.useQuery(
+    { id: patientIdParam! },
+    { enabled: isParamValidUuid && !selectedPatient },
+  );
+
+  useEffect(() => {
+    if (patientQuery.data && !selectedPatient) {
+      const p = patientQuery.data;
+      const clientFullName = [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ");
+      setSelectedPatient({
+        id: p.id,
+        name: p.name ?? "Neznámy pacient",
+        species: p.species ?? null,
+        clientName: clientFullName,
+      });
+      toast.success(`Pacient „${p.name}“ bol vybraný`);
+    }
+  }, [patientQuery.data, selectedPatient]);
 
   // Recording
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -72,6 +104,7 @@ export default function VoiceDictationPage() {
   // UI state
   const [viewMode, setViewMode] = useState<ViewMode>("main");
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [commandsOpen, setCommandsOpen] = useState(false);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
 
   // tRPC mutations
@@ -276,6 +309,69 @@ export default function VoiceDictationPage() {
     [selectedPatient, activeStyle, formatTextMutation],
   );
 
+  const handleExecuteVoiceCommand = useCallback(
+    (actionKey: string, phrase: string) => {
+      switch (actionKey) {
+        case "new_note":
+          resetState();
+          toast.success("Pripravená nová poznámka pacienta");
+          break;
+        case "start_consultation":
+          if (!selectedPatient) {
+            toast.warning("Najprv vyberte pacienta pre začatie konzultácie");
+          } else {
+            toast.info("Stlačte tlačidlo mikrofónu pre začatie diktovania");
+          }
+          break;
+        case "end_note":
+          if (audioBlob) {
+            handleProcess();
+          } else {
+            toast.info("Záznam pripravený na spracovanie");
+          }
+          break;
+        case "save_document":
+          if (dictationId && selectedPatient) {
+            handleSave();
+          } else {
+            toast.warning("Zatiaľ nie je k dispozícii žiadny vygenerovaný SOAP záznam");
+          }
+          break;
+        case "new_paragraph":
+          setRawTranscript((prev) => (prev ? `${prev}\n\n` : "\n\n"));
+          toast.success("Vložený nový odsek");
+          break;
+        case "bullet_point":
+          setRawTranscript((prev) => (prev ? `${prev}\n• ` : "• "));
+          toast.success("Vložená odrážka");
+          break;
+        case "numbered_list":
+          setRawTranscript((prev) => (prev ? `${prev}\n1. ` : "1. "));
+          toast.success("Vložený číslovaný zoznam");
+          break;
+        case "bold_text":
+          setRawTranscript((prev) => (prev ? `${prev} **Dôležité:** ` : "**Dôležité:** "));
+          toast.success("Vložený formát pre tučný text");
+          break;
+        case "go_to_patients":
+          router.push("/patients");
+          break;
+        case "open_appointments":
+          router.push("/appointments");
+          break;
+        case "show_dashboard":
+          router.push("/dashboard");
+          break;
+        case "search_records":
+          router.push("/records");
+          break;
+        default:
+          toast.info(`Rozpoznaný príkaz: ${phrase}`);
+      }
+    },
+    [resetState, selectedPatient, audioBlob, handleProcess, dictationId, handleSave, router],
+  );
+
   const isProcessing = status === "processing";
   const canRecord = selectedPatient && !isProcessing && viewMode === "main";
   const hasRecording = audioBlob && status === "idle";
@@ -311,6 +407,17 @@ export default function VoiceDictationPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCommandsOpen(true)}
+            className="gap-1.5 text-xs font-medium border-violet-200 dark:border-violet-900/60 hover:bg-violet-50 dark:hover:bg-violet-950/40 text-violet-700 dark:text-violet-300 shadow-xs"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Hlasové príkazy
+          </Button>
+
           <Button
             type="button"
             variant="outline"
@@ -387,6 +494,9 @@ export default function VoiceDictationPage() {
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                 <RecordingButton
                   onRecordingComplete={handleRecordingComplete}
+                  onCommandDetected={(actionKey, phrase) => {
+                    handleExecuteVoiceCommand(actionKey, phrase);
+                  }}
                   disabled={!canRecord}
                   size="large"
                 />
@@ -650,6 +760,13 @@ export default function VoiceDictationPage() {
         </div>
       </div>
 
+      {/* Voice Commands Modal */}
+      <VoiceCommandsModal
+        open={commandsOpen}
+        onOpenChange={setCommandsOpen}
+        onExecuteCommand={handleExecuteVoiceCommand}
+      />
+
       {/* Clinical Templates Modal */}
       <ClinicalTemplatesModal
         open={templatesOpen}
@@ -657,5 +774,22 @@ export default function VoiceDictationPage() {
         onSelectTemplate={handleSelectTemplate}
       />
     </div>
+  );
+}
+
+export default function VoiceDictationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-[calc(100vh-7.5rem)] items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+            <span className="text-xs text-muted-foreground">Načítavam hlasové diktovanie...</span>
+          </div>
+        </div>
+      }
+    >
+      <VoiceDictationContent />
+    </Suspense>
   );
 }
