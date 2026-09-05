@@ -12,6 +12,7 @@ import { filterVercelAnalyticsEvent } from "./analytics-privacy";
 import { createAppQueryClient } from "./query-client";
 import { trpc } from "./trpc";
 import { I18nProvider } from "./i18n";
+import { GuiThemeProvider } from "./theme/theme-context";
 
 export const ACTIVE_THEME = "light";
 
@@ -52,9 +53,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
             enableSystem={false}
           >
             <I18nProvider>
-              {children}
-              <Toaster richColors position="bottom-right" />
-              <Analytics beforeSend={filterVercelAnalyticsEvent} />
+              <GuiThemeProvider>
+                {children}
+                <Toaster richColors position="bottom-right" />
+                <Analytics beforeSend={filterVercelAnalyticsEvent} />
+              </GuiThemeProvider>
             </I18nProvider>
           </ThemeProvider>
         </SessionProvider>

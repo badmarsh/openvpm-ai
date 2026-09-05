@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 
+# Marketing module prototype (reference only, not part of openvpm-ai)
+automated-veterinary-marketing-module/
+
 # Next.js
 .next/
 out/
