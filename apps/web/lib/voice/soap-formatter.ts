@@ -11,52 +11,112 @@ const soapSectionsSchema = z.object({
 
 export type SoapSections = z.infer<typeof soapSectionsSchema>;
 
-const SOAP_FORMAT_PROMPT = `Si veterinárny asistent. Analyzuj transkripciu diktovania a rozdeľ ju do 4 sekcií SOAP.
-Vráť JSON s presne týmito kľúčmi: { "subjective", "objective", "assessment", "plan" }
+export type SoapStyle = "standard" | "detailed" | "concise";
 
-Pravidlá:
-- Subjektívne: čo majiteľ popisuje, anamnéza, sťažnosti
-- Objektívne: fyzikálne vyšetrenie, teplota, hmotnosť, palpácia, auskultácia
-- Diagnóza (Assessment): pracovná diagnóza, diferenciálne diagnózy
-- Plán: predpísané lieky, dávky, diéta, kontrola, ďalšie vyšetrenia
+export interface SoapFormatOptions {
+  style?: SoapStyle;
+  species?: string | null;
+  patientName?: string | null;
+}
 
-Ak sekcia nemá obsah, vráť prázdny string "".
-Odpovedz výhradne v slovenčine s veterinárnou terminológiou.
-Odpovedz IBA platným JSON objektom, bez akéhokoľvek ďalšieho textu.`;
+function getSystemPrompt(style: SoapStyle = "standard"): string {
+  const styleInstructions = {
+    standard: `Štýl: Štandardný klinický záznam. Vyvážený, jasný, profesionálny veterinárny tón s kompletnými údajmi a dávkovaním.`,
+    detailed: `Štýl: Detailný klinický záznam. Dôkladne rozpracuj všetky zistenia, diferenciálne diagnózy, podrobné odôvodnenie terapie a podrobný plán pre majiteľa vrátane varovných príznakov.`,
+    concise: `Štýl: Stručný telegrafický záznam. Používaj výstižné odrážky a kľúčové fakty, vhodné pre rýchlu ambulantnú prax.`,
+  }[style];
+
+  return `Si špičkový asistent veterinárneho lekára na Slovensku. Tvojou úlohou je transformovať transkripciu hovoreného diktovania do dokonale štruktúrovaného SOAP záznamu (podľa štandardov KVL SR a ŠVPS SR).
+
+${styleInstructions}
+
+Vráť výhradne JSON objekt s presne týmito 4 kľúčmi:
+{
+  "subjective": string,
+  "objective": string,
+  "assessment": string,
+  "plan": string
+}
+
+Pravidlá pre sekcie SOAP:
+1. "subjective" (Subjektívne / Anamnéza):
+   - Druh, plemeno, vek a pohlavie pacienta (ak sú spomenuté)
+   - Hlavný dôvod návštevy (chief complaint)
+   - Anamnéza: trvanie ťažkostí, dynamika stavu, doterajšia liečba
+   - Fyziologické funkcie: chuť do jedla, príjem vody, močenie, defekácia, aktivita majiteľa
+
+2. "objective" (Objektívne / Klinický nález):
+   - Triáda a vitálne funkcie: Telesná teplota (TT v °C), tepová frekvencia (TF /min), dychová frekvencia (DF /min), CRT (kapilárny návrat v s), stav slizníc (ružové, anemické, ikterické...)
+   - Stav hydratácie (kožná riasa) a výživný stav (BCS)
+   - Vyšetrenie hlavy, očí, uší, miazgových uzlín
+   - Auskultácia hrudníka (srdečné ozvy, šelesty, vezikulárne dýchanie)
+   - Palpácia brušnej dutiny (napätie, bolestivosť, náplň orgánov)
+   - Lokálne nálezy (koža, pohybový aparát, rany)
+   - Zobrazovacie a laboratórne nálezy (RTG, USG, krvný obraz, biochémia), ak boli diktované
+
+3. "assessment" (Diagnóza / Posúdenie):
+   - Hlavná pracovná diagnóza (presný lekársky/latinský alebo slovenský termín)
+   - Diferenciálne diagnózy (podozrenia)
+   - Posúdenie závažnosti stavu a prognóza
+
+4. "plan" (Terapeutický plán & Odporúčania):
+   - Terapia aplikovaná na pracovisku (liečivo, dávka, cesta: napr. Cerenia 1 mg/kg s.c.)
+   - Predpísaná domáca liečba: názov lieku, presná forma a dávka, frekvencia (s.i.d./b.i.d./t.i.d.), dĺžka podávania
+   - Diétne opatrenia a režimové obmedzenia (kľudový režim, venčenie na vôdzke)
+   - Doplňujúce odporučené vyšetrenia (opakované sono, kontrolná biochémia)
+   - Termín a podmienky kontroly (alebo inštrukcie v prípade zhoršenia)
+
+Dôležité inštrukcie:
+- Všetky texty píš výhradne gramaticky správnou slovenčinou s odbornou veterinárnou terminológiou.
+- Ak v diktovaní niektorá časť úplne chýba, vráť prázdny reťazec "".
+- Odpovedz IBA čistým JSON objektom bez formátovania markdownom, bez spätných lomiek alebo úvodných viet.`;
+}
 
 function parseAiJson(raw: string): Record<string, unknown> {
   let cleaned = raw.trim();
-  // Strip markdown code fences if present
   if (cleaned.startsWith("```")) {
     cleaned = cleaned
       .replace(/^```(?:json)?\s*\n?/i, "")
       .replace(/\n?```\s*$/i, "")
       .trim();
   }
-  // Remove trailing commas before } or ]
   cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
-  // Remove control characters
   cleaned = cleaned.replace(/[\x00-\x1f\x7f]/g, "");
   return JSON.parse(cleaned);
 }
 
 export async function formatTranscriptToSoap(
   transcript: string,
+  options: SoapFormatOptions = {},
 ): Promise<SoapSections> {
-  const result = await generateText({
-    model: configuredModel(),
-    system: SOAP_FORMAT_PROMPT,
-    prompt: `Transkripcia diktovania:\n\n${transcript}`,
-  });
+  const { style = "standard", species, patientName } = options;
 
-  const raw = parseAiJson(result.text);
-  const parsed = soapSectionsSchema.safeParse(raw);
-
-  if (!parsed.success) {
-    throw new Error(
-      `AI odpoveď neobsahuje platnú SOAP štruktúru: ${parsed.error.message}`,
-    );
+  let patientContext = "";
+  if (patientName || species) {
+    patientContext = `Pacient: ${patientName ?? "Neznámy"}${species ? ` (${species})` : ""}\n\n`;
   }
 
-  return parsed.data;
+  const result = await generateText({
+    model: configuredModel(),
+    system: getSystemPrompt(style),
+    prompt: `${patientContext}Transkripcia diktovania:\n\n${transcript}`,
+  });
+
+  try {
+    const raw = parseAiJson(result.text);
+    const parsed = soapSectionsSchema.safeParse(raw);
+
+    if (parsed.success) {
+      return parsed.data;
+    }
+  } catch {
+    // Ak by model vrátil neštruktúrovaný text, bezpečne ho umiestnime do subjektívnej sekcie
+  }
+
+  return {
+    subjective: transcript,
+    objective: "",
+    assessment: "",
+    plan: "",
+  };
 }
