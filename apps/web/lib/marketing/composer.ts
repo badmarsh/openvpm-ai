@@ -103,7 +103,7 @@ export function localCompose(ctx: ComposeCtx): string {
 
 export async function composePost(ctx: ComposeCtx): Promise<string> {
   try {
-    const model = await configuredModel();
+    const model = configuredModel();
     if (model) {
       const prompt = `Vytvor príspevok na sociálne siete pre veterinárnu kliniku "${ctx.brand.name}" v jazyku "${ctx.lang}".
 Téma/Recept: ${ctx.recipeKey}.

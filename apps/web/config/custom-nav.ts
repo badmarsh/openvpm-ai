@@ -17,6 +17,7 @@ import {
   Heart,
   Building2,
   MessageSquare,
+  Headphones,
 } from "lucide-react";
 
 export type UserRole =
@@ -52,7 +53,7 @@ export const customNavItems: CustomNavItem[] = [
   // Clinical
   {
     href: "/billing/ekasa",
-    label: "e-Kasa",
+    label: "e-Kasa Doklady",
     i18nKey: "nav.ekasa",
     icon: ReceiptText,
     roles: ["admin", "veterinarian", "front_desk"],
@@ -157,14 +158,6 @@ export const customNavItems: CustomNavItem[] = [
     section: 'marketing',
   },
   {
-    href: '/marketing/competitors',
-    label: 'Konkurencia & Trh',
-    i18nKey: 'nav.marketingCompetitors',
-    icon: Building2,
-    roles: ['admin', 'veterinarian'],
-    section: 'marketing',
-  },
-  {
     href: '/marketing/wellness',
     label: 'Wellness balíčky',
     i18nKey: 'nav.marketingWellness',
@@ -176,9 +169,10 @@ export const customNavItems: CustomNavItem[] = [
     href: "/vet-intel",
     label: "Vet Intelligence",
     i18nKey: "nav.vetIntel",
-    icon: Newspaper,
+    icon: Building2,
     roles: ["admin", "veterinarian"],
     section: "marketing",
+    badge: "AI",
   },
   // AI
   {
@@ -207,5 +201,23 @@ export const customNavItems: CustomNavItem[] = [
     roles: ["admin", "veterinarian", "technician", "front_desk"],
     section: "ai",
     badge: "AI",
+  },
+  // Support
+  {
+    href: "/support",
+    label: "Vzdialená Podpora",
+    i18nKey: "nav.remoteSupport",
+    icon: Headphones,
+    roles: ["admin", "veterinarian", "technician", "front_desk"],
+    section: "settings",
+  },
+  {
+    href: "/admin/support",
+    label: "Admin Podpora",
+    i18nKey: "nav.adminSupport",
+    icon: ShieldCheck,
+    roles: ["admin"],
+    section: "settings",
+    badge: "Support",
   },
 ];

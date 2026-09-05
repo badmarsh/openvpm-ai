@@ -13,7 +13,12 @@ import { configuredModel } from "@/lib/agent/runner";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { recordUsage } from "@/lib/billing/usage";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
-import { schedulePostopCheckIn, applySympathyGate } from "@/lib/marketing/messaging";
+import {
+  schedulePostopCheckIn,
+  applySympathyGate,
+  detectAndTriggerDentalRecall,
+  checkAndTriggerSeniorMilestone,
+} from "@/lib/marketing/messaging";
 
 const dischargeProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian", "technician", "front_desk"))
@@ -106,7 +111,7 @@ export const dischargeRouter = createRouter({
 
       // 3. Pokus o AI generovanie cez configuredModel
       try {
-        const model = await configuredModel();
+        const model = configuredModel();
         const systemPrompt =
           input.language === "sk"
             ? DISCHARGE_SYSTEM_PROMPT_SK
@@ -226,6 +231,22 @@ export const dischargeRouter = createRouter({
             }
           } else if (patient?.clientId) {
             await schedulePostopCheckIn(
+              ctx.db,
+              ctx.practiceId,
+              patient.clientId,
+              saved.patientId
+            );
+
+            // Automatické vyvolanie klinických recallov (dentálna hygiena a geriatrický screening)
+            const clinicalContext = `${saved.diagnosis} ${saved.treatment ?? ""} ${saved.reportText}`;
+            await detectAndTriggerDentalRecall(
+              ctx.db,
+              ctx.practiceId,
+              patient.clientId,
+              saved.patientId,
+              clinicalContext
+            );
+            await checkAndTriggerSeniorMilestone(
               ctx.db,
               ctx.practiceId,
               patient.clientId,

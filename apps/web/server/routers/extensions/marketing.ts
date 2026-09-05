@@ -29,6 +29,7 @@ import {
   practices,
   users,
   wellnessEnrollments,
+  bookingPages,
 } from '@openpims/db';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
 import { autoFix, validateMarketingText, withDisclaimer, type ValidatorReport } from '@/lib/marketing/validator';
@@ -50,6 +51,7 @@ import {
   ALIBABA_DEFAULT_IMAGE_MODEL,
   ALIBABA_DEFAULT_VIDEO_MODEL,
 } from "@/lib/ai/alibaba-proxy";
+import { proceduralIllustration } from "@/lib/marketing/illustration";
 
 async function assertPatientNotDeceased(db: any, patientId: string) {
   const [p] = await db
@@ -326,7 +328,7 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
       z.object({
         status: z.enum(['proposed', 'approved', 'published', 'blocked', 'archived', 'all']).default('all'),
         channel: z.enum(['instagram', 'facebook', 'google_business', 'sms', 'email', 'all']).default('all'),
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(500).default(200),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -548,6 +550,93 @@ approveContentItem: protectedProcedure
     return updated;
   }),
 
+  /** Reschedule a content item (change date/time or unassign date) */
+  rescheduleContentItem: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        scheduledFor: z.string().datetime().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingContentItems)
+        .set({
+          scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
+        })
+        .where(
+          and(
+            eq(extMarketingContentItems.id, input.id),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Príspevok nebol nájdený." });
+      }
+      return updated;
+    }),
+
+  /** Update content item details (title, body, channel, scheduled date) */
+  updateContentItem: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().min(1).max(255).optional(),
+        body: z.string().min(1).max(5000).optional(),
+        channel: z.enum(["instagram", "facebook", "google_business", "sms", "email"]).optional(),
+        scheduledFor: z.string().datetime().nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db
+        .select()
+        .from(extMarketingContentItems)
+        .where(
+          and(
+            eq(extMarketingContentItems.id, input.id),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Príspevok nebol nájdený." });
+      }
+
+      const updateData: Record<string, any> = {};
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.channel !== undefined) updateData.channel = input.channel;
+      if (input.scheduledFor !== undefined) {
+        updateData.scheduledFor = input.scheduledFor ? new Date(input.scheduledFor) : null;
+      }
+
+      if (input.body !== undefined) {
+        updateData.body = input.body;
+        const report = validateMarketingText({
+          text: input.body,
+          context: "marketing",
+        });
+        updateData.validatorVerdict = report.verdict;
+        updateData.validatorFindings = report.findings;
+        if (report.verdict === "block") {
+          updateData.status = "blocked";
+        } else if (existing.status === "blocked") {
+          updateData.status = "proposed";
+        }
+      }
+
+      const [updated] = await ctx.db
+        .update(extMarketingContentItems)
+        .set(updateData)
+        .where(eq(extMarketingContentItems.id, input.id))
+        .returning();
+
+      return updated;
+    }),
+
 /** Validate text without saving */
 validateContent: protectedProcedure
   .input(
@@ -675,6 +764,62 @@ createTvSlide: protectedProcedure
       })
       .returning();
     return slide;
+  }),
+
+updateTvSlide: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      id: z.string().uuid(),
+      title: z.string().min(1).max(255).optional(),
+      body: z.string().nullable().optional(),
+      mediaAssetId: z.string().uuid().nullable().optional(),
+      durationSeconds: z.number().min(5).max(60).optional(),
+      sortOrder: z.number().optional(),
+      isActive: z.boolean().optional(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const { id, ...data } = input;
+    const [slide] = await ctx.db
+      .update(extMarketingTvSlides)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(extMarketingTvSlides.id, id),
+          eq(extMarketingTvSlides.practiceId, ctx.practiceId),
+          isNull(extMarketingTvSlides.deletedAt),
+        )
+      )
+      .returning();
+    if (!slide) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "TV Slide not found" });
+    }
+    return slide;
+  }),
+
+deleteTvSlide: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(z.object({ id: z.string().uuid() }))
+  .mutation(async ({ ctx, input }) => {
+    const [slide] = await ctx.db
+      .update(extMarketingTvSlides)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(extMarketingTvSlides.id, input.id),
+          eq(extMarketingTvSlides.practiceId, ctx.practiceId),
+          isNull(extMarketingTvSlides.deletedAt),
+        )
+      )
+      .returning();
+    if (!slide) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "TV Slide not found" });
+    }
+    return { ok: true };
   }),
 
 // ── Handouts ─────────────────────────────────────────────────────────────────
@@ -1590,10 +1735,17 @@ listStaffTasks: protectedProcedure
 
   createCustomPost: protectedProcedure
     .use(requireRole("admin", "veterinarian", "front_desk"))
-    .input(z.object({ topic: z.string().min(1) }))
+    .input(
+      z.object({
+        topic: z.string().min(1),
+        scheduledFor: z.string().datetime().optional(),
+        channel: z.enum(["instagram", "facebook", "google_business", "sms", "email"]).optional().default("facebook"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const brand = await getBrand(ctx.db, ctx.practiceId);
-      const monday = mondayOf(new Date());
+      const postDate = input.scheduledFor ? new Date(input.scheduledFor) : new Date(Date.now() + 24 * 3600_000);
+      const monday = mondayOf(postDate);
       const weekStr = monday.toISOString().slice(0, 10);
 
       let [batch] = await ctx.db
@@ -1645,9 +1797,9 @@ listStaffTasks: protectedProcedure
           createdBy: ctx.user.id,
           title: input.topic.slice(0, 60),
           body,
-          channel: "facebook",
+          channel: input.channel ?? "facebook",
           status: rep.verdict === "block" ? "blocked" : "proposed",
-          scheduledFor: new Date(Date.now() + 24 * 3600_000),
+          scheduledFor: postDate,
           validatorVerdict: rep.verdict,
           validatorFindings: rep,
         })
@@ -2651,14 +2803,25 @@ listStaffTasks: protectedProcedure
         .orderBy(desc(extMarketingMediaAssets.createdAt))
         .limit(limit);
 
-      return rows.filter(({ asset, consent }) => {
-        if (filterConsent === "all") return true;
-        const isConsentValid = consent && !consent.revokedAt;
-        if (filterConsent === "valid") return isConsentValid;
-        if (filterConsent === "missing") return asset.subjectsPresent && !isConsentValid;
-        if (filterConsent === "not_required") return !asset.subjectsPresent;
-        return true;
-      });
+      return rows
+        .filter(({ asset, consent }) => {
+          if (filterConsent === "all") return true;
+          const isConsentValid = consent && !consent.revokedAt;
+          if (filterConsent === "valid") return isConsentValid;
+          if (filterConsent === "missing") return asset.subjectsPresent && !isConsentValid;
+          if (filterConsent === "not_required") return !asset.subjectsPresent;
+          return true;
+        })
+        .map(({ asset, consent }) => ({
+          asset,
+          consent: consent
+            ? {
+                ...consent,
+                revoked: Boolean(consent.revokedAt),
+                validUntil: new Date(new Date(consent.grantedAt).getTime() + 365 * 86400_000).toISOString(),
+              }
+            : null,
+        }));
     }),
 
   createMediaAsset: protectedProcedure
@@ -2799,6 +2962,186 @@ listStaffTasks: protectedProcedure
       clientName: `${client.firstName} ${client.lastName}`,
       patientName: patient?.name ?? "Všetky zvieratá klienta",
       grantedAt: consent.grantedAt,
+    }));
+  }),
+
+  applyMediaEdit: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        edit: z.object({
+          preset: z.string().optional(),
+          crop: z.string().optional(),
+          overlay: z.string().optional(),
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db
+        .select()
+        .from(extMarketingMediaAssets)
+        .where(
+          and(
+            eq(extMarketingMediaAssets.id, input.id),
+            eq(extMarketingMediaAssets.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Médium nebolo nájdené." });
+      }
+
+      const currentMeta = (existing.meta as Record<string, any>) ?? {};
+      const updatedMeta = {
+        ...currentMeta,
+        edit: {
+          ...(currentMeta.edit ?? {}),
+          ...input.edit,
+        },
+      };
+
+      const [updated] = await ctx.db
+        .update(extMarketingMediaAssets)
+        .set({ meta: updatedMeta })
+        .where(
+          and(
+            eq(extMarketingMediaAssets.id, input.id),
+            eq(extMarketingMediaAssets.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      return { ok: true, asset: updated };
+    }),
+
+  generateIllustration: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ prompt: z.string().min(4).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const clean = input.prompt.trim();
+      const report = validateMarketingText({ text: clean, context: "marketing" });
+      if (report.verdict === "block") {
+        return {
+          ok: false,
+          error: "Validátor prompt zablokoval – upravte zadanie (žiadne Rx liečivá ani zakázané tvrdenia).",
+          report,
+        };
+      }
+
+      const brand = await getBrand(ctx.db, ctx.practiceId);
+      const url = proceduralIllustration(clean, {
+        name: brand.name,
+        brandColor: brand.brandColor,
+        accentColor: brand.accentColor,
+      });
+
+      const [created] = await ctx.db
+        .insert(extMarketingMediaAssets)
+        .values({
+          practiceId: ctx.practiceId,
+          uploadedBy: ctx.user.id,
+          url,
+          kind: "illustration",
+          caption: clean,
+          altText: `Ilustrácia (generovaná): ${clean}`,
+          subjectsPresent: false,
+          consentId: null,
+          tags: ["generované", "ai-canvas"],
+          meta: { generated: true, prompt: clean },
+        })
+        .returning();
+
+      return { ok: true, id: created.id, report };
+    }),
+
+  grantConsent: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        clientId: z.string().uuid(),
+        patientId: z.string().uuid().optional(),
+        scope: z.enum(["photo_social", "photo_web", "photo_tv", "story", "testimonial", "marketing_messages"]).default("photo_social"),
+        evidenceType: z.enum(["signature", "sms_confirm", "pdf"]).default("signature"),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [consent] = await ctx.db
+        .insert(extMarketingMediaConsents)
+        .values({
+          practiceId: ctx.practiceId,
+          clientId: input.clientId,
+          patientId: input.patientId ?? null,
+          scope: input.scope,
+          evidenceType: input.evidenceType,
+          grantedAt: new Date(),
+          notes: input.notes ?? "Udelené na recepcii (podpis)",
+        })
+        .returning();
+
+      return { ok: true, consent };
+    }),
+
+  getBrandInfo: protectedProcedure.query(async ({ ctx }) => {
+    const brand = await getBrand(ctx.db, ctx.practiceId);
+    const words = (brand.name || "Veterinárna klinika").trim().split(/\s+/);
+    const logoInitials =
+      words.length >= 2
+        ? `${words[0][0]}${words[1][0]}`.toUpperCase()
+        : (brand.name.slice(0, 2) || "VK").toUpperCase();
+
+    return {
+      name: brand.name,
+      logoInitials,
+      primaryColor: brand.brandColor || "#0e5e4a",
+      secondaryColor: brand.accentColor || "#e8a33d",
+      phone: brand.phone,
+      bookingUrl: brand.bookingUrl,
+    };
+  }),
+
+  listClientsForMedia: protectedProcedure.query(async ({ ctx }) => {
+    const clientList = await ctx.db
+      .select({
+        id: clients.id,
+        firstName: clients.firstName,
+        lastName: clients.lastName,
+      })
+      .from(clients)
+      .where(
+        and(
+          eq(clients.practiceId, ctx.practiceId),
+          isNull(clients.deletedAt)
+        )
+      )
+      .orderBy(clients.lastName, clients.firstName)
+      .limit(80);
+
+    const activeConsents = await ctx.db
+      .select({
+        id: extMarketingMediaConsents.id,
+        clientId: extMarketingMediaConsents.clientId,
+      })
+      .from(extMarketingMediaConsents)
+      .where(
+        and(
+          eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
+          eq(extMarketingMediaConsents.scope, "photo_social"),
+          isNull(extMarketingMediaConsents.revokedAt)
+        )
+      );
+
+    const consentByClient = new Map<string, string>();
+    for (const c of activeConsents) {
+      consentByClient.set(c.clientId, c.id);
+    }
+
+    return clientList.map((cl) => ({
+      id: cl.id,
+      name: `${cl.firstName} ${cl.lastName}`.trim(),
+      validConsentId: consentByClient.get(cl.id) ?? null,
     }));
   }),
 
@@ -3047,9 +3390,23 @@ listStaffTasks: protectedProcedure
         .orderBy(desc(extMarketingReviews.receivedAt))
         .limit(8);
 
+      // Active booking page slug
+      const [bookingPage] = await ctx.db
+        .select({ slug: bookingPages.slug })
+        .from(bookingPages)
+        .where(
+          and(
+            eq(bookingPages.practiceId, input.clinicId),
+            eq(bookingPages.published, true),
+            isNull(bookingPages.deletedAt)
+          )
+        )
+        .limit(1);
+
       return {
         practice,
         isPublished,
+        bookingSlug: bookingPage?.slug ?? null,
         team: staffMembers,
         handouts: publicHandouts,
         reviews: topReviews,
