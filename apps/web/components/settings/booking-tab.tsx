@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookingIntakeSettings } from "@/components/settings/booking-intake-settings";
@@ -25,27 +26,29 @@ import {
 } from "@/lib/booking/page-config";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const LEAD_TIME_OPTIONS = [
-  { value: 0, label: "No notice needed" },
-  { value: 60, label: "1 hour" },
-  { value: 240, label: "4 hours" },
-  { value: 1440, label: "1 day" },
-  { value: 2880, label: "2 days" },
+  { value: 0, key: "none", label: "No notice needed" },
+  { value: 60, key: "hour1", label: "1 hour" },
+  { value: 240, key: "hour4", label: "4 hours" },
+  { value: 1440, key: "day1", label: "1 day" },
+  { value: 2880, key: "day2", label: "2 days" },
 ];
 
 const WINDOW_OPTIONS = [
-  { value: 14, label: "2 weeks" },
-  { value: 30, label: "1 month" },
-  { value: 60, label: "2 months" },
-  { value: 90, label: "3 months" },
-  { value: 180, label: "6 months" },
+  { value: 14, key: "week2", label: "2 weeks" },
+  { value: 30, key: "month1", label: "1 month" },
+  { value: 60, key: "month2", label: "2 months" },
+  { value: 90, key: "month3", label: "3 months" },
+  { value: 180, key: "month6", label: "6 months" },
 ];
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500";
 
 export function BookingTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const myPage = trpc.booking.getMyPage.useQuery();
   const types = trpc.settings.listAppointmentTypes.useQuery();
@@ -55,8 +58,14 @@ export function BookingTab() {
       setPublishError(null);
       toast.success(
         saved.published
-          ? "Appointment request page published"
-          : "Appointment request page saved"
+          ? t(
+              "settings.booking.toasts.published",
+              "Appointment request page published",
+            )
+          : t(
+              "settings.booking.toasts.saved",
+              "Appointment request page saved",
+            ),
       );
       utils.booking.getMyPage.invalidate();
     },
@@ -138,18 +147,20 @@ export function BookingTab() {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(which);
-      toast.success("Copied");
+      toast.success(t("settings.booking.toasts.copied", "Copied"));
       setTimeout(() => setCopied(null), 2000);
     } catch {
-      toast.error("Could not copy");
+      toast.error(t("settings.booking.toasts.copyFailed", "Could not copy"));
     }
   }
 
   function handleSave(nextPublished: boolean) {
     if (!slugValid || slugTaken) return;
     if (nextPublished && bookableSet.size === 0) {
-      const message =
-        "Select at least one active visit type before publishing the appointment request page.";
+      const message = t(
+        "settings.booking.errors.needType",
+        "Select at least one active visit type before publishing the appointment request page.",
+      );
       setPublishError(message);
       toast.error(message);
       return;

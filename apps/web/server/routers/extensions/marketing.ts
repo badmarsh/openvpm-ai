@@ -5,6 +5,18 @@ import { TRPCError } from "@trpc/server";
 import { configuredModel } from "@/lib/agent/runner";
 import { readHostedAiAccess } from "@/lib/billing/ai-access";
 import { recordUsage } from "@/lib/billing/usage";
+import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm';
+import {
+  extMarketingContentItems,
+  extMarketingMediaAssets,
+  extMarketingMediaConsents,
+  extMarketingTvSlides,
+  extMarketingHandouts,
+  extMarketingReviews,
+  extMarketingRecallSchedules,
+  extMarketingWellnessRedemptions,
+} from '@openpims/db';
+import { validateMarketingText } from '@/lib/marketing/validator';
 
 export interface CampaignTemplate {
   id: string;
@@ -234,4 +246,374 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
         usedAi: false,
       };
     }),
+
+// ── Content Plan ──────────────────────────────────────────────────────────────
+
+/** List all content items for the practice (most recent first) */
+listContentItems: protectedProcedure
+  .input(
+    z.object({
+      status: z.enum(['proposed', 'approved', 'published', 'blocked', 'archived', 'all']).default('all'),
+      channel: z.enum(['instagram', 'facebook', 'google_business', 'sms', 'email', 'all']).default('all'),
+      limit: z.number().min(1).max(100).default(50),
+    })
+  )
+  .query(async ({ ctx, input }) => {
+    const conditions = [
+      eq(extMarketingContentItems.practiceId, ctx.practiceId),
+      isNull(extMarketingContentItems.deletedAt),
+    ];
+    if (input.status !== 'all') conditions.push(eq(extMarketingContentItems.status, input.status));
+    if (input.channel !== 'all') conditions.push(eq(extMarketingContentItems.channel, input.channel));
+    return ctx.db
+      .select()
+      .from(extMarketingContentItems)
+      .where(and(...conditions))
+      .orderBy(desc(extMarketingContentItems.createdAt))
+      .limit(input.limit);
+  }),
+
+/** Create a new content item and run the validator */
+createContentItem: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      title: z.string().min(1).max(255),
+      body: z.string().min(1).max(5000),
+      channel: z.enum(['instagram', 'facebook', 'google_business', 'sms', 'email']),
+      scheduledFor: z.string().datetime().optional(),
+      mediaAssetId: z.string().uuid().optional(),
+      allowPrice: z.boolean().default(false),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const report = validateMarketingText({
+      text: input.body,
+      context: 'marketing',
+      allowPrice: input.allowPrice,
+    });
+    const [item] = await ctx.db
+      .insert(extMarketingContentItems)
+      .values({
+        practiceId: ctx.practiceId,
+        createdBy: ctx.user.id,
+        title: input.title,
+        body: input.body,
+        channel: input.channel,
+        status: report.verdict === 'block' ? 'blocked' : 'proposed',
+        scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
+        mediaAssetId: input.mediaAssetId ?? null,
+        validatorVerdict: report.verdict,
+        validatorFindings: report.findings,
+      })
+      .returning();
+    return { item, validatorReport: report };
+  }),
+
+/** Approve a proposed content item (admin/vet only) */
+approveContentItem: protectedProcedure
+  .use(requireRole('admin', 'veterinarian'))
+  .input(z.object({ id: z.string().uuid() }))
+  .mutation(async ({ ctx, input }) => {
+    const [existing] = await ctx.db
+      .select()
+      .from(extMarketingContentItems)
+      .where(
+        and(
+          eq(extMarketingContentItems.id, input.id),
+          eq(extMarketingContentItems.practiceId, ctx.practiceId),
+          isNull(extMarketingContentItems.deletedAt),
+        )
+      )
+      .limit(1);
+    if (!existing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Príspevok nebol nájdený.' });
+    if (existing.validatorVerdict === 'block') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Príspevok je zablokovaný validátorom a nemôže byť schválený. Odstráňte problematický obsah.',
+      });
+    }
+    const [updated] = await ctx.db
+      .update(extMarketingContentItems)
+      .set({ status: 'approved', approvedBy: ctx.user.id, approvedAt: new Date() })
+      .where(eq(extMarketingContentItems.id, input.id))
+      .returning();
+    return updated;
+  }),
+
+/** Validate text without saving */
+validateContent: protectedProcedure
+  .input(
+    z.object({
+      text: z.string().min(1).max(5000),
+      context: z.enum(['marketing', 'review_reply', 'handout']).default('marketing'),
+      allowPrice: z.boolean().default(false),
+    })
+  )
+  .mutation(async ({ input }) => {
+    return validateMarketingText({
+      text: input.text,
+      context: input.context,
+      allowPrice: input.allowPrice,
+    });
+  }),
+
+// ── Media Library ─────────────────────────────────────────────────────────────
+
+listMediaAssets: protectedProcedure
+  .input(z.object({ limit: z.number().min(1).max(100).default(50) }))
+  .query(async ({ ctx, input }) => {
+    return ctx.db
+      .select()
+      .from(extMarketingMediaAssets)
+      .where(
+        and(
+          eq(extMarketingMediaAssets.practiceId, ctx.practiceId),
+          isNull(extMarketingMediaAssets.deletedAt),
+        )
+      )
+      .orderBy(desc(extMarketingMediaAssets.createdAt))
+      .limit(input.limit);
+  }),
+
+// ── TV Slides ─────────────────────────────────────────────────────────────────
+
+listTvSlides: protectedProcedure.query(async ({ ctx }) => {
+  return ctx.db
+    .select()
+    .from(extMarketingTvSlides)
+    .where(
+      and(
+        eq(extMarketingTvSlides.practiceId, ctx.practiceId),
+        isNull(extMarketingTvSlides.deletedAt),
+      )
+    )
+    .orderBy(extMarketingTvSlides.sortOrder);
+}),
+
+createTvSlide: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      title: z.string().min(1).max(255),
+      body: z.string().optional(),
+      mediaAssetId: z.string().uuid().optional(),
+      durationSeconds: z.number().min(5).max(60).default(12),
+      sortOrder: z.number().default(0),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const [slide] = await ctx.db
+      .insert(extMarketingTvSlides)
+      .values({
+        practiceId: ctx.practiceId,
+        createdBy: ctx.user.id,
+        title: input.title,
+        body: input.body ?? null,
+        mediaAssetId: input.mediaAssetId ?? null,
+        durationSeconds: input.durationSeconds,
+        sortOrder: input.sortOrder,
+        isActive: true,
+      })
+      .returning();
+    return slide;
+  }),
+
+// ── Handouts ─────────────────────────────────────────────────────────────────
+
+listHandouts: protectedProcedure.query(async ({ ctx }) => {
+  return ctx.db
+    .select()
+    .from(extMarketingHandouts)
+    .where(
+      and(
+        eq(extMarketingHandouts.practiceId, ctx.practiceId),
+        isNull(extMarketingHandouts.deletedAt),
+      )
+    )
+    .orderBy(desc(extMarketingHandouts.createdAt));
+}),
+
+getPublicHandout: protectedProcedure
+  .input(z.object({ slug: z.string() }))
+  .query(async ({ ctx, input }) => {
+    const [handout] = await ctx.db
+      .select()
+      .from(extMarketingHandouts)
+      .where(
+        and(
+          eq(extMarketingHandouts.practiceId, ctx.practiceId),
+          eq(extMarketingHandouts.slug, input.slug),
+          eq(extMarketingHandouts.isPublic, true),
+          isNull(extMarketingHandouts.deletedAt),
+        )
+      )
+      .limit(1);
+    if (!handout) throw new TRPCError({ code: 'NOT_FOUND' });
+    return handout;
+  }),
+
+createHandout: protectedProcedure
+  .use(requireRole('admin', 'veterinarian'))
+  .input(
+    z.object({
+      slug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/, 'Slug môže obsahovať len malé písmená, číslice a pomlčky.'),
+      title: z.string().min(1).max(255),
+      body: z.string().min(1),
+      species: z.array(z.string()).optional(),
+      tags: z.array(z.string()).optional(),
+      isPublic: z.boolean().default(true),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const [handout] = await ctx.db
+      .insert(extMarketingHandouts)
+      .values({
+        practiceId: ctx.practiceId,
+        createdBy: ctx.user.id,
+        ...input,
+      })
+      .returning();
+    return handout;
+  }),
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
+
+listReviews: protectedProcedure
+  .input(
+    z.object({
+      limit: z.number().min(1).max(100).default(50),
+      unansweredOnly: z.boolean().default(false),
+    })
+  )
+  .query(async ({ ctx, input }) => {
+    const conditions = [
+      eq(extMarketingReviews.practiceId, ctx.practiceId),
+      isNull(extMarketingReviews.deletedAt),
+    ];
+    if (input.unansweredOnly) conditions.push(isNull(extMarketingReviews.replyText));
+    return ctx.db
+      .select()
+      .from(extMarketingReviews)
+      .where(and(...conditions))
+      .orderBy(desc(extMarketingReviews.receivedAt))
+      .limit(input.limit);
+  }),
+
+replyToReview: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      id: z.string().uuid(),
+      replyText: z.string().min(1).max(1000),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    // Validate reply text against marketing rules
+    const report = validateMarketingText({ text: input.replyText, context: 'review_reply' });
+    if (report.verdict === 'block') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Odpoveď obsahuje neprijateľný obsah: ' + report.findings.map((f: any) => f.message).join(' / '),
+      });
+    }
+    const [updated] = await ctx.db
+      .update(extMarketingReviews)
+      .set({ replyText: input.replyText, repliedAt: new Date(), repliedBy: ctx.user.id })
+      .where(
+        and(
+          eq(extMarketingReviews.id, input.id),
+          eq(extMarketingReviews.practiceId, ctx.practiceId),
+        )
+      )
+      .returning();
+    return updated;
+  }),
+
+// ── Recall schedule config ────────────────────────────────────────────────────
+
+getRecallSchedule: protectedProcedure.query(async ({ ctx }) => {
+  const [config] = await ctx.db
+    .select()
+    .from(extMarketingRecallSchedules)
+    .where(eq(extMarketingRecallSchedules.practiceId, ctx.practiceId))
+    .limit(1);
+  return config ?? null;
+}),
+
+updateRecallSchedule: protectedProcedure
+  .use(requireRole('admin'))
+  .input(
+    z.object({
+      vaccinationRecallEnabled: z.boolean().optional(),
+      vaccinationRecallLeadDays: z.number().min(1).max(60).optional(),
+      postVisitReviewEnabled: z.boolean().optional(),
+      postVisitReviewDelayHours: z.number().min(1).max(168).optional(),
+      postVisitHandoutEnabled: z.boolean().optional(),
+      inactiveRecallEnabled: z.boolean().optional(),
+      inactiveRecallMonths: z.number().min(6).max(36).optional(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db
+      .select()
+      .from(extMarketingRecallSchedules)
+      .where(eq(extMarketingRecallSchedules.practiceId, ctx.practiceId))
+      .limit(1);
+    if (existing.length === 0) {
+      const [created] = await ctx.db
+        .insert(extMarketingRecallSchedules)
+        .values({ practiceId: ctx.practiceId, ...input })
+        .returning();
+      return created;
+    }
+    const [updated] = await ctx.db
+      .update(extMarketingRecallSchedules)
+      .set(input)
+      .where(eq(extMarketingRecallSchedules.practiceId, ctx.practiceId))
+      .returning();
+    return updated;
+  }),
+
+// ── Wellness Redemptions ──────────────────────────────────────────────────────
+
+listWellnessRedemptions: protectedProcedure
+  .input(z.object({ enrollmentId: z.string().uuid() }))
+  .query(async ({ ctx, input }) => {
+    return ctx.db
+      .select()
+      .from(extMarketingWellnessRedemptions)
+      .where(
+        and(
+          eq(extMarketingWellnessRedemptions.practiceId, ctx.practiceId),
+          eq(extMarketingWellnessRedemptions.enrollmentId, input.enrollmentId),
+        )
+      )
+      .orderBy(desc(extMarketingWellnessRedemptions.redeemedAt));
+  }),
+
+redeemWellnessBenefit: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      enrollmentId: z.string().uuid(),
+      benefitKey: z.string().min(1).max(100),
+      appointmentId: z.string().uuid().optional(),
+      notes: z.string().max(500).optional(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const [redemption] = await ctx.db
+      .insert(extMarketingWellnessRedemptions)
+      .values({
+        practiceId: ctx.practiceId,
+        enrollmentId: input.enrollmentId,
+        benefitKey: input.benefitKey,
+        redeemedAt: new Date(),
+        appointmentId: input.appointmentId ?? null,
+        notes: input.notes ?? null,
+      })
+      .returning();
+    return redemption;
+  }),
 });

@@ -18,6 +18,13 @@ export function BrandTheme() {
   });
 
   useEffect(() => {
+    try {
+      const activeGuiTheme = localStorage.getItem("openvpm_gui_theme");
+      if (activeGuiTheme && activeGuiTheme !== "openvpm") {
+        return;
+      }
+    } catch {}
+
     const root = document.documentElement;
     const hsl = data?.brandColor ? hexToHslString(data.brandColor) : null;
     if (hsl) {

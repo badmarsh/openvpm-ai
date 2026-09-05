@@ -1162,6 +1162,7 @@ type LocationForm = {
 };
 
 function LocationsTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const {
     data: locationList,
@@ -1288,7 +1289,7 @@ function LocationsTab() {
     <div className="max-w-4xl space-y-4">
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-sm font-semibold">Practice Locations</h3>
+          <h3 className="text-sm font-semibold">{t("settings.locations.title", "Practice Locations")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Locations power texting setup, room assignment, reminders, and
             hosted billing quantity.
@@ -1310,7 +1311,7 @@ function LocationsTab() {
 
       {showAdd ? (
         <div className="rounded-lg border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold">New Location</h3>
+          <h3 className="text-sm font-semibold">{t("settings.locations.newLocation", "New Location")}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Input
               placeholder="Location name"
@@ -1372,9 +1373,9 @@ function LocationsTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Location</th>
-              <th className="px-4 py-3 text-left font-medium">Contact</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.locations.colLocation", "Location")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.locations.colContact", "Contact")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.locations.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1568,6 +1569,7 @@ function redirectToClientPaymentUrl(url: unknown) {
 }
 
 function BillingTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const searchParams = useSearchParams();
   const [selectedCadence, setSelectedCadence] = useState<BillingCadence>(() =>
@@ -1704,7 +1706,7 @@ function BillingTab() {
     <div className="min-w-0 w-full max-w-full space-y-6">
       {checkoutStatus === "cancelled" ? (
         <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm">
-          <p className="font-medium">Checkout was canceled</p>
+          <p className="font-medium">{t("settings.billing.checkoutCanceled", "Checkout was canceled")}</p>
           <p className="mt-1 text-muted-foreground">
             Nothing changed. Choose a schedule whenever you are ready.
           </p>
@@ -1712,8 +1714,8 @@ function BillingTab() {
       ) : null}
       {checkoutStatus === "success" ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          <p className="font-medium">Your billing details were received</p>
-          <p className="mt-1">OpenVPM is confirming the subscription now.</p>
+          <p className="font-medium">{t("settings.billing.detailsReceived", "Your billing details were received")}</p>
+          <p className="mt-1">{t("settings.billing.confirmingSubscription", "OpenVPM is confirming the subscription now.")}</p>
         </div>
       ) : null}
 
@@ -1878,7 +1880,7 @@ function BillingTab() {
                   : "border-amber-200 bg-amber-50 text-amber-800",
               )}
             >
-              <span className="font-medium">Billing sync: </span>
+              <span className="font-medium">{t("settings.billing.billingSync", "Billing sync:")} </span>
               {data.billingSyncStatus!.message}
             </div>
           ) : null}
@@ -2041,13 +2043,13 @@ function ClientPaymentProcessingSection({
       {!isLoading && !error && data && (
         <div className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-3">
           <div>
-            <p className="text-muted-foreground">Stripe API</p>
+            <p className="text-muted-foreground">{t("settings.billing.stripeApi", "Stripe API")}</p>
             <p className="font-medium">
               {data.stripeConfigured ? "Configured" : "Missing"}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Card payments</p>
+            <p className="text-muted-foreground">{t("settings.billing.cardPayments", "Card payments")}</p>
             <p className="font-medium">
               {data.enabled || data.status === "not_required"
                 ? "Enabled"
@@ -2055,7 +2057,7 @@ function ClientPaymentProcessingSection({
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Payouts</p>
+            <p className="text-muted-foreground">{t("settings.billing.payouts", "Payouts")}</p>
             <p className="font-medium">
               {data.payoutsEnabled
                 ? "Enabled"
@@ -2066,7 +2068,7 @@ function ClientPaymentProcessingSection({
           </div>
           {data.requirementsCurrentlyDue?.length ? (
             <div className="sm:col-span-3">
-              <p className="text-muted-foreground">Stripe requirements</p>
+              <p className="text-muted-foreground">{t("settings.billing.stripeRequirements", "Stripe requirements")}</p>
               <p className="font-medium">
                 {data.requirementsCurrentlyDue.length} item
                 {data.requirementsCurrentlyDue.length === 1 ? "" : "s"} due
@@ -2075,7 +2077,7 @@ function ClientPaymentProcessingSection({
           ) : null}
           {data.requirementsDisabledReason ? (
             <div className="sm:col-span-3">
-              <p className="text-muted-foreground">Disabled reason</p>
+              <p className="text-muted-foreground">{t("settings.billing.disabledReason", "Disabled reason")}</p>
               <p className="font-medium">{data.requirementsDisabledReason}</p>
             </div>
           ) : null}
@@ -2185,7 +2187,7 @@ function PlanGrid({
                   </li>
                 ))
               ) : (
-                <li>Full core PIMS</li>
+                <li>{t("settings.billing.fullCorePims", "Full core PIMS")}</li>
               )}
             </ul>
             <div className="mt-4 pt-2">
@@ -2223,6 +2225,7 @@ function PlanGrid({
 
 // ── Staff ───────────────────────────────────────────────────
 function StaffTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const {
     data: staffList,
@@ -2405,7 +2408,7 @@ function StaffTab() {
 
       {showInvite && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold">Invite a teammate</h3>
+          <h3 className="text-sm font-semibold">{t("settings.staff.inviteTitle", "Invite a teammate")}</h3>
           <p className="text-xs text-muted-foreground">
             They&apos;ll get an email to set their own password and activate
             their account.
@@ -2438,11 +2441,11 @@ function StaffTab() {
                 })
               }
             >
-              <option value="front_desk">Front Desk</option>
-              <option value="viewer">Viewer (read-only)</option>
-              <option value="technician">Technician</option>
-              <option value="veterinarian">Veterinarian</option>
-              <option value="admin">Admin</option>
+              <option value="front_desk">{t("settings.staff.roleFrontDesk", "Front Desk")}</option>
+              <option value="viewer">{t("settings.staff.roleViewer", "Viewer (read-only)")}</option>
+              <option value="technician">{t("settings.staff.roleTechnician", "Technician")}</option>
+              <option value="veterinarian">{t("settings.staff.roleVeterinarian", "Veterinarian")}</option>
+              <option value="admin">{t("settings.staff.roleAdmin", "Admin")}</option>
             </select>
           </div>
           <div className="flex gap-2">
@@ -2504,7 +2507,7 @@ function StaffTab() {
 
       {showAdd && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold">New Staff Member</h3>
+          <h3 className="text-sm font-semibold">{t("settings.staff.newMember", "New Staff Member")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
               placeholder="Full name"
@@ -2542,11 +2545,11 @@ function StaffTab() {
                 })
               }
             >
-              <option value="front_desk">Front Desk</option>
-              <option value="viewer">Viewer (read-only)</option>
-              <option value="technician">Technician</option>
-              <option value="veterinarian">Veterinarian</option>
-              <option value="admin">Admin</option>
+              <option value="front_desk">{t("settings.staff.roleFrontDesk", "Front Desk")}</option>
+              <option value="viewer">{t("settings.staff.roleViewer", "Viewer (read-only)")}</option>
+              <option value="technician">{t("settings.staff.roleTechnician", "Technician")}</option>
+              <option value="veterinarian">{t("settings.staff.roleVeterinarian", "Veterinarian")}</option>
+              <option value="admin">{t("settings.staff.roleAdmin", "Admin")}</option>
             </select>
             <Input
               placeholder="Phone (optional)"
@@ -2618,13 +2621,13 @@ function StaffTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Email</th>
-              <th className="px-4 py-3 text-left font-medium">Role</th>
-              <th className="px-4 py-3 text-left font-medium">Provider</th>
-              <th className="px-4 py-3 text-left font-medium">Phone</th>
-              <th className="px-4 py-3 text-left font-medium">License #</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colName", "Name")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colEmail", "Email")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colRole", "Role")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colProvider", "Provider")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colPhone", "Phone")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colLicense", "License #")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.staff.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -2846,6 +2849,7 @@ function StaffTab() {
 
 // ── Appointment Types ───────────────────────────────────────
 function AppointmentTypesTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const {
     data: types,
@@ -2950,7 +2954,7 @@ function AppointmentTypesTab() {
 
       {showAdd && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold">New Appointment Type</h3>
+          <h3 className="text-sm font-semibold">{t("settings.appointmentTypes.newType", "New Appointment Type")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
               placeholder="Type name"
@@ -2972,7 +2976,7 @@ function AppointmentTypesTab() {
               }
             />
             <div className="space-y-1.5">
-              <span className="text-sm font-medium">Color</span>
+              <span className="text-sm font-medium">{t("settings.appointmentTypes.colorLabel", "Color")}</span>
               <div className="flex gap-1.5">
                 {PRESET_COLORS.map((c) => (
                   <button
@@ -3033,11 +3037,11 @@ function AppointmentTypesTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Duration</th>
-              <th className="px-4 py-3 text-left font-medium">Color</th>
-              <th className="px-4 py-3 text-left font-medium">Room Type</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colName", "Name")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colDuration", "Duration")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colColor", "Color")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colRoomType", "Room Type")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.appointmentTypes.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -3733,7 +3737,7 @@ function DataTab() {
   const runImportPreview = useCallback(
     (text: string) => {
       if (!importMode || !migrationSource) {
-        toast.error("Najprv vyberte zdrojový systém.");
+        toast.error(t("settings.data.importFirst", "Select the source system first."));
         return;
       }
       setImportPreview(null);
@@ -3769,7 +3773,7 @@ function DataTab() {
   const handleFileSelect = useCallback(
     (file: File) => {
       if (!importMode || !migrationSource) {
-        toast.error("Najprv vyberte zdrojový systém.");
+        toast.error(t("settings.data.importFirst", "Select the source system first."));
         return;
       }
       const readVersion = ++importFileReadVersionRef.current;
@@ -3936,12 +3940,11 @@ function DataTab() {
 
   return (
     <div className="space-y-8">
-      {/* Ukážkové dáta */}
+      {/* Sample data */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Ukážkové dáta</h3>
+        <h3 className="text-sm font-semibold mb-1">{t("settings.data.demoTitle", "Sample Data")}</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Klinika plná vymyslených klientov a zvierat na preskúmanie. Môžete si
-          ich kedykoľvek pridať a odstrániť, keď budete pripravení pracovať naostro.
+          {t("settings.data.demoDescription", "A clinic full of fictional clients and animals to explore. You can add them anytime and remove them when you are ready to work live.")}
         </p>
         <Button
           variant="outline"
@@ -3962,17 +3965,17 @@ function DataTab() {
             reseedDemo.isPending
           }
         >
-          {hasDemo ? "Remove sample data" : "Add sample data"}
+          {hasDemo ? t("settings.data.removeSampleData", "Remove sample data") : t("settings.data.addSampleData", "Add sample data")}
         </Button>
         {onboarding.error || onboardingMissing ? (
           <p className="mt-2 text-xs text-destructive">
             {onboarding.error?.message ??
-              "Nepodarilo sa načítať stav ukážkových dát. Skúste znova."}
+              t("settings.data.demoLoadError", "Unable to load sample data status. Please retry.")}
           </p>
         ) : null}
       </div>
 
-      {/* V2 Migrácia & Archív */}
+      {/* V2 Migration & Archive */}
       <div className="grid gap-3 sm:grid-cols-2">
         <a
           href="/settings/import-v2"
@@ -3980,11 +3983,10 @@ function DataTab() {
         >
           <div className="flex items-center gap-3 mb-1">
             <Database className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            <h3 className="text-sm font-semibold">V2 Migrácia</h3>
+            <h3 className="text-sm font-semibold">{t("settings.data.v2Migration", "V2 Migration")}</h3>
           </div>
           <p className="text-xs text-muted-foreground">
-            Importujte dáta z predchádzajúceho systému VPM V2. Klienti, pacienti,
-            vakcíny a lekárska história.
+            {t("settings.data.v2MigrationDescription", "Import data from the previous VPM V2 system. Clients, patients, vaccinations, and medical history.")}
           </p>
         </a>
         <a
@@ -3993,20 +3995,19 @@ function DataTab() {
         >
           <div className="flex items-center gap-3 mb-1">
             <Archive className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            <h3 className="text-sm font-semibold">Archív histórie (V2)</h3>
+            <h3 className="text-sm font-semibold">{t("settings.data.v2Archive", "History Archive (V2)")}</h3>
           </div>
           <p className="text-xs text-muted-foreground">
-            Prezerajte migrovanú históriu z V2 — klienti, pacienti, očkovania a
-            návštevy v pôvodnej štruktúre.
+            {t("settings.data.v2ArchiveDescription", "Browse migrated history from V2 — clients, patients, vaccinations, and visits in their original structure.")}
           </p>
         </a>
       </div>
 
-      {/* Export dát */}
+      {/* Data Export */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Export dát</h3>
+        <h3 className="text-sm font-semibold mb-1">{t("settings.data.exportTitle", "Data Export")}</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Stiahnite si dáta vašej praxe.
+          {t("settings.data.exportDescription", "Download your practice data.")}
         </p>
         <div className="mb-3 max-w-2xl">
           <Button
@@ -4027,7 +4028,7 @@ function DataTab() {
               <Download className="h-4 w-4" />
             )}
             <Database className="h-4 w-4" />
-            Záloha databázy
+            {t("settings.data.databaseBackup", "Database Backup")}
           </Button>
           {practiceSettingsError || practiceSettingsMissing ? (
             <p className="mt-2 text-xs text-destructive">
@@ -4357,23 +4358,17 @@ function DataTab() {
         </div>
       </div>
 
-      {/* Import dát */}
+      {/* Data Import */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Import dát</h3>
+        <h3 className="text-sm font-semibold mb-1">{t("settings.data.importTitle", "Data Import")}</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Prechádzate z iného systému? Importujte najprv klientov, potom pacientov,
-          očkovaciu históriu a nakoniec lekársku históriu (návštevy). Každý súbor sa
-          najprv skontroluje bez zápisu, aby ste videli duplicity a chýbajúce záznamy
-          predtým, než sa čokoľvek uloží. Bežné názvy stĺpcov z AVImark, Cornerstone
-          a ezyVet sú rozpoznávané. Migrácie zo Shepherdu sú sprevádzané, aby sme
-          overili presný formát exportu kliniky. ID vlastníkov a pacientov zostávajú
-          prepojené naprieč súbormi, aj keď vlastník nemá e-mail.
+          {t("settings.data.importDescription", "Transitioning from another system? Import clients first, then patients, vaccination history, and finally medical history (visits). Each file is checked in a dry run first so you can see duplicates and missing records before anything is saved. Common column names from AVImark, Cornerstone, and ezyVet are recognized. Shepherd migrations are accompanied to verify the exact clinic export format. Owner and patient IDs stay linked across files, even when an owner has no email.")}
         </p>
 
         {/* Where the data is coming from (export instructions per source) */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
-            Zdroj dát:
+            {t("settings.data.importSourceLabel", "Data source:")}
           </span>
           {MIGRATION_SOURCES.map((source) => (
             <button
@@ -4696,6 +4691,7 @@ function ImportStat({ label, value }: { label: string; value: number }) {
 
 // ── Rooms ───────────────────────────────────────────────────
 function RoomsTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const locationsQuery = trpc.settings.listLocations.useQuery();
   const {
@@ -4785,7 +4781,7 @@ function RoomsTab() {
 
       {showAdd && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold">New Room</h3>
+          <h3 className="text-sm font-semibold">{t("settings.rooms.newRoom", "New Room")}</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Input
               placeholder="Room name"
@@ -4818,7 +4814,7 @@ function RoomsTab() {
               }
               disabled={locationsQuery.isLoading || roomLocations.length === 0}
             >
-              <option value="">Select location</option>
+              <option value="">{t("settings.rooms.selectLocation", "Select location")}</option>
               {roomLocations.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
@@ -4852,10 +4848,10 @@ function RoomsTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Type</th>
-              <th className="px-4 py-3 text-left font-medium">Location</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.rooms.colName", "Name")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.rooms.colType", "Type")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.rooms.colLocation", "Location")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.rooms.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -4905,6 +4901,7 @@ function RoomsTab() {
 
 // ── Wellness Plans ──────────────────────────────────────────
 function WellnessPlansTab() {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const {
@@ -4990,8 +4987,8 @@ function WellnessPlansTab() {
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold">Scheduled invoice billing</h3>
-            <Badge variant="secondary">No auto-charge</Badge>
+            <h3 className="text-sm font-semibold">{t("settings.wellness.scheduledBilling", "Scheduled invoice billing")}</h3>
+            <Badge variant="secondary">{t("settings.wellness.noAutoCharge", "No auto-charge")}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Wellness plans generate due invoices by cadence; Stripe checkout is
@@ -5006,7 +5003,7 @@ function WellnessPlansTab() {
 
       {showAdd && (
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold">New Wellness Plan</h3>
+          <h3 className="text-sm font-semibold">{t("settings.wellness.newPlan", "New Wellness Plan")}</h3>
           <div className="grid gap-3 md:grid-cols-[1fr_9rem_9rem]">
             <Input
               placeholder="Plan name"
@@ -5036,8 +5033,8 @@ function WellnessPlansTab() {
                 })
               }
             >
-              <option value="monthly">Monthly</option>
-              <option value="annual">Annual</option>
+              <option value="monthly">{t("settings.wellness.monthly", "Monthly")}</option>
+              <option value="annual">{t("settings.wellness.annual", "Annual")}</option>
             </select>
           </div>
           <Input
@@ -5077,11 +5074,11 @@ function WellnessPlansTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Interval</th>
-              <th className="px-4 py-3 text-right font-medium">Price</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.wellness.colName", "Name")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.wellness.colInterval", "Interval")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.wellness.colPrice", "Price")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.wellness.colStatus", "Status")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.wellness.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -5185,6 +5182,7 @@ interface TemplateItem {
 }
 
 function TemplatesTab() {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const [showAdd, setShowAdd] = useState(false);
@@ -5543,7 +5541,7 @@ function TemplatesTab() {
 
       {showAdd && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold">New Treatment Template</h3>
+          <h3 className="text-sm font-semibold">{t("settings.templates.newTemplate", "New Treatment Template")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
               placeholder="Template name"
@@ -5579,7 +5577,7 @@ function TemplatesTab() {
 
           {/* Items */}
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">Items</h4>
+            <h4 className="text-sm font-medium">{t("settings.templates.itemsLabel", "Items")}</h4>
             {addItems.map((item, index) => (
               <div
                 key={item.draftId}
@@ -5615,8 +5613,8 @@ function TemplatesTab() {
                     )
                   }
                 >
-                  <option value="service">Service</option>
-                  <option value="product">Product</option>
+                  <option value="service">{t("settings.templates.typeService", "Service")}</option>
+                  <option value="product">{t("settings.templates.typeProduct", "Product")}</option>
                 </select>
                 <Input
                   type="number"
@@ -5708,11 +5706,11 @@ function TemplatesTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Category</th>
-              <th className="px-4 py-3 text-left font-medium">Items</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colName", "Name")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colCategory", "Category")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colItems", "Items")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colStatus", "Status")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.templates.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
