@@ -15,24 +15,11 @@ import {
   invoiceItems,
   communications,
   products,
-  extMarketingTvSlides,
-  extMarketingHandouts,
-  extMarketingReviews,
-  extMarketingContentBatches,
-  extMarketingContentItems,
-  extMarketingMediaConsents,
-  extMarketingMediaAssets,
-  extMarketingStaffTasks,
-  extMarketingMessageTemplates,
-  extMarketingMessageLogs,
-  extMarketingAutomationRules,
-  extMarketingOperativeScripts,
-  extMarketingRecallSchedules,
-  extMarketingCompetitorSnapshots,
 } from "@openpims/db";
 import { centsToMoney, moneyToCents } from "@/lib/billing/invoice-balance";
 import { calculateInvoiceTaxTotals } from "@/lib/billing/invoice-tax";
 import { finalizedSoapInsertValues } from "@/lib/records/soap-lifecycle";
+import { seedMarketingDemoData, type MarketingDemoIds } from "./marketing-demo-data";
 
 /**
  * Sensible defaults seeded for a brand-new practice so it's usable immediately
@@ -130,7 +117,7 @@ export async function seedPractice(
   );
 }
 
-export interface DemoDataIds {
+export interface DemoDataIds extends MarketingDemoIds {
   clientIds: string[];
   patientIds: string[];
   appointmentIds: string[];
@@ -141,20 +128,6 @@ export interface DemoDataIds {
   invoiceItemIds: string[];
   communicationIds: string[];
   productIds: string[];
-  marketingTvSlideIds?: string[];
-  marketingHandoutIds?: string[];
-  marketingReviewIds?: string[];
-  marketingContentBatchIds?: string[];
-  marketingContentItemIds?: string[];
-  marketingMediaConsentIds?: string[];
-  marketingMediaAssetIds?: string[];
-  marketingStaffTaskIds?: string[];
-  marketingMessageTemplateIds?: string[];
-  marketingMessageLogIds?: string[];
-  marketingAutomationRuleIds?: string[];
-  marketingScriptIds?: string[];
-  marketingRecallScheduleIds?: string[];
-  marketingCompetitorSnapshotIds?: string[];
 }
 
 /**
@@ -587,6 +560,14 @@ export async function seedDemoData(
     ])
     .returning({ id: communications.id });
 
+  const marketingIds = await seedMarketingDemoData(db, {
+    practiceId: opts.practiceId,
+    ownerId: owner?.id ?? null,
+    clientIds: insertedClients.map((c) => c.id),
+    patientIds: insertedPatients.map((p) => p.id),
+    appointmentIds: insertedAppts.map((a) => a.id),
+  });
+
   return {
     clientIds: insertedClients.map((c) => c.id),
     patientIds: insertedPatients.map((p) => p.id),
@@ -598,5 +579,6 @@ export async function seedDemoData(
     invoiceItemIds,
     communicationIds: insertedComms.map((c) => c.id),
     productIds: insertedProducts.map((product) => product.id),
+    ...marketingIds,
   };
 }

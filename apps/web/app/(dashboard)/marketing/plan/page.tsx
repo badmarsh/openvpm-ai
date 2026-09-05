@@ -14,6 +14,8 @@ import {
   Archive,
   Loader2,
   CalendarDays,
+  Image as ImageIcon,
+  RefreshCw,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
@@ -122,6 +124,24 @@ export default function ContentPlanPage() {
     },
     onError: (err) => {
       toast.error(err.message || "Nepodarilo sa schváliť batch.");
+    },
+  });
+
+  const [generatingItemId, setGeneratingItemId] = useState<string | null>(null);
+
+  const generateImageMutation = trpc.extensions.marketing.generateImageForPost.useMutation({
+    onMutate: (vars) => {
+      setGeneratingItemId(vars.itemId);
+    },
+    onSettled: () => {
+      setGeneratingItemId(null);
+    },
+    onSuccess: () => {
+      utils.extensions.marketing.listContentItems.invalidate();
+      toast.success("Obrázok bol vygenerovaný a priradený k príspevku.");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa vygenerovať obrázok.");
     },
   });
 
@@ -393,6 +413,57 @@ export default function ContentPlanPage() {
                       {item.scheduledFor ? new Date(item.scheduledFor).toLocaleDateString("sk-SK") : "Nenaplánované"}
                     </span>
                   </div>
+
+                  {item.mediaAsset?.url ? (
+                    <div className="relative aspect-video w-full rounded-lg overflow-hidden border bg-muted/20 group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.mediaAsset.url}
+                        alt={item.mediaAsset.altText || item.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute top-2 left-2 flex items-center gap-1">
+                        <Badge variant="secondary" className="text-[9px] bg-background/85 backdrop-blur-sm shadow-xs font-semibold">
+                          {item.mediaAsset.kind === "brand_graphic" ? "Grafika" : item.mediaAsset.kind === "photo" ? "Fotografia" : "AI Ilustrácia"}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="absolute bottom-2 right-2 h-7 text-[10px] gap-1 bg-background/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-xs"
+                        onClick={() => generateImageMutation.mutate({ itemId: item.id })}
+                        disabled={generatingItemId === item.id}
+                      >
+                        {generatingItemId === item.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                        Prevekslovať AI
+                      </Button>
+                    </div>
+                  ) : item.channel !== "sms" ? (
+                    <div className="rounded-lg border border-dashed p-2.5 bg-muted/10 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <ImageIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
+                        <span>Bez vizuálu</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1 text-primary border-primary/30 hover:bg-primary/5"
+                        onClick={() => generateImageMutation.mutate({ itemId: item.id })}
+                        disabled={generatingItemId === item.id}
+                      >
+                        {generatingItemId === item.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3 h-3 text-primary" />
+                        )}
+                        Generovať vizuál
+                      </Button>
+                    </div>
+                  ) : null}
 
                   <div className="p-3 rounded-lg bg-muted/40 text-xs leading-relaxed text-foreground whitespace-pre-wrap max-h-36 overflow-y-auto">
                     {item.body}

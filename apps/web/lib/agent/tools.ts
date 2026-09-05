@@ -312,7 +312,7 @@ async function fetchOverlappingAppointments(
 const findClient: AgentTool = {
   name: "find_client",
   description:
-    "Search clients (pet owners) by name, email, or phone. Returns up to 10 matches with their ids.",
+    "Search clients (pet owners) by name, email, or phone. Returns up to 10 matches with their ids and registered patients.",
   inputSchema: {
     type: "object",
     properties: { query: { type: "string", description: "Name, email, or phone fragment" } },
@@ -338,8 +338,95 @@ const findClient: AgentTool = {
           or(
             ilike(clients.firstName, `%${query}%`),
             ilike(clients.lastName, `%${query}%`),
+            ilike(sql`concat(${clients.firstName}, ' ', ${clients.lastName})`, `%${query}%`),
+            ilike(sql`concat(${clients.lastName}, ' ', ${clients.firstName})`, `%${query}%`),
             ilike(clients.email, `%${query}%`),
             ilike(clients.phone, `%${query}%`)
+          )
+        )
+      )
+      .limit(10);
+
+    if (rows.length === 0) return [];
+
+    const clientIds = rows.map((r) => r.id);
+    const clientPatients = await ctx.db
+      .select({
+        id: patients.id,
+        clientId: patients.clientId,
+        name: patients.name,
+        species: patients.species,
+        breed: patients.breed,
+        status: patients.status,
+      })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.practiceId, ctx.practiceId),
+          inArray(patients.clientId, clientIds),
+          isNull(patients.deletedAt)
+        )
+      );
+
+    return rows.map((client) => ({
+      ...client,
+      patients: clientPatients
+        .filter((p) => p.clientId === client.id)
+        .map(({ clientId: _, ...p }) => p),
+    }));
+  },
+};
+
+const findPatient: AgentTool = {
+  name: "find_patient",
+  description:
+    "Search patients (pets/animals) by name, breed, species, or owner name. Returns up to 10 matching patients with their patientId, signalment, status, and owner details.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "Patient name, breed, species, or owner name fragment",
+      },
+    },
+    required: ["query"],
+  },
+  zod: z.object({ query: agentSearchQueryInput }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const { query } = this.zod.parse(args) as { query: string };
+    const rows = await ctx.db
+      .select({
+        patientId: patients.id,
+        name: patients.name,
+        species: patients.species,
+        breed: patients.breed,
+        sex: patients.sex,
+        dob: patients.dob,
+        status: patients.status,
+        owner: {
+          id: clients.id,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          email: clients.email,
+          phone: clients.phone,
+        },
+      })
+      .from(patients)
+      .innerJoin(clients, eq(patients.clientId, clients.id))
+      .where(
+        and(
+          eq(patients.practiceId, ctx.practiceId),
+          isNull(patients.deletedAt),
+          isNull(clients.deletedAt),
+          or(
+            ilike(patients.name, `%${query}%`),
+            ilike(patients.breed, `%${query}%`),
+            ilike(sql`${patients.species}::text`, `%${query}%`),
+            ilike(clients.firstName, `%${query}%`),
+            ilike(clients.lastName, `%${query}%`),
+            ilike(sql`concat(${clients.firstName}, ' ', ${clients.lastName})`, `%${query}%`),
+            ilike(sql`concat(${clients.lastName}, ' ', ${clients.firstName})`, `%${query}%`)
           )
         )
       )
@@ -987,6 +1074,7 @@ const findOpenSlotsTool: AgentTool = {
 
 export const AGENT_TOOLS: AgentTool[] = [
   findClient,
+  findPatient,
   getPatientSummary,
   listLocations,
   listAppointments,

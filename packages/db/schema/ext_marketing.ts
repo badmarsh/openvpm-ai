@@ -129,6 +129,7 @@ export const extMarketingReviews = pgTable("ext_marketing_reviews", {
   patientId: uuid("patient_id").references(() => patients.id),
   clientId: uuid("client_id").references(() => clients.id),
   appointmentId: uuid("appointment_id").references(() => appointments.id),
+  platform: text("platform").notNull().default("google"),
   externalReviewId: text("external_review_id"),
   rating: integer("rating"),
   reviewText: text("review_text"),
@@ -142,6 +143,7 @@ export const extMarketingReviews = pgTable("ext_marketing_reviews", {
 }, (table) => ({
   practiceIdx: index("ext_mkt_reviews_practice_idx").on(table.practiceId, table.deletedAt),
   receivedIdx: index("ext_mkt_reviews_received_idx").on(table.practiceId, table.receivedAt),
+  platformIdx: index("ext_mkt_reviews_platform_idx").on(table.practiceId, table.platform),
 }));
 
 export const extMarketingRecallSchedules = pgTable("ext_marketing_recall_schedules", {

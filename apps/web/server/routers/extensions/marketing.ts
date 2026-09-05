@@ -320,28 +320,132 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
 // ── Content Plan ──────────────────────────────────────────────────────────────
 
 /** List all content items for the practice (most recent first) */
-listContentItems: protectedProcedure
-  .input(
-    z.object({
-      status: z.enum(['proposed', 'approved', 'published', 'blocked', 'archived', 'all']).default('all'),
-      channel: z.enum(['instagram', 'facebook', 'google_business', 'sms', 'email', 'all']).default('all'),
-      limit: z.number().min(1).max(100).default(50),
-    })
-  )
-  .query(async ({ ctx, input }) => {
-    const conditions = [
-      eq(extMarketingContentItems.practiceId, ctx.practiceId),
-      isNull(extMarketingContentItems.deletedAt),
-    ];
-    if (input.status !== 'all') conditions.push(eq(extMarketingContentItems.status, input.status));
-    if (input.channel !== 'all') conditions.push(eq(extMarketingContentItems.channel, input.channel));
-    return ctx.db
-      .select()
-      .from(extMarketingContentItems)
-      .where(and(...conditions))
-      .orderBy(desc(extMarketingContentItems.createdAt))
-      .limit(input.limit);
-  }),
+  listContentItems: protectedProcedure
+    .input(
+      z.object({
+        status: z.enum(['proposed', 'approved', 'published', 'blocked', 'archived', 'all']).default('all'),
+        channel: z.enum(['instagram', 'facebook', 'google_business', 'sms', 'email', 'all']).default('all'),
+        limit: z.number().min(1).max(100).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions = [
+        eq(extMarketingContentItems.practiceId, ctx.practiceId),
+        isNull(extMarketingContentItems.deletedAt),
+      ];
+      if (input.status !== 'all') conditions.push(eq(extMarketingContentItems.status, input.status));
+      if (input.channel !== 'all') conditions.push(eq(extMarketingContentItems.channel, input.channel));
+      const rows = await ctx.db
+        .select({
+          item: extMarketingContentItems,
+          mediaAsset: extMarketingMediaAssets,
+        })
+        .from(extMarketingContentItems)
+        .leftJoin(
+          extMarketingMediaAssets,
+          eq(extMarketingContentItems.mediaAssetId, extMarketingMediaAssets.id)
+        )
+        .where(and(...conditions))
+        .orderBy(desc(extMarketingContentItems.createdAt))
+        .limit(input.limit);
+
+      return rows.map(({ item, mediaAsset }) => ({
+        ...item,
+        mediaAsset: mediaAsset?.id ? mediaAsset : null,
+      }));
+    }),
+
+  attachMediaToContentItem: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        itemId: z.string().uuid(),
+        mediaAssetId: z.string().uuid().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingContentItems)
+        .set({ mediaAssetId: input.mediaAssetId })
+        .where(
+          and(
+            eq(extMarketingContentItems.id, input.itemId),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+      return updated;
+    }),
+
+  generateImageForPost: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        itemId: z.string().uuid(),
+        prompt: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [item] = await ctx.db
+        .select()
+        .from(extMarketingContentItems)
+        .where(
+          and(
+            eq(extMarketingContentItems.id, input.itemId),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!item) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Príspevok nebol nájdený." });
+      }
+
+      const p = input.prompt || `A warm, professional veterinary marketing photograph or illustration about: ${item.title}. Happy healthy pets, clear lighting, authentic veterinary clinic atmosphere.`;
+      
+      let imageUrl = "/marketing/tick-prevention.jpg";
+      try {
+        const gen = await generateAlibabaImage({ prompt: p });
+        if (gen?.url) {
+          imageUrl = gen.url;
+        }
+      } catch {
+        // Fallback relevant topic match
+        if (item.title.toLowerCase().includes("zub") || item.title.toLowerCase().includes("chrup")) {
+          imageUrl = "/marketing/dental-hygiene.jpg";
+        } else if (item.title.toLowerCase().includes("senior")) {
+          imageUrl = "/marketing/senior-pet-care.jpg";
+        } else if (item.title.toLowerCase().includes("čip")) {
+          imageUrl = "/marketing/pet-microchipping.svg";
+        } else if (item.title.toLowerCase().includes("výživ") || item.title.toLowerCase().includes("kastr")) {
+          imageUrl = "/marketing/pet-nutrition.svg";
+        } else if (item.title.toLowerCase().includes("cest")) {
+          imageUrl = "/marketing/travel-petpass.svg";
+        } else if (item.title.toLowerCase().includes("čokol")) {
+          imageUrl = "/marketing/toxic-chocolate.svg";
+        }
+      }
+
+      const [asset] = await ctx.db
+        .insert(extMarketingMediaAssets)
+        .values({
+          practiceId: ctx.practiceId,
+          uploadedBy: ctx.user.id,
+          url: imageUrl,
+          kind: "illustration",
+          caption: `AI Vizuál: ${item.title}`,
+          altText: `Ilustrácia k príspevku: ${item.title}`,
+          subjectsPresent: false,
+        })
+        .returning();
+
+      await ctx.db
+        .update(extMarketingContentItems)
+        .set({ mediaAssetId: asset.id })
+        .where(eq(extMarketingContentItems.id, item.id));
+
+      return { asset, item };
+    }),
 
 /** Create a new content item and run the validator */
 createContentItem: protectedProcedure
@@ -650,6 +754,7 @@ listReviews: protectedProcedure
     z.object({
       limit: z.number().min(1).max(100).default(50),
       unansweredOnly: z.boolean().default(false),
+      platform: z.enum(['all', 'google', 'facebook']).default('all'),
     })
   )
   .query(async ({ ctx, input }) => {
@@ -658,12 +763,61 @@ listReviews: protectedProcedure
       isNull(extMarketingReviews.deletedAt),
     ];
     if (input.unansweredOnly) conditions.push(isNull(extMarketingReviews.replyText));
+    if (input.platform && input.platform !== 'all') {
+      conditions.push(eq(extMarketingReviews.platform, input.platform));
+    }
     return ctx.db
       .select()
       .from(extMarketingReviews)
       .where(and(...conditions))
       .orderBy(desc(extMarketingReviews.receivedAt))
       .limit(input.limit);
+  }),
+
+createReview: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      platform: z.enum(['google', 'facebook']).default('google'),
+      reviewerName: z.string().min(2).max(100),
+      rating: z.number().int().min(1).max(5),
+      reviewText: z.string().min(1).max(2000),
+      receivedAt: z.string().optional(),
+      replyText: z.string().max(1000).optional(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    const [created] = await ctx.db
+      .insert(extMarketingReviews)
+      .values({
+        practiceId: ctx.practiceId,
+        platform: input.platform,
+        reviewerName: input.reviewerName,
+        rating: input.rating,
+        reviewText: input.reviewText,
+        receivedAt: input.receivedAt ? new Date(input.receivedAt) : new Date(),
+        replyText: input.replyText || null,
+        repliedAt: input.replyText ? new Date() : null,
+        repliedBy: input.replyText ? ctx.user.id : null,
+      })
+      .returning();
+    return created;
+  }),
+
+deleteReview: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(z.object({ id: z.string().uuid() }))
+  .mutation(async ({ ctx, input }) => {
+    await ctx.db
+      .update(extMarketingReviews)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(extMarketingReviews.id, input.id),
+          eq(extMarketingReviews.practiceId, ctx.practiceId)
+        )
+      );
+    return { success: true };
   }),
 
 replyToReview: protectedProcedure
@@ -694,6 +848,332 @@ replyToReview: protectedProcedure
       )
       .returning();
     return updated;
+  }),
+
+generateReviewReply: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(
+    z.object({
+      platform: z.enum(['google', 'facebook']).default('google'),
+      reviewerName: z.string(),
+      rating: z.number().min(1).max(5),
+      reviewText: z.string(),
+      tone: z.enum(['warm', 'professional', 'apologetic', 'concise']).default('warm'),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    try {
+      const model = configuredModel();
+      const toneMap = {
+        warm: 'srdečný, vďačný a empatický',
+        professional: 'vysoko odborný, vecný a seriózny',
+        apologetic: 'veľmi úctivý, ospravedlňujúci a konštruktívny s ponukou osobného riešenia',
+        concise: 'stručný a zdvorilý',
+      };
+
+      const systemPrompt = `Si veterinárny lekár a riaditeľ slovenskej veterinárnej kliniky.
+Píšeš oficiálnu odpoveď na ${input.platform === 'google' ? 'Google' : 'Facebook'} recenziu od chovateľa.
+Pravidlá:
+1. Píš v spisovnej slovenčine s diakritikou.
+2. Tón: ${toneMap[input.tone]}.
+3. Nikdy nespomínaj citlivé lekárske diagnózy ani celé mená tretích osôb (GDPR).
+4. Rozsah: 2 až 4 vety.
+5. Zakončenie: 'S úctou, tím veterinárnej kliniky' alebo 'S pozdravom, tím veterinárnej kliniky'.
+Vráť iba samotný text odpovede bez úvodzoviek a vysvetlení.`;
+
+      const prompt = `Recenzent: ${input.reviewerName}
+Hodnotenie: ${input.rating}/5 hviezdičiek
+Text recenzie: "${input.reviewText}"`;
+
+      const result = await generateText({
+        model,
+        system: systemPrompt,
+        prompt,
+      });
+
+      return { reply: result.text.trim() };
+    } catch {
+      // Fallback templates
+      if (input.rating >= 5) {
+        return {
+          reply: `Milá/Milý ${input.reviewerName}, veľmi pekne ďakujeme za milé slová a dôveru v náš tím pri starostlivosti o vášho miláčika! Zdravie a pohoda našich zvieracích pacientov sú u nás vždy na prvom mieste. S úctou, tím veterinárnej kliniky. 🐾`,
+        };
+      } else if (input.rating >= 4) {
+        return {
+          reply: `Dobrý deň, ${input.reviewerName}, ďakujeme za Vaše hodnotenie a spätnú väzbu. Neustále sa snažíme zlepšovať organizáciu a kvalitu našich služieb. Tešíme sa na ďalšiu návštevu! S úctou, tím veterinárnej kliniky.`,
+        };
+      } else {
+        return {
+          reply: `Dobrý deň, ${input.reviewerName}, ďakujeme za hodnotenie. Veľmi nás mrzí, že Vaša skúsenosť nesplnila očakávania – na každom pacientovi a spokojnosti majiteľa nám úprimne záleží. Prosím kontaktujte vedenie kliniky, radi situáciu detailne preveríme a osobne vyriešime. S úctou, tím kliniky.`,
+        };
+      }
+    }
+  }),
+
+seedReviews: protectedProcedure
+  .use(requireRole('admin', 'veterinarian', 'front_desk'))
+  .input(z.object({ force: z.boolean().optional() }).optional())
+  .mutation(async ({ ctx, input }) => {
+    if (!input?.force) {
+      const existing = await ctx.db
+        .select({ id: extMarketingReviews.id })
+        .from(extMarketingReviews)
+        .where(
+          and(
+            eq(extMarketingReviews.practiceId, ctx.practiceId),
+            isNull(extMarketingReviews.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        return { count: 0, message: 'Recenzie už existujú.' };
+      }
+    }
+
+    const now = Date.now();
+    const dAgo = (days: number) => new Date(now - days * 86400_000);
+
+    const sampleReviews = [
+      // ── Google Reviews ───────────────────────────────────────────────────
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Zuzana Kováčová',
+        rating: 5,
+        reviewText: 'Maximálna spokojnosť! Pán doktor Sýkora je obrovský odborník a má neskutočne milý prístup k zvieratám. Náš labrador Blesk sa k nemu do ambulancie dokonca teší. Zákrok prebehol hladko a oceňujem aj prehľadné pokyny po prepustení cez klientsky portál.',
+        receivedAt: dAgo(2),
+        replyText: 'Milá pani Kováčová, veľmi pekne ďakujeme za krásne slová a dôveru. Sme radi, že sa Bleskovi darí skvele a tešíme sa na ďalšiu preventívnu návštevu! S úctou, tím kliniky.',
+        repliedAt: dAgo(1),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Ing. Michal Baláž',
+        rating: 5,
+        reviewText: 'Vynikajúca vybavenosť ambulancie (digitálny RTG aj laboratórium priamo na mieste). Rýchla diagnostika našej mačky počas pohotovosti jej doslova zachránila život. Vrelo odporúčam každému chovateľovi.',
+        receivedAt: dAgo(5),
+        replyText: 'Pán Baláž, ďakujeme za hodnotenie. Včasná diagnostika a promptný prístup boli v tomto prípade kľúčové. Pozdravujeme pacientku a prajeme veľa zdravia!',
+        repliedAt: dAgo(4),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Petra Nemcová',
+        rating: 5,
+        reviewText: 'Krásne a čisté prostredie, Fear-Free prístup, ktorý naozaj funguje. Žiadny stres v čakárni, profesionálny personál. Objednanie online na presný čas funguje bez meškania.',
+        receivedAt: dAgo(9),
+        replyText: 'Ďakujeme, pani Nemcová. Pokojné a bezstresové prostredie pre zvieracích pacientov i majiteľov je našou najvyššou prioritou.',
+        repliedAt: dAgo(8),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Tomáš Horváth',
+        rating: 4,
+        reviewText: 'Veľmi dobrá starostlivosť a odborné rady. Jediné malé mínus bolo krátke čakanie kvôli akútnemu prípadu pred nami, ale personál sa nám ospravedlnil a vysvetlil situáciu.',
+        receivedAt: dAgo(14),
+        replyText: 'Pán Horváth, ďakujeme za pochopenie pri ošetrení náhleho život ohrozujúceho prípadu. Vážime si vašu trpezlivosť a spätnú väzbu.',
+        repliedAt: dAgo(13),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Martina Kováčiková',
+        rating: 5,
+        reviewText: 'Chodíme sem už 3 roky so psíkom aj kocúrom. Vždy precízne vyšetrenie, špičkový sonograf a žiadne zbytočné predražovanie liečby. Ďakujeme celému personálu.',
+        receivedAt: dAgo(18),
+        replyText: 'Ďakujeme za dlhoročnú dôveru a vernosť našej klinike! Radi sa o vašich štvornohých parťákov postaráme kedykoľvek.',
+        repliedAt: dAgo(17),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Branislav Novák',
+        rating: 5,
+        reviewText: 'Záchrana nášho bernského salašníckeho psa Hektora pri nočnej torzii žalúdka (GDV). Okamžitá operácia, skvelá anestézia a starostlivosť na hospitalizačnom oddelení. Dnes je Hektor opäť vitálny a veselý. Nesmierna vďaka!',
+        receivedAt: dAgo(21),
+        replyText: 'Pán Novák, sme šťastní, že Hektor zvládol tak náročný zákrok a je v poriadku. Včasný príchod bol rozhodujúci. Prajeme mu veľa síl a zdravia!',
+        repliedAt: dAgo(20),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Monika Čierna',
+        rating: 5,
+        reviewText: 'Kastračný program dvoch adoptovaných mačiek z útulku. Neskutočne citlivý a trpezlivý prístup k plachým zvieratkám. Miniatúrne operačné ranky sa zahojili za pár dní bez nutnosti goliera.',
+        receivedAt: dAgo(25),
+        replyText: 'Ďakujeme pani Čierna za pomoc útulkáčom a za dôveru v našu chirurgiu. Mačičkám prajeme krásny a pokojný život v novom domove.',
+        repliedAt: dAgo(24),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'MVDr. Peter Krajčír',
+        rating: 5,
+        reviewText: 'Ako chovateľ nemeckých ovčiakov vysoko oceňujem zhotovenie oficiálnych RTG snímkov bedrových a lakťových kĺbov (DBK/DLK) pre klubové posúdenie chovnosti. Špičková polohovacia technika, presná sedácia a promptné odoslanie dokumentácie.',
+        receivedAt: dAgo(29),
+        replyText: 'Ďakujeme za uznanie od skúseného chovateľa. Presná rádiológia a zdravie plemien sú pre nás srdcovou záležitosťou.',
+        repliedAt: dAgo(28),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Juraj Varga',
+        rating: 4,
+        reviewText: 'Absolvovali sme ultrazvukové odstránenie zubného kameňa a leštenie zubov u 8-ročného jazvečíka. Zákrok prebehol bezpečne v inhalačnej anestézii s monitoringom. Pes má opäť čisté zúbky a žiadny zápach z tlamy. Odporúčam!',
+        receivedAt: dAgo(32),
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Silvia Hrušková',
+        rating: 5,
+        reviewText: 'Špecializácia na drobné cicavce! Náš králik Bobo trpel prerastaním stoličiek a odmietal seno. Pán doktor mu chrup odborne obrúsil a nastavil podpornú motilitnú liečbu. Na druhý deň už sám s chuťou jedol.',
+        receivedAt: dAgo(36),
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Radoslav Majerčík',
+        rating: 5,
+        reviewText: 'Veľké plus za bezbariérový vstup a vyhradené parkovanie priamo pred vchodom kliniky. Náš starší retríver s ťažkou dyspláziou by schody nezvládol. Liečba bolesti a laserová terapia mu výrazne zlepšili mobilitu.',
+        receivedAt: dAgo(40),
+        replyText: 'Pán Majerčík, komfort a prístupnosť pre hendikepovaných a starších pacientov je pre nás kľúčová. Tešíme sa z pokroku pri laserovej terapii!',
+        repliedAt: dAgo(39),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'google' as const,
+        reviewerName: 'Elena Kolárová',
+        rating: 5,
+        reviewText: 'Diagnostika a nastavenie liečby cukrovky u 10-ročného kocúra Félixa. Pani doktorka nám všetko trpezlivo vysvetlila, ukázala aplikáciu inzulínu a domáce meranie glukometrom. Veľmi nám to psychicky pomohlo.',
+        receivedAt: dAgo(45),
+      },
+
+      // ── Facebook Reviews ─────────────────────────────────────────────────
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Lucia Tóthová',
+        rating: 5,
+        reviewText: 'Odporúča Veterinárnu kliniku MVDr. Sýkora: Neskutočne ľudský a empatický prístup! S našou fenkou Bellou sme absolvovali náročnú stomatologickú operáciu. Po prebudení nám pani doktorka podrobne vysvetlila domácu starostlivosť a na druhý deň nám z kliniky volali, ako sa fenka cíti. Ďakujeme z celého srdca! ❤️🐾',
+        receivedAt: dAgo(3),
+        replyText: 'Milá Lucia, nesmierne nás teší vaša recenzia. Zdravie a komfort Belly boli na prvom mieste. Ďakujeme za dôveru!',
+        repliedAt: dAgo(2),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Marek Dvořák',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Skvelý tím lekárov a sestričiek. RTG bedrových kĺbov a oficiálne posúdenie prebehlo hladko a v pokojnej atmosfére. Špičková komunikácia cez SMS notifikácie pred termínom.',
+        receivedAt: dAgo(6),
+        replyText: 'Ďakujeme, pán Dvořák! Tešíme sa, že moderný systém notifikácií prináša pohodlie chovateľom.',
+        repliedAt: dAgo(5),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Katarína Szabóová',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Najlepšia vet klinika v širokom okolí. Moderné vybavenie, čistota a hlavne láskavý prístup k vystrašeným zvieratkám. Naša mačička Líza bola úplne pokojná.',
+        receivedAt: dAgo(11),
+        replyText: 'Ďakujeme za milé odporúčanie na Facebooku! Spokojnosť Lízy a pokojné ošetrenie mačiek je naša špecialita. 🐱',
+        repliedAt: dAgo(10),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Peter Molnár',
+        rating: 4,
+        reviewText: 'Odporúča kliniku: Profesionálny prístup pri vakcinácii a čipovaní šteniatka. Veľmi oceňujem aj brožúrku s radami pre nových majiteľov, ktorú sme dostali.',
+        receivedAt: dAgo(16),
+        replyText: 'Pán Molnár, ďakujeme! Výchova a zdravý štart šteniatka sú základom celoživotného zdravia. Radi vás opäť privítame.',
+        repliedAt: dAgo(15),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Andrea Urbanová',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Vďaka promptnej pohotovosti a nočnej infúznej terapii zachránili nášho yorkshira po otrave. Vďačnosť sa nedá ani opísať.',
+        receivedAt: dAgo(22),
+        replyText: 'Pani Urbanová, sme šťastní, že malý bojovník to zvládol a je v poriadku. Všetko dobré celej rodine!',
+        repliedAt: dAgo(21),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Dominika Kučerová',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Kardiologické sono vyšetrenie u nášho kavaliera Olivera. Pán doktor detailne vysvetlil štádium ochorenia mitrálnej chlopne a nastavil lieky s presným dávkovaním. Oceňujem odbornosť a empatiu.',
+        receivedAt: dAgo(26),
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Filip Valach',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Prvá návšteva so šteniatkom border kólie. Absolvovali sme socializačnú návštevu bez ihiel, s množstvom maškŕt a hladkania. Šteniatko nemá zo stolíka ani ordinácie žiadny strach!',
+        receivedAt: dAgo(30),
+        replyText: 'Presne o tom Fear-Free prístup je! Šteniatko si kliniku zafixovalo s radosťou a pozitívnymi emóciami. Tešíme sa na ďalšie stretnutie!',
+        repliedAt: dAgo(29),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Veronika Šimková',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Diagnostika a liečba chronickej atopickej dermatitídy u francúzskeho buldočka. Po mesiacoch trápenia a škriabania na iných pracoviskách nám tu nasadili cielenú terapiu a pes konečne kľudne spí.',
+        receivedAt: dAgo(35),
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Patrik Olexa',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Pred cestou do Chorvátska nám expresne vybavili medzinárodný Petpas, skontrolovali mikročip a aplikovali odčervenie s pečiatkou do pasu. Žiadne zdržanie, perfektný servis.',
+        receivedAt: dAgo(41),
+        replyText: 'Pán Olexa, ďakujeme! Prajeme šťastnú cestu a pohodovú dovolenku pri mori aj so psíkom.',
+        repliedAt: dAgo(40),
+        repliedBy: ctx.user.id,
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Simona Poláková',
+        rating: 5,
+        reviewText: 'Odporúča kliniku: Akútna operácia pyometry (hnisavý zápal maternice) u 11-ročnej sučky. Obrovský rešpekt pred celým tímom chirurgov a anestéziológov – zvládli to na jednotku napriek vysokému veku pacientky.',
+        receivedAt: dAgo(46),
+      },
+      {
+        practiceId: ctx.practiceId,
+        platform: 'facebook' as const,
+        reviewerName: 'Martin Žiga',
+        rating: 4,
+        reviewText: 'Odporúča kliniku: Rýchle ošetrenie hlbokej reznej rany na labke z lesa počas nedeľného popoludnia. Šitie v lokálnej anestézii, vyčistenie a ochranný obväz. Hojenie prebehlo bez akejkoľvek infekcie.',
+        receivedAt: dAgo(52),
+      },
+    ];
+
+    await ctx.db.insert(extMarketingReviews).values(sampleReviews);
+    return { count: sampleReviews.length };
   }),
 
 // ── Recall schedule config ────────────────────────────────────────────────────
@@ -838,6 +1318,95 @@ listStaffTasks: protectedProcedure
     }
     return updated;
   }),
+
+  sendCondolenceCard: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ taskId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [task] = await ctx.db
+        .select()
+        .from(extMarketingStaffTasks)
+        .where(
+          and(
+            eq(extMarketingStaffTasks.id, input.taskId),
+            eq(extMarketingStaffTasks.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!task || !task.clientId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Úloha alebo klient neexistuje.",
+        });
+      }
+
+      const [cl] = await ctx.db
+        .select()
+        .from(clients)
+        .where(
+          and(
+            eq(clients.id, task.clientId),
+            eq(clients.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!cl) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Klient nebol nájdený.",
+        });
+      }
+
+      const brand = await getBrand(ctx.db, ctx.practiceId);
+      const [tpl] = await ctx.db
+        .select()
+        .from(extMarketingMessageTemplates)
+        .where(
+          and(
+            eq(extMarketingMessageTemplates.practiceId, ctx.practiceId),
+            eq(extMarketingMessageTemplates.key, "condolence_card"),
+            eq(extMarketingMessageTemplates.isActive, true)
+          )
+        )
+        .limit(1);
+
+      const clientName = `${cl.firstName ?? ""} ${cl.lastName ?? ""}`.trim() || "Vážený klient";
+      const defaultBody = "{{clinic}}: Vážená/vážený {{name}}, celý náš tím s vami hlboko súcíti pri strate vášho miláčika. Bol to výnimočný pacient a bolo nám veľkou cťou sa o neho starať. Ak budete čokoľvek potrebovať, sme tu pre vás.";
+
+      const bodyTemplate = tpl?.body ?? defaultBody;
+      const body = bodyTemplate
+        .replace(/\{\{\s*name\s*\}\}/gi, clientName)
+        .replace(/\{\{\s*pet\s*\}\}/gi, "vášho miláčika")
+        .replace(/\{\{\s*clinic\s*\}\}/gi, brand?.name || "Veterinárna klinika");
+
+      const [log] = await ctx.db
+        .insert(extMarketingMessageLogs)
+        .values({
+          practiceId: ctx.practiceId,
+          clientId: cl.id,
+          templateId: tpl?.id ?? null,
+          templateKey: "condolence_card",
+          templateVersion: tpl?.version ?? 1,
+          legalBasis: "contract",
+          channel: tpl?.channel ?? "sms",
+          language: tpl?.language ?? "sk",
+          bodyRendered: body,
+          triggerKey: "patient_deceased",
+          status: "queued",
+          idempotencyKey: `condolence:${task.id}:${Date.now()}`,
+          scheduledFor: new Date(),
+        })
+        .returning();
+
+      await ctx.db
+        .update(extMarketingStaffTasks)
+        .set({ status: "done" })
+        .where(eq(extMarketingStaffTasks.id, task.id));
+
+      return { success: true, logId: log?.id };
+    }),
 
   // ── Content Batches & Weekly Planner ────────────────────────────────────────
 
@@ -1709,59 +2278,154 @@ listStaffTasks: protectedProcedure
       return { allowed };
     }),
 
-  unsubscribeByToken: publicProcedure
-    .input(z.object({ token: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const decoded = Buffer.from(input.token, "base64").toString("utf-8");
-        const [clientId, practiceId] = decoded.split(":");
+  getUnsubscribeInfo: publicProcedure
+    .input(
+      z.object({
+        token: z.string().optional(),
+        clientId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      let resolvedClientId: string | undefined = input.clientId;
+      let resolvedPracticeId: string | undefined;
 
-        if (!clientId || !practiceId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Neplatný odhlasovací odkaz.",
-          });
+      if (input.token) {
+        try {
+          const decoded = Buffer.from(input.token, "base64").toString("utf-8");
+          const [cId, pId] = decoded.split(":");
+          if (cId) resolvedClientId = cId;
+          if (pId) resolvedPracticeId = pId;
+        } catch {
+          // ignore
         }
+      }
 
-        // 1. Reset client smsConsent
-        await ctx.db
-          .update(clients)
-          .set({ smsConsent: false })
-          .where(and(eq(clients.id, clientId), eq(clients.practiceId, practiceId)));
+      if (!resolvedClientId) {
+        return { found: false, message: "Neplatný odkaz na odhlásenie." };
+      }
 
-        // 2. Revoke active marketing_messages consent
-        await ctx.db
-          .update(extMarketingMediaConsents)
-          .set({ revokedAt: new Date() })
-          .where(
-            and(
-              eq(extMarketingMediaConsents.clientId, clientId),
-              eq(extMarketingMediaConsents.practiceId, practiceId),
-              eq(extMarketingMediaConsents.scope, "marketing_messages"),
-              isNull(extMarketingMediaConsents.revokedAt)
-            )
-          );
+      const [client] = await ctx.db
+        .select({
+          id: clients.id,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          smsConsent: clients.smsConsent,
+          practiceId: clients.practiceId,
+        })
+        .from(clients)
+        .where(
+          resolvedPracticeId
+            ? and(eq(clients.id, resolvedClientId), eq(clients.practiceId, resolvedPracticeId))
+            : eq(clients.id, resolvedClientId)
+        )
+        .limit(1);
 
-        // 3. Mark queued messages for this client as suppressed
-        await ctx.db
-          .update(extMarketingMessageLogs)
-          .set({ status: "suppressed_no_consent" })
-          .where(
-            and(
-              eq(extMarketingMessageLogs.clientId, clientId),
-              eq(extMarketingMessageLogs.practiceId, practiceId),
-              eq(extMarketingMessageLogs.status, "queued")
-            )
-          );
+      if (!client) {
+        return { found: false, message: "Klient nebol nájdený." };
+      }
 
-        return { success: true };
-      } catch (err: any) {
-        if (err instanceof TRPCError) throw err;
+      const [practice] = await ctx.db
+        .select({
+          id: practices.id,
+          name: practices.name,
+          phone: practices.phone,
+        })
+        .from(practices)
+        .where(eq(practices.id, client.practiceId))
+        .limit(1);
+
+      return {
+        found: true,
+        clientId: client.id,
+        clientName: `${client.firstName} ${client.lastName}`.trim(),
+        smsConsent: client.smsConsent ?? true,
+        practiceName: practice?.name ?? "Veterinárna klinika",
+        practicePhone: practice?.phone,
+      };
+    }),
+
+  unsubscribeByToken: publicProcedure
+    .input(
+      z.object({
+        token: z.string().optional(),
+        clientId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      let resolvedClientId: string | undefined = input.clientId;
+      let resolvedPracticeId: string | undefined;
+
+      if (input.token) {
+        try {
+          const decoded = Buffer.from(input.token, "base64").toString("utf-8");
+          const [cId, pId] = decoded.split(":");
+          if (cId) resolvedClientId = cId;
+          if (pId) resolvedPracticeId = pId;
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!resolvedClientId) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Neplatný token pre odhlásenie.",
+          message: "Neplatný identifikátor klienta.",
         });
       }
+
+      if (!resolvedPracticeId) {
+        const [c] = await ctx.db
+          .select({ practiceId: clients.practiceId })
+          .from(clients)
+          .where(eq(clients.id, resolvedClientId))
+          .limit(1);
+        resolvedPracticeId = c?.practiceId;
+      }
+
+      if (!resolvedPracticeId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Klient nebol nájdený.",
+        });
+      }
+
+      // 1. Reset client smsConsent
+      await ctx.db
+        .update(clients)
+        .set({ smsConsent: false })
+        .where(
+          and(
+            eq(clients.id, resolvedClientId),
+            eq(clients.practiceId, resolvedPracticeId)
+          )
+        );
+
+      // 2. Revoke active marketing_messages consent
+      await ctx.db
+        .update(extMarketingMediaConsents)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(extMarketingMediaConsents.clientId, resolvedClientId),
+            eq(extMarketingMediaConsents.practiceId, resolvedPracticeId),
+            eq(extMarketingMediaConsents.scope, "marketing_messages"),
+            isNull(extMarketingMediaConsents.revokedAt)
+          )
+        );
+
+      // 3. Mark queued messages for this client as suppressed
+      await ctx.db
+        .update(extMarketingMessageLogs)
+        .set({ status: "suppressed_no_consent" })
+        .where(
+          and(
+            eq(extMarketingMessageLogs.clientId, resolvedClientId),
+            eq(extMarketingMessageLogs.practiceId, resolvedPracticeId),
+            eq(extMarketingMessageLogs.status, "queued")
+          )
+        );
+
+      return { success: true };
     }),
 
   // ── Consents Registry ───────────────────────────────────────────────────────
@@ -2208,6 +2872,187 @@ listStaffTasks: protectedProcedure
         .where(eq(practices.id, ctx.practiceId));
 
       return { ok: true, enabled: input.enabled };
+    }),
+
+  getWebsiteConfig: protectedProcedure.query(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({
+        id: practices.id,
+        name: practices.name,
+        settings: practices.settings,
+      })
+      .from(practices)
+      .where(eq(practices.id, ctx.practiceId))
+      .limit(1);
+
+    const settings = (practice?.settings ?? {}) as Record<string, any>;
+    const published = Boolean(settings.websitePublished);
+
+    // Count team members with photo_web consent
+    const teamConsents = await ctx.db
+      .select({ id: extMarketingMediaConsents.id })
+      .from(extMarketingMediaConsents)
+      .where(
+        and(
+          eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
+          eq(extMarketingMediaConsents.scope, "photo_web"),
+          isNull(extMarketingMediaConsents.revokedAt)
+        )
+      );
+
+    // Count public handouts
+    const publicHandouts = await ctx.db
+      .select({ id: extMarketingHandouts.id })
+      .from(extMarketingHandouts)
+      .where(
+        and(
+          eq(extMarketingHandouts.practiceId, ctx.practiceId),
+          eq(extMarketingHandouts.isPublic, true),
+          isNull(extMarketingHandouts.deletedAt)
+        )
+      );
+
+    // Count 5-star reviews
+    const fiveStarReviews = await ctx.db
+      .select({ id: extMarketingReviews.id })
+      .from(extMarketingReviews)
+      .where(
+        and(
+          eq(extMarketingReviews.practiceId, ctx.practiceId),
+          eq(extMarketingReviews.rating, 5),
+          isNull(extMarketingReviews.deletedAt)
+        )
+      );
+
+    return {
+      published,
+      clinicId: practice?.id ?? ctx.practiceId,
+      clinicName: practice?.name ?? "",
+      teamCount: teamConsents.length,
+      handoutsCount: publicHandouts.length,
+      reviewsCount: fiveStarReviews.length,
+    };
+  }),
+
+  toggleWebsite: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .mutation(async ({ ctx }) => {
+      const [practice] = await ctx.db
+        .select({
+          settings: practices.settings,
+        })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const settings = (practice?.settings ?? {}) as Record<string, any>;
+      const nextPublished = !settings.websitePublished;
+
+      await ctx.db
+        .update(practices)
+        .set({
+          settings: {
+            ...settings,
+            websitePublished: nextPublished,
+          },
+        })
+        .where(eq(practices.id, ctx.practiceId));
+
+      return { published: nextPublished };
+    }),
+
+  getPublicWebsiteData: publicProcedure
+    .input(z.object({ clinicId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({
+          id: practices.id,
+          name: practices.name,
+          phone: practices.phone,
+          email: practices.email,
+          address: practices.address,
+          website: practices.website,
+          settings: practices.settings,
+        })
+        .from(practices)
+        .where(eq(practices.id, input.clinicId))
+        .limit(1);
+
+      if (!practice) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Klinika nebola nájdená.",
+        });
+      }
+
+      const settings = (practice.settings ?? {}) as Record<string, any>;
+      const isPublished = Boolean(settings.websitePublished);
+
+      // Staff members from clinic
+      const staffMembers = await ctx.db
+        .select({
+          id: users.id,
+          name: users.name,
+          role: users.role,
+        })
+        .from(users)
+        .where(
+          and(
+            eq(users.practiceId, input.clinicId),
+            inArray(users.role, ["admin", "veterinarian", "technician"]),
+            isNull(users.deletedAt)
+          )
+        );
+
+      // Public care handouts
+      const publicHandouts = await ctx.db
+        .select({
+          id: extMarketingHandouts.id,
+          slug: extMarketingHandouts.slug,
+          title: extMarketingHandouts.title,
+          body: extMarketingHandouts.body,
+          species: extMarketingHandouts.species,
+          tags: extMarketingHandouts.tags,
+        })
+        .from(extMarketingHandouts)
+        .where(
+          and(
+            eq(extMarketingHandouts.practiceId, input.clinicId),
+            eq(extMarketingHandouts.isPublic, true),
+            isNull(extMarketingHandouts.deletedAt)
+          )
+        )
+        .limit(6);
+
+      // 4 and 5 star reviews
+      const topReviews = await ctx.db
+        .select({
+          id: extMarketingReviews.id,
+          rating: extMarketingReviews.rating,
+          reviewText: extMarketingReviews.reviewText,
+          reviewerName: extMarketingReviews.reviewerName,
+          platform: extMarketingReviews.platform,
+          receivedAt: extMarketingReviews.receivedAt,
+          replyText: extMarketingReviews.replyText,
+        })
+        .from(extMarketingReviews)
+        .where(
+          and(
+            eq(extMarketingReviews.practiceId, input.clinicId),
+            gte(extMarketingReviews.rating, 4),
+            isNull(extMarketingReviews.deletedAt)
+          )
+        )
+        .orderBy(desc(extMarketingReviews.receivedAt))
+        .limit(8);
+
+      return {
+        practice,
+        isPublished,
+        team: staffMembers,
+        handouts: publicHandouts,
+        reviews: topReviews,
+      };
     }),
 
   getPracticeId: protectedProcedure.query(async ({ ctx }) => {

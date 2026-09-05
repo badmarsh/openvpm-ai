@@ -91,12 +91,62 @@ function clientIp(req?: Request): string | null {
   return ip === "unknown" ? null : ip;
 }
 
+interface CachedActiveSession {
+  emailVerifiedAt: Date | string | null;
+  practiceCreatedAt: Date | string | null;
+  recoveryHold?: boolean;
+  verifiedAt: number;
+}
+
+const activeSessionCache = new Map<string, CachedActiveSession>();
+const ACTIVE_SESSION_CACHE_TTL_MS = 30_000; // 30 seconds
+
+/** Clear cached session verifications (useful for tests and user deactivations). */
+export function clearActiveSessionCache(): void {
+  activeSessionCache.clear();
+}
+
+interface CachedPracticeBilling {
+  tier: string | null;
+  billingStatus: string | null;
+  trialEndsAt: Date | null;
+  cachedAt: number;
+}
+
+const practiceBillingCache = new Map<string, CachedPracticeBilling>();
+const PRACTICE_BILLING_CACHE_TTL_MS = 60_000; // 60 seconds
+
+/** Clear cached practice billing states (useful when subscription changes occur). */
+export function invalidatePracticeBillingCache(practiceId?: string): void {
+  if (practiceId) {
+    practiceBillingCache.delete(practiceId);
+  } else {
+    practiceBillingCache.clear();
+  }
+}
+
 async function activeSessionOrNull(
   database: Database,
   session: AppSession | null,
 ): Promise<AppSession | null> {
   if (!session?.user?.id || !session.user.practiceId) {
     return null;
+  }
+
+  const cacheKey = `${session.user.id}:${session.user.practiceId}`;
+  const now = Date.now();
+  const cached = activeSessionCache.get(cacheKey);
+
+  if (cached && now - cached.verifiedAt < ACTIVE_SESSION_CACHE_TTL_MS) {
+    return {
+      ...session,
+      user: {
+        ...session.user,
+        emailVerifiedAt: cached.emailVerifiedAt,
+        practiceCreatedAt: cached.practiceCreatedAt,
+        recoveryHold: cached.recoveryHold,
+      },
+    };
   }
 
   const [activeUser] = await withTenant(
@@ -125,17 +175,26 @@ async function activeSessionOrNull(
         .limit(1),
   );
 
-  return activeUser
-    ? {
-        ...session,
-        user: {
-          ...session.user,
-          emailVerifiedAt: activeUser.emailVerifiedAt,
-          practiceCreatedAt: activeUser.practiceCreatedAt,
-          recoveryHold: activeUser.recoveryHold,
-        },
-      }
-    : null;
+  if (activeUser) {
+    activeSessionCache.set(cacheKey, {
+      emailVerifiedAt: activeUser.emailVerifiedAt,
+      practiceCreatedAt: activeUser.practiceCreatedAt,
+      recoveryHold: activeUser.recoveryHold,
+      verifiedAt: now,
+    });
+    return {
+      ...session,
+      user: {
+        ...session.user,
+        emailVerifiedAt: activeUser.emailVerifiedAt,
+        practiceCreatedAt: activeUser.practiceCreatedAt,
+        recoveryHold: activeUser.recoveryHold,
+      },
+    };
+  }
+
+  activeSessionCache.delete(cacheKey);
+  return null;
 }
 
 export async function createTRPCContext(opts?: {
@@ -397,28 +456,50 @@ export const protectedProcedure = t.procedure.use(
           billingEnforced() &&
           !HOSTED_READ_ONLY_MUTATION_ALLOWLIST.has(path)
         ) {
-          const [practice] = await tx
-            .select({
-              tier: practices.subscriptionTier,
-              billingStatus: practices.billingStatus,
-              trialEndsAt: practices.trialEndsAt,
-            })
-            .from(practices)
-            .where(
-              and(
-                eq(practices.id, user.practiceId),
-                isNull(practices.deletedAt),
-              ),
-            )
-            .limit(1);
-          if (!practice) {
-            throw practiceNotFound();
+          const now = Date.now();
+          const cached = practiceBillingCache.get(user.practiceId);
+          let tier: string | null;
+          let billingStatus: string | null;
+          let trialEndsAt: Date | null;
+
+          if (cached && now - cached.cachedAt < PRACTICE_BILLING_CACHE_TTL_MS) {
+            tier = cached.tier;
+            billingStatus = cached.billingStatus;
+            trialEndsAt = cached.trialEndsAt;
+          } else {
+            const [practice] = await tx
+              .select({
+                tier: practices.subscriptionTier,
+                billingStatus: practices.billingStatus,
+                trialEndsAt: practices.trialEndsAt,
+              })
+              .from(practices)
+              .where(
+                and(
+                  eq(practices.id, user.practiceId),
+                  isNull(practices.deletedAt),
+                ),
+              )
+              .limit(1);
+            if (!practice) {
+              throw practiceNotFound();
+            }
+            tier = practice.tier;
+            billingStatus = practice.billingStatus;
+            trialEndsAt = practice.trialEndsAt;
+            practiceBillingCache.set(user.practiceId, {
+              tier,
+              billingStatus,
+              trialEndsAt,
+              cachedAt: now,
+            });
           }
+
           if (
             !hasHostedFullAccess(
-              practice.tier,
-              practice.billingStatus,
-              practice.trialEndsAt,
+              tier,
+              billingStatus,
+              trialEndsAt,
             )
           ) {
             throw new TRPCError({

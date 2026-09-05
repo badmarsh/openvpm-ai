@@ -1655,14 +1655,14 @@ function BillingTab() {
             <div className="flex items-center gap-3">
               <Check className="h-5 w-5 text-green-600" />
               <h3 className="font-heading text-lg font-semibold">
-                Self-hosted — all features unlocked
+                {t("settings.billing.selfHostedTitle", "Self-hosted — all features unlocked")}
               </h3>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              You&apos;re running OpenVPM on your own infrastructure. Every
-              feature is available and there&apos;s no subscription — free
-              forever. Plans below are how the managed OpenVPM Cloud is priced,
-              for reference.
+              {t(
+                "settings.billing.selfHostedDescription",
+                "You're running OpenVPM on your own infrastructure. Every feature is available and there's no subscription — free forever. Plans below are how the managed OpenVPM Cloud is priced, for reference.",
+              )}
             </p>
           </div>
           <ClientPaymentProcessingSection
@@ -1945,14 +1945,14 @@ function ClientPaymentProcessingSection({
 }) {
   const { t } = useI18n();
   const status = data?.enabled
-    ? "ready"
+    ? t("settings.billing.statusReady", "ready")
     : data?.status === "action_required" || data?.status === "disabled"
-      ? "action required"
+      ? t("settings.billing.statusActionRequired", "action required")
       : data?.connectRequired
-        ? "setup needed"
+        ? t("settings.billing.statusSetupNeeded", "setup needed")
         : data?.stripeConfigured
-          ? "configured"
-          : "not configured";
+          ? t("settings.billing.statusConfigured", "configured")
+          : t("settings.billing.statusNotConfigured", "not configured");
   const statusClass = data?.enabled
     ? "bg-green-100 text-green-700"
     : data?.status === "action_required" || data?.status === "disabled"
@@ -1973,7 +1973,7 @@ function ClientPaymentProcessingSection({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-heading text-lg font-semibold">
-              Client payment processing
+              {t("settings.billing.clientPaymentTitle", "Client payment processing")}
             </h3>
             <span
               className={cn(
@@ -1986,8 +1986,14 @@ function ClientPaymentProcessingSection({
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             {data?.connectRequired
-              ? "Stripe Connect lets the clinic collect card payments from pet owners into its own Stripe account."
-              : "This installation can use its configured Stripe key for client invoice payments. Stripe Connect is required for hosted OpenVPM Cloud clinics."}
+              ? t(
+                  "settings.billing.clientPaymentStripeConnect",
+                  "Stripe Connect lets the clinic collect card payments from pet owners into its own Stripe account.",
+                )
+              : t(
+                  "settings.billing.clientPaymentSelfHosted",
+                  "This installation can use its configured Stripe key for client invoice payments. Stripe Connect is required for hosted OpenVPM Cloud clinics.",
+                )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1998,7 +2004,9 @@ function ClientPaymentProcessingSection({
               ) : (
                 <CreditCard className="mr-2 h-4 w-4" />
               )}
-              {data?.status === "not_started" ? "Set up" : "Resume setup"}
+              {data?.status === "not_started"
+                ? t("settings.billing.btnSetUp", "Set up")
+                : t("settings.billing.btnResumeSetup", "Resume setup")}
             </Button>
           )}
           {data?.connectRequired && (
@@ -2013,7 +2021,7 @@ function ClientPaymentProcessingSection({
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}
-              Refresh
+              {t("settings.billing.btnRefresh", "Refresh")}
             </Button>
           )}
           {canOpenDashboard && (
@@ -2028,7 +2036,7 @@ function ClientPaymentProcessingSection({
               ) : (
                 <CreditCard className="mr-2 h-4 w-4" />
               )}
-              Open Stripe
+              {t("settings.billing.btnOpenStripe", "Open Stripe")}
             </Button>
           )}
         </div>
@@ -2037,7 +2045,7 @@ function ClientPaymentProcessingSection({
       {isLoading && (
         <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading client payment status
+          {t("settings.billing.clientPaymentLoading", "Loading client payment status")}
         </div>
       )}
       {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
@@ -2117,12 +2125,34 @@ function PlanGrid({
   busyTier: string | null;
 }) {
   const { t } = useI18n();
+  const FEATURE_I18N: Record<string, string> = {
+    agent: t("settings.billing.featureAgent", "OpenVPM Agent (AI)"),
+    sms: t("settings.billing.featureSms", "SMS sending"),
+    advancedReporting: t("settings.billing.featureAdvancedReporting", "Advanced reporting"),
+    apiAccess: t("settings.billing.featureApiAccess", "API access + webhooks"),
+    multiLocation: t("settings.billing.featureMultiLocation", "Multi-location"),
+    integrations: t("settings.billing.featureIntegrations", "Supported integrations"),
+  };
+
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {plans.map((p) => {
         const isCurrent = p.tier === currentTier;
         const canBuy =
           enforced && p.purchasable && p.tier === "cloud" && !isCurrent;
+        const planName =
+          p.tier === "free"
+            ? t("settings.billing.freePlanName", p.name)
+            : p.name;
+        const planBlurb =
+          p.tier === "free"
+            ? t("settings.billing.freePlanBlurb", p.blurb)
+            : p.tier === "cloud"
+              ? t("settings.billing.cloudPlanBlurb", p.blurb)
+              : p.tier === "enterprise"
+                ? t("settings.billing.enterprisePlanBlurb", p.blurb)
+                : p.blurb;
+
         return (
           <div
             key={p.tier}
@@ -2133,51 +2163,65 @@ function PlanGrid({
                 : "border-border",
             )}
           >
-            <h4 className="font-heading text-base font-semibold">{p.name}</h4>
+            <h4 className="font-heading text-base font-semibold">{planName}</h4>
             <p className="mt-1 text-2xl font-bold">
               {p.locationUnitPriceMonthlyUsd === null ? (
-                "Custom"
+                t("settings.billing.customPrice", "Custom")
               ) : p.locationUnitPriceMonthlyUsd === 0 ? (
-                "Free"
+                t("settings.billing.freePrice", "Free")
               ) : (
                 <>
                   ${p.locationUnitPriceMonthlyUsd}
                   <span className="text-sm font-normal text-muted-foreground">
-                    /location
+                    {t("settings.billing.perLocation", "/location")}
                   </span>
                   <span className="block text-sm font-normal text-muted-foreground">
                     {p.seatUnitPriceMonthlyUsd && p.seatUnitPriceMonthlyUsd > 0
-                      ? `+ $${p.seatUnitPriceMonthlyUsd}/staff/mo`
-                      : "unlimited staff"}
+                      ? t("settings.billing.staffUnitPrice", `+ $${p.seatUnitPriceMonthlyUsd}/staff/mo`, {
+                          price: p.seatUnitPriceMonthlyUsd,
+                        })
+                      : t("settings.billing.unlimitedStaff", "unlimited staff")}
                   </span>
                 </>
               )}
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">{p.blurb}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{planBlurb}</p>
             <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
               <li>
-                {p.seatLimit === null ? "All" : p.seatLimit} staff roles
-                included
+                {p.seatLimit === null
+                  ? t("settings.billing.allStaffRoles", "All staff roles included")
+                  : t("settings.billing.staffRolesIncluded", `${p.seatLimit} staff roles included`, {
+                      count: p.seatLimit,
+                    })}
               </li>
               <li>
-                {p.locationLimit === null ? "Unlimited" : p.locationLimit}{" "}
-                location
-                {p.locationLimit === 1 ? "" : "s"}
+                {p.locationLimit === null
+                  ? t("settings.billing.unlimitedLocations", "Unlimited locations")
+                  : t("settings.billing.locationsCount", `${p.locationLimit} locations`, {
+                      count: p.locationLimit,
+                    })}
               </li>
               {p.includedSmsPerMonth ? (
                 <li>
-                  {p.includedSmsPerMonth.toLocaleString()} SMS/mo included
+                  {t("settings.billing.smsIncluded", `${p.includedSmsPerMonth.toLocaleString()} SMS/mo included`, {
+                    count: p.includedSmsPerMonth.toLocaleString(),
+                  })}
                   {p.smsOveragePriceUsd
-                    ? `, then $${p.smsOveragePriceUsd}/SMS`
+                    ? t("settings.billing.smsOverage", `, then $${p.smsOveragePriceUsd}/SMS`, {
+                        price: p.smsOveragePriceUsd,
+                      })
                     : ""}
                 </li>
               ) : null}
               {p.includedAiRunsPerMonth ? (
                 <li>
-                  {p.includedAiRunsPerMonth.toLocaleString()} AI actions/mo
-                  included
+                  {t("settings.billing.aiActionsIncluded", `${p.includedAiRunsPerMonth.toLocaleString()} AI actions/mo included`, {
+                    count: p.includedAiRunsPerMonth.toLocaleString(),
+                  })}
                   {p.aiOveragePriceUsd
-                    ? `, then $${p.aiOveragePriceUsd}/action`
+                    ? t("settings.billing.aiActionsOverage", `, then $${p.aiOveragePriceUsd}/action`, {
+                        price: p.aiOveragePriceUsd,
+                      })
                     : ""}
                 </li>
               ) : null}
@@ -2185,7 +2229,7 @@ function PlanGrid({
                 p.features.map((f) => (
                   <li key={f} className="flex items-center gap-1">
                     <Check className="h-3 w-3 text-green-600" />
-                    {FEATURE_LABELS[f] ?? f}
+                    {FEATURE_I18N[f] ?? FEATURE_LABELS[f] ?? f}
                   </li>
                 ))
               ) : (
@@ -2195,7 +2239,7 @@ function PlanGrid({
             <div className="mt-4 pt-2">
               {isCurrent ? (
                 <span className="text-xs font-medium text-primary">
-                  Current plan
+                  {t("settings.billing.currentPlan", "Current plan")}
                 </span>
               ) : canBuy ? (
                 <Button
@@ -2207,14 +2251,14 @@ function PlanGrid({
                   {busyTier === p.tier ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  Choose {p.name}
+                  {t("settings.billing.choosePlan", `Choose ${p.name}`, { name: p.name })}
                 </Button>
               ) : !p.selfServe ? (
                 <a
                   href="mailto:support@openvpm.com?subject=OpenVPM%20Enterprise"
                   className="text-xs font-medium text-primary hover:underline"
                 >
-                  Contact sales
+                  {t("settings.billing.contactSales", "Contact sales")}
                 </a>
               ) : null}
             </div>
@@ -4040,27 +4084,33 @@ function DataTab() {
             </p>
           ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
-            Includes structured records and attachment manifests. Uploaded
-            document and image bytes are not embedded in the JSON download.
+            {t(
+              "settings.data.backupDescription",
+              "Includes structured records and attachment manifests. Uploaded document and image bytes are not embedded in the JSON download."
+            )}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 max-w-2xl">
           {(
             [
-              { key: "clients", label: "Export Clients", icon: Users },
+              {
+                key: "clients",
+                label: t("settings.data.exportClients", "Export Clients"),
+                icon: Users,
+              },
               {
                 key: "patients",
-                label: "Export Patients",
+                label: t("settings.data.exportPatients", "Export Patients"),
                 icon: FileSpreadsheet,
               },
               {
                 key: "appointments",
-                label: "Export Appointments",
+                label: t("settings.data.exportAppointments", "Export Appointments"),
                 icon: Calendar,
               },
               {
                 key: "invoices",
-                label: "Export Invoices",
+                label: t("settings.data.exportInvoices", "Export Invoices"),
                 icon: FileSpreadsheet,
               },
             ] as const
@@ -4086,23 +4136,33 @@ function DataTab() {
 
       {/* Database backup restore */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Restore Database Backup</h3>
+        <h3 className="text-sm font-semibold mb-1">
+          {t("settings.data.restoreTitle", "Restore Database Backup")}
+        </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Restore structured data into an empty practice. Existing clients,
-          patients, appointments, or invoices block the restore. A backup with
-          attachment manifests must target its original practice.
+          {t(
+            "settings.data.restoreDescription",
+            "Restore structured data into an empty practice. Existing clients, patients, appointments, or invoices block the restore. A backup with attachment manifests must target its original practice."
+          )}
         </p>
         <div className="max-w-2xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1 space-y-4">
               <div>
-                <p className="text-sm font-medium">Empty-practice restore</p>
+                <p className="text-sm font-medium">
+                  {t("settings.data.emptyPracticeRestore", "Empty-practice restore")}
+                </p>
                 <p className="mt-1 text-xs leading-5 text-amber-900 dark:text-amber-200">
-                  OpenVPM first checks the backup sections, row counts, and
-                  internal record links. Restores are non-destructive and only
-                  insert rows that do not already exist.{" "}
-                  {PRACTICE_BACKUP_JSON_SIZE_MESSAGE}
+                  {t(
+                    "settings.data.restoreInfo",
+                    "OpenVPM first checks the backup sections, row counts, and internal record links. Restores are non-destructive and only insert rows that do not already exist."
+                  )}{" "}
+                  {/* {PRACTICE_BACKUP_JSON_SIZE_MESSAGE} */}
+                  {t(
+                    "settings.data.backupSizeLimit",
+                    PRACTICE_BACKUP_JSON_SIZE_MESSAGE
+                  )}
                 </p>
               </div>
 
@@ -4119,7 +4179,7 @@ function DataTab() {
                   ) : (
                     <Upload className="h-4 w-4" />
                   )}
-                  Choose Backup JSON
+                  {t("settings.data.chooseBackupJson", "Choose Backup JSON")}
                 </Button>
                 {backupFileName && (
                   <span className="truncate text-xs text-amber-900 dark:text-amber-200">
@@ -4198,7 +4258,11 @@ function DataTab() {
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
                   <div className="flex items-center gap-2 font-medium">
                     <Check className="h-4 w-4" />
-                    Restored {restoreResult.totalRows.toLocaleString()} rows
+                    {t(
+                      "settings.data.restoredRows",
+                      `Restored ${restoreResult.totalRows.toLocaleString()} rows`,
+                      { count: restoreResult.totalRows.toLocaleString() }
+                    )}
                   </div>
                 </div>
               )}
@@ -4218,8 +4282,10 @@ function DataTab() {
                   className="mt-0.5"
                 />
                 <span>
-                  I confirm this practice has no live clients, patients,
-                  appointments, or invoices.
+                  {t(
+                    "settings.data.confirmFreshPractice",
+                    "I confirm this practice has no live clients, patients, appointments, or invoices."
+                  )}
                 </span>
               </label>
 
@@ -4234,7 +4300,10 @@ function DataTab() {
                 ) : (
                   <Database className="h-4 w-4" />
                 )}
-                Restore into Empty Practice
+                {t(
+                  "settings.data.restoreIntoEmptyPractice",
+                  "Restore into Empty Practice"
+                )}
               </Button>
             </div>
           </div>
@@ -4243,29 +4312,40 @@ function DataTab() {
 
       {/* Account deletion */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Account Deletion</h3>
+        <h3 className="text-sm font-semibold mb-1">
+          {t("settings.data.deletionTitle", "Account Deletion")}
+        </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Start a deletion review after exporting the database backup. Review
-          uploaded files separately because their bytes are not in the JSON.
+          {t(
+            "settings.data.deletionDescription",
+            "Start a deletion review after exporting the database backup. Review uploaded files separately because their bytes are not in the JSON."
+          )}
         </p>
         <div className="max-w-2xl rounded-lg border border-destructive/30 bg-destructive/5 p-4">
           {isDeletionStatusLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading deletion status
+              {t("settings.data.deletionLoading", "Loading deletion status")}
             </div>
           ) : deletionStatusError ? (
             <div className="flex items-start gap-2 text-sm text-destructive">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                <p className="font-medium">Could not load deletion status</p>
+                <p className="font-medium">
+                  {t(
+                    "settings.data.deletionLoadError",
+                    "Could not load deletion status"
+                  )}
+                </p>
                 <p className="mt-1 text-xs">{deletionStatusError.message}</p>
               </div>
             </div>
           ) : deletionRequest ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="warning">Review requested</Badge>
+                <Badge variant="warning">
+                  {t("settings.data.deletionReviewRequested", "Review requested")}
+                </Badge>
                 {deletionRequestedAt && (
                   <span className="text-sm text-muted-foreground">
                     {deletionRequestedAt}
@@ -4274,11 +4354,15 @@ function DataTab() {
               </div>
               <div className="grid gap-1 text-sm">
                 <div>
-                  <span className="font-medium">Contact:</span>{" "}
+                  <span className="font-medium">
+                    {t("settings.data.deletionContact", "Contact:")}
+                  </span>{" "}
                   {deletionRequest.contactEmail}
                 </div>
                 <div>
-                  <span className="font-medium">Requested by:</span>{" "}
+                  <span className="font-medium">
+                    {t("settings.data.deletionRequestedBy", "Requested by:")}
+                  </span>{" "}
                   {deletionRequest.requestedByEmail}
                 </div>
               </div>
@@ -4290,7 +4374,7 @@ function DataTab() {
                   htmlFor="account-deletion-contact"
                   className="mb-1 block text-sm font-medium"
                 >
-                  Contact email
+                  {t("settings.data.deletionContactEmail", "Contact email")}
                 </label>
                 <Input
                   id="account-deletion-contact"
@@ -4306,7 +4390,7 @@ function DataTab() {
                   htmlFor="account-deletion-reason"
                   className="mb-1 block text-sm font-medium"
                 >
-                  Notes
+                  {t("settings.data.deletionNotes", "Notes")}
                 </label>
                 <textarea
                   id="account-deletion-reason"
@@ -4315,7 +4399,10 @@ function DataTab() {
                   maxLength={ACCOUNT_DELETION_REASON_MAX_LENGTH}
                   rows={3}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Optional context for the ops review"
+                  placeholder={t(
+                    "settings.data.deletionNotesPlaceholder",
+                    "Optional context for the ops review"
+                  )}
                 />
               </div>
               <label className="flex items-start gap-2 text-sm">
@@ -4327,7 +4414,10 @@ function DataTab() {
                   className="mt-0.5"
                 />
                 <span>
-                  I downloaded the database backup before requesting deletion.
+                  {t(
+                    "settings.data.confirmExportDownloaded",
+                    "I downloaded the database backup before requesting deletion."
+                  )}
                 </span>
               </label>
               <label className="flex items-start gap-2 text-sm">
@@ -4339,8 +4429,10 @@ function DataTab() {
                   className="mt-0.5"
                 />
                 <span>
-                  I understand deletion needs manual retention review before
-                  records are erased.
+                  {t(
+                    "settings.data.confirmManualReview",
+                    "I understand deletion needs manual retention review before records are erased."
+                  )}
                 </span>
               </label>
               <Button
@@ -4354,7 +4446,10 @@ function DataTab() {
                 ) : (
                   <Trash2 className="h-4 w-4" />
                 )}
-                Request Deletion Review
+                {t(
+                  "settings.data.requestDeletionReview",
+                  "Request Deletion Review"
+                )}
               </Button>
             </div>
           )}
@@ -4395,7 +4490,9 @@ function DataTab() {
                   : "border-border text-muted-foreground hover:border-primary/50",
               )}
             >
-              {source.name}
+              {source.id === "other"
+                ? t("settings.data.sourceOther", source.name)
+                : source.name}
             </button>
           ))}
         </div>
@@ -4413,7 +4510,10 @@ function DataTab() {
           </div>
         ) : (
           <p className="mb-4 text-xs font-medium text-amber-700">
-            Pred výberom importu najprv vyberte zdrojový systém.
+            {t(
+              "settings.data.selectSourcePrompt",
+              "Pred výberom importu najprv vyberte zdrojový systém."
+            )}
           </p>
         )}
 
@@ -4436,7 +4536,7 @@ function DataTab() {
               }}
             >
               <Upload className="mr-2 h-4 w-4" />
-              {index + 1}. Import {label}
+              {index + 1}. {t("settings.data.importStep", `Import ${label}`, { step: t(`settings.data.step_${mode}`, label) })}
             </Button>
           ))}
         </div>
@@ -4994,13 +5094,15 @@ function WellnessPlansTab() {
             <Badge variant="secondary">{t("settings.wellness.noAutoCharge", "No auto-charge")}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Wellness plans generate due invoices by cadence; Stripe checkout is
-            collected on each invoice.
+            {t(
+              "settings.wellness.noAutoChargeDescription",
+              "Wellness plans generate due invoices by cadence; Stripe checkout is collected on each invoice."
+            )}
           </p>
         </div>
         <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Plan
+          {t("settings.wellness.addPlan", "Add Plan")}
         </Button>
       </div>
 

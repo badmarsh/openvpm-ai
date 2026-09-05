@@ -23,12 +23,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 const SCOPES = [
-  { value: "marketing_messages", label: "Marketingové SMS / emaily", icon: MessageSquare },
-  { value: "photo_social", label: "Fotografie na sociálne siete", icon: Camera },
-  { value: "photo_web", label: "Fotografie na web", icon: FileCheck },
-  { value: "photo_tv", label: "Fotografie na TV v čakárni", icon: Tv },
-  { value: "story", label: "Príbeh pacienta / kazuistika", icon: FileCheck },
-  { value: "testimonial", label: "Recenzia a svedectvo klienta", icon: CheckCircle2 },
+  { value: "marketing_messages", label: "Marketingové SMS / emaily", i18nKey: "marketing.consents.scopeMarketingMessages", icon: MessageSquare },
+  { value: "photo_social", label: "Fotografie na sociálne siete", i18nKey: "marketing.consents.scopePhotoSocial", icon: Camera },
+  { value: "photo_web", label: "Fotografie na web", i18nKey: "marketing.consents.scopePhotoWeb", icon: FileCheck },
+  { value: "photo_tv", label: "Fotografie na TV v čakárni", i18nKey: "marketing.consents.scopePhotoTv", icon: Tv },
+  { value: "story", label: "Príbeh pacienta / kazuistika", i18nKey: "marketing.consents.scopeStory", icon: FileCheck },
+  { value: "testimonial", label: "Recenzia a svedectvo klienta", i18nKey: "marketing.consents.scopeTestimonial", icon: CheckCircle2 },
 ] as const;
 
 export default function MarketingConsentsPage() {
@@ -48,31 +48,31 @@ export default function MarketingConsentsPage() {
 
   const createMutation = trpc.extensions.marketing.createMediaConsent.useMutation({
     onSuccess: () => {
-      toast.success("Súhlas bol úspešne zaznamenaný.");
+      toast.success(t("marketing.consents.createSuccess", "Súhlas bol úspešne zaznamenaný."));
       setIsCreateOpen(false);
       setSelectedClientId("");
       setNotes("");
       utils.extensions.marketing.listMediaConsents.invalidate();
     },
     onError: (err) => {
-      toast.error(err.message || "Nepodarilo sa uložiť súhlas.");
+      toast.error(err.message || t("marketing.consents.createError", "Nepodarilo sa uložiť súhlas."));
     },
   });
 
   const revokeMutation = trpc.extensions.marketing.revokeMediaConsent.useMutation({
     onSuccess: () => {
-      toast.success("Súhlas bol odvolaný a marketingové položky zablokované.");
+      toast.success(t("marketing.consents.revokeSuccess", "Súhlas bol odvolaný a marketingové položky zablokované."));
       utils.extensions.marketing.listMediaConsents.invalidate();
     },
     onError: (err) => {
-      toast.error(err.message || "Nepodarilo sa odvolať súhlas.");
+      toast.error(err.message || t("marketing.consents.revokeError", "Nepodarilo sa odvolať súhlas."));
     },
   });
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClientId) {
-      toast.error("Vyberte klienta.");
+      toast.error(t("marketing.consents.selectClientError", "Vyberte klienta."));
       return;
     }
     createMutation.mutate({
@@ -151,7 +151,7 @@ export default function MarketingConsentsPage() {
               >
                 {SCOPES.map((sc) => (
                   <option key={sc.value} value={sc.value}>
-                    {sc.label}
+                    {t(sc.i18nKey, sc.label)}
                   </option>
                 ))}
               </select>
@@ -251,7 +251,7 @@ export default function MarketingConsentsPage() {
                       )}
                     </div>
                     <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                      <span>Rozsah: <strong>{scopeObj?.label ?? consent.scope}</strong></span>
+                      <span>{t("marketing.consents.scope", "Rozsah")}: <strong>{scopeObj ? t(scopeObj.i18nKey, scopeObj.label) : consent.scope}</strong></span>
                       <span>Dôkaz: {consent.evidenceType}</span>
                       <span>Udelené: {new Date(consent.grantedAt).toLocaleDateString("sk-SK")}</span>
                       {consent.notes && <span>({consent.notes})</span>}

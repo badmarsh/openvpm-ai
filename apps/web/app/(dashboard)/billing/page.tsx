@@ -1160,7 +1160,7 @@ function InvoiceRow({
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${displayStatus.style}`}
           >
-            {displayStatus.label}
+            {t(`billing.status_${displayStatus.label}`, displayStatus.label)}
           </span>
         </td>
         <td className="px-4 py-3 text-right tabular-nums">

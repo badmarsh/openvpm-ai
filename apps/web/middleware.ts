@@ -25,15 +25,20 @@ const PUBLIC_PATH_PREFIXES = [
   "/clinic-fit",
   "/email-preferences",
   "/forgot-password",
+  "/h",
   "/legal",
   "/login",
+  "/odhlasenie",
   "/portal",
+  "/postop",
   "/register",
   "/reset-password",
   "/sign",
   "/sms",
   "/treatment-plan",
+  "/tv",
   "/verify-email",
+  "/waiting-room",
 ];
 
 const PUBLIC_FILE_PATTERN =

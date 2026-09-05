@@ -83,6 +83,12 @@ declare module "next-auth/jwt" {
     id: string;
     role: "admin" | "veterinarian" | "technician" | "front_desk" | "viewer";
     practiceId: string;
+    emailVerifiedAt?: string | null;
+    practiceCreatedAt?: string | null;
+    recoveryHold?: boolean;
+    billingTier?: string | null;
+    billingStatus?: string | null;
+    trialEndsAt?: string | null;
   }
 }
 
@@ -219,6 +225,25 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.practiceId = user.practiceId;
+        const u = user as unknown as Record<string, unknown>;
+        if (u.emailVerifiedAt !== undefined) {
+          token.emailVerifiedAt = u.emailVerifiedAt ? String(u.emailVerifiedAt) : null;
+        }
+        if (u.practiceCreatedAt !== undefined) {
+          token.practiceCreatedAt = u.practiceCreatedAt ? String(u.practiceCreatedAt) : null;
+        }
+        if (u.recoveryHold !== undefined) {
+          token.recoveryHold = Boolean(u.recoveryHold);
+        }
+        if (u.billingTier !== undefined) {
+          token.billingTier = u.billingTier ? String(u.billingTier) : null;
+        }
+        if (u.billingStatus !== undefined) {
+          token.billingStatus = u.billingStatus ? String(u.billingStatus) : null;
+        }
+        if (u.trialEndsAt !== undefined) {
+          token.trialEndsAt = u.trialEndsAt ? String(u.trialEndsAt) : null;
+        }
       }
       return token;
     },
@@ -226,6 +251,25 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.id;
       session.user.role = token.role;
       session.user.practiceId = token.practiceId;
+      const sUser = session.user as Record<string, unknown>;
+      if (token.emailVerifiedAt !== undefined) {
+        sUser.emailVerifiedAt = token.emailVerifiedAt;
+      }
+      if (token.practiceCreatedAt !== undefined) {
+        sUser.practiceCreatedAt = token.practiceCreatedAt;
+      }
+      if (token.recoveryHold !== undefined) {
+        sUser.recoveryHold = token.recoveryHold;
+      }
+      if (token.billingTier !== undefined) {
+        sUser.billingTier = token.billingTier;
+      }
+      if (token.billingStatus !== undefined) {
+        sUser.billingStatus = token.billingStatus;
+      }
+      if (token.trialEndsAt !== undefined) {
+        sUser.trialEndsAt = token.trialEndsAt;
+      }
       return session;
     },
   },

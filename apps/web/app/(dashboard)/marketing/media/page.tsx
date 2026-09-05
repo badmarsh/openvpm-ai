@@ -140,11 +140,11 @@ export default function MediaLibraryPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ImageIcon className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <ImageIcon className="w-7 h-7 text-primary" />
             {t("marketing.media.title", "Knižnica médií a grafiky")}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             {t(
               "marketing.media.description",
               "Správa fotografií, videí a vizuálnych podkladov s prísnou kontrolou GDPR súhlasov."

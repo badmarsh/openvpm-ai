@@ -13,6 +13,12 @@ async function applyMigration() {
     ALTER TABLE ext_marketing_media_assets ADD COLUMN IF NOT EXISTS alt_text text DEFAULT '';
     ALTER TABLE ext_marketing_media_assets ADD COLUMN IF NOT EXISTS meta jsonb;
 
+    ALTER TABLE ext_marketing_media_assets DROP CONSTRAINT IF EXISTS ext_mkt_media_consent_required;
+    ALTER TABLE ext_marketing_media_assets ADD CONSTRAINT ext_mkt_media_consent_required CHECK ((subjects_present = false) OR (consent_id IS NOT NULL));
+
+    ALTER TABLE ext_marketing_reviews ADD COLUMN IF NOT EXISTS platform text NOT NULL DEFAULT 'google';
+    CREATE INDEX IF NOT EXISTS ext_mkt_reviews_platform_idx ON ext_marketing_reviews (practice_id, platform);
+
     CREATE TABLE IF NOT EXISTS ext_marketing_competitor_snapshots (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       created_at timestamptz NOT NULL DEFAULT now(),

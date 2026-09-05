@@ -27,6 +27,8 @@ import {
   Play,
   RefreshCw,
   Tv,
+  HeartHandshake,
+  Mail,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -66,6 +68,26 @@ export default function MarketingStudioPage() {
     },
     onError: (err) => {
       toast.error(err.message || "Nepodarilo sa vytvoriť TV slajd");
+    },
+  });
+
+  const staffTasksQuery = trpc.extensions.marketing.listStaffTasks.useQuery({ status: "open" });
+  const resolveTaskMutation = trpc.extensions.marketing.resolveStaffTask.useMutation({
+    onSuccess: () => {
+      utils.extensions.marketing.listStaffTasks.invalidate();
+      toast.success("Úloha bola označená ako vybavená.");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa aktualizovať úlohu.");
+    },
+  });
+  const sendCondolenceMutation = trpc.extensions.marketing.sendCondolenceCard.useMutation({
+    onSuccess: () => {
+      utils.extensions.marketing.listStaffTasks.invalidate();
+      toast.success("Kondolenčná správa bola zaradená a odoslaná.");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa odoslať kondolenciu.");
     },
   });
 
@@ -346,6 +368,61 @@ export default function MarketingStudioPage() {
           </Button>
         </div>
       </div>
+
+      {/* Staff Tasks Banner: Sympathy Gate Condolences & Post-Op Concerns */}
+      {staffTasksQuery.data && staffTasksQuery.data.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-semibold text-sm">
+              <HeartHandshake className="w-4 h-4" />
+              <span>Úlohy pre personál – Sympathy Flow a Post-Op eskalácie ({staffTasksQuery.data.length})</span>
+            </div>
+            <Badge variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs">
+              Vyžaduje manuálnu starostlivosť
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Podľa etického kódexu veterinára systém automaticky zablokoval všetky marketingové správy pre zosnulých pacientov. Prevezmite komunikáciu osobne alebo odošlite kondolenčnú kartu.
+          </p>
+          <div className="divide-y divide-border/60">
+            {staffTasksQuery.data.map((task) => (
+              <div key={task.id} className="pt-2.5 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="space-y-0.5">
+                  <div className="font-semibold text-foreground flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                    {task.title}
+                  </div>
+                  <div className="text-muted-foreground pl-3.5">{task.detail}</div>
+                </div>
+                <div className="flex items-center gap-2 pl-3.5 sm:pl-0 shrink-0">
+                  {task.kind === "condolence" && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="h-7 text-xs bg-rose-600 hover:bg-rose-700 text-white gap-1"
+                      onClick={() => sendCondolenceMutation.mutate({ taskId: task.id })}
+                      disabled={sendCondolenceMutation.isPending}
+                    >
+                      <Mail className="w-3 h-3" />
+                      Odoslať kondolenciu
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => resolveTaskMutation.mutate({ id: task.id })}
+                    disabled={resolveTaskMutation.isPending}
+                  >
+                    <Check className="w-3 h-3" />
+                    Vybavené
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

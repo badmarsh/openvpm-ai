@@ -48,6 +48,7 @@ import {
 import type { Database } from "@openpims/db/client";
 import { alias } from "drizzle-orm/pg-core";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
+import { applySympathyGate } from "@/lib/marketing/messaging";
 import {
   CLINICAL_CORRECTION_REASON_MAX_LENGTH,
   CLINICAL_CORRECTION_REASON_MIN_LENGTH,
@@ -1142,6 +1143,20 @@ export const patientsRouter = createRouter({
           oldStatus: existingStatus,
           newStatus: input.status,
         });
+
+        if (input.status === "deceased" && patient.clientId) {
+          try {
+            await applySympathyGate(
+              ctx.db,
+              ctx.practiceId,
+              patient.clientId,
+              patient.id,
+              "patient_status_deceased",
+            );
+          } catch (err) {
+            console.error("Sympathy gate error on patient status change:", err);
+          }
+        }
       }
       return patient;
     }),

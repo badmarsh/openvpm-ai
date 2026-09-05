@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -12,26 +12,32 @@ import {
   X,
   FileText,
   RotateCcw,
-  ChevronRight,
   BookOpen,
   ExternalLink,
-  CheckCircle2,
-  Volume2,
-  Sliders,
   MessageSquare,
+  Stethoscope,
+  Copy,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecordingButton } from "./components/recording-button";
 import { AudioPlayer } from "./components/audio-player";
 import { ClinicalTemplatesModal } from "./components/clinical-templates";
 import { VoiceCommandsModal } from "./components/voice-commands";
 import { PatientSelector } from "./components/patient-selector";
 import { SoapPreview, type SoapSectionsData } from "./components/soap-preview";
-import { HistoryList, type Dictation } from "./components/history-list";
 import type { SoapStyle } from "@/lib/voice/soap-formatter";
 
 type DictationStatus =
@@ -42,13 +48,29 @@ type DictationStatus =
   | "saved"
   | "error";
 
-type ViewMode = "main" | "history" | "results";
+const QUICK_TEMPLATES = [
+  {
+    name: "Preventívna prehliadka",
+    text: "Preventívna prehliadka psa. Celkový stav pokojný, výživný stav optimálny. Sliznice ružové a vlhké, CRT do 2 sekúnd. Auskultačne srdce a pľúca bez patologických šelestov. Palpácia brucha nebolestivá. Aplikované kombinované očkovanie DHPPiL a odčervenie tabletou. Odporúčaná kontrola o 1 rok.",
+  },
+  {
+    name: "Gastroenteritída",
+    text: "Pes predvedený pre akútne zvracanie a hnačku od včerajšieho večera po konzumácii zvyškov jedla. Teplota 38.6 °C, mierna dehydratácia cca 4%. Brucho mierne citlivé v epigastriu. Aplikovaný Maropitant 1mg/kg s.c. a Ringer-laktát 200ml s.c. Nasadená diéta varené kuracie s ryžou a probiotická pasta. Kontrola o 2 dni.",
+  },
+  {
+    name: "Kontrola po operácii",
+    text: "Kontrola po plánovanej ovariohysterektómii. Operačná rana v linea alba je čistá, kľudná, bez výtoku, dehiscencie a známok infekcie. Pacientka prijíma krmivo a vodu bez ťažkostí. Odstránenie stehov plánované o 4 dni. Pokračovať v nosení ochranného goliera.",
+  },
+];
 
 function VoiceDictationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const patientIdParam = searchParams.get("patientId");
   const utils = trpc.useUtils();
+
+  // Navigation tab
+  const [activeTab, setActiveTab] = useState<"editor" | "history">("editor");
 
   // Patient
   const [selectedPatient, setSelectedPatient] = useState<{
@@ -84,6 +106,12 @@ function VoiceDictationContent() {
     }
   }, [patientQuery.data, selectedPatient]);
 
+  const patientDetailQ = trpc.patients.getById.useQuery(
+    { id: selectedPatient?.id ?? "" },
+    { enabled: !!selectedPatient?.id },
+  );
+  const isDeceased = patientDetailQ.data?.status === "deceased";
+
   // Recording
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
@@ -100,9 +128,9 @@ function VoiceDictationContent() {
     plan: "",
   });
   const [activeStyle, setActiveStyle] = useState<SoapStyle>("standard");
+  const [copied, setCopied] = useState(false);
 
-  // UI state
-  const [viewMode, setViewMode] = useState<ViewMode>("main");
+  // UI modals
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
@@ -136,7 +164,6 @@ function VoiceDictationContent() {
     setRawTranscript("");
     setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
     setSavedNoteId(null);
-    setViewMode("main");
   }, []);
 
   const handleRecordingComplete = useCallback(
@@ -193,7 +220,6 @@ function VoiceDictationContent() {
       });
 
       setStatus("done");
-      setViewMode("results");
       toast.success("Transkripcia a SOAP analýza dokončená");
 
       utils.extensions.voice.listByPatient.invalidate({
@@ -232,7 +258,7 @@ function VoiceDictationContent() {
           plan: formatted.plan,
         });
         toast.success(`SOAP preformátovaný v štýle: ${style === "standard" ? "Štandardný" : style === "detailed" ? "Detailný" : "Stručný"}`);
-      } catch (err) {
+      } catch {
         toast.error("Preformátovanie zlyhalo");
       }
     },
@@ -267,7 +293,7 @@ function VoiceDictationContent() {
     }
   }, [dictationId, selectedPatient, soapSections, saveMutation, utils]);
 
-  const handleSelectHistory = useCallback((item: Dictation) => {
+  const handleSelectHistoryItem = (item: any) => {
     setDictationId(item.id);
     setRawTranscript(item.rawTranscript ?? "");
     setSoapSections({
@@ -277,13 +303,13 @@ function VoiceDictationContent() {
       plan: item.plan ?? "",
     });
     setStatus(item.status === "COMPLETED" ? "done" : "idle");
-    setViewMode("results");
-  }, []);
+    setActiveTab("editor");
+    toast.info("Diktát načítaný do editora");
+  };
 
   const handleSelectTemplate = useCallback(
     async (sampleText: string, templateTitle: string) => {
       setRawTranscript(sampleText);
-      setViewMode("results");
       setStatus("processing");
 
       try {
@@ -372,126 +398,279 @@ function VoiceDictationContent() {
     [resetState, selectedPatient, audioBlob, handleProcess, dictationId, handleSave, router],
   );
 
+  const handleCopySoap = () => {
+    const text = `S (Subjektívne):\n${soapSections.subjective}\n\nO (Objektívne):\n${soapSections.objective}\n\nA (Posúdenie):\n${soapSections.assessment}\n\nP (Plán):\n${soapSections.plan}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("SOAP záznam skopírovaný do schránky");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const isProcessing = status === "processing";
-  const canRecord = selectedPatient && !isProcessing && viewMode === "main";
-  const hasRecording = audioBlob && status === "idle";
-  const hasResults = status === "done" || status === "saved";
+  const canRecord = !!selectedPatient && !isProcessing;
+  const hasRecording = !!audioBlob && status === "idle";
+  const hasSoapContent = Boolean(
+    soapSections.subjective ||
+    soapSections.objective ||
+    soapSections.assessment ||
+    soapSections.plan,
+  );
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-7.5rem)]">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <Mic className="h-5 w-5 text-white" />
-            </div>
-            {isProcessing && (
-              <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-amber-500 animate-ping border-2 border-background" />
-            )}
+    <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Hlasové Diktovanie
+            </h1>
+            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+              <Sparkles className="h-3 w-3" />
+              Klinický AI Prepis
+            </Badge>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight">
-                Hlasové Diktovanie
-              </h1>
-              <Badge variant="secondary" className="gap-1 text-[11px] font-mono">
-                <Sparkles className="h-3 w-3 text-violet-500" />
-                Gemini STT
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Presná transkripcia hovoreného slova s veterinárnou terminológiou a štruktúrovaním do SOAP
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Presná transkripcia hovoreného slova s veterinárnou terminológiou a automatickým štruktúrovaním do SOAP.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setCommandsOpen(true)}
-            className="gap-1.5 text-xs font-medium border-violet-200 dark:border-violet-900/60 hover:bg-violet-50 dark:hover:bg-violet-950/40 text-violet-700 dark:text-violet-300 shadow-xs"
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            Hlasové príkazy
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setTemplatesOpen(true)}
-            className="gap-1.5 text-xs font-medium border-violet-200 dark:border-violet-900/60 hover:bg-violet-50 dark:hover:bg-violet-950/40 text-violet-700 dark:text-violet-300"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Vzory diktátov
-          </Button>
-
-          {selectedPatient && (
-            <Button
-              variant={viewMode === "history" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode(viewMode === "history" ? "main" : "history")}
-              className="gap-1.5 text-xs"
-            >
-              <History className="h-3.5 w-3.5" />
-              História pacienta
-            </Button>
-          )}
-        </div>
+        {/* Mode / Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+          <TabsList className="grid grid-cols-2 w-[280px]">
+            <TabsTrigger value="editor" className="gap-1.5">
+              <Mic className="h-4 w-4" />
+              Diktovanie
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-1.5">
+              <History className="h-4 w-4" />
+              História diktátov
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Column (Main Panel) */}
-        <div className="lg:col-span-8 flex flex-col gap-3 min-h-0">
-          {/* Patient Selector Card */}
-          <div className="bg-card rounded-xl border p-3 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-            <div className="flex-1 w-full sm:max-w-md">
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                Vyberte pacienta pre klinické diktovanie
-              </label>
-              <PatientSelector
-                value={selectedPatient}
-                onChange={(p) => {
-                  setSelectedPatient(p);
-                  resetState();
-                }}
-              />
-            </div>
-
-            {selectedPatient && (
-              <div className="flex items-center gap-2 shrink-0">
+      {activeTab === "history" ? (
+        /* History View */
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              História hlasových diktovaní
+            </CardTitle>
+            <CardDescription>
+              {selectedPatient
+                ? `Zoznam predchádzajúcich diktovaní pre pacienta ${selectedPatient.name}.`
+                : "Vyberte pacienta v editore pre zobrazenie histórie jeho diktovaní."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!selectedPatient ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm font-medium">Nie je vybraný žiadny pacient</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Vráťte sa do editora a vyberte pacienta, ktorého históriu si prajete zobraziť.
+                </p>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  asChild
-                  className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setActiveTab("editor")}
+                  className="mt-4 text-xs"
                 >
-                  <Link href={`/patients/${selectedPatient.id}`} target="_blank">
-                    <span>Karta pacienta</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
+                  Prejsť do editora
                 </Button>
               </div>
+            ) : historyQuery.isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !historyQuery.data || historyQuery.data.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Pre pacienta {selectedPatient.name} zatiaľ neboli zaznamenané žiadne diktáty.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {historyQuery.data.map((item: any) => (
+                  <Card key={item.id} className="hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base font-semibold">
+                          Diktát — {new Date(item.createdAt).toLocaleDateString("sk-SK")}
+                        </CardTitle>
+                        <Badge
+                          variant={
+                            item.status === "COMPLETED"
+                              ? "default"
+                              : item.status === "SAVED"
+                                ? "secondary"
+                                : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {item.status === "COMPLETED"
+                            ? "Spracované"
+                            : item.status === "SAVED"
+                              ? "Uložené v karte"
+                              : "Koncept"}
+                        </Badge>
+                      </div>
+                      <CardDescription className="line-clamp-2 text-xs mt-1">
+                        {item.assessment || item.rawTranscript || "Bez popisu nálezu"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {item.audioDurationSeconds ? `${item.audioDurationSeconds} s audia` : "Diktát"}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleSelectHistoryItem(item)}
+                        className="gap-1.5 text-xs"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Načítať do editora
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
+      ) : (
+        /* Main 2-Column Editor Layout */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Patient, Presets & Recording */}
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            {/* Patient Search */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                    Vybrať pacienta pre diktovanie *
+                  </span>
+                  {selectedPatient && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Link href={`/patients/${selectedPatient.id}`} target="_blank">
+                          <span>Karta pacienta</span>
+                          <ExternalLink className="h-3 w-3 ml-1" />
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPatient(null);
+                          resetState();
+                        }}
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Zrušiť
+                      </Button>
+                    </div>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <PatientSelector
+                  value={selectedPatient}
+                  onChange={(p) => {
+                    setSelectedPatient(p);
+                    resetState();
+                  }}
+                />
 
-          {/* Central Workspace Card */}
-          <div
-            className={cn(
-              "flex-1 bg-card rounded-xl border shadow-sm overflow-hidden transition-all duration-300 flex flex-col",
-              canRecord && "hover:border-violet-300 dark:hover:border-violet-800",
-              hasRecording && "border-violet-400 dark:border-violet-600 shadow-md",
-              isProcessing && "border-amber-400 dark:border-amber-600 shadow-md",
-              hasResults && "border-emerald-400 dark:border-emerald-700",
-            )}
-          >
-            {/* 1. Main Recording View */}
-            {viewMode === "main" && (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                {/* Sympathy Flow Warning Banner */}
+                {isDeceased && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-semibold block mb-0.5">Upozornenie na status pacienta</strong>
+                      Tento pacient je evidovaný ako uhynutý/eutanazovaný. Záznam bude uložený do archívu.
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions & Presets (matching discharge style) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Rýchle vzory & pomôcky:
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCommandsOpen(true)}
+                    className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    Hlasové príkazy
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTemplatesOpen(true)}
+                    className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
+                  >
+                    <BookOpen className="h-3 w-3" />
+                    Všetky vzory
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_TEMPLATES.map((tpl) => (
+                  <Button
+                    key={tpl.name}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                    onClick={() => handleSelectTemplate(tpl.text, tpl.name)}
+                  >
+                    {tpl.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recording Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Mic className="h-4 w-4 text-primary" />
+                    Hlasový záznam vyšetrenia
+                  </span>
+                  {audioDuration > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {audioDuration} sekúnd
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {selectedPatient
+                    ? "Stlačte mikrofón a diktujte anamnézu, klinický nález a medikáciu."
+                    : "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                 <RecordingButton
                   onRecordingComplete={handleRecordingComplete}
                   onCommandDetected={(actionKey, phrase) => {
@@ -501,9 +680,9 @@ function VoiceDictationContent() {
                   size="large"
                 />
 
-                {/* Recorded Audio Preview Bar */}
+                {/* Recorded Audio Preview */}
                 {hasRecording && audioUrl && (
-                  <div className="mt-6 w-full max-w-md space-y-3 animate-in fade-in slide-in-from-bottom-3 duration-300">
+                  <div className="w-full space-y-3 pt-2">
                     <AudioPlayer
                       src={audioUrl}
                       title={`Záznam diktátu (${audioDuration} sekúnd)`}
@@ -518,17 +697,16 @@ function VoiceDictationContent() {
                           setAudioBlob(null);
                           setAudioDuration(0);
                         }}
-                        className="text-xs"
+                        className="text-xs gap-1"
                       >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        <RotateCcw className="h-3.5 w-3.5" />
                         Nahrať znova
                       </Button>
 
                       <Button
                         type="button"
-                        size="sm"
                         onClick={handleProcess}
-                        className="gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-md shadow-violet-500/20"
+                        className="gap-2 py-4 text-xs font-semibold shadow-sm"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
                         Spracovať cez Gemini AI
@@ -539,226 +717,142 @@ function VoiceDictationContent() {
 
                 {/* Processing State */}
                 {isProcessing && (
-                  <div className="mt-6 flex flex-col items-center gap-2.5 animate-in fade-in duration-300">
-                    <div className="relative">
-                      <Loader2 className="h-9 w-9 animate-spin text-amber-500" />
-                      <div className="absolute inset-0 h-9 w-9 rounded-full bg-amber-500/20 blur-md" />
-                    </div>
-                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                      AI analyzuje a štruktúruje diktovanie...
+                  <div className="flex flex-col items-center gap-2 py-4 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-xs font-semibold text-foreground">
+                      AI analyzuje a štruktúruje veterinárne diktovanie...
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Raw Transcript Card */}
+            {(rawTranscript || hasSoapContent) && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold">
+                      Surový prepis diktátu
+                    </CardTitle>
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      {rawTranscript.length} znakov
                     </span>
-                    <p className="text-xs text-muted-foreground max-w-sm">
-                      Prebieha prepis reči so slovenským veterinárnym názvoslovím a extrakcia sekcií S-O-A-P.
-                    </p>
                   </div>
-                )}
-
-                {/* Initial Guide */}
-                {!selectedPatient && (
-                  <div className="mt-6 max-w-sm text-center">
-                    <p className="text-sm font-medium text-foreground">
-                      Najskôr vyberte pacienta
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Diktát sa automaticky priradí k vybranému pacientovi a umožní okamžité uloženie do jeho karty.
-                    </p>
-                  </div>
-                )}
-
-                {canRecord && !hasRecording && (
-                  <div className="mt-6 max-w-sm text-center">
-                    <p className="text-sm font-medium text-foreground">
-                      Stlačte mikrofón a začnite diktovať
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Povedzte anamnézu, triádu, diagnózu a plán terapie. Pre inšpiráciu kliknite na „Vzory diktátov“.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 2. Results & Review View */}
-            {viewMode === "results" && (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header Bar */}
-                <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-xs">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold">
-                        Spracovaný SOAP záznam
-                      </span>
-                      {selectedPatient && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          · {selectedPatient.name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setViewMode("main")}
-                      className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Nový diktát
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* Saved Success Notification Banner */}
-                  {status === "saved" && (
-                    <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 flex items-center justify-between gap-3 animate-in fade-in duration-300">
-                      <div className="flex items-center gap-2.5">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <div>
-                          <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-                            SOAP záznam bol úspešne zapísaný do klinických záznamov pacienta
-                          </p>
-                          <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-                            Záznam nájdete v karte pacienta aj v sekcii Klinické záznamy.
-                          </p>
-                        </div>
-                      </div>
-
-                      {selectedPatient && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          asChild
-                          className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-                        >
-                          <Link href={`/patients/${selectedPatient.id}`}>
-                            Otvoriť kartu
-                            <ChevronRight className="h-3 w-3 ml-1" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Audio Player if available */}
-                  {audioUrl && (
-                    <AudioPlayer
-                      src={audioUrl}
-                      compact
-                      title="Zvukový záznam diktovania"
-                    />
-                  )}
-
-                  {/* Raw Transcript Accordion/Textarea */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-muted-foreground">
-                        Surová transkripcia z diktátu
-                      </label>
-                      <span className="text-[11px] font-mono text-muted-foreground">
-                        {rawTranscript.length} znakov
-                      </span>
-                    </div>
-                    <textarea
-                      value={rawTranscript}
-                      onChange={(e) => setRawTranscript(e.target.value)}
-                      rows={3}
-                      placeholder="Sem môžete vložiť alebo upraviť surový text..."
-                      className="w-full rounded-xl border bg-muted/30 px-3.5 py-2.5 text-xs font-sans focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none leading-relaxed"
-                    />
-                  </div>
-
-                  {/* SOAP Sections Form */}
-                  <SoapPreview
-                    sections={soapSections}
-                    editable
-                    onChange={setSoapSections}
-                    patientName={selectedPatient?.name}
-                    onReformat={handleReformat}
-                    isReformatting={formatTextMutation.isPending}
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <textarea
+                    value={rawTranscript}
+                    onChange={(e) => setRawTranscript(e.target.value)}
+                    rows={3}
+                    placeholder="Sem môžete vložiť alebo upraviť surový text..."
+                    className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
                   />
-
-                  {/* Footer Actions */}
-                  <div className="pt-3 border-t flex items-center justify-between">
+                  <div className="flex justify-end">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setViewMode("main")}
-                      className="text-xs"
+                      onClick={() => handleReformat(activeStyle)}
+                      disabled={formatTextMutation.isPending || !rawTranscript}
+                      className="text-xs gap-1.5 h-7"
                     >
-                      Späť na mikrofón
-                    </Button>
-
-                    <Button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saveMutation.isPending || status === "saved"}
-                      className="gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20 text-xs h-9 px-4"
-                    >
-                      {saveMutation.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {formatTextMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <Save className="h-3.5 w-3.5" />
+                        <Sparkles className="h-3 w-3" />
                       )}
-                      {status === "saved" ? "Uložené v kartotéke" : "Uložiť do záznamov pacienta"}
+                      Preformátovať do SOAP
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column: SOAP Preview & Actions */}
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            <Card className="flex flex-col h-full min-h-[550px] shadow-sm">
+              <CardHeader className="pb-3 border-b border-border flex-row items-center justify-between space-y-0">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-base font-semibold">
+                    Klinický SOAP záznam
+                  </CardTitle>
                 </div>
-              </div>
-            )}
+
+                {hasSoapContent && (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopySoap}
+                      className="h-8 px-2.5 text-xs gap-1"
+                    >
+                      {copied ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                      Kopírovať
+                    </Button>
+                  </div>
+                )}
+              </CardHeader>
+
+              <CardContent className="flex-1 flex flex-col p-4 space-y-4">
+                {hasSoapContent ? (
+                  <div className="flex-1 flex flex-col space-y-4">
+                    <SoapPreview
+                      sections={soapSections}
+                      editable
+                      onChange={setSoapSections}
+                      patientName={selectedPatient?.name}
+                      onReformat={handleReformat}
+                      isReformatting={formatTextMutation.isPending}
+                    />
+
+                    {/* Footer Save CTA */}
+                    <div className="pt-3 border-t">
+                      <Button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saveMutation.isPending || status === "saved" || !dictationId}
+                        className="w-full gap-2 py-5 text-sm font-semibold shadow-sm"
+                      >
+                        {saveMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Ukladám SOAP do karty pacienta...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            {status === "saved" ? "Uložené v kartotéke pacienta" : "Uložiť do záznamov pacienta"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center flex-1 py-16 text-muted-foreground text-center">
+                    <Mic className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium text-foreground">
+                      Žiadny vygenerovaný SOAP záznam
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                      Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
-
-        {/* Right Column (History & Clinical Info) */}
-        <div
-          className={cn(
-            "lg:col-span-4 bg-card rounded-xl border shadow-xs overflow-hidden flex flex-col min-h-0",
-            viewMode === "history" || selectedPatient ? "flex" : "hidden lg:flex",
-          )}
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40 shrink-0">
-            <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-violet-600" />
-              <span className="text-xs font-semibold">História diktovaní</span>
-            </div>
-            {selectedPatient && (
-              <span className="text-xs font-medium text-muted-foreground truncate max-w-[130px]">
-                {selectedPatient.name}
-              </span>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {selectedPatient ? (
-              <HistoryList
-                items={historyQuery.data ?? []}
-                selectedId={dictationId}
-                onSelect={handleSelectHistory}
-                onDeleted={() => {
-                  if (dictationId) resetState();
-                }}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                <FileText className="h-10 w-10 text-muted-foreground/30 mb-2.5" />
-                <p className="text-xs font-medium text-foreground">
-                  Žiadny vybraný pacient
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
-                  Vyberte pacienta pre zobrazenie histórie jeho predchádzajúcich diktovaní.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Voice Commands Modal */}
       <VoiceCommandsModal
@@ -781,9 +875,9 @@ export default function VoiceDictationPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-[calc(100vh-7.5rem)] items-center justify-center">
+        <div className="flex h-96 items-center justify-center">
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground">Načítavam hlasové diktovanie...</span>
           </div>
         </div>

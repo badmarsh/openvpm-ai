@@ -112,6 +112,51 @@ describe("dashboard router", () => {
     expect(select).toHaveBeenCalledTimes(5);
   });
 
+  it("loads unified dashboard metrics and charts in a single operation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T02:30:00.000Z"));
+    const { db, select } = createDashboardDb([
+      [{ timezone: "America/Los_Angeles" }],
+      [{ count: 7 }],
+      [{ count: 5 }],
+      [{ total: "1250.50" }],
+      [{ count: 3 }],
+      [
+        { day: "Tue", status: "scheduled", count: 2 },
+        { day: "Tue", status: "checked_out", count: 1 },
+      ],
+      [{ day: "Jul 14", dayOrder: "2026-07-14", revenue: "450.25" }],
+      [{ species: "canine", count: 4 }],
+      [
+        { doctorName: "Dr. Ada Chen", production: "925.50" },
+        { doctorName: "Unassigned", production: "125.00" },
+      ],
+    ]);
+
+    const result = await callerWithDb(db).getDashboard();
+
+    expect(result.stats).toEqual({
+      todayAppointments: 7,
+      patientsSeen: 5,
+      revenueMtd: 1250.5,
+      pendingInvoices: 3,
+    });
+    expect(result.charts.appointmentsByDay).toHaveLength(7);
+    expect(result.charts.revenueByDay).toEqual([
+      { date: "Jul 14", revenue: 450.25 },
+    ]);
+    expect(result.charts.speciesDistribution).toEqual([
+      { name: "Canine", value: 4 },
+    ]);
+    expect(result.charts.productionByDoctor).toEqual([
+      { doctorName: "Dr. Ada Chen", production: 925.5 },
+      { doctorName: "Unassigned", production: 125 },
+    ]);
+
+    // 1 timezone query + 8 parallel queries = 9 queries in 1 procedure call
+    expect(select).toHaveBeenCalledTimes(9);
+  });
+
   it("rejects stats and charts when the practice is missing or deleted", async () => {
     const statsDb = createDashboardDb([[]]);
 

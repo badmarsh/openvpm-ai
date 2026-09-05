@@ -49,7 +49,8 @@ You help practice staff by using the provided tools to read and act on practice 
 - Always use tools to ground answers in real data. Never invent client names, patient records, appointment times, or doses.
 - You operate on a single practice's data; you cannot see other practices.
 - For any drug dose, use calculate_drug_dose and present it as a reference range that the prescribing clinician must verify. Never present a dose as a final prescribing decision.
-- Before booking an appointment, confirm you have the right client and patient (use find_client / get_patient_summary first when ids are not given).
+- To locate an animal or pet, use find_patient (or find_client to inspect a client's registered patients). Use get_patient_summary to inspect the full patient record.
+- Before booking an appointment, confirm you have the right client and patient (use find_patient / find_client / get_patient_summary first when ids are not given).
 - Be concise and clinical. Surface warnings the tools return.
 - Language & Regional Terminology:
   * Answer in the language used by the user (English or Slovak).
@@ -440,12 +441,93 @@ export async function runAgent(opts: {
   // Meter only successful agent runs for hosted billing (no-op on self-host).
   await recordUsage({ practiceId: opts.context.practiceId, kind: "ai_run" });
 
+  let text = result.text.trim();
+  if (!text && result.steps && result.steps.length > 0) {
+    const combined = result.steps
+      .map((s) => s.text?.trim())
+      .filter(Boolean)
+      .join("\n\n");
+    if (combined) {
+      text = combined;
+    }
+  }
+  if (!text) {
+    text = buildFallbackSummary(toolCalls, opts.instruction);
+  }
+
   return {
-    text: result.text.trim(),
+    text,
     toolCalls,
     iterations: result.steps.length,
     stopReason: result.finishReason ?? null,
   };
+}
+
+export function buildFallbackSummary(
+  toolCalls: AgentToolCall[],
+  instruction: string,
+): string {
+  const isSlovak =
+    /[áäčďéíĺľňóôŕšťúýž]/i.test(instruction) ||
+    /\b(podrobnosti|pacient|klient|vyhladaj|zisti|liek|termin|ockovanie|vysetrenie|kocka|pes|macka)\b/i.test(
+      instruction,
+    );
+
+  if (toolCalls.length === 0) {
+    return isSlovak
+      ? "Asistent nedokázal vygenerovať odpoveď v stanovenom limite. Skúste prosím otázku preformulovať alebo spresniť."
+      : "The agent reached the step limit without completing the answer. Please try rephrasing or refining your request.";
+  }
+
+  const clientFound = toolCalls.some(
+    (c) =>
+      c.name === "find_client" &&
+      Array.isArray(c.result) &&
+      c.result.length > 0,
+  );
+  const patientFound = toolCalls.some(
+    (c) =>
+      (c.name === "find_patient" || c.name === "get_patient_summary") &&
+      Boolean(c.result) &&
+      !("error" in (c.result as Record<string, unknown>)) &&
+      (!Array.isArray(c.result) || c.result.length > 0),
+  );
+
+  if (isSlovak) {
+    const parts = [
+      "Asistent dosiahol maximálny počet krokov pri prehľadávaní databázy kliniky.",
+    ];
+    if (clientFound && !patientFound) {
+      parts.push(
+        "Klient bol v systéme nájdený, ale nepodarilo sa jednoznačne dohľadať požadovaného pacienta.",
+      );
+    } else if (!clientFound && !patientFound) {
+      parts.push(
+        "Pre zadané kritériá sa v systéme nenašiel zodpovedajúci klient ani pacient.",
+      );
+    }
+    parts.push(
+      "Skúste prosím overiť meno zvieraťa alebo priezvisko majiteľa a spresniť zadanie.",
+    );
+    return parts.join(" ");
+  }
+
+  const parts = [
+    "The agent reached the maximum number of steps while searching practice records.",
+  ];
+  if (clientFound && !patientFound) {
+    parts.push(
+      "The client was found, but the specific patient record could not be identified.",
+    );
+  } else if (!clientFound && !patientFound) {
+    parts.push(
+      "No matching client or patient was found for the provided details.",
+    );
+  }
+  parts.push(
+    "Please verify the patient name or owner surname and refine your request.",
+  );
+  return parts.join(" ");
 }
 
 /** Names of tools the agent can use, for surfacing in the UI/docs. */

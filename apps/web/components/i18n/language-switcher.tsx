@@ -24,6 +24,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           type="button"
           variant="outline"
           size="sm"
+          suppressHydrationWarning
           className={cn(
             "h-9 gap-1.5 px-2.5 font-medium text-foreground hover:bg-accent border-input shadow-none",
             className
