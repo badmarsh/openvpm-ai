@@ -22,12 +22,12 @@ import { useI18n } from "@/lib/i18n";
 interface IntelItem {
   id: string;
   source: "SVPS_SR" | "KVL_SR" | "SUKL" | "CLINICAL";
-  sourceName: string;
-  title: string;
+  sourceNameKey: string;
+  titleKey: string;
   category: "alert" | "regulation" | "drug" | "advisory";
   date: string;
-  summary: string;
-  badge: string;
+  summaryKey: string;
+  badgeKey: string;
   badgeVariant: "destructive" | "default" | "secondary" | "outline";
   officialUrl?: string;
   actRef?: string;
@@ -37,13 +37,12 @@ const INTEL_ITEMS: IntelItem[] = [
   {
     id: "1",
     source: "SVPS_SR",
-    sourceName: "ŠVPS SR",
-    title: "Mimoriadne núdzové opatrenia: Besnota a vakcinácia mäsožravcov",
+    sourceNameKey: "vetIntel.svpsPortal",
+    titleKey: "vetIntel.item1.title",
     category: "alert",
     date: "2026-09-01",
-    summary:
-      "Povinná antirabická vakcinácia psov, mačiek a fretiek podľa § 17 zákona č. 39/2007 Z. z. Hlásenie každého podozrenia a pohryznutia človeka príslušnej RVPS do 3 pracovných dní.",
-    badge: "Zákonná povinnosť",
+    summaryKey: "vetIntel.item1.summary",
+    badgeKey: "vetIntel.item1.badge",
     badgeVariant: "destructive",
     officialUrl: "https://www.svps.sk",
     actRef: "Zákon 39/2007 Z. z.",
@@ -51,26 +50,24 @@ const INTEL_ITEMS: IntelItem[] = [
   {
     id: "2",
     source: "SVPS_SR",
-    sourceName: "ŠVPS SR",
-    title: "Africký mor ošípaných (AMO) – Aktualizácia reštrikčných pásiem",
+    sourceNameKey: "vetIntel.svpsPortal",
+    titleKey: "vetIntel.item2.title",
     category: "alert",
     date: "2026-08-28",
-    summary:
-      "Aktualizácia ochranných pásiem a pásiem dohľadu na východnom a južnom Slovensku. Zákaz presunu vnímavých zvierat bez veterinárneho sprievodného dokladu.",
-    badge: "Epizootológia",
+    summaryKey: "vetIntel.item2.summary",
+    badgeKey: "vetIntel.item2.badge",
     badgeVariant: "destructive",
     officialUrl: "https://www.svps.sk",
   },
   {
     id: "3",
     source: "KVL_SR",
-    sourceName: "KVL SR",
-    title: "Smernica o vedení knihy narkotík a psychotropných látok v ambulancii",
+    sourceNameKey: "vetIntel.kvlPortal",
+    titleKey: "vetIntel.item3.title",
     category: "regulation",
     date: "2026-08-15",
-    summary:
-      "Metodické usmernenie pre evidenciu omamných látok II. a III. skupiny v súlade so zákonom č. 139/1998 Z. z. Archivácia záznamov minimálne 5 rokov.",
-    badge: "Legislatíva",
+    summaryKey: "vetIntel.item3.summary",
+    badgeKey: "vetIntel.item3.badge",
     badgeVariant: "default",
     officialUrl: "https://www.kvlsr.sk",
     actRef: "Zákon 139/1998 Z. z.",
@@ -78,25 +75,23 @@ const INTEL_ITEMS: IntelItem[] = [
   {
     id: "4",
     source: "SUKL",
-    sourceName: "ÚSKVBL / ŠÚKL",
-    title: "Bezpečnostné upozornenie: Ochranné lehoty pri potravinových zvieratách",
+    sourceNameKey: "vetIntel.kvlPortal",
+    titleKey: "vetIntel.item4.title",
     category: "drug",
     date: "2026-08-10",
-    summary:
-      "Dôsledné dodržiavanie a zaznamenávanie ochranných lehôt (mäso, mlieko) pri aplikácii registrovaných VLP. Povinný zápis do Denníka veterinárnych úkonov.",
-    badge: "Ochranné lehoty",
+    summaryKey: "vetIntel.item4.summary",
+    badgeKey: "vetIntel.item4.badge",
     badgeVariant: "secondary",
   },
   {
     id: "5",
     source: "CLINICAL",
-    sourceName: "Klinický protokol",
-    title: "Sezónny výskyt Babesiózy a kliešťovej encefalitídy na západe a juhu SR",
+    sourceNameKey: "vetIntel.categoryAdvisory",
+    titleKey: "vetIntel.item5.title",
     category: "advisory",
     date: "2026-08-01",
-    summary:
-      "Zvýšený záchyt Babesia canis prenášanej pijakom lužným (Dermacentor reticulatus). Odporúčané skoré vyšetrenie krvného náteru a PCR diagnostika pri hypertermii a splenomegálii.",
-    badge: "Klinická prax",
+    summaryKey: "vetIntel.item5.summary",
+    badgeKey: "vetIntel.item5.badge",
     badgeVariant: "outline",
   },
 ];
@@ -109,11 +104,12 @@ export default function VetIntelPage() {
   const filtered = INTEL_ITEMS.filter((item) => {
     const matchesCat =
       selectedCategory === "all" || item.category === selectedCategory;
+    const searchLower = search.toLowerCase();
     const matchesSearch =
       search.trim() === "" ||
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.summary.toLowerCase().includes(search.toLowerCase()) ||
-      item.sourceName.toLowerCase().includes(search.toLowerCase());
+      t(item.titleKey).toLowerCase().includes(searchLower) ||
+      t(item.summaryKey).toLowerCase().includes(searchLower) ||
+      t(item.sourceNameKey).toLowerCase().includes(searchLower);
     return matchesCat && matchesSearch;
   });
 
@@ -131,7 +127,7 @@ export default function VetIntelPage() {
                 {t("nav.vetIntel", "Vet Intelligence")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Úradné vestníky ŠVPS SR, nariadenia KVL SR, registrácia liečiv a epizootologický dohľad
+                {t("vetIntel.subtitle", "Official bulletins of SVPS SR, KVL SR regulations, drug registration and epizootological surveillance")}
               </p>
             </div>
           </div>
@@ -146,7 +142,7 @@ export default function VetIntelPage() {
               className="gap-1.5"
             >
               <Building2 className="h-4 w-4" />
-              ŠVPS SR Portál
+              {t("vetIntel.svpsPortal", "SVPS SR Portal")}
               <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           </Button>
@@ -158,7 +154,7 @@ export default function VetIntelPage() {
               className="gap-1.5"
             >
               <FileCheck2 className="h-4 w-4" />
-              KVL SR Portál
+              {t("vetIntel.kvlPortal", "KVL SR Portal")}
               <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           </Button>
@@ -170,7 +166,7 @@ export default function VetIntelPage() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Hľadať v obežníkoch, zákonoch a správach..."
+            placeholder={t("vetIntel.searchPlaceholder", "Search bulletins, laws and reports...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -183,35 +179,35 @@ export default function VetIntelPage() {
             variant={selectedCategory === "all" ? "default" : "outline"}
             onClick={() => setSelectedCategory("all")}
           >
-            Všetky
+            {t("vetIntel.allCategories", "All")}
           </Button>
           <Button
             size="sm"
             variant={selectedCategory === "alert" ? "default" : "outline"}
             onClick={() => setSelectedCategory("alert")}
           >
-            Epizootológia & Výstrahy
+            {t("vetIntel.categoryAlert", "Epizootology & Alerts")}
           </Button>
           <Button
             size="sm"
             variant={selectedCategory === "regulation" ? "default" : "outline"}
             onClick={() => setSelectedCategory("regulation")}
           >
-            Legislatíva & KVL
+            {t("vetIntel.categoryRegulation", "Legislation & KVL")}
           </Button>
           <Button
             size="sm"
             variant={selectedCategory === "drug" ? "default" : "outline"}
             onClick={() => setSelectedCategory("drug")}
           >
-            Liečivá & ŠÚKL
+            {t("vetIntel.categoryDrug", "Drugs & SUKL")}
           </Button>
           <Button
             size="sm"
             variant={selectedCategory === "advisory" ? "default" : "outline"}
             onClick={() => setSelectedCategory("advisory")}
           >
-            Klinické protokoly
+            {t("vetIntel.categoryAdvisory", "Clinical Protocols")}
           </Button>
         </div>
       </div>
@@ -225,10 +221,10 @@ export default function VetIntelPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Badge variant={item.badgeVariant} className="text-[10px]">
-                      {item.badge}
+                      {t(item.badgeKey)}
                     </Badge>
                     <span className="text-xs font-semibold text-muted-foreground">
-                      {item.sourceName}
+                      {t(item.sourceNameKey)}
                     </span>
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">
@@ -236,19 +232,19 @@ export default function VetIntelPage() {
                     </span>
                   </div>
                   <CardTitle className="text-base font-bold leading-snug">
-                    {item.title}
+                    {t(item.titleKey)}
                   </CardTitle>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                {item.summary}
+                {t(item.summaryKey)}
               </p>
               {item.actRef && (
                 <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
                   <Info className="h-3.5 w-3.5" />
-                  <span>Referencia: {item.actRef}</span>
+                  <span>{t("vetIntel.reference", "Reference:")} {item.actRef}</span>
                 </div>
               )}
             </CardContent>

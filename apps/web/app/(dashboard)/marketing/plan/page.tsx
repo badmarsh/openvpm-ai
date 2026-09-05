@@ -129,11 +129,11 @@ export default function ContentPlanPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <Tabs value={status} onValueChange={setStatus}>
           <TabsList>
-            <TabsTrigger value="all">Všetky</TabsTrigger>
-            <TabsTrigger value="proposed">Navrhnuté</TabsTrigger>
-            <TabsTrigger value="approved">Schválené</TabsTrigger>
-            <TabsTrigger value="published">Publikované</TabsTrigger>
-            <TabsTrigger value="blocked">Zablokované</TabsTrigger>
+            <TabsTrigger value="all">{t("marketing.plan.all", "All")}</TabsTrigger>
+            <TabsTrigger value="proposed">{t("marketing.plan.proposed", "Proposed")}</TabsTrigger>
+            <TabsTrigger value="approved">{t("marketing.plan.approved", "Approved")}</TabsTrigger>
+            <TabsTrigger value="published">{t("marketing.plan.published", "Published")}</TabsTrigger>
+            <TabsTrigger value="blocked">{t("marketing.plan.blocked", "Blocked")}</TabsTrigger>
           </TabsList>
         </Tabs>
         
@@ -213,7 +213,7 @@ export default function ContentPlanPage() {
                   onClick={() => approveMutation.mutate({ id: item.id })}
                   disabled={approveMutation.isPending}
                 >
-                  Schváliť
+                  {t("marketing.plan.approve", "Approve")}
                 </Button>
               )}
             </div>

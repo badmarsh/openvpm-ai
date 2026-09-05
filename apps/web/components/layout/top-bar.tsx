@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { TrialBadge } from "@/components/layout/trial-badge";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { useI18n } from "@/lib/i18n";
 
 const routeLabels: Record<string, { label: string; i18nKey: string }> = {
@@ -145,6 +146,7 @@ export function TopBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <ThemeSwitcher />
         <LanguageSwitcher />
 
         {/* Below sm the pill would crush the page title into one character. */}

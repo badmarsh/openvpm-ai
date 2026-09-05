@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 export interface EkasaReceiptModalData {
   receiptId?: string;
@@ -42,6 +43,7 @@ export function EkasaReceiptDialog({
   const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("80mm");
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const utils = trpc.useUtils();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!open) return;
@@ -109,7 +111,7 @@ export function EkasaReceiptDialog({
           className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <X className="h-5 w-5" />
-          <span className="sr-only">Zavrieť</span>
+          <span className="sr-only">{t("ekasa.close", "Close")}</span>
         </button>
 
         {/* Header */}
@@ -126,13 +128,13 @@ export function EkasaReceiptDialog({
           <div>
             <h3 className="font-heading text-lg font-semibold text-foreground">
               {isConfirmed
-                ? "Pokladničný doklad vystavený"
+                ? t("ekasa.receiptIssued", "Receipt issued")
                 : isOffline
-                ? "Doklad uložený (Offline režim)"
-                : "Doklad zaevidovaný"}
+                ? t("ekasa.receiptOffline", "Receipt saved (Offline mode)")
+                : t("ekasa.receiptRecorded", "Receipt recorded")}
             </h3>
             <p className="text-xs text-muted-foreground">
-              e-Kasa Finančnej správy SR (Zákon č. 289/2008 Z. z.)
+              {t("ekasa.legalRef", "e-Kasa of the Financial Administration SR (Act No. 289/2008 Z. z.)")}
             </p>
           </div>
         </div>
@@ -140,28 +142,28 @@ export function EkasaReceiptDialog({
         {/* Receipt Details Card */}
         <div className="mt-5 space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
           <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <span className="text-muted-foreground">Číslo dokladu:</span>
+            <span className="text-muted-foreground">{t("ekasa.receiptNumber", "Receipt number:")}</span>
             <span className="font-mono font-semibold text-foreground">
               {receipt.receiptNumber}
             </span>
           </div>
 
           <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <span className="text-muted-foreground">Celková suma:</span>
+            <span className="text-muted-foreground">{t("ekasa.totalAmount", "Total amount:")}</span>
             <span className="text-base font-bold text-foreground">
               {Number(receipt.amountTotal).toFixed(2)} €
             </span>
           </div>
 
           <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <span className="text-muted-foreground">Stav evidencie:</span>
+            <span className="text-muted-foreground">{t("ekasa.status", "Filing status:")}</span>
             {isConfirmed ? (
               <Badge variant="default" className="bg-emerald-600">
-                Potvrdené (FR SR)
+                {t("ekasa.confirmed", "Confirmed (FR SR)")}
               </Badge>
             ) : isOffline ? (
               <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                Offline uložené
+                {t("ekasa.offlineStored", "Offline saved")}
               </Badge>
             ) : (
               <Badge variant="outline">{receipt.status}</Badge>
@@ -170,7 +172,7 @@ export function EkasaReceiptDialog({
 
           {receipt.okp && (
             <div className="flex flex-col gap-0.5 border-b border-border/60 pb-2">
-              <span className="text-xs text-muted-foreground">OKP kód:</span>
+              <span className="text-xs text-muted-foreground">{t("ekasa.okpCode", "OKP code:")}</span>
               <span className="font-mono text-xs text-foreground/80 break-all">
                 {receipt.okp}
               </span>
@@ -179,7 +181,7 @@ export function EkasaReceiptDialog({
 
           {receipt.uid && (
             <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-muted-foreground">UID dokladu:</span>
+              <span className="text-xs text-muted-foreground">{t("ekasa.uidLabel", "Receipt UID:")}</span>
               <span className="font-mono text-xs text-foreground/80 break-all">
                 {receipt.uid}
               </span>
@@ -190,14 +192,14 @@ export function EkasaReceiptDialog({
         {/* Verification Link / QR Info */}
         {receipt.qrUrl && (
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Overenie dokladu na portáli FS SR:</span>
+            <span>{t("ekasa.verificationLabel", "Receipt verification on FS SR portal:")}</span>
             <a
               href={receipt.qrUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-primary hover:underline"
             >
-              Overiť online
+              {t("ekasa.verifyOnline", "Verify online")}
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
@@ -232,7 +234,7 @@ export function EkasaReceiptDialog({
 
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onClose} ref={closeBtnRef}>
-              Zavrieť
+              {t("ekasa.close", "Close")}
             </Button>
 
             {(receipt.html || receipt.receiptId) && (
@@ -247,7 +249,7 @@ export function EkasaReceiptDialog({
                 ) : (
                   <Printer className="h-4 w-4" />
                 )}
-                Tlačiť doklad ({paperWidth})
+                {t("ekasa.printReceipt", "Print receipt ({width})", { width: paperWidth })}
               </Button>
             )}
           </div>

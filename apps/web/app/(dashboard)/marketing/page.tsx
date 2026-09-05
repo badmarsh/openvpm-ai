@@ -22,6 +22,11 @@ import {
   ChevronRight,
   Info,
   Palette,
+  ImageIcon,
+  Video,
+  Play,
+  RefreshCw,
+  Tv,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -40,10 +45,29 @@ export default function MarketingStudioPage() {
   const [activeChannel, setActiveChannel] = useState<ChannelType>("instagram");
   const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
 
+  // Alibaba Proxy media generation state
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [videoStatusText, setVideoStatusText] = useState<string | null>(null);
+
   // tRPC queries & mutations
+  const utils = trpc.useUtils();
   const templatesQuery = trpc.extensions.marketing.listTemplates.useQuery();
   const generatePostMutation = trpc.extensions.marketing.generatePost.useMutation();
   const brandKitQuery = trpc.settings.getBrandKit.useQuery();
+  const aliStatusQuery = trpc.extensions.marketing.getAlibabaProxyStatus.useQuery();
+  const generateImageMutation = trpc.extensions.marketing.generateImage.useMutation();
+  const submitVideoMutation = trpc.extensions.marketing.submitVideo.useMutation();
+  const createTvSlideMutation = trpc.extensions.marketing.createTvSlide.useMutation({
+    onSuccess: () => {
+      toast.success("Kampaň bola pridaná na TV obrazovku v čakárni!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa vytvoriť TV slajd");
+    },
+  });
 
   const clinicName = brandKitQuery.data?.clinicName || "Veterinárna Klinika";
   const igHandle = brandKitQuery.data?.socialHandles?.instagram
@@ -152,6 +176,97 @@ export default function MarketingStudioPage() {
     toast.success("Kampaň bola stiahnutá ako textový súbor");
   };
 
+  const handleGenerateImage = async () => {
+    if (!selectedTopic.trim()) {
+      toast.warning("Zadajte tému pre vizuál");
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const prompt = `Veterinary clinic social media visual: ${selectedTopic}. Clean, professional veterinary photography, healthy animal, fear-free clinic, soft warm lighting, high quality.`;
+      const res = await generateImageMutation.mutateAsync({
+        prompt,
+        model: "wanx2.1-t2i-turbo",
+      });
+      if (res.url) {
+        setGeneratedImageUrl(res.url);
+        setGeneratedVideoUrl(null);
+        toast.success("Obrázok bol vygenerovaný cez Alibaba Wanx 2.1 (Qwen 3 Pro)!");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Chyba pri generovaní obrázka cez Alibaba proxy.");
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!selectedTopic.trim()) {
+      toast.warning("Zadajte tému pre video");
+      return;
+    }
+    setIsVideoLoading(true);
+    setVideoStatusText("Odosielam požiadavku na Wan 2.1...");
+    try {
+      const prompt = `Cinematic veterinary video: ${selectedTopic}. High quality, smooth movement, clean bright clinic.`;
+      const submitRes = await submitVideoMutation.mutateAsync({
+        prompt,
+        model: "wan2.1-t2v-turbo",
+      });
+
+      setVideoStatusText("Spracovávam na GPU...");
+      toast.info("Úloha generovania videa bola zaradená do fronty.");
+
+      const startTime = Date.now();
+      const pollInterval = setInterval(async () => {
+        try {
+          const pollRes = await utils.extensions.marketing.pollVideo.fetch({ taskId: submitRes.taskId });
+          if (pollRes.status === "SUCCEEDED" && pollRes.videoUrl) {
+            clearInterval(pollInterval);
+            setGeneratedVideoUrl(pollRes.videoUrl);
+            setGeneratedImageUrl(null);
+            setIsVideoLoading(false);
+            setVideoStatusText(null);
+            toast.success("Video bolo úspešne vygenerované cez Alibaba Wan 2.1 (Wan 30)!");
+          } else if (pollRes.status === "FAILED" || pollRes.status === "CANCELED") {
+            clearInterval(pollInterval);
+            setIsVideoLoading(false);
+            setVideoStatusText(null);
+            toast.error(pollRes.error || "Generovanie videa zlyhalo.");
+          } else {
+            setVideoStatusText(`Spracovanie videa (${pollRes.status.toLowerCase()})...`);
+          }
+        } catch {
+          // ignore transient errors
+        }
+
+        if (Date.now() - startTime > 120_000) {
+          clearInterval(pollInterval);
+          setIsVideoLoading(false);
+          setVideoStatusText(null);
+          toast.warning("Generovanie videa trvá dlhšie ako zvyčajne. Skontrolujte neskôr.");
+        }
+      }, 3500);
+    } catch (err: any) {
+      setIsVideoLoading(false);
+      setVideoStatusText(null);
+      toast.error(err?.message || "Chyba pri odoslaní videa na Alibaba proxy");
+    }
+  };
+
+  const handleSendToTv = () => {
+    if (!selectedTopic.trim()) {
+      toast.warning("Zadajte tému kampane");
+      return;
+    }
+    createTvSlideMutation.mutate({
+      title: selectedTopic,
+      body: posts.facebook || posts.instagram || "Veterinárna starostlivosť a prevencia",
+      durationSeconds: 15,
+      sortOrder: 0,
+    });
+  };
+
   const isGenerating = generatePostMutation.isPending;
 
   return (
@@ -164,13 +279,33 @@ export default function MarketingStudioPage() {
               <Megaphone className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold tracking-tight">
                   Marketing Studio & Kampane
                 </h1>
                 <Badge variant="outline" className="text-[10px] font-mono gap-1 border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300">
                   <Sparkles className="h-2.5 w-2.5" /> Gemini Copywriter
                 </Badge>
+                {aliStatusQuery.data?.isConfigured && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-mono gap-1",
+                      aliStatusQuery.data.online
+                        ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20"
+                        : "border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400"
+                    )}
+                    title={`Alibaba Proxy (${aliStatusQuery.data.baseUrl}): ${aliStatusQuery.data.online ? "Online" : aliStatusQuery.data.error || "Offline"}`}
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        aliStatusQuery.data.online ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                      )}
+                    />
+                    AliProxy (Wanx 2.1 & Wan 2.1): {aliStatusQuery.data.online ? "Online" : "Offline"}
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Tvorba edukačných a sezónnych príspevkov na sociálne siete, SMS a newslettery pre majiteľov zvierat.
@@ -188,6 +323,16 @@ export default function MarketingStudioPage() {
             >
               <Palette className="h-3.5 w-3.5 text-rose-500" />
               <span>Brand Kit kliniky</span>
+            </Button>
+          </Link>
+          <Link href="/marketing/tv">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 border-purple-200 dark:border-purple-900/50 hover:bg-purple-50/50 dark:hover:bg-purple-950/20"
+            >
+              <Tv className="h-3.5 w-3.5 text-purple-500" />
+              <span>TV Čakáreň</span>
             </Button>
           </Link>
           <Button
@@ -410,18 +555,196 @@ export default function MarketingStudioPage() {
                 </Badge>
               </div>
 
-              {/* Mock Image Placeholder */}
-              <div className="aspect-square w-full rounded-xl bg-gradient-to-tr from-rose-100 via-purple-100 to-sky-100 dark:from-rose-950/40 dark:via-purple-950/40 dark:to-sky-950/40 flex flex-col items-center justify-center text-center p-6 border">
-                <div className="h-16 w-16 rounded-2xl bg-white/80 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center text-3xl shadow-sm mb-3">
-                  🐾
+              {/* Media Controls Bar */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-muted/40 border text-xs">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-rose-500" />
+                  AI Vizuál (Alibaba):
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] gap-1 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    onClick={handleGenerateImage}
+                    disabled={isGeneratingImage || isVideoLoading}
+                  >
+                    {isGeneratingImage ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-rose-500" />
+                    ) : (
+                      <ImageIcon className="h-3 w-3 text-rose-500" />
+                    )}
+                    <span>Obrázok (Wanx 2.1)</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] gap-1 border-purple-200 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                    onClick={handleGenerateVideo}
+                    disabled={isGeneratingImage || isVideoLoading}
+                  >
+                    {isVideoLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-purple-500" />
+                    ) : (
+                      <Video className="h-3 w-3 text-purple-500" />
+                    )}
+                    <span>Video (Wan 2.1)</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] gap-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 border-sky-200 dark:border-sky-900/50"
+                    onClick={handleSendToTv}
+                    disabled={createTvSlideMutation.isPending}
+                    title="Pridať túto kampaň ako slajd na TV do čakárne"
+                  >
+                    {createTvSlideMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
+                    ) : (
+                      <Tv className="h-3 w-3 text-sky-500" />
+                    )}
+                    <span>Na TV</span>
+                  </Button>
+
+                  {(generatedImageUrl || generatedVideoUrl) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        setGeneratedImageUrl(null);
+                        setGeneratedVideoUrl(null);
+                      }}
+                      title="Resetovať vizuál"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
-                <h4 className="font-bold text-sm text-foreground max-w-xs leading-snug">
-                  {selectedTopic}
-                </h4>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Veterinárna starostlivosť a prevencia
-                </p>
               </div>
+
+              {/* Media Display Area */}
+              {isVideoLoading ? (
+                <div className="aspect-square w-full rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                  <div className="h-14 w-14 rounded-2xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 shadow-sm">
+                    <Loader2 className="h-7 w-7 animate-spin" />
+                  </div>
+                  <div className="space-y-1">
+                    <h5 className="font-semibold text-xs text-foreground">
+                      {videoStatusText || "Spracovávam Wan 2.1 video..."}
+                    </h5>
+                    <p className="text-[11px] text-muted-foreground max-w-xs">
+                      Alibaba Wan 2.1 generuje plynulé video pre tému „{selectedTopic}“.
+                    </p>
+                  </div>
+                </div>
+              ) : isGeneratingImage ? (
+                <div className="aspect-square w-full rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                  <div className="h-14 w-14 rounded-2xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 shadow-sm">
+                    <Loader2 className="h-7 w-7 animate-spin" />
+                  </div>
+                  <div className="space-y-1">
+                    <h5 className="font-semibold text-xs text-foreground">
+                      Generujem Wanx 2.1 vizuál...
+                    </h5>
+                    <p className="text-[11px] text-muted-foreground max-w-xs">
+                      Alibaba Wanx 2.1 (Qwen 3 Pro) vykresľuje fotorealistický obrázok pre sociálne siete.
+                    </p>
+                  </div>
+                </div>
+              ) : generatedVideoUrl ? (
+                <div className="relative aspect-square w-full rounded-xl overflow-hidden border bg-black group">
+                  <video
+                    src={generatedVideoUrl}
+                    controls
+                    autoPlay
+                    loop
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 left-2 pointer-events-none">
+                    <Badge className="bg-black/70 backdrop-blur-sm text-white text-[10px] gap-1 border-white/20">
+                      <Video className="h-3 w-3 text-purple-400" /> Wan 2.1 AI Video
+                    </Badge>
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    <a
+                      href={generatedVideoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      download="wan_video.mp4"
+                      className="h-7 w-7 rounded-lg bg-black/70 hover:bg-black/90 text-white backdrop-blur-sm flex items-center justify-center transition-colors shadow-sm"
+                      title="Stiahnuť video súbor"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+              ) : generatedImageUrl ? (
+                <div className="relative aspect-square w-full rounded-xl overflow-hidden border bg-black group">
+                  <img
+                    src={generatedImageUrl}
+                    alt={selectedTopic}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 left-2 pointer-events-none">
+                    <Badge className="bg-black/70 backdrop-blur-sm text-white text-[10px] gap-1 border-white/20">
+                      <ImageIcon className="h-3 w-3 text-emerald-400" /> Wanx 2.1 / Qwen 3 Pro
+                    </Badge>
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    <a
+                      href={generatedImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      download="wanx_image.png"
+                      className="h-7 w-7 rounded-lg bg-black/70 hover:bg-black/90 text-white backdrop-blur-sm flex items-center justify-center transition-colors shadow-sm"
+                      title="Stiahnuť obrázok"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                /* Mock Image Placeholder */
+                <div className="aspect-square w-full rounded-xl bg-gradient-to-tr from-rose-100 via-purple-100 to-sky-100 dark:from-rose-950/40 dark:via-purple-950/40 dark:to-sky-950/40 flex flex-col items-center justify-center text-center p-6 border relative group">
+                  <div className="h-16 w-16 rounded-2xl bg-white/80 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center text-3xl shadow-sm mb-3">
+                    🐾
+                  </div>
+                  <h4 className="font-bold text-sm text-foreground max-w-xs leading-snug">
+                    {selectedTopic}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Veterinárna starostlivosť a prevencia
+                  </p>
+                  <div className="mt-4 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 text-xs gap-1 shadow-xs"
+                      onClick={handleGenerateImage}
+                    >
+                      <ImageIcon className="h-3 w-3 text-rose-500" />
+                      Vygenerovať obrázok
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 text-xs gap-1 shadow-xs"
+                      onClick={handleGenerateVideo}
+                    >
+                      <Video className="h-3 w-3 text-purple-500" />
+                      Vygenerovať video
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Actions Bar */}
               <div className="flex items-center justify-between pt-1">
@@ -462,20 +785,42 @@ export default function MarketingStudioPage() {
                 {posts.facebook}
               </div>
 
-              {/* Mock Banner */}
-              <div className="rounded-xl border bg-muted/40 p-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-muted-foreground uppercase font-mono">
-                    Objednanie termínu online
-                  </span>
-                  <h5 className="font-semibold text-xs text-foreground">
-                    Preventívna prehliadka v našej ambulancii
-                  </h5>
+              {/* Generated Media in Facebook */}
+              {generatedVideoUrl ? (
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden border bg-black">
+                  <video
+                    src={generatedVideoUrl}
+                    controls
+                    autoPlay
+                    loop
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white">
-                  Rezervovať
-                </Button>
-              </div>
+              ) : generatedImageUrl ? (
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden border bg-black">
+                  <img
+                    src={generatedImageUrl}
+                    alt={selectedTopic}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                /* Mock Banner */
+                <div className="rounded-xl border bg-muted/40 p-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase font-mono">
+                      Objednanie termínu online
+                    </span>
+                    <h5 className="font-semibold text-xs text-foreground">
+                      Preventívna prehliadka v našej ambulancii
+                    </h5>
+                  </div>
+                  <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white">
+                    Rezervovať
+                  </Button>
+                </div>
+              )}
 
               {/* Engagement Bar */}
               <div className="flex items-center justify-around border-t pt-2 text-muted-foreground text-xs">

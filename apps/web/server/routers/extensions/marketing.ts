@@ -17,6 +17,14 @@ import {
   extMarketingWellnessRedemptions,
 } from '@openpims/db';
 import { validateMarketingText } from '@/lib/marketing/validator';
+import {
+  generateAlibabaImage,
+  submitAlibabaVideo,
+  pollAlibabaVideo,
+  checkAlibabaProxyHealth,
+  ALIBABA_DEFAULT_IMAGE_MODEL,
+  ALIBABA_DEFAULT_VIDEO_MODEL,
+} from "@/lib/ai/alibaba-proxy";
 
 export interface CampaignTemplate {
   id: string;
@@ -358,7 +366,74 @@ validateContent: protectedProcedure
     });
   }),
 
-// ── Media Library ─────────────────────────────────────────────────────────────
+// ── Media Library & Alibaba AI Generation ──────────────────────────────────────
+
+getAlibabaProxyStatus: protectedProcedure.query(async () => {
+  return checkAlibabaProxyHealth();
+}),
+
+generateImage: protectedProcedure
+  .use(requireRole("admin", "veterinarian", "front_desk"))
+  .input(
+    z.object({
+      prompt: z.string().min(1).max(1000),
+      model: z.string().optional().default(ALIBABA_DEFAULT_IMAGE_MODEL),
+      size: z.enum(["1024*1024", "720*1280", "1280*720"]).optional().default("1024*1024"),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    try {
+      const result = await generateAlibabaImage({
+        prompt: input.prompt,
+        model: input.model,
+        size: input.size,
+      });
+      await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
+      return result;
+    } catch (err) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err instanceof Error ? err.message : "Chyba pri generovaní obrázka cez Alibaba proxy.",
+      });
+    }
+  }),
+
+submitVideo: protectedProcedure
+  .use(requireRole("admin", "veterinarian", "front_desk"))
+  .input(
+    z.object({
+      prompt: z.string().min(1).max(1000),
+      model: z.string().optional().default(ALIBABA_DEFAULT_VIDEO_MODEL),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    try {
+      const result = await submitAlibabaVideo({
+        prompt: input.prompt,
+        model: input.model,
+      });
+      await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
+      return result;
+    } catch (err) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err instanceof Error ? err.message : "Chyba pri odoslaní požiadavky na video cez Alibaba proxy.",
+      });
+    }
+  }),
+
+pollVideo: protectedProcedure
+  .input(z.object({ taskId: z.string().min(1) }))
+  .query(async ({ input }) => {
+    try {
+      return await pollAlibabaVideo(input.taskId);
+    } catch (err) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err instanceof Error ? err.message : "Chyba pri kontrole stavu videa.",
+      });
+    }
+  }),
 
 listMediaAssets: protectedProcedure
   .input(z.object({ limit: z.number().min(1).max(100).default(50) }))
