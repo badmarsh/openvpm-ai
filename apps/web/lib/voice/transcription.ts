@@ -44,19 +44,28 @@ export async function transcribeAudio(fileKey: string): Promise<string> {
   const base64Audio = Buffer.from(object.body).toString("base64");
   const mimeType = object.contentType ?? "audio/webm";
 
-  const result = await generateText({
-    model: configuredModel(),
-    system: STT_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "Transkribuj toto audio." },
-          { type: "file", data: base64Audio, mediaType: mimeType },
-        ],
-      },
-    ],
-  });
+  const ac = new AbortController();
+  const timeout = setTimeout(() => ac.abort(new Error("Audio transcription timed out after 60s")), 60_000);
+
+  let result;
+  try {
+    result = await generateText({
+      model: configuredModel(),
+      system: STT_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Transkribuj toto audio." },
+            { type: "file", data: base64Audio, mediaType: mimeType },
+          ],
+        },
+      ],
+      abortSignal: ac.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   return result.text.trim();
 }

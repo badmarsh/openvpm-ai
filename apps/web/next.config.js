@@ -2,12 +2,31 @@ const {
   capabilityHeaders,
   securityHeaders,
 } = require("./lib/security-headers.js");
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  // output: "standalone", // temporarily disabled for Windows build testing
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-tooltip",
+      "@tanstack/react-query",
+      "recharts",
+      "sonner",
+    ],
+  },
   async headers() {
     return [
       {
@@ -24,4 +43,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

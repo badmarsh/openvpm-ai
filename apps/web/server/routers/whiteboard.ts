@@ -177,7 +177,8 @@ export const whiteboardRouter = createRouter({
           ])
         )
       )
-      .orderBy(appointments.startTime);
+      .orderBy(appointments.startTime)
+      .limit(100);
   }),
 
   updateStatus: protectedProcedure

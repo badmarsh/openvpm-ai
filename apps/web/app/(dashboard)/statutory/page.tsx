@@ -470,7 +470,7 @@ export default function StatutoryPage() {
           className="gap-2"
         >
           <ShieldAlert className="h-4 w-4" />
-          <span>{t("statutory.tabs.narcotics", "Kniha omamných látok (Opiáty)")}</span>
+          <span>{t("statutory.tabs.narcotics", "Kontrolované látky")}</span>
         </Button>
         <Button
           variant={activeTab === "protocols" ? "default" : "ghost"}
@@ -1325,7 +1325,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-amber-500" />
-              <h3 className="font-semibold text-base">Kniha omamných a psychotropných látok (Opiáty)</h3>
+              <h3 className="font-semibold text-base">Kontrolované látky</h3>
             </div>
             <p className="text-sm text-muted-foreground max-w-2xl">
               Vedená v zmysle zákona č. 139/1998 Z. z. Každý príjem, podanie pacientovi a likvidácia zvyškov musí byť evidovaná s menom lekára, šaržou a svedkom.

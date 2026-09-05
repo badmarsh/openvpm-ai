@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -43,13 +44,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
 import { AccentColorPicker } from "@/components/brand/accent-color-picker";
-import { MessagingTab } from "@/components/settings/messaging-tab";
-import { BookingTab } from "@/components/settings/booking-tab";
-import { ProviderHours } from "@/components/settings/provider-hours";
 import { MigrationHelpRequest } from "@/components/onboarding/migration-help-request";
-import { ServicesTab } from "@/components/settings/services-tab";
-import { BrandKitTab } from "@/components/settings/brand-kit-tab";
-import { AmbulatoryWorkspaceSettingsCard } from "@/components/settings/ambulatory-workspace-settings";
+const MessagingTab = dynamic(() => import("@/components/settings/messaging-tab").then(m => ({ default: m.MessagingTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const BookingTab = dynamic(() => import("@/components/settings/booking-tab").then(m => ({ default: m.BookingTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const ProviderHours = dynamic(() => import("@/components/settings/provider-hours").then(m => ({ default: m.ProviderHours })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const ServicesTab = dynamic(() => import("@/components/settings/services-tab").then(m => ({ default: m.ServicesTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const BrandKitTab = dynamic(() => import("@/components/settings/brand-kit-tab").then(m => ({ default: m.BrandKitTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const AmbulatoryWorkspaceSettingsCard = dynamic(() => import("@/components/settings/ambulatory-workspace-settings").then(m => ({ default: m.AmbulatoryWorkspaceSettingsCard })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 import {
   TemplateCatalogPicker,
   type TemplateCatalogItem,

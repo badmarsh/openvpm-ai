@@ -500,7 +500,8 @@ export const aiRouter = createRouter({
           lt(vaccinationRecords.nextDueDate, today),
         ),
       )
-      .orderBy(vaccinationRecords.nextDueDate);
+      .orderBy(vaccinationRecords.nextDueDate)
+      .limit(200);
 
     return rows.map((r) => ({
       patientId: r.patientId,
@@ -573,7 +574,8 @@ export const aiRouter = createRouter({
           lte(appointments.startTime, now),
         ),
       )
-      .orderBy(desc(appointments.startTime));
+      .orderBy(desc(appointments.startTime))
+      .limit(100);
 
     // For each patient, check if there is a future appointment
     const patientIds = [

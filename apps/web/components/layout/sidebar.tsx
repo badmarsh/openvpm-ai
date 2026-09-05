@@ -162,16 +162,9 @@ const vanillaSections: NavSection[] = [
       },
       {
         href: "/whiteboard",
-        label: "Hospitalizácia",
+        label: "Prevádzková tabuľa",
         i18nKey: "nav.whiteboard",
         icon: ClipboardList,
-        roles: allRoles,
-      },
-      {
-        href: "/migration-archive",
-        label: "Imported History",
-        i18nKey: "nav.migrationArchive",
-        icon: Archive,
         roles: allRoles,
       },
       {
@@ -230,6 +223,13 @@ const vanillaSections: NavSection[] = [
         i18nKey: "nav.settings",
         icon: Settings,
         roles: ["admin"],
+      },
+      {
+        href: "/migration-archive",
+        label: "Archív histórie (V2)",
+        i18nKey: "nav.migrationArchive",
+        icon: Archive,
+        roles: allRoles,
       },
     ],
   },

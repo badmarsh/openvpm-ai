@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { generateText } from "ai";
-import { createRouter, protectedProcedure } from "../../trpc";
+import { createRouter, protectedProcedure, requireRole } from "../../trpc";
+import { TRPCError } from "@trpc/server";
 import { configuredModel } from "@/lib/agent/runner";
+import { readHostedAiAccess } from "@/lib/billing/ai-access";
+import { recordUsage } from "@/lib/billing/usage";
 
 export interface CampaignTemplate {
   id: string;
@@ -117,6 +120,7 @@ export const marketingRouter = createRouter({
    * AI Generátor multikanálových príspevkov (Instagram, Facebook, SMS, Email)
    */
   generatePost: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
     .input(
       z.object({
         topic: z.string().min(3),
@@ -127,7 +131,16 @@ export const marketingRouter = createRouter({
         phoneNumber: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // AI access gate — consistent with agent runner
+      const aiAccess = await readHostedAiAccess(ctx.db, ctx.practiceId);
+      if (!aiAccess?.allowed) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: aiAccess?.message ?? "AI funkcie nie sú k dispozícii",
+        });
+      }
+
       // 1. Vyhľadá existujúcu šablónu ako vzor
       const matchedTemplate = CAMPAIGN_TEMPLATES.find(
         (t) =>
@@ -179,6 +192,8 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
           system: systemPrompt,
           prompt,
         });
+
+        await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
 
         const rawText = result.text.trim();
         // Očistenie prípadných markdown json backtickov

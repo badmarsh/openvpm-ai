@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  DollarSign,
+  Euro,
   CalendarCheck,
   UserX,
   XCircle,
@@ -65,7 +65,7 @@ type DateRange = { startDate: string; endDate: string };
 type ReportPdfCell = string | number | null | undefined;
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
-  { key: "revenue", label: "Revenue", icon: DollarSign },
+  { key: "revenue", label: "Revenue", icon: Euro },
   { key: "appointments", label: "Appointments", icon: CalendarCheck },
   { key: "services", label: "Services", icon: BarChart3 },
   { key: "inventory", label: "Inventory", icon: Package },
@@ -407,7 +407,7 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
           title={t("reports.revenue.selectedRange", "Selected Range")}
           value={formatCurrency(data.total)}
           subtitle={rangeSubtitle}
-          icon={DollarSign}
+          icon={Euro}
         />
         <KpiCard
           title={t("reports.revenue.previousPeriod", "Previous Period")}
@@ -434,7 +434,7 @@ function RevenueTab({ dateRange }: { dateRange: DateRange }) {
         ) : (
           <EmptyState
             className="border-0 bg-transparent py-12"
-            icon={DollarSign}
+            icon={Euro}
             title={t("reports.revenue.emptyTitle", "No revenue data for this period")} /* title="No revenue data for this period" */
             description={t("reports.revenue.emptyDesc", "Paid invoices will appear here once they fall inside the selected date range.")}
           />

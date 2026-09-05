@@ -139,12 +139,21 @@ export class SoapDraftUnavailableError extends Error {
 export async function draftSoapNote(
   context: SoapDraftContext
 ): Promise<SoapDraft> {
-  const result = await generateText({
-    model: configuredModel(),
-    system: SOAP_DRAFT_SYSTEM_PROMPT,
-    prompt: buildSoapDraftPrompt(context),
-    maxOutputTokens: SOAP_DRAFT_MAX_OUTPUT_TOKENS,
-  });
+  const ac = new AbortController();
+  const timeout = setTimeout(() => ac.abort(new Error("SOAP draft timed out after 30s")), 30_000);
+
+  let result;
+  try {
+    result = await generateText({
+      model: configuredModel(),
+      system: SOAP_DRAFT_SYSTEM_PROMPT,
+      prompt: buildSoapDraftPrompt(context),
+      maxOutputTokens: SOAP_DRAFT_MAX_OUTPUT_TOKENS,
+      abortSignal: ac.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const draft = parseSoapDraft(result.text);
   if (!draft) {

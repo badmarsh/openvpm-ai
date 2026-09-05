@@ -412,19 +412,28 @@ export async function runAgent(opts: {
           ],
         }
       : { prompt: opts.instruction };
-  const result = await generateText({
-    model: resolveModel(modelId),
-    system: SYSTEM_PROMPT,
-    ...messagesInput,
-    tools: buildToolSet(
-      opts.context,
-      allowWrites,
-      opts.apiKeyScopes,
-      toolCalls,
-    ),
-    stopWhen: stepCountIs(MAX_ITERATIONS),
-    maxOutputTokens: MAX_OUTPUT_TOKENS,
-  });
+  const ac = new AbortController();
+  const timeout = setTimeout(() => ac.abort(new Error("Agent run timed out after 60s")), 60_000);
+
+  let result;
+  try {
+    result = await generateText({
+      model: resolveModel(modelId),
+      system: SYSTEM_PROMPT,
+      ...messagesInput,
+      tools: buildToolSet(
+        opts.context,
+        allowWrites,
+        opts.apiKeyScopes,
+        toolCalls,
+      ),
+      stopWhen: stepCountIs(MAX_ITERATIONS),
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      abortSignal: ac.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   // Meter only successful agent runs for hosted billing (no-op on self-host).
   await recordUsage({ practiceId: opts.context.practiceId, kind: "ai_run" });

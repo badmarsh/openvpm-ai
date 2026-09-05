@@ -30,7 +30,7 @@ export const voiceRouter = createRouter({
       z.object({
         patientId: z.string().uuid(),
         appointmentId: z.string().uuid().optional(),
-        audioBase64: z.string().min(1),
+        audioBase64: z.string().min(1).max(26_214_400, "Audio súbor je príliš veľký (max 25 MB)"),
         audioMimeType: z.string().default("audio/webm"),
         audioDurationSeconds: z.string().optional(),
         language: z.string().default("sk"),
@@ -73,7 +73,10 @@ export const voiceRouter = createRouter({
       try {
         await uploadFile(audioKey, audioBuffer, input.audioMimeType);
       } catch (err) {
-        console.warn("[voice-upload] Primary storage upload:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Nepodarilo sa uložiť audio súbor",
+        });
       }
 
       // 3. Vytvorenie záznamu v tabuľke voiceDictations
@@ -196,6 +199,13 @@ export const voiceRouter = createRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Pacient sa nenašiel",
+        });
+      }
+
+      if (!input.audioFileKey.startsWith(`${ctx.practiceId}/`)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "audioFileKey musí byť v rámci adresára praktiky",
         });
       }
 
@@ -362,7 +372,8 @@ export const voiceRouter = createRouter({
             isNull(voiceDictations.deletedAt),
           ),
         )
-        .orderBy(desc(voiceDictations.createdAt));
+        .orderBy(desc(voiceDictations.createdAt))
+        .limit(50);
     }),
 
   /** Preformátuje existujúcu alebo upravenú transkripciu do SOAP štruktúry */
@@ -417,6 +428,7 @@ export const voiceRouter = createRouter({
             and(
               eq(voiceDictations.id, input.dictationId),
               eq(voiceDictations.practiceId, ctx.practiceId),
+              isNull(voiceDictations.deletedAt),
             ),
           );
       }
@@ -451,7 +463,7 @@ export const voiceRouter = createRouter({
       }
 
       try {
-        const obj = await readPrimaryObject(dictation.audioFileKey);
+        const obj = await readPrimaryObject(dictation.audioFileKey, { maxBytes: 26_214_400 });
         if (obj.status !== "available") return null;
 
         const base64 = Buffer.from(obj.body).toString("base64");

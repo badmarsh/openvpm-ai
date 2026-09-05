@@ -12,7 +12,7 @@ import {
   X,
   Search,
   Package,
-  DollarSign,
+  Euro,
   BarChart3,
   Settings,
   Clipboard,
@@ -69,7 +69,7 @@ const navigationItems: CommandItemConfig[] = [
     Icon: FlaskConical,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
   },
-  { label: "Billing", href: "/billing", Icon: DollarSign, roles: allRoles },
+  { label: "Billing", href: "/billing", Icon: Euro, roles: allRoles },
   { label: "Inventory", href: "/inventory", Icon: Package, roles: allRoles },
   { label: "Inbox", href: "/inbox", Icon: Mail, roles: allRoles },
   {
@@ -109,7 +109,7 @@ const quickActionItems: CommandItemConfig[] = [
   {
     label: "New Invoice",
     href: "/billing/new",
-    Icon: DollarSign,
+    Icon: Euro,
     roles: ["admin", "front_desk"],
   },
 ];

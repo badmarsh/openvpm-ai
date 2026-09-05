@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull, gte, lte, desc } from "drizzle-orm";
+import { eq, and, isNull, gte, lte, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import {
@@ -37,8 +37,12 @@ export const accountingRouter = createRouter({
         where: eq(practices.id, ctx.practiceId),
       });
 
-      const fromDate = new Date(`${input.dateFrom}T00:00:00.000Z`);
-      const toDate = new Date(`${input.dateTo}T23:59:59.999Z`);
+      // Date filtering uses Slovakia local time (CET/CEST aware)
+      const localDateFilter = (col: any, from: string, to: string) =>
+        and(
+          sql`date_trunc('day', ${col} AT TIME ZONE 'Europe/Bratislava')::text >= ${from}`,
+          sql`date_trunc('day', ${col} AT TIME ZONE 'Europe/Bratislava')::text <= ${to}`,
+        );
 
       // 1. Načítaj faktúry
       let formattedInvoices: AccountingInvoiceItem[] = [];
@@ -48,8 +52,7 @@ export const accountingRouter = createRouter({
             eq(invoices.practiceId, ctx.practiceId),
             isNull(invoices.deletedAt),
             eq(invoices.isEstimate, false),
-            gte(invoices.createdAt, fromDate),
-            lte(invoices.createdAt, toDate)
+            localDateFilter(invoices.createdAt, input.dateFrom, input.dateTo)
           ),
           with: {
             client: true,
@@ -67,7 +70,7 @@ export const accountingRouter = createRouter({
 
           return {
             id: inv.id,
-            invoiceNumber: `VF${createdYmd.replace(/-/g, "")}-${(idx + 1).toString().padStart(4, "0")}`,
+            invoiceNumber: `VF-${inv.id.slice(0, 8)}`,
             issueDate: createdYmd,
             taxDate: createdYmd,
             dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().slice(0, 10) : createdYmd,
@@ -97,8 +100,7 @@ export const accountingRouter = createRouter({
           where: and(
             eq(ekasaReceipts.practiceId, ctx.practiceId),
             isNull(ekasaReceipts.deletedAt),
-            gte(ekasaReceipts.issuedAt, fromDate),
-            lte(ekasaReceipts.issuedAt, toDate)
+            localDateFilter(ekasaReceipts.issuedAt, input.dateFrom, input.dateTo)
           ),
           orderBy: [desc(ekasaReceipts.issuedAt)],
         });
@@ -118,9 +120,9 @@ export const accountingRouter = createRouter({
       }
 
       // 3. Vypočítaj celkovú sumu
-      const invTotal = formattedInvoices.reduce((sum, i) => sum + i.total, 0);
-      const ekasaTotal = formattedReceipts.reduce((sum, r) => sum + r.amountTotal, 0);
-      const totalAmount = (invTotal + ekasaTotal).toFixed(2);
+      const invTotal = formattedInvoices.reduce((sum, i) => sum + Math.round(i.total * 100), 0);
+      const ekasaTotal = formattedReceipts.reduce((sum, r) => sum + Math.round(r.amountTotal * 100), 0);
+      const totalAmount = ((invTotal + ekasaTotal) / 100).toFixed(2);
 
       // 4. Generuj výstupný formát
       let filename: string;
@@ -128,7 +130,7 @@ export const accountingRouter = createRouter({
       let mimeType: string;
 
       const dateSuffix = `${input.dateFrom}_do_${input.dateTo}`;
-      const practiceIco = (practice as any)?.ico || "00000000";
+      const practiceIco = (practice as Record<string, unknown>)?.ico as string | undefined ?? "00000000";
 
       if (input.format === "pohoda_xml") {
         filename = `pohoda_export_${dateSuffix}.xml`;
