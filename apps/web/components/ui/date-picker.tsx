@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDateYmdToDisplay } from "@/lib/date-display";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -17,14 +18,6 @@ interface DatePickerProps {
   max?: string;
 }
 
-function formatYmdToDisplay(value: string | null | undefined): string {
-  if (!value) return "";
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return value;
-  const [, year, month, day] = match;
-  return `${day}.${month}.${year}`;
-}
-
 export function DatePicker({
   value,
   onChange,
@@ -38,15 +31,15 @@ export function DatePicker({
   max,
 }: DatePickerProps) {
   const nativeRef = useRef<HTMLInputElement>(null);
-  const [display, setDisplay] = useState(() => formatYmdToDisplay(value));
+  const [display, setDisplay] = useState(() => formatDateYmdToDisplay(value));
 
   useEffect(() => {
-    setDisplay(formatYmdToDisplay(value));
+    setDisplay(formatDateYmdToDisplay(value));
   }, [value]);
 
   const handleSelect = (nextValue: string) => {
     onChange(nextValue);
-    setDisplay(formatYmdToDisplay(nextValue));
+    setDisplay(formatDateYmdToDisplay(nextValue));
   };
 
   return (
