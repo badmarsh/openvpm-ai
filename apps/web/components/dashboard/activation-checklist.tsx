@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useTour } from "@/components/tour/tour-provider";
 import { useOnboardingJourney } from "@/components/onboarding/journey-overlay";
+import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import {
   DEFAULT_ONBOARDING_INTENT,
@@ -52,6 +53,7 @@ const JOURNEY_STEP_LABELS: Record<string, string> = {
  * concrete reason to come back, all the way to confirming billing is connected.
  */
 export function ActivationChecklist() {
+  const { t } = useI18n();
   const { start } = useTour();
   const { openJourney } = useOnboardingJourney();
   const [hidden, setHidden] = useState(false);
@@ -80,7 +82,9 @@ export function ActivationChecklist() {
   const requestSetupHelp = trpc.settings.requestOnboardingHelp.useMutation({
     onSuccess: async () => {
       await utils.settings.getOnboardingState.invalidate();
-      toast.success("Setup request received");
+      toast.success(
+        t("activation.helpRequestedToast", "Setup request received"),
+      );
     },
     onError: (error) => toast.error(error.message),
   });
@@ -136,7 +140,10 @@ export function ActivationChecklist() {
   ) {
     return (
       <ActivationChecklistError
-        message="Setup checklist data was unavailable. Try loading it again."
+        message={t(
+          "activation.error.unavailable",
+          "Setup checklist data was unavailable. Try loading it again.",
+        )}
         onRetry={() => {
           void Promise.all([
             state.refetch(),
@@ -329,8 +336,28 @@ export function ActivationChecklist() {
     checklistState.onboardingIntentSelectedAt || checklistState.journeyStepId,
   );
   const guidedSetupStage = checklistState.journeyStepId
-    ? JOURNEY_STEP_LABELS[checklistState.journeyStepId]
+    ? t(
+        `activation.journey.steps.${checklistState.journeyStepId}`,
+        JOURNEY_STEP_LABELS[checklistState.journeyStepId],
+      )
     : null;
+
+  const getMilestoneLabel = (m: Milestone) => {
+    if (m === firstWin) {
+      return t(`onboarding.intents.${pathway.value}.firstWin`, m.label);
+    }
+    return t(`activation.milestones.${m.key}.label`, m.label);
+  };
+
+  const getMilestoneHint = (m: Milestone) => {
+    if (m === firstWin) {
+      return t(`onboarding.intents.${pathway.value}.firstWinHint`, m.hint);
+    }
+    if (m.key === "team" && pathway.value === "explore") {
+      return t("activation.milestones.teamExplore.hint", m.hint);
+    }
+    return t(`activation.milestones.${m.key}.hint`, m.hint);
+  };
 
   // The corner X just hides the checklist for this session — it comes back next
   // visit ("show later"). "Don't show this again" dismisses it for good.
@@ -351,11 +378,13 @@ export function ActivationChecklist() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-heading text-sm font-semibold">
-              Guided setup checks complete
+              {t("activation.complete.title", "Guided setup checks complete")}
             </p>
             <p className="text-xs text-zinc-400">
-              Keep validating real clinic workflows with your team before
-              switching systems.
+              {t(
+                "activation.complete.description",
+                "Keep validating real clinic workflows with your team before switching systems.",
+              )}
             </p>
           </div>
           <button
@@ -363,7 +392,7 @@ export function ActivationChecklist() {
             onClick={dontShowAgain}
             className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100"
           >
-            Dismiss
+            {t("activation.complete.dismiss", "Dismiss")}
           </button>
         </div>
       </div>
@@ -378,8 +407,8 @@ export function ActivationChecklist() {
         <button
           type="button"
           onClick={snooze}
-          aria-label="Hide for now"
-          title="Hide for now"
+          aria-label={t("activation.hideForNow", "Hide for now")}
+          title={t("activation.hideForNow", "Hide for now")}
           className="absolute right-3 top-3 rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
         >
           <X className="h-4 w-4" />
@@ -391,10 +420,24 @@ export function ActivationChecklist() {
           </span>
           <div className="min-w-0">
             <p className="truncate font-heading text-sm font-semibold">
-              Finish {practiceName}&apos;s setup checks
+              {t("activation.title", `Finish ${practiceName}'s setup checks`, {
+                practiceName,
+              })}
             </p>
             <p className="text-xs text-zinc-400">
-              {pathway.shortLabel} · {doneCount} of {total} done
+              {/* {pathway.shortLabel} · {doneCount} of {total} done */}
+              {t(
+                "activation.progressSummary",
+                `${pathway.shortLabel} · ${doneCount} of ${total} done`,
+                {
+                  shortLabel: t(
+                    `onboarding.intents.${pathway.value}.shortLabel`,
+                    pathway.shortLabel,
+                  ),
+                  doneCount,
+                  total,
+                },
+              )}
             </p>
           </div>
         </div>
@@ -414,13 +457,22 @@ export function ActivationChecklist() {
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold">
                 {guidedSetupStarted
-                  ? "Resume guided setup"
-                  : "Start guided setup"}
+                  ? t("activation.journey.resume", "Resume guided setup")
+                  : t("activation.journey.start", "Start guided setup")}
               </span>
               <span className="block truncate text-xs text-emerald-950/75">
                 {guidedSetupStage
-                  ? `Continue at ${guidedSetupStage}`
-                  : "Choose your path and save progress as you go"}
+                  ? t(
+                      "activation.journey.continueAt",
+                      `Continue at ${guidedSetupStage}`,
+                      {
+                        stage: guidedSetupStage,
+                      },
+                    )
+                  : t(
+                      "activation.journey.choosePath",
+                      "Choose your path and save progress as you go",
+                    )}
               </span>
             </span>
             <ArrowRight className="h-4 w-4 shrink-0" />
@@ -435,7 +487,7 @@ export function ActivationChecklist() {
                   "group flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors",
                   m.done ? "opacity-60" : "hover:bg-zinc-800",
                 )}
-                title={m.hint}
+                title={getMilestoneHint(m)}
               >
                 <span
                   className={cn(
@@ -453,7 +505,7 @@ export function ActivationChecklist() {
                     m.done && "text-zinc-400 line-through",
                   )}
                 >
-                  {m.label}
+                  {getMilestoneLabel(m)}
                 </p>
                 {!m.done ? (
                   <ArrowRight className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-400" />
@@ -485,7 +537,7 @@ export function ActivationChecklist() {
           {setupHelpRequestedAt ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
               <Check className="h-3.5 w-3.5" />
-              Setup help requested
+              {t("activation.helpRequested", "Setup help requested")}
             </span>
           ) : (
             <button
@@ -499,7 +551,7 @@ export function ActivationChecklist() {
               ) : (
                 <Headphones className="h-3.5 w-3.5" />
               )}
-              Help me set this up
+              {t("activation.helpMe", "Help me set this up")}
             </button>
           )}
           <button
@@ -507,7 +559,7 @@ export function ActivationChecklist() {
             onClick={dontShowAgain}
             className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-200"
           >
-            Don&apos;t show this again
+            {t("activation.dontShowAgain", "Don't show this again")}
           </button>
         </div>
       </div>
@@ -527,13 +579,14 @@ function ActivationChecklistError({
   message: string;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="relative z-20 w-full sm:fixed sm:bottom-4 sm:right-4 sm:z-[70] sm:w-[340px]">
       <div className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-zinc-50 shadow-2xl shadow-black/30">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">
-            Setup checklist could not load
+            {t("activation.error.title", "Setup checklist could not load")}
           </p>
           <p className="mt-1 text-xs text-zinc-400">{message}</p>
           <Button
@@ -542,7 +595,7 @@ function ActivationChecklistError({
             onClick={onRetry}
             className="mt-2 border-zinc-700 bg-transparent text-zinc-100 hover:bg-zinc-800"
           >
-            Retry
+            {t("activation.error.retry", "Retry")}
           </Button>
         </div>
       </div>

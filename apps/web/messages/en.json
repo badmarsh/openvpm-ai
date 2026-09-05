@@ -6,7 +6,7 @@
     },
     "accessDenied": {
       "title": "Access Denied",
-      "desc": "This area is for OpenVPM platform operators only."
+      "desc": "This area is for VET.IS platform operators only."
     },
     "error": {
       "title": "Unable to load platform admin",
@@ -48,15 +48,15 @@
     }
   },
   "agent": {
-    "title": "OpenVPM Agent",
+    "title": "VET.IS Agent",
     "subtitle": "Ask about your clinic. It can look things up and, with your okay, do the work.",
     "checkingAccess": "Checking agent access...",
     "accessRestricted": "Agent access is restricted",
-    "accessRestrictedDesc": "Only administrators and veterinarians can run the OpenVPM Agent.",
+    "accessRestrictedDesc": "Only administrators and veterinarians can run the VET.IS Agent.",
     "backToDashboard": "Back to dashboard",
     "welcome": {
       "title": "What can I help you with?",
-      "subtitle": "AI is built into OpenVPM. Ask a question in plain words, or start with one of these."
+      "subtitle": "AI is built into VET.IS. Ask a question in plain words, or start with one of these."
     },
     "suggestions": {
       "vaccinations": "Which patients are overdue for vaccinations?",
@@ -73,7 +73,7 @@
       "addCardTitle": "Add a card to try AI",
       "addCardButton": "Add a card",
       "askAdminCard": "Ask a practice administrator to add the card.",
-      "notAvailable": "OpenVPM AI is not available for this workspace.",
+      "notAvailable": "VET.IS AI is not available for this workspace.",
       "hostedUnavailable": "The agent is not available right now. We are on it. Please check back soon.",
       "configVertexPrefix": "Configure Google Vertex AI with",
       "configVertexMid": "and service-account credentials for Gemini, or set",
@@ -94,7 +94,7 @@
     }
   },
   "agent.accessRestricted": "Agent access is restricted",
-  "agent.accessRestrictedDesc": "Only administrators and veterinarians can run the OpenVPM Agent.",
+  "agent.accessRestrictedDesc": "Only administrators and veterinarians can run the VET.IS Agent.",
   "agent.backToDashboard": "Back to dashboard",
   "agent.checkingAccess": "Checking agent access...",
   "agent.composer.allowWrites": "Allow writes: appointments and patient vitals",
@@ -112,7 +112,7 @@
   "agent.status.configVertexPrefix": "Configure Google Vertex AI with",
   "agent.status.configVertexSuffix": "for an explicit Claude model.",
   "agent.status.hostedUnavailable": "The agent is not available right now. We are on it. Please check back soon.",
-  "agent.status.notAvailable": "OpenVPM AI is not available for this workspace.",
+  "agent.status.notAvailable": "VET.IS AI is not available for this workspace.",
   "agent.status.retry": "Retry",
   "agent.status.unavailable": "Agent status is unavailable",
   "agent.status.unavailableDesc": "We could not confirm the agent is ready. Retry before running.",
@@ -121,11 +121,11 @@
   "agent.suggestions.carprofen": "What's the carprofen dose for a 12 kg dog?",
   "agent.suggestions.clinicalSummary": "Pull a clinical summary for the next patient checked in.",
   "agent.suggestions.vaccinations": "Which patients are overdue for vaccinations?",
-  "agent.title": "OpenVPM Agent",
+  "agent.title": "VET.IS Agent",
   "agent.trace.toolCallFew": "{count} tool calls",
   "agent.trace.toolCallMany": "{count} tool calls",
   "agent.trace.toolCallSingular": "1 tool call",
-  "agent.welcome.subtitle": "AI is built into OpenVPM. Ask a question in plain words, or start with one of these.",
+  "agent.welcome.subtitle": "AI is built into VET.IS. Ask a question in plain words, or start with one of these.",
   "agent.welcome.title": "What can I help you with?",
   "ai": {
     "voiceInput": {
@@ -264,6 +264,28 @@
     "successDelete": "Automation removed",
     "infoTitle": "💡 How do automations work?",
     "infoDescription": "Rules are triggered by events (discharge, visit anniversary…). AI generates a message in Slovak/Hungarian with a Fear-Free tone. Messages are sent via SMS or email — configure Twilio/Resend in settings."
+  },
+  "auth": {
+    "login": {
+      "subtitle": "Sign in to your practice",
+      "subtitleDemo": "Explore the live product",
+      "demoBoxTitle": "Immediate access to the live demo",
+      "demoBoxBody": "No call, sales form, or credit card. We use your email to protect this shared sandbox from automated abuse. We may send one brief email asking what you thought; unsubscribe anytime.",
+      "email": "Email",
+      "password": "Password",
+      "emailPlaceholder": "you@clinic.com",
+      "passwordPlaceholder": "Enter your password",
+      "errorInvalid": "Invalid email or password",
+      "demoUnavailable": "The demo is temporarily unavailable.",
+      "openingDemo": "Opening demo...",
+      "signingIn": "Signing in...",
+      "openDemo": "Open the live demo",
+      "signIn": "Sign in",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "startClinic": "Start my clinic",
+      "register": "Register your practice"
+    }
   },
   "billing": {
     "page": {
@@ -775,7 +797,12 @@
     "loading": "Loading...",
     "error_retry": "Unable to load data. Please retry.",
     "signOut": "Sign out",
-    "skipToMainContent": "Skip to main content"
+    "skipToMainContent": "Skip to main content",
+    "back": "Back",
+    "continue": "Continue",
+    "finish": "Finish",
+    "retry": "Retry",
+    "dismiss": "Dismiss"
   },
   "common.cancel": "Cancel",
   "common.save": "Save",
@@ -909,7 +936,16 @@
         "description": "Book your first visit and it will show up here.",
         "action": "Book your first visit"
       },
-      "error": "Could not load upcoming appointments."
+      "error": "Could not load upcoming appointments.",
+      "status": {
+        "confirmed": "Confirmed",
+        "checked_in": "Checked in",
+        "in_exam": "In exam",
+        "scheduled": "Scheduled",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "no_show": "No show"
+      }
     },
     "followUps": {
       "title": "Follow-up work queue",
@@ -930,7 +966,16 @@
       "empty": {
         "title": "Your charts will appear once active",
         "description": "As you book visits and post invoices, your trends and totals will populate here."
-      }
+      },
+      "appointmentsThisWeek": "Appointments This Week",
+      "completed": "Completed",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "speciesDistribution": "Species Distribution",
+      "revenueLast30Days": "Revenue (Last 30 Days)",
+      "revenue": "Revenue",
+      "productionByDoctor": "Production by Doctor (MTD)",
+      "production": "Production"
     }
   },
   "encounters.chargeCapture.addButton": "Add",
@@ -1894,6 +1939,9 @@
       "backToPatients": "Back to Patients",
       "backToPatient": "Back to Patient",
       "reviewDuplicates": "Review duplicates",
+      "capturePhotos": "Capture photos",
+      "getSignature": "Get signature",
+      "downloadMedicalSummary": "Download Summary",
       "editPatient": "Edit Patient",
       "newSoap": "New SOAP Record",
       "newPrescription": "New Prescription",
@@ -2282,6 +2330,25 @@
     "confirmSendMany": "Send vaccination reminders to {count} patients now? Delivery will use each client's eligible channel and will be logged in Communications."
   },
   "records": {
+    "capturePhotos": {
+      "button": "Capture photos",
+      "modalTitle": "Capture photos",
+      "scanNotice": "Scan with any phone. The code works for 30 minutes.",
+      "noPhotos": "No photos yet",
+      "onePhoto": "1 photo added",
+      "countPhotos": "{count} photos added",
+      "newPhotosArrive": "New photos show up here."
+    },
+    "consentSign": {
+      "button": "Get signature",
+      "modalTitle": "Get signature",
+      "scanNotice": "Scan with any phone. The code works for 60 minutes.",
+      "checkNotice": "Check the consent text, then make the code.",
+      "makeCode": "Make the code",
+      "signedBy": "Signed by {name}",
+      "openSignedPdf": "Open the signed PDF",
+      "savedUnderDocs": "Saved on this patient under Documents."
+    },
     "title": "Medical Records",
     "subtitle": "Clinical notes, SOAPE entries, and history",
     "new_record": "New Record",
@@ -3291,7 +3358,7 @@
   "whiteboard.unknownPatient": "Unknown Patient",
   "nav.sectionClinical": "Clinical Practice",
   "nav.sectionMarketing": "Marketing Studio",
-  "nav.sectionAi": "AI Veterinary",
+  "nav.sectionAi": "AI Tools",
   "nav.sectionSettings": "Clinic Management",
   "nav.collapseMenu": "Collapse menu",
   "nav.expandMenu": "Expand menu",
@@ -3315,17 +3382,17 @@
   "nav.marketingBrandKit": "Brand Kit",
   "nav.marketingPlan": "Content Plan",
   "nav.marketingReviews": "Reviews",
-  "nav.marketingHandouts": "Care Handouts",
-  "nav.marketingMessages": "Messages & SMS Queue",
-  "nav.marketingWebsite": "Clinic Website",
+  "nav.marketingHandouts": "Handouts",
+  "nav.marketingMessages": "Messages & SMS",
+  "nav.marketingWebsite": "Clinic Web",
   "nav.waitingRoomTv": "Waiting Room TV",
   "nav.marketingAutomations": "Automations",
-  "nav.marketingConsents": "Consents (GDPR)",
-  "nav.marketingScripts": "Surgical Scripts",
-  "nav.marketingMedia": "Media & AI Canvas",
-  "nav.marketingCompetitors": "Competitors",
-  "nav.marketingWellness": "Wellness Plans",
-  "nav.ekasa": "e-Kasa",
+  "nav.marketingConsents": "Consents & Scripts",
+  "nav.marketingScripts": "Operative Scripts",
+  "nav.marketingMedia": "Media Library",
+  "nav.marketingCompetitors": "Competitor Intel",
+  "nav.marketingWellness": "Wellness Packages",
+  "nav.ekasa": "e-Kasa Receipts",
   "nav.v2Import": "V2 Migration",
   "nav.vetIntel": "Vet Intelligence",
   "nav.agentImaging": "Image Analysis",
@@ -3400,17 +3467,17 @@
   "labImport.emptyDesc": "Upload CSV or text exports from IDEXX, Fuji Dri-Chem, or Mindray analyzers.",
   "labImport.saveSuccess": "Lab report saved successfully",
   "labImport.toastReviewed": "Lab report reviewed and closed by veterinarian",
-  "welcome.headlineAdmin": "Welcome to OpenVPM, {practiceName}!",
+  "welcome.headlineAdmin": "Welcome to VET.IS, {practiceName}!",
   "welcome.headlineStaff": "Welcome, {firstName}!",
-  "welcome.headlineFallback": "Welcome to OpenVPM!",
+  "welcome.headlineFallback": "Welcome to VET.IS!",
   "welcome.yourClinic": "your clinic",
-  "welcome.subline": "Here is what OpenVPM can do for your clinic today. Pick a card and we will show you in about a minute.",
+  "welcome.subline": "Here is what VET.IS can do for your clinic today. Pick a card and we will show you in about a minute.",
   "welcome.skip": "Skip for now",
   "welcome.reopenHint": "You can come back any time from Guides in settings.",
   "welcome.setupInstead": "Set up my clinic instead",
   "welcome.doneBadge": "Done",
   "welcome.allDone.title": "You tried them all!",
-  "welcome.allDone.body": "That was every guide. Ready to make OpenVPM yours? Add your logo, your team, and your real clients.",
+  "welcome.allDone.body": "That was every guide. Ready to make VET.IS yours? Add your logo, your team, and your real clients.",
   "welcome.allDone.accept": "Make it mine",
   "welcome.allDone.later": "Later",
   "welcome.cards.ask-ai.caption": "Ask the AI about a pet",
@@ -3920,15 +3987,15 @@
   "settings.billing.freePrice": "Free",
   "settings.billing.perLocation": "/location",
   "settings.billing.unlimitedStaff": "unlimited staff",
-  "settings.billing.staffUnitPrice": "+ ${price}/staff/mo",
+  "settings.billing.staffUnitPrice": "+ €{price}/staff/mo",
   "settings.billing.allStaffRoles": "All staff roles included",
   "settings.billing.staffRolesIncluded": "{count} staff roles included",
   "settings.billing.unlimitedLocations": "Unlimited locations",
   "settings.billing.locationsCount": "{count} locations",
   "settings.billing.smsIncluded": "{count} SMS/mo included",
-  "settings.billing.smsOverage": ", then ${price}/SMS",
+  "settings.billing.smsOverage": ", then €{price}/SMS",
   "settings.billing.aiActionsIncluded": "{count} AI actions/mo included",
-  "settings.billing.aiActionsOverage": ", then ${price}/action",
+  "settings.billing.aiActionsOverage": ", then €{price}/action",
   "settings.billing.featureAgent": "OpenVPM Agent (AI)",
   "settings.billing.featureSms": "SMS sending",
   "settings.billing.featureAdvancedReporting": "Advanced reporting",
@@ -3982,11 +4049,27 @@
   "marketing.plan.published": "Published",
   "marketing.plan.blocked": "Blocked",
   "marketing.plan.approve": "Approve",
+  "marketing.plan.calendar": "Calendar",
+  "marketing.plan.month": "Month",
+  "marketing.plan.week": "Week",
+  "marketing.plan.cards": "Cards",
+  "marketing.plan.today": "Today",
+  "marketing.plan.schedulePost": "Schedule Post",
+  "marketing.plan.scheduleOnDate": "Schedule for this day",
+  "marketing.plan.unscheduled": "Unscheduled drafts",
+  "marketing.plan.moveSuccess": "Post moved to {date}.",
   "common.close": "Close",
   "marketing.handouts.title": "Educational Handouts",
   "marketing.handouts.description": "Library of reusable handouts with QR codes for clients.",
   "marketing.handouts.newHandout": "New Handout",
   "marketing.handouts.noHandouts": "No handouts yet.",
+  "marketing.handouts.aiGenerate": "AI Generator",
+  "marketing.handouts.aiGeneratorTitle": "AI Flyer & Image Generator",
+  "marketing.handouts.aiGeneratorDesc": "Create an illustration or photo for your handout using AI.",
+  "marketing.handouts.aiPrompt": "Image description (prompt)",
+  "marketing.handouts.aiToggleShow": "Open AI Generator",
+  "marketing.handouts.aiToggleHide": "Hide AI Generator",
+  "marketing.handouts.aiImageReady": "AI image ready — use it as the handout's illustrative photo.",
   "marketing.tv.title": "Waiting Room TV – Slides",
   "marketing.tv.description": "Manage slides displayed on the TV screen in the waiting room.",
   "marketing.tv.newSlide": "New Slide",
@@ -4008,16 +4091,8 @@
   "marketing.tv.active": "Active",
   "marketing.tv.inactive": "Inactive",
   "marketing.tv.noContent": "No content",
-  "nav.marketingPlan": "Content Plan",
-  "nav.marketingReviews": "Reviews",
-  "nav.marketingHandouts": "Handouts",
-  "nav.waitingRoomTv": "Waiting Room TV",
   "marketing.messages.tabInbox": "Inbox",
   "marketing.messages.tabLogs": "Messages & Logs",
-  "nav.marketingAutomations": "Automations",
-  "nav.marketingConsents": "Consents (GDPR)",
-  "nav.marketingScripts": "Operative Scripts",
-  "nav.marketingWellness": "Wellness Packages",
   "marketing.consents.title": "Consents (Consent Registry)",
   "marketing.consents.subtitle": "Single source of truth for GDPR and media consents. No photo is published without active consent.",
   "marketing.consents.createBtn": "Record Consent",
@@ -4080,6 +4155,14 @@
   "waitingRoom.announcement.seniorBody": "Older dogs and cats benefit from preventive blood work and kidney/liver checks. Early detection extends life.",
   "waitingRoom.announcement.parasiteTitle": "Year-Round Parasite Prevention",
   "waitingRoom.announcement.parasiteBody": "Deworming and antiparasitic prevention aren't just for summer. We'll help you with a tailored program.",
+  "waitingRoom.announcement.heatTitle": "Summer Heat & Heatstroke Warning",
+  "waitingRoom.announcement.heatBody": "Never leave your pet in a parked car, even for a few minutes. Ensure plenty of fresh water and walk during cooler morning/evening hours.",
+  "waitingRoom.announcement.winterTitle": "Winter Care & Paw Protection",
+  "waitingRoom.announcement.winterBody": "Road salt and ice can cause painful paw cracks. Rinse and dry paws after walks and apply protective paw balm.",
+  "waitingRoom.announcement.felineStressTitle": "Feline Comfort & Stress-Free Visits",
+  "waitingRoom.announcement.felineStressBody": "Keep the cat carrier on your lap or an elevated bench rather than the floor near dogs. Reducing stress prevents feline idiopathic cystitis (FLUTD).",
+  "waitingRoom.announcement.puppySocialTitle": "Puppies: Socialization & Vaccine Schedule",
+  "waitingRoom.announcement.puppySocialBody": "Early weeks are critical for lifelong behavior. Avoid contact with unvaccinated dogs until completing the puppy vaccine series.",
   "scribe.title": "AI Voice Scribe - Voice Consultation",
   "scribe.description": "Search for a patient to start a voice consultation and generate SOAP notes.",
   "scribe.searchPlaceholder": "Search patient...",
@@ -4304,8 +4387,6 @@
   "statutory.protocols.noForms": "No forms available.",
   "statutory.protocols.templateId": "Template ID: {slug}",
   "statutory.dateRangeTo": "to",
-  "nav.marketingMedia": "Media Library",
-  "nav.marketingCompetitors": "Competitor Intel",
   "marketing.media.title": "Media & Graphics Library",
   "marketing.media.description": "Manage clinic photos, reels, and visual branding assets with strict GDPR consent enforcement.",
   "marketing.media.manageConsents": "Manage GDPR Consents",
@@ -4380,5 +4461,236 @@
   "book.sendingRequest": "Sending request…",
   "book.requestType": "Request {type}",
   "book.requestAppointment": "Request appointment",
-  "book.preferToTalk": "Prefer to talk to a person?"
+  "book.preferToTalk": "Prefer to talk to a person?",
+  "dashboard.charts.appointmentsThisWeek": "Appointments This Week",
+  "dashboard.charts.speciesDistribution": "Species Distribution",
+  "dashboard.charts.revenueLast30Days": "Revenue (Last 30 Days)",
+  "dashboard.charts.productionByDoctor": "Production by Doctor (MTD)",
+  "dashboard.charts.revenue": "Revenue",
+  "dashboard.charts.production": "Production",
+  "dashboard.charts.completed": "Completed",
+  "dashboard.charts.scheduled": "Scheduled",
+  "dashboard.charts.cancelled": "Cancelled",
+  "activation": {
+    "title": "Finish {practiceName}'s setup checks",
+    "defaultPracticeName": "your practice",
+    "progressSummary": "{shortLabel} · {doneCount} of {total} done",
+    "hideForNow": "Hide for now",
+    "helpMe": "Help me set this up",
+    "helpRequested": "Setup help requested",
+    "helpRequestedToast": "Setup request received",
+    "dontShowAgain": "Don't show this again",
+    "journey": {
+      "resume": "Resume guided setup",
+      "start": "Start guided setup",
+      "continueAt": "Continue at {stage}",
+      "choosePath": "Choose your path and save progress as you go",
+      "steps": {
+        "intent": "your starting path",
+        "basics": "clinic basics",
+        "branding": "branding",
+        "team": "your team",
+        "data": "data import",
+        "agent": "the AI helper",
+        "phone": "texting",
+        "billing": "billing",
+        "allSet": "the final review"
+      }
+    },
+    "milestones": {
+      "tour": {
+        "label": "Take the 60-second tour",
+        "hint": "See the schedule, records, billing, and AI in a minute."
+      },
+      "brand": {
+        "label": "Make it your brand",
+        "hint": "Add your logo and accent color."
+      },
+      "team": {
+        "label": "Invite a teammate",
+        "hint": "Test the handoff between a doctor and the front desk."
+      },
+      "teamExplore": {
+        "label": "Invite a teammate",
+        "hint": "Bring your doctors and front desk in. Staff is unlimited."
+      },
+      "ai": {
+        "label": "Ask the AI assistant something",
+        "hint": "Try “Which pets are overdue for vaccines?”"
+      },
+      "data": {
+        "label": "Add one real client and pet",
+        "hint": "Start small: create one client, then add their pet."
+      },
+      "firstAppointment": {
+        "label": "Book that pet's first appointment",
+        "hint": "Put one real appointment on the schedule. Your current PIMS can stay in place."
+      },
+      "firstVisit": {
+        "label": "Complete your first visit",
+        "hint": "Check in, start the exam, finalize the owner handoff, save the charge or no-charge reason, and complete checkout."
+      },
+      "booking": {
+        "label": "Configure appointment requests",
+        "hint": "Choose which visit types and times clients can request, then publish the page."
+      },
+      "texting": {
+        "label": "Finish texting activation",
+        "hint": "Submit carrier registration and wait for approval. Texting is not live until an active number is enabled."
+      },
+      "clientPayments": {
+        "label": "Set up client card payments",
+        "hint": "Connect the clinic's Stripe account so pet-owner payments go directly to the clinic."
+      },
+      "billing": {
+        "label": "Confirm billing is connected",
+        "hint": "A saved card lets the trial convert without interrupting access. Cancel anytime."
+      }
+    },
+    "complete": {
+      "title": "Guided setup checks complete",
+      "description": "Keep validating real clinic workflows with your team before switching systems.",
+      "dismiss": "Dismiss"
+    },
+    "error": {
+      "title": "Setup checklist could not load",
+      "unavailable": "Setup checklist data was unavailable. Try loading it again.",
+      "retry": "Retry"
+    }
+  },
+  "onboarding": {
+    "intents": {
+      "alongside": {
+        "label": "Run alongside my current PIMS",
+        "shortLabel": "Alongside current PIMS",
+        "description": "Start with one useful workflow while your current system stays in place.",
+        "firstWin": "Bring over a small real dataset",
+        "firstWinHint": "Start with a few clients and pets. Your current PIMS stays in place."
+      },
+      "replace": {
+        "label": "Replace my current PIMS",
+        "shortLabel": "Replace current PIMS",
+        "description": "Prepare a staged move of your clinic data and day-to-day workflows.",
+        "firstWin": "Start your staged data import",
+        "firstWinHint": "Bring clients and pets in before switching live clinic workflows."
+      },
+      "explore": {
+        "label": "Explore with sample data",
+        "shortLabel": "Explore",
+        "description": "Learn the product first with a ready-made clinic and no migration decision.",
+        "firstWin": "Take the 60-second tour",
+        "firstWinHint": "See the schedule, records, billing, and AI in a minute."
+      },
+      "self_host": {
+        "label": "Evaluate for self-hosting",
+        "shortLabel": "Self-host",
+        "description": "Learn the same open-source product while you plan or run your own deployment.",
+        "firstWin": "Brand your self-hosted workspace",
+        "firstWinHint": "Set clinic details first; hosted-only billing steps stay out of self-hosted setup."
+      }
+    },
+    "journey": {
+      "stepCounter": "Step {current} of {total}",
+      "canChangeLater": "You can change this later.",
+      "finishLater": "I'll finish later",
+      "finishRemainingImportLater": "Finish remaining import later",
+      "backUnavailable": "Back is unavailable after records are saved. Finish the remaining import now or continue it later.",
+      "steps": {
+        "intent": {
+          "title": "A platform truly built for your clinic."
+        },
+        "basics": {
+          "title": "Make it feel like your clinic."
+        },
+        "data": {
+          "title": "Bring your history with confidence."
+        },
+        "allSet": {
+          "title": "Your first day is ready."
+        }
+      }
+    }
+  },
+  "species": {
+    "dog": "Dog",
+    "cat": "Cat",
+    "bird": "Bird",
+    "rabbit": "Rabbit",
+    "horse": "Horse",
+    "reptile": "Reptile",
+    "small_mammal": "Small Mammal",
+    "other": "Other",
+    "canine": "Canine",
+    "feline": "Feline",
+    "avian": "Avian",
+    "equine": "Equine",
+    "bovine": "Bovine",
+    "ovine": "Ovine",
+    "caprine": "Caprine",
+    "porcine": "Porcine",
+    "poultry": "Poultry",
+    "camelid": "Camelid"
+  },
+  "records.vaccinations.form.vaccine": "Vaccine *",
+  "records.vaccinations.form.vaccinePlaceholder": "e.g. Rabies",
+  "records.vaccinations.form.productName": "Product name",
+  "records.vaccinations.form.productNamePlaceholder": "e.g. Defensor 3",
+  "records.vaccinations.form.nextDue": "Next due",
+  "records.vaccinations.form.lotNumber": "Lot number",
+  "records.vaccinations.form.lotNumberPlaceholder": "e.g. RAB-2026-04",
+  "records.vaccinations.form.manufacturer": "Manufacturer",
+  "records.vaccinations.form.manufacturerPlaceholder": "e.g. Zoetis",
+  "records.vaccinations.form.productExpiration": "Product expiration *",
+  "records.vaccinations.form.doseType": "Dose type *",
+  "records.vaccinations.form.chooseDoseType": "Choose dose type",
+  "records.vaccinations.form.initialDose": "Initial dose",
+  "records.vaccinations.form.boosterDose": "Booster dose",
+  "records.vaccinations.form.licensedDuration": "Licensed duration *",
+  "records.vaccinations.form.chooseDuration": "Choose duration",
+  "records.vaccinations.form.duration1Year": "1 year",
+  "records.vaccinations.form.duration3Years": "3 years",
+  "records.vaccinations.form.duration4Years": "4 years",
+  "records.vaccinations.form.rabiesTagNumber": "Rabies tag number",
+  "records.vaccinations.form.supervisingVeterinarian": "Supervising veterinarian *",
+  "records.vaccinations.form.chooseVeterinarian": "Choose veterinarian",
+  "records.vaccinations.form.license": "License",
+  "records.vaccinations.form.licenseMissing": "license missing",
+  "records.vaccinations.form.licenseNote": "Rabies certificates require the veterinarian's license number in Staff settings.",
+  "records.vaccinations.saveVaccination": "Save vaccination",
+  "billing.page.ekasaReceipts": "Receipts (e-Kasa)",
+  "billing.page.ekasaClosures": "Daily closures (Z-report)",
+  "nav.ekasaClosures": "Daily closures (Z-report)",
+  "support": {
+    "remoteSupport": "Remote Support",
+    "description": "Share your screen with technical support for faster issue resolution.",
+    "instructions": "Click below to create a session and get a 6-digit code to share with support agent.",
+    "createSession": "Create support session",
+    "creating": "Creating...",
+    "shareCode": "Share this code with support agent. Session will activate when agent joins.",
+    "startSharing": "Start sharing",
+    "starting": "Starting...",
+    "endSession": "End session",
+    "copyCode": "Copy code",
+    "join": "Join",
+    "sessionCreated": "Support session created",
+    "sessionCreationFailed": "Failed to create support session",
+    "sharingStarted": "Sharing started",
+    "sessionEnded": "Session ended",
+    "codeCopied": "Code copied",
+    "adminTitle": "Admin Support",
+    "adminDescription": "Connect to customer screen via 6-digit session code.",
+    "adminInstructions": "Request the 6-digit code from customer on their support page.",
+    "sessionNotFound": "Session with this code not found",
+    "connected": "Connected to session"
+  },
+  "toast": {
+    "sessionCreated": "Support session created",
+    "sessionCreationFailed": "Failed to create support session",
+    "sharingStarted": "Sharing started",
+    "sessionEnded": "Session ended",
+    "codeCopied": "Code copied"
+  },
+  "button": {
+    "copy": "Copy"
+  }
 }

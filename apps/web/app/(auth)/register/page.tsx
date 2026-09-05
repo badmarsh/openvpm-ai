@@ -841,7 +841,7 @@ const NAV = [
 const KPIS = [
   { label: "Today's visits", value: "8", icon: Calendar },
   { label: "New patients", value: "3", icon: PawPrint },
-  { label: "Revenue", value: "$1,240", icon: Receipt },
+  { label: "Revenue", value: "€1,240", icon: Receipt },
 ];
 
 // Appointment colors mirror the real schedule.

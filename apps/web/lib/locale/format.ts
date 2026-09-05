@@ -19,14 +19,17 @@ export function localeForCountry(country?: string | null): string {
 
 export function formatCurrency(
   amount: number | string | null | undefined,
-  currency: string = "usd",
+  currency: string = "eur",
   country?: string | null
 ): string {
   const n = typeof amount === "string" ? parseFloat(amount) : amount ?? 0;
-  return new Intl.NumberFormat(localeForCountry(country), {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(Number.isFinite(n) ? (n as number) : 0);
+  return new Intl.NumberFormat(
+    localeForCountry(country ?? (currency.toLowerCase() === "eur" ? "SK" : "US")),
+    {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }
+  ).format(Number.isFinite(n) ? (n as number) : 0);
 }
 
 export function formatDate(date: Date | string, country?: string | null): string {

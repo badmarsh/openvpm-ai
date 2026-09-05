@@ -22,6 +22,7 @@ import {
   extMarketingMediaConsents,
   extMarketingWellnessRedemptions,
   extMarketingReviews,
+  communications,
 } from "./schema/index";
 
 function daysAgo(n: number): Date {
@@ -655,6 +656,100 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // F.5 Inbox / komunikácie (communications)
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log("💬 Vkladám demo komunikácie do inboxu...");
+  await db.delete(communications).where(eq(communications.practiceId, practiceId));
+
+  const inboxData = [
+    {
+      client: client1,
+      channel: "email",
+      direction: "inbound",
+      status: "read",
+      subject: "Otázka k pooperačnej starostlivosti",
+      content: "Dobrý deň, rada by som vedela, ako často mám čistiť ranu nášmu Bonovi. Ďakujem, Zuzana",
+      hoursAgo: 26,
+    },
+    {
+      client: client1,
+      channel: "email",
+      direction: "outbound",
+      status: "read",
+      subject: "Re: Otázka k pooperačnej starostlivosti",
+      content: "Dobrý deň, ranu stačí očistiť ráno a večer vatovou tampónou. Ak bude červená alebo mokvá, kontaktujte nás. S pozdravom, MVDr. Kováčová",
+      hoursAgo: 25,
+    },
+    {
+      client: client2,
+      channel: "sms",
+      direction: "inbound",
+      status: "read",
+      content: "Prosím, posuňte nám náš termín na zajtra o 14:00. Ďakujem.",
+      hoursAgo: 10,
+    },
+    {
+      client: client2,
+      channel: "sms",
+      direction: "outbound",
+      status: "delivered",
+      content: "Termín pre Lunu bol presunutý na zajtra 14:00. Potvrdzujeme.",
+      hoursAgo: 9,
+    },
+    {
+      client: client3,
+      channel: "email",
+      direction: "inbound",
+      status: "read",
+      subject: "Žiadosť o veterinárne osvedčenie",
+      content: "Dobrý deň, potrebujem vystaviť osvedčenie pre nášho psa na cestu do zahraničia. Kedy môžeme prísť? Ľuboš Novák",
+      hoursAgo: 72,
+    },
+    {
+      client: client4,
+      channel: "sms",
+      direction: "inbound",
+      status: "read",
+      content: "Ďakujem za pripomienku, prídeme na očkovanie podľa plánu.",
+      hoursAgo: 48,
+    },
+    {
+      client: client1,
+      channel: "phone",
+      direction: "inbound",
+      status: "read",
+      content: "Prichádzajúci hovor: otázka k diéte po kastrácii.",
+      hoursAgo: 5,
+    },
+    {
+      client: client2,
+      channel: "email",
+      direction: "inbound",
+      status: "read",
+      subject: "Spätnoväzbná recenzia",
+      content: "Ďakujeme za skvelú starostlivosť, s Lunou je všetko v poriadku.",
+      hoursAgo: 96,
+    },
+  ];
+
+  for (let i = 0; i < inboxData.length; i++) {
+    const item = inboxData[i];
+    const created = new Date(Date.now() - item.hoursAgo * 3600 * 1000);
+    await db.insert(communications).values({
+      practiceId,
+      clientId: item.client.id,
+      channel: item.channel as any,
+      direction: item.direction as any,
+      subject: item.subject ?? null,
+      content: item.content,
+      status: item.status as any,
+      assignedTo: item.direction === "outbound" ? userId : null,
+      readAt: item.status === "read" ? created : null,
+      createdAt: created,
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // G. Pooperačné odpovede a eskalácie (extMarketingPostopResponses & StaffTasks)
   // ─────────────────────────────────────────────────────────────────────────────
   console.log("🩺 Vkladám pooperačné dotazníky a úlohy personálu...");
@@ -859,40 +954,40 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         practiceId,
         platform: "google",
         clientId: client1?.id,
-        patientId: pet1?.id,
+        patientId: patient1?.id,
         reviewerName: "Zuzana Kováčová",
         rating: 5,
         reviewText: "Maximálna spokojnosť! Pán doktor Sýkora je obrovský odborník a má neskutočne milý prístup k zvieratám. Náš labrador Blesk sa k nemu do ambulancie dokonca teší. Zákrok prebehol hladko a oceňujem aj prehľadné pokyny po prepustení cez klientsky portál.",
         receivedAt: daysAgo(2),
         replyText: "Milá pani Kováčová, veľmi pekne ďakujeme za krásne slová a dôveru. Sme radi, že sa Bleskovi darí skvele a tešíme sa na ďalšiu preventívnu návštevu! S úctou, tím kliniky.",
         repliedAt: daysAgo(1),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
         platform: "google",
         clientId: client2?.id,
-        patientId: pet2?.id,
+        patientId: patient2?.id,
         reviewerName: "Ing. Michal Baláž",
         rating: 5,
         reviewText: "Vynikajúca vybavenosť ambulancie (digitálny RTG aj laboratórium priamo na mieste). Rýchla diagnostika našej mačky počas pohotovosti jej doslova zachránila život. Vrelo odporúčam každému chovateľovi.",
         receivedAt: daysAgo(5),
         replyText: "Pán Baláž, ďakujeme za hodnotenie. Včasná diagnostika a promptný prístup boli v tomto prípade kľúčové. Pozdravujeme pacientku a prajeme veľa zdravia!",
         repliedAt: daysAgo(4),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
         platform: "google",
         clientId: client3?.id,
-        patientId: pet3?.id,
+        patientId: patient3?.id,
         reviewerName: "Petra Nemcová",
         rating: 5,
         reviewText: "Krásne a čisté prostredie, Fear-Free prístup, ktorý naozaj funguje. Žiadny stres v čakárni, profesionálny personál. Objednanie online na presný čas funguje bez meškania.",
         receivedAt: daysAgo(9),
         replyText: "Ďakujeme, pani Nemcová. Pokojné a bezstresové prostredie pre zvieracích pacientov i majiteľov je našou najvyššou prioritou.",
         repliedAt: daysAgo(8),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -903,7 +998,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(14),
         replyText: "Pán Horváth, ďakujeme za pochopenie pri ošetrení náhleho život ohrozujúceho prípadu. Vážime si vašu trpezlivosť a spätnú väzbu.",
         repliedAt: daysAgo(13),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -914,7 +1009,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(18),
         replyText: "Ďakujeme za dlhoročnú dôveru a vernosť našej klinike! Radi sa o vašich štvornohých parťákov postaráme kedykoľvek.",
         repliedAt: daysAgo(17),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -925,7 +1020,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(21),
         replyText: "Pán Novák, sme šťastní, že Hektor zvládol tak náročný zákrok a je v poriadku. Včasný príchod bol rozhodujúci. Prajeme mu veľa síl a zdravia!",
         repliedAt: daysAgo(20),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -936,7 +1031,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(25),
         replyText: "Ďakujeme pani Čierna za pomoc útulkáčom a za dôveru v našu chirurgiu. Mačičkám prajeme krásny a pokojný život v novom domove.",
         repliedAt: daysAgo(24),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -947,7 +1042,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(29),
         replyText: "Ďakujeme za uznanie od skúseného chovateľa. Presná rádiológia a zdravie plemien sú pre nás srdcovou záležitosťou.",
         repliedAt: daysAgo(28),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -974,7 +1069,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(40),
         replyText: "Pán Majerčík, komfort a prístupnosť pre hendikepovaných a starších pacientov je pre nás kľúčová. Tešíme sa z pokroku pri laserovej terapii!",
         repliedAt: daysAgo(39),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -994,7 +1089,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(3),
         replyText: "Milá Lucia, nesmierne nás teší vaša recenzia. Zdravie a komfort Belly boli na prvom mieste. Ďakujeme za dôveru!",
         repliedAt: daysAgo(2),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -1005,7 +1100,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(6),
         replyText: "Ďakujeme, pán Dvořák! Tešíme sa, že moderný systém notifikácií prináša pohodlie chovateľom.",
         repliedAt: daysAgo(5),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -1016,7 +1111,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(11),
         replyText: "Ďakujeme za milé odporúčanie na Facebooku! Spokojnosť Lízy a pokojné ošetrenie mačiek je naša špecialita. 🐱",
         repliedAt: daysAgo(10),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -1027,7 +1122,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(16),
         replyText: "Pán Molnár, ďakujeme! Výchova a zdravý štart šteniatka sú základom celoživotného zdravia. Radi vás opäť privítame.",
         repliedAt: daysAgo(15),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -1038,7 +1133,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(22),
         replyText: "Pani Urbanová, sme šťastní, že malý bojovník to zvládol a je v poriadku. Všetko dobré celej rodine!",
         repliedAt: daysAgo(21),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -1057,7 +1152,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(30),
         replyText: "Presne o tom Fear-Free prístup je! Šteniatko si kliniku zafixovalo s radosťou a pozitívnymi emóciami. Tešíme sa na ďalšie stretnutie!",
         repliedAt: daysAgo(29),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,
@@ -1076,7 +1171,7 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
         receivedAt: daysAgo(41),
         replyText: "Pán Olexa, ďakujeme! Prajeme šťastnú cestu a pohodovú dovolenku pri mori aj so psíkom.",
         repliedAt: daysAgo(40),
-        repliedBy: adminUser.id,
+        repliedBy: userId,
       },
       {
         practiceId,

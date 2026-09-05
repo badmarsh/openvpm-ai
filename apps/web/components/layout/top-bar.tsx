@@ -37,7 +37,7 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/controlled-substances": { label: "Controlled Substances", i18nKey: "nav.controlledSubstances" }, // "/controlled-substances": "Controlled Substances"
   "/reports": { label: "Reports", i18nKey: "nav.reports" },
   "/settings": { label: "Settings", i18nKey: "nav.settings" },
-  "/billing/ekasa": { label: "e-Kasa", i18nKey: "nav.ekasa" },
+  "/billing/ekasa": { label: "e-Kasa Doklady", i18nKey: "nav.ekasa" },
   "/marketing": { label: "Marketing Studio", i18nKey: "nav.marketing" },
   "/marketing/brand-kit": { label: "Brand Kit", i18nKey: "nav.marketingBrandKit" },
   "/marketing/plan": { label: "Plán obsahu", i18nKey: "nav.marketingPlan" },
@@ -151,7 +151,7 @@ export function TopBar({
           type="button"
           onClick={onMenuOpen}
           aria-label="Open navigation"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -159,8 +159,10 @@ export function TopBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <ThemeSwitcher />
-        <LanguageSwitcher />
+        <div className="contents" suppressHydrationWarning>
+          <ThemeSwitcher />
+          <LanguageSwitcher />
+        </div>
 
         {/* Below sm the pill would crush the page title into one character. */}
         <div className="hidden sm:block">
@@ -170,7 +172,7 @@ export function TopBar({
           type="button"
           onClick={onSearchOpen}
           aria-label="Open search"
-          className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground transition-colors hover:bg-accent sm:w-64 sm:px-3 md:w-80"
+          className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-64 sm:px-3 md:w-80"
         >
           <Search className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">{t("chrome.searchPlaceholder", "Search...")}</span>

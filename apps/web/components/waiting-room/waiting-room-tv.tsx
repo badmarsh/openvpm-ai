@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Tv,
   Maximize2,
@@ -18,6 +18,8 @@ import {
   RefreshCw,
   ListOrdered,
   Timer,
+  Sun,
+  Snowflake,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -49,37 +51,75 @@ function playCheckInChime() {
 }
 
 // ---------------------------------------------------------------------------
-// Fallback health-tip announcements when no custom slides exist
+// Context-aware & Seasonal Health-tip announcements
 // ---------------------------------------------------------------------------
-const FALLBACK_ANNOUNCEMENTS: Array<{
+export interface AnnouncementItem {
   icon: React.ReactNode;
   titleKey: string;
   bodyKey: string;
-}> = [
+  category: "spring" | "summer" | "autumn" | "winter" | "feline" | "puppy" | "general";
+}
+
+const ALL_HEALTH_ANNOUNCEMENTS: AnnouncementItem[] = [
+  // Jarné
   {
     icon: <ShieldAlert className="h-4 w-4 text-amber-500" />,
     titleKey: "waitingRoom.announcement.tickTitle",
     bodyKey: "waitingRoom.announcement.tickBody",
-  },
-  {
-    icon: <HeartPulse className="h-4 w-4 text-rose-500" />,
-    titleKey: "waitingRoom.announcement.dentalTitle",
-    bodyKey: "waitingRoom.announcement.dentalBody",
-  },
-  {
-    icon: <PawPrint className="h-4 w-4 text-blue-500" />,
-    titleKey: "waitingRoom.announcement.vaccineTitle",
-    bodyKey: "waitingRoom.announcement.vaccineBody",
-  },
-  {
-    icon: <HeartPulse className="h-4 w-4 text-violet-500" />,
-    titleKey: "waitingRoom.announcement.seniorTitle",
-    bodyKey: "waitingRoom.announcement.seniorBody",
+    category: "spring",
   },
   {
     icon: <ShieldAlert className="h-4 w-4 text-orange-500" />,
     titleKey: "waitingRoom.announcement.parasiteTitle",
     bodyKey: "waitingRoom.announcement.parasiteBody",
+    category: "spring",
+  },
+  // Letné
+  {
+    icon: <Sun className="h-4 w-4 text-amber-500" />,
+    titleKey: "waitingRoom.announcement.heatTitle",
+    bodyKey: "waitingRoom.announcement.heatBody",
+    category: "summer",
+  },
+  // Zimné
+  {
+    icon: <Snowflake className="h-4 w-4 text-cyan-500" />,
+    titleKey: "waitingRoom.announcement.winterTitle",
+    bodyKey: "waitingRoom.announcement.winterBody",
+    category: "winter",
+  },
+  // Mačacie
+  {
+    icon: <HeartPulse className="h-4 w-4 text-pink-500" />,
+    titleKey: "waitingRoom.announcement.felineStressTitle",
+    bodyKey: "waitingRoom.announcement.felineStressBody",
+    category: "feline",
+  },
+  // Šteňacie
+  {
+    icon: <PawPrint className="h-4 w-4 text-emerald-500" />,
+    titleKey: "waitingRoom.announcement.puppySocialTitle",
+    bodyKey: "waitingRoom.announcement.puppySocialBody",
+    category: "puppy",
+  },
+  // Celoročné základné
+  {
+    icon: <HeartPulse className="h-4 w-4 text-rose-500" />,
+    titleKey: "waitingRoom.announcement.dentalTitle",
+    bodyKey: "waitingRoom.announcement.dentalBody",
+    category: "general",
+  },
+  {
+    icon: <PawPrint className="h-4 w-4 text-blue-500" />,
+    titleKey: "waitingRoom.announcement.vaccineTitle",
+    bodyKey: "waitingRoom.announcement.vaccineBody",
+    category: "general",
+  },
+  {
+    icon: <HeartPulse className="h-4 w-4 text-violet-500" />,
+    titleKey: "waitingRoom.announcement.seniorTitle",
+    bodyKey: "waitingRoom.announcement.seniorBody",
+    category: "general",
   },
 ];
 
@@ -163,6 +203,49 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
 
   const appointments = activeAppointments ?? [];
 
+  // Dynamic context-aware announcement list (Seasonal + Live patient mix)
+  const dynamicAnnouncements = useMemo(() => {
+    const month = new Date().getMonth(); // 0 = Jan, 11 = Dec
+    let currentSeason: "spring" | "summer" | "autumn" | "winter";
+    if (month >= 2 && month <= 4) currentSeason = "spring";
+    else if (month >= 5 && month <= 7) currentSeason = "summer";
+    else if (month >= 8 && month <= 9) currentSeason = "autumn";
+    else currentSeason = "winter";
+
+    const hasFelinePresent = appointments.some((a) => {
+      const sp = (a.patientSpecies || "").toLowerCase();
+      return (a.status === "checked_in" || a.status === "in_exam") && (sp.includes("fel") || sp.includes("cat") || sp.includes("mačk"));
+    });
+
+    const hasPuppyPresent = appointments.some((a) => {
+      const name = (a.patientName || "").toLowerCase();
+      const notes = (a.notes || "").toLowerCase();
+      const type = (a.typeName || "").toLowerCase();
+      return (
+        (a.status === "checked_in" || a.status === "in_exam") &&
+        (name.includes("šteňa") || name.includes("puppy") || notes.includes("šteňa") || notes.includes("puppy") || type.includes("očkov") || type.includes("vaccin"))
+      );
+    });
+
+    const list: AnnouncementItem[] = [];
+
+    // 1. Live patient context (highest priority when relevant)
+    if (hasFelinePresent) {
+      list.push(...ALL_HEALTH_ANNOUNCEMENTS.filter((a) => a.category === "feline"));
+    }
+    if (hasPuppyPresent) {
+      list.push(...ALL_HEALTH_ANNOUNCEMENTS.filter((a) => a.category === "puppy"));
+    }
+
+    // 2. Current season announcements
+    list.push(...ALL_HEALTH_ANNOUNCEMENTS.filter((a) => a.category === currentSeason));
+
+    // 3. General baseline
+    list.push(...ALL_HEALTH_ANNOUNCEMENTS.filter((a) => a.category === "general"));
+
+    return list.length > 0 ? list : ALL_HEALTH_ANNOUNCEMENTS;
+  }, [appointments]);
+
   // Build rotation items: custom slides if any, otherwise fallback announcements
   const activeSlides = (tvSlides as TvSlide[] | undefined)?.filter(
     (s) => s.isActive,
@@ -174,13 +257,13 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
     const ms = hasCustomSlides
       ? (activeSlides[slideIndex % activeSlides.length]?.durationSeconds ?? 12) * 1000
       : 12000;
-    const totalItems = hasCustomSlides ? activeSlides.length : FALLBACK_ANNOUNCEMENTS.length;
+    const totalItems = hasCustomSlides ? activeSlides.length : dynamicAnnouncements.length;
     const interval = setInterval(
       () => setSlideIndex((i) => (i + 1) % totalItems),
       ms,
     );
     return () => clearInterval(interval);
-  }, [hasCustomSlides, activeSlides, slideIndex]);
+  }, [hasCustomSlides, activeSlides, slideIndex, dynamicAnnouncements.length]);
 
   // Categorize
   const inExam = appointments.filter((a) => a.status === "in_exam");
@@ -234,7 +317,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
   };
 
   // Current rotation pair (2 visible at a time)
-  const totalItems = hasCustomSlides ? activeSlides.length : FALLBACK_ANNOUNCEMENTS.length;
+  const totalItems = hasCustomSlides ? activeSlides.length : dynamicAnnouncements.length;
   const firstIdx = slideIndex % totalItems;
   const secondIdx = (slideIndex + 1) % totalItems;
 
@@ -524,9 +607,9 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                   })}
                 </>
               ) : (
-                // Fallback hardcoded announcements
+                // Dynamic contextual & seasonal announcements
                 <>
-                  {[FALLBACK_ANNOUNCEMENTS[firstIdx], FALLBACK_ANNOUNCEMENTS[secondIdx]].map(
+                  {[dynamicAnnouncements[firstIdx], dynamicAnnouncements[secondIdx]].filter(Boolean).map(
                     (a, i) => (
                       <div
                         key={`${slideIndex}-${i}`}

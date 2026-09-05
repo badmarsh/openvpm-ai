@@ -1302,19 +1302,19 @@ export default function InventoryPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colName", "Name")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colSku", "SKU")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colCategory", "Category")}
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       {t("inventory.table.colPriceUnit", "Price / unit")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colTax", "Tax")}
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
@@ -1326,13 +1326,13 @@ export default function InventoryPage() {
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       {t("inventory.table.colReorderPoint", "Reorder Pt")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colLotExpiry", "Lot / Expiry")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colStatus", "Status")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colActions", "Actions")}
                     </th>
                   </tr>
@@ -1591,22 +1591,22 @@ export default function InventoryPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colName", "Name")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colEmail", "Email")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colPhone", "Phone")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colAddress", "Address")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colNotes", "Notes")}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colActions", "Actions")}
                     </th>
                   </tr>

@@ -19,6 +19,7 @@ import {
 import { trackFunnelEvent } from "@/lib/track-funnel-event";
 import { getFunnelVisitorId, useFunnelVisitorId } from "@/lib/funnel-visitor";
 import { safeAuthNextPath } from "@/lib/auth-redirect";
+import { useI18n } from "@/lib/i18n";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE?.trim() === "true";
 
@@ -37,6 +38,7 @@ export default function LoginPage() {
 }
 
 function LoginPageInner() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const visitorId = useFunnelVisitorId();
@@ -74,7 +76,7 @@ function LoginPageInner() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password");
+      setError(t("auth.login.errorInvalid", "Invalid email or password"));
     } else {
       router.push(nextPath);
       router.refresh();
@@ -103,7 +105,10 @@ function LoginPageInner() {
           error?: string;
         } | null;
         if (!gateResponse.ok || !gateResult?.ok) {
-          setError(gateResult?.error ?? "The demo is temporarily unavailable.");
+          setError(
+            gateResult?.error ??
+              t("auth.login.demoUnavailable", "The demo is temporarily unavailable."),
+          );
           return;
         }
 
@@ -112,14 +117,14 @@ function LoginPageInner() {
           redirect: false,
         });
         if (result?.error) {
-          setError("The demo is temporarily unavailable.");
+          setError(t("auth.login.demoUnavailable", "The demo is temporarily unavailable."));
           return;
         }
 
         router.push(nextPath);
         router.refresh();
       } catch {
-        setError("The demo is temporarily unavailable.");
+        setError(t("auth.login.demoUnavailable", "The demo is temporarily unavailable."));
       } finally {
         setLoading(false);
       }
@@ -144,20 +149,21 @@ function LoginPageInner() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {DEMO_MODE
-              ? "Explore the live product"
-              : "Sign in to your practice"}
+              ? t("auth.login.subtitleDemo", "Explore the live product")
+              : t("auth.login.subtitle", "Sign in to your practice")}
           </p>
         </div>
 
         {DEMO_MODE && (
           <div className="mb-6 rounded-md border border-primary/20 bg-primary/5 p-4">
             <p className="mb-1 text-sm font-semibold text-foreground">
-              Immediate access to the live demo
+              {t("auth.login.demoBoxTitle", "Immediate access to the live demo")}
             </p>
             <p className="text-xs leading-5 text-muted-foreground">
-              No call, sales form, or credit card. We use your email to protect
-              this shared sandbox from automated abuse. We may send one brief
-              email asking what you thought; unsubscribe anytime.
+              {t(
+                "auth.login.demoBoxBody",
+                "No call, sales form, or credit card. We use your email to protect this shared sandbox from automated abuse. We may send one brief email asking what you thought; unsubscribe anytime."
+              )}
             </p>
           </div>
         )}
@@ -174,7 +180,7 @@ function LoginPageInner() {
               htmlFor="email"
               className="mb-1.5 block text-sm font-medium text-foreground"
             >
-              Email
+              {t("auth.login.email", "Email")}
             </label>
             <input
               id="email"
@@ -184,7 +190,7 @@ function LoginPageInner() {
               required
               maxLength={AUTH_EMAIL_MAX_LENGTH}
               className="min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="you@clinic.com"
+              placeholder={t("auth.login.emailPlaceholder", "you@clinic.com")}
               autoComplete="email"
             />
           </div>
@@ -195,7 +201,7 @@ function LoginPageInner() {
                 htmlFor="password"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Password
+                {t("auth.login.password", "Password")}
               </label>
               <input
                 id="password"
@@ -205,7 +211,7 @@ function LoginPageInner() {
                 required
                 maxLength={AUTH_PASSWORD_MAX_LENGTH}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Enter your password"
+                placeholder={t("auth.login.passwordPlaceholder", "Enter your password")}
               />
             </div>
           )}
@@ -217,11 +223,11 @@ function LoginPageInner() {
           >
             {loading
               ? DEMO_MODE
-                ? "Opening demo..."
-                : "Signing in..."
+                ? t("auth.login.openingDemo", "Opening demo...")
+                : t("auth.login.signingIn", "Signing in...")
               : DEMO_MODE
-                ? "Open the live demo"
-                : "Sign in"}
+                ? t("auth.login.openDemo", "Open the live demo")
+                : t("auth.login.signIn", "Sign in")}
           </button>
         </form>
 
@@ -231,12 +237,12 @@ function LoginPageInner() {
               href="/forgot-password"
               className="text-primary hover:underline"
             >
-              Forgot your password?
+              {t("auth.login.forgotPassword", "Forgot your password?")}
             </Link>
           </p>
         )}
         <p className="mt-2 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          {t("auth.login.noAccount", "Don't have an account?")}{" "}
           {DEMO_MODE ? (
             <a
               href={buildCloudSignupUrl({
@@ -254,7 +260,7 @@ function LoginPageInner() {
               }
               className="text-primary hover:underline"
             >
-              Start my clinic
+              {t("auth.login.startClinic", "Start my clinic")}
             </a>
           ) : (
             <Link
@@ -265,7 +271,7 @@ function LoginPageInner() {
               }
               className="text-primary hover:underline"
             >
-              Register your practice
+              {t("auth.login.register", "Register your practice")}
             </Link>
           )}
         </p>

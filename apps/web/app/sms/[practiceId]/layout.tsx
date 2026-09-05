@@ -5,9 +5,9 @@ import { PawMark } from "@/components/brand/paw-mark";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Clinic text messaging information - OpenVPM",
+  title: "Clinic text messaging information - VET.IS",
   description:
-    "Program information, consent disclosure, privacy policy, and terms for clinic text messages powered by OpenVPM.",
+    "Program information, consent disclosure, privacy policy, and terms for clinic text messages powered by VET.IS.",
   robots: { index: false, follow: false },
 };
 
@@ -29,7 +29,7 @@ export default async function SmsProgramLayout({
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <PawMark className="h-4 w-4 text-primary-foreground" />
             </span>
-            <span className="font-heading text-lg font-semibold">OpenVPM</span>
+            <span className="font-heading text-lg font-semibold">VET.IS</span>
           </Link>
           <nav
             aria-label="Text messaging policies"
@@ -54,7 +54,7 @@ export default async function SmsProgramLayout({
       </main>
       <footer className="border-t border-border bg-card">
         <div className="mx-auto max-w-3xl px-4 py-6 text-center text-xs text-muted-foreground">
-          Text messaging powered by OpenVPM
+          Text messaging powered by VET.IS
         </div>
       </footer>
     </div>

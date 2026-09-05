@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneOff, Copy, Check } from "lucide-react";
@@ -17,21 +18,22 @@ export function SupportSessionControls({
   onEnd,
   isActive,
 }: SupportSessionControlsProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const copyCode = useCallback(() => {
     if (sessionCode) {
       navigator.clipboard.writeText(sessionCode);
       setCopied(true);
-      toast.success("Kód skopírovaný");
+      toast.success(t("toast.codeCopied", "Kód skopírovaný"));
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [sessionCode]);
+  }, [sessionCode, t]);
 
   const handleEnd = useCallback(() => {
     onEnd();
-    toast.info("Support session ukončený");
-  }, [onEnd]);
+    toast.info(t("toast.sessionEnded", "Relácia podpory ukončená"));
+  }, [onEnd, t]);
 
   return (
     <div className="flex items-center gap-3">
@@ -43,7 +45,7 @@ export function SupportSessionControls({
           <button
             onClick={copyCode}
             className="text-stone-400 hover:text-stone-600 transition-colors"
-            title="Kopírovať kód"
+            title={t("support.copyCode", "Kopírovať kód")}
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
@@ -58,7 +60,7 @@ export function SupportSessionControls({
           className="gap-2"
         >
           <PhoneOff className="w-4 h-4" />
-          Ukončiť session
+          {t("support.endSession", "Ukončiť reláciu")}
         </Button>
       )}
     </div>
@@ -73,6 +75,7 @@ export function AgentJoinForm({
 }: {
   onJoin: (code: string) => void;
 }) {
+  const { t } = useI18n();
   const [code, setCode] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -93,7 +96,7 @@ export function AgentJoinForm({
         className="w-28 font-mono text-center uppercase tracking-widest"
       />
       <Button type="submit" size="sm" disabled={code.length !== 6}>
-        Pripojiť sa
+        {t("support.join", "Pripojiť sa")}
       </Button>
     </form>
   );

@@ -21,10 +21,24 @@
     --destructive: 10.2 77.9% 53.9%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 84.7%;
-    --input: 0 0% 84.7%;
+    --input: 0 0% 80%;
     --ring: 16.7 22% 32.2%;
     --radius: 0.5rem;
     --surface: 0 0% 97.6%;
+
+    /* Semantic state colors for badges, alerts, status indicators */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 142 76% 96%;
+    --success-muted-foreground: 142 76% 28%;
+    --warning: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
+    --warning-muted: 38 92% 96%;
+    --warning-muted-foreground: 38 92% 32%;
+    --info: 199 89% 38%;
+    --info-foreground: 0 0% 100%;
+    --info-muted: 199 89% 96%;
+    --info-muted-foreground: 199 89% 30%;
 
     --sidebar: 0 0% 98.4%;
     --sidebar-foreground: 0 0% 14.5%;
@@ -58,6 +72,20 @@
     --ring: 29.5 100% 88%;
     --surface: 0 0% 6.7%;
 
+    /* Semantic state colors for dark mode */
+    --success: 142 76% 48%;
+    --success-foreground: 0 0% 10%;
+    --success-muted: 142 40% 18%;
+    --success-muted-foreground: 142 76% 64%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 0 0% 10%;
+    --warning-muted: 38 40% 18%;
+    --warning-muted-foreground: 38 92% 68%;
+    --info: 199 89% 52%;
+    --info-foreground: 0 0% 10%;
+    --info-muted: 199 40% 18%;
+    --info-muted-foreground: 199 89% 66%;
+
     --sidebar: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -70,10 +98,40 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary));
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: var(--radius);
   }
 }

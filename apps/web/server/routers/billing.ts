@@ -1685,10 +1685,16 @@ export const billingRouter = createRouter({
     }
     return {
       practiceName: practice.practiceName,
-      taxRatePercent: practice.taxRatePercent ?? "8.00",
-      currency: practice.currency ?? "usd",
-      country: practice.country ?? "US",
-      timezone: practice.timezone ?? null,
+      taxRatePercent: practice.taxRatePercent ?? "20.00",
+      currency:
+        practice.currency && practice.currency.toLowerCase() !== "usd"
+          ? practice.currency
+          : "eur",
+      country:
+        practice.country && practice.country.toUpperCase() !== "US"
+          ? practice.country
+          : "SK",
+      timezone: practice.timezone ?? "Europe/Bratislava",
     };
   }),
 

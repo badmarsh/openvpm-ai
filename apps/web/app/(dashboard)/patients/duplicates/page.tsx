@@ -379,7 +379,7 @@ export default function PatientDuplicatesPage() {
           {t("common.error_retry", "Unable to load duplicate candidates.")} {duplicates.error.message}
         </div>
       ) : duplicates.isLoading ? (
-        <TableSkeleton rows={5} cols={2} />
+        <TableSkeleton rows={5} cols={2} className="mt-6" />
       ) : duplicates.data && duplicates.data.length > 0 ? (
         <div className="mt-6 space-y-4">
           {duplicates.data.map((group) => (

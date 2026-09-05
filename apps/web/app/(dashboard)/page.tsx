@@ -193,8 +193,14 @@ export default function DashboardPage() {
     taxConfig.error || taxConfigMissing || !taxConfig.data
       ? null
       : taxConfig.data;
-  const currency = verifiedTaxConfig ? verifiedTaxConfig.currency : "usd";
-  const country = verifiedTaxConfig ? verifiedTaxConfig.country : "US";
+  const currency =
+    verifiedTaxConfig?.currency && verifiedTaxConfig.currency.toLowerCase() !== "usd"
+      ? verifiedTaxConfig.currency
+      : "eur";
+  const country =
+    verifiedTaxConfig?.country && verifiedTaxConfig.country.toUpperCase() !== "US"
+      ? verifiedTaxConfig.country
+      : "SK";
   const calendarSettingsMissing =
     !calendarSettingsQuery.isLoading &&
     !calendarSettingsQuery.error &&
@@ -481,11 +487,11 @@ export default function DashboardPage() {
                   className={cn(
                     "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
                     appt.status === "confirmed"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      ? "bg-success-muted text-success-muted-foreground"
                       : appt.status === "checked_in"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        ? "bg-info-muted text-info-muted-foreground"
                         : appt.status === "in_exam"
-                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                          ? "bg-secondary text-secondary-foreground"
                           : "bg-muted text-muted-foreground",
                   )}
                 >

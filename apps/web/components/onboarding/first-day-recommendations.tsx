@@ -168,7 +168,7 @@ export function FirstDayRecommendations({
           <div className="rounded-lg bg-white/90 px-3 py-2.5 shadow-sm">
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>Invoice total</span>
-              <span className="font-semibold text-slate-900">$68.00</span>
+              <span className="font-semibold text-slate-900">€68.00</span>
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
               <CreditCard className="h-3.5 w-3.5" /> Pay securely online

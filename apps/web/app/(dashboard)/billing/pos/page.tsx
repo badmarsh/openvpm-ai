@@ -364,7 +364,7 @@ export default function PosCheckoutPage() {
                         <span
                           className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
                             isLowStock
-                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                              ? "bg-warning-muted text-warning-muted-foreground"
                               : "text-muted-foreground"
                           }`}
                         >

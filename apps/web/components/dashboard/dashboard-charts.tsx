@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -16,6 +17,7 @@ import {
   Line,
 } from "recharts";
 import { formatCurrency, localeForCountry } from "@/lib/locale/format";
+import { useI18n } from "@/lib/i18n";
 
 const SPECIES_COLORS: Record<string, string> = {
   Canine: "#3b82f6",
@@ -25,6 +27,41 @@ const SPECIES_COLORS: Record<string, string> = {
   Reptile: "#ef4444",
   Equine: "#06b6d4",
   Other: "#6b7280",
+};
+
+const MONTH_SK: Record<string, string> = {
+  Jan: "jan",
+  Feb: "feb",
+  Mar: "mar",
+  Apr: "apr",
+  May: "máj",
+  Jun: "jún",
+  Jul: "júl",
+  Aug: "aug",
+  Sep: "sep",
+  Oct: "okt",
+  Nov: "nov",
+  Dec: "dec",
+};
+
+const WEEKDAY_SK_SHORT: Record<string, string> = {
+  Mon: "Po",
+  Tue: "Ut",
+  Wed: "St",
+  Thu: "Št",
+  Fri: "Pi",
+  Sat: "So",
+  Sun: "Ne",
+};
+
+const WEEKDAY_SK_FULL: Record<string, string> = {
+  Mon: "Pondelok",
+  Tue: "Utorok",
+  Wed: "Streda",
+  Thu: "Štvrtok",
+  Fri: "Piatok",
+  Sat: "Sobota",
+  Sun: "Nedeľa",
 };
 
 type AppointmentChartPoint = {
@@ -100,6 +137,8 @@ export function DashboardCharts({
   currency: string;
   country: string;
 }) {
+  const { t, locale } = useI18n();
+
   const fmtMoney = (value: number) => formatCurrency(value, currency, country);
   const fmtAxisMoney = (value: number) =>
     new Intl.NumberFormat(localeForCountry(country), {
@@ -109,12 +148,81 @@ export function DashboardCharts({
       maximumFractionDigits: 0,
     }).format(value);
 
+  const fmtWeekdayTick = (day: string) => {
+    if (locale === "sk") {
+      return WEEKDAY_SK_SHORT[day] ?? day;
+    }
+    return day;
+  };
+
+  const fmtWeekdayTooltip = (day: string) => {
+    if (locale === "sk") {
+      return WEEKDAY_SK_FULL[day] ?? day;
+    }
+    return day;
+  };
+
+  const fmtDateTick = (dateStr: string) => {
+    if (locale === "sk") {
+      const match = dateStr.match(/^([A-Za-z]{3})\s+(\d{1,2})$/);
+      if (match) {
+        const month = match[1];
+        const day = parseInt(match[2], 10);
+        const skMonth = MONTH_SK[month] ?? month;
+        return `${day}. ${skMonth}`;
+      }
+      const isoMatch = dateStr.match(/^\d{4}-(\d{2})-(\d{2})$/);
+      if (isoMatch) {
+        const day = parseInt(isoMatch[2], 10);
+        const mNum = parseInt(isoMatch[1], 10);
+        const months = [
+          "jan",
+          "feb",
+          "mar",
+          "apr",
+          "máj",
+          "jún",
+          "júl",
+          "aug",
+          "sep",
+          "okt",
+          "nov",
+          "dec",
+        ];
+        const skMonth = months[mNum - 1] ?? isoMatch[1];
+        return `${day}. ${skMonth}`;
+      }
+    }
+    return dateStr;
+  };
+
+  const localizedSpeciesDistribution = useMemo(() => {
+    return speciesDistribution.map((entry) => ({
+      ...entry,
+      rawName: entry.name,
+      name: t(`species.${entry.name.toLowerCase()}`, entry.name),
+    }));
+  }, [speciesDistribution, t]);
+
+  const localizedDoctorProduction = useMemo(() => {
+    return productionByDoctor.map((item) => ({
+      ...item,
+      doctorName:
+        item.doctorName === "Unassigned"
+          ? t("encounters.workspace.unassignedProvider", "Unassigned")
+          : item.doctorName,
+    }));
+  }, [productionByDoctor, t]);
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6">
           <h2 className="mb-4 font-heading text-lg font-semibold">
-            Appointments This Week
+            {t(
+              "dashboard.charts.appointmentsThisWeek",
+              "Appointments This Week",
+            )}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={appointmentsByDay}>
@@ -123,6 +231,7 @@ export function DashboardCharts({
                 dataKey="date"
                 className="text-xs fill-muted-foreground"
                 tick={{ fontSize: 12 }}
+                tickFormatter={fmtWeekdayTick}
               />
               <YAxis
                 allowDecimals={false}
@@ -136,25 +245,26 @@ export function DashboardCharts({
                   borderRadius: "0.5rem",
                   fontSize: "0.875rem",
                 }}
+                labelFormatter={(label) => fmtWeekdayTooltip(String(label))}
               />
               <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
               <Bar
                 dataKey="completed"
-                name="Completed"
+                name={t("dashboard.charts.completed", "Completed")}
                 stackId="a"
                 fill="#22c55e"
                 radius={[0, 0, 0, 0]}
               />
               <Bar
                 dataKey="scheduled"
-                name="Scheduled"
+                name={t("dashboard.charts.scheduled", "Scheduled")}
                 stackId="a"
                 fill="#3b82f6"
                 radius={[0, 0, 0, 0]}
               />
               <Bar
                 dataKey="cancelled"
-                name="Cancelled"
+                name={t("dashboard.charts.cancelled", "Cancelled")}
                 stackId="a"
                 fill="#ef4444"
                 radius={[4, 4, 0, 0]}
@@ -165,22 +275,24 @@ export function DashboardCharts({
 
         <div className="rounded-lg border border-border bg-card p-6">
           <h2 className="mb-4 font-heading text-lg font-semibold">
-            Species Distribution
+            {t("dashboard.charts.speciesDistribution", "Species Distribution")}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={speciesDistribution}
+                data={localizedSpeciesDistribution}
                 cx="50%"
                 cy="50%"
                 outerRadius={100}
                 dataKey="value"
                 label={PieLabel}
               >
-                {speciesDistribution.map((entry) => (
+                {localizedSpeciesDistribution.map((entry) => (
                   <Cell
-                    key={entry.name}
-                    fill={SPECIES_COLORS[entry.name] ?? "#6b7280"}
+                    key={entry.rawName ?? entry.name}
+                    fill={
+                      SPECIES_COLORS[entry.rawName ?? entry.name] ?? "#6b7280"
+                    }
                   />
                 ))}
               </Pie>
@@ -200,7 +312,7 @@ export function DashboardCharts({
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6">
           <h2 className="mb-4 font-heading text-lg font-semibold">
-            Revenue (Last 30 Days)
+            {t("dashboard.charts.revenueLast30Days", "Revenue (Last 30 Days)")}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueByDay}>
@@ -209,6 +321,7 @@ export function DashboardCharts({
                 dataKey="date"
                 className="text-xs fill-muted-foreground"
                 tick={{ fontSize: 12 }}
+                tickFormatter={fmtDateTick}
               />
               <YAxis
                 className="text-xs fill-muted-foreground"
@@ -222,12 +335,16 @@ export function DashboardCharts({
                   borderRadius: "0.5rem",
                   fontSize: "0.875rem",
                 }}
-                formatter={(value: number) => [fmtMoney(value), "Revenue"]}
+                labelFormatter={(label) => fmtDateTick(String(label))}
+                formatter={(value: number) => [
+                  fmtMoney(value),
+                  t("dashboard.charts.revenue", "Revenue"),
+                ]}
               />
               <Line
                 type="monotone"
                 dataKey="revenue"
-                name="Revenue"
+                name={t("dashboard.charts.revenue", "Revenue")}
                 stroke="#0d9488"
                 strokeWidth={2}
                 dot={false}
@@ -239,11 +356,15 @@ export function DashboardCharts({
 
         <div className="rounded-lg border border-border bg-card p-6">
           <h2 className="mb-4 font-heading text-lg font-semibold">
-            Production by Doctor (MTD)
+            {/* Production by Doctor (MTD) */}
+            {t(
+              "dashboard.charts.productionByDoctor",
+              "Production by Doctor (MTD)",
+            )}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
-              data={productionByDoctor}
+              data={localizedDoctorProduction}
               layout="vertical"
               margin={{ left: 16, right: 24 }}
             >
@@ -261,6 +382,7 @@ export function DashboardCharts({
                 className="text-xs fill-muted-foreground"
                 tick={{ fontSize: 12 }}
               />
+              {/* formatter={(value: number) => [fmtMoney(value), "Production"]} */}
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -268,11 +390,14 @@ export function DashboardCharts({
                   borderRadius: "0.5rem",
                   fontSize: "0.875rem",
                 }}
-                formatter={(value: number) => [fmtMoney(value), "Production"]}
+                formatter={(value: number) => [
+                  fmtMoney(value),
+                  t("dashboard.charts.production", "Production"),
+                ]}
               />
               <Bar
                 dataKey="production"
-                name="Production"
+                name={t("dashboard.charts.production", "Production")}
                 fill="#14b8a6"
                 radius={[0, 4, 4, 0]}
               />

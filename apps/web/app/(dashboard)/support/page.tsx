@@ -19,17 +19,17 @@ export default function SupportPage() {
   const createSession = trpc.extensions.support.createSession.useMutation({
     onSuccess: (data) => {
       setSession({ id: data.sessionId, code: data.sessionCode });
-      toast.success("Support session vytvorený");
+      toast.success(t("toast.sessionCreated", "Relácia podpory vytvorená"));
     },
     onError: () => {
-      toast.error("Nepodarilo sa vytvoriť support session");
+      toast.error(t("toast.sessionCreationFailed", "Nepodarilo sa vytvoriť reláciu podpory"));
     },
   });
 
   const startSession = trpc.extensions.support.startSession.useMutation({
     onSuccess: () => {
       setStarted(true);
-      toast.success("Zdieľanie spustené");
+      toast.success(t("toast.sharingStarted", "Zdieľanie spustené"));
     },
   });
 
@@ -37,7 +37,7 @@ export default function SupportPage() {
     onSuccess: () => {
       setSession(null);
       setStarted(false);
-      toast.info("Session ukončená");
+      toast.info(t("toast.sessionEnded", "Relácia ukončená"));
     },
   });
 
@@ -71,17 +71,16 @@ export default function SupportPage() {
           {!session && (
             <div className="space-y-4">
               <p className="text-sm text-stone-600">
-                Kliknutím nižšie vytvoríte session a získate 6-miestny kód,
-                ktorý oznámite agentovi podpory.
+                {t("support.instructions", "Kliknutím nižšie vytvoríte reláciu a získate 6-miestny kód, ktorý oznámite technickému podporte.")}
               </p>
               <Button onClick={handleCreate} disabled={createSession.isPending}>
                 {createSession.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Vytváranie...
+                    {t("support.creating", "Vytváram...")}
                   </>
                 ) : (
-                  "Vytvoriť support session"
+                  t("support.createSession", "Vytvoriť reláciu podpory")
                 )}
               </Button>
             </div>
@@ -99,23 +98,23 @@ export default function SupportPage() {
                   size="sm"
                   onClick={() => {
                     navigator.clipboard.writeText(session.code);
-                    toast.success("Kód skopírovaný");
+                    toast.success(t("toast.codeCopied", "Kód skopírovaný"));
                   }}
                 >
-                  Kopírovať
+                  {t("button.copy", "Kopírovať")}
                 </Button>
               </div>
               <p className="text-sm text-stone-500">
-                Oznámte tento kód agentovi podpory. Session sa aktivuje po pripojení agenta.
+                {t("support.shareCode", "Oznámte tento kód technickému podporte. Relácia sa aktivuje po pripojení agenta.")}
               </p>
               <Button onClick={handleStart} disabled={startSession.isPending}>
                 {startSession.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Spúšťanie...
+                    {t("support.starting", "Spúšťam...")}
                   </>
                 ) : (
-                  "Spustiť zdieľanie"
+                  t("support.startSharing", "Spustiť zdieľanie")
                 )}
               </Button>
             </div>

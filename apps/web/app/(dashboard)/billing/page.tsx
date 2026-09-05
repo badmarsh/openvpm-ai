@@ -23,6 +23,7 @@ import {
   Undo2,
   ReceiptText,
   Receipt,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -32,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { ActionConfirmationDialog } from "@/components/common/action-confirmation-dialog";
 import {
   EkasaReceiptDialog,
@@ -60,14 +62,14 @@ const STATUS_TABS = [
 ] as const;
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  sent: "bg-blue-100 text-blue-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  void: "bg-gray-100 text-gray-500",
-  partial: "bg-amber-100 text-amber-700",
-  settled: "bg-teal-100 text-teal-700",
-  estimate: "bg-purple-100 text-purple-700",
+  draft: "bg-muted text-muted-foreground",
+  sent: "bg-info-muted text-info-muted-foreground",
+  paid: "bg-success-muted text-success-muted-foreground",
+  overdue: "bg-destructive/10 text-destructive",
+  void: "bg-muted text-muted-foreground/60",
+  partial: "bg-warning-muted text-warning-muted-foreground",
+  settled: "bg-success-muted text-success-muted-foreground",
+  estimate: "bg-secondary text-secondary-foreground",
 };
 
 const PAYMENT_METHODS = [
@@ -290,21 +292,28 @@ export default function BillingPage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("billing.page.title", "Billing")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("billing.page.subtitle", "Invoices and payments")}
-          </p>
-        </div>
-        {canManageBilling && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setExportDialogOpen(true)}
+    <div className="space-y-6">
+      <PageHeader
+        title={t("billing.page.title", "Billing")}
+        subtitle={t("billing.page.subtitle", "Invoices and payments")}
+        actions={
+          canManageBilling ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/billing/ekasa">
+                  <ReceiptText className="mr-1 h-4 w-4" />
+                  {t("billing.page.ekasaReceipts", "Doklady (e-Kasa)")}
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/billing/ekasa?tab=closures">
+                  <Lock className="mr-1 h-4 w-4" />
+                  {t("billing.page.ekasaClosures", "Denné uzávierky (Z-report)")}
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setExportDialogOpen(true)}
             >
               <Download className="mr-1 h-4 w-4" />
               {t("billing.page.accountingExport", "Účtovný export")}
@@ -322,8 +331,9 @@ export default function BillingPage() {
               </Link>
             </Button>
           </div>
-        )}
-      </div>
+        ) : undefined
+      }
+      />
 
       <DispenseChargeQueuePanel
         canManage={canManageBilling}
@@ -410,7 +420,7 @@ export default function BillingPage() {
             t("billing.page.loadInvoicesError", "Unable to load invoices. Please retry.")}
         </div>
       ) : isListLoading ? (
-        <TableSkeleton rows={8} cols={7} />
+        <TableSkeleton rows={8} cols={7} className="mt-6" />
       ) : data && verifiedBillingConfig && data.items.length > 0 ? (
         <>
           <TableScroll className="mt-6 rounded-lg border border-border">
@@ -418,13 +428,13 @@ export default function BillingPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="w-8 px-2 py-3" />
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("billing.page.tableClient", "Client")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("billing.page.tablePatient", "Patient")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("billing.page.tableStatus", "Status")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
@@ -433,10 +443,10 @@ export default function BillingPage() {
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                     {t("billing.page.tablePaid", "Paid")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("billing.page.tableDueDate", "Due Date")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("billing.page.tableCreated", "Created")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
@@ -1034,16 +1044,16 @@ function WellnessBillingPanel({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                   {t("billing.wellness.tableClient", "Client")}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                   {t("billing.wellness.tablePatient", "Patient")}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                   {t("billing.wellness.tablePlan", "Plan")}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                   {t("billing.wellness.tableDue", "Due")}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">
@@ -1597,7 +1607,7 @@ function PaymentEkasaBadge({
           e.stopPropagation();
           setOpen(true);
         }}
-        className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 transition-colors"
+        className="inline-flex items-center gap-1 rounded bg-success-muted/60 px-2 py-0.5 text-xs font-medium text-success-muted-foreground hover:bg-success-muted/80 border border-success-muted/40 transition-colors"
         title="Zobraziť a vytlačiť e-Kasa doklad"
       >
         <ReceiptText className="h-3 w-3 text-emerald-600" />

@@ -18,6 +18,8 @@
     "db:seed": "tsx seed.ts",
     "db:seed:sk": "tsx seed-sk.ts",
     "db:seed:marketing": "tsx seed-marketing.ts",
+    "db:seed:lab": "tsx seed-lab-demo.ts",
+    "db:seed:schedule": "tsx seed-schedule-demo.ts",
     "db:seed:all": "tsx seed-all-demo.ts",
     "db:reset": "tsx reset.ts",
     "db:rls": "tsx apply-rls.ts",

@@ -11,7 +11,7 @@ import { dischargeRouter } from "./discharge";
 import { supportRouter } from "./support";
 
 /**
- * Root router for all OpenVPM custom extensions.
+ * Root router for all VET.IS custom extensions.
  * Keeps extensions fully isolated from vanilla routers.
  */
 export const extensionsRouter = createRouter({

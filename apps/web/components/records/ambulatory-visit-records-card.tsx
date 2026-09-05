@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useI18n } from "@/lib/i18n";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -101,6 +102,7 @@ export function AmbulatoryVisitRecordsCard({
   timeZone?: string | null;
 }) {
   const { data: session } = useSession();
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const isOnline = useOnlineStatus();
   const [openForm, setOpenForm] = useState<OpenForm>(null);
@@ -428,7 +430,7 @@ export function AmbulatoryVisitRecordsCard({
                   {createVaccination.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  Save vaccination
+                  {t("records.vaccinations.saveVaccination", "Save vaccination")}
                 </Button>
               </div>
             </form>

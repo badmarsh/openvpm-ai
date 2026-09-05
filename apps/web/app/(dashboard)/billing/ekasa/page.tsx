@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import {
   Receipt,
@@ -36,27 +37,27 @@ const STATUS_CONFIG: Record<
 > = {
   PENDING: {
     label: "Čaká",
-    color: "bg-gray-100 text-gray-700",
+    color: "bg-muted text-muted-foreground",
     icon: Clock,
   },
   SENT: {
     label: "Odoslané",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-info-muted text-info-muted-foreground",
     icon: Send,
   },
   CONFIRMED: {
     label: "Potvrdené",
-    color: "bg-emerald-100 text-emerald-700",
+    color: "bg-success-muted text-success-muted-foreground",
     icon: CheckCircle2,
   },
   FAILED: {
     label: "Chyba",
-    color: "bg-red-100 text-red-700",
+    color: "bg-destructive/10 text-destructive",
     icon: XCircle,
   },
   OFFLINE_STORED: {
     label: "Offline",
-    color: "bg-amber-100 text-amber-800",
+    color: "bg-warning-muted text-warning-muted-foreground",
     icon: WifiOff,
   },
 };
@@ -79,7 +80,18 @@ const VAT_LABEL: Record<string, string> = {
 const PAGE_SIZE = 20;
 
 export default function EkasaReceiptsPage() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("receipts");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    tabParam === "closures" || tabParam === "accountant" ? tabParam : "receipts"
+  );
+
+  useEffect(() => {
+    if (tabParam === "closures" || tabParam === "accountant" || tabParam === "receipts") {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
   const [offset, setOffset] = useState(0);
   const [statusFilter, setStatusFilter] = useState<ReceiptStatus | undefined>();
   const [printingId, setPrintingId] = useState<string | null>(null);
@@ -308,7 +320,7 @@ export default function EkasaReceiptsPage() {
                 <p className="font-medium text-muted-foreground">Žiadne doklady</p>
                 <p className="mt-1 text-xs text-muted-foreground/60">
                   {statusFilter
-                    ? `Žiadne doklady so statusom „${STATUS_CONFIG[statusFilter].label}"`
+                    ? `Žiadne doklady so statusom „${STATUS_CONFIG[statusFilter].label}“`
                     : "Doklady sa vytvárajú automaticky pri zaznamenaní platby"}
                 </p>
               </div>
@@ -399,7 +411,7 @@ export default function EkasaReceiptsPage() {
                                   onClick={() => retryMutation.mutate({ receiptId: r.id })}
                                   disabled={retryMutation.isPending}
                                   title="Opakovať odoslanie"
-                                  className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                                  className="inline-flex items-center gap-1 rounded-md border border-warning-muted/50 bg-warning-muted/30 px-2 py-1 text-xs font-medium text-warning-muted-foreground hover:bg-warning-muted/50 disabled:opacity-50 transition-colors"
                                 >
                                   <RefreshCw
                                     className={`h-3 w-3 ${

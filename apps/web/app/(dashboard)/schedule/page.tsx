@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { CalendarSubscribe } from "@/components/schedule/calendar-subscribe";
+import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
 import { dateInputTimeUtcInstant } from "@/lib/date-input";
 import {
@@ -2903,17 +2904,15 @@ function SchedulePageContent() {
           </p>
         </div>
       ) : null}
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">{t("schedule.title", "Schedule")}</h2>
-          <p className="text-sm text-muted-foreground">{t("schedule.subtitle", "Appointment calendar")}</p>
-        </div>
-        <CalendarSubscribe />
-      </div>
+      <PageHeader
+        title={t("schedule.title", "Schedule")}
+        subtitle={t("schedule.subtitle", "Appointment calendar")}
+        actions={<CalendarSubscribe />}
+        className="mb-6"
+      />
 
       {/* Toolbar */}
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Date navigation */}
         <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-start">
           <div className="flex shrink-0 items-center gap-1">

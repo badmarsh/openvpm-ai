@@ -10,7 +10,6 @@ import {
   Palette,
   CalendarDays,
   Zap,
-  PenLine,
   Star,
   Globe,
   ShieldCheck,
@@ -51,14 +50,7 @@ export interface CustomNavItem {
  */
 export const customNavItems: CustomNavItem[] = [
   // Clinical
-  {
-    href: "/billing/ekasa",
-    label: "e-Kasa Doklady",
-    i18nKey: "nav.ekasa",
-    icon: ReceiptText,
-    roles: ["admin", "veterinarian", "front_desk"],
-    section: "clinical",
-  },
+
   // Marketing
   {
     href: "/marketing",
@@ -103,7 +95,7 @@ export const customNavItems: CustomNavItem[] = [
   },
   {
     href: '/marketing/messages',
-    label: 'Správy a SMS fronta',
+    label: 'Správy & SMS',
     i18nKey: 'nav.marketingMessages',
     icon: MessageSquare,
     roles: ['admin', 'veterinarian', 'front_desk'],
@@ -111,7 +103,7 @@ export const customNavItems: CustomNavItem[] = [
   },
   {
     href: '/marketing/website',
-    label: 'Webstránka kliniky',
+    label: 'Web kliniky',
     i18nKey: 'nav.marketingWebsite',
     icon: Globe,
     roles: ['admin', 'veterinarian'],
@@ -135,18 +127,10 @@ export const customNavItems: CustomNavItem[] = [
   },
   {
     href: '/marketing/consents',
-    label: 'Súhlasy (GDPR)',
+    label: 'Súhlasy & skripty',
     i18nKey: 'nav.marketingConsents',
     icon: ShieldCheck,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'marketing',
-  },
-  {
-    href: '/marketing/scripts',
-    label: 'Operačné skripty',
-    i18nKey: 'nav.marketingScripts',
-    icon: PenLine,
-    roles: ['admin', 'veterinarian'],
     section: 'marketing',
   },
   {
@@ -164,15 +148,6 @@ export const customNavItems: CustomNavItem[] = [
     icon: Heart,
     roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'marketing',
-  },
-  {
-    href: "/vet-intel",
-    label: "Vet Intelligence",
-    i18nKey: "nav.vetIntel",
-    icon: Building2,
-    roles: ["admin", "veterinarian"],
-    section: "marketing",
-    badge: "AI",
   },
   // AI
   {
@@ -201,6 +176,24 @@ export const customNavItems: CustomNavItem[] = [
     roles: ["admin", "veterinarian", "technician", "front_desk"],
     section: "ai",
     badge: "AI",
+  },
+  {
+    href: "/vet-intel",
+    label: "Vet Intelligence",
+    i18nKey: "nav.vetIntel",
+    icon: Building2,
+    roles: ["admin", "veterinarian"],
+    section: "ai",
+    badge: "AI",
+  },
+  // Finance / admin
+  {
+    href: "/billing/ekasa",
+    label: "e-Kasa Doklady",
+    i18nKey: "nav.ekasa",
+    icon: ReceiptText,
+    roles: ["admin", "veterinarian", "front_desk"],
+    section: "settings",
   },
   // Support
   {

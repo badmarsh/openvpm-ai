@@ -22,12 +22,14 @@ export function PageLoading({ className }: { className?: string }) {
 export function TableSkeleton({
   rows = 5,
   cols = 4,
+  className,
 }: {
   rows?: number;
   cols?: number;
+  className?: string;
 }) {
   return (
-    <div className="mt-6 overflow-hidden rounded-lg border border-border animate-pulse">
+    <div className={cn("overflow-hidden rounded-lg border border-border animate-pulse", className)}>
       <div className="border-b border-border bg-muted/50 px-4 py-3">
         <div className="flex gap-8">
           {Array.from({ length: cols }).map((_, i) => (

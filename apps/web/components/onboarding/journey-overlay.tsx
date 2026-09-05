@@ -16,6 +16,7 @@ import { ArrowLeft, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { BrandBadge } from "@/components/brand/paw-mark";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { firstRunMode } from "@/lib/welcome/first-run";
@@ -214,6 +215,7 @@ function JourneyShell({
     JourneyState["migrationCompletedModes"]
   >;
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const router = useRouter();
   const completeOnboarding = trpc.settings.completeOnboarding.useMutation();
@@ -466,7 +468,10 @@ function JourneyShell({
                 </div>
                 <div className="flex min-w-[132px] items-center gap-3 sm:min-w-[230px]">
                   <span className="shrink-0 text-xs font-medium text-slate-500">
-                    Step {index + 1} of {total}
+                    {t("onboarding.journey.stepCounter", `Step ${index + 1} of ${total}`, {
+                      current: index + 1,
+                      total,
+                    })}
                   </span>
                   <div className="flex flex-1 gap-1.5" aria-hidden="true">
                     {steps.map((s, i) => (
@@ -499,7 +504,7 @@ function JourneyShell({
                         : "font-heading text-2xl font-bold sm:text-3xl",
                     )}
                   >
-                    {step.title}
+                    {t(`onboarding.journey.steps.${step.id}.title`, step.title)}
                   </h2>
                 </DialogPrimitive.Title>
 
@@ -546,12 +551,15 @@ function JourneyShell({
                           }
                         >
                           <ArrowLeft className="mr-1.5 h-4 w-4" />
-                          Back
+                          {t("common.back", "Back")}
                         </Button>
                       ) : (
                         <span className="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
                           <ShieldCheck className="h-4 w-4 text-primary" />
-                          You can change this later.
+                          {t(
+                            "onboarding.journey.canChangeLater",
+                            "You can change this later.",
+                          )}
                         </span>
                       )}
                       {!isLast ? (
@@ -562,8 +570,14 @@ function JourneyShell({
                           className="min-h-10 rounded-lg px-2 text-sm font-medium text-slate-500 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
                         >
                           {state.hasPartialImport
-                            ? "Finish remaining import later"
-                            : "I'll finish later"}
+                            ? t(
+                                "onboarding.journey.finishRemainingImportLater",
+                                "Finish remaining import later",
+                              )
+                            : t(
+                                "onboarding.journey.finishLater",
+                                "I'll finish later",
+                              )}
                         </button>
                       ) : null}
                     </div>
@@ -572,8 +586,10 @@ function JourneyShell({
                         id="onboarding-back-disabled-reason"
                         className="max-w-sm text-xs leading-5 text-slate-500"
                       >
-                        Back is unavailable after records are saved. Finish the
-                        remaining import now or continue it later.
+                        {t(
+                          "onboarding.journey.backUnavailable",
+                          "Back is unavailable after records are saved. Finish the remaining import now or continue it later.",
+                        )}
                       </p>
                     ) : null}
                   </div>
@@ -587,7 +603,7 @@ function JourneyShell({
                     {busy ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
-                    {continueLabel ?? (isLast ? "Finish" : "Continue")}
+                    {continueLabel ?? (isLast ? t("common.finish", "Finish") : t("common.continue", "Continue"))}
                     {!busy ? <ArrowRight className="ml-2 h-4 w-4" /> : null}
                   </Button>
                 </div>

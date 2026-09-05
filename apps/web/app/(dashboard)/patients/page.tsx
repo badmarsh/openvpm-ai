@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Search, Plus, PawPrint, GitMerge } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { TableSkeleton } from "@/components/common/loading";
+import { PageHeader } from "@/components/layout/page-header";
 import { PATIENT_SEARCH_MAX_LENGTH } from "@/lib/patients/policy";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -67,40 +69,36 @@ export default function PatientsPage() {
   const patientsMissing = !isLoading && !error && !data;
 
   return (
-    <div>
-      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("patients.title", "Patients")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("patients.subtitle", "Manage patient records")}
-          </p>
-        </div>
-        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          {canReviewDuplicates ? (
-            <Button
-              variant="outline"
-              onClick={() => router.push("/patients/duplicates")}
-              className="h-11 w-full sm:h-10 sm:w-auto"
-            >
-              <GitMerge className="mr-2 h-4 w-4" />
-              {t("patients.actions.reviewDuplicates", "Review duplicates")}
-            </Button>
-          ) : null}
-          {canManagePatients && (
-            <Button
-              onClick={() => router.push("/patients/new")}
-              className="h-11 w-full sm:h-10 sm:w-auto"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {t("patients.new_patient", "New Patient")}
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("patients.title", "Patients")}
+        subtitle={t("patients.subtitle", "Manage patient records")}
+        actions={
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            {canReviewDuplicates ? (
+              <Button
+                variant="outline"
+                onClick={() => router.push("/patients/duplicates")}
+                className="h-11 w-full sm:h-10 sm:w-auto"
+              >
+                <GitMerge className="mr-2 h-4 w-4" />
+                {t("patients.actions.reviewDuplicates", "Review duplicates")}
+              </Button>
+            ) : null}
+            {canManagePatients && (
+              <Button
+                onClick={() => router.push("/patients/new")}
+                className="h-11 w-full sm:h-10 sm:w-auto"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {t("patients.new_patient", "New Patient")}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
-      <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -117,7 +115,7 @@ export default function PatientsPage() {
         <select
           value={species}
           onChange={(e) => setSpecies(e.target.value as SpeciesFilter)}
-          className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-10 sm:w-auto"
+          className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:h-10 sm:w-auto"
         >
           {speciesOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -143,7 +141,7 @@ export default function PatientsPage() {
           {error?.message ?? t("common.error_retry", "Unable to load patients. Please retry.")}
         </div>
       ) : isLoading ? (
-        <TableSkeleton rows={8} cols={5} />
+        <TableSkeleton rows={8} cols={5} className="mt-6" />
       ) : data && data.items.length > 0 ? (
         <>
           <div className="mt-6 space-y-3 sm:hidden">
@@ -175,17 +173,17 @@ export default function PatientsPage() {
                       </span>
                       {patient.name}
                     </span>
-                    <span
-                      className={`inline-flex shrink-0 items-center rounded-full px-2 py-1 text-xs font-medium ${
+                    <Badge
+                      variant={
                         patient.status === "active"
-                          ? "bg-emerald-100 text-emerald-700"
+                          ? "success"
                           : patient.status === "deceased"
-                            ? "bg-gray-100 text-gray-600"
-                            : "bg-amber-100 text-amber-700"
-                      }`}
+                            ? "secondary"
+                            : "warning"
+                      }
                     >
                       {patientStatusText}
-                    </span>
+                    </Badge>
                   </span>
                   <span className="mt-2 block min-w-0 space-y-1 text-sm text-muted-foreground">
                     <span className="block truncate">
@@ -209,19 +207,19 @@ export default function PatientsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("patients.column_name", "Name")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("patients.column_breed", "Breed")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("patients.column_owner", "Owner")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("patients.column_sex", "Sex")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("patients.column_status", "Status")}
                   </th>
                 </tr>
@@ -260,17 +258,17 @@ export default function PatientsPage() {
                         {formatSex(patient.sex)}
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        <Badge
+                          variant={
                             patient.status === "active"
-                              ? "bg-emerald-100 text-emerald-700"
+                              ? "success"
                               : patient.status === "deceased"
-                                ? "bg-gray-100 text-gray-600"
-                                : "bg-amber-100 text-amber-700"
-                          }`}
+                                ? "secondary"
+                                : "warning"
+                          }
                         >
                           {patientStatusText}
-                        </span>
+                        </Badge>
                       </td>
                     </tr>
                   );

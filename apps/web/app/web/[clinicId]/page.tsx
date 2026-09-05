@@ -53,8 +53,10 @@ export default function PublicClinicWebsitePage() {
     );
   }
 
-  const { practice, isPublished, team, handouts, reviews } = data;
-  const bookingUrl = `/book/${practice.id}?utm_source=klinika_web&utm_medium=site`;
+  const { practice, isPublished, team, handouts, reviews, bookingSlug } = data;
+  const bookingUrl = bookingSlug
+    ? `/book/${bookingSlug}?utm_source=klinika_web&utm_medium=site`
+    : `/book/${practice.id}?utm_source=klinika_web&utm_medium=site`;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -292,7 +294,7 @@ export default function PublicClinicWebsitePage() {
           {practice.phone && `Tel: ${practice.phone}`}
         </p>
         <p className="text-[11px] text-muted-foreground/70 pt-2">
-          Poháňané systémom <span className="font-bold text-foreground">OpenVPM AI</span> · Veterinárna klinická správa & marketing
+          Poháňané systémom <span className="font-bold text-foreground">VET.IS AI</span> · Veterinárna klinická správa & marketing
         </p>
       </footer>
     </div>

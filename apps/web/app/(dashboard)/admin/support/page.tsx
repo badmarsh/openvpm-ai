@@ -13,29 +13,32 @@ export default function AdminSupportPage() {
   const { t } = useI18n();
   const [session, setSession] = useState<{ id: string; code: string } | null>(null);
 
-  const getSession = trpc.extensions.support.getSessionByCode.useQuery(
-    { code: "" },
-    { enabled: false }
-  );
-
   const endSession = trpc.extensions.support.endSession.useMutation({
     onSuccess: () => {
       setSession(null);
-      toast.info("Session ukončená");
+      toast.info(t("toast.sessionEnded", "Relácia ukončená"));
+    },
+  });
+
+  const joinSession = trpc.extensions.support.getSessionByCode.useMutation({
+    onSuccess: (data) => {
+      if (data.found && data.session) {
+        setSession({ id: data.session.id, code: data.session.sessionCode });
+        toast.success(t("support.connected", "Pripojené k relácii"));
+      } else {
+        toast.error(t("support.sessionNotFound", "Relácia s týmto kódom nebola nájdená"));
+      }
+    },
+    onError: () => {
+      toast.error(t("support.sessionNotFound", "Relácia s týmto kódom nebola nájdená"));
     },
   });
 
   const handleJoin = useCallback(
     async (code: string) => {
-      const result = await trpc.extensions.support.getSessionByCode.fetch({ code });
-      if (!result.data?.found) {
-        toast.error("Session s týmto kódom nebola nájdená");
-        return;
-      }
-      setSession({ id: result.data.session!.id, code });
-      toast.success("Pripojené k session");
+      joinSession.mutate({ code });
     },
-    [getSession]
+    [joinSession]
   );
 
   const handleEnd = useCallback(() => {
@@ -57,10 +60,10 @@ export default function AdminSupportPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
-            {t("title", "Admin podpora")}
+            {t("support.adminTitle", "Admin podpora")}
           </CardTitle>
           <CardDescription>
-            {t("description", "Pripojte sa k obrazovke zákazníka cez 6-miestny kód session.")}
+            {t("support.adminDescription", "Pripojte sa k obrazovke zákazníka cez 6-miestny kód relácie.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,7 +72,7 @@ export default function AdminSupportPage() {
               <div className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                 <Monitor className="w-4 h-4 shrink-0" />
                 <p>
-                  Vyžiadajte si od zákazníka 6-miestny kód z jeho support stránky.
+                  {t("support.adminInstructions", "Vyžiadajte si od zákazníka 6-miestny kód z jeho support stránky.")}
                 </p>
               </div>
               <AgentJoinForm onJoin={handleJoin} />

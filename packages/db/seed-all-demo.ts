@@ -20,6 +20,7 @@ import {
   ekasaConfig,
   ekasaReceipts,
   extMarketingCompetitorSnapshots,
+  careReminders,
 } from "./schema/index";
 
 export async function seedAllDemoData() {
@@ -995,6 +996,98 @@ Majiteľ potvrdzuje, že zviera v priebehu posledných 14 dní nepohrýzlo ani n
     ]);
     console.log("  ✓ Vytvorený komplexný cenový benchmarking konkurencie.");
   }
+
+  // 12. Zdravotné pripomienky (Care Reminders)
+  console.log("\n📋 Seeding Zdravotné pripomienky (Care Reminders)...");
+  await db.delete(careReminders).where(eq(careReminders.practiceId, practiceId));
+  const today = new Date();
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const addDays = (d: Date, days: number) => {
+    const res = new Date(d);
+    res.setDate(res.getDate() + days);
+    return res;
+  };
+  const makeFp = (seed: string) => {
+    const hex = Buffer.from(seed).toString("hex").padEnd(64, "0").slice(0, 64);
+    return hex;
+  };
+
+  await db.insert(careReminders).values([
+    {
+      practiceId,
+      patientId: blesk.id,
+      title: "Vakcinácia – Preočkovanie DHPP + Besnota (Nobivac)",
+      notes: "[DEMO] Ročné preočkovanie základných infekčných chorôb a besnoty",
+      dueDate: ymd(addDays(today, 5)),
+      status: "open",
+      createdBy: vetUser.id,
+      externalSource: "demo_data",
+      externalId: "demo-rem-blesk-1",
+      importFingerprint: makeFp("demo-rem-blesk-1"),
+    },
+    {
+      practiceId,
+      patientId: bella.id,
+      title: "Dentálna hygiena – Ultrazvukové odstránenie zubného kameňa",
+      notes: "[DEMO] Sanácia ústnej dutiny a kontrola ďasien po začatí domácej starostlivosti",
+      dueDate: ymd(addDays(today, 12)),
+      status: "open",
+      createdBy: vetUser.id,
+      externalSource: "demo_data",
+      externalId: "demo-rem-bella-1",
+      importFingerprint: makeFp("demo-rem-bella-1"),
+    },
+    {
+      practiceId,
+      patientId: felix.id,
+      title: "Geriatrický screening – Biochemický a hematologický profil",
+      notes: "[DEMO] Pravidelný polročný odber krvi a moču pre seniora",
+      dueDate: ymd(addDays(today, -3)),
+      status: "open",
+      createdBy: vetUser.id,
+      externalSource: "demo_data",
+      externalId: "demo-rem-felix-1",
+      importFingerprint: makeFp("demo-rem-felix-1"),
+    },
+    {
+      practiceId,
+      patientId: bruno.id,
+      title: "Sezónne odčervenie – Antiparazitárna kúra (Dehinel Plus / Milbemax)",
+      notes: "[DEMO] Preventívne podanie širokospektrálneho odčervenia",
+      dueDate: ymd(addDays(today, 25)),
+      status: "open",
+      createdBy: vetUser.id,
+      externalSource: "demo_data",
+      externalId: "demo-rem-bruno-1",
+      importFingerprint: makeFp("demo-rem-bruno-1"),
+    },
+    {
+      practiceId,
+      patientId: blesk.id,
+      title: "Kontrola po ortopedickom zákroku – Kontrola hybnosti kĺbu",
+      notes: "[DEMO] Kontrola pooperačného hojenia a hybnosti",
+      dueDate: ymd(addDays(today, -2)),
+      status: "completed",
+      completedAt: addDays(today, -2),
+      completedBy: vetUser.id,
+      externalSource: "demo_data",
+      externalId: "demo-rem-blesk-2",
+      importFingerprint: makeFp("demo-rem-blesk-2"),
+    },
+    {
+      practiceId,
+      patientId: bella.id,
+      title: "Dermatologická kontrola – Cytológia zvukovodu a kontrola kože",
+      notes: "[DEMO] Kontrola pretrvávajúceho svrbenia",
+      dueDate: ymd(addDays(today, 18)),
+      status: "open",
+      createdBy: vetUser.id,
+      externalSource: "demo_data",
+      externalId: "demo-rem-bella-2",
+      importFingerprint: makeFp("demo-rem-bella-2"),
+    },
+  ]);
+  console.log("  ✓ Vytvorených 6 realistických zdravotných pripomienok (Care Reminders).");
 
   console.log("\n🎉 VŠETKY DEMO DÁTA BOLI ÚSPEŠNE VYTVORENÉ A ULOŽENÉ DO DATABÁZY!");
 }
