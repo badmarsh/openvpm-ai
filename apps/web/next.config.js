@@ -8,7 +8,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // output: "standalone", // temporarily disabled for Windows build testing
+  // output: "standalone", // disabled: Windows path length limit breaks standalone build
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
   experimental: {

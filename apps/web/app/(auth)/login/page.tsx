@@ -130,7 +130,10 @@ function LoginPageInner() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface p-4">
+    <main
+      id="main-content"
+      className="flex min-h-screen items-center justify-center bg-surface p-4"
+    >
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-8">
         <div className="mb-6 text-center">
           <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -267,6 +270,6 @@ function LoginPageInner() {
           )}
         </p>
       </div>
-    </div>
+    </main>
   );
 }

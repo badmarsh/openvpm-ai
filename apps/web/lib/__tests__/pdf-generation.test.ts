@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  generateDischargeInstructions,
   generateMedicalSummaryPdf,
   generateRabiesVaccinationCertificatePdf,
+  generateReportPdf,
   generateVaccinationHistoryCertificatePdf,
 } from "../pdf";
 
@@ -212,5 +214,134 @@ describe("staff vaccination certificate PDFs", () => {
       "Routine vaccination record — not a travel health certificate",
     );
     expect(source).toContain("Certificate ID: ${data.certificateId}");
+  });
+});
+
+describe("slovak translated PDF reports", () => {
+  const identity = {
+    certificateId: "00000000-0000-0000-0000-000000000001",
+    generatedDate: "2026-08-24",
+    practice: {
+      name: "Veterinárna klinika VetCare",
+      address: "Mlynská 15, Bratislava",
+      phone: "+421 2 1234 5678",
+      email: "info@vetcare.sk",
+    },
+    owner: {
+      name: "Ján Novák",
+      address: "Hlavná 1\nBratislava, 81101",
+      phone: "+421 905 111 222",
+    },
+    patient: {
+      name: "Dunčo",
+      species: "Pes",
+      breed: "Slovenský čuvač",
+      sex: "Samec (kastrovaný)",
+      dob: "2020-05-01",
+      color: "Biela",
+      microchipNumber: "985141000000001",
+      weightKg: "32.5",
+    },
+  };
+
+  it("generates slovak vaccination history certificate PDF", () => {
+    const doc = generateVaccinationHistoryCertificatePdf({
+      ...identity,
+      locale: "sk",
+      vaccinations: [
+        {
+          vaccineName: "Nobivac DHPPi",
+          productName: "Nobivac",
+          administeredAt: "2026-08-24",
+          nextDueDate: "2027-08-24",
+          lotNumber: "A123B45",
+          administeredByName: "MVDr. Kováč",
+        },
+      ],
+    });
+
+    expect(doc.getNumberOfPages()).toBe(1);
+    expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(3_000);
+  });
+
+  it("generates slovak rabies vaccination certificate PDF with duration and license formatting", () => {
+    for (const months of [12, 24, 36, 60, 6]) {
+      const doc = generateRabiesVaccinationCertificatePdf({
+        ...identity,
+        locale: "sk",
+        vaccination: {
+          vaccineName: "Nobivac Rabies",
+          productName: "Nobivac Rabies",
+          manufacturer: "MSD Animal Health",
+          lotNumber: "LOT-999",
+          productExpirationDate: "2027-05-01",
+          doseType: "initial",
+          licensedDurationMonths: months,
+          rabiesTagNumber: "BA-2026-01",
+          administeredAt: "2026-08-24",
+          nextDueDate: "2027-08-24",
+          administeredByName: "MVDr. Kováč",
+          veterinarianName: "MVDr. Peter Kováč",
+          veterinarianLicenseNumber: "1234",
+        },
+      });
+
+      expect(doc.getNumberOfPages()).toBe(1);
+      expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(4_000);
+    }
+  });
+
+  it("generates slovak generic report PDF", () => {
+    const docEmpty = generateReportPdf({
+      title: "Denný prehľad",
+      columns: ["Dátum", "Pacient", "Služba", "Cena"],
+      rows: [],
+      locale: "sk",
+    });
+    expect(docEmpty.getNumberOfPages()).toBe(1);
+
+    const docWithRows = generateReportPdf({
+      title: "Denný prehľad tržieb",
+      subtitle: "Prehľad za august 2026",
+      columns: ["Dátum", "Klient", "Popis", "Suma"],
+      rows: [["24.8.2026", "Ján Novák", "Očkovanie", "45,00 €"]],
+      locale: "sk",
+    });
+    expect(docWithRows.getNumberOfPages()).toBe(1);
+    expect(docWithRows.output("arraybuffer").byteLength).toBeGreaterThan(2_000);
+  });
+
+  it("generates slovak discharge instructions PDF", () => {
+    const doc = generateDischargeInstructions({
+      practiceName: "Veterinárna klinika VetCare",
+      practicePhone: "+421 2 1234 5678",
+      patientName: "Dunčo",
+      species: "Pes",
+      clientName: "Ján Novák",
+      visitDate: "2026-08-24",
+      doctorName: "MVDr. Peter Kováč",
+      diagnosis: "Gastroenteritída",
+      medications: [
+        {
+          name: "Amoksiklav 500mg",
+          dosage: "1 tableta",
+          frequency: "každých 12 hodín",
+          instructions: "Podávať s jedlom",
+        },
+      ],
+      instructions: [
+        "Diéta: varená ryža s kuracím mäsom v malých dávkach.",
+        "Dostatočný prísun čerstvej vody.",
+      ],
+      restrictions: ["Pokojový režim bez fyzickej námahy počas 3 dní."],
+      followUpDate: "2026-08-28",
+      followUpNotes: "Kontrola zdravotného stavu a ukončenie antibiotickej liečby.",
+      emergencyNotes:
+        "Pri opakovanom zvracaní, apatii alebo prítomnosti krvi v stolici ihneď vyhľadajte pohotovosť.",
+      locale: "sk",
+    });
+
+    expect(doc.getNumberOfPages()).toBe(1);
+    expect(doc.output("arraybuffer").byteLength).toBeGreaterThan(3_000);
   });
 });

@@ -774,7 +774,8 @@
     "delete": "Odstrániť",
     "loading": "Načítavam...",
     "error_retry": "Nepodarilo sa načítať dáta. Skúste to znova.",
-    "signOut": "Odhlásiť sa"
+    "signOut": "Odhlásiť sa",
+    "skipToMainContent": "Prejsť na hlavný obsah"
   },
   "common.cancel": "Zrušiť",
   "common.save": "Uložiť",
