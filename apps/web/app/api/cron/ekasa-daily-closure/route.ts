@@ -4,56 +4,41 @@ import { ekasaConfig } from "@openpims/db";
 import { eq, and, isNull } from "drizzle-orm";
 import { createDailyClosure } from "@/lib/ekasa/service";
 import { withTenant } from "@/lib/tenant-db";
+import { cronAuthError } from "@/lib/cron-auth";
 
-// ---------------------------------------------------------------------------
-// Automatická denná uzávierka (Z-report) — spúšťaná o 23:59
-// Vercel Cron: { "path": "/api/cron/ekasa-daily-closure", "schedule": "59 23 * * *" }
-// ---------------------------------------------------------------------------
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  const expectedToken = process.env.CRON_SECRET;
-  if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = cronAuthError(req);
+  if (authError) return authError;
 
   const startedAt = new Date();
   const dateStr = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Europe/Bratislava",
-      year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(startedAt);
+    timeZone: "Europe/Bratislava",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(startedAt);
   let processed = 0;
   let created = 0;
-  const results: Array<{ practiceId: string; closureNumber?: string; error?: string }> = [];
 
   try {
     const activeConfigs = await db.query.ekasaConfig.findMany({
-      where: and(
-        eq(ekasaConfig.isActive, true),
-        isNull(ekasaConfig.deletedAt)
-      ),
+      where: and(eq(ekasaConfig.isActive, true), isNull(ekasaConfig.deletedAt)),
     });
 
     for (const config of activeConfigs) {
       processed++;
       try {
-        const closure = await withTenant(
-          db,
-          config.practiceId,
-          (tx) => createDailyClosure(tx, {
+        await withTenant(db, config.practiceId, (tx) =>
+          createDailyClosure(tx, {
             practiceId: config.practiceId,
             dateStr,
           }),
         );
         created++;
-        results.push({
-          practiceId: config.practiceId,
-          closureNumber: closure.closureNumber,
-        });
-      } catch (err) {
-        results.push({
-          practiceId: config.practiceId,
-          error: err instanceof Error ? err.message : "Chyba pri uzávierke",
-        });
+      } catch {
+        // Continue remaining practices; do not leak clinic identifiers in the HTTP body.
       }
     }
 
@@ -63,17 +48,14 @@ export async function GET(req: Request) {
       processed,
       created,
       durationMs: Date.now() - startedAt.getTime(),
-      results,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Neznáma chyba";
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error: message,
         durationMs: Date.now() - startedAt.getTime(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

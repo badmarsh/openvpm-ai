@@ -4,7 +4,10 @@ on:
   push:
     branches: [development, staging, main]
   pull_request:
-    branches: [development, staging, main]
+
+# Playwright E2E (`pnpm test:e2e`) is a deploy gate documented in
+# docs/production-readiness/RELEASE_RUNBOOK.md — it is not executed in this
+# workflow because it needs a migrated database and a running app.
 
 permissions:
   contents: read

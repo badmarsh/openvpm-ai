@@ -31,6 +31,10 @@ const sensitiveContentRules = [
     name: "Vercel access token",
     pattern: /\bvercel_[A-Za-z0-9_-]{20,}\b/,
   },
+  {
+    name: "AWS access key id",
+    pattern: /\bAKIA[0-9A-Z]{16}\b/,
+  },
 ];
 
 const findings = [];

@@ -63,16 +63,14 @@ describe("e-Kasa Service & Calculations", () => {
       expect(qr).toContain("https://ekasa.financnasprava.sk/mdu/verifikacia?uid=O-ABC123XYZ");
     });
 
-    it("generates fallback verification URL with DIC when UID is not yet assigned", () => {
+    it("does not impersonate FR SR verification when UID is missing", () => {
       const qr = generateQrCodeData({
         dic: "2020293057",
         amountTotal: "45.00",
         receiptNumber: "20260904-0001",
       });
 
-      expect(qr).toContain("dic=2020293057");
-      expect(qr).toContain("cislo=20260904-0001");
-      expect(qr).toContain("suma=45.00");
+      expect(qr).toBe("");
     });
   });
 

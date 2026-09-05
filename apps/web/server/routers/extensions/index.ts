@@ -9,6 +9,7 @@ import { voiceRouter } from "./voice";
 import { marketingRouter } from "./marketing";
 import { dischargeRouter } from "./discharge";
 import { supportRouter } from "./support";
+import { statutoryRouter } from "./statutory";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -25,6 +26,7 @@ export const extensionsRouter = createRouter({
   marketing: marketingRouter,
   discharge: dischargeRouter,
   support: supportRouter,
+  statutory: statutoryRouter,
 });
 
 export {
@@ -38,4 +40,6 @@ export {
   marketingRouter,
   dischargeRouter,
   supportRouter,
+  statutoryRouter,
 };
+

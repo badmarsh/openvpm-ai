@@ -2,6 +2,10 @@ import crypto from "crypto";
 import type { Database } from "@openpims/db/client";
 import { ekasaReceipts, ekasaDailyClosures, ekasaConfig } from "@openpims/db";
 import { eq, and, isNull, sql, gte, lte } from "drizzle-orm";
+import {
+  assertEkasaOutboundAllowed,
+  pemPrivateKeyFromCert,
+} from "@/lib/ekasa/fiscal";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -172,9 +176,11 @@ export function generatePkp(params: {
   issuedAt: Date;
   amountTotal: string;
   certBase64?: string | null;
-}): string {
-  const issuedAtStr = toSlovakTimestamp(params.issuedAt);
+}): string | null {
+  const pem = pemPrivateKeyFromCert(params.certBase64);
+  if (!pem) return null;
 
+  const issuedAtStr = toSlovakTimestamp(params.issuedAt);
   const input = [
     params.dic,
     params.pokladnicaId,
@@ -183,14 +189,10 @@ export function generatePkp(params: {
     params.amountTotal,
   ].join("|");
 
-  const mockKey = params.certBase64
-    ? Buffer.from(params.certBase64, "base64").toString("hex").slice(0, 32)
-    : "openvpm-ekasa-signing-secret-placeholder";
-
-  return crypto
-    .createHmac("sha256", mockKey)
-    .update(input, "utf8")
-    .digest("base64");
+  const sign = crypto.createSign("SHA256");
+  sign.update(input, "utf8");
+  sign.end();
+  return sign.sign(pem, "base64");
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +230,17 @@ export async function sendToEkasaApi(params: {
     })),
   };
 
+  const blocked = assertEkasaOutboundAllowed(params.apiUrl);
+  if (blocked) {
+    return { success: false, message: blocked };
+  }
+  if (!params.pkp) {
+    return {
+      success: false,
+      message: "e-Kasa PKP is missing; RSA private key from FR SR is required",
+    };
+  }
+
   try {
     const res = await fetch(`${params.apiUrl}/v2/receipts`, {
       method: "POST",
@@ -239,19 +252,25 @@ export async function sendToEkasaApi(params: {
     });
 
     if (!res.ok) {
-      const errorText = await res.text();
       return {
         success: false,
-        message: `FR SR API vrátilo ${res.status}: ${errorText}`,
-        rawResponse: { status: res.status, body: errorText },
+        message: `FR SR API returned ${res.status}`,
+        rawResponse: { status: res.status },
       };
     }
 
     const data = (await res.json()) as { uid?: string; message?: string };
+    if (!data.uid?.trim()) {
+      return {
+        success: false,
+        message: "FR SR response did not include a receipt UID",
+        rawResponse: { status: res.status },
+      };
+    }
     return {
       success: true,
-      uid: data.uid ?? `MOCK-UID-${Date.now()}`,
-      rawResponse: data,
+      uid: data.uid.trim(),
+      rawResponse: { uidPresent: true },
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Neznáma chyba siete";
@@ -273,10 +292,10 @@ export function generateQrCodeData(params: {
   amountTotal: string;
   receiptNumber: string;
 }): string {
-  if (params.uid) {
-    return `https://ekasa.financnasprava.sk/mdu/verifikacia?uid=${encodeURIComponent(params.uid)}`;
+  if (params.uid?.trim()) {
+    return `https://ekasa.financnasprava.sk/mdu/verifikacia?uid=${encodeURIComponent(params.uid.trim())}`;
   }
-  return `https://ekasa.financnasprava.sk/mdu/verifikacia?dic=${params.dic}&cislo=${params.receiptNumber}&suma=${params.amountTotal}`;
+  return "";
 }
 
 // ---------------------------------------------------------------------------
@@ -314,6 +333,9 @@ export async function processEkasaReceipt(
     certBase64: config.certBase64,
   });
 
+  const cannotFiscalize =
+    Boolean(assertEkasaOutboundAllowed(config.ekasaApiUrl)) || !pkp;
+
   const [receipt] = await db
     .insert(ekasaReceipts)
     .values({
@@ -322,7 +344,7 @@ export async function processEkasaReceipt(
       paymentId: input.paymentId ?? null,
       receiptNumber,
       okp,
-      pkp,
+      pkp: pkp ?? null,
       amountBase: input.amountBase,
       amountVat: input.amountVat,
       amountTotal: input.amountTotal,
@@ -335,7 +357,7 @@ export async function processEkasaReceipt(
 
   if (!receipt) throw new Error("Nepodarilo sa uložiť doklad do databázy");
 
-  if (config.offlineModeEnabled) {
+  if (config.offlineModeEnabled || cannotFiscalize) {
     await db
       .update(ekasaReceipts)
       .set({ status: "OFFLINE_STORED" })
