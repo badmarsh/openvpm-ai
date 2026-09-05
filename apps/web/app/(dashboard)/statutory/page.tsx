@@ -16,6 +16,7 @@ import {
   FileSignature,
   Calendar,
   ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -23,8 +24,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
+import { CrszPanel } from "@/components/statutory/crsz-panel";
 
-type StatutoryTab = "rabies" | "treatment" | "euthanasia" | "narcotics" | "protocols";
+type StatutoryTab = "rabies" | "treatment" | "euthanasia" | "narcotics" | "protocols" | "crsz";
 
 function downloadStatutoryCsv(
   filename: string,
@@ -183,6 +185,15 @@ export default function StatutoryPage() {
           <FileSignature className="h-4 w-4" />
           <span>{t("statutory.tabs.protocols", "Zákonné protokoly & formuláre")}</span>
         </Button>
+        <Button
+          variant={activeTab === "crsz" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("crsz")}
+          className="gap-2"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          <span>{t("statutory.tabs.crsz", "CRSZ & Mikročipy / PetPass")}</span>
+        </Button>
       </div>
 
       {/* Tab Panels */}
@@ -192,6 +203,7 @@ export default function StatutoryPage() {
         {activeTab === "euthanasia" && <EuthanasiaRegisterTab />}
         {activeTab === "narcotics" && <NarcoticsTab />}
         {activeTab === "protocols" && <ProtocolsTab />}
+        {activeTab === "crsz" && <CrszPanel />}
       </div>
     </div>
   );

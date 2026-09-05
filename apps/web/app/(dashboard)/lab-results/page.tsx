@@ -14,11 +14,14 @@ import {
   History,
   Loader2,
   UserRoundCheck,
+  Activity,
+  UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { AnalyzerImportPanel } from "@/components/lab/analyzer-import-panel";
 import {
   dateTimeLocalInputUtcInstant,
   formatDateTimeLocalInputForTimeZone,
@@ -208,6 +211,7 @@ function LabResultsInboxContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const utils = trpc.useUtils();
+  const [mainTab, setMainTab] = useState<"inbox" | "analyzers">("inbox");
   const [filter, setFilter] = useState<InboxFilter>("action_required");
   const [actionPanel, setActionPanel] = useState<ActionPanel>(null);
   const [completion, setCompletion] = useState<CompletionForm>(EMPTY_COMPLETION);
@@ -354,7 +358,32 @@ function LabResultsInboxContent() {
         </Badge>
       </div>
 
-      {selectedResultId ? (
+      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+        <Button
+          variant={mainTab === "inbox" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMainTab("inbox")}
+          className="gap-2"
+        >
+          <FlaskConical className="h-4 w-4" />
+          <span>{t("labResults.tabClinicalInbox", "Laboratórna schránka & Review")}</span>
+        </Button>
+        <Button
+          variant={mainTab === "analyzers" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMainTab("analyzers")}
+          className="gap-2"
+        >
+          <Activity className="h-4 w-4" />
+          <span>{t("labResults.tabAnalyzerImport", "Import z analyzátorov (IDEXX / Fuji / Mindray)")}</span>
+        </Button>
+      </div>
+
+      {mainTab === "analyzers" ? (
+        <AnalyzerImportPanel />
+      ) : (
+        <>
+          {selectedResultId ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
           <span className="font-medium">
             {t("labResults.showingSelected", "Showing selected result")}
@@ -928,7 +957,8 @@ function LabResultsInboxContent() {
           })}
         </div>
       )}
-
+        </>
+      )}
     </div>
   );
 }
