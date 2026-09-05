@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { WelcomeCardId } from "@/lib/welcome/cards";
 import { WELCOME_CARD_COPY } from "./welcome-copy";
 import { ImageryBackdrop } from "./vignettes/imagery";
+import { useI18n } from "@/lib/i18n";
 
 export type WelcomeVariant = "vignette" | "imagery";
 
@@ -33,7 +34,12 @@ export function PolaroidCard({
   onOpen: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const copy = WELCOME_CARD_COPY[card];
+  const caption = t(`welcome.cards.${card}.caption`, copy.caption);
+  const sub = t(`welcome.cards.${card}.sub`, copy.sub);
+  const chip = t(`welcome.cards.${card}.chip`, copy.chip);
+
   return (
     <button
       type="button"
@@ -70,18 +76,18 @@ export function PolaroidCard({
         {done ? (
           <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-primary shadow-sm">
             <Check className="h-3 w-3" aria-hidden="true" />
-            Done
+            {t("welcome.doneBadge", "Done")}
           </span>
         ) : null}
       </span>
       <span className="mt-2.5 block font-heading text-sm font-semibold leading-snug text-slate-900">
-        {copy.caption}
+        {caption}
       </span>
       <span className="mt-0.5 block text-xs leading-5 text-slate-500">
-        {copy.sub}
+        {sub}
       </span>
       <span className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-        {copy.chip}
+        {chip}
       </span>
     </button>
   );
