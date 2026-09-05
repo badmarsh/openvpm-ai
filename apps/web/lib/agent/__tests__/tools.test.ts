@@ -130,6 +130,7 @@ describe("agent tool registry", () => {
 
   it("getTool resolves by name and returns undefined otherwise", () => {
     expect(getTool("find_client")?.name).toBe("find_client");
+    expect(getTool("find_patient")?.name).toBe("find_patient");
     expect(getTool("record_soap_note")).toBeUndefined();
     expect(getTool("nope")).toBeUndefined();
   });
@@ -216,6 +217,12 @@ describe("agent tool input bounds", () => {
     expect(query.success).toBe(true);
     if (!query.success) throw new Error("expected query parse to succeed");
     expect(query.data.query).toBe("Ada");
+
+    const findPatient = getTool("find_patient")!;
+    const patientQuery = findPatient.zod.safeParse({ query: "  Pupinka  " });
+    expect(patientQuery.success).toBe(true);
+    if (!patientQuery.success) throw new Error("expected patient query parse to succeed");
+    expect(patientQuery.data.query).toBe("Pupinka");
 
     expect(
       findClient.zod.safeParse({
@@ -638,5 +645,86 @@ describe("agent read tool query safety", () => {
     expect(source).toContain("const timezone = await practiceTimeZone(ctx)");
     expect(source).toContain("dateInputTimeUtcInstant(");
     expect(source).not.toContain("new Date(`${input.date}T08:00:00`)");
+  });
+});
+
+describe("find_client and find_patient execution", () => {
+  it("find_client includes registered patients for each returned client", async () => {
+    const tool = getTool("find_client")!;
+    const { ctx } = toolDb(
+      [
+        [
+          {
+            id: CLIENT_ID,
+            firstName: "Margaréta",
+            lastName: "Keľová",
+            email: "kelova@example.sk",
+            phone: "+421900111222",
+          },
+        ],
+        [
+          {
+            id: PATIENT_ID,
+            clientId: CLIENT_ID,
+            name: "Pupinka",
+            species: "canine",
+            breed: "Yorkshire Terrier",
+            status: "active",
+          },
+        ],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute({ query: "Keľová" }, ctx)) as Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      patients: Array<{ id: string; name: string }>;
+    }>;
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe(CLIENT_ID);
+    expect(result[0]?.patients).toHaveLength(1);
+    expect(result[0]?.patients[0]?.id).toBe(PATIENT_ID);
+    expect(result[0]?.patients[0]?.name).toBe("Pupinka");
+  });
+
+  it("find_patient returns matching patient signalment and owner info", async () => {
+    const tool = getTool("find_patient")!;
+    const { ctx } = toolDb(
+      [
+        [
+          {
+            patientId: PATIENT_ID,
+            name: "Pupinka",
+            species: "canine",
+            breed: "Yorkshire Terrier",
+            sex: "female",
+            dob: "2021-06-15",
+            status: "active",
+            owner: {
+              id: CLIENT_ID,
+              firstName: "Margaréta",
+              lastName: "Keľová",
+              email: "kelova@example.sk",
+              phone: "+421900111222",
+            },
+          },
+        ],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute({ query: "Pupinka" }, ctx)) as Array<{
+      patientId: string;
+      name: string;
+      owner: { id: string; lastName: string };
+    }>;
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.patientId).toBe(PATIENT_ID);
+    expect(result[0]?.name).toBe("Pupinka");
+    expect(result[0]?.owner?.lastName).toBe("Keľová");
   });
 });

@@ -121,11 +121,11 @@ export default function CompetitorsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Building2 className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <Building2 className="w-7 h-7 text-primary" />
           {t("marketing.competitors.title", "Konkurencia a trhová inteligencia")}
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           {t(
             "marketing.competitors.description",
             "Sledovanie konkurenčných veterinárnych pracovísk, benchmarking služieb, ratingov a trhových trendov."

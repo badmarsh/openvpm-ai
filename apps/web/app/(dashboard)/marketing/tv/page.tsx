@@ -36,11 +36,11 @@ export default function TvSlidesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Tv className="h-6 w-6" />
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <Tv className="w-7 h-7 text-primary" />
           {t("marketing.tv.title", "Čakáreň TV – Slajdy")}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           {t("marketing.tv.description", "Spravujte slajdy zobrazované na TV obrazovke v čakárni a sledujte živý náhľad.")}
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function TvSlidesPage() {
 
                 <div className="space-y-4 pt-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Title</label>
+                    <label className="text-sm font-medium">{t("marketing.tv.fieldTitle", "Názov")}</label>
                     <Input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
@@ -90,7 +90,7 @@ export default function TvSlidesPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Body (optional)
+                      {t("marketing.tv.fieldBody", "Text (voliteľné)")}
                     </label>
                     <Textarea
                       rows={3}
@@ -101,7 +101,7 @@ export default function TvSlidesPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Duration (sec)
+                        {t("marketing.tv.fieldDuration", "Trvanie (sek)")}
                       </label>
                       <Input
                         type="number"
@@ -114,7 +114,7 @@ export default function TvSlidesPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Sort Order</label>
+                      <label className="text-sm font-medium">{t("marketing.tv.fieldSortOrder", "Poradie")}</label>
                       <Input
                         type="number"
                         value={sortOrder}
@@ -136,7 +136,7 @@ export default function TvSlidesPage() {
                     }
                     disabled={!title || createMutation.isPending}
                   >
-                    Create
+                    {t("marketing.tv.createSlide", "Vytvoriť")}
                   </Button>
                 </div>
 
@@ -144,7 +144,7 @@ export default function TvSlidesPage() {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  Close
+                  {t("marketing.tv.close", "Zavrieť")}
                 </Button>
               </div>
             </div>
@@ -167,11 +167,11 @@ export default function TvSlidesPage() {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
                   <tr className="border-b border-border">
-                    <th className="px-4 py-3 font-medium">Order</th>
-                    <th className="px-4 py-3 font-medium">Title</th>
-                    <th className="px-4 py-3 font-medium">Content</th>
-                    <th className="px-4 py-3 font-medium">Duration</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">{t("marketing.tv.colOrder", "Poradie")}</th>
+                    <th className="px-4 py-3 font-medium">{t("marketing.tv.colTitle", "Názov")}</th>
+                    <th className="px-4 py-3 font-medium">{t("marketing.tv.colContent", "Obsah")}</th>
+                    <th className="px-4 py-3 font-medium">{t("marketing.tv.colDuration", "Trvanie")}</th>
+                    <th className="px-4 py-3 font-medium">{t("marketing.tv.colStatus", "Stav")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,7 +182,7 @@ export default function TvSlidesPage() {
                       <td className="px-4 py-3">
                         {slide.body || (
                           <span className="italic text-muted-foreground/50">
-                            No content
+                            {t("marketing.tv.noContent", "Bez obsahu")}
                           </span>
                         )}
                       </td>
@@ -198,10 +198,10 @@ export default function TvSlidesPage() {
                             variant="default"
                             className="bg-emerald-500 hover:bg-emerald-600"
                           >
-                            Active
+                            {t("marketing.tv.active", "Aktívny")}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">Inactive</Badge>
+                          <Badge variant="secondary">{t("marketing.tv.inactive", "Neaktívny")}</Badge>
                         )}
                       </td>
                     </tr>

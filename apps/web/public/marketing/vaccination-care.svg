@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgVaxHandout" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#042f2e" />
+      <stop offset="50%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#115e59" />
+    </linearGradient>
+    <linearGradient id="glassVaxHandout" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+    <filter id="shadowVaxHandout" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" fill="url(#bgVaxHandout)" />
+
+  <!-- Background decor -->
+  <circle cx="680" cy="140" r="180" fill="#14b8a6" opacity="0.15" />
+  <circle cx="120" cy="680" r="160" fill="#2dd4bf" opacity="0.12" />
+  <circle cx="400" cy="340" r="260" fill="none" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="6 8" opacity="0.25" />
+
+  <!-- Main Container Card -->
+  <g filter="url(#shadowVaxHandout)">
+    <rect x="140" y="140" width="520" height="520" rx="32" fill="url(#glassVaxHandout)" stroke="#5eead4" stroke-width="1.5" />
+  </g>
+
+  <!-- Top Category Tag -->
+  <rect x="250" y="180" width="300" height="38" rx="19" fill="#0d9488" fill-opacity="0.4" stroke="#2dd4bf" stroke-width="1" />
+  <text x="400" y="204" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#ccfbf1" text-anchor="middle" letter-spacing="1.5">IMUNIZÁCIA &amp; PREVENCIA</text>
+
+  <!-- Central Graphic: Protective Medical Shield & Precision Syringe -->
+  <g transform="translate(400, 335)">
+    <!-- Shield -->
+    <path
+      d="M0 -85 C55 -85 90 -60 90 -20 C90 50 35 90 0 110 C-35 90 -90 50 -90 -20 C-90 -60 -55 -85 0 -85 Z"
+      fill="#0d9488"
+      fill-opacity="0.3"
+      stroke="#5eead4"
+      stroke-width="3"
+    />
+
+    <!-- Medical cross inside shield -->
+    <path d="M-10 -40 h20 v-20 h14 v20 h20 v14 h-20 v20 h-14 v-20 h-20 z" fill="#ccfbf1" opacity="0.8" />
+
+    <!-- Syringe -->
+    <g transform="translate(40, 10) rotate(-35)">
+      <rect x="-14" y="-30" width="28" height="68" rx="6" fill="#ffffff" stroke="#2dd4bf" stroke-width="2" />
+      <rect x="-10" y="-2" width="20" height="36" rx="3" fill="#14b8a6" />
+      <line x1="-10" y1="8" x2="-2" y2="8" stroke="#ffffff" stroke-width="2" />
+      <line x1="-10" y1="18" x2="-4" y2="18" stroke="#ffffff" stroke-width="2" />
+      <line x1="-10" y1="28" x2="-2" y2="28" stroke="#ffffff" stroke-width="2" />
+      <!-- Plunger -->
+      <rect x="-6" y="-55" width="12" height="26" fill="#5eead4" />
+      <rect x="-16" y="-58" width="32" height="6" rx="3" fill="#99f6e4" />
+      <!-- Needle -->
+      <line x1="0" y1="38" x2="0" y2="70" stroke="#f0fdfa" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="0" cy="74" r="4" fill="#2dd4bf" />
+    </g>
+
+    <!-- Vaccine vial on left -->
+    <g transform="translate(-55, 35)">
+      <rect x="-18" y="-24" width="36" height="52" rx="6" fill="#ffffff" fill-opacity="0.85" stroke="#5eead4" stroke-width="2" />
+      <rect x="-15" y="4" width="30" height="20" rx="3" fill="#0d9488" />
+      <rect x="-10" y="-32" width="20" height="8" rx="2" fill="#0f766e" />
+      <rect x="-12" y="-37" width="24" height="6" rx="3" fill="#2dd4bf" />
+    </g>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <text x="400" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff" text-anchor="middle">Očkovací plán &amp; Imunita</text>
+  <text x="400" y="510" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="500" fill="#ccfbf1" text-anchor="middle">Ochrana šteniat, mačiatok a dospelých zvierat</text>
+
+  <!-- Key Info Badges -->
+  <g transform="translate(400, 570)">
+    <rect x="-210" y="-18" width="190" height="36" rx="18" fill="#042f2e" stroke="#2dd4bf" stroke-width="1"/>
+    <text x="-115" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ccfbf1" text-anchor="middle">✓ Zákonné očkovanie (Besnota)</text>
+
+    <rect x="20" y="-18" width="190" height="36" rx="18" fill="#042f2e" stroke="#2dd4bf" stroke-width="1"/>
+    <text x="115" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ccfbf1" text-anchor="middle">✓ Infekčné ochorenia (DHPPi)</text>
+  </g>
+</svg>

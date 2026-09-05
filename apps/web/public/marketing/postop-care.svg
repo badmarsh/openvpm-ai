@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgPostOp" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b0764" />
+      <stop offset="50%" stop-color="#4c0519" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+    <linearGradient id="glassPostOp" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+    <linearGradient id="heartPostOp" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <filter id="shadowPostOp" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" fill="url(#bgPostOp)" />
+
+  <!-- Background decor: ambient circles -->
+  <circle cx="680" cy="140" r="180" fill="#f43f5e" opacity="0.12" />
+  <circle cx="120" cy="680" r="160" fill="#fb7185" opacity="0.1" />
+  <circle cx="400" cy="340" r="260" fill="none" stroke="#fda4af" stroke-width="1.5" stroke-dasharray="6 8" opacity="0.2" />
+
+  <!-- Main Container Card -->
+  <g filter="url(#shadowPostOp)">
+    <rect x="140" y="140" width="520" height="520" rx="32" fill="url(#glassPostOp)" stroke="#fecdd3" stroke-width="1.5" />
+  </g>
+
+  <!-- Top Category Tag -->
+  <rect x="230" y="180" width="340" height="38" rx="19" fill="#9f1239" fill-opacity="0.4" stroke="#fb7185" stroke-width="1" />
+  <text x="400" y="204" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#ffe4e6" text-anchor="middle" letter-spacing="1.5">CHIRURGIA &amp; REKONVALESCENCIA</text>
+
+  <!-- Central Graphic: Protective Medical Collar (E-Collar) & Healing Heart -->
+  <g transform="translate(400, 335)">
+    <!-- Aura Glow -->
+    <circle cx="0" cy="0" r="100" fill="#fb7185" opacity="0.12" />
+
+    <!-- Protective Elizabeth Collar Outline -->
+    <path d="M-85 -45 L-110 -75 C-40 -120 40 -120 110 -75 L85 -45 C45 -70 -45 -70 -85 -45 Z" fill="#ffffff" fill-opacity="0.2" stroke="#fda4af" stroke-width="2.5" />
+
+    <!-- Big Healing Heart -->
+    <path
+      d="M0 65 C-75 25 -95 -25 -95 -55 C-95 -85 -65 -100 -35 -100 C-10 -100 0 -80 0 -70 C0 -80 10 -100 35 -100 C65 -100 95 -85 95 -55 C95 -25 75 25 0 65 Z"
+      fill="url(#heartPostOp)"
+      stroke="#ffe4e6"
+      stroke-width="2.5"
+    />
+
+    <!-- Bandage across the heart -->
+    <g transform="rotate(28)">
+      <rect x="-55" y="-18" width="110" height="36" rx="10" fill="#fff1f2" stroke="#fb7185" stroke-width="2" />
+      <rect x="-18" y="-18" width="36" height="36" fill="#fecdd3" />
+      <!-- Medical cross -->
+      <path d="M-4 -9 h8 v6 h6 v6 h-6 v6 h-8 v-6 h-6 v-6 h6 z" fill="#e11d48" />
+    </g>
+
+    <!-- ECG pulse wave -->
+    <path
+      d="M-75 18 L-35 18 L-25 0 L-12 36 L2 -18 L16 28 L28 18 L75 18"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.9"
+    />
+
+    <!-- 24/7 Care Badge -->
+    <g transform="translate(85, -60)">
+      <rect x="-35" y="-16" width="70" height="32" rx="16" fill="#f43f5e" stroke="#ffe4e6" stroke-width="1.5" />
+      <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">24/7</text>
+    </g>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <text x="400" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff" text-anchor="middle">Starostlivosť po zákroku</text>
+  <text x="400" y="510" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="500" fill="#fecdd3" text-anchor="middle">Pokyny k domácej rekonvalescencii a hojeniu rán</text>
+
+  <!-- Key Info Badges -->
+  <g transform="translate(400, 570)">
+    <rect x="-210" y="-18" width="190" height="36" rx="18" fill="#4c0519" stroke="#fb7185" stroke-width="1"/>
+    <text x="-115" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffe4e6" text-anchor="middle">✓ Ochranný golier 24/7</text>
+
+    <rect x="20" y="-18" width="190" height="36" rx="18" fill="#4c0519" stroke="#fb7185" stroke-width="1"/>
+    <text x="115" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffe4e6" text-anchor="middle">✓ Kľudový režim a kontrola</text>
+  </g>
+</svg>

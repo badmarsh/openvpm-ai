@@ -21,6 +21,7 @@ import {
   extMarketingOperativeScripts,
   extMarketingMediaConsents,
   extMarketingWellnessRedemptions,
+  extMarketingReviews,
 } from "./schema/index";
 
 function daysAgo(n: number): Date {
@@ -843,11 +844,265 @@ Psi vstupujú do seniorského veku približne od 7. roku života (veľké a obri
     ]);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // K. Recenzie Google & Facebook (extMarketingReviews)
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log("⭐ Vkladám vzorové Google & Facebook recenzie...");
+  const existingReviews = await db.query.extMarketingReviews.findMany({
+    where: eq(extMarketingReviews.practiceId, practiceId),
+  });
+
+  if (existingReviews.length === 0) {
+    await db.insert(extMarketingReviews).values([
+      // Google Reviews
+      {
+        practiceId,
+        platform: "google",
+        clientId: client1?.id,
+        patientId: pet1?.id,
+        reviewerName: "Zuzana Kováčová",
+        rating: 5,
+        reviewText: "Maximálna spokojnosť! Pán doktor Sýkora je obrovský odborník a má neskutočne milý prístup k zvieratám. Náš labrador Blesk sa k nemu do ambulancie dokonca teší. Zákrok prebehol hladko a oceňujem aj prehľadné pokyny po prepustení cez klientsky portál.",
+        receivedAt: daysAgo(2),
+        replyText: "Milá pani Kováčová, veľmi pekne ďakujeme za krásne slová a dôveru. Sme radi, že sa Bleskovi darí skvele a tešíme sa na ďalšiu preventívnu návštevu! S úctou, tím kliniky.",
+        repliedAt: daysAgo(1),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        clientId: client2?.id,
+        patientId: pet2?.id,
+        reviewerName: "Ing. Michal Baláž",
+        rating: 5,
+        reviewText: "Vynikajúca vybavenosť ambulancie (digitálny RTG aj laboratórium priamo na mieste). Rýchla diagnostika našej mačky počas pohotovosti jej doslova zachránila život. Vrelo odporúčam každému chovateľovi.",
+        receivedAt: daysAgo(5),
+        replyText: "Pán Baláž, ďakujeme za hodnotenie. Včasná diagnostika a promptný prístup boli v tomto prípade kľúčové. Pozdravujeme pacientku a prajeme veľa zdravia!",
+        repliedAt: daysAgo(4),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        clientId: client3?.id,
+        patientId: pet3?.id,
+        reviewerName: "Petra Nemcová",
+        rating: 5,
+        reviewText: "Krásne a čisté prostredie, Fear-Free prístup, ktorý naozaj funguje. Žiadny stres v čakárni, profesionálny personál. Objednanie online na presný čas funguje bez meškania.",
+        receivedAt: daysAgo(9),
+        replyText: "Ďakujeme, pani Nemcová. Pokojné a bezstresové prostredie pre zvieracích pacientov i majiteľov je našou najvyššou prioritou.",
+        repliedAt: daysAgo(8),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Tomáš Horváth",
+        rating: 4,
+        reviewText: "Veľmi dobrá starostlivosť a odborné rady. Jediné malé mínus bolo krátke čakanie kvôli akútnemu prípadu pred nami, ale personál sa nám ospravedlnil a vysvetlil situáciu.",
+        receivedAt: daysAgo(14),
+        replyText: "Pán Horváth, ďakujeme za pochopenie pri ošetrení náhleho život ohrozujúceho prípadu. Vážime si vašu trpezlivosť a spätnú väzbu.",
+        repliedAt: daysAgo(13),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Martina Kováčiková",
+        rating: 5,
+        reviewText: "Chodíme sem už 3 roky so psíkom aj kocúrom. Vždy precízne vyšetrenie, špičkový sonograf a žiadne zbytočné predražovanie liečby. Ďakujeme celému personálu.",
+        receivedAt: daysAgo(18),
+        replyText: "Ďakujeme za dlhoročnú dôveru a vernosť našej klinike! Radi sa o vašich štvornohých parťákov postaráme kedykoľvek.",
+        repliedAt: daysAgo(17),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Branislav Novák",
+        rating: 5,
+        reviewText: "Záchrana nášho bernského salašníckeho psa Hektora pri nočnej torzii žalúdka (GDV). Okamžitá operácia, skvelá anestézia a starostlivosť na hospitalizačnom oddelení. Dnes je Hektor opäť vitálny a veselý. Nesmierna vďaka!",
+        receivedAt: daysAgo(21),
+        replyText: "Pán Novák, sme šťastní, že Hektor zvládol tak náročný zákrok a je v poriadku. Včasný príchod bol rozhodujúci. Prajeme mu veľa síl a zdravia!",
+        repliedAt: daysAgo(20),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Monika Čierna",
+        rating: 5,
+        reviewText: "Kastračný program dvoch adoptovaných mačiek z útulku. Neskutočne citlivý a trpezlivý prístup k plachým zvieratkám. Miniatúrne operačné ranky sa zahojili za pár dní bez nutnosti goliera.",
+        receivedAt: daysAgo(25),
+        replyText: "Ďakujeme pani Čierna za pomoc útulkáčom a za dôveru v našu chirurgiu. Mačičkám prajeme krásny a pokojný život v novom domove.",
+        repliedAt: daysAgo(24),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "MVDr. Peter Krajčír",
+        rating: 5,
+        reviewText: "Ako chovateľ nemeckých ovčiakov vysoko oceňujem zhotovenie oficiálnych RTG snímkov bedrových a lakťových kĺbov (DBK/DLK) pre klubové posúdenie chovnosti. Špičková polohovacia technika, presná sedácia a promptné odoslanie dokumentácie.",
+        receivedAt: daysAgo(29),
+        replyText: "Ďakujeme za uznanie od skúseného chovateľa. Presná rádiológia a zdravie plemien sú pre nás srdcovou záležitosťou.",
+        repliedAt: daysAgo(28),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Juraj Varga",
+        rating: 4,
+        reviewText: "Absolvovali sme ultrazvukové odstránenie zubného kameňa a leštenie zubov u 8-ročného jazvečíka. Zákrok prebehol bezpečne v inhalačnej anestézii s monitoringom. Pes má opäť čisté zúbky a žiadny zápach z tlamy. Odporúčam!",
+        receivedAt: daysAgo(32),
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Silvia Hrušková",
+        rating: 5,
+        reviewText: "Špecializácia na drobné cicavce! Náš králik Bobo trpel prerastaním stoličiek a odmietal seno. Pán doktor mu chrup odborne obrúsil a nastavil podpornú motilitnú liečbu. Na druhý deň už sám s chuťou jedol.",
+        receivedAt: daysAgo(36),
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Radoslav Majerčík",
+        rating: 5,
+        reviewText: "Veľké plus za bezbariérový vstup a vyhradené parkovanie priamo pred vchodom kliniky. Náš starší retríver s ťažkou dyspláziou by schody nezvládol. Liečba bolesti a laserová terapia mu výrazne zlepšili mobilitu.",
+        receivedAt: daysAgo(40),
+        replyText: "Pán Majerčík, komfort a prístupnosť pre hendikepovaných a starších pacientov je pre nás kľúčová. Tešíme sa z pokroku pri laserovej terapii!",
+        repliedAt: daysAgo(39),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "google",
+        reviewerName: "Elena Kolárová",
+        rating: 5,
+        reviewText: "Diagnostika a nastavenie liečby cukrovky u 10-ročného kocúra Félixa. Pani doktorka nám všetko trpezlivo vysvetlila, ukázala aplikáciu inzulínu a domáce meranie glukometrom. Veľmi nám to psychicky pomohlo.",
+        receivedAt: daysAgo(45),
+      },
+      // Facebook Reviews
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Lucia Tóthová",
+        rating: 5,
+        reviewText: "Odporúča Veterinárnu kliniku MVDr. Sýkora: Neskutočne ľudský a empatický prístup! S našou fenkou Bellou sme absolvovali náročnú stomatologickú operáciu. Po prebudení nám pani doktorka podrobne vysvetlila domácu starostlivosť a na druhý deň nám z kliniky volali, ako sa fenka cíti. Ďakujeme z celého srdca! ❤️🐾",
+        receivedAt: daysAgo(3),
+        replyText: "Milá Lucia, nesmierne nás teší vaša recenzia. Zdravie a komfort Belly boli na prvom mieste. Ďakujeme za dôveru!",
+        repliedAt: daysAgo(2),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Marek Dvořák",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Skvelý tím lekárov a sestričiek. RTG bedrových kĺbov a oficiálne posúdenie prebehlo hladko a v pokojnej atmosfére. Špičková komunikácia cez SMS notifikácie pred termínom.",
+        receivedAt: daysAgo(6),
+        replyText: "Ďakujeme, pán Dvořák! Tešíme sa, že moderný systém notifikácií prináša pohodlie chovateľom.",
+        repliedAt: daysAgo(5),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Katarína Szabóová",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Najlepšia vet klinika v širokom okolí. Moderné vybavenie, čistota a hlavne láskavý prístup k vystrašeným zvieratkám. Naša mačička Líza bola úplne pokojná.",
+        receivedAt: daysAgo(11),
+        replyText: "Ďakujeme za milé odporúčanie na Facebooku! Spokojnosť Lízy a pokojné ošetrenie mačiek je naša špecialita. 🐱",
+        repliedAt: daysAgo(10),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Peter Molnár",
+        rating: 4,
+        reviewText: "Odporúča kliniku: Profesionálny prístup pri vakcinácii a čipovaní šteniatka. Veľmi oceňujem aj brožúrku s radami pre nových majiteľov, ktorú sme dostali.",
+        receivedAt: daysAgo(16),
+        replyText: "Pán Molnár, ďakujeme! Výchova a zdravý štart šteniatka sú základom celoživotného zdravia. Radi vás opäť privítame.",
+        repliedAt: daysAgo(15),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Andrea Urbanová",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Vďaka promptnej pohotovosti a nočnej infúznej terapii zachránili nášho yorkshira po otrave. Vďačnosť sa nedá ani opísať.",
+        receivedAt: daysAgo(22),
+        replyText: "Pani Urbanová, sme šťastní, že malý bojovník to zvládol a je v poriadku. Všetko dobré celej rodine!",
+        repliedAt: daysAgo(21),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Dominika Kučerová",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Kardiologické sono vyšetrenie u nášho kavaliera Olivera. Pán doktor detailne vysvetlil štádium ochorenia mitrálnej chlopne a nastavil lieky s presným dávkovaním. Oceňujem odbornosť a empatiu.",
+        receivedAt: daysAgo(26),
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Filip Valach",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Prvá návšteva so šteniatkom border kólie. Absolvovali sme socializačnú návštevu bez ihiel, s množstvom maškŕt a hladkania. Šteniatko nemá zo stolíka ani ordinácie žiadny strach!",
+        receivedAt: daysAgo(30),
+        replyText: "Presne o tom Fear-Free prístup je! Šteniatko si kliniku zafixovalo s radosťou a pozitívnymi emóciami. Tešíme sa na ďalšie stretnutie!",
+        repliedAt: daysAgo(29),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Veronika Šimková",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Diagnostika a liečba chronickej atopickej dermatitídy u francúzskeho buldočka. Po mesiacoch trápenia a škriabania na iných pracoviskách nám tu nasadili cielenú terapiu a pes konečne kľudne spí.",
+        receivedAt: daysAgo(35),
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Patrik Olexa",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Pred cestou do Chorvátska nám expresne vybavili medzinárodný Petpas, skontrolovali mikročip a aplikovali odčervenie s pečiatkou do pasu. Žiadne zdržanie, perfektný servis.",
+        receivedAt: daysAgo(41),
+        replyText: "Pán Olexa, ďakujeme! Prajeme šťastnú cestu a pohodovú dovolenku pri mori aj so psíkom.",
+        repliedAt: daysAgo(40),
+        repliedBy: adminUser.id,
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Simona Poláková",
+        rating: 5,
+        reviewText: "Odporúča kliniku: Akútna operácia pyometry (hnisavý zápal maternice) u 11-ročnej sučky. Obrovský rešpekt pred celým tímom chirurgov a anestéziológov – zvládli to na jednotku napriek vysokému veku pacientky.",
+        receivedAt: daysAgo(46),
+      },
+      {
+        practiceId,
+        platform: "facebook",
+        reviewerName: "Martin Žiga",
+        rating: 4,
+        reviewText: "Odporúča kliniku: Rýchle ošetrenie hlbokej reznej rany na labke z lesa počas nedeľného popoludnia. Šitie v lokálnej anestézii, vyčistenie a ochranný obväz. Hojenie prebehlo bez akejkoľvek infekcie.",
+        receivedAt: daysAgo(52),
+      },
+    ]);
+  }
+
   console.log("\n✨ VŠETKY MARKETINGOVÉ DEMO DÁTA BOLI ÚSPEŠNE VLOŽENÉ!");
   console.log("────────────────────────────────────────────────────────────────");
   console.log("📺 TV Čakáreň:       6 edukačných slajdov (/marketing/tv & /tv/[clinicId])");
   console.log("📄 Letáky:           4 kompletné odborné letáky (/h/[slug])");
   console.log("📅 Plán príspevkov:  10 príspevkov v 2 týždenných dávkach (/marketing/plan)");
+  console.log("⭐ Recenzie:         10 Google & Facebook recenzií (/marketing/reviews)");
   console.log("✉️ Správy & SMS:     6 šablón a 10 záznamov v logu správ (/marketing/messages)");
   console.log("⚙️ Automatizácie:    5 aktívnych pravidiel (/marketing/automations)");
   console.log("🩺 Pooperačná péča:  4 odpovede a 3 úlohy personálu");

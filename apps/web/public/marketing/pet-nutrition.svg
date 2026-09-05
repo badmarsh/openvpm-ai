@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgNutri" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="50%" stop-color="#047857" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+    <linearGradient id="glassNutri" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+    <filter id="shadowNutri" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="800" fill="url(#bgNutri)" />
+
+  <!-- Background decor -->
+  <circle cx="680" cy="120" r="160" fill="#10b981" opacity="0.15" />
+  <circle cx="120" cy="680" r="180" fill="#34d399" opacity="0.12" />
+
+  <!-- Main Container -->
+  <g filter="url(#shadowNutri)">
+    <rect x="140" y="140" width="520" height="520" rx="32" fill="url(#glassNutri)" stroke="#6ee7b7" stroke-width="1.5" />
+  </g>
+
+  <!-- Tag -->
+  <rect x="260" y="180" width="280" height="38" rx="19" fill="#059669" fill-opacity="0.3" stroke="#34d399" stroke-width="1" />
+  <text x="400" y="204" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#a7f3d0" text-anchor="middle" letter-spacing="1.5">VÝŽIVA &amp; PREVENCIA</text>
+
+  <!-- Nutrition Bowl / Scale Icon -->
+  <g transform="translate(400, 340)">
+    <!-- Plate / Bowl -->
+    <ellipse cx="0" cy="30" rx="90" ry="38" fill="#064e3b" stroke="#34d399" stroke-width="3" />
+    <path d="M-80 30 Q 0 85 80 30" fill="#047857" stroke="#34d399" stroke-width="3" />
+    
+    <!-- Food / Healthy Greens & Salmon/Kibble icon -->
+    <circle cx="-30" cy="18" r="14" fill="#f59e0b" />
+    <circle cx="0" cy="12" r="16" fill="#10b981" />
+    <circle cx="30" cy="18" r="14" fill="#f59e0b" />
+    <circle cx="-12" cy="24" r="12" fill="#34d399" />
+    <circle cx="15" cy="25" r="13" fill="#f59e0b" />
+
+    <!-- Healthy Heart / Paw -->
+    <g transform="translate(0, -40)">
+      <circle cx="0" cy="0" r="36" fill="#10b981" stroke="#a7f3d0" stroke-width="2"/>
+      <!-- Sparkle / Weight check -->
+      <path d="M-10 2 L-2 10 L12 -6" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- -20% Calorie Badge -->
+    <g transform="translate(85, -20)">
+      <rect x="-35" y="-16" width="70" height="32" rx="16" fill="#f59e0b" />
+      <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle">-20%</text>
+    </g>
+  </g>
+
+  <!-- Title & Text -->
+  <text x="400" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff" text-anchor="middle">Výživa po kastrácii</text>
+  <text x="400" y="510" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="500" fill="#d1fae5" text-anchor="middle">Optimálna hmotnosť a ochrana kĺbov</text>
+
+  <!-- Key info pills -->
+  <g transform="translate(400, 570)">
+    <rect x="-190" y="-18" width="180" height="36" rx="18" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+    <text x="-100" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#ecfdf5" text-anchor="middle">✓ Úprava kŕmnej dávky</text>
+
+    <rect x="10" y="-18" width="180" height="36" rx="18" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+    <text x="100" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#ecfdf5" text-anchor="middle">✓ Zdravé močové cesty</text>
+  </g>
+
+  <text x="400" y="730" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#6ee7b7" text-anchor="middle" letter-spacing="1">VETERINÁRNE PORADENSTVO VO VÝŽIVE</text>
+</svg>

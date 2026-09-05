@@ -10,6 +10,7 @@ import {
   Send,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +66,7 @@ function hasConfiguredSender(
 }
 
 export function MessagingTab() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const { data, isLoading, error, refetch } =
     trpc.messaging.getStatus.useQuery();
@@ -135,12 +137,13 @@ export function MessagingTab() {
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <MessageSquare className="h-5 w-5" /> Messaging
+          <MessageSquare className="h-5 w-5" /> {t("settings.messaging.title", "Messaging")}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Text appointment reminders from each location&apos;s own number.
-          Clients who reply land in your inbox; STOP opt-outs are handled
-          automatically.
+          {t(
+            "settings.messaging.description",
+            "Text appointment reminders from each location's own number. Clients who reply land in your inbox; STOP opt-outs are handled automatically."
+          )}
         </p>
       </div>
 
@@ -168,12 +171,14 @@ export function MessagingTab() {
       <div className="rounded-lg border border-border bg-card p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-medium">Automatic appointment reminders</p>
+            <p className="font-medium">
+              {t("settings.messaging.autoReminders", "Automatic appointment reminders")}
+            </p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Send one reminder for each confirmed appointment. Delivery follows
-              the client&apos;s saved reminder preference. Texts require
-              recorded consent and an active clinic number; suppressed email
-              addresses stay blocked.
+              {t(
+                "settings.messaging.autoRemindersDescription",
+                "Send one reminder for each confirmed appointment. Delivery follows the client's saved reminder preference. Texts require recorded consent and an active clinic number; suppressed email addresses stay blocked."
+              )}
             </p>
           </div>
           <Checkbox
@@ -200,7 +205,9 @@ export function MessagingTab() {
         </div>
 
         <label className="mt-4 block max-w-xs space-y-1.5 text-sm">
-          <span className="font-medium">Send approximately</span>
+          <span className="font-medium">
+            {t("settings.messaging.sendApproximately", "Send approximately")}
+          </span>
           <select
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             value={reminderSettings.leadHours}
@@ -222,7 +229,11 @@ export function MessagingTab() {
           >
             {APPOINTMENT_REMINDER_LEAD_OPTIONS.map((hours) => (
               <option key={hours} value={hours}>
-                {hours} hours before the appointment
+                {t(
+                  "settings.messaging.hoursBefore",
+                  `${hours} hours before the appointment`,
+                  { hours }
+                )}
               </option>
             ))}
           </select>
@@ -230,17 +241,22 @@ export function MessagingTab() {
 
         <p className="mt-3 text-xs text-muted-foreground">
           {reminderSettings.enabled
-            ? "Automatic reminders are on. "
-            : "Off by default. No automatic appointment reminders are sent until a clinic administrator enables them here. "}
-          Enabling reminders or increasing this window may send reminders for
-          existing eligible confirmed appointments on the next hourly run.
+            ? t("settings.messaging.remindersAreOn", "Automatic reminders are on. ")
+            : t(
+                "settings.messaging.offByDefault",
+                "Off by default. No automatic appointment reminders are sent until a clinic administrator enables them here. "
+              )}
+          {t(
+            "settings.messaging.enablingNote",
+            "Enabling reminders or increasing this window may send reminders for existing eligible confirmed appointments on the next hourly run."
+          )}
         </p>
       </div>
 
       {/* Usage + consent summary */}
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryStat
-          label="SMS this month"
+          label={t("settings.messaging.smsThisMonth", "SMS this month")}
           value={
             usage
               ? usage.includedSms != null
@@ -248,14 +264,18 @@ export function MessagingTab() {
                 : String(usage.smsUsed)
               : "—"
           }
-          hint={usage?.includedSms != null ? "included" : undefined}
+          hint={
+            usage?.includedSms != null
+              ? t("settings.messaging.included", "included")
+              : undefined
+          }
         />
         <SummaryStat
-          label="Clients opted in"
+          label={t("settings.messaging.clientsOptedIn", "Clients opted in")}
           value={String(consent?.optedIn ?? 0)}
         />
         <SummaryStat
-          label="Do-not-text numbers"
+          label={t("settings.messaging.doNotText", "Do-not-text numbers")}
           value={String(consent?.suppressed ?? 0)}
         />
       </div>
@@ -274,7 +294,10 @@ export function MessagingTab() {
         ))}
         {locations.length === 0 && (
           <p className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-            Add a location in Practice Info to set up texting.
+            {t(
+              "settings.messaging.addLocationPrompt",
+              "Add a location in Practice Info to set up texting."
+            )}
           </p>
         )}
       </div>
@@ -364,6 +387,7 @@ function LocationCard({
   testSendAllowed: boolean;
   onStartSetup: () => void;
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const refresh = () => utils.messaging.getStatus.invalidate();
 
@@ -372,7 +396,11 @@ function LocationCard({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="font-medium">{loc.name}</span>
-          {loc.isPrimary && <Badge variant="secondary">Primary</Badge>}
+          {loc.isPrimary && (
+            <Badge variant="secondary">
+              {t("settings.messaging.primary", "Primary")}
+            </Badge>
+          )}
         </div>
         {loc.messaging && (
           <Badge
@@ -418,6 +446,7 @@ function ConfiguredLocation({
   testSendAllowed: boolean;
   onChanged: () => void;
 }) {
+  const { t } = useI18n();
   const m = loc.messaging!;
   const [testTo, setTestTo] = useState("");
   const senderLabel =
@@ -526,14 +555,14 @@ function ConfiguredLocation({
             })
           }
         />
-        Sending enabled
+        {t("settings.messaging.sendingEnabled", "Sending enabled")}
       </label>
 
       {testSendAllowed ? (
         <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4">
           <label className="space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">
-              Send a test message to
+              {t("settings.messaging.sendTestMessageTo", "Send a test message to")}
             </span>
             <Input
               value={testTo}
@@ -559,7 +588,7 @@ function ConfiguredLocation({
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Send test
+            {t("settings.messaging.sendTest", "Send test")}
           </Button>
         </div>
       ) : (
@@ -583,27 +612,44 @@ function UnconfiguredLocation({
   setupAvailable: boolean;
   onStartSetup: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="mt-4 rounded-xl border border-dashed border-border bg-muted/20 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium">Texting is not set up yet</p>
+          <p className="text-sm font-medium">
+            {t("settings.messaging.textingNotSetup", "Texting is not set up yet")}
+          </p>
           <p className="text-sm text-muted-foreground">
             {setupAvailable
-              ? "Start a guided setup and choose a new local texting number. Your existing clinic phone line will not be ported or changed."
+              ? t(
+                  "settings.messaging.unconfiguredGuided",
+                  "Start a guided setup and choose a new local texting number. Your existing clinic phone line will not be ported or changed."
+                )
               : hosted
-                ? "OpenVPM will enable number setup after your clinic joins the controlled texting pilot. Email reminders can be used now."
-                : "Number setup is disabled by your OpenVPM administrator. Email reminders can be used now."}
+                ? t(
+                    "settings.messaging.unconfiguredPilot",
+                    "OpenVPM will enable number setup after your clinic joins the controlled texting pilot. Email reminders can be used now."
+                  )
+                : t(
+                    "settings.messaging.unconfiguredAdmin",
+                    "Number setup is disabled by your OpenVPM administrator. Email reminders can be used now."
+                  )}
           </p>
           {loc.existingPhone ? (
             <p className="text-xs text-muted-foreground">
-              Existing phone on file: {loc.existingPhone}
+              {t(
+                "settings.messaging.existingPhoneOnFile",
+                `Existing phone on file: ${loc.existingPhone}`,
+                { phone: loc.existingPhone }
+              )}
             </p>
           ) : null}
         </div>
         {setupAvailable ? (
           <Button onClick={onStartSetup} className="shrink-0">
-            Set up texting
+            {t("settings.messaging.setUpTexting", "Set up texting")}
           </Button>
         ) : null}
       </div>

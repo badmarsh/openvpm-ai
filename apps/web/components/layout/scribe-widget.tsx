@@ -46,6 +46,7 @@ export function ScribeWidget() {
       <PopoverTrigger asChild>
         <Button
           size="lg"
+          suppressHydrationWarning
           className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center z-50 text-primary-foreground focus:outline-none focus:ring-4 focus:ring-primary/25"
           title={t("scribe.title", "AI Voice Scribe - Voice Consultation")}
           aria-label="AI Voice Scribe"

@@ -48,6 +48,7 @@ import {
   appointmentCreatedWebhookPayload,
   dispatchAppointmentWebhookAfterCommit,
 } from "@/lib/appointment-webhooks";
+import { createMessagesForTrigger } from "@/lib/marketing/messaging";
 import {
   clinicalDateInput,
   isValidClinicalDateInput,
@@ -1374,6 +1375,51 @@ export const appointmentsRouter = createRouter({
           },
         );
       }
+
+      // Marketing automation triggers
+      if (appt.status === "checked_out") {
+        if (appt.clientId) {
+          try {
+            await createMessagesForTrigger(ctx.db, ctx.practiceId, {
+              eventId: appt.id,
+              triggerKey: "visit_completed",
+              clientId: appt.clientId,
+              patientId: appt.patientId ?? undefined,
+              appointmentAt: appt.startTime,
+            });
+          } catch (err) {
+            console.error("Marketing visit_completed trigger error:", err);
+          }
+        }
+      } else if (appt.status === "no_show") {
+        if (appt.clientId) {
+          try {
+            await createMessagesForTrigger(ctx.db, ctx.practiceId, {
+              eventId: appt.id,
+              triggerKey: "appointment_no_show",
+              clientId: appt.clientId,
+              patientId: appt.patientId ?? undefined,
+            });
+          } catch (err) {
+            console.error("Marketing appointment_no_show trigger error:", err);
+          }
+        }
+      } else if (appt.status === "confirmed") {
+        if (appt.clientId) {
+          try {
+            await createMessagesForTrigger(ctx.db, ctx.practiceId, {
+              eventId: appt.id,
+              triggerKey: "appointment_booked",
+              clientId: appt.clientId,
+              patientId: appt.patientId ?? undefined,
+              appointmentAt: appt.startTime,
+            });
+          } catch (err) {
+            console.error("Marketing appointment_booked trigger error:", err);
+          }
+        }
+      }
+
       return appt;
     }),
 

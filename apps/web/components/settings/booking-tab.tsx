@@ -243,13 +243,13 @@ export function BookingTab() {
       <div>
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Globe className="h-5 w-5 text-teal-600" />
-          Online appointment requests
+          {t("settings.booking.title", "Online appointment requests")}
         </h2>
         <p className="text-sm text-gray-500 mt-1">
-          Give new and existing clients a simple way to request a preferred
-          appointment time. Every request lands on your schedule for your team
-          to review, assign, and confirm. Share the link, print the QR code, or
-          add the button to your website.
+          {t(
+            "settings.booking.description",
+            "Give new and existing clients a simple way to request a preferred appointment time. Every request lands on your schedule for your team to review, assign, and confirm. Share the link, print the QR code, or add the button to your website."
+          )}
         </p>
       </div>
 
@@ -259,7 +259,7 @@ export function BookingTab() {
           htmlFor="booking-page-slug"
           className="block text-sm font-medium text-gray-700"
         >
-          Your appointment request link
+          {t("settings.booking.requestLink", "Your appointment request link")}
         </label>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500 shrink-0">{origin}/book/</span>
@@ -276,18 +276,21 @@ export function BookingTab() {
           {slug && slugValid && !slugCheck.isLoading && (
             slugTaken ? (
               <span className="flex items-center gap-1 text-xs text-red-600">
-                <X className="h-3.5 w-3.5" /> Taken
+                <X className="h-3.5 w-3.5" /> {t("settings.booking.taken", "Taken")}
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs text-emerald-600">
-                <Check className="h-3.5 w-3.5" /> Available
+                <Check className="h-3.5 w-3.5" /> {t("settings.booking.available", "Available")}
               </span>
             )
           )}
         </div>
         {slug && !slugValid && (
           <p className="text-xs text-red-600">
-            Use 3 to 64 lowercase letters, numbers, and dashes.
+            {t(
+              "settings.booking.slugHelp",
+              "Use 3 to 64 lowercase letters, numbers, and dashes."
+            )}
           </p>
         )}
 
@@ -304,12 +307,12 @@ export function BookingTab() {
               ) : (
                 <Copy className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Copy link
+              {t("settings.booking.copyLink", "Copy link")}
             </Button>
             <Button type="button" variant="outline" size="sm" asChild>
               <a href={liveUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                Open page
+                {t("settings.booking.openPage", "Open page")}
               </a>
             </Button>
             <Button
@@ -323,7 +326,7 @@ export function BookingTab() {
               ) : (
                 <Copy className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Copy website button
+              {t("settings.booking.copyWebsiteButton", "Copy website button")}
             </Button>
           </div>
         )}
@@ -332,14 +335,20 @@ export function BookingTab() {
       {/* Hours */}
       <div className="rounded-xl border border-gray-200 p-4 space-y-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Request hours</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            {t("settings.booking.requestHours", "Request hours")}
+          </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            When clients can request times online. Uses your practice timezone.
+            {t(
+              "settings.booking.requestHoursDescription",
+              "When clients can request times online. Uses your practice timezone."
+            )}
           </p>
         </div>
         <div className="space-y-2">
           {WEEKDAY_LABELS.map((label, day) => {
             const hours = config.hours[day];
+            const dayKey = WEEKDAY_KEYS[day];
             return (
               <div key={label} className="flex items-center gap-3">
                 <label className="flex w-24 items-center gap-2 text-sm text-gray-700">
@@ -356,7 +365,7 @@ export function BookingTab() {
                     }
                     className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                   />
-                  {label}
+                  {t(`settings.booking.day_${dayKey}`, label)}
                 </label>
                 {hours ? (
                   <div className="flex items-center gap-2 text-sm">
@@ -368,7 +377,9 @@ export function BookingTab() {
                       }
                       className="rounded-md border border-gray-300 px-2 py-1 text-sm"
                     />
-                    <span className="text-gray-400">to</span>
+                    <span className="text-gray-400">
+                      {t("settings.booking.to", "to")}
+                    </span>
                     <input
                       type="time"
                       value={hours.close}
@@ -379,7 +390,9 @@ export function BookingTab() {
                     />
                   </div>
                 ) : (
-                  <span className="text-sm text-gray-400">Closed</span>
+                  <span className="text-sm text-gray-400">
+                    {t("settings.booking.closed", "Closed")}
+                  </span>
                 )}
               </div>
             );
@@ -391,29 +404,34 @@ export function BookingTab() {
       <div className="rounded-xl border border-gray-200 p-4 space-y-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">
-            Requestable visit types
+            {t("settings.booking.requestableTypes", "Requestable visit types")}
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Select each active visit type clients may request online. The public
-            page stays unavailable until at least one type is selected.
+            {t(
+              "settings.booking.requestableTypesDescription",
+              "Select each active visit type clients may request online. The public page stays unavailable until at least one type is selected."
+            )}
           </p>
         </div>
         {allTypes.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No appointment types yet. Add them in the Appointment Types tab.
+            {t(
+              "settings.booking.noTypes",
+              "No appointment types yet. Add them in the Appointment Types tab."
+            )}
           </p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
-            {allTypes.map((t) => (
-              <label key={t.id} className="flex items-center gap-2 text-sm text-gray-700">
+            {allTypes.map((tItem) => (
+              <label key={tItem.id} className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
-                  checked={bookableSet.has(t.id)}
-                  onChange={() => toggleType(t.id)}
+                  checked={bookableSet.has(tItem.id)}
+                  onChange={() => toggleType(tItem.id)}
                   className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                 />
-                {t.name}
-                <span className="text-gray-400">({t.durationMinutes} min)</span>
+                {tItem.name}
+                <span className="text-gray-400">({tItem.durationMinutes} min)</span>
               </label>
             ))}
           </div>
@@ -430,14 +448,16 @@ export function BookingTab() {
 
       {/* Request rules */}
       <div className="rounded-xl border border-gray-200 p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-gray-900">Request rules</h3>
+        <h3 className="text-sm font-semibold text-gray-900">
+          {t("settings.booking.requestRules", "Request rules")}
+        </h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label
               htmlFor="booking-minimum-notice"
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
-              Minimum notice
+              {t("settings.booking.minimumNotice", "Minimum notice")}
             </label>
             <select
               id="booking-minimum-notice"
@@ -452,7 +472,7 @@ export function BookingTab() {
             >
               {LEAD_TIME_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {t(`settings.booking.lead_${o.key}`, o.label)}
                 </option>
               ))}
             </select>
@@ -462,7 +482,7 @@ export function BookingTab() {
               htmlFor="booking-window"
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
-              How far ahead
+              {t("settings.booking.howFarAhead", "How far ahead")}
             </label>
             <select
               id="booking-window"
@@ -477,7 +497,7 @@ export function BookingTab() {
             >
               {WINDOW_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {t(`settings.booking.window_${o.key}`, o.label)}
                 </option>
               ))}
             </select>
@@ -493,28 +513,40 @@ export function BookingTab() {
             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
           />
           <span>
-            Let new clients request appointments
+            {t(
+              "settings.booking.letNewClients",
+              "Let new clients request appointments"
+            )}
             <span className="block text-xs text-gray-500">
-              New clients and their pets are added to your records automatically.
+              {t(
+                "settings.booking.letNewClientsDescription",
+                "New clients and their pets are added to your records automatically."
+              )}
             </span>
           </span>
         </label>
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Requests are never confirmed automatically. Your team reviews the
-          requested time, assigns a doctor and room as needed, and confirms it
-          from the schedule.
+          {t(
+            "settings.booking.neverAutoConfirmed",
+            "Requests are never confirmed automatically. Your team reviews the requested time, assigns a doctor and room as needed, and confirms it from the schedule."
+          )}
         </p>
       </div>
 
       {/* Look and feel */}
       <div className="rounded-xl border border-gray-200 p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-gray-900">Look and feel</h3>
+        <h3 className="text-sm font-semibold text-gray-900">
+          {t("settings.booking.lookAndFeel", "Look and feel")}
+        </h3>
         <div>
           <label
             htmlFor="booking-welcome-message"
             className="block text-sm font-medium text-gray-700 mb-1.5"
           >
-            Welcome message <span className="text-gray-400 font-normal">(optional)</span>
+            {t("settings.booking.welcomeMessage", "Welcome message")}{" "}
+            <span className="text-gray-400 font-normal">
+              ({t("settings.booking.optional", "optional")})
+            </span>
           </label>
           <textarea
             id="booking-welcome-message"
@@ -524,7 +556,10 @@ export function BookingTab() {
             }
             rows={2}
             maxLength={BOOKING_WELCOME_MAX_LENGTH}
-            placeholder="A short hello shown at the top of your page"
+            placeholder={t(
+              "settings.booking.welcomeMessageDescription",
+              "A short hello shown at the top of your page"
+            )}
             className={`${inputClass} resize-none`}
           />
         </div>
@@ -533,7 +568,7 @@ export function BookingTab() {
             htmlFor="booking-accent-color"
             className="text-sm font-medium text-gray-700"
           >
-            Accent color
+            {t("settings.booking.accentColor", "Accent color")}
           </label>
           <input
             id="booking-accent-color"
@@ -550,9 +585,14 @@ export function BookingTab() {
       {/* QR code, only when live */}
       {isLive && (
         <div className="rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">QR code</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">
+            {t("settings.booking.qrCode", "QR code")}
+          </h3>
           <p className="text-xs text-gray-500 mb-3">
-            Print it for your front desk. Clients scan it to request a visit.
+            {t(
+              "settings.booking.qrCodeDescription",
+              "Print it for your front desk. Clients scan it to request a visit."
+            )}
           </p>
           <div className="inline-block rounded-lg bg-white p-3 border border-gray-100">
             <QRCodeSVG value={liveUrl} size={144} />
@@ -575,7 +615,9 @@ export function BookingTab() {
           {save.isPending && published ? (
             <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
           ) : null}
-          {isLive ? "Save changes" : "Publish page"}
+          {isLive
+            ? t("settings.booking.saveChanges", "Save changes")
+            : t("settings.booking.publishPage", "Publish page")}
         </Button>
         {isLive ? (
           <Button
@@ -584,7 +626,7 @@ export function BookingTab() {
             onClick={() => handleSave(false)}
             disabled={save.isPending}
           >
-            Unpublish
+            {t("settings.booking.unpublish", "Unpublish")}
           </Button>
         ) : (
           <Button
@@ -593,12 +635,15 @@ export function BookingTab() {
             onClick={() => handleSave(false)}
             disabled={!slugValid || slugTaken || save.isPending}
           >
-            Save draft
+            {t("settings.booking.saveDraft", "Save draft")}
           </Button>
         )}
         {published && !isLive && !save.isPending && (
           <span className="text-xs text-gray-500">
-            Publishing makes your page public right away.
+            {t(
+              "settings.booking.publishingImmediate",
+              "Publishing makes your page public right away."
+            )}
           </span>
         )}
       </div>

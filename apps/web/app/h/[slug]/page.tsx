@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/common/empty-state";
+import { getHandoutThematicImage } from "@/lib/marketing/handout-themes";
 
 function escapeHtml(s: string): string {
   return s
@@ -94,6 +95,15 @@ export default function PublicHandoutPage() {
     return renderSimpleMarkdown(handout.body);
   }, [handout?.body]);
 
+  const thematicImage = useMemo(() => {
+    return getHandoutThematicImage({
+      slug: handout?.slug ?? "",
+      title: handout?.title ?? "",
+      tags: handout?.tags,
+      species: handout?.species,
+    });
+  }, [handout?.slug, handout?.title, handout?.tags, handout?.species]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -170,6 +180,23 @@ export default function PublicHandoutPage() {
             </button>
           </div>
         </header>
+
+        {/* Thematic Illustrative Hero Banner */}
+        {thematicImage && (
+          <div className="relative h-56 sm:h-64 w-full overflow-hidden bg-muted border-b print:hidden">
+            <img
+              src={thematicImage.src}
+              alt={thematicImage.alt}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-6 sm:left-8">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-background/90 text-foreground backdrop-blur-md border border-border/70 shadow-sm">
+                {thematicImage.category}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Content Body */}
         <main className="p-6 sm:p-8 space-y-6">

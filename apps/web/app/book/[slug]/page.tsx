@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { AlertCircle, CalendarX2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/components/common/empty-state";
 import { PrevisitIntakeFields } from "@/components/booking/previsit-intake-fields";
 import { BOOKING_REASON_MAX_LENGTH } from "@/lib/booking/page-config";
@@ -22,6 +23,7 @@ function dateInputValue(d: Date): string {
 }
 
 export default function PublicBookingPage() {
+  const { t } = useI18n();
   const params = useParams();
   const slug = (params.slug as string) ?? "";
   const formId = useId();
@@ -88,8 +90,11 @@ export default function PublicBookingPage() {
       <EmptyState
         className="py-16"
         icon={AlertCircle}
-        title="This appointment request page isn't available"
-        description="The link may be incorrect, or online appointment requests may be turned off. Please contact the clinic directly."
+        title={t("book.unavailableTitle", "This appointment request page isn't available")}
+        description={t(
+          "book.unavailableDescription",
+          "The link may be incorrect, or online appointment requests may be turned off. Please contact the clinic directly.",
+        )}
       />
     );
   }
@@ -164,31 +169,33 @@ export default function PublicBookingPage() {
             />
           </svg>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Request sent!</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">
+          {t("book.requestSentTitle", "Request sent!")}
+        </h1>
         <p className="text-gray-600 max-w-sm mx-auto">{book.data.message}</p>
         <div className="mx-auto mt-5 max-w-sm rounded-xl border border-gray-200 bg-gray-50 p-4 text-left text-sm">
           <p className="mb-3 font-semibold text-gray-900">
-            Requested — not yet confirmed
+            {t("book.notYetConfirmed", "Requested — not yet confirmed")}
           </p>
           <dl className="space-y-2 text-gray-600">
             <div className="flex justify-between gap-4">
-              <dt>Pet</dt>
+              <dt>{t("book.labelPet", "Pet")}</dt>
               <dd className="font-medium text-gray-900">{petName}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt>Visit</dt>
+              <dt>{t("book.labelVisit", "Visit")}</dt>
               <dd className="font-medium text-gray-900">
-                {selectedType?.name ?? "Appointment"}
+                {selectedType?.name ?? t("book.defaultAppointment", "Appointment")}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt>Preferred time</dt>
+              <dt>{t("book.labelPreferredTime", "Preferred time")}</dt>
               <dd className="font-medium text-gray-900">
-                {date} at {time}
+                {t("book.atTime", "{date} at {time}", { date, time })}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt>Clinic</dt>
+              <dt>{t("book.labelClinic", "Clinic")}</dt>
               <dd className="text-right font-medium text-gray-900">
                 {selectedLocation?.name ?? data.practice.name}
               </dd>
@@ -196,10 +203,10 @@ export default function PublicBookingPage() {
           </dl>
         </div>
         <p className="text-gray-500 text-sm mt-4">
-          We sent the details to the clinic. Questions?{" "}
+          {t("book.sentDetails", "We sent the details to the clinic. Questions?")}{" "}
           {data.practice.phone
-            ? `Call ${data.practice.phone}.`
-            : "Contact the clinic."}
+            ? t("book.callClinic", "Call {phone}.", { phone: data.practice.phone })
+            : t("book.contactClinic", "Contact the clinic.")}
         </p>
       </div>
     );
@@ -249,11 +256,13 @@ export default function PublicBookingPage() {
       >
         <div>
           <h2 className="text-base font-semibold text-gray-900">
-            Request an appointment
+            {t("book.title", "Request an appointment")}
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Choose a preferred time. The clinic will review your request and
-            confirm the appointment with you.
+            {t(
+              "book.subtitle",
+              "Choose a preferred time. The clinic will review your request and confirm the appointment with you.",
+            )}
           </p>
         </div>
 
@@ -263,7 +272,7 @@ export default function PublicBookingPage() {
               htmlFor={locationFieldId}
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
-              Clinic location
+              {t("book.clinicLocation", "Clinic location")}
             </label>
             <select
               id={locationFieldId}
@@ -276,7 +285,7 @@ export default function PublicBookingPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             >
               <option value="" disabled>
-                Choose a location
+                {t("book.chooseLocation", "Choose a location")}
               </option>
               {data.locations.map((location) => (
                 <option key={location.id} value={location.id}>
@@ -304,7 +313,7 @@ export default function PublicBookingPage() {
             htmlFor={typeFieldId}
             className="block text-sm font-medium text-gray-700 mb-1.5"
           >
-            What do you need?
+            {t("book.whatDoYouNeed", "What do you need?")}
           </label>
           <select
             id={typeFieldId}
@@ -317,7 +326,7 @@ export default function PublicBookingPage() {
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
           >
             <option value="" disabled>
-              Choose a visit type
+              {t("book.chooseVisitType", "Choose a visit type")}
             </option>
             {data.types.map((t) => (
               <option key={t.id} value={t.id}>
@@ -332,7 +341,7 @@ export default function PublicBookingPage() {
             htmlFor={dateFieldId}
             className="block text-sm font-medium text-gray-700 mb-1.5"
           >
-            Pick a day
+            {t("book.pickADay", "Pick a day")}
           </label>
           <input
             id={dateFieldId}
@@ -352,14 +361,19 @@ export default function PublicBookingPage() {
         {date && typeId && locationId && (
           <fieldset>
             <legend className="text-sm font-medium text-gray-700 mb-2">
-              Pick a time
+              {t("book.pickATime", "Pick a time")}
             </legend>
             {slots.isLoading && (
-              <p className="text-xs text-gray-500">Checking suggested times…</p>
+              <p className="text-xs text-gray-500">
+                {t("book.checkingTimes", "Checking suggested times…")}
+              </p>
             )}
             {!slots.isLoading && slots.error && (
               <p className="text-xs text-red-600">
-                Suggested times could not be loaded. Please try again.
+                {t(
+                  "book.timesLoadError",
+                  "Suggested times could not be loaded. Please try again.",
+                )}
               </p>
             )}
             {!slots.isLoading &&
@@ -368,7 +382,10 @@ export default function PublicBookingPage() {
               slots.data.length === 0 && (
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <CalendarX2 className="h-4 w-4" />
-                  No suggested request times that day. Try another date.
+                  {t(
+                    "book.noTimesAvailable",
+                    "No suggested request times that day. Try another date.",
+                  )}
                 </div>
               )}
             {!slots.isLoading &&
@@ -412,14 +429,16 @@ export default function PublicBookingPage() {
         )}
 
         <div className="border-t border-gray-100 pt-5 space-y-4">
-          <p className="text-sm font-semibold text-gray-900">About you</p>
+          <p className="text-sm font-semibold text-gray-900">
+            {t("book.aboutYou", "About you")}
+          </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor={firstNameFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                First name
+                {t("book.firstName", "First name")}
               </label>
               <input
                 id={firstNameFieldId}
@@ -436,7 +455,7 @@ export default function PublicBookingPage() {
                 htmlFor={lastNameFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Last name
+                {t("book.lastName", "Last name")}
               </label>
               <input
                 id={lastNameFieldId}
@@ -455,7 +474,7 @@ export default function PublicBookingPage() {
                 htmlFor={emailFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Email
+                {t("book.email", "Email")}
               </label>
               <input
                 id={emailFieldId}
@@ -473,8 +492,10 @@ export default function PublicBookingPage() {
                 htmlFor={phoneFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Phone{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
+                {t("book.phone", "Phone")}{" "}
+                <span className="text-gray-400 font-normal">
+                  ({t("book.optional", "optional")})
+                </span>
               </label>
               <input
                 id={phoneFieldId}
@@ -491,7 +512,7 @@ export default function PublicBookingPage() {
           {/* Honeypot: invisible to humans, present for bots. */}
           <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
             <label htmlFor={websiteFieldId}>
-              Website
+              {t("book.website", "Website")}
               <input
                 id={websiteFieldId}
                 tabIndex={-1}
@@ -508,7 +529,7 @@ export default function PublicBookingPage() {
                 htmlFor={petNameFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Pet's name
+                {t("book.petName", "Pet's name")}
               </label>
               <input
                 id={petNameFieldId}
@@ -524,7 +545,7 @@ export default function PublicBookingPage() {
                 htmlFor={speciesFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Pet type
+                {t("book.petType", "Pet type")}
               </label>
               <select
                 id={speciesFieldId}
@@ -534,7 +555,7 @@ export default function PublicBookingPage() {
               >
                 {PATIENT_SPECIES_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>
-                    {s.label}
+                    {t(`species.${s.value}`, s.label)}
                   </option>
                 ))}
               </select>
@@ -546,7 +567,7 @@ export default function PublicBookingPage() {
               htmlFor={reasonFieldId}
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
-              What's this visit about?
+              {t("book.visitReason", "What's this visit about?")}
             </label>
             <textarea
               id={reasonFieldId}
@@ -555,7 +576,10 @@ export default function PublicBookingPage() {
               required
               rows={3}
               maxLength={BOOKING_REASON_MAX_LENGTH}
-              placeholder="Tell us a little about what your pet needs"
+              placeholder={t(
+                "book.visitReasonPlaceholder",
+                "Tell us a little about what your pet needs",
+              )}
               className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
           </div>
@@ -584,16 +608,16 @@ export default function PublicBookingPage() {
           style={{ backgroundColor: accent }}
         >
           {book.isPending
-            ? "Sending request…"
+            ? t("book.sendingRequest", "Sending request…")
             : selectedType
-              ? `Request ${selectedType.name}`
-              : "Request appointment"}
+              ? t("book.requestType", "Request {type}", { type: selectedType.name })
+              : t("book.requestAppointment", "Request appointment")}
         </button>
         <p className="text-center text-xs text-gray-400">
-          Prefer to talk to a person?
+          {t("book.preferToTalk", "Prefer to talk to a person?")}
           {data.practice.phone
-            ? ` Call ${data.practice.phone}.`
-            : " Contact the clinic."}
+            ? ` ${t("book.callClinic", "Call {phone}.", { phone: data.practice.phone })}`
+            : ` ${t("book.contactClinic", "Contact the clinic.")}`}
         </p>
       </form>
     </div>

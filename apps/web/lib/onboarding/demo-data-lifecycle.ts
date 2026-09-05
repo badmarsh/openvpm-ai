@@ -11,6 +11,20 @@ import {
   products,
   soapNotes,
   vaccinationRecords,
+  extMarketingTvSlides,
+  extMarketingHandouts,
+  extMarketingReviews,
+  extMarketingContentBatches,
+  extMarketingContentItems,
+  extMarketingMediaConsents,
+  extMarketingMediaAssets,
+  extMarketingStaffTasks,
+  extMarketingMessageTemplates,
+  extMarketingMessageLogs,
+  extMarketingAutomationRules,
+  extMarketingOperativeScripts,
+  extMarketingRecallSchedules,
+  extMarketingCompetitorSnapshots,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { seedDemoData, type DemoDataIds } from "./defaults";
@@ -59,6 +73,62 @@ export function mergeDemoDataProvenance(
       latest.communicationIds,
     ),
     productIds: uniqueIds(existing?.productIds, latest.productIds),
+    marketingTvSlideIds: uniqueIds(
+      existing?.marketingTvSlideIds,
+      latest.marketingTvSlideIds,
+    ),
+    marketingHandoutIds: uniqueIds(
+      existing?.marketingHandoutIds,
+      latest.marketingHandoutIds,
+    ),
+    marketingReviewIds: uniqueIds(
+      existing?.marketingReviewIds,
+      latest.marketingReviewIds,
+    ),
+    marketingContentBatchIds: uniqueIds(
+      existing?.marketingContentBatchIds,
+      latest.marketingContentBatchIds,
+    ),
+    marketingContentItemIds: uniqueIds(
+      existing?.marketingContentItemIds,
+      latest.marketingContentItemIds,
+    ),
+    marketingMediaConsentIds: uniqueIds(
+      existing?.marketingMediaConsentIds,
+      latest.marketingMediaConsentIds,
+    ),
+    marketingMediaAssetIds: uniqueIds(
+      existing?.marketingMediaAssetIds,
+      latest.marketingMediaAssetIds,
+    ),
+    marketingStaffTaskIds: uniqueIds(
+      existing?.marketingStaffTaskIds,
+      latest.marketingStaffTaskIds,
+    ),
+    marketingMessageTemplateIds: uniqueIds(
+      existing?.marketingMessageTemplateIds,
+      latest.marketingMessageTemplateIds,
+    ),
+    marketingMessageLogIds: uniqueIds(
+      existing?.marketingMessageLogIds,
+      latest.marketingMessageLogIds,
+    ),
+    marketingAutomationRuleIds: uniqueIds(
+      existing?.marketingAutomationRuleIds,
+      latest.marketingAutomationRuleIds,
+    ),
+    marketingScriptIds: uniqueIds(
+      existing?.marketingScriptIds,
+      latest.marketingScriptIds,
+    ),
+    marketingRecallScheduleIds: uniqueIds(
+      existing?.marketingRecallScheduleIds,
+      latest.marketingRecallScheduleIds,
+    ),
+    marketingCompetitorSnapshotIds: uniqueIds(
+      existing?.marketingCompetitorSnapshotIds,
+      latest.marketingCompetitorSnapshotIds,
+    ),
     clearedAt: null,
   };
 }
@@ -245,6 +315,162 @@ export async function clearSeededDemoData(
         );
     }
 
+    // ── Marketing extension demo data ─────────────────────────────────────
+    if (demo.marketingCompetitorSnapshotIds?.length) {
+      await tx
+        .update(extMarketingCompetitorSnapshots)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingCompetitorSnapshots.practiceId, practiceId),
+            inArray(extMarketingCompetitorSnapshots.id, demo.marketingCompetitorSnapshotIds),
+          ),
+        );
+    }
+    if (demo.marketingMessageLogIds?.length) {
+      await tx
+        .update(extMarketingMessageLogs)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingMessageLogs.practiceId, practiceId),
+            inArray(extMarketingMessageLogs.id, demo.marketingMessageLogIds),
+          ),
+        );
+    }
+    if (demo.marketingMessageTemplateIds?.length) {
+      await tx
+        .update(extMarketingMessageTemplates)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingMessageTemplates.practiceId, practiceId),
+            inArray(extMarketingMessageTemplates.id, demo.marketingMessageTemplateIds),
+          ),
+        );
+    }
+    if (demo.marketingStaffTaskIds?.length) {
+      await tx
+        .update(extMarketingStaffTasks)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingStaffTasks.practiceId, practiceId),
+            inArray(extMarketingStaffTasks.id, demo.marketingStaffTaskIds),
+          ),
+        );
+    }
+    if (demo.marketingMediaAssetIds?.length) {
+      await tx
+        .update(extMarketingMediaAssets)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingMediaAssets.practiceId, practiceId),
+            inArray(extMarketingMediaAssets.id, demo.marketingMediaAssetIds),
+          ),
+        );
+    }
+    if (demo.marketingMediaConsentIds?.length) {
+      await tx
+        .update(extMarketingMediaConsents)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingMediaConsents.practiceId, practiceId),
+            inArray(extMarketingMediaConsents.id, demo.marketingMediaConsentIds),
+          ),
+        );
+    }
+    if (demo.marketingContentItemIds?.length) {
+      await tx
+        .update(extMarketingContentItems)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingContentItems.practiceId, practiceId),
+            inArray(extMarketingContentItems.id, demo.marketingContentItemIds),
+          ),
+        );
+    }
+    if (demo.marketingContentBatchIds?.length) {
+      await tx
+        .update(extMarketingContentBatches)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingContentBatches.practiceId, practiceId),
+            inArray(extMarketingContentBatches.id, demo.marketingContentBatchIds),
+          ),
+        );
+    }
+    if (demo.marketingReviewIds?.length) {
+      await tx
+        .update(extMarketingReviews)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingReviews.practiceId, practiceId),
+            inArray(extMarketingReviews.id, demo.marketingReviewIds),
+          ),
+        );
+    }
+    if (demo.marketingHandoutIds?.length) {
+      await tx
+        .update(extMarketingHandouts)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingHandouts.practiceId, practiceId),
+            inArray(extMarketingHandouts.id, demo.marketingHandoutIds),
+          ),
+        );
+    }
+    if (demo.marketingTvSlideIds?.length) {
+      await tx
+        .update(extMarketingTvSlides)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingTvSlides.practiceId, practiceId),
+            inArray(extMarketingTvSlides.id, demo.marketingTvSlideIds),
+          ),
+        );
+    }
+    if (demo.marketingScriptIds?.length) {
+      await tx
+        .update(extMarketingOperativeScripts)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingOperativeScripts.practiceId, practiceId),
+            inArray(extMarketingOperativeScripts.id, demo.marketingScriptIds),
+          ),
+        );
+    }
+    if (demo.marketingAutomationRuleIds?.length) {
+      await tx
+        .update(extMarketingAutomationRules)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingAutomationRules.practiceId, practiceId),
+            inArray(extMarketingAutomationRules.id, demo.marketingAutomationRuleIds),
+          ),
+        );
+    }
+    if (demo.marketingRecallScheduleIds?.length) {
+      await tx
+        .update(extMarketingRecallSchedules)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(extMarketingRecallSchedules.practiceId, practiceId),
+            inArray(extMarketingRecallSchedules.id, demo.marketingRecallScheduleIds),
+          ),
+        );
+    }
+
     const preserved: DemoDataProvenance = {
       clientIds: demo.clientIds,
       patientIds: demo.patientIds,
@@ -256,6 +482,20 @@ export async function clearSeededDemoData(
       invoiceItemIds: demo.invoiceItemIds ?? [],
       communicationIds: demo.communicationIds ?? [],
       productIds: demo.productIds ?? [],
+      marketingTvSlideIds: demo.marketingTvSlideIds ?? [],
+      marketingHandoutIds: demo.marketingHandoutIds ?? [],
+      marketingReviewIds: demo.marketingReviewIds ?? [],
+      marketingContentBatchIds: demo.marketingContentBatchIds ?? [],
+      marketingContentItemIds: demo.marketingContentItemIds ?? [],
+      marketingMediaConsentIds: demo.marketingMediaConsentIds ?? [],
+      marketingMediaAssetIds: demo.marketingMediaAssetIds ?? [],
+      marketingStaffTaskIds: demo.marketingStaffTaskIds ?? [],
+      marketingMessageTemplateIds: demo.marketingMessageTemplateIds ?? [],
+      marketingMessageLogIds: demo.marketingMessageLogIds ?? [],
+      marketingAutomationRuleIds: demo.marketingAutomationRuleIds ?? [],
+      marketingScriptIds: demo.marketingScriptIds ?? [],
+      marketingRecallScheduleIds: demo.marketingRecallScheduleIds ?? [],
+      marketingCompetitorSnapshotIds: demo.marketingCompetitorSnapshotIds ?? [],
       clearedAt: now.toISOString(),
     };
     const [updated] = await tx

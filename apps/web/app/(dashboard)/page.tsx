@@ -168,10 +168,19 @@ function AppointmentRowSkeleton() {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { t } = useI18n();
-  const stats = trpc.dashboard.getStats.useQuery();
-  const charts = trpc.dashboard.getCharts.useQuery();
+  const router = useRouter();
+  const dashboardQuery = trpc.dashboard.getDashboard.useQuery();
+  const stats = {
+    data: dashboardQuery.data?.stats,
+    isLoading: dashboardQuery.isLoading,
+    error: dashboardQuery.error,
+  };
+  const charts = {
+    data: dashboardQuery.data?.charts,
+    isLoading: dashboardQuery.isLoading,
+    error: dashboardQuery.error,
+  };
   const pendingFollowUps = trpc.encounters.listPendingFollowUps.useQuery();
   const taxConfig = trpc.billing.getTaxConfig.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
@@ -321,23 +330,30 @@ export default function DashboardPage() {
               id="pending-follow-ups-heading"
               className="font-heading text-lg font-semibold"
             >
-              Follow-up work queue
+              {t("dashboard.followUps.title", "Follow-up work queue")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Signed visit obligations that still need an owner.
+              {t(
+                "dashboard.followUps.description",
+                "Signed visit obligations that still need an owner."
+              )}
             </p>
           </div>
           {pendingFollowUps.data?.length ? (
             <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-              {pendingFollowUps.data.length} open
+              {t("dashboard.followUps.openCount", "{count} open", {
+                count: pendingFollowUps.data.length,
+              })}
             </span>
           ) : null}
         </div>
         <div className="space-y-2 p-4">
           {pendingFollowUps.error ? (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-              Follow-up obligations could not be loaded. Refresh before ending
-              the shift.
+              {t(
+                "dashboard.followUps.error",
+                "Follow-up obligations could not be loaded. Refresh before ending the shift."
+              )}
             </div>
           ) : pendingFollowUps.isLoading ? (
             Array.from({ length: 2 }).map((_, index) => (
@@ -361,13 +377,15 @@ export default function DashboardPage() {
                     />
                     <div className="min-w-0">
                       <p className="font-medium">
-                        {followUp.patientName} · due {formatDueDate(dueDate)}
+                        {followUp.patientName} · {t("dashboard.followUps.due", "due {date}", { date: formatDueDate(dueDate) })}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Owner: {followUp.clientFirstName}{" "}
-                        {followUp.clientLastName}
+                        {t("dashboard.followUps.owner", "Owner: {firstName} {lastName}", {
+                          firstName: followUp.clientFirstName,
+                          lastName: followUp.clientLastName,
+                        })}
                         {followUp.assigneeName
-                          ? ` · Assigned to ${followUp.assigneeName}`
+                          ? ` · ${t("dashboard.followUps.assignedTo", "Assigned to {name}", { name: followUp.assigneeName })}`
                           : ""}
                       </p>
                       {followUp.followUpNotes ? (
@@ -381,7 +399,7 @@ export default function DashboardPage() {
                     href={`/encounters/${followUp.appointmentId}#visit-closeout`}
                     className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
                   >
-                    Resolve follow-up
+                    {t("dashboard.followUps.resolve", "Resolve follow-up")}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -389,7 +407,10 @@ export default function DashboardPage() {
             })
           ) : (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              No pending follow-up obligations.
+              {t(
+                "dashboard.followUps.empty",
+                "No pending follow-up obligations."
+              )}
             </p>
           )}
         </div>

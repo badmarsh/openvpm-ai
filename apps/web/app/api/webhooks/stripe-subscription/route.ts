@@ -11,6 +11,7 @@ import {
 import { syncPracticeSubscriptionQuantities } from "@/lib/billing/subscription-sync";
 import { alertOps } from "@/lib/alerts";
 import { withSystem } from "@/lib/tenant-db";
+import { invalidatePracticeBillingCache } from "@/server/trpc";
 import { sendPaymentReceiptEmail, sendPaymentFailedEmail } from "@/lib/email";
 import { sendLifecycleEmail } from "@/lib/email-lifecycle";
 import {
@@ -198,6 +199,7 @@ export async function POST(req: NextRequest) {
                   isNull(practices.deletedAt),
                 ),
               );
+            invalidatePracticeBillingCache(practiceId);
           }
           break;
         }
@@ -420,6 +422,7 @@ async function applySubscription(
     );
     return null;
   }
+  invalidatePracticeBillingCache(practice.id);
   if (!terminalWithoutSubscriptionIdentity) {
     await syncPracticeSubscriptionQuantities({
       db: tx,

@@ -45,7 +45,8 @@ vi.mock("@/lib/audit", () => ({
   recordAuditLog: mocks.recordAuditLog,
 }));
 
-const { createTRPCContext } = await import("../trpc");
+const { createTRPCContext, clearActiveSessionCache } =
+  await import("../trpc");
 const { practices, users } = await import("@openpims/db");
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
