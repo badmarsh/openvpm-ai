@@ -915,7 +915,7 @@ const sections: Section[] = [
         name: "POST /api/v1/soap-notes",
         method: "POST",
         description:
-          "Create an immediately finalized, immutable SOAP note for an external AI scribe during an active in-exam appointment and emit the soap_note.created webhook. Returns a conflict when the encounter already has a draft or effective finalized note.",
+          "Create an immediately finalized, immutable SOAP note for an external AI scribe during an active in-exam appointment and emit the soap_note.created webhook. Requires clinician_confirmed: true as the human-in-the-loop attestation. Returns a conflict when the encounter already has a draft or effective finalized note.",
         input: `{
   patient_id: string,
   appointment_id: string,
@@ -924,7 +924,8 @@ const sections: Section[] = [
   objective?: string,
   assessment?: string,
   plan?: string,
-  source: string
+  source: string,
+  clinician_confirmed: true
 }`,
         response: `{ data: SoapNote }`,
         auth: "API key: records:write",

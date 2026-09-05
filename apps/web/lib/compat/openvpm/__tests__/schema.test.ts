@@ -142,8 +142,27 @@ describe("SoapNoteCreateSchema validation", () => {
       appointment_id: "33333333-3333-3333-3333-333333333333",
       subjective: "Eating well",
       source: "scribenote",
+      clinician_confirmed: true,
     });
     expect(r.success).toBe(true);
+  });
+
+  it("rejects AI scribe bodies without the clinician attestation", () => {
+    const base = {
+      patient_id: "22222222-2222-2222-2222-222222222222",
+      appointment_id: "33333333-3333-3333-3333-333333333333",
+      subjective: "Eating well",
+      source: "scribenote",
+    };
+    expect(SoapNoteCreateSchema.safeParse(base).success).toBe(false);
+    expect(
+      SoapNoteCreateSchema.safeParse({ ...base, clinician_confirmed: false })
+        .success,
+    ).toBe(false);
+    expect(
+      SoapNoteCreateSchema.safeParse({ ...base, clinician_confirmed: "true" })
+        .success,
+    ).toBe(false);
   });
 
   it("rejects non-uuid clinical references", () => {

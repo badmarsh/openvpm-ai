@@ -17,6 +17,7 @@ type SchemaObjectRow = {
   object_type:
     | "column"
     | "constraint"
+    | "deferred_constraint"
     | "index"
     | "trigger"
     | "rls_policy"
@@ -251,6 +252,34 @@ describe("findSchemaDrift", () => {
       "files_available_evidence_check",
       "file_object_replicas_due_idx",
     ]);
+  });
+
+  it("catches treatment-plan tenant FKs that lost DEFERRABLE INITIALLY DEFERRED (schema push drift)", async () => {
+    // The ORM definition cannot express deferrability, so a database created
+    // with `drizzle-kit push` instead of the committed migrations recreates
+    // these FKs as immediate. Revision inserts then fail with 23503 because
+    // lines are written before the revision row inside the same transaction.
+    const rows = liveSchemaWithout(() => false).map((row) =>
+      row.object_type === "deferred_constraint" &&
+      row.object_name === "visit_treatment_plan_revision_lines_revision_tenant_fk"
+        ? { ...row, healthy: false }
+        : row,
+    );
+    const drift = await findSchemaDrift(fakeDb(rows));
+
+    expect(drift.invalidObjects).toEqual([
+      {
+        kind: "deferred_constraint",
+        table: "visit_treatment_plan_revision_lines",
+        name: "visit_treatment_plan_revision_lines_revision_tenant_fk",
+      },
+    ]);
+    expect(driftIsClean(drift)).toBe(false);
+    expect(criticalDatabaseContract()).toContainEqual({
+      kind: "deferred_constraint",
+      table: "visit_treatment_plan_response_lines",
+      name: "visit_treatment_plan_response_lines_response_tenant_fk",
+    });
   });
 
   it("requires validated recovery-hold and signature-evidence guards", async () => {

@@ -37,11 +37,18 @@ function createSelectDb(selectResults: unknown[][]) {
   const results = [...selectResults];
   const select = vi.fn(() => {
     const result = results.shift() ?? [];
+    const terminal = {
+      limit: vi.fn(async () => result),
+      then: (
+        resolve: (value: unknown[]) => unknown,
+        reject?: (error: unknown) => unknown,
+      ) => Promise.resolve(result).then(resolve, reject),
+    };
     const builder = {
       from: vi.fn(() => builder),
       leftJoin: vi.fn(() => builder),
       where: vi.fn(() => builder),
-      orderBy: vi.fn(async () => result),
+      orderBy: vi.fn(() => terminal),
       limit: vi.fn(async () => result),
     };
     return builder;

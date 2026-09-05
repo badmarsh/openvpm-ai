@@ -32,6 +32,17 @@ Data corruption suspected → recovery hold + restore drill path
 
 ## Post-deploy smoke
 
+Automated: `node scripts/staging-smoke-test.mjs --base-url https://<staging-or-prod-host>` (exit 0 = pass; `--json` for CI artifacts; `--allow-not-ready` while a known advisory check is open). It needs no credentials and asserts:
+
+- `GET /api/health/live` 200 with `no-store`
+- `GET /api/health/ready` 200 with a redacted `checks` payload (includes schema drift + the deferred-FK gate)
+- all 18 `/api/cron/*` routes → 401 anonymous, bad bearer, and bad `x-cron-secret`
+- `/api/v1/*` → 401 with `WWW-Authenticate` for missing and malformed keys
+- `/api/upload`, `/api/files/*`, tRPC → 401/403; unknown `/api/sign/<token>` and `/api/portal/session` → 404
+- e-Kasa offline fallback in-process with `fetch` disabled: offline mode, unreachable FR SR, flag off, missing RSA key, SSRF host — receipt persisted as `OFFLINE_STORED`/`FAILED`, never `CONFIRMED`, zero egress
+
+Manual:
+
 - `GET /api/health/live` 200
 - `GET /api/health/ready` 200 (or 503 with actionable checks)
 - Login as synthetic user on staging/demo

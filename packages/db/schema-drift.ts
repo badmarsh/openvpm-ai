@@ -36,6 +36,7 @@ export type SchemaDrift = {
 export type DeclaredDatabaseObject = {
   kind:
     | "constraint"
+    | "deferred_constraint"
     | "index"
     | "trigger"
     | "rls_policy"
@@ -793,6 +794,21 @@ export function criticalDatabaseContract(): DeclaredDatabaseObject[] {
       table,
       name,
     })),
+    // Treatment-plan evidence is written lines-first inside one transaction
+    // and reconciled against the revision row at commit. The committed
+    // migrations declare these composite tenant FKs DEFERRABLE INITIALLY
+    // DEFERRED; a schema pushed from the ORM definition silently loses that
+    // and every revision insert fails with 23503. Gate readiness on it.
+    {
+      kind: "deferred_constraint",
+      table: "visit_treatment_plan_revision_lines",
+      name: "visit_treatment_plan_revision_lines_revision_tenant_fk",
+    },
+    {
+      kind: "deferred_constraint",
+      table: "visit_treatment_plan_response_lines",
+      name: "visit_treatment_plan_response_lines_response_tenant_fk",
+    },
   ];
 
   return objects;
@@ -820,6 +836,7 @@ type SchemaObjectRow = {
   object_type:
     | "column"
     | "constraint"
+    | "deferred_constraint"
     | "index"
     | "trigger"
     | "rls_policy"
@@ -875,6 +892,23 @@ export async function findSchemaDrift(db: Queryable): Promise<SchemaDrift> {
     join pg_catalog.pg_namespace table_namespace
       on table_namespace.oid = table_class.relnamespace
     where table_namespace.nspname = 'public'
+    union all
+    select
+      'deferred_constraint'::text,
+      table_class.relname::text,
+      constraint_object.conname::text,
+      (
+        constraint_object.convalidated
+        and constraint_object.condeferrable
+        and constraint_object.condeferred
+      )
+    from pg_catalog.pg_constraint constraint_object
+    join pg_catalog.pg_class table_class
+      on table_class.oid = constraint_object.conrelid
+    join pg_catalog.pg_namespace table_namespace
+      on table_namespace.oid = table_class.relnamespace
+    where table_namespace.nspname = 'public'
+      and constraint_object.contype = 'f'
     union all
     select
       'index'::text,

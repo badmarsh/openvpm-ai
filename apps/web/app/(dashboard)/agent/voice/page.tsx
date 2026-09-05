@@ -135,6 +135,9 @@ function VoiceDictationContent() {
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
+  // Human-in-the-loop: AI transcription is saved as a draft unless the
+  // clinician explicitly confirms the content for finalization.
+  const [clinicianConfirmed, setClinicianConfirmed] = useState(false);
 
   // tRPC mutations
   const uploadAndProcessMutation = trpc.extensions.voice.uploadAndProcess.useMutation();
@@ -269,21 +272,29 @@ function VoiceDictationContent() {
   const handleSave = useCallback(async () => {
     if (!dictationId || !selectedPatient) return;
     try {
+      // Human-in-the-loop: the clinician must tick the confirmation to
+      // finalize; otherwise the note is saved as an editable chart draft.
       const note = await saveMutation.mutateAsync({
         dictationId,
         ...soapSections,
+        clinicianConfirmed: clinicianConfirmed ? true : undefined,
       });
 
       setStatus("saved");
       setSavedNoteId(note.id);
-      toast.success("SOAP záznam bol úspešne uložený do kartotéky", {
+      toast.success(
+        note.status === "finalized"
+          ? "SOAP záznam bol potvrdený a uložený do kartotéky"
+          : "SOAP záznam bol uložený ako koncept – finalizujte ho v kartotéke",
+        {
         action: {
           label: "Zobraziť pacienta",
           onClick: () => {
             window.location.href = `/patients/${selectedPatient.id}`;
           },
         },
-      });
+      },
+      );
 
       utils.extensions.voice.listByPatient.invalidate({
         patientId: selectedPatient.id,
@@ -292,7 +303,7 @@ function VoiceDictationContent() {
       const message = err instanceof Error ? err.message : "Uloženie SOAP záznamu zlyhalo";
       toast.error(message);
     }
-  }, [dictationId, selectedPatient, soapSections, saveMutation, utils]);
+  }, [dictationId, selectedPatient, soapSections, saveMutation, utils, clinicianConfirmed]);
 
   const handleSelectHistoryItem = (item: any) => {
     setDictationId(item.id);
@@ -859,7 +870,22 @@ function VoiceDictationContent() {
                     />
 
                     {/* Footer Save CTA */}
-                    <div className="pt-3 border-t">
+                    <div className="pt-3 border-t space-y-3">
+                      <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 rounded border-input"
+                          checked={clinicianConfirmed}
+                          onChange={(e) => setClinicianConfirmed(e.target.checked)}
+                          aria-label="Potvrdzujem, že som skontroloval(a) AI prepis a finalizujem záznam"
+                          data-testid="voice-clinician-confirm"
+                        />
+                        <span>
+                          Potvrdzujem, že som AI prepis skontroloval(a) a záznam
+                          finalizujem pod svojím menom. Bez potvrdenia sa uloží
+                          iba ako koncept.
+                        </span>
+                      </label>
                       <Button
                         type="button"
                         onClick={handleSave}
@@ -874,7 +900,11 @@ function VoiceDictationContent() {
                         ) : (
                           <>
                             <Save className="h-4 w-4" />
-                            {status === "saved" ? "Uložené v kartotéke pacienta" : "Uložiť do záznamov pacienta"}
+                            {status === "saved"
+                              ? "Uložené v kartotéke pacienta"
+                              : clinicianConfirmed
+                                ? "Potvrdiť a finalizovať SOAP záznam"
+                                : "Uložiť ako koncept do záznamov pacienta"}
                           </>
                         )}
                       </Button>

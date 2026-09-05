@@ -48,6 +48,10 @@ import { lockOpenVisitForClinicalAppend } from "@/lib/records/visit-integrity";
 import { hasUnresolvedSoapTemplatePrompts } from "@/lib/records/soap-templates";
 import { AI_SOURCE_MAX_LENGTH } from "@/lib/ai/soap";
 import {
+  assertClinicianConfirmed,
+  clinicianConfirmationInput,
+} from "@/lib/ai/draft-safety";
+import {
   createFinalizedAppointmentSoapNote,
   SoapLifecycleError,
 } from "@/lib/records/soap-lifecycle";
@@ -205,6 +209,10 @@ export const aiRouter = createRouter({
    * AI SOAP Note Hook
    * External AI scribes (Scribenote, VetRec, HappyDoc) POST here
    * to auto-populate SOAP notes for a patient visit.
+   *
+   * Safety gate: the note is finalized under the signed-in clinician's
+   * identity, so `clinicianConfirmed: true` is mandatory. AI output alone can
+   * never sign a record.
    */
   createSoapFromAI: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
@@ -226,10 +234,18 @@ export const aiRouter = createRouter({
         ),
         plan: optionalClinicalTextInput("SOAP plan", SOAP_SECTION_MAX_LENGTH),
         source: z.string().trim().min(1).max(AI_SOURCE_MAX_LENGTH),
+        /**
+         * Human-in-the-loop attestation. This procedure creates an immediately
+         * finalized, immutable clinical record, so the caller must assert that
+         * the signed-in clinician reviewed the AI content. Missing or `false`
+         * fails validation before any database work.
+         */
+        clinicianConfirmed: clinicianConfirmationInput,
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const { source } = input;
+      assertClinicianConfirmed(input.clinicianConfirmed);
       const normalizedNote = {
         subjective: normalizeSoapSection(input.subjective),
         objective: normalizeSoapSection(input.objective),

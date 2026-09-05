@@ -9,6 +9,7 @@ vi.mock("@/lib/audit", () => ({
 }));
 
 import { appRouter } from "../routers/_app";
+import { invalidatePracticeBillingCache } from "../trpc";
 
 // Build a tRPC caller with a fake session. The db is a throwing proxy: any
 // resolver that reaches the database fails loudly — so a passing query proves
@@ -36,6 +37,9 @@ function callerFor(role: string, dbOverride?: Record<string, unknown>) {
 }
 
 afterEach(() => {
+  // Billing state is cached per practice at module level; reset it so each
+  // scenario re-reads the (mocked) practice row instead of a prior test's.
+  invalidatePracticeBillingCache();
   vi.unstubAllEnvs();
 });
 

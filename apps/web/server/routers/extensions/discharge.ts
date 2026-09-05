@@ -19,6 +19,11 @@ import {
   detectAndTriggerDentalRecall,
   checkAndTriggerSeniorMilestone,
 } from "@/lib/marketing/messaging";
+import {
+  CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE,
+  optionalClinicianConfirmationInput,
+  resolveAiRecordStatus,
+} from "@/lib/ai/draft-safety";
 
 const dischargeProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian", "technician", "front_desk"))
@@ -162,7 +167,16 @@ export const dischargeRouter = createRouter({
       };
     }),
 
-  /** Uloží vygenerovanú správu do databázy */
+  /**
+   * Uloží vygenerovanú správu do databázy.
+   *
+   * Human-in-the-loop: AI-generated discharge text is a *draft* until a
+   * clinician explicitly confirms it (`clinicianConfirmed: true`). Only a
+   * confirmed, finalized report may emit the webhook or schedule any owner
+   * communication. Deceased patients are hard-gated: no recall, post-op
+   * check-in, dental, or senior-milestone message is ever queued; instead the
+   * sympathy gate blocks outstanding marketing and opens a condolence task.
+   */
   save: dischargeProcedure
     .input(
       z.object({
@@ -173,12 +187,48 @@ export const dischargeRouter = createRouter({
         diagnosis: z.string().min(1).max(5000),
         treatment: z.string().max(5000).optional(),
         followUp: z.string().max(5000).optional(),
-        reportText: z.string().min(1),
-        language: z.string().default("sk"),
-        status: z.enum(["draft", "finalized"]).default("finalized"),
+        reportText: z.string().min(1).max(50_000),
+        language: z.string().max(8).default("sk"),
+        status: z.enum(["draft", "finalized"]).default("draft"),
+        clinicianConfirmed: optionalClinicianConfirmationInput,
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.status === "finalized" && input.clinicianConfirmed !== true) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE,
+        });
+      }
+      const status = resolveAiRecordStatus({
+        requestedStatus: input.status,
+        clinicianConfirmed: input.clinicianConfirmed,
+      });
+
+      // Tenant scoping: a report may only reference this practice's patient.
+      let patient:
+        | { clientId: string | null; status: string }
+        | undefined;
+      if (input.patientId) {
+        [patient] = await ctx.db
+          .select({ clientId: patients.clientId, status: patients.status })
+          .from(patients)
+          .where(
+            and(
+              eq(patients.id, input.patientId),
+              eq(patients.practiceId, ctx.practiceId),
+              isNull(patients.deletedAt),
+            ),
+          )
+          .limit(1);
+        if (!patient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pacient sa nenašiel",
+          });
+        }
+      }
+
       const [saved] = await ctx.db
         .insert(dischargeReports)
         .values({
@@ -194,7 +244,7 @@ export const dischargeRouter = createRouter({
           reportText: input.reportText,
           language: input.language,
           modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
-          status: input.status,
+          status,
         })
         .returning();
 
@@ -205,54 +255,53 @@ export const dischargeRouter = createRouter({
         });
       }
 
-      if (saved.status === "finalized") {
-        void dispatchWebhookEvent(ctx.practiceId, "discharge_report.finalized", {
-          reportId: saved.id,
-          patientId: saved.patientId,
-          appointmentId: saved.appointmentId,
-        });
+      // Drafts never leave the chart: no webhook, no owner communication.
+      if (saved.status !== "finalized") {
+        return saved;
+      }
 
-        if (saved.patientId) {
-          const [patient] = await ctx.db
-            .select({ clientId: patients.clientId, status: patients.status })
-            .from(patients)
-            .where(eq(patients.id, saved.patientId))
-            .limit(1);
+      void dispatchWebhookEvent(ctx.practiceId, "discharge_report.finalized", {
+        reportId: saved.id,
+        patientId: saved.patientId,
+        appointmentId: saved.appointmentId,
+      });
 
-          if (patient?.status === "deceased") {
-            if (patient.clientId) {
-              await applySympathyGate(
-                ctx.db,
-                ctx.practiceId,
-                patient.clientId,
-                saved.patientId,
-                "discharge_sympathy_gate"
-              );
-            }
-          } else if (patient?.clientId) {
-            await schedulePostopCheckIn(
-              ctx.db,
-              ctx.practiceId,
-              patient.clientId,
-              saved.patientId
-            );
-
-            // Automatické vyvolanie klinických recallov (dentálna hygiena a geriatrický screening)
-            const clinicalContext = `${saved.diagnosis} ${saved.treatment ?? ""} ${saved.reportText}`;
-            await detectAndTriggerDentalRecall(
+      if (saved.patientId && patient) {
+        if (patient.status === "deceased") {
+          // Sympathy gate: block every recall/marketing trigger for a
+          // deceased patient and route staff to a condolence task instead.
+          if (patient.clientId) {
+            await applySympathyGate(
               ctx.db,
               ctx.practiceId,
               patient.clientId,
               saved.patientId,
-              clinicalContext
-            );
-            await checkAndTriggerSeniorMilestone(
-              ctx.db,
-              ctx.practiceId,
-              patient.clientId,
-              saved.patientId
+              "discharge_sympathy_gate"
             );
           }
+        } else if (patient.clientId) {
+          await schedulePostopCheckIn(
+            ctx.db,
+            ctx.practiceId,
+            patient.clientId,
+            saved.patientId
+          );
+
+          // Automatické vyvolanie klinických recallov (dentálna hygiena a geriatrický screening)
+          const clinicalContext = `${saved.diagnosis} ${saved.treatment ?? ""} ${saved.reportText}`;
+          await detectAndTriggerDentalRecall(
+            ctx.db,
+            ctx.practiceId,
+            patient.clientId,
+            saved.patientId,
+            clinicalContext
+          );
+          await checkAndTriggerSeniorMilestone(
+            ctx.db,
+            ctx.practiceId,
+            patient.clientId,
+            saved.patientId
+          );
         }
       }
 

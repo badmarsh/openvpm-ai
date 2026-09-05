@@ -70,8 +70,10 @@ export default function AIIntegrationDocs() {
             <strong>VetRec</strong>, or <strong>HappyDoc</strong> &mdash; to
             automatically populate SOAP notes during an active visit. This
             endpoint creates an immediately finalized, immutable clinical
-            record; use it only after the clinician has reviewed the generated
-            content.
+            record; the request must carry{" "}
+            <code>clinician_confirmed: true</code> to attest that the
+            attributed clinician reviewed the generated content. Requests
+            without it are rejected before any tenant work.
           </p>
 
           <h3 className="mb-2 mt-6 text-sm font-semibold uppercase tracking-wider text-gray-500">
@@ -96,7 +98,8 @@ Content-Type: application/json`}
   "objective": "string",         // Physical exam findings, vitals
   "assessment": "string",        // Diagnosis, differential list
   "plan": "string",              // Treatment plan, follow-up
-  "source": "string"             // Required - e.g. "scribenote", "vetrec"
+  "source": "string",            // Required - e.g. "scribenote", "vetrec"
+  "clinician_confirmed": true    // Required - clinician reviewed the AI content
 }`}
           </CodeBlock>
           <p className="mt-3 text-sm text-gray-500">
@@ -121,7 +124,8 @@ Content-Type: application/json`}
     "objective": "T: 101.5F, HR: 120, RR: 24. Mild dehydration...",
     "assessment": "Suspect early-stage renal disease...",
     "plan": "CBC/Chem panel, urinalysis. Recheck in 2 weeks.",
-    "source": "scribenote"
+    "source": "scribenote",
+    "clinician_confirmed": true
   }'`}
           </CodeBlock>
         </Section>

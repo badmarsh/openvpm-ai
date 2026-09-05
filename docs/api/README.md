@@ -194,8 +194,10 @@ subscribed endpoints with camelCase appointment fields (see the
 ### `POST /api/v1/soap-notes`
 
 Scope `records:write`. Create an immediately finalized, immutable SOAP note
-from an external AI scribe. The clinician should review the content before the
-integration submits it. Body:
+from an external AI scribe. Because the note is finalized under the attributed
+clinician's identity, the body must carry `clinician_confirmed: true` as the
+human-in-the-loop attestation; requests without it fail validation (`400`)
+before any tenant work. Body:
 
 ```json
 {
@@ -206,11 +208,12 @@ integration submits it. Body:
   "objective": "T: 101.5F, HR: 120, RR: 24. Mild dehydration.",
   "assessment": "Suspect early-stage renal disease.",
   "plan": "CBC/Chem panel, urinalysis. Recheck in 2 weeks.",
-  "source": "scribenote"
+  "source": "scribenote",
+  "clinician_confirmed": true
 }
 ```
 
-`patient_id`, `appointment_id`, and `source` are required. The appointment must
+`patient_id`, `appointment_id`, `source`, and `clinician_confirmed` are required. The appointment must
 belong to the same patient/practice and be an active in-exam appointment whose
 clinical closeout has not been finalized. `author_id` is optional when the
 appointment has an assigned doctor; otherwise it must identify an active admin

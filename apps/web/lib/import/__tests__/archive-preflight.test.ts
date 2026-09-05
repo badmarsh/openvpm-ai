@@ -862,6 +862,10 @@ describe("migration archive preflight", () => {
       new Date("2026-08-11T12:00:00.000Z"),
       {
         afterArchiveInitialHash: async () => {
+          // Inode timestamps use the kernel's coarse clock; a rename that
+          // lands in the same tick as the file's creation would not move
+          // ctime and the scenario would silently stop exercising the guard.
+          await new Promise((resolve) => setTimeout(resolve, 50));
           await rename(archive, movedOriginal);
           await writeFile(archive, replacementBytes);
           await chmod(archive, 0o600);

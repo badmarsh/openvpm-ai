@@ -21,9 +21,18 @@ import {
   rooms,
   soapNotes,
 } from "@openpims/db";
+import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { readPrimaryObject } from "@/lib/s3";
+import {
+  saveAppointmentSoapDraft,
+  SoapLifecycleError,
+} from "@/lib/records/soap-lifecycle";
+import {
+  AiDraftSafetyError,
+  assertAiMayWriteToSoapNote,
+} from "@/lib/ai/draft-safety";
 
 const MEDICAL_IMAGING_SYSTEM_PROMPT = `You are a veterinary radiology AI assistant integrated into OpenVPM, an open-source veterinary practice management system.
 
@@ -447,7 +456,15 @@ export const imagingRouter = createRouter({
       };
     }),
 
-  /** Vloží nález AI analýzy do SOAP záznamu vizity */
+  /**
+   * Vloží nález AI analýzy do SOAP záznamu vizity.
+   *
+   * Human-in-the-loop: AI findings may only be appended to an *open draft*.
+   * A finalized note is immutable from the AI side (PRECONDITION_FAILED); the
+   * clinician must use the addendum/replacement workflow. When no draft exists
+   * a new draft is created through the shared SOAP lifecycle so the open
+   * in-exam visit lock and duplicate-draft invariants apply.
+   */
   injectFindingsIntoSoap: imagingProcedure
     .input(
       z.object({
@@ -479,40 +496,64 @@ export const imagingRouter = createRouter({
           and(
             eq(soapNotes.appointmentId, input.appointmentId),
             eq(soapNotes.practiceId, ctx.practiceId),
+            eq(soapNotes.patientId, analysis.patientId),
             isNull(soapNotes.deletedAt)
           )
         )
         .limit(1);
 
-      const imagingFinding = `[AI Rádiológia (${analysis.imageType.toUpperCase()})]:\n${analysis.result}`;
+      const imagingFinding = `[AI Rádiológia (${analysis.imageType.toUpperCase()}) – návrh na overenie lekárom]:\n${analysis.result}`;
+      const actor = { id: ctx.user.id, name: ctx.user.name ?? "Veterinárny lekár" };
 
-      if (existingSoap) {
-        const updatedObjective = existingSoap.objective
-          ? `${existingSoap.objective}\n\n${imagingFinding}`
-          : imagingFinding;
+      try {
+        if (existingSoap) {
+          assertAiMayWriteToSoapNote(existingSoap);
+          const updatedObjective = existingSoap.objective
+            ? `${existingSoap.objective}\n\n${imagingFinding}`
+            : imagingFinding;
 
-        await ctx.db
-          .update(soapNotes)
-          .set({ objective: updatedObjective })
-          .where(eq(soapNotes.id, existingSoap.id));
+          const result = await ctx.db.transaction((tx) =>
+            saveAppointmentSoapDraft(tx as unknown as Database, {
+              practiceId: ctx.practiceId,
+              patientId: analysis.patientId,
+              appointmentId: input.appointmentId,
+              noteId: existingSoap.id,
+              expectedRevision: existingSoap.revision,
+              actor,
+              sections: { ...existingSoap, objective: updatedObjective },
+            }),
+          );
+          if (result.outcome !== "saved") {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "SOAP draft changed in another session. Refresh and retry.",
+            });
+          }
+          return { success: true, updatedSoapId: result.draft.id, status: result.draft.status };
+        }
 
-        return { success: true, updatedSoapId: existingSoap.id };
+        const result = await ctx.db.transaction((tx) =>
+          saveAppointmentSoapDraft(tx as unknown as Database, {
+            practiceId: ctx.practiceId,
+            patientId: analysis.patientId,
+            appointmentId: input.appointmentId,
+            expectedRevision: 0,
+            actor,
+            sections: { objective: imagingFinding },
+          }),
+        );
+        if (result.outcome !== "saved") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "This encounter already has SOAP documentation. Refresh and retry.",
+          });
+        }
+        return { success: true, updatedSoapId: result.draft.id, status: result.draft.status };
+      } catch (error) {
+        if (error instanceof SoapLifecycleError || error instanceof AiDraftSafetyError) {
+          throw new TRPCError({ code: error.code, message: error.message });
+        }
+        throw error;
       }
-
-      // Vytvor nový draft SOAP note
-      const [newSoap] = await ctx.db
-        .insert(soapNotes)
-        .values({
-          practiceId: ctx.practiceId,
-          patientId: analysis.patientId,
-          appointmentId: input.appointmentId,
-          authorId: ctx.user.id,
-          authorName: ctx.user.name ?? "Veterinárny lekár",
-          status: "draft",
-          objective: imagingFinding,
-        })
-        .returning();
-
-      return { success: true, updatedSoapId: newSoap?.id };
     }),
 });

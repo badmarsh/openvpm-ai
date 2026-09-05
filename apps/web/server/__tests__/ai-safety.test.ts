@@ -39,11 +39,18 @@ function createDb(opts?: {
   const selectResults = [...(opts?.selectResults ?? [])];
   const select = vi.fn(() => {
     const result = selectResults.shift() ?? [];
+    const afterOrderBy = {
+      limit: vi.fn(async () => result),
+      then: (
+        resolve: (value: unknown[]) => unknown,
+        reject?: (error: unknown) => unknown,
+      ) => Promise.resolve(result).then(resolve, reject),
+    };
     const afterWhere = {
       limit: vi.fn(async () => result),
       for: vi.fn(async () => result),
       groupBy: vi.fn(async () => result),
-      orderBy: vi.fn(async () => result),
+      orderBy: vi.fn(() => afterOrderBy),
       then: (
         resolve: (value: unknown[]) => unknown,
         reject?: (error: unknown) => unknown,
@@ -105,6 +112,7 @@ describe("AI SOAP note safety", () => {
         patientId: PATIENT_ID,
         subjective: "Eating well",
         source: "scribe",
+        clinicianConfirmed: true,
       } as never),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -123,6 +131,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
@@ -140,6 +149,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
@@ -167,6 +177,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).resolves.toMatchObject({
       id: NOTE_ID,
@@ -196,6 +207,7 @@ describe("AI SOAP note safety", () => {
         subjective: "<p><br></p>",
         plan: "&nbsp;",
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -211,6 +223,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: SOAP_NOTE_TEMPLATES[0]!.sections.subjective,
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
@@ -230,6 +243,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -239,6 +253,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         objective: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -248,6 +263,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         assessment: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -257,6 +273,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         plan: "A".repeat(SOAP_SECTION_MAX_LENGTH + 1),
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -273,6 +290,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "A".repeat(AI_SOURCE_MAX_LENGTH + 1),
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
@@ -289,6 +307,7 @@ describe("AI SOAP note safety", () => {
         appointmentId: APPOINTMENT_ID,
         subjective: "Eating well",
         source: "scribe",
+        clinicianConfirmed: true,
       }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
