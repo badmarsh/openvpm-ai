@@ -100,7 +100,7 @@ export const voiceDictations = pgTable(
     audioDurationSeconds: text("audio_duration_seconds"),
 
     // Transkripcia
-    modelId: text("model_id").notNull(),            // "gemini-3.7-flash"
+    modelId: text("model_id").notNull(),            // "gemini-3.8-flash-medium"
     rawTranscript: text("raw_transcript"),          // Surová transkripcia z STT
     language: text("language").default("sk"),       // Jazyk diktovania
 
@@ -361,7 +361,7 @@ Jediné zmeny:
 
 5. **Dvojstupňové uloženie** — diktovanie je najprv "draft" (transkripcia + SOAP návrh). Veterinár musí explicitne potvrdiť "Uložiť do záznamov". Až vtedy sa vytvorí záznam v `soapNotes` tabuľke.
 
-6. **Model** — `gemini-3.7-flash` (podľa memory: gemini-model-name-standardization). Podporuje audio input natívne.
+6. **Model** — `gemini-3.8-flash-medium` (podľa `@/lib/ai-models` DEFAULT_AI_MODEL). Podporuje audio input natívne.
 
 ---
 

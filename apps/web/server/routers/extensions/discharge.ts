@@ -10,7 +10,10 @@ import {
 } from "../../trpc";
 import { dischargeReports, patients, practices } from "@openpims/db";
 import { configuredModel } from "@/lib/agent/runner";
+import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { recordUsage } from "@/lib/billing/usage";
+import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
+import { schedulePostopCheckIn, applySympathyGate } from "@/lib/marketing/messaging";
 
 const dischargeProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian", "technician", "front_desk"))
@@ -185,7 +188,7 @@ export const dischargeRouter = createRouter({
           followUp: input.followUp ?? null,
           reportText: input.reportText,
           language: input.language,
-          modelId: process.env.AI_MODEL ?? "gemini-flash-latest",
+          modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
           status: input.status,
         })
         .returning();
@@ -195,6 +198,41 @@ export const dischargeRouter = createRouter({
           code: "INTERNAL_SERVER_ERROR",
           message: "Nepodarilo sa uložiť prepúšťaciu správu",
         });
+      }
+
+      if (saved.status === "finalized") {
+        void dispatchWebhookEvent(ctx.practiceId, "discharge_report.finalized", {
+          reportId: saved.id,
+          patientId: saved.patientId,
+          appointmentId: saved.appointmentId,
+        });
+
+        if (saved.patientId) {
+          const [patient] = await ctx.db
+            .select({ clientId: patients.clientId, status: patients.status })
+            .from(patients)
+            .where(eq(patients.id, saved.patientId))
+            .limit(1);
+
+          if (patient?.status === "deceased") {
+            if (patient.clientId) {
+              await applySympathyGate(
+                ctx.db,
+                ctx.practiceId,
+                patient.clientId,
+                saved.patientId,
+                "discharge_sympathy_gate"
+              );
+            }
+          } else if (patient?.clientId) {
+            await schedulePostopCheckIn(
+              ctx.db,
+              ctx.practiceId,
+              patient.clientId,
+              saved.patientId
+            );
+          }
+        }
       }
 
       return saved;

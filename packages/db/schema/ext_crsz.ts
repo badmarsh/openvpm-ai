@@ -15,6 +15,7 @@ import { practices } from "./practices";
 import { patients } from "./patients";
 import { clients } from "./clients";
 import { users } from "./users";
+import { vaccinationRecords } from "./clinical";
 
 // ---------------------------------------------------------------------------
 // Enums (Slovak CRSZ & PetPass Legislation - Law 39/2007 Z. z.)
@@ -123,6 +124,8 @@ export const petPassports = pgTable(
     // Dátum, od kedy je zviera spôsobilé na cestovanie (21 dní po primovakcinácii)
     travelEligibleFrom: date("travel_eligible_from"),
 
+    vaccinationRecordId: uuid("vaccination_record_id").references(() => vaccinationRecords.id),
+
     notes: text("notes"),
   },
   (table) => ({
@@ -179,5 +182,9 @@ export const petPassportsRelations = relations(petPassports, ({ one }) => ({
   issuer: one(users, {
     fields: [petPassports.issuedBy],
     references: [users.id],
+  }),
+  vaccinationRecord: one(vaccinationRecords, {
+    fields: [petPassports.vaccinationRecordId],
+    references: [vaccinationRecords.id],
   }),
 }));

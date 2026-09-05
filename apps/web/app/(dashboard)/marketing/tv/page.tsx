@@ -20,6 +20,8 @@ export default function TvSlidesPage() {
 
   const utils = trpc.useUtils();
   const listQuery = trpc.extensions.marketing.listTvSlides.useQuery();
+  const practiceQuery = trpc.extensions.marketing.getPracticeId.useQuery();
+  const tvHref = practiceQuery.data?.practiceId ? `/tv/${practiceQuery.data.practiceId}` : "/waiting-room";
 
   const createMutation = trpc.extensions.marketing.createTvSlide.useMutation({
     onSuccess: () => {
@@ -45,7 +47,7 @@ export default function TvSlidesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/waiting-room" target="_blank">
+          <Link href={tvHref} target="_blank">
             <Button variant="outline" className="gap-2">
               <ExternalLink className="h-4 w-4" />
               {t("marketing.tv.openTv", "Otvoriť TV zobrazenie")}

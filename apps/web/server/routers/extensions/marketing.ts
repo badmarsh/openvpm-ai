@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { generateText } from "ai";
-import { createRouter, protectedProcedure, requireRole } from "../../trpc";
+import { createRouter, protectedProcedure, publicProcedure, requireRole } from "../../trpc";
 import { TRPCError } from "@trpc/server";
 import { configuredModel } from "@/lib/agent/runner";
 import { readHostedAiAccess } from "@/lib/billing/ai-access";
 import { recordUsage } from "@/lib/billing/usage";
-import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import {
+  extMarketingContentBatches,
   extMarketingContentItems,
   extMarketingMediaAssets,
   extMarketingMediaConsents,
@@ -15,8 +16,29 @@ import {
   extMarketingReviews,
   extMarketingRecallSchedules,
   extMarketingWellnessRedemptions,
+  extMarketingStaffTasks,
+  extMarketingMessageTemplates,
+  extMarketingMessageLogs,
+  extMarketingAutomationRules,
+  extMarketingPostopResponses,
+  extMarketingOperativeScripts,
+  extSmsDeliveryLog,
+  patients,
+  clients,
+  practices,
+  wellnessEnrollments,
 } from '@openpims/db';
-import { validateMarketingText } from '@/lib/marketing/validator';
+import { autoFix, validateMarketingText, withDisclaimer, type ValidatorReport } from '@/lib/marketing/validator';
+import { generateWeeklyBatch, getBrand, mondayOf, nameGuards } from '@/lib/marketing/planner';
+import { composePost } from '@/lib/marketing/composer';
+import { RECIPES } from '@/lib/marketing/recipes';
+import {
+  processQueue,
+  createMessagesForTrigger,
+  applySympathyGate,
+  schedulePostopCheckIn,
+} from '@/lib/marketing/messaging';
+import { smsRateLimitOk } from '@/lib/marketing/sms-rate-limit';
 import {
   generateAlibabaImage,
   submitAlibabaVideo,
@@ -25,6 +47,44 @@ import {
   ALIBABA_DEFAULT_IMAGE_MODEL,
   ALIBABA_DEFAULT_VIDEO_MODEL,
 } from "@/lib/ai/alibaba-proxy";
+
+async function assertPatientNotDeceased(db: any, patientId: string) {
+  const [p] = await db
+    .select({ status: patients.status })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  if (p?.status === "deceased") {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "Sympathy Gate: Blocked for deceased patient.",
+    });
+  }
+}
+
+export async function createCondolenceTask(
+  db: any,
+  practiceId: string,
+  clientId: string,
+  detail?: string,
+  title?: string,
+) {
+  const [task] = await db
+    .insert(extMarketingStaffTasks)
+    .values({
+      practiceId,
+      clientId,
+      kind: "condolence",
+      title: title ?? "Kondolencia: úmrtie pacienta",
+      detail:
+        detail ??
+        "Pacient zomrel / bola zaznamenaná eutanázia. Pozvať na osobnú kondolenciu.",
+      status: "open",
+    })
+    .returning();
+  return task;
+}
+
 
 export interface CampaignTemplate {
   id: string;
@@ -291,10 +351,28 @@ createContentItem: protectedProcedure
       channel: z.enum(['instagram', 'facebook', 'google_business', 'sms', 'email']),
       scheduledFor: z.string().datetime().optional(),
       mediaAssetId: z.string().uuid().optional(),
+      patientId: z.string().uuid().optional(),
       allowPrice: z.boolean().default(false),
     })
   )
   .mutation(async ({ ctx, input }) => {
+    if (input.patientId) {
+      await assertPatientNotDeceased(ctx.db, input.patientId);
+    }
+    if (input.mediaAssetId) {
+      const [asset] = await ctx.db
+        .select({ patientId: extMarketingMediaConsents.patientId })
+        .from(extMarketingMediaAssets)
+        .leftJoin(
+          extMarketingMediaConsents,
+          eq(extMarketingMediaAssets.consentId, extMarketingMediaConsents.id)
+        )
+        .where(eq(extMarketingMediaAssets.id, input.mediaAssetId))
+        .limit(1);
+      if (asset?.patientId) {
+        await assertPatientNotDeceased(ctx.db, asset.patientId);
+      }
+    }
     const report = validateMarketingText({
       text: input.body,
       context: 'marketing',
@@ -340,6 +418,20 @@ approveContentItem: protectedProcedure
         code: 'FORBIDDEN',
         message: 'Príspevok je zablokovaný validátorom a nemôže byť schválený. Odstráňte problematický obsah.',
       });
+    }
+    if (existing.mediaAssetId) {
+      const [asset] = await ctx.db
+        .select({ patientId: extMarketingMediaConsents.patientId })
+        .from(extMarketingMediaAssets)
+        .leftJoin(
+          extMarketingMediaConsents,
+          eq(extMarketingMediaAssets.consentId, extMarketingMediaConsents.id)
+        )
+        .where(eq(extMarketingMediaAssets.id, existing.mediaAssetId))
+        .limit(1);
+      if (asset?.patientId) {
+        await assertPatientNotDeceased(ctx.db, asset.patientId);
+      }
     }
     const [updated] = await ctx.db
       .update(extMarketingContentItems)
@@ -509,7 +601,7 @@ listHandouts: protectedProcedure.query(async ({ ctx }) => {
     .orderBy(desc(extMarketingHandouts.createdAt));
 }),
 
-getPublicHandout: protectedProcedure
+getPublicHandout: publicProcedure
   .input(z.object({ slug: z.string() }))
   .query(async ({ ctx, input }) => {
     const [handout] = await ctx.db
@@ -517,15 +609,28 @@ getPublicHandout: protectedProcedure
       .from(extMarketingHandouts)
       .where(
         and(
-          eq(extMarketingHandouts.practiceId, ctx.practiceId),
           eq(extMarketingHandouts.slug, input.slug),
           eq(extMarketingHandouts.isPublic, true),
           isNull(extMarketingHandouts.deletedAt),
         )
       )
       .limit(1);
-    if (!handout) throw new TRPCError({ code: 'NOT_FOUND' });
-    return handout;
+    if (!handout) throw new TRPCError({ code: 'NOT_FOUND', message: 'Handout not found' });
+    const [practice] = await ctx.db
+      .select({
+        id: practices.id,
+        name: practices.name,
+        phone: practices.phone,
+        email: practices.email,
+        address: practices.address,
+      })
+      .from(practices)
+      .where(eq(practices.id, handout.practiceId))
+      .limit(1);
+    return {
+      ...handout,
+      practice,
+    };
   }),
 
 createHandout: protectedProcedure
@@ -678,6 +783,14 @@ redeemWellnessBenefit: protectedProcedure
     })
   )
   .mutation(async ({ ctx, input }) => {
+    const [enrollment] = await ctx.db
+      .select({ patientId: wellnessEnrollments.patientId })
+      .from(wellnessEnrollments)
+      .where(eq(wellnessEnrollments.id, input.enrollmentId))
+      .limit(1);
+    if (enrollment?.patientId) {
+      await assertPatientNotDeceased(ctx.db, enrollment.patientId);
+    }
     const [redemption] = await ctx.db
       .insert(extMarketingWellnessRedemptions)
       .values({
@@ -690,5 +803,1168 @@ redeemWellnessBenefit: protectedProcedure
       })
       .returning();
     return redemption;
+  }),
+
+// ── Staff Tasks ───────────────────────────────────────────────────────────────
+
+listStaffTasks: protectedProcedure
+  .use(requireRole("admin", "veterinarian"))
+  .input(
+    z.object({
+      status: z.enum(["open", "done", "all"]).default("open"),
+      kind: z.enum(["condolence", "postop_escalation", "info", "all"]).default("all"),
+    })
+  )
+  .query(async ({ ctx, input }) => {
+    const conditions = [
+      eq(extMarketingStaffTasks.practiceId, ctx.practiceId),
+      isNull(extMarketingStaffTasks.deletedAt),
+    ];
+    if (input.status !== "all") {
+      conditions.push(eq(extMarketingStaffTasks.status, input.status));
+    }
+    if (input.kind !== "all") {
+      conditions.push(eq(extMarketingStaffTasks.kind, input.kind));
+    }
+    return ctx.db
+      .select()
+      .from(extMarketingStaffTasks)
+      .where(and(...conditions))
+      .orderBy(desc(extMarketingStaffTasks.createdAt));
+  }),
+
+  resolveStaffTask: protectedProcedure
+  .use(requireRole("admin", "veterinarian"))
+  .input(z.object({ id: z.string().uuid() }))
+  .mutation(async ({ ctx, input }) => {
+    const [updated] = await ctx.db
+      .update(extMarketingStaffTasks)
+      .set({ status: "done" })
+      .where(
+        and(
+          eq(extMarketingStaffTasks.id, input.id),
+          eq(extMarketingStaffTasks.practiceId, ctx.practiceId),
+        )
+      )
+      .returning();
+    if (!updated) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
+    }
+    return updated;
+  }),
+
+  // ── Content Batches & Weekly Planner ────────────────────────────────────────
+
+  listContentBatches: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db
+      .select()
+      .from(extMarketingContentBatches)
+      .where(eq(extMarketingContentBatches.practiceId, ctx.practiceId))
+      .orderBy(desc(extMarketingContentBatches.weekStart))
+      .limit(20);
+  }),
+
+  createContentBatch: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        weekStart: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const date = input.weekStart ? new Date(input.weekStart) : undefined;
+      return generateWeeklyBatch(ctx.db, ctx.practiceId, {
+        weekStart: date,
+        userId: ctx.user.id,
+      });
+    }),
+
+  approveContentBatch: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(z.object({ batchId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [batch] = await ctx.db
+        .update(extMarketingContentBatches)
+        .set({ status: "approved" })
+        .where(
+          and(
+            eq(extMarketingContentBatches.id, input.batchId),
+            eq(extMarketingContentBatches.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      if (!batch) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Batch not found" });
+      }
+
+      await ctx.db
+        .update(extMarketingContentItems)
+        .set({
+          status: "approved",
+          approvedBy: ctx.user.id,
+          approvedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(extMarketingContentItems.batchId, input.batchId),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId),
+            eq(extMarketingContentItems.status, "proposed")
+          )
+        );
+
+      return batch;
+    }),
+
+  getWeeklyPlan: protectedProcedure
+    .input(z.object({ weekStart: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const monday = input.weekStart
+        ? mondayOf(new Date(input.weekStart))
+        : mondayOf(new Date());
+      const weekStr = monday.toISOString().slice(0, 10);
+
+      let [batch] = await ctx.db
+        .select()
+        .from(extMarketingContentBatches)
+        .where(
+          and(
+            eq(extMarketingContentBatches.practiceId, ctx.practiceId),
+            eq(extMarketingContentBatches.weekStart, weekStr)
+          )
+        )
+        .limit(1);
+
+      if (!batch) {
+        const gen = await generateWeeklyBatch(ctx.db, ctx.practiceId, {
+          weekStart: monday,
+          userId: ctx.user.id,
+        });
+        const [insertedBatch] = await ctx.db
+          .select()
+          .from(extMarketingContentBatches)
+          .where(
+            and(
+              eq(extMarketingContentBatches.practiceId, ctx.practiceId),
+              eq(extMarketingContentBatches.id, gen.result.batchId)
+            )
+          )
+          .limit(1);
+        batch = insertedBatch;
+      }
+
+      const items = await ctx.db
+        .select()
+        .from(extMarketingContentItems)
+        .where(
+          and(
+            eq(extMarketingContentItems.batchId, batch.id),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId),
+            isNull(extMarketingContentItems.deletedAt)
+          )
+        )
+        .orderBy(extMarketingContentItems.scheduledFor);
+
+      return { batch, items };
+    }),
+
+  rejectContentItem: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingContentItems)
+        .set({ status: "archived" })
+        .where(
+          and(
+            eq(extMarketingContentItems.id, input.id),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+      return updated;
+    }),
+
+  autoFixContentItem: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [item] = await ctx.db
+        .select()
+        .from(extMarketingContentItems)
+        .where(
+          and(
+            eq(extMarketingContentItems.id, input.id),
+            eq(extMarketingContentItems.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!item) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Content item not found" });
+      }
+
+      const rep = item.validatorFindings as ValidatorReport | null;
+      if (!rep) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No validation findings to fix" });
+      }
+
+      const fixedBody = autoFix(item.body, rep);
+      const guards = await nameGuards(ctx.db, ctx.practiceId);
+      const newRep = validateMarketingText({
+        text: fixedBody,
+        context: "marketing",
+        allowedClientNames: guards.allowedNames,
+        knownClientNames: guards.knownNames,
+      });
+
+      const [updated] = await ctx.db
+        .update(extMarketingContentItems)
+        .set({
+          body: fixedBody,
+          validatorVerdict: newRep.verdict,
+          validatorFindings: newRep,
+          status: newRep.verdict === "block" ? "blocked" : "proposed",
+        })
+        .where(eq(extMarketingContentItems.id, input.id))
+        .returning();
+
+      return updated;
+    }),
+
+  createCustomPost: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ topic: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const brand = await getBrand(ctx.db, ctx.practiceId);
+      const monday = mondayOf(new Date());
+      const weekStr = monday.toISOString().slice(0, 10);
+
+      let [batch] = await ctx.db
+        .select()
+        .from(extMarketingContentBatches)
+        .where(
+          and(
+            eq(extMarketingContentBatches.practiceId, ctx.practiceId),
+            eq(extMarketingContentBatches.weekStart, weekStr)
+          )
+        )
+        .limit(1);
+
+      if (!batch) {
+        [batch] = await ctx.db
+          .insert(extMarketingContentBatches)
+          .values({
+            practiceId: ctx.practiceId,
+            weekStart: weekStr,
+            status: "in_review",
+          })
+          .returning();
+      }
+
+      const body = await composePost({
+        recipeKey: "custom",
+        lang: brand.defaultLanguage,
+        brand,
+        facts: {
+          topic: input.topic.trim(),
+          booking_url: brand.bookingUrl,
+          seed: `custom-${Date.now()}`,
+        },
+      });
+
+      const guards = await nameGuards(ctx.db, ctx.practiceId);
+      const rep = validateMarketingText({
+        text: body,
+        context: "marketing",
+        allowedClientNames: guards.allowedNames,
+        knownClientNames: guards.knownNames,
+      });
+
+      const [item] = await ctx.db
+        .insert(extMarketingContentItems)
+        .values({
+          practiceId: ctx.practiceId,
+          batchId: batch.id,
+          createdBy: ctx.user.id,
+          title: input.topic.slice(0, 60),
+          body,
+          channel: "facebook",
+          status: rep.verdict === "block" ? "blocked" : "proposed",
+          scheduledFor: new Date(Date.now() + 24 * 3600_000),
+          validatorVerdict: rep.verdict,
+          validatorFindings: rep,
+        })
+        .returning();
+
+      return item;
+    }),
+
+  // ── Message Logs & Stats ────────────────────────────────────────────────────
+
+  listMessageLogs: protectedProcedure
+    .input(
+      z.object({
+        status: z.string().optional(),
+        clientId: z.string().uuid().optional(),
+        channel: z.string().optional(),
+        limit: z.number().min(1).max(200).default(100),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions = [eq(extMarketingMessageLogs.practiceId, ctx.practiceId)];
+
+      if (input.status && input.status !== "all") {
+        conditions.push(eq(extMarketingMessageLogs.status, input.status as any));
+      }
+      if (input.clientId) {
+        conditions.push(eq(extMarketingMessageLogs.clientId, input.clientId));
+      }
+      if (input.channel && input.channel !== "all") {
+        conditions.push(eq(extMarketingMessageLogs.channel, input.channel));
+      }
+
+      const rows = await ctx.db
+        .select({
+          log: extMarketingMessageLogs,
+          client: {
+            id: clients.id,
+            firstName: clients.firstName,
+            lastName: clients.lastName,
+            phone: clients.phone,
+            email: clients.email,
+          },
+          patient: {
+            id: patients.id,
+            name: patients.name,
+            species: patients.species,
+            status: patients.status,
+          },
+        })
+        .from(extMarketingMessageLogs)
+        .leftJoin(clients, eq(extMarketingMessageLogs.clientId, clients.id))
+        .leftJoin(patients, eq(extMarketingMessageLogs.patientId, patients.id))
+        .where(and(...conditions))
+        .orderBy(desc(extMarketingMessageLogs.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return rows;
+    }),
+
+  getMessageStats: protectedProcedure.query(async ({ ctx }) => {
+    const since = new Date(Date.now() - 30 * 86400_000);
+    const rows = await ctx.db
+      .select({
+        status: extMarketingMessageLogs.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(extMarketingMessageLogs)
+      .where(
+        and(
+          eq(extMarketingMessageLogs.practiceId, ctx.practiceId),
+          gte(extMarketingMessageLogs.createdAt, since)
+        )
+      )
+      .groupBy(extMarketingMessageLogs.status);
+
+    const stats = {
+      total: 0,
+      sent: 0,
+      delivered: 0,
+      queued: 0,
+      failed: 0,
+      blocked_sympathy: 0,
+      suppressed_no_consent: 0,
+      suppressed_rate: 0,
+      suppressed_quiet: 0,
+    };
+
+    for (const r of rows) {
+      stats.total += r.count;
+      if (r.status in stats) {
+        (stats as any)[r.status] = r.count;
+      }
+    }
+
+    return stats;
+  }),
+
+  listMessageTemplates: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db
+      .select()
+      .from(extMarketingMessageTemplates)
+      .where(
+        and(
+          eq(extMarketingMessageTemplates.practiceId, ctx.practiceId),
+          eq(extMarketingMessageTemplates.isActive, true)
+        )
+      )
+      .orderBy(extMarketingMessageTemplates.key);
+  }),
+
+  upsertMessageTemplate: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(
+      z.object({
+        id: z.string().uuid().optional(),
+        key: z.string(),
+        language: z.string().default("sk"),
+        channel: z.string().default("sms"),
+        body: z.string().min(1),
+        legalBasis: z.string().default("contract"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.id) {
+        const [existing] = await ctx.db
+          .select()
+          .from(extMarketingMessageTemplates)
+          .where(
+            and(
+              eq(extMarketingMessageTemplates.id, input.id),
+              eq(extMarketingMessageTemplates.practiceId, ctx.practiceId)
+            )
+          )
+          .limit(1);
+
+        if (existing) {
+          await ctx.db
+            .update(extMarketingMessageTemplates)
+            .set({ isActive: false })
+            .where(eq(extMarketingMessageTemplates.id, existing.id));
+
+          const [created] = await ctx.db
+            .insert(extMarketingMessageTemplates)
+            .values({
+              practiceId: ctx.practiceId,
+              key: input.key,
+              language: input.language,
+              channel: input.channel,
+              body: input.body,
+              legalBasis: input.legalBasis,
+              version: existing.version + 1,
+              isActive: true,
+            })
+            .returning();
+          return created;
+        }
+      }
+
+      const [created] = await ctx.db
+        .insert(extMarketingMessageTemplates)
+        .values({
+          practiceId: ctx.practiceId,
+          key: input.key,
+          language: input.language,
+          channel: input.channel,
+          body: input.body,
+          legalBasis: input.legalBasis,
+          version: 1,
+          isActive: true,
+        })
+        .onConflictDoUpdate({
+          target: [
+            extMarketingMessageTemplates.practiceId,
+            extMarketingMessageTemplates.key,
+            extMarketingMessageTemplates.language,
+          ],
+          set: {
+            body: input.body,
+            channel: input.channel,
+            legalBasis: input.legalBasis,
+            isActive: true,
+          },
+        })
+        .returning();
+
+      return created;
+    }),
+
+  processQueuedMessages: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .mutation(async ({ ctx }) => {
+      return processQueue(ctx.db, ctx.practiceId);
+    }),
+
+  triggerMessage: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        clientId: z.string().uuid(),
+        triggerKey: z.string(),
+        patientId: z.string().uuid().optional(),
+        service: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.triggerKey === "patient_deceased") {
+        return applySympathyGate(
+          ctx.db,
+          ctx.practiceId,
+          input.clientId,
+          input.patientId,
+          "manual_trigger"
+        );
+      }
+
+      return createMessagesForTrigger(ctx.db, ctx.practiceId, {
+        triggerKey: input.triggerKey,
+        clientId: input.clientId,
+        patientId: input.patientId,
+        service: input.service,
+        eventId: `manual_${Date.now()}`,
+      });
+    }),
+
+  // ── Automation Rules ────────────────────────────────────────────────────────
+
+  listAutomationRules: protectedProcedure.query(async ({ ctx }) => {
+    let rules = await ctx.db
+      .select()
+      .from(extMarketingAutomationRules)
+      .where(eq(extMarketingAutomationRules.practiceId, ctx.practiceId))
+      .orderBy(extMarketingAutomationRules.sort);
+
+    if (rules.length === 0) {
+      // Seed default Slovak automation rules
+      const defaultRules = [
+        {
+          practiceId: ctx.practiceId,
+          key: "vaccine_due",
+          label: "Pripomienka očkovania",
+          description: "Odosiela SMS upozornenie 14 dní pred expiráciou platnosti vakcíny.",
+          triggerKey: "vaccine_due",
+          timing: "14 dní pred expiráciou",
+          channel: "sms",
+          legalBasis: "contract",
+          enabled: true,
+          sort: 1,
+        },
+        {
+          practiceId: ctx.practiceId,
+          key: "postop_check",
+          label: "Pooperačná kontrola stavu",
+          description: "Odosiela SMS s odkazom na kontrolu stavu pacienta 24 hodín po prepustení z chirurgie.",
+          triggerKey: "surgery_completed",
+          timing: "24 hodín po zákroku",
+          channel: "sms",
+          legalBasis: "contract",
+          enabled: true,
+          sort: 2,
+        },
+        {
+          practiceId: ctx.practiceId,
+          key: "review_request",
+          label: "Žiadosť o Google recenziu",
+          description: "Odosiela SMS s poďakovaním a žiadosťou o recenziu 48 hodín po úspešnej návšteve.",
+          triggerKey: "appointment_completed",
+          timing: "48 hodín po návšteve",
+          channel: "sms",
+          legalBasis: "consent",
+          enabled: true,
+          sort: 3,
+        },
+        {
+          practiceId: ctx.practiceId,
+          key: "inactive_recall",
+          label: "Recall neaktívnych pacientov",
+          description: "Pripomenie preventívnu prehliadku pacientom, ktorí neboli na klinike viac ako 12 mesiacov.",
+          triggerKey: "inactive_recall",
+          timing: "12 mesiacov bez návštevy",
+          channel: "sms",
+          legalBasis: "consent",
+          enabled: true,
+          sort: 4,
+        },
+      ];
+
+      await ctx.db
+        .insert(extMarketingAutomationRules)
+        .values(defaultRules)
+        .onConflictDoNothing();
+
+      rules = await ctx.db
+        .select()
+        .from(extMarketingAutomationRules)
+        .where(eq(extMarketingAutomationRules.practiceId, ctx.practiceId))
+        .orderBy(extMarketingAutomationRules.sort);
+    }
+
+    return rules;
+  }),
+
+  upsertAutomationRule: protectedProcedure
+    .use(requireRole("admin"))
+    .input(
+      z.object({
+        id: z.string().uuid().optional(),
+        key: z.string(),
+        label: z.string(),
+        description: z.string().optional(),
+        triggerKey: z.string(),
+        timing: z.string().optional(),
+        channel: z.string().default("sms"),
+        legalBasis: z.string().default("contract"),
+        enabled: z.boolean().default(true),
+        sort: z.number().default(0),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [upserted] = await ctx.db
+        .insert(extMarketingAutomationRules)
+        .values({
+          practiceId: ctx.practiceId,
+          key: input.key,
+          label: input.label,
+          description: input.description ?? "",
+          triggerKey: input.triggerKey,
+          timing: input.timing ?? "",
+          channel: input.channel,
+          legalBasis: input.legalBasis,
+          enabled: input.enabled,
+          sort: input.sort,
+        })
+        .onConflictDoUpdate({
+          target: [
+            extMarketingAutomationRules.practiceId,
+            extMarketingAutomationRules.key,
+          ],
+          set: {
+            label: input.label,
+            description: input.description ?? "",
+            triggerKey: input.triggerKey,
+            timing: input.timing ?? "",
+            channel: input.channel,
+            legalBasis: input.legalBasis,
+            enabled: input.enabled,
+            sort: input.sort,
+          },
+        })
+        .returning();
+
+      return upserted;
+    }),
+
+  toggleAutomationRule: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(z.object({ id: z.string().uuid(), enabled: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingAutomationRules)
+        .set({ enabled: input.enabled })
+        .where(
+          and(
+            eq(extMarketingAutomationRules.id, input.id),
+            eq(extMarketingAutomationRules.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Rule not found" });
+      }
+
+      return updated;
+    }),
+
+  // ── Post-op Responses ───────────────────────────────────────────────────────
+
+  submitPostopResponse: publicProcedure
+    .input(
+      z.object({
+        messageLogId: z.string().uuid().optional(),
+        clientId: z.string().uuid().optional(),
+        patientId: z.string().uuid().optional(),
+        outcome: z.enum(["ok", "question", "concern"]),
+        note: z.string().max(1000).optional(),
+        token: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      let clientId = input.clientId;
+      let practiceId: string | null = null;
+
+      if (input.token) {
+        try {
+          const decoded = Buffer.from(input.token, "base64").toString("utf-8");
+          const parts = decoded.split(":");
+          if (parts.length >= 2) {
+            clientId = parts[0];
+            practiceId = parts[1];
+          }
+        } catch {
+          // invalid token
+        }
+      }
+
+      if (!practiceId && input.messageLogId) {
+        const [log] = await ctx.db
+          .select({
+            practiceId: extMarketingMessageLogs.practiceId,
+            clientId: extMarketingMessageLogs.clientId,
+            patientId: extMarketingMessageLogs.patientId,
+          })
+          .from(extMarketingMessageLogs)
+          .where(eq(extMarketingMessageLogs.id, input.messageLogId))
+          .limit(1);
+        if (log) {
+          practiceId = log.practiceId;
+          clientId = clientId ?? log.clientId;
+        }
+      }
+
+      if (!practiceId && clientId) {
+        const [cl] = await ctx.db
+          .select({ practiceId: clients.practiceId })
+          .from(clients)
+          .where(eq(clients.id, clientId))
+          .limit(1);
+        if (cl) {
+          practiceId = cl.practiceId;
+        }
+      }
+
+      if (!practiceId || !clientId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Unable to determine clinic or client identity.",
+        });
+      }
+
+      const [response] = await ctx.db
+        .insert(extMarketingPostopResponses)
+        .values({
+          practiceId,
+          messageLogId: input.messageLogId ?? null,
+          clientId,
+          patientId: input.patientId ?? null,
+          outcome: input.outcome,
+          note: input.note ?? "",
+        })
+        .returning();
+
+      if (input.outcome === "concern" || input.outcome === "question") {
+        await ctx.db.insert(extMarketingStaffTasks).values({
+          practiceId,
+          clientId,
+          kind: "postop_escalation",
+          title:
+            input.outcome === "concern"
+              ? "Post-op eskalácia: Majiteľ hlási obavy / komplikácie"
+              : "Post-op otázka: Majiteľ má doplňujúce otázky",
+          detail:
+            input.note ||
+            `Klient hlási stav: ${input.outcome}. Bezodkladne kontaktovať majiteľa.`,
+          status: "open",
+        });
+      }
+
+      return { success: true, id: response.id };
+    }),
+
+  listPostopResponses: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db
+      .select({
+        response: extMarketingPostopResponses,
+        client: {
+          id: clients.id,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          phone: clients.phone,
+        },
+        patient: {
+          id: patients.id,
+          name: patients.name,
+          species: patients.species,
+        },
+      })
+      .from(extMarketingPostopResponses)
+      .leftJoin(clients, eq(extMarketingPostopResponses.clientId, clients.id))
+      .leftJoin(patients, eq(extMarketingPostopResponses.patientId, patients.id))
+      .where(eq(extMarketingPostopResponses.practiceId, ctx.practiceId))
+      .orderBy(desc(extMarketingPostopResponses.createdAt))
+      .limit(50);
+  }),
+
+  // ── Operative Scripts ───────────────────────────────────────────────────────
+
+  listOperativeScripts: protectedProcedure.query(async ({ ctx }) => {
+    let scripts = await ctx.db
+      .select()
+      .from(extMarketingOperativeScripts)
+      .where(eq(extMarketingOperativeScripts.practiceId, ctx.practiceId))
+      .orderBy(extMarketingOperativeScripts.sort);
+
+    if (scripts.length === 0) {
+      const defaultScripts = [
+        {
+          practiceId: ctx.practiceId,
+          category: "discharge_ask",
+          title: "Dentálna hygiena a stomatológia",
+          body: "12 hodín hladovka pred anestéziou. Mäkká strava 3-5 dní po zákroku. Nekŕmiť tvrdými kosťami ani maškrtami. Pri krvácaní dlhšom ako 24h volať kliniku.",
+          note: "Štandardný protokol pre ultrazvukové čistenie zubov.",
+          sort: 1,
+        },
+        {
+          practiceId: ctx.practiceId,
+          category: "discharge_ask",
+          title: "Kastrácia psa / mačky",
+          body: "Ochranný golier alebo pooperačné body 10-12 dní. Pokojový režim bez behania a skákania. Kontrola operačnej rany 2x denne. Stehy sa vyberajú o 10-12 dní.",
+          note: "Pooperačná starostlivosť po bežnej orchiektómii / ovariektómii.",
+          sort: 2,
+        },
+        {
+          practiceId: ctx.practiceId,
+          category: "crisis",
+          title: "Pyometra - akútny stav",
+          body: "Prísny pokojový režim, pravidelné podávanie antibiotík a analgetík. Zabezpečiť stály prístup k vode. Sledovať močenie, zvracanie a teplotu.",
+          note: "Akútna pooperačná starostlivosť.",
+          sort: 3,
+        },
+        {
+          practiceId: ctx.practiceId,
+          category: "condolence",
+          title: "Kondolenčný protokol",
+          body: "Vyjadriť úprimnú sústrasť v mene celého personálu. Ponúknuť možnosť individuálnej kremácie a odtlačku labky. Zaznamenať do systému a zablokovať všetky marketingové a recall správy.",
+          note: "Sympathy flow pre personál.",
+          sort: 4,
+        },
+        {
+          practiceId: ctx.practiceId,
+          category: "review_ask",
+          title: "Žiadosť o recenziu po vyriešení problému",
+          body: "Sme radi, že sa vášmu miláčikovi darí lepšie! Pomohlo by nám, keby ste našu prácu ohodnotili na Google. Zaberie to len minútu.",
+          note: "Odosiela sa len po úspešnej rekonvalescencii.",
+          sort: 5,
+        },
+      ];
+
+      await ctx.db
+        .insert(extMarketingOperativeScripts)
+        .values(defaultScripts)
+        .onConflictDoNothing();
+
+      scripts = await ctx.db
+        .select()
+        .from(extMarketingOperativeScripts)
+        .where(eq(extMarketingOperativeScripts.practiceId, ctx.practiceId))
+        .orderBy(extMarketingOperativeScripts.sort);
+    }
+
+    return scripts;
+  }),
+
+  upsertOperativeScript: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(
+      z.object({
+        id: z.string().uuid().optional(),
+        category: z.string(),
+        title: z.string(),
+        body: z.string(),
+        note: z.string().optional(),
+        sort: z.number().default(0),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.id) {
+        const [updated] = await ctx.db
+          .update(extMarketingOperativeScripts)
+          .set({
+            category: input.category,
+            title: input.title,
+            body: input.body,
+            note: input.note ?? "",
+            sort: input.sort,
+          })
+          .where(
+            and(
+              eq(extMarketingOperativeScripts.id, input.id),
+              eq(extMarketingOperativeScripts.practiceId, ctx.practiceId)
+            )
+          )
+          .returning();
+        return updated;
+      }
+
+      const [created] = await ctx.db
+        .insert(extMarketingOperativeScripts)
+        .values({
+          practiceId: ctx.practiceId,
+          category: input.category,
+          title: input.title,
+          body: input.body,
+          note: input.note ?? "",
+          sort: input.sort,
+        })
+        .returning();
+
+      return created;
+    }),
+
+  // ── SMS Rate Limit & GDPR Unsubscribe ───────────────────────────────────────
+
+  checkSmsRateLimit: protectedProcedure
+    .input(
+      z.object({
+        clientId: z.string().uuid(),
+        windowDays: z.number().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const allowed = await smsRateLimitOk(
+        ctx.db,
+        ctx.practiceId,
+        input.clientId,
+        input.windowDays
+      );
+      return { allowed };
+    }),
+
+  unsubscribeByToken: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const decoded = Buffer.from(input.token, "base64").toString("utf-8");
+        const [clientId, practiceId] = decoded.split(":");
+
+        if (!clientId || !practiceId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Neplatný odhlasovací odkaz.",
+          });
+        }
+
+        // 1. Reset client smsConsent
+        await ctx.db
+          .update(clients)
+          .set({ smsConsent: false })
+          .where(and(eq(clients.id, clientId), eq(clients.practiceId, practiceId)));
+
+        // 2. Revoke active marketing_messages consent
+        await ctx.db
+          .update(extMarketingMediaConsents)
+          .set({ revokedAt: new Date() })
+          .where(
+            and(
+              eq(extMarketingMediaConsents.clientId, clientId),
+              eq(extMarketingMediaConsents.practiceId, practiceId),
+              eq(extMarketingMediaConsents.scope, "marketing_messages"),
+              isNull(extMarketingMediaConsents.revokedAt)
+            )
+          );
+
+        // 3. Mark queued messages for this client as suppressed
+        await ctx.db
+          .update(extMarketingMessageLogs)
+          .set({ status: "suppressed_no_consent" })
+          .where(
+            and(
+              eq(extMarketingMessageLogs.clientId, clientId),
+              eq(extMarketingMessageLogs.practiceId, practiceId),
+              eq(extMarketingMessageLogs.status, "queued")
+            )
+          );
+
+        return { success: true };
+      } catch (err: any) {
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Neplatný token pre odhlásenie.",
+        });
+      }
+    }),
+
+  // ── Consents Registry ───────────────────────────────────────────────────────
+
+  listMediaConsents: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db
+      .select({
+        consent: extMarketingMediaConsents,
+        client: {
+          id: clients.id,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          phone: clients.phone,
+          email: clients.email,
+        },
+        patient: {
+          id: patients.id,
+          name: patients.name,
+          species: patients.species,
+        },
+      })
+      .from(extMarketingMediaConsents)
+      .leftJoin(clients, eq(extMarketingMediaConsents.clientId, clients.id))
+      .leftJoin(patients, eq(extMarketingMediaConsents.patientId, patients.id))
+      .where(
+        and(
+          eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
+          isNull(extMarketingMediaConsents.deletedAt)
+        )
+      )
+      .orderBy(desc(extMarketingMediaConsents.grantedAt));
+  }),
+
+  createMediaConsent: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        clientId: z.string().uuid(),
+        patientId: z.string().uuid().optional(),
+        scope: z.enum([
+          "photo_social",
+          "photo_web",
+          "photo_tv",
+          "story",
+          "testimonial",
+          "marketing_messages",
+        ]),
+        evidenceType: z.enum(["signature", "sms_confirm", "pdf"]),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [created] = await ctx.db
+        .insert(extMarketingMediaConsents)
+        .values({
+          practiceId: ctx.practiceId,
+          clientId: input.clientId,
+          patientId: input.patientId ?? null,
+          scope: input.scope,
+          evidenceType: input.evidenceType,
+          grantedAt: new Date(),
+          notes: input.notes ?? null,
+        })
+        .returning();
+
+      if (input.scope === "marketing_messages") {
+        await ctx.db
+          .update(clients)
+          .set({ smsConsent: true })
+          .where(
+            and(
+              eq(clients.id, input.clientId),
+              eq(clients.practiceId, ctx.practiceId)
+            )
+          );
+      }
+
+      return created;
+    }),
+
+  revokeMediaConsent: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ consentId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const now = new Date();
+      const [consent] = await ctx.db
+        .select()
+        .from(extMarketingMediaConsents)
+        .where(
+          and(
+            eq(extMarketingMediaConsents.id, input.consentId),
+            eq(extMarketingMediaConsents.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!consent || consent.revokedAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Súhlas neexistuje alebo už bol odvolaný.",
+        });
+      }
+
+      const [updated] = await ctx.db
+        .update(extMarketingMediaConsents)
+        .set({ revokedAt: now })
+        .where(eq(extMarketingMediaConsents.id, input.consentId))
+        .returning();
+
+      if (consent.scope === "marketing_messages") {
+        await ctx.db
+          .update(clients)
+          .set({ smsConsent: false })
+          .where(
+            and(
+              eq(clients.id, consent.clientId),
+              eq(clients.practiceId, ctx.practiceId)
+            )
+          );
+
+        await ctx.db
+          .update(extMarketingMessageLogs)
+          .set({ status: "suppressed_no_consent" })
+          .where(
+            and(
+              eq(extMarketingMessageLogs.clientId, consent.clientId),
+              eq(extMarketingMessageLogs.practiceId, ctx.practiceId),
+              eq(extMarketingMessageLogs.status, "queued")
+            )
+          );
+      }
+
+      // If media consent, archive proposed items using media with this consent
+      const assets = await ctx.db
+        .select({ id: extMarketingMediaAssets.id })
+        .from(extMarketingMediaAssets)
+        .where(eq(extMarketingMediaAssets.consentId, input.consentId));
+
+      const assetIds = assets.map((a) => a.id);
+      if (assetIds.length > 0) {
+        await ctx.db
+          .update(extMarketingContentItems)
+          .set({ status: "archived" })
+          .where(
+            and(
+              inArray(extMarketingContentItems.mediaAssetId, assetIds),
+              eq(extMarketingContentItems.status, "proposed")
+            )
+          );
+      }
+
+      return updated;
+    }),
+
+  getPublicTvSlides: publicProcedure
+    .input(z.object({ clinicId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const slides = await ctx.db
+        .select()
+        .from(extMarketingTvSlides)
+        .where(
+          and(
+            eq(extMarketingTvSlides.practiceId, input.clinicId),
+            eq(extMarketingTvSlides.isActive, true),
+            isNull(extMarketingTvSlides.deletedAt)
+          )
+        )
+        .orderBy(extMarketingTvSlides.sortOrder);
+
+      const [practice] = await ctx.db
+        .select({
+          id: practices.id,
+          name: practices.name,
+          phone: practices.phone,
+          settings: practices.settings,
+        })
+        .from(practices)
+        .where(eq(practices.id, input.clinicId))
+        .limit(1);
+
+      return {
+        slides,
+        practice,
+      };
+    }),
+
+  getPracticeId: protectedProcedure.query(async ({ ctx }) => {
+    return {
+      practiceId: ctx.practiceId,
+    };
   }),
 });

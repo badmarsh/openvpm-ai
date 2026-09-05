@@ -39,6 +39,7 @@ import {
 } from "@/lib/email-preferences";
 import { platformEmailIdentityConfigurationReady } from "@/lib/platform-email-preferences";
 import { hostedSmsCredentialIssueCount } from "@/lib/messaging/hosted-sms-readiness";
+import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +129,7 @@ const HOSTED_ANTHROPIC_AI_ENV_NAMES = ["ANTHROPIC_API_KEY"];
 // authentication is Vercel OIDC -> Google workload identity federation, so no
 // long-lived Google private key is accepted as a complete production setup.
 function activeAiModel(): string {
-  return envValue("AI_MODEL") ?? envValue("AGENT_MODEL") ?? "gemini-3.5-flash";
+  return envValue("AI_MODEL") ?? envValue("AGENT_MODEL") ?? DEFAULT_AI_MODEL;
 }
 
 function isGeminiModel(model: string): boolean {

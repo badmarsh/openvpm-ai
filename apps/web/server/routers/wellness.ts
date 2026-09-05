@@ -118,7 +118,7 @@ async function assertEnrollmentTargetsBelongToPractice(
 
   if (input.patientId) {
     const [patient] = await db
-      .select({ id: patients.id })
+      .select({ id: patients.id, status: patients.status })
       .from(patients)
       .where(
         and(
@@ -132,6 +132,12 @@ async function assertEnrollmentTargetsBelongToPractice(
       .limit(1);
     if (!patient) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Patient not found" });
+    }
+    if (patient.status === "deceased") {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Sympathy Gate: Cannot enroll a deceased patient in a wellness plan.",
+      });
     }
   }
 }

@@ -34,7 +34,9 @@ import {
  * change. Each tool already carries a Zod schema, which the AI SDK consumes
  * directly, and the SDK runs the tool-use loop for us up to MAX_ITERATIONS.
  */
-const DEFAULT_MODEL = "gemini-3.5-flash";
+import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+
+const DEFAULT_MODEL = DEFAULT_AI_MODEL;
 const MAX_ITERATIONS = 8;
 const MAX_OUTPUT_TOKENS = 1024;
 export const AGENT_RUN_RATE_WINDOW_MS = 60_000;

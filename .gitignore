@@ -55,5 +55,6 @@ package-lock.json
 .mcp.json
 .codex/
 .gstack/
+.qwen/
 _wip/
 

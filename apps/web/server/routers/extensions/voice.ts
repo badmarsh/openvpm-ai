@@ -17,7 +17,9 @@ const voiceProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian"))
   .use(requireFeature("agent"));
 
-const DEFAULT_MODEL = "gemini-3.7-flash";
+import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+
+const DEFAULT_MODEL = DEFAULT_AI_MODEL;
 
 function activeModelId(): string {
   return process.env.AI_MODEL ?? DEFAULT_MODEL;

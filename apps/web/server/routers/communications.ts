@@ -5,6 +5,7 @@ import { createRouter, protectedProcedure, requireRole } from "../trpc";
 import {
   communications,
   clients,
+  patients,
   emailSuppressions,
   practices,
   locationMessaging,
@@ -202,6 +203,7 @@ const createCommunicationInput = z
       .enum(["pending", "sent", "delivered", "read", "failed"])
       .optional(),
     requestId: z.string().uuid().optional(),
+    patientId: z.string().uuid().optional(),
   })
   .superRefine((input, ctx) => {
     if (
@@ -865,6 +867,45 @@ export const communicationsRouter = createRouter({
       let smsRecipient: string | null = null;
       let smsSenderLocationId: string | undefined;
       if (input.direction === "outbound" && input.channel === "sms") {
+        if (input.patientId) {
+          const [patient] = await ctx.db
+            .select({ status: patients.status })
+            .from(patients)
+            .where(
+              and(
+                eq(patients.id, input.patientId),
+                eq(patients.practiceId, ctx.practiceId),
+                isNull(patients.deletedAt),
+              ),
+            )
+            .limit(1);
+          if (patient?.status === "deceased") {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Sympathy Gate: Cannot send messages for a deceased patient.",
+            });
+          }
+        } else {
+          const clientPatients = await ctx.db
+            .select({ status: patients.status })
+            .from(patients)
+            .where(
+              and(
+                eq(patients.clientId, input.clientId),
+                eq(patients.practiceId, ctx.practiceId),
+                isNull(patients.deletedAt),
+              ),
+            );
+          if (
+            clientPatients.length > 0 &&
+            clientPatients.every((p) => p.status === "deceased")
+          ) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Sympathy Gate: Cannot send messages for a deceased patient.",
+            });
+          }
+        }
         if (!client.phone) {
           throw new TRPCError({
             code: "BAD_REQUEST",

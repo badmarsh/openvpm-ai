@@ -6,6 +6,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
+    "typecheck": "turbo type-check",
     "test": "turbo test",
     "db:push": "pnpm --filter @openpims/db db:push",
     "db:generate": "pnpm --filter @openpims/db db:generate",
