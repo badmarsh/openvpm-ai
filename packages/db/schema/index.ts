@@ -52,3 +52,4 @@ export * from "./ext_lab_import";
 export * from "./ext_voice";
 export * from "./ext_discharge";
 export * from "./ext_marketing";
+export * from "./ext_support";

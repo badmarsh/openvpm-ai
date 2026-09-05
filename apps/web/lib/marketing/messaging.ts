@@ -51,6 +51,13 @@ export const TRIGGERS: Record<string, TriggerRule[]> = {
   payment_failed: [{ key: "payment_failed", offsetMinutes: 0 }],
   surgery_completed: [{ key: "postop_check", offsetMinutes: 24 * 60 }],
   wellness_enrolled: [{ key: "wellness_welcome", offsetMinutes: 60 }],
+  dental_detected: [
+    { key: "dental_education", offsetMinutes: 7 * 24 * 60 },
+    { key: "dental_recall", offsetMinutes: 21 * 24 * 60 },
+  ],
+  senior_milestone: [
+    { key: "senior_wellness_invite", offsetMinutes: 2 * 24 * 60 },
+  ],
 };
 
 export function renderTemplate(body: string, vars: Record<string, string>): string {
@@ -216,6 +223,42 @@ export async function createMessagesForTrigger(
   return created;
 }
 
+const DEFAULT_TRIGGER_TEMPLATES: Record<
+  string,
+  Record<string, { channel: string; subject?: string; body: string }>
+> = {
+  dental_education: {
+    sk: {
+      channel: "sms",
+      body: "Dobry den {{client_name}}, pri poslednom vysetreni sme u {{pet_name}} zaznamenali zacinajuci zubny kamen. Precitajte si, ako spravne cistit zubky a predchadzat zapalu dasien: {{handout_url}} Vasa {{clinic_name}}",
+    },
+    en: {
+      channel: "sms",
+      body: "Hello {{client_name}}, during the recent visit we noted dental tartar on {{pet_name}}. Learn tips on home dental hygiene and oral health: {{handout_url}} Your {{clinic_name}}",
+    },
+  },
+  dental_recall: {
+    sk: {
+      channel: "sms",
+      body: "Zdravime {{client_name}}! Chceli by sme sa opytat na zubky pacienta {{pet_name}}. Radi vam ponukneme bezplatnu kontrolu chrupu a ultrazvukove cistenie. Objednajte sa online: {{booking_url}} {{clinic_name}}",
+    },
+    en: {
+      channel: "sms",
+      body: "Hi {{client_name}}, checking in on {{pet_name}}'s teeth! We'd love to invite you for a dental check and ultrasonic cleaning. Book online: {{booking_url}} {{clinic_name}}",
+    },
+  },
+  senior_wellness_invite: {
+    sk: {
+      channel: "sms",
+      body: "Vazeny/a {{client_name}}, {{pet_name}} vstupuje do zlateho veku seniora. Preventivne vysetrenie krvi a organovych funkcii dokaze zachytit skryte ochorenia vcas. Radi vas privitame: {{booking_url}} {{clinic_name}}",
+    },
+    en: {
+      channel: "sms",
+      body: "Dear {{client_name}}, {{pet_name}} is entering the senior golden age. Preventive blood screening helps catch conditions early. Book a senior checkup: {{booking_url}} {{clinic_name}}",
+    },
+  },
+};
+
 async function pickTemplate(
   db: Database | any,
   practiceId: string,
@@ -233,7 +276,20 @@ async function pickTemplate(
         eq(extMarketingMessageTemplates.isActive, true)
       )
     );
-  if (!rows.length) return undefined;
+  if (!rows.length) {
+    const fallback = DEFAULT_TRIGGER_TEMPLATES[key]?.[lang] ?? DEFAULT_TRIGGER_TEMPLATES[key]?.["sk"];
+    if (fallback) {
+      return {
+        id: `default_${key}_${lang}`,
+        key,
+        channel: fallback.channel,
+        subject: fallback.subject ?? null,
+        body: fallback.body,
+        language: lang,
+      };
+    }
+    return undefined;
+  }
   return (
     rows.find((t: any) => t.language === lang) ??
     rows.find((t: any) => t.language === brand.defaultLanguage) ??
@@ -278,8 +334,8 @@ async function templateVars(
   const token = Buffer.from(`${cl.id}:${practiceId}`).toString("base64");
 
   return {
-    name: clientName,
-    pet: petName,
+    client_name: clientName,
+    pet_name: petName,
     date: iso(appt),
     time: `${String(appt.getHours()).padStart(2, "0")}:${String(appt.getMinutes()).padStart(2, "0")}`,
     clinic: brand.name,
@@ -531,3 +587,75 @@ async function marketingConsentOk(
 
   return !latestConsent.revokedAt;
 }
+
+/**
+ * Scans SOAP clinical notes or diagnosis for dental tartar / calculus cues and schedules dental recall
+ */
+export async function detectAndTriggerDentalRecall(
+  db: Database | any,
+  practiceId: string,
+  clientId: string,
+  patientId: string,
+  clinicalText: string
+): Promise<boolean> {
+  const dentalRegex = /zubn.*kame[ňn]|tartar|calculus|parodont|gingivit|čisten.*zub/i;
+  if (!dentalRegex.test(clinicalText)) return false;
+
+  const [patient] = await db
+    .select({ status: patients.status })
+    .from(patients)
+    .where(and(eq(patients.id, patientId), eq(patients.practiceId, practiceId)))
+    .limit(1);
+
+  if (patient?.status === "deceased") {
+    await applySympathyGate(db, practiceId, clientId, patientId, "dental_recall_blocked");
+    return false;
+  }
+
+  const count = await createMessagesForTrigger(db, practiceId, {
+    triggerKey: "dental_detected",
+    clientId,
+    patientId,
+    eventId: `dental_${patientId}_${Date.now()}`,
+  });
+
+  return count > 0;
+}
+
+/**
+ * Checks if patient has reached senior age threshold (7+ dogs, 8+ cats) and triggers wellness invite
+ */
+export async function checkAndTriggerSeniorMilestone(
+  db: Database | any,
+  practiceId: string,
+  clientId: string,
+  patientId: string
+): Promise<boolean> {
+  const [patient] = await db
+    .select({ status: patients.status, dob: patients.dob, species: patients.species })
+    .from(patients)
+    .where(and(eq(patients.id, patientId), eq(patients.practiceId, practiceId)))
+    .limit(1);
+
+  if (!patient || !patient.dob || patient.status === "deceased") return false;
+
+  const birthDate = new Date(patient.dob);
+  const now = new Date();
+  const ageYears = (now.getTime() - birthDate.getTime()) / (365.25 * 24 * 3600 * 1000);
+
+  const speciesLower = (patient.species || "").toLowerCase();
+  const isFeline = speciesLower.includes("fel") || speciesLower.includes("cat") || speciesLower.includes("mačk");
+  const threshold = isFeline ? 8 : 7;
+
+  if (ageYears < threshold) return false;
+
+  const count = await createMessagesForTrigger(db, practiceId, {
+    triggerKey: "senior_milestone",
+    clientId,
+    patientId,
+    eventId: `senior_${patientId}_${now.getFullYear()}`,
+  });
+
+  return count > 0;
+}
+
