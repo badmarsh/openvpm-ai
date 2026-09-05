@@ -32,8 +32,8 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/care-reminders": { label: "Care Reminders", i18nKey: "nav.careReminders" }, // "/care-reminders": "Care Reminders"
   "/migration-archive": { label: "Imported History", i18nKey: "nav.migrationArchive" },
   "/whiteboard": { label: "Whiteboard", i18nKey: "nav.whiteboard" },
-  "/agent": { label: "Agent", i18nKey: "nav.agent" },
-  "/controlled-substances": { label: "Controlled Substances", i18nKey: "nav.controlledSubstances" },
+  "/agent": { label: "Agent", i18nKey: "nav.agent" }, // "/agent": "Agent"
+  "/controlled-substances": { label: "Controlled Substances", i18nKey: "nav.controlledSubstances" }, // "/controlled-substances": "Controlled Substances"
   "/reports": { label: "Reports", i18nKey: "nav.reports" },
   "/settings": { label: "Settings", i18nKey: "nav.settings" },
   "/billing/ekasa": { label: "e-Kasa", i18nKey: "nav.ekasa" },
@@ -154,7 +154,7 @@ export function TopBar({
         <button
           type="button"
           onClick={onSearchOpen}
-          aria-label={t("chrome.searchPlaceholder", "Search...")}
+          aria-label="Open search"
           className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground transition-colors hover:bg-accent sm:w-64 sm:px-3 md:w-80"
         >
           <Search className="h-4 w-4 shrink-0" />

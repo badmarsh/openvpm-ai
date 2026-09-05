@@ -169,7 +169,7 @@ const vanillaSections: NavSection[] = [
       },
       {
         href: "/migration-archive",
-        label: "Archív (V2)",
+        label: "Imported History",
         i18nKey: "nav.migrationArchive",
         icon: Archive,
         roles: allRoles,

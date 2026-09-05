@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,12 @@ import { MigrationReviewChecklist } from "@/components/migration/migration-revie
 const PAGE_SIZE = 50;
 
 const sections = [
-  { id: "contacts", label: "Co-owners", icon: Users },
-  { id: "appointments", label: "Appointments", icon: CalendarClock },
-  { id: "medications", label: "Medications", icon: Pill },
-  { id: "labs", label: "Labs", icon: FlaskConical },
-  { id: "financial", label: "Financial", icon: Receipt },
-  { id: "documents", label: "Documents", icon: FileText },
+  { id: "contacts", label: "Co-owners", labelKey: "migrationArchive.sections.contacts", icon: Users },
+  { id: "appointments", label: "Appointments", labelKey: "migrationArchive.sections.appointments", icon: CalendarClock },
+  { id: "medications", label: "Medications", labelKey: "migrationArchive.sections.medications", icon: Pill },
+  { id: "labs", label: "Labs", labelKey: "migrationArchive.sections.labs", icon: FlaskConical },
+  { id: "financial", label: "Financial", labelKey: "migrationArchive.sections.financial", icon: Receipt },
+  { id: "documents", label: "Documents", labelKey: "migrationArchive.sections.documents", icon: FileText },
 ] as const;
 
 type ArchiveSection = (typeof sections)[number]["id"];
@@ -63,6 +64,7 @@ function titleCase(value: string): string {
 }
 
 export default function MigrationArchivePage() {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const [section, setSection] = useState<ArchiveSection>("contacts");
   const [query, setQuery] = useState("");
@@ -95,39 +97,39 @@ export default function MigrationArchivePage() {
     const data = summary.data;
     return [
       {
-        label: "Co-owners",
+        label: t("migrationArchive.summary.contacts", "Co-owners"),
         value: data?.contacts.total,
-        note: `${metric(data?.contacts.needsReview)} need matching`,
+        note: t("migrationArchive.summary.contactsNeedMatching", `${metric(data?.contacts.needsReview)} need matching`, { count: metric(data?.contacts.needsReview) }),
       },
       {
-        label: "Appointments",
+        label: t("migrationArchive.summary.appointments", "Appointments"),
         value: data?.appointments.total,
-        note: "Reference history",
+        note: t("migrationArchive.summary.referenceHistory", "Reference history"),
       },
       {
-        label: "Prescriptions",
+        label: t("migrationArchive.summary.prescriptions", "Prescriptions"),
         value: data?.medications.total,
-        note: `${metric(data?.medications.fills)} fills preserved`,
+        note: t("migrationArchive.summary.fillsPreserved", `${metric(data?.medications.fills)} fills preserved`, { count: metric(data?.medications.fills) }),
       },
       {
-        label: "Lab reports",
+        label: t("migrationArchive.summary.labReports", "Lab reports"),
         value: data?.labs.total,
-        note: `${metric(data?.labs.needsReview)} need review`,
+        note: t("migrationArchive.summary.needReview", `${metric(data?.labs.needsReview)} need review`, { count: metric(data?.labs.needsReview) }),
       },
       {
-        label: "Financial documents",
+        label: t("migrationArchive.summary.financialDocuments", "Financial documents"),
         value: data?.financial.total,
         note: data
-          ? `${formatCurrency(data.financial.openBalance)} historical balance`
-          : "Historical reference",
+          ? t("migrationArchive.summary.historicalBalance", `${formatCurrency(data.financial.openBalance)} historical balance`, { amount: formatCurrency(data.financial.openBalance) })
+          : t("migrationArchive.summary.historicalReference", "Historical reference"),
       },
       {
-        label: "Documents",
+        label: t("migrationArchive.summary.documents", "Documents"),
         value: data?.documents.total,
-        note: `${metric(data?.documents.needsReview)} need linking`,
+        note: t("migrationArchive.summary.needLinking", `${metric(data?.documents.needsReview)} need linking`, { count: metric(data?.documents.needsReview) }),
       },
     ];
-  }, [formatCurrency, summary.data]);
+  }, [formatCurrency, summary.data, t]);
 
   return (
     <div className="space-y-6">
@@ -135,17 +137,17 @@ export default function MigrationArchivePage() {
         <div className="flex items-center gap-2 text-primary">
           <Archive className="h-5 w-5" aria-hidden="true" />
           <span className="text-sm font-semibold uppercase tracking-wide">
-            Imported history
+            {t("migrationArchive.header.badge", "Imported history")}
           </span>
         </div>
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          Clinic archive
+          {t("migrationArchive.header.title", "Clinic archive")}
         </h2>
         <p className="max-w-4xl text-sm leading-6 text-muted-foreground">
-          Source-attributed history from a prior system. These records support
-          clinical and business context, but they do not silently create live
-          appointments, dispense inventory, change accounts receivable, or
-          authorize client communication.
+          {t(
+            "migrationArchive.header.description",
+            "Source-attributed history from a prior system. These records support clinical and business context, but they do not silently create live appointments, dispense inventory, change accounts receivable, or authorize client communication.",
+          )}
         </p>
       </header>
 
@@ -155,19 +157,19 @@ export default function MigrationArchivePage() {
         <section aria-labelledby="practice-data-heading" className="space-y-3">
           <div>
             <h3 id="practice-data-heading" className="font-heading text-lg font-semibold">
-              Practice data snapshot
+              {t("migrationArchive.snapshot.title", "Practice data snapshot")}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Use these totals as a reasonableness check, then sample the records below.
+              {t("migrationArchive.snapshot.description", "Use these totals as a reasonableness check, then sample the records below.")}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {[
-              ["Clients", summary.data.practiceData.clients],
-              ["Patients", summary.data.practiceData.patients],
-              ["Open reminders", summary.data.practiceData.openReminders],
-              ["Services", summary.data.practiceData.services],
-              ["Products", summary.data.practiceData.products],
+              [t("migrationArchive.snapshot.clients", "Clients"), summary.data.practiceData.clients],
+              [t("migrationArchive.snapshot.patients", "Patients"), summary.data.practiceData.patients],
+              [t("migrationArchive.snapshot.openReminders", "Open reminders"), summary.data.practiceData.openReminders],
+              [t("migrationArchive.snapshot.services", "Services"), summary.data.practiceData.services],
+              [t("migrationArchive.snapshot.products", "Products"), summary.data.practiceData.products],
             ].map(([label, value]) => (
               <Card key={String(label)}>
                 <CardContent className="p-4">
@@ -194,7 +196,7 @@ export default function MigrationArchivePage() {
       ) : summary.error ? (
         <EmptyState
           icon={AlertTriangle}
-          title="Could not load the archive summary"
+          title={t("migrationArchive.summary.loadError", "Could not load the archive summary")}
           description={summary.error.message}
           action={{ label: "Retry", onClick: () => summary.refetch() }}
         />
@@ -224,10 +226,9 @@ export default function MigrationArchivePage() {
       <Card>
         <CardHeader className="space-y-4">
           <div>
-            <CardTitle>Browse imported records</CardTitle>
+            <CardTitle>{t("migrationArchive.browser.title", "Browse imported records")}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Search by the clinic-facing names and labels already stored in
-              this practice. Source identifiers stay out of the interface.
+              {t("migrationArchive.browser.description", "Search by the clinic-facing names and labels already stored in this practice. Source identifiers stay out of the interface.")}
             </p>
           </div>
           <div
@@ -251,7 +252,7 @@ export default function MigrationArchivePage() {
                 onClick={() => setSection(item.id)}
               >
                 <item.icon className="h-4 w-4" aria-hidden="true" />
-                {item.label}
+                {t(item.labelKey, item.label)}
               </button>
             ))}
           </div>
@@ -264,7 +265,7 @@ export default function MigrationArchivePage() {
               aria-label={`Search ${activeSection.label.toLowerCase()}`}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search ${activeSection.label.toLowerCase()}`}
+              placeholder={t("migrationArchive.browser.searchPlaceholder", `Search ${activeSection.label.toLowerCase()}`, { section: t(activeSection.labelKey, activeSection.label) })}
               className="pl-9"
             />
           </div>
@@ -287,23 +288,23 @@ export default function MigrationArchivePage() {
                     className="h-4 w-4 animate-spin"
                     aria-hidden="true"
                   />
-                  Loading {activeSection.label.toLowerCase()}…
+                  {t("migrationArchive.browser.loading", `Loading ${activeSection.label.toLowerCase()}…`, { section: t(activeSection.labelKey, activeSection.label) })}
                 </div>
               ) : list.error ? (
                 <EmptyState
                   icon={AlertTriangle}
-                  title={`Could not load ${activeSection.label.toLowerCase()}`}
+                  title={t("migrationArchive.browser.loadError", `Could not load ${activeSection.label.toLowerCase()}`, { section: t(activeSection.labelKey, activeSection.label) })}
                   description={list.error.message}
                   action={{ label: "Retry", onClick: () => list.refetch() }}
                 />
               ) : list.data?.items.length === 0 ? (
                 <EmptyState
                   icon={activeSection.icon}
-                  title={query ? "No matching records" : "Nothing imported yet"}
+                  title={query ? t("migrationArchive.browser.noMatching", "No matching records") : t("migrationArchive.browser.nothingImported", "Nothing imported yet")}
                   description={
                     query
-                      ? "Try a broader search term."
-                      : `No ${activeSection.label.toLowerCase()} have been added to this archive.`
+                      ? t("migrationArchive.browser.tryBroader", "Try a broader search term.")
+                      : t("migrationArchive.browser.noSectionAdded", `No ${activeSection.label.toLowerCase()} have been added to this archive.`, { section: t(activeSection.labelKey, activeSection.label) })
                   }
                 />
               ) : (
@@ -326,7 +327,7 @@ export default function MigrationArchivePage() {
                               }
                             >
                               {item.needsReview
-                                ? "Needs review"
+                                ? t("migrationArchive.browser.needsReview", "Needs review")
                                 : titleCase(item.status)}
                             </Badge>
                           </div>
@@ -351,7 +352,7 @@ export default function MigrationArchivePage() {
                                   href={`/patients/${item.patientId}`}
                                   className="font-medium text-primary underline-offset-4 hover:underline"
                                 >
-                                  Open patient
+                                  {t("migrationArchive.browser.openPatient", "Open patient")}
                                 </Link>
                               ) : null}
                               {item.clientId ? (
@@ -359,7 +360,7 @@ export default function MigrationArchivePage() {
                                   href={`/clients/${item.clientId}`}
                                   className="font-medium text-primary underline-offset-4 hover:underline"
                                 >
-                                  Open client
+                                  {t("migrationArchive.browser.openClient", "Open client")}
                                 </Link>
                               ) : null}
                             </div>
@@ -372,7 +373,7 @@ export default function MigrationArchivePage() {
                                 rel="noopener noreferrer"
                                 className="inline-flex min-h-9 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               >
-                                Open document
+                                {t("migrationArchive.browser.openDocument", "Open document")}
                               </Link>
                             </div>
                           ) : null}
@@ -384,7 +385,7 @@ export default function MigrationArchivePage() {
                                 {formatCurrency(item.amount)}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {formatCurrency(item.balance)} balance
+                                {t("migrationArchive.browser.balance", `${formatCurrency(item.balance)} balance`, { amount: formatCurrency(item.balance) })}
                               </p>
                             </div>
                           ) : null}
@@ -402,8 +403,8 @@ export default function MigrationArchivePage() {
                               }
                             >
                               {selectedId === item.id
-                                ? "Close details"
-                                : "View details"}
+                                ? t("migrationArchive.browser.closeDetails", "Close details")
+                                : t("migrationArchive.browser.viewDetails", "View details")}
                             </Button>
                           ) : null}
                         </div>
@@ -416,9 +417,11 @@ export default function MigrationArchivePage() {
               {list.data && list.data.total > 0 ? (
                 <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Showing {page * PAGE_SIZE + 1}–
-                    {Math.min((page + 1) * PAGE_SIZE, list.data.total)} of{" "}
-                    {metric(list.data.total)}
+                    {t("migrationArchive.browser.showing", `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, list.data.total)} of ${metric(list.data.total)}`, {
+                      from: page * PAGE_SIZE + 1,
+                      to: Math.min((page + 1) * PAGE_SIZE, list.data.total),
+                      total: metric(list.data.total),
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -433,7 +436,7 @@ export default function MigrationArchivePage() {
                         className="mr-1 h-4 w-4"
                         aria-hidden="true"
                       />
-                      Previous
+                      {t("migrationArchive.browser.previous", "Previous")}
                     </Button>
                     <span className="text-sm tabular-nums text-muted-foreground">
                       {page + 1} / {totalPages}
@@ -444,7 +447,7 @@ export default function MigrationArchivePage() {
                       disabled={page + 1 >= totalPages}
                       onClick={() => setPage((current) => current + 1)}
                     >
-                      Next
+                      {t("migrationArchive.browser.next", "Next")}
                       <ChevronRight
                         className="ml-1 h-4 w-4"
                         aria-hidden="true"
@@ -461,7 +464,7 @@ export default function MigrationArchivePage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                      Source detail
+                      {t("migrationArchive.detail.sourceDetail", "Source detail")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -483,33 +486,41 @@ export default function MigrationArchivePage() {
         <Card>
           <CardHeader>
             <CardTitle id="archive-boundaries-heading">
-              How imported records behave
+              {t("migrationArchive.behavior.title", "How imported records behave")}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-5 text-sm md:grid-cols-3">
             <div>
-              <p className="font-medium">Ready as history</p>
+              <p className="font-medium">
+                {t("migrationArchive.behavior.readyAsHistory", "Ready as history")}
+              </p>
               <p className="mt-1 leading-6 text-muted-foreground">
-                Prior appointments, prescriptions, fills, lab reports, and
-                financial documents are searchable reference records. They do
-                not become upcoming visits, active prescriptions, or current
-                receivables.
+                {t(
+                  "migrationArchive.behavior.readyAsHistoryDetail",
+                  "Prior appointments, prescriptions, fills, lab reports, and financial documents are searchable reference records. They do not become upcoming visits, active prescriptions, or current receivables.",
+                )}
               </p>
             </div>
             <div>
-              <p className="font-medium">Review before relying on it</p>
+              <p className="font-medium">
+                {t("migrationArchive.behavior.reviewBeforeRelying", "Review before relying on it")}
+              </p>
               <p className="mt-1 leading-6 text-muted-foreground">
-                Items marked Needs review lack an exact source relationship.
-                Verify the clinic, client, or patient match before using them
-                for care or business decisions.
+                {t(
+                  "migrationArchive.behavior.reviewBeforeRelyingDetail",
+                  "Items marked Needs review lack an exact source relationship. Verify the clinic, client, or patient match before using them for care or business decisions.",
+                )}
               </p>
             </div>
             <div>
-              <p className="font-medium">Never restored automatically</p>
+              <p className="font-medium">
+                {t("migrationArchive.behavior.neverRestoredAutomatically", "Never restored automatically")}
+              </p>
               <p className="mt-1 leading-6 text-muted-foreground">
-                Staff access, passwords, messaging consent, send queues,
-                accounts-receivable balances, and stock counts require a fresh
-                OpenVPM decision or reviewed opening value.
+                {t(
+                  "migrationArchive.behavior.neverRestoredAutomaticallyDetail",
+                  "Staff access, passwords, messaging consent, send queues, accounts-receivable balances, and stock counts require a fresh OpenVPM decision or reviewed opening value.",
+                )}
               </p>
             </div>
           </CardContent>
@@ -530,18 +541,20 @@ function ArchiveDetail({
   errorMessage?: string;
   formatCurrency: (value: string | number | null | undefined) => string;
 }) {
+  const { t } = useI18n();
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Loading detail…
+        {t("migrationArchive.detail.loading", "Loading detail…")}
       </div>
     );
   }
   if (errorMessage || !data) {
     return (
       <p className="text-sm text-destructive">
-        {errorMessage ?? "Detail is unavailable."}
+        {errorMessage ?? t("migrationArchive.detail.unavailable", "Detail is unavailable.")}
       </p>
     );
   }
@@ -559,16 +572,22 @@ function ArchiveDetail({
         ) : null}
         <dl className="grid grid-cols-2 gap-3">
           <div>
-            <dt className="text-xs text-muted-foreground">Quantity</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("migrationArchive.detail.quantity", "Quantity")}
+            </dt>
             <dd>{data.record.quantity ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Refills written</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("migrationArchive.detail.refillsWritten", "Refills written")}
+            </dt>
             <dd>{data.record.refillCount ?? "—"}</dd>
           </div>
         </dl>
         <div>
-          <p className="font-medium">Fill history</p>
+          <p className="font-medium">
+            {t("migrationArchive.detail.fillHistory", "Fill history")}
+          </p>
           {data.entries.length ? (
             <ul className="mt-2 divide-y divide-border rounded-md border border-border">
               {data.entries.map((entry) => (
@@ -576,12 +595,12 @@ function ArchiveDetail({
                   <p>
                     {entry.occurredAt
                       ? formatDate(entry.occurredAt.toISOString())
-                      : "Date unavailable"}
+                      : t("migrationArchive.detail.dateUnavailable", "Date unavailable")}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {entry.quantity
-                      ? `Quantity ${entry.quantity}`
-                      : "Quantity unavailable"}
+                      ? `${t("migrationArchive.detail.quantity", "Quantity")} ${entry.quantity}`
+                      : t("migrationArchive.detail.quantityUnavailable", "Quantity unavailable")}
                     {entry.status ? ` · ${entry.status}` : ""}
                   </p>
                 </li>
@@ -589,7 +608,7 @@ function ArchiveDetail({
             </ul>
           ) : (
             <p className="mt-1 text-muted-foreground">
-              No fills in the source export.
+              {t("migrationArchive.detail.noFills", "No fills in the source export.")}
             </p>
           )}
         </div>
@@ -601,10 +620,10 @@ function ArchiveDetail({
       <div className="space-y-4 text-sm">
         <div>
           <p className="font-medium">
-            {data.record.title ?? "Imported lab report"}
+            {data.record.title ?? t("migrationArchive.detail.importedLabReport", "Imported lab report")}
           </p>
           <p className="text-muted-foreground">
-            {data.record.patientName ?? "Patient match needs review"}
+            {data.record.patientName ?? t("migrationArchive.detail.patientMatchNeedsReview", "Patient match needs review")}
           </p>
         </div>
         {data.record.summary ? (
@@ -623,8 +642,10 @@ function ArchiveDetail({
           </ul>
         ) : (
           <p className="rounded-md border border-dashed border-border p-3 text-muted-foreground">
-            The source supplied this as an unstructured report. Its verified
-            document is preserved separately.
+            {t(
+              "migrationArchive.detail.unstructuredLabNotice",
+              "The source supplied this as an unstructured report. Its verified document is preserved separately.",
+            )}
           </p>
         )}
       </div>
@@ -640,16 +661,22 @@ function ArchiveDetail({
       </div>
       <dl className="grid grid-cols-2 gap-3">
         <div>
-          <dt className="text-xs text-muted-foreground">Total</dt>
+          <dt className="text-xs text-muted-foreground">
+            {t("migrationArchive.detail.total", "Total")}
+          </dt>
           <dd className="font-medium">{formatCurrency(data.record.total)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">Historical balance</dt>
+          <dt className="text-xs text-muted-foreground">
+            {t("migrationArchive.detail.historicalBalance", "Historical balance")}
+          </dt>
           <dd className="font-medium">{formatCurrency(data.record.balance)}</dd>
         </div>
       </dl>
       <div>
-        <p className="font-medium">Line items</p>
+        <p className="font-medium">
+          {t("migrationArchive.detail.lineItems", "Line items")}
+        </p>
         <ul className="mt-2 divide-y divide-border rounded-md border border-border">
           {data.entries.map((entry) => (
             <li key={entry.id} className="flex justify-between gap-3 p-3">
@@ -668,7 +695,9 @@ function ArchiveDetail({
       </div>
       {data.allocations.length ? (
         <div>
-          <p className="font-medium">Payment allocations</p>
+          <p className="font-medium">
+            {t("migrationArchive.detail.paymentAllocations", "Payment allocations")}
+          </p>
           <ul className="mt-2 space-y-2 text-muted-foreground">
             {data.allocations.map((allocation) => (
               <li key={allocation.id}>
