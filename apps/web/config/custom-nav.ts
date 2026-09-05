@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Heart,
   Building2,
+  MessageSquare,
 } from "lucide-react";
 
 export type UserRole =
@@ -97,6 +98,22 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingHandouts',
     icon: FileText,
     roles: ['admin', 'veterinarian', 'front_desk'],
+    section: 'marketing',
+  },
+  {
+    href: '/marketing/messages',
+    label: 'Správy a SMS fronta',
+    i18nKey: 'nav.marketingMessages',
+    icon: MessageSquare,
+    roles: ['admin', 'veterinarian', 'front_desk'],
+    section: 'marketing',
+  },
+  {
+    href: '/marketing/website',
+    label: 'Webstránka kliniky',
+    i18nKey: 'nav.marketingWebsite',
+    icon: Globe,
+    roles: ['admin', 'veterinarian'],
     section: 'marketing',
   },
   {

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import {
   PawPrint,
@@ -77,32 +76,12 @@ function inline(s: string): string {
 
 export default function PublicHandoutPage() {
   const params = useParams();
-  const slug = (params.slug as string) ?? "";
+  const slug = (params?.slug as string) ?? "";
 
   const { data: handout, isLoading, error } = trpc.extensions.marketing.getPublicHandout.useQuery(
     { slug },
-    { enabled: !!slug, retry: false }
+    { enabled: Boolean(slug), retry: false }
   );
-
-  const readingTimeMinutes = useMemo(() => {
-    if (!handout?.body) return 1;
-    const wordCount = handout.body.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(wordCount / 180));
-  }, [handout?.body]);
-
-  const renderedHtml = useMemo(() => {
-    if (!handout?.body) return "";
-    return renderSimpleMarkdown(handout.body);
-  }, [handout?.body]);
-
-  const thematicImage = useMemo(() => {
-    return getHandoutThematicImage({
-      slug: handout?.slug ?? "",
-      title: handout?.title ?? "",
-      tags: handout?.tags,
-      species: handout?.species,
-    });
-  }, [handout?.slug, handout?.title, handout?.tags, handout?.species]);
 
   if (isLoading) {
     return (
@@ -130,6 +109,15 @@ export default function PublicHandoutPage() {
   }
 
   const practice = handout.practice;
+  const wordCount = handout.body ? handout.body.trim().split(/\s+/).length : 0;
+  const readingTimeMinutes = Math.max(1, Math.ceil(wordCount / 180));
+  const renderedHtml = handout.body ? renderSimpleMarkdown(handout.body) : "";
+  const thematicImage = getHandoutThematicImage({
+    slug: handout.slug,
+    title: handout.title,
+    tags: handout.tags,
+    species: handout.species,
+  });
 
   return (
     <div className="min-h-screen bg-muted/20 py-8 px-4 sm:px-6 lg:px-8 print:bg-white print:p-0">

@@ -659,20 +659,58 @@ export function InboxView() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-heading text-base font-semibold">
-                  {smsSummary.title}
+                  {smsSummary.kind === "not_configured"
+                    ? t("inbox.smsBanner.notConfiguredTitle", smsSummary.title)
+                    : smsSummary.kind === "action_required"
+                      ? t("inbox.smsBanner.actionNeededTitle", smsSummary.title)
+                      : smsSummary.kind === "pending"
+                        ? t("inbox.smsBanner.pendingTitle", smsSummary.title)
+                        : smsSummary.kind === "disabled"
+                          ? t("inbox.smsBanner.disabledTitle", smsSummary.title)
+                          : smsSummary.kind === "ready"
+                            ? t("inbox.smsBanner.readyTitle", smsSummary.title)
+                            : smsSummary.title}
                 </h3>
                 <Badge variant={smsSummary.badge.variant}>
-                  {smsSummary.badge.label}
+                  {smsSummary.kind === "not_configured"
+                    ? t("inbox.smsBanner.notConfiguredBadge", smsSummary.badge.label)
+                    : smsSummary.kind === "action_required"
+                      ? t("inbox.smsBanner.actionNeededBadge", smsSummary.badge.label)
+                      : smsSummary.kind === "pending"
+                        ? t("inbox.smsBanner.pendingBadge", smsSummary.badge.label)
+                        : smsSummary.kind === "disabled"
+                          ? t("inbox.smsBanner.disabledBadge", smsSummary.badge.label)
+                          : smsSummary.kind === "ready"
+                            ? t("inbox.smsBanner.readyBadge", smsSummary.badge.label)
+                            : smsSummary.badge.label}
                 </Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {smsSummary.description}
+                {smsSummary.kind === "not_configured"
+                  ? t("inbox.smsBanner.notConfiguredDesc", smsSummary.description)
+                  : smsSummary.kind === "action_required"
+                    ? t("inbox.smsBanner.actionNeededDesc", smsSummary.description)
+                    : smsSummary.kind === "pending"
+                      ? t("inbox.smsBanner.pendingDesc", smsSummary.description)
+                      : smsSummary.kind === "disabled"
+                        ? t("inbox.smsBanner.disabledDesc", smsSummary.description)
+                        : smsSummary.kind === "ready"
+                          ? t("inbox.smsBanner.readyDesc", smsSummary.description)
+                          : smsSummary.description}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {messagingStatus?.canManage && smsSummary.actionLabel ? (
                   <Button size="sm" asChild>
                     <Link href="/settings?tab=messaging&setup=texting">
-                      {smsSummary.actionLabel}
+                      {smsSummary.kind === "not_configured"
+                        ? t("inbox.smsBanner.notConfiguredAction", smsSummary.actionLabel)
+                        : smsSummary.kind === "action_required"
+                          ? t("inbox.smsBanner.actionNeededAction", smsSummary.actionLabel)
+                          : smsSummary.kind === "pending"
+                            ? t("inbox.smsBanner.pendingAction", smsSummary.actionLabel)
+                            : smsSummary.kind === "disabled"
+                              ? t("inbox.smsBanner.disabledAction", smsSummary.actionLabel)
+                              : smsSummary.actionLabel}
                     </Link>
                   </Button>
                 ) : (
