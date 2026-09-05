@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Mic, Bot, Loader2, Save, History } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import {
+  Mic,
+  Bot,
+  Loader2,
+  Save,
+  History,
+  X,
+  FileText,
+  Sparkles,
+  RotateCcw,
+  ChevronRight,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   selectManagedUploadFile,
   settleManagedUploadAttempt,
@@ -23,11 +28,18 @@ import {
 } from "@/lib/client-fetch";
 import { RecordingButton } from "./components/recording-button";
 import { PatientSelector } from "./components/patient-selector";
-import { TranscriptView } from "./components/transcript-view";
 import { SoapPreview, type SoapSectionsData } from "./components/soap-preview";
-import { HistoryList } from "./components/history-list";
+import { HistoryList, type Dictation } from "./components/history-list";
 
-type DictationStatus = "idle" | "uploading" | "processing" | "done" | "error";
+type DictationStatus =
+  | "idle"
+  | "recording"
+  | "uploading"
+  | "processing"
+  | "done"
+  | "error";
+
+type ViewMode = "main" | "history" | "results";
 
 export default function VoiceDictationPage() {
   const utils = trpc.useUtils();
@@ -57,7 +69,7 @@ export default function VoiceDictationPage() {
   });
 
   // UI
-  const [showHistory, setShowHistory] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("main");
 
   // tRPC
   const startMutation = trpc.extensions.voice.start.useMutation();
@@ -81,6 +93,7 @@ export default function VoiceDictationPage() {
     setDictationId(null);
     setRawTranscript("");
     setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
+    setViewMode("main");
   }, []);
 
   const handleRecordingComplete = useCallback(
@@ -94,7 +107,6 @@ export default function VoiceDictationPage() {
         uploadAttemptRef.current,
         file,
       );
-      // Reset previous results
       setDictationId(null);
       setRawTranscript("");
       setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
@@ -113,7 +125,6 @@ export default function VoiceDictationPage() {
 
     setStatus("uploading");
     try {
-      // 1. Upload audio
       const formData = new FormData();
       formData.append("file", file);
       formData.append("category", "patient-photos");
@@ -150,7 +161,6 @@ export default function VoiceDictationPage() {
 
       const audioFileKey = json.key;
 
-      // 2. Start dictation record
       setStatus("processing");
       const dictation = await startMutation.mutateAsync({
         patientId: selectedPatient.id,
@@ -162,7 +172,6 @@ export default function VoiceDictationPage() {
 
       setDictationId(dictation.id);
 
-      // 3. Process (transcribe + format)
       const processed = await processMutation.mutateAsync({
         dictationId: dictation.id,
       });
@@ -175,9 +184,9 @@ export default function VoiceDictationPage() {
         plan: processed.plan ?? "",
       });
       setStatus("done");
-      toast.success("Transkripcia a formátovanie dokončené");
+      setViewMode("results");
+      toast.success("Transkripcia dokončená");
 
-      // Invalidate history
       utils.extensions.voice.listByPatient.invalidate({
         patientId: selectedPatient.id,
       });
@@ -204,15 +213,7 @@ export default function VoiceDictationPage() {
   }, [dictationId, soapSections, saveMutation]);
 
   const handleSelectHistory = useCallback(
-    (item: {
-      id: string;
-      rawTranscript?: string | null;
-      subjective?: string | null;
-      objective?: string | null;
-      assessment?: string | null;
-      plan?: string | null;
-      status: string;
-    }) => {
+    (item: Dictation) => {
       setDictationId(item.id);
       setRawTranscript(item.rawTranscript ?? "");
       setSoapSections({
@@ -222,152 +223,271 @@ export default function VoiceDictationPage() {
         plan: item.plan ?? "",
       });
       setStatus(item.status === "COMPLETED" ? "done" : "idle");
+      setViewMode("results");
     },
     [],
   );
 
   const isProcessing = status === "uploading" || status === "processing";
+  const canRecord = selectedPatient && !isProcessing && viewMode === "main";
+  const hasRecording = audioBlob && status === "idle";
+  const hasResults = status === "done";
 
   return (
-    <div className="flex flex-col gap-6 p-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Hlasové Diktovanie</h1>
-          <p className="text-sm text-muted-foreground">
-            Nadiktujte klinické poznámky — AI ich transkribuje a naformátuje do
-            SOAP záznamu
-          </p>
+    <div className="relative flex flex-col h-[calc(100vh-8rem)]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+              <Mic className="h-5 w-5 text-white" />
+            </div>
+            {isProcessing && (
+              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse border-2 border-background" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">
+              Hlasové Diktovanie
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              AI transkripcia a SOAP formátovanie
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="gap-1">
-            <Bot className="h-3 w-3" />
-            AI-powered
+          <Badge variant="secondary" className="gap-1.5 text-xs">
+            <Sparkles className="h-3 w-3" />
+            Gemini
           </Badge>
-          <Button
-            variant={showHistory ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowHistory(!showHistory)}
-            disabled={!selectedPatient}
-          >
-            <History className="mr-1 h-4 w-4" />
-            História
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left column — recording + processing */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
-          {/* Patient selection */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Pacient</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PatientSelector
-                value={selectedPatient}
-                onChange={(p) => {
-                  setSelectedPatient(p);
-                  resetState();
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Recording */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Nahrávanie</CardTitle>
-              <CardDescription>
-                Stlačte mikrofón a začnite diktovať klinické poznámky
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              <RecordingButton
-                onRecordingComplete={handleRecordingComplete}
-                disabled={!selectedPatient || isProcessing}
-              />
-              {audioBlob && status === "idle" && (
-                <p className="text-sm text-muted-foreground">
-                  Nahrávka pripravená ({audioDuration}s,{" "}
-                  {(audioBlob.size / 1024).toFixed(0)} KB)
-                </p>
-              )}
-              {audioBlob && status === "idle" && (
-                <Button onClick={handleProcess} className="gap-2">
-                  <Mic className="h-4 w-4" />
-                  Spracovať diktovanie
-                </Button>
-              )}
-              {isProcessing && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {status === "uploading"
-                    ? "Nahrávam audio..."
-                    : "Transkribujem a formátujem..."}
-                </div>
-              )}
-              {status === "error" && (
-                <Button variant="outline" onClick={handleProcess}>
-                  Skúsiť znova
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Results */}
-          {status === "done" && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                  Výsledok spracovania
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <TranscriptView
-                  transcript={rawTranscript}
-                  editable
-                  onChange={setRawTranscript}
-                />
-                <SoapPreview
-                  sections={soapSections}
-                  editable
-                  onChange={setSoapSections}
-                />
-                <div className="flex justify-end">
-                  <Button onClick={handleSave} className="gap-2">
-                    <Save className="h-4 w-4" />
-                    Uložiť do záznamov
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          {selectedPatient && (
+            <Button
+              variant={viewMode === "history" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode(viewMode === "history" ? "main" : "history")}
+              className="gap-1.5"
+            >
+              <History className="h-3.5 w-3.5" />
+              História
+            </Button>
           )}
         </div>
-
-        {/* Right column — history */}
-        {showHistory && selectedPatient && (
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                  História diktovaní
-                </CardTitle>
-                <CardDescription>
-                  {selectedPatient.name}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <HistoryList
-                  items={historyQuery.data ?? []}
-                  selectedId={dictationId}
-                  onSelect={handleSelectHistory}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
+
+      {/* Main content area */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left panel — Patient + Recording */}
+        <div className="lg:col-span-2 flex flex-col gap-3 min-h-0">
+          {/* Patient selector — compact */}
+          <div className="bg-card rounded-lg border p-3 shadow-sm">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Pacient
+            </label>
+            <PatientSelector
+              value={selectedPatient}
+              onChange={(p) => {
+                setSelectedPatient(p);
+                resetState();
+              }}
+            />
+          </div>
+
+          {/* Recording widget — the main floating element */}
+          <div
+            className={cn(
+              "flex-1 bg-card rounded-xl border shadow-lg overflow-hidden transition-all duration-300",
+              "flex flex-col items-center justify-center",
+              canRecord && "hover:border-violet-300 hover:shadow-violet-500/10",
+              hasRecording && "border-violet-400 shadow-violet-500/20",
+              isProcessing && "border-amber-400 shadow-amber-500/20",
+              hasResults && "border-green-400 shadow-green-500/20",
+            )}
+          >
+            {viewMode === "main" && (
+              <>
+                <RecordingButton
+                  onRecordingComplete={handleRecordingComplete}
+                  disabled={!canRecord}
+                  size="large"
+                />
+
+                {hasRecording && (
+                  <div className="mt-4 flex flex-col items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300">
+                      <div className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+                      <span className="text-sm font-medium">
+                        {audioDuration}s · {(audioBlob.size / 1024).toFixed(0)} KB
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setAudioBlob(null);
+                          setAudioDuration(0);
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Zrušiť
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleProcess}
+                        className="gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Spracovať
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isProcessing && (
+                  <div className="mt-4 flex flex-col items-center gap-2 animate-in fade-in duration-300">
+                    <div className="relative">
+                      <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                      <div className="absolute inset-0 h-8 w-8 rounded-full bg-amber-500/20 blur-md" />
+                    </div>
+                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                      {status === "uploading" ? "Nahrávam..." : "Transkribujem a formátujem..."}
+                    </span>
+                    <p className="text-xs text-muted-foreground text-center max-w-[280px]">
+                      AI spracováva vaše diktovanie do štruktúrovaného SOAP záznamu
+                    </p>
+                  </div>
+                )}
+
+                {status === "error" && (
+                  <div className="mt-4 flex flex-col items-center gap-2 animate-in fade-in duration-300">
+                    <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-950/50 flex items-center justify-center">
+                      <X className="h-5 w-5 text-red-500" />
+                    </div>
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                      Spracovanie zlyhalo
+                    </span>
+                    <Button variant="outline" size="sm" onClick={handleProcess}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                      Skúsiť znova
+                    </Button>
+                  </div>
+                )}
+
+                {canRecord && !hasRecording && (
+                  <div className="mt-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <p className="text-sm text-muted-foreground">
+                      Stlačte mikrofón a začnite diktovať
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      AI automaticky vytvorí SOAP záznam
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {viewMode === "results" && (
+              <div className="w-full h-full flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+                      <FileText className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <span className="text-sm font-medium">Výsledok spracovania</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode("main")}
+                    className="h-7 px-2"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Transcript */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Surová transkripcia
+                    </label>
+                    <textarea
+                      value={rawTranscript}
+                      onChange={(e) => setRawTranscript(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border bg-muted/30 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                    />
+                  </div>
+
+                  {/* SOAP sections */}
+                  <SoapPreview
+                    sections={soapSections}
+                    editable
+                    onChange={setSoapSections}
+                    compact
+                  />
+
+                  {/* Save button */}
+                  <div className="pt-2 border-t flex justify-end">
+                    <Button
+                      onClick={handleSave}
+                      className="gap-1.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    >
+                      <Save className="h-4 w-4" />
+                      Uložiť do záznamov
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right panel — History (collapsible on mobile, fixed on desktop) */}
+        <div
+          className={cn(
+            "bg-card rounded-xl border shadow-lg overflow-hidden transition-all duration-300",
+            viewMode === "history" || selectedPatient ? "block" : "hidden lg:block",
+          )}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-muted/50 to-muted/30">
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">História</span>
+            </div>
+            {selectedPatient && (
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                {selectedPatient.name}
+              </span>
+            )}
+          </div>
+          <div className="h-[calc(100%-49px)] overflow-y-auto">
+            {selectedPatient ? (
+              <HistoryList
+                items={historyQuery.data ?? []}
+                selectedId={dictationId}
+                onSelect={handleSelectHistory}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Vyberte pacienta pre zobrazenie histórie
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Floating action hint — bottom right */}
+      {canRecord && !hasRecording && (
+        <div className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-full bg-muted/80 backdrop-blur-sm border shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
+            Začnite diktovať kliknutím na mikrofón
+          </span>
+        </div>
+      )}
     </div>
   );
 }
