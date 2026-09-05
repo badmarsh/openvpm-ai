@@ -15,6 +15,20 @@ import {
   invoiceItems,
   communications,
   products,
+  extMarketingTvSlides,
+  extMarketingHandouts,
+  extMarketingReviews,
+  extMarketingContentBatches,
+  extMarketingContentItems,
+  extMarketingMediaConsents,
+  extMarketingMediaAssets,
+  extMarketingStaffTasks,
+  extMarketingMessageTemplates,
+  extMarketingMessageLogs,
+  extMarketingAutomationRules,
+  extMarketingOperativeScripts,
+  extMarketingRecallSchedules,
+  extMarketingCompetitorSnapshots,
 } from "@openpims/db";
 import { centsToMoney, moneyToCents } from "@/lib/billing/invoice-balance";
 import { calculateInvoiceTaxTotals } from "@/lib/billing/invoice-tax";
@@ -127,6 +141,20 @@ export interface DemoDataIds {
   invoiceItemIds: string[];
   communicationIds: string[];
   productIds: string[];
+  marketingTvSlideIds?: string[];
+  marketingHandoutIds?: string[];
+  marketingReviewIds?: string[];
+  marketingContentBatchIds?: string[];
+  marketingContentItemIds?: string[];
+  marketingMediaConsentIds?: string[];
+  marketingMediaAssetIds?: string[];
+  marketingStaffTaskIds?: string[];
+  marketingMessageTemplateIds?: string[];
+  marketingMessageLogIds?: string[];
+  marketingAutomationRuleIds?: string[];
+  marketingScriptIds?: string[];
+  marketingRecallScheduleIds?: string[];
+  marketingCompetitorSnapshotIds?: string[];
 }
 
 /**
