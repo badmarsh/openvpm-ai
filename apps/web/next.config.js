@@ -1,3 +1,4 @@
+const path = require("path");
 const {
   capabilityHeaders,
   securityHeaders,
@@ -8,6 +9,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
