@@ -22,7 +22,7 @@ export const labImportRouter = createRouter({
   parseFile: staffProcedure
     .input(
       z.object({
-        content: z.string().min(1, "Obsah súboru je prázdny"),
+        content: z.string().min(1, "Obsah súboru je prázdny").max(10_485_760, "Súbor je príliš veľký (max 10 MB)"),
         fileName: z.string().optional(),
         species: z.enum(["canine", "feline", "other"]).default("canine"),
       })
@@ -109,7 +109,7 @@ export const labImportRouter = createRouter({
           analyzerType: input.analyzerType,
           deviceModel: input.deviceModel ?? null,
           sampleId: input.sampleId ?? null,
-          sampleDate: input.sampleDate ? new Date(input.sampleDate) : new Date(),
+          sampleDate: input.sampleDate ? new Date(input.sampleDate) : null,
           species: input.species ?? "canine",
           fileName: input.fileName ?? "lab_export.csv",
           rawContent: input.rawContent ?? null,
@@ -199,6 +199,27 @@ export const labImportRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const report = await ctx.db.query.labAnalyzerReports.findFirst({
+        where: and(
+          eq(labAnalyzerReports.id, input.id),
+          eq(labAnalyzerReports.practiceId, ctx.practiceId),
+        ),
+      });
+
+      if (!report) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Laboratórny protokol nebol nájdený",
+        });
+      }
+
+      if (report.status === "REVIEWED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Schválený protokol nie je možné priradiť",
+        });
+      }
+
       const patient = await ctx.db.query.patients.findFirst({
         where: and(
           eq(patients.id, input.patientId),
@@ -221,12 +242,7 @@ export const labImportRouter = createRouter({
           status: "ATTACHED",
           updatedAt: new Date(),
         })
-        .where(
-          and(
-            eq(labAnalyzerReports.id, input.id),
-            eq(labAnalyzerReports.practiceId, ctx.practiceId)
-          )
-        )
+        .where(eq(labAnalyzerReports.id, input.id))
         .returning();
 
       return updated;
@@ -241,6 +257,27 @@ export const labImportRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.labAnalyzerReports.findFirst({
+        where: and(
+          eq(labAnalyzerReports.id, input.id),
+          eq(labAnalyzerReports.practiceId, ctx.practiceId),
+        ),
+      });
+
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Laboratórny protokol nebol nájdený",
+        });
+      }
+
+      if (existing.status === "REVIEWED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Protokol už bol schválený a nie je možné ho znova potvrdiť",
+        });
+      }
+
       const [updated] = await ctx.db
         .update(labAnalyzerReports)
         .set({

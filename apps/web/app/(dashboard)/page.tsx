@@ -9,7 +9,7 @@ import {
   Calendar,
   CalendarPlus,
   Clock,
-  DollarSign,
+  Euro,
   FileText,
   PawPrint,
   TrendingUp,
@@ -121,7 +121,7 @@ const kpiConfig = [
     key: "revenueMtd" as const,
     label: "Revenue (MTD)",
     description: "Paid invoices this month",
-    icon: DollarSign,
+    icon: Euro,
     isCurrency: true,
   },
   {

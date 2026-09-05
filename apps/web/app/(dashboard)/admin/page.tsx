@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   ShieldAlert,
   Building2,
-  DollarSign,
+  Euro,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -257,7 +257,7 @@ export default function AdminPage() {
       label: "Est. MRR",
       displayLabel: t("admin.kpi.estMrr", "Est. MRR"),
       value: formatUsd(data.totals.estimatedMrr),
-      icon: DollarSign,
+      icon: Euro,
     },
     {
       label: "Active trials",

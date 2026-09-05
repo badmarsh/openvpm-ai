@@ -3,6 +3,7 @@ import { db } from "@openpims/db/client";
 import { ekasaConfig } from "@openpims/db";
 import { eq, and, isNull } from "drizzle-orm";
 import { createDailyClosure } from "@/lib/ekasa/service";
+import { withTenant } from "@/lib/tenant-db";
 
 // ---------------------------------------------------------------------------
 // Automatická denná uzávierka (Z-report) — spúšťaná o 23:59
@@ -16,7 +17,10 @@ export async function GET(req: Request) {
   }
 
   const startedAt = new Date();
-  const dateStr = startedAt.toISOString().slice(0, 10);
+  const dateStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Bratislava",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(startedAt);
   let processed = 0;
   let created = 0;
   const results: Array<{ practiceId: string; closureNumber?: string; error?: string }> = [];
@@ -32,10 +36,14 @@ export async function GET(req: Request) {
     for (const config of activeConfigs) {
       processed++;
       try {
-        const closure = await createDailyClosure({
-          practiceId: config.practiceId,
-          dateStr,
-        });
+        const closure = await withTenant(
+          db,
+          config.practiceId,
+          (tx) => createDailyClosure(tx, {
+            practiceId: config.practiceId,
+            dateStr,
+          }),
+        );
         created++;
         results.push({
           practiceId: config.practiceId,

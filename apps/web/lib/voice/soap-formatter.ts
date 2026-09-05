@@ -96,11 +96,20 @@ export async function formatTranscriptToSoap(
     patientContext = `Pacient: ${patientName ?? "Neznámy"}${species ? ` (${species})` : ""}\n\n`;
   }
 
-  const result = await generateText({
-    model: configuredModel(),
-    system: getSystemPrompt(style),
-    prompt: `${patientContext}Transkripcia diktovania:\n\n${transcript}`,
-  });
+  const ac = new AbortController();
+  const timeout = setTimeout(() => ac.abort(new Error("SOAP formatting timed out after 30s")), 30_000);
+
+  let result;
+  try {
+    result = await generateText({
+      model: configuredModel(),
+      system: getSystemPrompt(style),
+      prompt: `${patientContext}Transkripcia diktovania:\n\n${transcript}`,
+      abortSignal: ac.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   try {
     const raw = parseAiJson(result.text);

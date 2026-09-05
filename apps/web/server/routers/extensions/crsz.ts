@@ -167,8 +167,9 @@ export const crszRouter = createRouter({
         conditions.push(eq(microchipRegistrations.crszStatus, input.status));
       }
       if (input?.search) {
+        const escaped = input.search.replace(/[%_]/g, "\\$&");
         conditions.push(
-          ilike(microchipRegistrations.microchipNumber, `%${input.search}%`)
+          ilike(microchipRegistrations.microchipNumber, `%${escaped}%`)
         );
       }
 
@@ -227,7 +228,18 @@ export const crszRouter = createRouter({
       let travelInfo: any = null;
 
       if (input.rabiesAdministeredAt) {
-        const microchipDate = patient.createdAt ? new Date(patient.createdAt).toISOString().slice(0, 10) : input.issuedAt;
+        // For EU pet travel rules, the "microchip date" is the date the chip
+        // was implanted (from the most recent microchip registration), NOT
+        // patient.createdAt.
+        const latestChip = await ctx.db.query.microchipRegistrations.findFirst({
+          where: and(
+            eq(microchipRegistrations.patientId, input.patientId),
+            eq(microchipRegistrations.practiceId, ctx.practiceId),
+            isNull(microchipRegistrations.deletedAt),
+          ),
+          orderBy: [desc(microchipRegistrations.createdAt)],
+        });
+        const microchipDate = latestChip?.implantedAt ?? input.issuedAt;
         travelInfo = calculateTravelEligibility({
           microchipDate,
           rabiesDate: input.rabiesAdministeredAt,
@@ -289,8 +301,9 @@ export const crszRouter = createRouter({
         conditions.push(eq(petPassports.patientId, input.patientId));
       }
       if (input?.search) {
+        const escaped = input.search.replace(/[%_]/g, "\\$&");
         conditions.push(
-          ilike(petPassports.passportNumber, `%${input.search}%`)
+          ilike(petPassports.passportNumber, `%${escaped}%`)
         );
       }
 

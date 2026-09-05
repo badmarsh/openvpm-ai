@@ -12,7 +12,7 @@ import {
   CheckCircle,
   Loader2,
   Plus,
-  DollarSign,
+  Euro,
   ArrowRightLeft,
   Download,
   Mail,
@@ -1880,7 +1880,7 @@ function PaymentSection({
               className="w-full sm:w-auto"
               onClick={handleOpenForm}
             >
-              <DollarSign className="mr-1 h-3.5 w-3.5" />
+              <Euro className="mr-1 h-3.5 w-3.5" />
               {t("billing.payments.recordPayment", "Record Payment")}
             </Button>
             <Button
@@ -1912,7 +1912,7 @@ function PaymentSection({
               className="w-full sm:w-auto"
               onClick={handleOpenAdjustmentForm}
             >
-              <DollarSign className="mr-1 h-3.5 w-3.5" />
+              <Euro className="mr-1 h-3.5 w-3.5" />
               {t("billing.payments.creditWriteOff", "Credit / Write Off")}
             </Button>
           </div>

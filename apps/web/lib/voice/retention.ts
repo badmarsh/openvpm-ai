@@ -32,7 +32,7 @@ export async function purgeExpiredAudio(): Promise<{
         isNull(voiceDictations.deletedAt),
       ),
     )
-    .limit(100);
+    .limit(1000);
 
   let deleted = 0;
   let errors = 0;

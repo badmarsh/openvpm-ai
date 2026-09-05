@@ -664,6 +664,7 @@ export const encountersRouter = createRouter({
         )
       )
       .orderBy(asc(visitCloseouts.followUpDueDate), asc(visitCloseouts.createdAt))
+      .limit(100)
   ),
 
   getCloseout: protectedProcedure

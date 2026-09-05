@@ -7,6 +7,7 @@ import { accountingRouter } from "./accounting";
 import { labImportRouter } from "./lab-import";
 import { voiceRouter } from "./voice";
 import { marketingRouter } from "./marketing";
+import { dischargeRouter } from "./discharge";
 
 /**
  * Root router for all OpenVPM custom extensions.
@@ -21,6 +22,7 @@ export const extensionsRouter = createRouter({
   labImport: labImportRouter,
   voice: voiceRouter,
   marketing: marketingRouter,
+  discharge: dischargeRouter,
 });
 
 export {
@@ -32,4 +34,5 @@ export {
   labImportRouter,
   voiceRouter,
   marketingRouter,
+  dischargeRouter,
 };

@@ -1,7 +1,39 @@
 import crypto from "crypto";
-import { db } from "@openpims/db/client";
+import type { Database } from "@openpims/db/client";
 import { ekasaReceipts, ekasaDailyClosures, ekasaConfig } from "@openpims/db";
 import { eq, and, isNull, sql, gte, lte } from "drizzle-orm";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format a Date as "YYYY-MM-DD HH:MM:SS" in Europe/Bratislava timezone. */
+function toSlovakTimestamp(date: Date): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Bratislava",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const p = Object.fromEntries(
+    fmt.formatToParts(date).map((x) => [x.type, x.value]),
+  );
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+}
+
+/** Return "YYYY-MM-DD" in Europe/Bratislava timezone. */
+function slovakDateStr(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Bratislava",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -77,12 +109,16 @@ export interface EkasaApiResponse {
 // Formát: YYYYMMDD-NNNN (napr. 20260904-0042)
 // Atomické — číta MAX(seq) z DB pre daný deň a kliniku
 // ---------------------------------------------------------------------------
-export async function generateReceiptNumber(practiceId: string): Promise<string> {
+export async function generateReceiptNumber(db: Database, practiceId: string): Promise<string> {
   const today = new Date();
-  const datePrefix = today
-    .toISOString()
-    .slice(0, 10)
-    .replace(/-/g, ""); // "20260904"
+  const localDate = slovakDateStr(today);
+  const datePrefix = localDate.replace(/-/g, ""); // "20260904"
+
+  // Advisory lock prevents concurrent receipt number races within this
+  // practice-day.  pg_advisory_xact_lock is released at transaction end.
+  await db.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${practiceId} || '-ekasa-receipt-' || ${localDate}))`,
+  );
 
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -91,8 +127,8 @@ export async function generateReceiptNumber(practiceId: string): Promise<string>
       and(
         eq(ekasaReceipts.practiceId, practiceId),
         isNull(ekasaReceipts.deletedAt),
-        sql`date_trunc('day', ${ekasaReceipts.issuedAt}) = date_trunc('day', now())`
-      )
+        sql`date_trunc('day', ${ekasaReceipts.issuedAt} AT TIME ZONE 'Europe/Bratislava')::text = ${localDate}`,
+      ),
     );
 
   const seq = ((result[0]?.count ?? 0) + 1).toString().padStart(4, "0");
@@ -111,10 +147,7 @@ export function generateOkp(params: {
   issuedAt: Date;
   amountTotal: string;
 }): string {
-  const issuedAtStr = params.issuedAt
-    .toISOString()
-    .replace("T", " ")
-    .slice(0, 19); // "2026-09-04 20:00:00"
+  const issuedAtStr = toSlovakTimestamp(params.issuedAt);
 
   const input = [
     params.dic,
@@ -140,10 +173,7 @@ export function generatePkp(params: {
   amountTotal: string;
   certBase64?: string | null;
 }): string {
-  const issuedAtStr = params.issuedAt
-    .toISOString()
-    .replace("T", " ")
-    .slice(0, 19);
+  const issuedAtStr = toSlovakTimestamp(params.issuedAt);
 
   const input = [
     params.dic,
@@ -184,7 +214,7 @@ export async function sendToEkasaApi(params: {
     pokladnicaId: params.pokladnicaId,
     dic: params.dic,
     cisloDokladu: params.receiptNumber,
-    datumCas: params.issuedAt.toISOString(),
+    datumCas: toSlovakTimestamp(params.issuedAt),
     celkovaSuma: params.amountTotal,
     dph: params.amountVat,
     platba: params.paymentMethod,
@@ -253,6 +283,7 @@ export function generateQrCodeData(params: {
 // Orchestrovaná funkcia: Vytvor, podpíš a odošli doklad
 // ---------------------------------------------------------------------------
 export async function processEkasaReceipt(
+  db: Database,
   input: EkasaReceiptInput,
   config: {
     dic: string;
@@ -264,7 +295,7 @@ export async function processEkasaReceipt(
   }
 ): Promise<{ receiptId: string; status: string; uid?: string }> {
   const issuedAt = input.issuedAt ?? new Date();
-  const receiptNumber = await generateReceiptNumber(input.practiceId);
+  const receiptNumber = await generateReceiptNumber(db, input.practiceId);
 
   const okp = generateOkp({
     dic: config.dic,
@@ -349,6 +380,7 @@ export async function processEkasaReceipt(
 // ---------------------------------------------------------------------------
 
 export async function generateClosureNumber(
+  db: Database,
   practiceId: string,
   dateStr: string
 ): Promise<string> {
@@ -384,19 +416,16 @@ export interface DailyClosureSummary {
 }
 
 export async function computeDailySummary(
+  db: Database,
   practiceId: string,
   dateStr: string
 ): Promise<DailyClosureSummary> {
-  // Načítaj všetky platné doklady za daný kalendárny deň
-  const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
-  const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
-
+  // Načítaj všetky platné doklady za daný kalendárny deň (Slovak local time)
   const receipts = await db.query.ekasaReceipts.findMany({
     where: and(
       eq(ekasaReceipts.practiceId, practiceId),
       isNull(ekasaReceipts.deletedAt),
-      gte(ekasaReceipts.issuedAt, startOfDay),
-      lte(ekasaReceipts.issuedAt, endOfDay)
+      sql`date_trunc('day', ${ekasaReceipts.issuedAt} AT TIME ZONE 'Europe/Bratislava')::text = ${dateStr}`,
     ),
   });
 
@@ -460,7 +489,7 @@ export async function computeDailySummary(
   };
 }
 
-export async function createDailyClosure(params: {
+export async function createDailyClosure(db: Database, params: {
   practiceId: string;
   dateStr: string;
   userId?: string;
@@ -477,8 +506,8 @@ export async function createDailyClosure(params: {
     return existing;
   }
 
-  const summary = await computeDailySummary(params.practiceId, params.dateStr);
-  const closureNumber = await generateClosureNumber(params.practiceId, params.dateStr);
+  const summary = await computeDailySummary(db, params.practiceId, params.dateStr);
+  const closureNumber = await generateClosureNumber(db, params.practiceId, params.dateStr);
 
   const [closure] = await db
     .insert(ekasaDailyClosures)
@@ -499,4 +528,3 @@ export async function createDailyClosure(params: {
 
   return closure;
 }
-

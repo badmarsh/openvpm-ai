@@ -50,3 +50,4 @@ export * from "./ext_imaging";
 export * from "./ext_crsz";
 export * from "./ext_lab_import";
 export * from "./ext_voice";
+export * from "./ext_discharge";

@@ -174,6 +174,7 @@ export const ekasaRouter = createRouter({
       const issuedAt = input.issuedAt ? new Date(input.issuedAt) : new Date();
 
       const result = await processEkasaReceipt(
+        ctx.db,
         {
           practiceId: ctx.practiceId,
           invoiceId: input.invoiceId,
@@ -360,7 +361,14 @@ export const ekasaRouter = createRouter({
         });
       }
 
-      // 2. Ak už existuje doklad k tejto platbe, vráť existujúci
+      // 2. Zabráň race condition na paymentId pomocou advisory zámku
+      if (input.paymentId) {
+        await ctx.db.execute(
+          sql`SELECT pg_advisory_xact_lock(hashtext(${input.paymentId}))`,
+        );
+      }
+
+      // 3. Ak už existuje doklad k tejto platbe, vráť existujúci
       if (input.paymentId) {
         const existing = await ctx.db.query.ekasaReceipts.findFirst({
           where: and(
@@ -447,6 +455,7 @@ export const ekasaRouter = createRouter({
 
       // 6. Spracuj, podpíš a odošli doklad
       const result = await processEkasaReceipt(
+        ctx.db,
         {
           practiceId: ctx.practiceId,
           invoiceId: input.invoiceId,
@@ -564,6 +573,7 @@ export const ekasaRouter = createRouter({
       const config = await ctx.db.query.ekasaConfig.findFirst({
         where: and(
           eq(ekasaConfig.practiceId, ctx.practiceId),
+          eq(ekasaConfig.isActive, true),
           isNull(ekasaConfig.deletedAt)
         ),
       });
@@ -659,9 +669,19 @@ export const ekasaRouter = createRouter({
         }
       }
 
-      // 5. Spracuj e-Kasa doklad
-      const dominantVatRate = (input.items[0]?.vatRate ?? "STANDARD_23") as EkasaVatRateType;
-      const vatAmounts = calculateVatAmounts(totalNum, dominantVatRate);
+      // 5. Vypočítaj DPH per-item a urči dominantnú sadzbu
+      let totalBase = 0;
+      let totalVat = 0;
+      const vatByRate = new Map<string, number>();
+      for (const it of input.items) {
+        const itemTotal = Number(it.unitPrice) * it.quantity;
+        const { base, vat } = calculateVatAmounts(itemTotal, it.vatRate as EkasaVatRateType);
+        totalBase += Number(base);
+        totalVat += Number(vat);
+        vatByRate.set(it.vatRate, (vatByRate.get(it.vatRate) ?? 0) + itemTotal);
+      }
+      // Dominant rate = highest total by rate
+      const dominantVatRate = ([...vatByRate.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "STANDARD_23") as EkasaVatRateType;
       const mappedItems = input.items.map((it) => ({
         name: it.description,
         qty: it.quantity,
@@ -670,11 +690,12 @@ export const ekasaRouter = createRouter({
       }));
 
       const receiptResult = await processEkasaReceipt(
+        ctx.db,
         {
           practiceId: ctx.practiceId,
           invoiceId: invoice.id,
-          amountBase: vatAmounts.base,
-          amountVat: vatAmounts.vat,
+          amountBase: totalBase.toFixed(2),
+          amountVat: totalVat.toFixed(2),
           amountTotal: totalStr,
           paymentMethod: input.paymentMethod,
           vatRate: dominantVatRate,
@@ -754,8 +775,11 @@ export const ekasaRouter = createRouter({
   getDailyClosureSummary: protectedProcedure
     .input(z.object({ date: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      const dateStr = input?.date ?? new Date().toISOString().slice(0, 10);
-      const summary = await computeDailySummary(ctx.practiceId, dateStr);
+      const dateStr = input?.date ?? new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Europe/Bratislava",
+          year: "numeric", month: "2-digit", day: "2-digit",
+        }).format(new Date());
+      const summary = await computeDailySummary(ctx.db, ctx.practiceId, dateStr);
 
       const existing = await ctx.db.query.ekasaDailyClosures.findFirst({
         where: and(
@@ -779,8 +803,11 @@ export const ekasaRouter = createRouter({
     .use(requireRole("admin", "veterinarian", "front_desk"))
     .input(z.object({ date: z.string().optional() }).optional())
     .mutation(async ({ ctx, input }) => {
-      const dateStr = input?.date ?? new Date().toISOString().slice(0, 10);
-      const closure = await createDailyClosure({
+      const dateStr = input?.date ?? new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Europe/Bratislava",
+          year: "numeric", month: "2-digit", day: "2-digit",
+        }).format(new Date());
+      const closure = await createDailyClosure(ctx.db, {
         practiceId: ctx.practiceId,
         dateStr,
         userId: ctx.session?.user?.id,
