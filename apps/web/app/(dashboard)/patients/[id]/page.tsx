@@ -12,15 +12,20 @@ import {
   Shield,
   Camera,
   CalendarDays,
+  Cake,
+  Check,
   ChevronDown,
   ChevronRight,
+  Copy,
   Download,
   ExternalLink,
   FileDown,
   FileText,
   GitMerge,
+  Heart,
   Loader2,
   Paperclip,
+  Phone,
   Plus,
   Receipt,
   Stethoscope,
@@ -31,6 +36,11 @@ import { trpc } from "@/lib/trpc";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
+import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
+import {
+  PatientHeaderSkeleton,
+  PatientSnapshotSkeleton,
+} from "@/components/ui/content-skeletons";
 import { useI18n } from "@/lib/i18n";
 import { PatientHistorySearch } from "@/components/patients/patient-history-search";
 import { CapturePhotos } from "@/components/records/capture-photos";
@@ -312,9 +322,9 @@ function PatientDetailErrorPanel({ message }: { message: string }) {
 
 function PatientDetailLoadingPanel({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      {label}
+    <div className="space-y-4">
+      <PatientHeaderSkeleton />
+      <PatientSnapshotSkeleton />
     </div>
   );
 }
@@ -326,6 +336,7 @@ export default function PatientDetailPage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [fieldVisitLocationId, setFieldVisitLocationId] = useState("");
+  const [copiedMicrochip, setCopiedMicrochip] = useState(false);
 
   const tabs: { id: Tab; label: string }[] = useMemo(
     () => [
@@ -965,19 +976,19 @@ export default function PatientDetailPage() {
       ) : null}
 
       {/* Patient Header Card */}
-      <div className="rounded-lg border border-border bg-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="space-y-1">
-              <div className="group relative h-14 w-14">
+              <div className="group relative h-16 w-16 overflow-hidden rounded-2xl border border-border/60 bg-muted/30 shadow-xs">
                 {patient.photoUrl ? (
                   <img
                     src={patient.photoUrl}
                     alt={patient.name}
-                    className="h-14 w-14 rounded-full object-cover"
+                    className="h-16 w-16 rounded-2xl object-cover"
                   />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 text-3xl">
                     {speciesEmoji[patient.species ?? "other"] ?? "\uD83D\uDC3E"}
                   </div>
                 )}
@@ -987,7 +998,7 @@ export default function PatientDetailPage() {
                       type="button"
                       disabled={uploadingPhoto}
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-wait"
+                      className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-wait"
                       title={t("patients.profile.uploadPhoto", "Upload photo")}
                     >
                       {uploadingPhoto ? (
@@ -1017,38 +1028,68 @@ export default function PatientDetailPage() {
                 </button>
               ) : null}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-heading text-xl font-semibold">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground">
                   {patient.name}
                 </h2>
-                <span
-                  className={cn(
-                    "inline-block h-2.5 w-2.5 rounded-full",
-                    statusColor,
-                  )}
-                  title={patient.status ?? "active"}
+                <StatusPulseBadge
+                  variant={
+                    patient.status === "deceased"
+                      ? "deceased"
+                      : patient.status === "inactive"
+                        ? "offline"
+                        : "online"
+                  }
+                  label={
+                    patient.status === "deceased"
+                      ? t("patients.status.deceased", "Deceased")
+                      : patient.status === "inactive"
+                        ? t("patients.status.inactive", "Inactive")
+                        : t("patients.status.active", "Active")
+                  }
+                  size="md"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">
-                {patient.species &&
-                  (patient.species in PATIENT_SPECIES_EMOJI
-                    ? t(
-                        `patients.species_${patient.species}`,
-                        patient.species.charAt(0).toUpperCase() +
-                          patient.species.slice(1),
-                      )
-                    : patient.species.charAt(0).toUpperCase() +
-                      patient.species.slice(1))}
-                {patient.breed ? ` \u00B7 ${patient.breed}` : ""}
-                {" \u00B7 "}
-                {calculateAge(patient.dob, t)}
-                {" \u00B7 "}
-                {formatSex(patient.sex, t)}
-              </p>
-              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {patient.color && (
+
+              {/* Metadata Pills Row */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-medium text-foreground">
+                  <span>{speciesEmoji[patient.species ?? "other"] ?? "\uD83D\uDC3E"}</span>
                   <span>
+                    {patient.species &&
+                      (patient.species in PATIENT_SPECIES_EMOJI
+                        ? t(
+                            `patients.species_${patient.species}`,
+                            patient.species.charAt(0).toUpperCase() +
+                              patient.species.slice(1),
+                          )
+                        : patient.species.charAt(0).toUpperCase() +
+                          patient.species.slice(1))}
+                  </span>
+                </span>
+
+                {patient.breed && (
+                  <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    {patient.breed}
+                  </span>
+                )}
+
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  {patient.dob ? (
+                    <Cake className="h-3.5 w-3.5 text-amber-500/90 shrink-0" />
+                  ) : null}
+                  <span>{calculateAge(patient.dob, t)}</span>
+                </span>
+
+                {patient.sex && (
+                  <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    {formatSex(patient.sex, t)}
+                  </span>
+                )}
+
+                {patient.color && (
+                  <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground">
                     {t(
                       "patients.profile.colorPrefix",
                       `Color: ${patient.color}`,
@@ -1056,24 +1097,56 @@ export default function PatientDetailPage() {
                     )}
                   </span>
                 )}
+
                 {patient.microchipNumber && (
-                  <span>
-                    {t(
-                      "patients.profile.microchipPrefix",
-                      `Microchip: ${patient.microchipNumber}`,
-                      { microchip: patient.microchipNumber },
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(patient.microchipNumber!);
+                      setCopiedMicrochip(true);
+                      setTimeout(() => setCopiedMicrochip(false), 2000);
+                      toast.success(
+                        t(
+                          "patients.profile.microchipCopied",
+                          "Microchip copied to clipboard",
+                        ),
+                      );
+                    }}
+                    className="group inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-muted/60 px-2.5 py-1 text-xs font-mono tabular-nums text-foreground/90 transition-all shadow-2xs hover:border-primary/40 cursor-pointer"
+                    title={t("patients.profile.copyMicrochip", "Click to copy microchip")}
+                  >
+                    <span className="text-[10px] uppercase font-sans text-muted-foreground font-semibold">Chip:</span>
+                    <span className="tracking-tight">{patient.microchipNumber}</span>
+                    {copiedMicrochip ? (
+                      <Check className="h-3 w-3 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-muted-foreground/70 group-hover:text-foreground shrink-0 transition-colors" />
                     )}
-                  </span>
+                  </button>
                 )}
               </div>
+
               {patient.clientFirstName && (
-                <button
-                  onClick={() => router.push(`/clients/${patient.clientId}`)}
-                  className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                >
-                  <User className="h-3.5 w-3.5" />
-                  {patient.clientFirstName} {patient.clientLastName}
-                </button>
+                <div className="flex flex-wrap items-center gap-3 pt-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/clients/${patient.clientId}`)}
+                    className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline hover:text-primary/90"
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    <span>{patient.clientFirstName} {patient.clientLastName}</span>
+                  </button>
+                  {patient.clientPhone ? (
+                    <a
+                      href={`tel:${patient.clientPhone}`}
+                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground font-mono tabular-nums transition-colors"
+                      title={t("patients.profile.callClient", "Call client")}
+                    >
+                      <Phone className="h-3 w-3" />
+                      <span>{patient.clientPhone}</span>
+                    </a>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>
@@ -1193,6 +1266,33 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
+      {/* Deceased Patient Sympathy Banner (Sympathy Gate active) */}
+      {patient.status === "deceased" ? (
+        <div className="mt-4 rounded-xl border border-slate-300/60 bg-gradient-to-r from-slate-100/90 via-slate-50 to-slate-100/90 p-4 text-slate-800 shadow-2xs dark:border-slate-800 dark:bg-gradient-to-r dark:from-slate-900/60 dark:via-slate-950 dark:to-slate-900/60 dark:text-slate-200">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-slate-200/80 p-2 dark:bg-slate-800 shrink-0">
+              <Heart className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-sm">
+                  {t("patients.sympathy.inMemoriam", "In Memoriam")}
+                </p>
+                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  {t("patients.sympathy.gateActive", "Sympathy Gate Active")}
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                {t(
+                  "patients.sympathy.notice",
+                  "This patient is marked as deceased. Automated reminders, vaccination alerts, marketing, and client portal notifications are respectfully suppressed.",
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {ambulatoryProfile.enabled ? (
         <section className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1218,10 +1318,7 @@ export default function PatientDetailPage() {
           recentVisitsQuery.isLoading ||
           snapshotVitalsQuery.isLoading ||
           vaccinationsQuery.isLoading ? (
-            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t("patients.profile.loadingSnapshot", "Loading clinical snapshot...")}
-            </div>
+            <PatientSnapshotSkeleton />
           ) : problemsQuery.error ||
             prescriptionsQuery.error ||
             recentVisitsQuery.error ||
@@ -1318,92 +1415,121 @@ export default function PatientDetailPage() {
 
       {/* Allergy Alert Bar */}
       {patient.allergies && patient.allergies.length > 0 ? (
-        <div className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-              {t("patients.profile.allergies", "Allergies")}
-            </p>
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
-              {patient.allergies.map((allergy) => (
-                <div
-                  key={allergy.id}
-                  className={cn(
-                    "rounded-md border px-3 py-2 text-sm",
-                    allergy.severity === "severe"
-                      ? "border-red-300 bg-red-100 text-red-900 dark:border-red-800 dark:bg-red-950/60 dark:text-red-100"
-                      : allergy.severity === "moderate"
-                        ? "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-100"
-                        : "border-yellow-300 bg-yellow-50 text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-100",
-                  )}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold">{allergy.allergen}</span>
-                    <span className="text-xs font-semibold uppercase tracking-wide">
-                      {allergy.severity}
-                    </span>
+        <div className="mt-4 rounded-xl border border-red-200/80 bg-red-50/60 p-4 shadow-xs dark:border-red-900/50 dark:bg-red-950/20">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-red-100 p-2 text-red-600 dark:bg-red-900/40 dark:text-red-400 shrink-0">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-red-900 dark:text-red-200">
+                    {t("patients.profile.allergies", "Allergies")}
+                  </h4>
+                  <span className="rounded-full bg-red-200/70 px-2 py-0.5 text-[11px] font-bold text-red-800 dark:bg-red-900/60 dark:text-red-200">
+                    {patient.allergies.length}
+                  </span>
+                </div>
+                {canManagePatientDetail && !showAllergyForm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllergyForm(true)}
+                    className="inline-flex items-center gap-1 rounded-md border border-red-300/80 bg-red-100/50 hover:bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800 transition-colors dark:border-red-800 dark:bg-red-900/30 dark:text-red-200 dark:hover:bg-red-900/50"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {t("patients.profile.add", "Add")}
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="mt-3 grid gap-2.5 md:grid-cols-2">
+                {patient.allergies.map((allergy) => (
+                  <div
+                    key={allergy.id}
+                    className={cn(
+                      "rounded-lg border p-3 text-sm transition-shadow shadow-2xs",
+                      allergy.severity === "severe"
+                        ? "border-red-300/80 bg-red-100/60 text-red-950 dark:border-red-800/80 dark:bg-red-950/60 dark:text-red-100"
+                        : allergy.severity === "moderate"
+                          ? "border-amber-300/80 bg-amber-100/60 text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/60 dark:text-amber-100"
+                          : "border-yellow-300/80 bg-yellow-50 text-yellow-950 dark:border-yellow-800/80 dark:bg-yellow-950/50 dark:text-yellow-100",
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-foreground dark:text-inherit">
+                        {allergy.allergen}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+                          allergy.severity === "severe"
+                            ? "bg-red-600 text-white shadow-2xs"
+                            : allergy.severity === "moderate"
+                              ? "bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30"
+                              : "bg-yellow-500/20 text-yellow-900 dark:text-yellow-200 border border-yellow-500/30",
+                        )}
+                      >
+                        {allergy.severity === "severe" && (
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                          </span>
+                        )}
+                        {allergy.severity}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground dark:text-inherit/80">
+                      {t(
+                        "patients.profile.reactionPrefix",
+                        `Reaction: ${allergy.reaction || "Not documented"}`,
+                        {
+                          reaction:
+                            allergy.reaction ||
+                            t("patients.profile.notDocumented", "Not documented"),
+                        },
+                      )}
+                    </p>
+                    <ClinicalCorrectionControl
+                      correction={null}
+                      canCorrect={canCorrectClinicalRecords}
+                      isPending={correctAllergy.isPending}
+                      triggerLabel={t(
+                        "patients.profile.markAllergyError",
+                        "Mark allergy entered in error",
+                      )}
+                      description={t(
+                        "patients.profile.markAllergyErrorDesc",
+                        "The original allergy and this permanent reason remain in staff chart history. The allergy will stop feeding current alerts, prescription safety, AI context, PDF summaries, and the client portal.",
+                      )}
+                      timeZone={recordsTimeZone}
+                      onCorrect={(reason) =>
+                        correctAllergy.mutateAsync({
+                          patientId: patient.id,
+                          recordId: allergy.id,
+                          reason,
+                        })
+                      }
+                    />
                   </div>
-                  <p className="mt-1 text-xs">
-                    {t(
-                      "patients.profile.reactionPrefix",
-                      `Reaction: ${allergy.reaction || "Not documented"}`,
-                      {
-                        reaction:
-                          allergy.reaction ||
-                          t("patients.profile.notDocumented", "Not documented"),
-                      },
-                    )}
-                  </p>
-                  <ClinicalCorrectionControl
-                    correction={null}
-                    canCorrect={canCorrectClinicalRecords}
-                    isPending={correctAllergy.isPending}
-                    triggerLabel={t(
-                      "patients.profile.markAllergyError",
-                      "Mark allergy entered in error",
-                    )}
-                    description={t(
-                      "patients.profile.markAllergyErrorDesc",
-                      "The original allergy and this permanent reason remain in staff chart history. The allergy will stop feeding current alerts, prescription safety, AI context, PDF summaries, and the client portal.",
-                    )}
-                    timeZone={recordsTimeZone}
-                    onCorrect={(reason) =>
-                      correctAllergy.mutateAsync({
-                        patientId: patient.id,
-                        recordId: allergy.id,
-                        reason,
-                      })
-                    }
+                ))}
+              </div>
+              {showAllergyForm ? (
+                <div className="mt-3">
+                  <AllergyForm
+                    allergyName={allergyName}
+                    setAllergyName={setAllergyName}
+                    allergySeverity={allergySeverity}
+                    setAllergySeverity={setAllergySeverity}
+                    allergyReaction={allergyReaction}
+                    setAllergyReaction={setAllergyReaction}
+                    canSubmit={canSubmitAllergy}
+                    isPending={addAllergy.isPending}
+                    onSubmit={handleAddAllergy}
+                    onCancel={() => setShowAllergyForm(false)}
                   />
                 </div>
-              ))}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {canManagePatientDetail && !showAllergyForm ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAllergyForm(true)}
-                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-red-300 px-2.5 py-0.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-                >
-                  <Plus className="h-3 w-3" />
-                  {t("patients.profile.add", "Add")}
-                </button>
               ) : null}
             </div>
-            {showAllergyForm ? (
-              <AllergyForm
-                allergyName={allergyName}
-                setAllergyName={setAllergyName}
-                allergySeverity={allergySeverity}
-                setAllergySeverity={setAllergySeverity}
-                allergyReaction={allergyReaction}
-                setAllergyReaction={setAllergyReaction}
-                canSubmit={canSubmitAllergy}
-                isPending={addAllergy.isPending}
-                onSubmit={handleAddAllergy}
-                onCancel={() => setShowAllergyForm(false)}
-              />
-            ) : null}
           </div>
         </div>
       ) : canManagePatientDetail ? (

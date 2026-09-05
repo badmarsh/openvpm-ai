@@ -21,7 +21,15 @@ import {
   CheckCircle2,
   History,
   Loader2,
+  ShieldCheck,
+  Thermometer,
+  Heart,
+  Wind,
+  Scale,
+  Activity,
 } from "lucide-react";
+import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
+import { RecordsTimelineSkeleton, TableSkeleton } from "@/components/ui/content-skeletons";
 import { trpc } from "@/lib/trpc";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -500,9 +508,11 @@ function RecordsErrorPanel({
 
 function RecordsLoadingPanel({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      {label}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <StatusPulseBadge variant="pending" label={label} size="sm" />
+      </div>
+      <RecordsTimelineSkeleton />
     </div>
   );
 }
@@ -782,6 +792,26 @@ function RecordsPageContent() {
     { patientId },
     { enabled: !!patientId }
   );
+  const { data: patientVitals } = trpc.vitals.listByPatient.useQuery(
+    { patientId: patientId || "00000000-0000-0000-0000-000000000000" },
+    { enabled: Boolean(patientId), staleTime: 60_000 }
+  );
+
+  const getNoteVitals = (appointmentId?: string | null, createdAt?: Date | string | null) => {
+    if (!patientVitals?.length) return null;
+    if (appointmentId) {
+      const match = patientVitals.find((v) => v.appointmentId === appointmentId);
+      if (match) return match;
+    }
+    if (createdAt) {
+      const noteDateStr = new Date(createdAt).toDateString();
+      const match = patientVitals.find(
+        (v) => new Date(v.recordedAt).toDateString() === noteDateStr
+      );
+      if (match) return match;
+    }
+    return patientVitals[0] ?? null;
+  };
   const soapNotesMissing =
     Boolean(patientId) && !isLoadingSoapNotes && !soapNotesError && !soapNotes;
   useEffect(() => {
@@ -1484,9 +1514,9 @@ function RecordsPageContent() {
                     }
                   />
                 ) : isLoadingSoapNotes ? (
-                  <RecordsLoadingPanel label={t("records.soap.loading", "Loading SOAP notes...")} />
+                  <RecordsTimelineSkeleton />
                 ) : soapNotes && soapNotes.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                         {soapNotes.map((note) => {
                           const isExpanded = expandedNoteId === note.id;
                           const hasOtherCurrentAppointmentSoap = Boolean(
@@ -1502,20 +1532,22 @@ function RecordsPageContent() {
                           );
                           const hasAppointmentSoapDraft = Boolean(
                             note.appointmentId &&
-                              soapNotes.some(
-                                (candidate) =>
-                                  candidate.id !== note.id &&
-                                  candidate.appointmentId ===
-                                    note.appointmentId &&
-                                  candidate.status === "draft",
-                              ),
+                            soapNotes.some(
+                              (candidate) =>
+                                candidate.id !== note.id &&
+                                candidate.appointmentId ===
+                                  note.appointmentId &&
+                                candidate.status === "draft",
+                            ),
                           );
+                          const noteVitals = getNoteVitals(note.appointmentId, note.createdAt);
+
                           return (
                             <div
                               key={note.id}
                               id={`soap-note-${note.id}`}
                               className={cn(
-                                "rounded-lg border border-border bg-card",
+                                "relative overflow-hidden rounded-xl border border-border/80 bg-card/80 backdrop-blur-xs shadow-xs transition-all hover:border-border hover:shadow-sm",
                                 note.correctionId &&
                                   "border-destructive/40 bg-destructive/5",
                               )}
@@ -1524,13 +1556,15 @@ function RecordsPageContent() {
                                 onClick={() =>
                                   setExpandedNoteId(isExpanded ? null : note.id)
                                 }
-                                className="flex w-full items-center justify-between px-4 py-3 text-left"
+                                className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/20 transition-colors"
                               >
-                                <div className="flex items-center gap-4">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-medium">
+                                <div className="flex items-center gap-4 min-w-0">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                    <FileText className="h-5 w-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-sm font-semibold font-mono tabular-nums text-foreground">
                                         {note.createdAt
                                           ? formatClinicalDate(
                                               note.createdAt,
@@ -1543,25 +1577,22 @@ function RecordsPageContent() {
                                           {t("records.soap.importedBadge", "Imported")}
                                         </span>
                                       ) : null}
-                                      <span
-                                        className={cn(
-                                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                      <StatusPulseBadge
+                                        variant={note.status === "draft" ? "pending" : "confirmed"}
+                                        label={
                                           note.status === "draft"
-                                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-                                        )}
-                                      >
-                                        {note.status === "draft"
-                                          ? t("records.soap.draftBadge", "Draft")
-                                          : t("records.soap.finalizedBadge", "Finalized")}
-                                      </span>
+                                            ? t("records.soap.draftBadge", "Draft")
+                                            : t("records.soap.finalizedBadge", "Finalized")
+                                        }
+                                        size="sm"
+                                      />
                                       {note.correctionId ? (
                                         <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
                                           {t("records.enteredInError", "Entered in error")}
                                         </span>
                                       ) : null}
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                       {note.imported
                                         ? note.authorName
                                           ? t("records.soap.importedBy", "Imported by {name}", { name: note.authorName })
@@ -1569,7 +1600,7 @@ function RecordsPageContent() {
                                         : (note.authorName ?? t("records.soap.unknownAuthor", "Unknown author"))}
                                     </p>
                                   </div>
-                                  <p className="text-sm text-muted-foreground line-clamp-1 max-w-md">
+                                  <p className="hidden md:block text-sm text-muted-foreground line-clamp-1 max-w-md ml-2 pl-4 border-l border-border/60">
                                     {soapSectionText(
                                       note.assessment ||
                                         note.subjective ||
@@ -1578,34 +1609,52 @@ function RecordsPageContent() {
                                     ) || t("records.soap.noNoteRecorded", "No note recorded")}
                                   </p>
                                 </div>
-                                {isExpanded ? (
-                                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                )}
+                                <div className="shrink-0 ml-3">
+                                  {isExpanded ? (
+                                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                  )}
+                                </div>
                               </button>
+
                               {isExpanded && (
-                                <div className="border-t border-border px-4 py-4 space-y-4">
+                                <div className="border-t border-border/70 px-5 py-5 space-y-5 bg-card/40">
+                                  {/* Finalized Clinician Approved Seal / Resume Draft Banner */}
                                   {note.status === "finalized" ? (
-                                    <p className="text-xs text-muted-foreground">
-                                      {note.finalizedAt
-                                        ? t("records.soap.finalizedByOn", "Finalized by {name} on {date}", {
-                                            name: note.finalizerName ?? t("records.soap.unknownClinician", "Unknown clinician"),
-                                            date: formatClinicalDateTime(note.finalizedAt, recordsTimeZone),
-                                          })
-                                        : t("records.soap.finalizedBy", "Finalized by {name}", {
-                                            name: note.finalizerName ?? t("records.soap.unknownClinician", "Unknown clinician"),
-                                          })}
-                                    </p>
+                                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-900 dark:text-emerald-200 shadow-2xs">
+                                      <div className="flex items-center gap-2.5">
+                                        <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                        <div>
+                                          <p className="font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                                            <span>{t("records.soap.clinicianApproved", "Clinician Approved")}</span>
+                                            <span className="text-[10px] opacity-75">· {t("records.soap.legalTamperProof", "Zákonný klinický záznam")}</span>
+                                          </p>
+                                          <p className="text-[11px] font-mono tabular-nums opacity-90">
+                                            {note.finalizerName ?? t("records.soap.unknownClinician", "Unknown clinician")}
+                                            {note.finalizedAt ? ` · ${formatClinicalDateTime(note.finalizedAt, recordsTimeZone)}` : ""}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <span className="rounded-full bg-emerald-600/20 border border-emerald-500/30 px-2.5 py-1 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
+                                        SEALED & VERIFIED
+                                      </span>
+                                    </div>
                                   ) : note.appointmentId &&
                                     canCorrectClinicalRecords ? (
-                                    <a
-                                      href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
-                                      className="inline-flex text-sm font-medium text-primary hover:underline"
-                                    >
-                                      {t("records.soap.resumeDraft", "Resume draft")}
-                                    </a>
+                                    <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 flex items-center justify-between">
+                                      <span className="text-xs text-blue-900 dark:text-blue-200 font-medium">
+                                        {t("records.soap.draftNotice", "Tento záznam je v štádiu konceptu.")}
+                                      </span>
+                                      <a
+                                        href={`/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(note.appointmentId)}`}
+                                        className="inline-flex text-xs font-semibold text-primary hover:underline"
+                                      >
+                                        {t("records.soap.resumeDraft", "Resume draft")} →
+                                      </a>
+                                    </div>
                                   ) : null}
+
                                   {note.replacesSoapNoteId ? (
                                     <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
                                       <p className="font-medium text-primary">
@@ -1619,37 +1668,108 @@ function RecordsPageContent() {
                                       </a>
                                     </div>
                                   ) : null}
-                                  <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                      {t("records.soap.subjective", "Subjective")}
-                                    </h4>
-                                    <p className="text-sm">
-                                      {soapSectionText(note.subjective) || "--"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                      {t("records.soap.objective", "Objective")}
-                                    </h4>
-                                    <p className="text-sm">
-                                      {soapSectionText(note.objective) || "--"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                      {t("records.soap.assessment", "Assessment")}
-                                    </h4>
-                                    <p className="text-sm">
-                                      {soapSectionText(note.assessment) || "--"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                      {t("records.soap.plan", "Plan")}
-                                    </h4>
-                                    <p className="text-sm">
-                                      {soapSectionText(note.plan) || "--"}
-                                    </p>
+
+                                  {/* Vitals Quick-Stats Strip */}
+                                  {noteVitals && (
+                                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3 shadow-2xs">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                          <Activity className="h-3.5 w-3.5 text-primary" />
+                                          {t("records.soap.vitalsSnapshot", "Visit Vitals Quick-Stats")}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                                          {formatClinicalDateTime(noteVitals.recordedAt, recordsTimeZone)}
+                                        </span>
+                                      </div>
+                                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono tabular-nums">
+                                        <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
+                                          <Thermometer className="h-4 w-4 text-amber-500 shrink-0" />
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Temp</p>
+                                            <p className="font-semibold">{noteVitals.temperatureC ? `${noteVitals.temperatureC} °C` : "—"}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
+                                          <Heart className="h-4 w-4 text-rose-500 shrink-0" />
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Heart Rate</p>
+                                            <p className="font-semibold">{noteVitals.heartRateBpm ? `${noteVitals.heartRateBpm} bpm` : "—"}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
+                                          <Wind className="h-4 w-4 text-sky-500 shrink-0" />
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Resp. Rate</p>
+                                            <p className="font-semibold">{noteVitals.respiratoryRateBpm ? `${noteVitals.respiratoryRateBpm} /min` : "—"}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
+                                          <Scale className="h-4 w-4 text-emerald-500 shrink-0" />
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Weight</p>
+                                            <p className="font-semibold">{noteVitals.weightKg ? `${noteVitals.weightKg} kg` : "—"}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
+                                          <Activity className="h-4 w-4 text-violet-500 shrink-0" />
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">BCS Score</p>
+                                            <p className="font-semibold">{noteVitals.bodyConditionScore ? `${noteVitals.bodyConditionScore}/${noteVitals.bodyConditionScale ?? 9}` : "—"}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Structured S-O-A-P blocks */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                                    {/* Subjective */}
+                                    <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.03] p-4 space-y-2 shadow-2xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="inline-flex items-center gap-1.5 rounded-md bg-sky-500/15 px-2.5 py-1 text-xs font-bold text-sky-800 dark:text-sky-300">
+                                          S · {t("records.soap.subjective", "Subjective")}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                        {soapSectionText(note.subjective) || "--"}
+                                      </p>
+                                    </div>
+
+                                    {/* Objective */}
+                                    <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.03] p-4 space-y-2 shadow-2xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500/15 px-2.5 py-1 text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                                          O · {t("records.soap.objective", "Objective")}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                        {soapSectionText(note.objective) || "--"}
+                                      </p>
+                                    </div>
+
+                                    {/* Assessment */}
+                                    <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.03] p-4 space-y-2 shadow-2xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="inline-flex items-center gap-1.5 rounded-md bg-violet-500/15 px-2.5 py-1 text-xs font-bold text-violet-800 dark:text-violet-300">
+                                          A · {t("records.soap.assessment", "Assessment")}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                        {soapSectionText(note.assessment) || "--"}
+                                      </p>
+                                    </div>
+
+                                    {/* Plan */}
+                                    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.03] p-4 space-y-2 shadow-2xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                                          P · {t("records.soap.plan", "Plan")}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                        {soapSectionText(note.plan) || "--"}
+                                      </p>
+                                    </div>
                                   </div>
                                   {note.addenda.length > 0 ? (
                                     <div className="space-y-2 border-t border-border pt-3">
