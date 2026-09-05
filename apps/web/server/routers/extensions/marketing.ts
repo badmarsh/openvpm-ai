@@ -22,12 +22,14 @@ import {
   extMarketingAutomationRules,
   extMarketingPostopResponses,
   extMarketingOperativeScripts,
+  extMarketingCompetitorSnapshots,
   extSmsDeliveryLog,
   patients,
   clients,
   practices,
   wellnessEnrollments,
 } from '@openpims/db';
+import { analyzeCompetitors } from '@/lib/marketing/competitors';
 import { autoFix, validateMarketingText, withDisclaimer, type ValidatorReport } from '@/lib/marketing/validator';
 import { generateWeeklyBatch, getBrand, mondayOf, nameGuards } from '@/lib/marketing/planner';
 import { composePost } from '@/lib/marketing/composer';
@@ -525,22 +527,6 @@ pollVideo: protectedProcedure
         message: err instanceof Error ? err.message : "Chyba pri kontrole stavu videa.",
       });
     }
-  }),
-
-listMediaAssets: protectedProcedure
-  .input(z.object({ limit: z.number().min(1).max(100).default(50) }))
-  .query(async ({ ctx, input }) => {
-    return ctx.db
-      .select()
-      .from(extMarketingMediaAssets)
-      .where(
-        and(
-          eq(extMarketingMediaAssets.practiceId, ctx.practiceId),
-          isNull(extMarketingMediaAssets.deletedAt),
-        )
-      )
-      .orderBy(desc(extMarketingMediaAssets.createdAt))
-      .limit(input.limit);
   }),
 
 // ── TV Slides ─────────────────────────────────────────────────────────────────
@@ -1960,6 +1946,268 @@ listStaffTasks: protectedProcedure
         slides,
         practice,
       };
+    }),
+
+  // ── Media Library Procedures ──────────────────────────────────────────
+
+  listMediaAssets: protectedProcedure
+    .input(
+      z.object({
+        kind: z.enum(["photo", "brand_graphic", "video", "illustration", "all"]).default("all"),
+        hasConsent: z.enum(["all", "valid", "missing", "not_required"]).default("all"),
+        limit: z.number().min(1).max(100).default(50),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const filterKind = input?.kind ?? "all";
+      const filterConsent = input?.hasConsent ?? "all";
+      const limit = input?.limit ?? 50;
+
+      const conditions = [
+        eq(extMarketingMediaAssets.practiceId, ctx.practiceId),
+        isNull(extMarketingMediaAssets.deletedAt),
+      ];
+
+      if (filterKind !== "all") {
+        conditions.push(eq(extMarketingMediaAssets.kind, filterKind));
+      }
+
+      const rows = await ctx.db
+        .select({
+          asset: extMarketingMediaAssets,
+          consent: extMarketingMediaConsents,
+        })
+        .from(extMarketingMediaAssets)
+        .leftJoin(
+          extMarketingMediaConsents,
+          eq(extMarketingMediaAssets.consentId, extMarketingMediaConsents.id)
+        )
+        .where(and(...conditions))
+        .orderBy(desc(extMarketingMediaAssets.createdAt))
+        .limit(limit);
+
+      return rows.filter(({ asset, consent }) => {
+        if (filterConsent === "all") return true;
+        const isConsentValid = consent && !consent.revokedAt;
+        if (filterConsent === "valid") return isConsentValid;
+        if (filterConsent === "missing") return asset.subjectsPresent && !isConsentValid;
+        if (filterConsent === "not_required") return !asset.subjectsPresent;
+        return true;
+      });
+    }),
+
+  createMediaAsset: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        url: z.string().min(1),
+        kind: z.enum(["photo", "brand_graphic", "video", "illustration"]).default("photo"),
+        caption: z.string().optional(),
+        altText: z.string().optional(),
+        patientName: z.string().optional(),
+        subjectsPresent: z.boolean().default(false),
+        consentId: z.string().uuid().optional(),
+        tags: z.array(z.string()).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.subjectsPresent && !input.consentId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Médiá so zobrazením pacienta alebo majiteľa vyžadujú prepojenie na platný GDPR súhlas.",
+        });
+      }
+
+      if (input.consentId) {
+        const [consent] = await ctx.db
+          .select()
+          .from(extMarketingMediaConsents)
+          .where(
+            and(
+              eq(extMarketingMediaConsents.id, input.consentId),
+              eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
+              isNull(extMarketingMediaConsents.revokedAt)
+            )
+          )
+          .limit(1);
+
+        if (!consent) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Vybraný GDPR súhlas neexistuje alebo bol odvolaný.",
+          });
+        }
+      }
+
+      const [created] = await ctx.db
+        .insert(extMarketingMediaAssets)
+        .values({
+          practiceId: ctx.practiceId,
+          uploadedBy: ctx.user.id,
+          url: input.url,
+          kind: input.kind,
+          caption: input.caption ?? null,
+          altText: input.altText ?? "",
+          patientName: input.patientName ?? null,
+          subjectsPresent: input.subjectsPresent,
+          consentId: input.consentId ?? null,
+          tags: input.tags ?? [],
+        })
+        .returning();
+
+      return created;
+    }),
+
+  deleteMediaAsset: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [deleted] = await ctx.db
+        .update(extMarketingMediaAssets)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            eq(extMarketingMediaAssets.id, input.id),
+            eq(extMarketingMediaAssets.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+      return deleted;
+    }),
+
+  suggestMediaAltText: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(z.object({
+      kind: z.enum(["photo", "brand_graphic", "video", "illustration"]),
+      caption: z.string().optional(),
+      patientName: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const clinicName = practice?.name ?? "Veterinárna klinika";
+      const petDesc = input.patientName ? ` – pacient ${input.patientName}` : "";
+      const kindDesc =
+        input.kind === "video" ? "Krátke video z kliniky" :
+        input.kind === "illustration" ? "Ilustrácia k preventívnej starostlivosti" :
+        input.kind === "brand_graphic" ? "Informačná grafika kliniky" :
+        "Fotografia z veterinárnej ambulancie";
+
+      const tagDesc = (input.tags && input.tags.length > 0) ? `, zameranie: ${input.tags.slice(0, 3).join(", ")}` : "";
+      const captionDesc = input.caption ? ` (${input.caption})` : "";
+
+      const candidate = `${kindDesc}${petDesc}${captionDesc}${tagDesc} – ${clinicName}`;
+      const report = validateMarketingText({ text: candidate, context: "marketing" });
+
+      return {
+        altText: candidate,
+        report,
+      };
+    }),
+
+  listConsentCandidates: protectedProcedure.query(async ({ ctx }) => {
+    const consents = await ctx.db
+      .select({
+        consent: extMarketingMediaConsents,
+        client: clients,
+        patient: patients,
+      })
+      .from(extMarketingMediaConsents)
+      .innerJoin(clients, eq(extMarketingMediaConsents.clientId, clients.id))
+      .leftJoin(patients, eq(extMarketingMediaConsents.patientId, patients.id))
+      .where(
+        and(
+          eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
+          isNull(extMarketingMediaConsents.revokedAt)
+        )
+      )
+      .orderBy(desc(extMarketingMediaConsents.grantedAt));
+
+    return consents.map(({ consent, client, patient }) => ({
+      id: consent.id,
+      scope: consent.scope,
+      clientName: `${client.firstName} ${client.lastName}`,
+      patientName: patient?.name ?? "Všetky zvieratá klienta",
+      grantedAt: consent.grantedAt,
+    }));
+  }),
+
+  // ── Competitor Tracking Procedures ──────────────────────────────────
+
+  listCompetitorSnapshots: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db
+      .select()
+      .from(extMarketingCompetitorSnapshots)
+      .where(
+        and(
+          eq(extMarketingCompetitorSnapshots.practiceId, ctx.practiceId),
+          isNull(extMarketingCompetitorSnapshots.deletedAt)
+        )
+      )
+      .orderBy(desc(extMarketingCompetitorSnapshots.createdAt))
+      .limit(10);
+
+    return rows;
+  }),
+
+  runCompetitorAnalysis: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(z.object({
+      query: z.string().min(2).max(120),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const q = input.query.trim();
+      const result = await analyzeCompetitors(q);
+
+      const [saved] = await ctx.db
+        .insert(extMarketingCompetitorSnapshots)
+        .values({
+          practiceId: ctx.practiceId,
+          query: q,
+          region: result.region,
+          clinics: result.clinics,
+          recommendations: result.recommendations,
+          articles: result.articles,
+          sources: result.sources,
+          model: result.model,
+          isSample: result.isSample,
+        })
+        .returning();
+
+      return saved;
+    }),
+
+  toggleCompetitorDigest: protectedProcedure
+    .use(requireRole("admin"))
+    .input(z.object({
+      enabled: z.boolean(),
+      email: z.string().email().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ settings: practices.settings })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const currentSettings = (practice?.settings as Record<string, unknown>) ?? {};
+      const updatedSettings = {
+        ...currentSettings,
+        competitorDigestEnabled: input.enabled,
+        competitorDigestEmail: input.email ?? currentSettings.competitorDigestEmail,
+      };
+
+      await ctx.db
+        .update(practices)
+        .set({ settings: updatedSettings })
+        .where(eq(practices.id, ctx.practiceId));
+
+      return { ok: true, enabled: input.enabled };
     }),
 
   getPracticeId: protectedProcedure.query(async ({ ctx }) => {

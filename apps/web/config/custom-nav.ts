@@ -13,9 +13,9 @@ import {
   PenLine,
   Star,
   Globe,
-  MessageSquare,
   ShieldCheck,
   Heart,
+  Building2,
 } from "lucide-react";
 
 export type UserRole =
@@ -108,14 +108,6 @@ export const customNavItems: CustomNavItem[] = [
     section: 'marketing',
   },
   {
-    href: '/marketing/messages',
-    label: 'Správy & Komunikácia',
-    i18nKey: 'nav.marketingMessages',
-    icon: MessageSquare,
-    roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'marketing',
-  },
-  {
     href: '/marketing/automations',
     label: 'Automatizácie',
     i18nKey: 'nav.marketingAutomations',
@@ -136,6 +128,22 @@ export const customNavItems: CustomNavItem[] = [
     label: 'Operačné skripty',
     i18nKey: 'nav.marketingScripts',
     icon: PenLine,
+    roles: ['admin', 'veterinarian'],
+    section: 'marketing',
+  },
+  {
+    href: '/marketing/media',
+    label: 'Knižnica médií',
+    i18nKey: 'nav.marketingMedia',
+    icon: ImageIcon,
+    roles: ['admin', 'veterinarian', 'front_desk'],
+    section: 'marketing',
+  },
+  {
+    href: '/marketing/competitors',
+    label: 'Konkurencia & Trh',
+    i18nKey: 'nav.marketingCompetitors',
+    icon: Building2,
     roles: ['admin', 'veterinarian'],
     section: 'marketing',
   },

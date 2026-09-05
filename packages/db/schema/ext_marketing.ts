@@ -50,13 +50,18 @@ export const extMarketingMediaAssets = pgTable("ext_marketing_media_assets", {
   practiceId: uuid("practice_id").notNull().references(() => practices.id),
   uploadedBy: uuid("uploaded_by").notNull().references(() => users.id),
   fileId: uuid("file_id").references(() => files.id),
+  url: text("url"),
   kind: extMarketingMediaKindEnum("kind").notNull(),
   caption: text("caption"),
+  patientName: text("patient_name"),
+  subjectsPresent: boolean("subjects_present").notNull().default(false),
   tags: text("tags").array(),
+  altText: text("alt_text").default(""),
+  meta: jsonb("meta"),
   consentId: uuid("consent_id").references(() => extMarketingMediaConsents.id),
 }, (table) => ({
   practiceIdx: index("ext_mkt_media_practice_idx").on(table.practiceId, table.deletedAt),
-  consentRequiredCheck: check("ext_mkt_media_consent_required", sql`(kind NOT IN ('photo', 'video') OR consent_id IS NOT NULL)`),
+  consentRequiredCheck: check("ext_mkt_media_consent_required", sql`(${table.subjectsPresent} = false) OR (${table.consentId} IS NOT NULL)`),
 }));
 
 export const extMarketingContentBatches = pgTable("ext_marketing_content_batches", {
@@ -378,6 +383,28 @@ export const extMarketingOperativeScripts = pgTable("ext_marketing_operative_scr
 
 export const extMarketingOperativeScriptsRelations = relations(extMarketingOperativeScripts, ({ one }) => ({
   practice: one(practices, { fields: [extMarketingOperativeScripts.practiceId], references: [practices.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Competitor Snapshots & Market Intelligence
+// ---------------------------------------------------------------------------
+export const extMarketingCompetitorSnapshots = pgTable("ext_marketing_competitor_snapshots", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  query: text("query").notNull(),
+  region: text("region").notNull(),
+  clinics: jsonb("clinics").notNull().default([]),
+  recommendations: jsonb("recommendations").notNull().default([]),
+  articles: jsonb("articles").notNull().default([]),
+  sources: jsonb("sources").notNull().default([]),
+  model: text("model").notNull().default("gemini-3.6-flash"),
+  isSample: boolean("is_sample").notNull().default(false),
+}, (t) => ({
+  practiceIdx: index("ext_mkt_competitor_practice_idx").on(t.practiceId, t.deletedAt),
+}));
+
+export const extMarketingCompetitorSnapshotsRelations = relations(extMarketingCompetitorSnapshots, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingCompetitorSnapshots.practiceId], references: [practices.id] }),
 }));
 
 
