@@ -27,6 +27,15 @@ Kill switch: leave `AI_MODEL` / provider credentials unset. Hosted billing can d
 
 Staff remain responsible for the medical record. SOAP/imaging/voice outputs are drafts until a human saves/finalizes through normal clinical APIs.
 
+Enforced contract (`apps/web/lib/ai/draft-safety.ts`, proven by `apps/web/server/__tests__/ai-draft-safety.test.ts`):
+
+- `ai.draftSoapNote` returns text to the editor only; it never writes `soap_notes`.
+- `ai.createSoapFromAI` (tRPC) and `POST /api/v1/soap-notes` (REST) require `clinicianConfirmed: true` / `clinician_confirmed: true` as a schema literal. Missing or `false` is a validation error before any DB work. The finalizer is always the signed-in user, never the AI source.
+- `voice.saveAsSoapNote` and `discharge.save` default to `draft`; finalizing requires the same explicit attestation and goes through the SOAP lifecycle (which also enforces the one-draft/one-finalized DB invariant).
+- `imaging.injectFindingsIntoSoap` appends to a draft only and refuses finalized notes (`PRECONDITION_FAILED`).
+- Discharge drafts emit no webhooks and no marketing/recall automation. A finalized discharge for a deceased or euthanized patient routes only to the sympathy gate; post-op check-ins, dental recalls, senior milestones and review asks are hard-blocked for those patients.
+- Agent tools that touch clinical text remain `readOnly` — the agent cannot sign a record.
+
 ## Prompt injection
 
 Agent tools execute with server-side tenant scope, not with model-chosen practice IDs. Retrieved document text can still influence the model; consequential actions require `allowWrites` and role gates. Additional injection evals are **partial**.

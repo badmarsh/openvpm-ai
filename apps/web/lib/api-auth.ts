@@ -79,9 +79,13 @@ function err(
   message: string,
   status: number,
 ): { ok: false; response: NextResponse } {
+  // RFC 7235: a 401 must advertise the accepted challenge scheme. Kept generic
+  // (no realm details) so the header cannot be used for fingerprinting.
+  const headers =
+    status === 401 ? { "WWW-Authenticate": 'Bearer realm="api"' } : undefined;
   return {
     ok: false,
-    response: NextResponse.json({ error: { message } }, { status }),
+    response: NextResponse.json({ error: { message } }, { status, headers }),
   };
 }
 

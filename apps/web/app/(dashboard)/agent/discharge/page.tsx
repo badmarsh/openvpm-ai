@@ -121,6 +121,9 @@ export default function DischargePage() {
 
   // Output & UI state
   const [result, setResult] = useState("");
+  // Human-in-the-loop: AI discharge text is saved as a draft unless the
+  // clinician explicitly confirms it for finalization.
+  const [clinicianConfirmed, setClinicianConfirmed] = useState(false);
   const [usedAi, setUsedAi] = useState(false);
   const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
   const [copied, setCopied] = useState(false);
@@ -308,10 +311,13 @@ export default function DischargePage() {
         followUp: followUp.trim() || undefined,
         reportText: result,
         language,
-        status: "finalized",
+        status: clinicianConfirmed ? "finalized" : "draft",
+        clinicianConfirmed: clinicianConfirmed ? true : undefined,
       });
       toast.success(
-        t("discharge.saved", "Report successfully saved to database")
+        clinicianConfirmed
+          ? t("discharge.saved", "Report confirmed and saved to chart")
+          : t("discharge.savedDraft", "Report saved as a draft (not yet confirmed by a clinician)")
       );
       utils.extensions.discharge.listRecent.invalidate();
     } catch (err) {
@@ -761,6 +767,17 @@ export default function DischargePage() {
                       <Printer className="h-3.5 w-3.5" />
                       {t("discharge.print", "Print / PDF")}
                     </Button>
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 rounded border-input"
+                        checked={clinicianConfirmed}
+                        onChange={(e) => setClinicianConfirmed(e.target.checked)}
+                        aria-label={t("discharge.clinicianConfirm", "I reviewed this AI report and confirm it for the chart")}
+                        data-testid="discharge-clinician-confirm"
+                      />
+                      {t("discharge.clinicianConfirmShort", "Reviewed by clinician")}
+                    </label>
                     <Button
                       variant="default"
                       size="sm"
@@ -775,7 +792,9 @@ export default function DischargePage() {
                       )}
                       {saveMutation.isPending
                         ? t("discharge.saving", "Saving...")
-                        : t("discharge.save", "Save to Chart")}
+                        : clinicianConfirmed
+                          ? t("discharge.saveFinal", "Confirm & Save to Chart")
+                          : t("discharge.saveDraft", "Save Draft")}
                     </Button>
                   </div>
                 )}

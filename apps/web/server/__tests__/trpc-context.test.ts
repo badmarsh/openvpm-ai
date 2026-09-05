@@ -108,6 +108,9 @@ function mockActiveUserLookup(rows: unknown[]) {
 }
 
 afterEach(() => {
+  // The verified-session cache is module-level; clear it so a prior test's
+  // successful lookup cannot mask a missing/deactivated user in the next one.
+  clearActiveSessionCache();
   mocks.getServerSession.mockReset();
   mocks.db.select.mockReset();
   mocks.assertHostedRlsRoleOnce.mockClear();

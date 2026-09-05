@@ -161,6 +161,9 @@ describe("authenticateApiKey", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.response.status).toBe(401);
+      expect(result.response.headers.get("www-authenticate")).toBe(
+        'Bearer realm="api"',
+      );
       await expect(result.response.json()).resolves.toEqual({
         error: {
           message:

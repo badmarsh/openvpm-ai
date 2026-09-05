@@ -114,6 +114,7 @@ function soapBody(overrides: Record<string, unknown> = {}) {
     subjective: "  Eating less than usual.  ",
     plan: "Bland diet and recheck if not improving.",
     source: "scribenote",
+    clinician_confirmed: true,
     ...overrides,
   };
 }

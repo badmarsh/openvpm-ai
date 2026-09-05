@@ -136,6 +136,17 @@ export const SoapNoteCreateSchema = z.object({
   assessment: ApiSoapSectionInputSchema,
   plan: ApiSoapSectionInputSchema,
   source: z.string().trim().min(1).max(AI_SOURCE_MAX_LENGTH),
+  /**
+   * Human-in-the-loop attestation. POST /api/v1/soap-notes creates an
+   * immediately finalized record, so the integration must assert the
+   * attributed clinician reviewed the AI-generated content.
+   */
+  clinician_confirmed: z.literal(true, {
+    errorMap: () => ({
+      message:
+        "clinician_confirmed must be true: a clinician must review AI-generated SOAP content before it is finalized.",
+    }),
+  }),
 });
 
 export type ApiClient = z.infer<typeof ApiClientSchema>;

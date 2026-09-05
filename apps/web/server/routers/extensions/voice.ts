@@ -8,8 +8,21 @@ import {
   requireRole,
   requireFeature,
 } from "../../trpc";
-import { voiceDictations, soapNotes, patients } from "@openpims/db";
+import { voiceDictations, patients } from "@openpims/db";
+import type { Database } from "@openpims/db/client";
 import { transcribeAudio } from "@/lib/voice/transcription";
+import {
+  createFinalizedAppointmentSoapNote,
+  saveAppointmentSoapDraft,
+  SoapLifecycleError,
+} from "@/lib/records/soap-lifecycle";
+import { hasSoapContent, SOAP_SECTION_MAX_LENGTH } from "@/lib/records/soap-content";
+import {
+  AiDraftSafetyError,
+  assertClinicianConfirmed,
+  optionalClinicianConfirmationInput,
+  resolveAiRecordStatus,
+} from "@/lib/ai/draft-safety";
 import { formatTranscriptToSoap, type SoapStyle } from "@/lib/voice/soap-formatter";
 import { uploadFile, readPrimaryObject } from "@/lib/s3";
 
@@ -480,18 +493,43 @@ export const voiceRouter = createRouter({
       }
     }),
 
-  /** Uloží potvrdený SOAP note do klinických záznamov (vanilla soapNotes). */
+  /**
+   * Uloží SOAP note z diktovania do klinických záznamov (vanilla soapNotes).
+   *
+   * Human-in-the-loop: AI transcription never finalizes a record on its own.
+   *  - Without `clinicianConfirmed: true` the note is saved as an editable
+   *    *draft* on the open encounter.
+   *  - Only an explicit `clinicianConfirmed: true` finalizes it, and even then
+   *    the write goes through the shared SOAP lifecycle (open in-exam visit
+   *    lock, no duplicate drafts, immutable finalized notes).
+   *  - Dictations without an appointment can never be finalized: there is no
+   *    encounter to sign.
+   */
   saveAsSoapNote: voiceProcedure
     .input(
       z.object({
         dictationId: z.string().uuid(),
-        subjective: z.string(),
-        objective: z.string(),
-        assessment: z.string(),
-        plan: z.string(),
+        subjective: z.string().max(SOAP_SECTION_MAX_LENGTH),
+        objective: z.string().max(SOAP_SECTION_MAX_LENGTH),
+        assessment: z.string().max(SOAP_SECTION_MAX_LENGTH),
+        plan: z.string().max(SOAP_SECTION_MAX_LENGTH),
+        clinicianConfirmed: optionalClinicianConfirmationInput,
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const sections = {
+        subjective: input.subjective || null,
+        objective: input.objective || null,
+        assessment: input.assessment || null,
+        plan: input.plan || null,
+      };
+      if (!hasSoapContent(sections)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "SOAP note must include at least one section.",
+        });
+      }
+
       const [dictation] = await ctx.db
         .select()
         .from(voiceDictations)
@@ -511,30 +549,78 @@ export const voiceRouter = createRouter({
         });
       }
 
-      // Vytvorí SOAP note vo vanilla tabuľke
-      const [note] = await ctx.db
-        .insert(soapNotes)
-        .values({
-          practiceId: ctx.practiceId,
-          patientId: dictation.patientId,
-          appointmentId: dictation.appointmentId,
-          authorId: ctx.user.id,
-          authorName: ctx.user.name ?? ctx.user.email,
-          status: "finalized",
-          finalizedAt: new Date(),
-          finalizedBy: ctx.user.id,
-          finalizerName: ctx.user.name ?? ctx.user.email,
-          subjective: input.subjective || null,
-          objective: input.objective || null,
-          assessment: input.assessment || null,
-          plan: input.plan || null,
-        })
-        .returning();
+      if (!dictation.appointmentId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Diktovanie nie je priradené k otvorenej vizite. Priraďte ho k vizite pred uložením do kartotéky.",
+        });
+      }
+      const appointmentId = dictation.appointmentId;
 
-      return {
-        ...note,
-        patientId: dictation.patientId,
-      };
+      const status = resolveAiRecordStatus({
+        requestedStatus: input.clinicianConfirmed ? "finalized" : "draft",
+        clinicianConfirmed: input.clinicianConfirmed,
+      });
+      const actor = { id: ctx.user.id, name: ctx.user.name ?? ctx.user.email };
+
+      try {
+        if (status === "finalized") {
+          assertClinicianConfirmed(input.clinicianConfirmed);
+          const note = await ctx.db.transaction((tx) =>
+            createFinalizedAppointmentSoapNote(tx as unknown as Database, {
+              practiceId: ctx.practiceId,
+              patientId: dictation.patientId,
+              appointmentId,
+              actor,
+              sections,
+            }),
+          );
+          await ctx.db
+            .update(voiceDictations)
+            .set({ soapNoteId: note.id })
+            .where(eq(voiceDictations.id, dictation.id));
+          return { ...note, patientId: dictation.patientId, status };
+        }
+
+        const result = await ctx.db.transaction((tx) =>
+          saveAppointmentSoapDraft(tx as unknown as Database, {
+            practiceId: ctx.practiceId,
+            patientId: dictation.patientId,
+            appointmentId,
+            expectedRevision: 0,
+            actor,
+            sections,
+          }),
+        );
+        if (result.outcome === "already_finalized") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "This encounter already has finalized SOAP documentation.",
+          });
+        }
+        if (result.outcome === "conflict") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "A SOAP draft already exists for this encounter. Resume it in the chart instead.",
+          });
+        }
+        await ctx.db
+          .update(voiceDictations)
+          .set({ soapNoteId: result.draft.id })
+          .where(eq(voiceDictations.id, dictation.id));
+        return { ...result.draft, patientId: dictation.patientId, status };
+      } catch (error) {
+        if (error instanceof SoapLifecycleError) {
+          throw new TRPCError({ code: error.code, message: error.message });
+        }
+        if (error instanceof AiDraftSafetyError) {
+          throw new TRPCError({ code: error.code, message: error.message });
+        }
+        throw error;
+      }
     }),
 
   /** Soft-delete diktovania. */
