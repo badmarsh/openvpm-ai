@@ -37,6 +37,7 @@ import {
   EkasaReceiptDialog,
   type EkasaReceiptModalData,
 } from "@/components/ekasa/ekasa-receipt-dialog";
+import { AccountingExportDialog } from "@/components/accounting/accounting-export-dialog";
 import { TableSkeleton } from "@/components/common/loading";
 import { TableScroll } from "@/components/common/table-scroll";
 import {
@@ -168,6 +169,7 @@ export default function BillingPage() {
     string | null
   >(null);
   const [invoiceVoidReason, setInvoiceVoidReason] = useState("");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const limit = 25;
 
   // Deep link: /billing?expand=<invoiceId> opens that invoice's detail (the
@@ -300,6 +302,13 @@ export default function BillingPage() {
         </div>
         {canManageBilling && (
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setExportDialogOpen(true)}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              {t("billing.page.accountingExport", "Účtovný export")}
+            </Button>
             <Button variant="outline" asChild>
               <Link href="/billing/pos">
                 <Receipt className="mr-1 h-4 w-4" />
@@ -560,6 +569,11 @@ export default function BillingPage() {
         }}
         onCancel={closeInvoiceVoidDialog}
         onConfirm={confirmInvoiceVoid}
+      />
+
+      <AccountingExportDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
       />
     </div>
   );
