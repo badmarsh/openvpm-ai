@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx seed.ts",
     "db:seed:sk": "tsx seed-sk.ts",
+    "db:seed:marketing": "tsx seed-marketing.ts",
     "db:reset": "tsx reset.ts",
     "db:rls": "tsx apply-rls.ts",
     "db:rls:preflight": "tsx rls-preflight.ts",
