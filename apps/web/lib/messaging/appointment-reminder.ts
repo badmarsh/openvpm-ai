@@ -68,6 +68,7 @@ export async function appointmentReminderDispatchEligible(
         eq(patients.clientId, appointments.clientId),
         eq(patients.practiceId, appointments.practiceId),
         isNull(patients.deletedAt),
+        sql`${patients.status} is distinct from 'deceased'`,
       ),
     )
     .where(
@@ -146,6 +147,7 @@ export async function currentAppointmentReminderEmailRecipient(
         eq(patients.clientId, appointments.clientId),
         eq(patients.practiceId, appointments.practiceId),
         isNull(patients.deletedAt),
+        sql`${patients.status} is distinct from 'deceased'`,
       ),
     )
     .leftJoin(

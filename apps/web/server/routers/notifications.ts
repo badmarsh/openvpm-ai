@@ -296,6 +296,7 @@ export const notificationsRouter = createRouter({
           startTime: appointments.startTime,
           status: appointments.status,
           patientName: patients.name,
+          patientStatus: patients.status,
           clientId: appointments.clientId,
           clientFirstName: clients.firstName,
           clientLastName: clients.lastName,
@@ -377,6 +378,12 @@ export const notificationsRouter = createRouter({
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "Confirm the appointment before sending a reminder.",
+        });
+      }
+      if (appt.patientStatus === "deceased") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Sympathy Gate: Reminders cannot be sent for a deceased patient.",
         });
       }
 

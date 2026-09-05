@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { AlertTriangle, Clock, CreditCard, Loader2 } from "lucide-react";
+import { AlertTriangle, Clock, CreditCard } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { trialCalendarDaysLeft } from "@/lib/billing/trial-days";
@@ -26,17 +26,11 @@ export function TrialBadge() {
 
   if (!isAdmin) return null;
 
-  if (isLoading) {
-    return (
-      <span
-        aria-label="Checking billing status"
-        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground"
-      >
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Billing
-      </span>
-    );
-  }
+  // Don't show a spinner during initial load – in self-host mode (no
+  // HOSTED_BILLING_ENABLED) the query resolves quickly to billingEnforced=false
+  // and the badge disappears entirely. A loading flash is more confusing than
+  // simply waiting for the resolved state.
+  if (isLoading) return null;
 
   if (error || !data) {
     return (

@@ -41,6 +41,57 @@ const SECONDARY_PRESETS = [
   { hex: "#374151", label: "Grafit" },
 ];
 
+const THEME_PRESETS = [
+  {
+    name: "Vercel",
+    primary: "#000000",
+    secondary: "#fafafa",
+    description: "Monochrome",
+  },
+  {
+    name: "Supabase",
+    primary: "#3ecf8e",
+    secondary: "#1c1c1c",
+    description: "Green & Dark",
+  },
+  {
+    name: "Linear",
+    primary: "#5e6ad2",
+    secondary: "#f8f9fc",
+    description: "Indigo",
+  },
+  {
+    name: "Stripe",
+    primary: "#635bff",
+    secondary: "#f6f9fc",
+    description: "Violet",
+  },
+  {
+    name: "Notion",
+    primary: "#2383e2",
+    secondary: "#f7f7f5",
+    description: "Blue & Warm",
+  },
+  {
+    name: "Railway",
+    primary: "#8a4baf",
+    secondary: "#f5f0fa",
+    description: "Purple",
+  },
+  {
+    name: "OpenVPM",
+    primary: "#0d9488",
+    secondary: "#f5f5f4",
+    description: "Teal & Sand",
+  },
+  {
+    name: "Rose Gold",
+    primary: "#8b2635",
+    secondary: "#fdf2f8",
+    description: "Maroon & Blush",
+  },
+];
+
 const TONE_PRESETS = [
   {
     label: "Fear-Free",
@@ -255,6 +306,55 @@ export function BrandKitTab() {
                       Vlastná
                     </span>
                   </label>
+                </div>
+              </div>
+
+              {/* Theme Presets */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Témy
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {THEME_PRESETS.map((theme) => {
+                    const isActive =
+                      brandColor === theme.primary &&
+                      secondaryColor === theme.secondary;
+                    return (
+                      <button
+                        key={theme.name}
+                        type="button"
+                        onClick={() => {
+                          setBrandColor(theme.primary);
+                          setSecondaryColor(theme.secondary);
+                        }}
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all",
+                          isActive
+                            ? "border-foreground shadow-sm ring-1 ring-foreground/20"
+                            : "border-border hover:border-foreground/30 hover:shadow-xs",
+                        )}
+                      >
+                        <div className="flex shrink-0 -space-x-1">
+                          <div
+                            className="h-5 w-5 rounded-full border-2 border-card"
+                            style={{ backgroundColor: theme.primary }}
+                          />
+                          <div
+                            className="h-5 w-5 rounded-full border-2 border-card"
+                            style={{ backgroundColor: theme.secondary }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold truncate">
+                            {theme.name}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground truncate">
+                            {theme.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

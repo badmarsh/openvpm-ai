@@ -261,6 +261,7 @@ export async function GET(request: Request) {
             isNull(appointments.deletedAt),
             eq(patients.practiceId, appointments.practiceId),
             isNull(patients.deletedAt),
+            sql`${patients.status} is distinct from 'deceased'`,
             eq(clients.practiceId, appointments.practiceId),
             isNull(clients.deletedAt),
             eq(practices.appointmentRemindersEnabled, true),
