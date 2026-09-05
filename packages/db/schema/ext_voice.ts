@@ -53,6 +53,9 @@ export const voiceDictations = pgTable(
     assessment: text("assessment"),
     plan: text("plan"),
     rawAiResponse: jsonb("raw_ai_response"),
+    formattedSoap: jsonb("formatted_soap"),
+    soapNoteId: uuid("soap_note_id"),
+    formattedAt: timestamp("formatted_at", { withTimezone: true }),
 
     // Stav
     status: voiceDictationStatusEnum("status").notNull().default("RECORDING"),

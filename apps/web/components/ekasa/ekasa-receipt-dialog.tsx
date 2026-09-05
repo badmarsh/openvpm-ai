@@ -187,6 +187,15 @@ export function EkasaReceiptDialog({
               </span>
             </div>
           )}
+
+          {receipt.uid?.startsWith("MOCK-UID") && (
+            <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-300">
+              {t(
+                "ekasa.mockNotice",
+                "⚠️ Predcertifikačná emulácia — doklad má interný evidenčný charakter a nie je fiškálne registrovaný na FS SR.",
+              )}
+            </div>
+          )}
         </div>
 
         {/* Verification Link / QR Info */}

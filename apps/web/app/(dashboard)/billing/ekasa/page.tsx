@@ -255,6 +255,21 @@ function EkasaReceiptsContent() {
         </div>
       </div>
 
+      {/* Pre-certification / Emulation Notice Banner */}
+      <div className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className="border-amber-500/50 bg-amber-500/20 text-amber-900 dark:text-amber-200 font-semibold shrink-0"
+          >
+            Režim pilotnej emulácie
+          </Badge>
+          <p className="text-xs text-amber-900 dark:text-amber-200">
+            e-Kasa beží v predcertifikačnom režime (interná evidencia, výpočet DPH a tlač dokladov). Pre legislatívne záväzné fiškálne doklady pred FS SR je potrebné pripojenie k certifikovanému CHDÚ alebo fiškálnemu driveru (napr. FiskalPRO / Varos).
+          </p>
+        </div>
+      </div>
+
       {/* ========================================================================= */}
       {/* TAB 1: DOKLADY                                                            */}
       {/* ========================================================================= */}
