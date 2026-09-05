@@ -24,6 +24,14 @@ export const WEBHOOK_EVENT_DEFINITIONS = [
     description: "New patient record created",
   },
   {
+    event: "patient.status_changed",
+    description: "Patient status changed",
+  },
+  {
+    event: "discharge_report.finalized",
+    description: "Discharge report finalized",
+  },
+  {
     event: "soap_note.created",
     description: "SOAP note created",
   },

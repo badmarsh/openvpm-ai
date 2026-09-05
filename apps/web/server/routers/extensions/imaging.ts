@@ -10,6 +10,7 @@ import {
 } from "../../trpc";
 import { aiImagingAnalyses, files } from "@openpims/db";
 import { configuredModel } from "@/lib/agent/runner";
+import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { readPrimaryObject } from "@/lib/s3";
 
 const MEDICAL_IMAGING_SYSTEM_PROMPT = `You are a veterinary radiology AI assistant integrated into OpenVPM, an open-source veterinary practice management system.
@@ -85,7 +86,7 @@ export const imagingRouter = createRouter({
           fileId: input.fileId,
           appointmentId: input.appointmentId ?? null,
           requestedBy: ctx.user.id,
-          modelId: process.env.AI_MODEL ?? "gemini-3.5-flash",
+          modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
           imageType: input.imageType,
           userPrompt: input.userPrompt ?? null,
           status: "PENDING",

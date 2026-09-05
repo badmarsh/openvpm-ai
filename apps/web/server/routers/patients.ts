@@ -1098,6 +1098,22 @@ export const patientsRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+      let existingStatus: string | undefined;
+      if (input.status !== undefined) {
+        const [existing] = await ctx.db
+          .select({ status: patients.status })
+          .from(patients)
+          .where(
+            and(
+              eq(patients.id, id),
+              eq(patients.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(patients.deletedAt),
+            ),
+          )
+          .limit(1);
+        existingStatus = existing?.status;
+      }
       const [patient] = await ctx.db
         .update(patients)
         .set(data)
@@ -1114,6 +1130,17 @@ export const patientsRouter = createRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Patient not found",
+        });
+      }
+      if (
+        input.status !== undefined &&
+        existingStatus !== undefined &&
+        input.status !== existingStatus
+      ) {
+        await dispatchWebhookEvent(ctx.practiceId, "patient.status_changed", {
+          patientId: input.id,
+          oldStatus: existingStatus,
+          newStatus: input.status,
         });
       }
       return patient;

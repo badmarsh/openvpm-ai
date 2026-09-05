@@ -59,9 +59,19 @@ export const extMarketingMediaAssets = pgTable("ext_marketing_media_assets", {
   consentRequiredCheck: check("ext_mkt_media_consent_required", sql`(kind NOT IN ('photo', 'video') OR consent_id IS NOT NULL)`),
 }));
 
+export const extMarketingContentBatches = pgTable("ext_marketing_content_batches", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  weekStart: text("week_start").notNull(), // ISO date YYYY-MM-DD
+  status: text("status").notNull().default("in_review"), // draft | in_review | approved
+}, (t) => ({
+  practiceWeekUq: uniqueIndex("ext_mkt_batches_practice_week_uq").on(t.practiceId, t.weekStart),
+}));
+
 export const extMarketingContentItems = pgTable("ext_marketing_content_items", {
   ...baseColumns(),
   practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  batchId: uuid("batch_id").references(() => extMarketingContentBatches.id),
   createdBy: uuid("created_by").notNull().references(() => users.id),
   title: text("title").notNull(),
   body: text("body").notNull(),
@@ -169,8 +179,14 @@ export const extMarketingMediaAssetsRelations = relations(extMarketingMediaAsset
   consent: one(extMarketingMediaConsents, { fields: [extMarketingMediaAssets.consentId], references: [extMarketingMediaConsents.id] }),
 }));
 
+export const extMarketingContentBatchesRelations = relations(extMarketingContentBatches, ({ one, many }) => ({
+  practice: one(practices, { fields: [extMarketingContentBatches.practiceId], references: [practices.id] }),
+  items: many(extMarketingContentItems),
+}));
+
 export const extMarketingContentItemsRelations = relations(extMarketingContentItems, ({ one }) => ({
   practice: one(practices, { fields: [extMarketingContentItems.practiceId], references: [practices.id] }),
+  batch: one(extMarketingContentBatches, { fields: [extMarketingContentItems.batchId], references: [extMarketingContentBatches.id] }),
   createdBy: one(users, { fields: [extMarketingContentItems.createdBy], references: [users.id] }),
   approvedBy: one(users, { fields: [extMarketingContentItems.approvedBy], references: [users.id] }),
   mediaAsset: one(extMarketingMediaAssets, { fields: [extMarketingContentItems.mediaAssetId], references: [extMarketingMediaAssets.id] }),
@@ -204,3 +220,164 @@ export const extMarketingWellnessRedemptionsRelations = relations(extMarketingWe
   enrollment: one(wellnessEnrollments, { fields: [extMarketingWellnessRedemptions.enrollmentId], references: [wellnessEnrollments.id] }),
   appointment: one(appointments, { fields: [extMarketingWellnessRedemptions.appointmentId], references: [appointments.id] }),
 }));
+
+export const extMarketingStaffTasks = pgTable("ext_marketing_staff_tasks", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  kind: text("kind").notNull().default("info"), // condolence | postop_escalation | info
+  title: text("title").notNull(),
+  detail: text("detail").notNull().default(""),
+  status: text("status").notNull().default("open"),
+  clientId: uuid("client_id").references(() => clients.id),
+}, (t) => ({
+  practiceIdx: index("ext_mkt_staff_tasks_practice_idx").on(t.practiceId, t.deletedAt),
+}));
+
+export const extMarketingStaffTasksRelations = relations(extMarketingStaffTasks, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingStaffTasks.practiceId], references: [practices.id] }),
+  client: one(clients, { fields: [extMarketingStaffTasks.clientId], references: [clients.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Message Templates (Task 3.2)
+// ---------------------------------------------------------------------------
+export const extMarketingMessageTemplates = pgTable("ext_marketing_message_templates", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  key: text("key").notNull(),
+  language: text("language").notNull().default("sk"),
+  channel: text("channel").notNull(), // sms | email | push
+  body: text("body").notNull(), // uses {{pet_name}}, {{clinic_name}} etc.
+  legalBasis: text("legal_basis").notNull().default("contract"),
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+}, (t) => ({
+  practiceKeyLangUq: uniqueIndex("ext_mkt_tpl_practice_key_lang_uq").on(t.practiceId, t.key, t.language),
+}));
+
+export const extMarketingMessageTemplatesRelations = relations(extMarketingMessageTemplates, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingMessageTemplates.practiceId], references: [practices.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Message Logs (Task 3.3)
+// ---------------------------------------------------------------------------
+export const extMarketingMessageStatusEnum = pgEnum("ext_marketing_message_status", [
+  "queued", "sent", "delivered", "failed",
+  "suppressed_quiet", "suppressed_rate", "suppressed_no_consent",
+  "blocked_sympathy",
+]);
+
+export const extMarketingMessageLogs = pgTable("ext_marketing_message_logs", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  clientId: uuid("client_id").notNull().references(() => clients.id),
+  patientId: uuid("patient_id").references(() => patients.id),
+  templateId: uuid("template_id").references(() => extMarketingMessageTemplates.id),
+  templateKey: text("template_key").notNull(),
+  templateVersion: integer("template_version").notNull(),
+  legalBasis: text("legal_basis").notNull(),
+  channel: text("channel").notNull(),
+  language: text("language").notNull().default("sk"),
+  bodyRendered: text("body_rendered").notNull(),
+  triggerKey: text("trigger_key").notNull(),
+  status: extMarketingMessageStatusEnum("status").notNull().default("queued"),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+}, (t) => ({
+  clientIdx: index("ext_mkt_msg_log_client_idx").on(t.clientId, t.createdAt),
+  practiceIdx: index("ext_mkt_msg_log_practice_idx").on(t.practiceId),
+}));
+
+export const extMarketingMessageLogsRelations = relations(extMarketingMessageLogs, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingMessageLogs.practiceId], references: [practices.id] }),
+  client: one(clients, { fields: [extMarketingMessageLogs.clientId], references: [clients.id] }),
+  patient: one(patients, { fields: [extMarketingMessageLogs.patientId], references: [patients.id] }),
+  template: one(extMarketingMessageTemplates, { fields: [extMarketingMessageLogs.templateId], references: [extMarketingMessageTemplates.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// SMS Delivery Log - Unified Rate Limit (Task 3.4 / F1 Option B)
+// ---------------------------------------------------------------------------
+export const extSmsDeliveryLog = pgTable("ext_sms_delivery_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  clientId: uuid("client_id").notNull().references(() => clients.id),
+  source: text("source").notNull(), // "vanilla" | "marketing"
+  sourceRecordId: text("source_record_id"), // communications.id or message_log.id
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  clientRecentIdx: index("ext_sms_delivery_client_idx").on(t.clientId, t.sentAt),
+}));
+
+export const extSmsDeliveryLogRelations = relations(extSmsDeliveryLog, ({ one }) => ({
+  practice: one(practices, { fields: [extSmsDeliveryLog.practiceId], references: [practices.id] }),
+  client: one(clients, { fields: [extSmsDeliveryLog.clientId], references: [clients.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Automation Rules (Task 3.5)
+// ---------------------------------------------------------------------------
+export const extMarketingAutomationRules = pgTable("ext_marketing_automation_rules", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  key: text("key").notNull(),
+  label: text("label").notNull(),
+  description: text("description").notNull().default(""),
+  triggerKey: text("trigger_key").notNull(),
+  timing: text("timing").notNull().default(""),
+  channel: text("channel").notNull().default("sms"),
+  legalBasis: text("legal_basis").notNull().default("contract"),
+  enabled: boolean("enabled").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+}, (t) => ({
+  practiceKeyUq: uniqueIndex("ext_mkt_auto_rule_practice_key_uq").on(t.practiceId, t.key),
+}));
+
+export const extMarketingAutomationRulesRelations = relations(extMarketingAutomationRules, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingAutomationRules.practiceId], references: [practices.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Post-op Responses (Task 3.6)
+// ---------------------------------------------------------------------------
+export const extMarketingPostopResponses = pgTable("ext_marketing_postop_responses", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  messageLogId: uuid("message_log_id").references(() => extMarketingMessageLogs.id),
+  clientId: uuid("client_id").notNull().references(() => clients.id),
+  patientId: uuid("patient_id").references(() => patients.id),
+  outcome: text("outcome").notNull(), // ok | question | concern
+  note: text("note").notNull().default(""),
+}, (t) => ({
+  practiceIdx: index("ext_mkt_postop_practice_idx").on(t.practiceId),
+}));
+
+export const extMarketingPostopResponsesRelations = relations(extMarketingPostopResponses, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingPostopResponses.practiceId], references: [practices.id] }),
+  client: one(clients, { fields: [extMarketingPostopResponses.clientId], references: [clients.id] }),
+  patient: one(patients, { fields: [extMarketingPostopResponses.patientId], references: [patients.id] }),
+  messageLog: one(extMarketingMessageLogs, { fields: [extMarketingPostopResponses.messageLogId], references: [extMarketingMessageLogs.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Operative Scripts (Task 3.7)
+// ---------------------------------------------------------------------------
+export const extMarketingOperativeScripts = pgTable("ext_marketing_operative_scripts", {
+  ...baseColumns(),
+  practiceId: uuid("practice_id").notNull().references(() => practices.id),
+  category: text("category").notNull(), // discharge_ask | crisis | condolence | review_ask
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  note: text("note").notNull().default(""),
+  sort: integer("sort").notNull().default(0),
+}, (t) => ({
+  practiceIdx: index("ext_mkt_scripts_practice_idx").on(t.practiceId),
+}));
+
+export const extMarketingOperativeScriptsRelations = relations(extMarketingOperativeScripts, ({ one }) => ({
+  practice: one(practices, { fields: [extMarketingOperativeScripts.practiceId], references: [practices.id] }),
+}));
+
+

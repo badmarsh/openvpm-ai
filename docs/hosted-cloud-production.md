@@ -133,7 +133,7 @@ MESSAGING_PROVISIONING_PRACTICE_IDS= # comma-separated approved pilot practice U
 MESSAGING_SENDING_ENABLED=false
 MESSAGING_SENDING_PRACTICE_IDS= # comma-separated approved pilot practice UUIDs
 MESSAGING_SENDING_LOCATION_IDS= # comma-separated approved pilot location UUIDs
-AI_MODEL=gemini-3.5-flash
+AI_MODEL=gemini-3.8-flash-medium
 GOOGLE_VERTEX_PROJECT=...
 GOOGLE_VERTEX_LOCATION=global
 GCP_PROJECT_NUMBER=...
@@ -403,7 +403,7 @@ STOP/HELP footer. Hosted sends do not use this override: they require an active,
 provider-matching `messaging_registrations` row. Console-only local testing may
 use the practice name because it never contacts a carrier.
 
-Hosted AI defaults to stable `gemini-3.5-flash` through Google Cloud Vertex AI.
+Hosted AI defaults to stable `gemini-3.8-flash-medium` through Google Cloud Vertex AI.
 Set the project and workload-identity values shown above; `/api/health` fails
 closed when any one is absent. Configure Vercel's team-mode OIDC issuer and bind
 only `owner:evangauers-projects:project:openvpm-app:environment:production` to a

@@ -125,7 +125,7 @@ describe("self-hosting operations docs", () => {
       hostedRunbook.indexOf("```", hostedEnvBlockStart + "```env".length),
     );
 
-    expect(requiredHostedEnvBlock).toContain("AI_MODEL=gemini-3.5-flash");
+    expect(requiredHostedEnvBlock).toContain("AI_MODEL=gemini-3.8-flash-medium");
     expect(requiredHostedEnvBlock).toContain("GOOGLE_VERTEX_PROJECT=...");
     expect(requiredHostedEnvBlock).toContain("GOOGLE_VERTEX_LOCATION=global");
     expect(requiredHostedEnvBlock).toContain("GCP_PROJECT_NUMBER=...");
@@ -137,7 +137,7 @@ describe("self-hosting operations docs", () => {
       "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel",
     );
     expect(hostedRunbook).toContain(
-      "Hosted AI defaults to stable `gemini-3.5-flash` through Google Cloud Vertex AI",
+      "Hosted AI defaults to stable `gemini-3.8-flash-medium` through Google Cloud Vertex AI",
     );
     expect(hostedRunbook).toContain("Do not substitute an AI Studio / Gemini");
     expect(hostedRunbook).toMatch(
