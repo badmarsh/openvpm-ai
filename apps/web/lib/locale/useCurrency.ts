@@ -13,8 +13,14 @@ export function useCurrencyFormatter() {
   const { data } = trpc.billing.getTaxConfig.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
-  const currency = data?.currency ?? "usd";
-  const country = data?.country ?? "US";
+  const currency =
+    data?.currency && data.currency.toLowerCase() !== "usd"
+      ? data.currency
+      : "eur";
+  const country =
+    data?.country && data.country.toUpperCase() !== "US"
+      ? data.country
+      : "SK";
   return (value: number | string | null | undefined) =>
     formatCurrency(value, currency, country);
 }

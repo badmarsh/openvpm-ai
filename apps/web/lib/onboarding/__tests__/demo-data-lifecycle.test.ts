@@ -15,6 +15,8 @@ function demoIds(prefix: string): DemoDataIds {
     problemIds: [`${prefix}-problem`],
     invoiceIds: [`${prefix}-invoice`],
     invoiceItemIds: [`${prefix}-invoice-item`],
+    paymentIds: [`${prefix}-payment`],
+    careReminderIds: [`${prefix}-care-reminder`],
     communicationIds: [`${prefix}-communication`],
     productIds: [`${prefix}-product`],
     marketingTvSlideIds: [`${prefix}-tv-slide`],
@@ -55,6 +57,8 @@ describe("demo data provenance", () => {
       problemIds: ["old-problem", "new-problem"],
       invoiceIds: ["old-invoice", "new-invoice"],
       invoiceItemIds: ["old-invoice-item", "new-invoice-item"],
+      paymentIds: ["old-payment", "new-payment"],
+      careReminderIds: ["old-care-reminder", "new-care-reminder"],
       communicationIds: [
         "old-communication",
         "new-communication",

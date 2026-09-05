@@ -34,10 +34,10 @@ export const supportRouter = createRouter({
     return { sessionId: session.id, sessionCode: session.sessionCode };
   }),
 
-  /** Get session details by code (agent joins) */
+  /** Get session details by code (agent joins) - mutation to avoid caching issues */
   getSessionByCode: protectedProcedure
     .input(z.object({ code: z.string().length(6) }))
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const [session] = await ctx.db
         .select()
         .from(extSupportSessions)

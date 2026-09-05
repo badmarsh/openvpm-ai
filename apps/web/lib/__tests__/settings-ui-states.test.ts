@@ -88,8 +88,8 @@ describe("settings UI states", () => {
     expect(billingTab).not.toContain("if (isLoading || !data)");
   });
 
-  it("uses the public support address for enterprise contact links", () => {
-    expect(source).toContain(
+  it("has no enterprise contact-sales mailto links in the billing UI", () => {
+    expect(source).not.toContain(
       "mailto:support@openvpm.com?subject=OpenVPM%20Enterprise",
     );
     expect(source).not.toContain("mailto:evan@openvpm.com");

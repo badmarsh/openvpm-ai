@@ -1723,10 +1723,10 @@ export default function PatientDetailPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                           {t("patients.weight.date", "Date")}
                         </th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                           {t(
                             "patients.weight.weightCol",
                             `Weight (${chartMeasurementSystem === "us_customary" ? "lb" : "kg"})`,
@@ -1738,7 +1738,7 @@ export default function PatientDetailPage() {
                             },
                           )}
                         </th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                           {t("patients.weight.recordedBy", "Recorded By")}
                         </th>
                       </tr>
@@ -2732,25 +2732,25 @@ function VaccinationsTab({
         <table className="w-full min-w-[960px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.vaccinations.vaccineName", "Vaccine Name")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.vaccinations.administeredAt", "Date Given")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.vaccinations.expiresAt", "Next Due")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.vaccinations.productLot", "Product / Lot")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.vaccinations.administeredBy", "Administered By")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.vaccinations.certificate", "Certificate")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.form.status", "Status")}
               </th>
             </tr>
@@ -3417,19 +3417,19 @@ function AppointmentsTab({
                 {t("patients.documentsTab.title", "Documents")}
               </span>
             </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.appointmentsTab.colWhen", "When")}
             </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.appointmentsTab.colType", "Type")}
             </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.appointmentsTab.colDoctor", "Doctor")}
             </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.appointmentsTab.colStatus", "Status")}
             </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.appointmentsTab.colNotes", "Notes")}
             </th>
           </tr>
@@ -3896,7 +3896,7 @@ function InvoicesTab({ patientId }: { patientId: string }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/50">
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.invoicesTab.colCreated", "Created")}
             </th>
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">
@@ -3905,7 +3905,7 @@ function InvoicesTab({ patientId }: { patientId: string }) {
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">
               {t("patients.invoicesTab.colDue", "Paid")}
             </th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+            <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {t("patients.invoicesTab.colStatus", "Status")}
             </th>
             <th className="px-4 py-3" />

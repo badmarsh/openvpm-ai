@@ -13,6 +13,8 @@ import {
   problemList,
   invoices,
   invoiceItems,
+  payments,
+  careReminders,
   communications,
   products,
 } from "@openpims/db";
@@ -126,6 +128,8 @@ export interface DemoDataIds extends MarketingDemoIds {
   problemIds: string[];
   invoiceIds: string[];
   invoiceItemIds: string[];
+  paymentIds: string[];
+  careReminderIds: string[];
   communicationIds: string[];
   productIds: string[];
 }
@@ -146,6 +150,8 @@ export async function seedDemoData(
       { practiceId: opts.practiceId, firstName: "Jordan", lastName: "Avery", email: "jordan.avery@example.com", phone: "(555) 200-1001" },
       { practiceId: opts.practiceId, firstName: "Sam", lastName: "Rivera", email: "sam.rivera@example.com", phone: "(555) 200-1002" },
       { practiceId: opts.practiceId, firstName: "Taylor", lastName: "Brooks", email: "taylor.brooks@example.com", phone: "(555) 200-1003" },
+      { practiceId: opts.practiceId, firstName: "Zuzana", lastName: "Kováčová", email: "zuzana.kovacova@priklad.sk", phone: "+421 905 123 456" },
+      { practiceId: opts.practiceId, firstName: "Michal", lastName: "Horváth", email: "michal.horvath@priklad.sk", phone: "+421 911 789 012" },
     ])
     .returning({ id: clients.id });
 
@@ -155,6 +161,8 @@ export async function seedDemoData(
       { practiceId: opts.practiceId, clientId: insertedClients[0]!.id, name: "Biscuit", species: "canine" as const, sex: "male_neutered" as const, breed: "Golden Retriever" },
       { practiceId: opts.practiceId, clientId: insertedClients[1]!.id, name: "Luna", species: "feline" as const, sex: "female_spayed" as const, breed: "Domestic Shorthair" },
       { practiceId: opts.practiceId, clientId: insertedClients[2]!.id, name: "Mango", species: "avian" as const, breed: "Sun Conure" },
+      { practiceId: opts.practiceId, clientId: insertedClients[3]!.id, name: "Blesk", species: "canine" as const, sex: "male_neutered" as const, breed: "Nemecký ovčiak" },
+      { practiceId: opts.practiceId, clientId: insertedClients[4]!.id, name: "Micka", species: "feline" as const, sex: "female_spayed" as const, breed: "Európska mačka" },
     ])
     .returning({ id: patients.id });
 
@@ -221,7 +229,7 @@ export async function seedDemoData(
     patientIdx: number;
     start: Date;
     durationMin: number;
-    status: "scheduled" | "confirmed" | "checked_in" | "in_exam";
+    status: "scheduled" | "confirmed" | "checked_in" | "in_exam" | "checked_out" | "no_show" | "cancelled";
     typeId: string | null;
     roomId: string | null;
     /** Omit for the owner; pass null for tech work with no doctor. */
@@ -240,6 +248,13 @@ export async function seedDemoData(
     roomId: opts2.roomId,
     notes: opts2.notes,
   });
+
+  const pastDayAt = (daysAgo: number, hour: number, minute: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
 
   const futureStart = new Date(Date.now() + 26 * 60 * 60 * 1000);
   const insertedAppts = await db
@@ -325,6 +340,21 @@ export async function seedDemoData(
         typeId: wellnessTypeId,
         roomId: room1,
       }),
+
+      // Historical appointments spanning the past 4 weeks (populates Prehľady / Reports)
+      mkAppt({ clientIdx: 0, patientIdx: 0, start: pastDayAt(28, 9, 0), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Ukončená preventívna prehliadka" }),
+      mkAppt({ clientIdx: 3, patientIdx: 3, start: pastDayAt(24, 10, 30), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Vyšetrenie krívania" }),
+      mkAppt({ clientIdx: 1, patientIdx: 1, start: pastDayAt(21, 14, 0), durationMin: 15, status: "checked_out", typeId: vaccineTypeId, roomId: room1, notes: "[DEMO] Očkovanie" }),
+      mkAppt({ clientIdx: 4, patientIdx: 4, start: pastDayAt(18, 11, 0), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room1, notes: "[DEMO] USG brucha" }),
+      mkAppt({ clientIdx: 2, patientIdx: 2, start: pastDayAt(15, 15, 0), durationMin: 15, status: "no_show", typeId: recheckTypeId, roomId: room2, notes: "[DEMO] Klient sa nedostavil" }),
+      mkAppt({ clientIdx: 3, patientIdx: 3, start: pastDayAt(14, 9, 30), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Kontrola a očkovanie" }),
+      mkAppt({ clientIdx: 0, patientIdx: 0, start: pastDayAt(12, 13, 30), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Dermatologické vyšetrenie" }),
+      mkAppt({ clientIdx: 1, patientIdx: 1, start: pastDayAt(9, 10, 0), durationMin: 15, status: "checked_out", typeId: vaccineTypeId, roomId: room1, notes: "[DEMO] Odčervenie" }),
+      mkAppt({ clientIdx: 4, patientIdx: 4, start: pastDayAt(8, 14, 30), durationMin: 30, status: "cancelled", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Zrušené majiteľom vopred" }),
+      mkAppt({ clientIdx: 3, patientIdx: 3, start: pastDayAt(6, 11, 30), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Vstupné vyšetrenie" }),
+      mkAppt({ clientIdx: 0, patientIdx: 0, start: pastDayAt(4, 9, 0), durationMin: 15, status: "checked_out", typeId: recheckTypeId, roomId: room1, notes: "[DEMO] Kontrola uší" }),
+      mkAppt({ clientIdx: 1, patientIdx: 1, start: pastDayAt(2, 16, 0), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Stomatologická konzultácia" }),
+      mkAppt({ clientIdx: 4, patientIdx: 4, start: pastDayAt(1, 10, 30), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Vakcinácia a čipovanie" }),
     ])
     .returning({ id: appointments.id });
 
@@ -448,18 +478,24 @@ export async function seedDemoData(
     ])
     .returning({ id: problemList.id });
 
-  // Two invoices with line items from the seeded services: one paid, one sent.
+  // Invoices and payments with line items from the seeded services.
   const serviceByName = (name: string) =>
     seededServices.find((s) => s.name === name) ?? null;
   const invoiceIds: string[] = [];
   const invoiceItemIds: string[] = [];
+  const paymentIds: string[] = [];
 
   const buildInvoice = async (cfg: {
     clientIdx: number;
     patientIdx: number;
     status: "paid" | "sent";
     serviceNames: string[];
+    daysAgo?: number;
+    paymentMethod?: "cash" | "credit_card" | "debit_card" | "check" | "online" | "other";
   }) => {
+    const daysAgo = cfg.daysAgo ?? 0;
+    const invDate = daysFromNow(-daysAgo);
+
     // Resolve line items from the catalog; fall back to a simple line if a name
     // is missing so we never end up with a blank invoice.
     const lines = cfg.serviceNames
@@ -490,7 +526,9 @@ export async function seedDemoData(
         total: centsToMoney(totals.totalCents),
         paidAmount:
           cfg.status === "paid" ? centsToMoney(totals.totalCents) : "0",
-        dueDate: ymd(daysFromNow(cfg.status === "paid" ? -3 : 14)),
+        dueDate: ymd(daysFromNow(cfg.status === "paid" ? -daysAgo : 14 - daysAgo)),
+        createdAt: invDate,
+        updatedAt: invDate,
       })
       .returning({ id: invoices.id });
     invoiceIds.push(inv!.id);
@@ -504,26 +542,214 @@ export async function seedDemoData(
       taxable: line.taxable,
       itemType: "service" as const,
       itemId: line.id,
+      createdAt: invDate,
+      updatedAt: invDate,
     }));
     const insertedItems = await db
       .insert(invoiceItems)
       .values(itemRows)
       .returning({ id: invoiceItems.id });
     invoiceItemIds.push(...insertedItems.map((i) => i.id));
+
+    // When invoice is paid, create a matching payment record in the ledger
+    if (cfg.status === "paid") {
+      const [pay] = await db
+        .insert(payments)
+        .values({
+          invoiceId: inv!.id,
+          amount: centsToMoney(totals.totalCents),
+          method: cfg.paymentMethod ?? "credit_card",
+          receivedBy: doctorId,
+          receivedAt: invDate,
+          notes: `[DEMO] Platba za veterinárne úkony (${cfg.paymentMethod ?? "credit_card"})`,
+          externalId: `demo-pay-${inv!.id}`,
+        } as any)
+        .returning({ id: payments.id });
+      if (pay) paymentIds.push(pay.id);
+    }
   };
 
+  // 1. Dnes: preventívna prehliadka + besnota + DHPP
   await buildInvoice({
     clientIdx: 0,
     patientIdx: 0,
     status: "paid",
     serviceNames: ["Wellness Exam", "Rabies Vaccine", "DHPP Vaccine"],
+    daysAgo: 0,
+    paymentMethod: "credit_card",
   });
+
+  // 2. Pred 3 dňami: vyšetrenie + diagnostika
+  await buildInvoice({
+    clientIdx: 1,
+    patientIdx: 1,
+    status: "paid",
+    serviceNames: ["Sick / Problem Exam", "Heartworm Test"],
+    daysAgo: 3,
+    paymentMethod: "credit_card",
+  });
+
+  // 3. Pred 7 dňami: stomatológia + čipovanie
+  await buildInvoice({
+    clientIdx: 3,
+    patientIdx: 3,
+    status: "paid",
+    serviceNames: ["Dental Cleaning", "Microchip"],
+    daysAgo: 7,
+    paymentMethod: "online",
+  });
+
+  // 4. Pred 12 dňami: kastrácia
+  await buildInvoice({
+    clientIdx: 4,
+    patientIdx: 4,
+    status: "paid",
+    serviceNames: ["Spay / Neuter"],
+    daysAgo: 12,
+    paymentMethod: "credit_card",
+  });
+
+  // 5. Pred 18 dňami: preventívka + DHPP
+  await buildInvoice({
+    clientIdx: 0,
+    patientIdx: 0,
+    status: "paid",
+    serviceNames: ["Wellness Exam", "DHPP Vaccine"],
+    daysAgo: 18,
+    paymentMethod: "cash",
+  });
+
+  // 6. Pred 24 dňami: vyšetrenie + pazúriky
+  await buildInvoice({
+    clientIdx: 1,
+    patientIdx: 1,
+    status: "paid",
+    serviceNames: ["Sick / Problem Exam", "Nail Trim"],
+    daysAgo: 24,
+    paymentMethod: "credit_card",
+  });
+
+  // 7. Pred 38 dňami (predchádzajúce obdobie do Prehľadov)
+  await buildInvoice({
+    clientIdx: 3,
+    patientIdx: 3,
+    status: "paid",
+    serviceNames: ["Dental Cleaning", "Sick / Problem Exam"],
+    daysAgo: 38,
+    paymentMethod: "credit_card",
+  });
+
+  // 8. Pred 45 dňami (predchádzajúce obdobie do Prehľadov)
+  await buildInvoice({
+    clientIdx: 4,
+    patientIdx: 4,
+    status: "paid",
+    serviceNames: ["Spay / Neuter"],
+    daysAgo: 45,
+    paymentMethod: "online",
+  });
+
+  // 9. Odoslaná / Neúhradená faktúra (v lehote splatnosti)
+  await buildInvoice({
+    clientIdx: 3,
+    patientIdx: 3,
+    status: "sent",
+    serviceNames: ["Spay / Neuter", "Microchip"],
+    daysAgo: 2,
+  });
+
+  // 10. Odoslaná po splatnosti
   await buildInvoice({
     clientIdx: 1,
     patientIdx: 1,
     status: "sent",
     serviceNames: ["Wellness Exam", "Nail Trim"],
+    daysAgo: 20,
   });
+
+  // Zdravotné pripomienky (Care Reminders) – preventívne veterinárne pripomienky
+  const careReminderIds: string[] = [];
+  const makeFp = (seed: string) =>
+    Buffer.from(seed).toString("hex").padEnd(64, "0").slice(0, 64);
+  const insertedReminders = await db
+    .insert(careReminders)
+    .values([
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[0]!.id,
+        title: "Vakcinácia – Preočkovanie DHPP + Besnota (Nobivac)",
+        notes: "[DEMO] Ročné preočkovanie základných infekčných chorôb a besnoty",
+        dueDate: ymd(daysFromNow(7)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-1",
+        importFingerprint: makeFp("demo-rem-1"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[1]!.id,
+        title: "Dentálna hygiena – Ultrazvukové odstránenie zubného kameňa",
+        notes: "[DEMO] Sanácia ústnej dutiny a kontrola ďasien po začatí domácej starostlivosti",
+        dueDate: ymd(daysFromNow(14)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-2",
+        importFingerprint: makeFp("demo-rem-2"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[3]!.id,
+        title: "Geriatrický screening – Biochemický a hematologický profil",
+        notes: "[DEMO] Pravidelný polročný odber krvi a moču pre seniora",
+        dueDate: ymd(daysFromNow(-4)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-3",
+        importFingerprint: makeFp("demo-rem-3"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[4]!.id,
+        title: "Sezónne odčervenie – Antiparazitárna kúra (Dehinel Plus / Milbemax)",
+        notes: "[DEMO] Preventívne podanie širokospektrálneho odčervenia",
+        dueDate: ymd(daysFromNow(28)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-4",
+        importFingerprint: makeFp("demo-rem-4"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[2]!.id,
+        title: "Kontrola peria a pazúrov – Papagáj",
+        notes: "[DEMO] Pravidelná kontrola stavu zobáka, pazúrov a operenia",
+        dueDate: ymd(daysFromNow(40)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-5",
+        importFingerprint: makeFp("demo-rem-5"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[0]!.id,
+        title: "Pooperačná kontrola – Kontrola hojenia a vybratie stehov",
+        notes: "[DEMO] Rána zahojená bez komplikácií, stehy vybraté",
+        dueDate: ymd(daysFromNow(-1)),
+        status: "completed" as const,
+        completedAt: daysFromNow(-1),
+        completedBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-6",
+        importFingerprint: makeFp("demo-rem-6"),
+      },
+    ])
+    .returning({ id: careReminders.id });
+  careReminderIds.push(...insertedReminders.map((r) => r.id));
 
   // A few inbound messages so the Inbox has real conversations to show in the
   // walkthrough. Inbound + status not "read" + no readAt renders as unread.
@@ -577,6 +803,8 @@ export async function seedDemoData(
     problemIds: insertedProblems.map((p) => p.id),
     invoiceIds,
     invoiceItemIds,
+    paymentIds,
+    careReminderIds,
     communicationIds: insertedComms.map((c) => c.id),
     productIds: insertedProducts.map((product) => product.id),
     ...marketingIds,

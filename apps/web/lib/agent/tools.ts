@@ -30,6 +30,13 @@ import {
   locations,
   practices,
   clinicalRecordCorrections,
+  labAnalyzerReports,
+  prescriptions,
+  patientAllergies,
+  soapNotes,
+  invoices,
+  invoiceItems,
+  dispenseChargeQueue,
 } from "@openpims/db";
 import {
   appointmentCreatedWebhookPayload,
@@ -1072,6 +1079,642 @@ const findOpenSlotsTool: AgentTool = {
   },
 };
 
+const queryLabTrendsTool: AgentTool = {
+  name: "query_lab_trends",
+  description:
+    "Query historical laboratory analyte trends (blood chemistry, hematology) for a patient to monitor disease progression (e.g., BUN, Creatinine, ALT, SDMA).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Patient UUID" },
+      analyte: {
+        type: "string",
+        description: "Optional specific analyte name (e.g., 'CREA', 'BUN', 'ALT')",
+      },
+      limit: {
+        type: "number",
+        description: "Max reports to inspect (default 20)",
+      },
+    },
+    required: ["patientId"],
+  },
+  zod: z.object({
+    patientId: z.string().uuid(),
+    analyte: z.string().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      analyte?: string;
+      limit?: number;
+    };
+    const reports = await ctx.db
+      .select({
+        id: labAnalyzerReports.id,
+        sampleDate: labAnalyzerReports.sampleDate,
+        createdAt: labAnalyzerReports.createdAt,
+        parsedResults: labAnalyzerReports.parsedResults,
+      })
+      .from(labAnalyzerReports)
+      .where(
+        and(
+          eq(labAnalyzerReports.practiceId, ctx.practiceId),
+          eq(labAnalyzerReports.patientId, input.patientId),
+          isNull(labAnalyzerReports.deletedAt)
+        )
+      )
+      .orderBy(desc(labAnalyzerReports.sampleDate))
+      .limit(input.limit ?? 20);
+
+    const analyteTarget = input.analyte?.trim().toUpperCase();
+    const timeline: Array<{
+      date: string;
+      analyte: string;
+      value: number | string;
+      unit?: string;
+      flag?: string;
+      referenceRange?: string;
+    }> = [];
+
+    for (const rep of reports) {
+      const date = (rep.sampleDate || rep.createdAt || new Date()).toISOString();
+      const results = Array.isArray(rep.parsedResults) ? rep.parsedResults : [];
+      for (const item of results) {
+        const itemAnalyte = (item.name || item.code || "").toUpperCase();
+        if (!analyteTarget || itemAnalyte.includes(analyteTarget)) {
+          timeline.push({
+            date,
+            analyte: item.name || item.code,
+            value: item.value,
+            unit: item.unit,
+            flag: item.flag,
+            referenceRange:
+              item.refLow != null && item.refHigh != null
+                ? `${item.refLow} - ${item.refHigh}`
+                : undefined,
+          });
+        }
+      }
+    }
+
+    let trend: "increasing" | "decreasing" | "stable" | "insufficient_data" =
+      "insufficient_data";
+    const numericValues = timeline
+      .map((t) =>
+        typeof t.value === "number" ? t.value : parseFloat(t.value as string)
+      )
+      .filter((v) => !isNaN(v));
+
+    if (numericValues.length >= 2) {
+      const first = numericValues[numericValues.length - 1]; // oldest
+      const last = numericValues[0]; // newest
+      const diffPercent = ((last - first) / (first || 1)) * 100;
+      if (diffPercent > 10) trend = "increasing";
+      else if (diffPercent < -10) trend = "decreasing";
+      else trend = "stable";
+    }
+
+    return {
+      patientId: input.patientId,
+      analyte: input.analyte ?? "all",
+      trend,
+      dataPointsCount: timeline.length,
+      history: timeline.slice(0, 30),
+    };
+  },
+};
+
+const checkDrugSafetyTool: AgentTool = {
+  name: "check_drug_safety",
+  description:
+    "Check drug safety for a patient, auditing species-specific toxicities (e.g., Paracetamol or Permethrin in felines), drug-drug interactions (e.g. concurrent NSAIDs + Corticosteroids), and patient allergy records.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Patient UUID" },
+      candidateDrug: {
+        type: "string",
+        description: "Proposed medication or active substance name",
+      },
+    },
+    required: ["patientId", "candidateDrug"],
+  },
+  zod: z.object({
+    patientId: z.string().uuid(),
+    candidateDrug: z.string().min(1),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      candidateDrug: string;
+    };
+
+    const patientRows = await ctx.db
+      .select({
+        id: patients.id,
+        name: patients.name,
+        species: patients.species,
+      })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.id, input.patientId),
+          eq(patients.practiceId, ctx.practiceId),
+          isNull(patients.deletedAt)
+        )
+      )
+      .limit(1);
+
+    const patient = patientRows[0];
+    if (!patient) {
+      return {
+        safe: false,
+        severity: "error",
+        contraindications: ["Patient not found"],
+      };
+    }
+
+    const contraindications: string[] = [];
+    const warnings: string[] = [];
+    const candidateLower = input.candidateDrug.toLowerCase();
+    const speciesLower = (patient.species || "").toLowerCase();
+
+    // 1. Feline-specific fatal toxicities
+    if (speciesLower.includes("cat") || speciesLower.includes("feline")) {
+      if (
+        candidateLower.includes("paracetamol") ||
+        candidateLower.includes("acetaminophen")
+      ) {
+        contraindications.push(
+          "Acetaminophen (Paracetamol) is fatal in feline patients due to deficient glucuronidation enzymes causing methemoglobinemia and acute hepatic necrosis."
+        );
+      }
+      if (candidateLower.includes("permethrin")) {
+        contraindications.push(
+          "Permethrin is highly neurotoxic and potentially fatal to felines."
+        );
+      }
+    }
+
+    // 2. Human NSAID toxicities for dogs & cats
+    if (
+      candidateLower.includes("ibuprofen") ||
+      candidateLower.includes("naproxen")
+    ) {
+      contraindications.push(
+        "Human NSAIDs (Ibuprofen, Naproxen) cause acute renal failure and severe gastrointestinal ulceration in veterinary patients."
+      );
+    }
+
+    // 3. Active prescriptions & drug interactions
+    const activePrescriptions = await ctx.db
+      .select({
+        id: prescriptions.id,
+        drugName: prescriptions.medicationName,
+        status: prescriptions.status,
+      })
+      .from(prescriptions)
+      .where(
+        and(
+          eq(prescriptions.practiceId, ctx.practiceId),
+          eq(prescriptions.patientId, input.patientId),
+          isNull(prescriptions.deletedAt),
+          eq(prescriptions.status, "active")
+        )
+      );
+
+    const isCandidateNsaid =
+      /melox|carprofen|firocoxib|robenacoxib|onsior|metacam|rimadyl|galliprant|ketoprofen/i.test(
+        candidateLower
+      );
+    const isCandidateSteroid =
+      /prednis|dexamethason|triamcinolon|methylprednis|hydrocortison/i.test(
+        candidateLower
+      );
+
+    for (const rx of activePrescriptions) {
+      const rxName = (
+        (rx as any).drugName ||
+        (rx as any).medicationName ||
+        ""
+      ).toLowerCase();
+      const isRxNsaid =
+        /melox|carprofen|firocoxib|robenacoxib|onsior|metacam|rimadyl|galliprant|ketoprofen/i.test(
+          rxName
+        );
+      const isRxSteroid =
+        /prednis|dexamethason|triamcinolon|methylprednis|hydrocortison/i.test(
+          rxName
+        );
+
+      if ((isCandidateNsaid && isRxSteroid) || (isCandidateSteroid && isRxNsaid)) {
+        contraindications.push(
+          `Concurrent administration of NSAID and Corticosteroid (${rxName}) is contraindicated due to severe risk of GI ulceration and intestinal perforation.`
+        );
+      }
+
+      if (isCandidateNsaid && isRxNsaid) {
+        contraindications.push(
+          `Dual NSAID therapy with active prescription (${rxName}) is contraindicated. A washout period of 3-5 days is mandatory.`
+        );
+      }
+    }
+
+    // 4. Known Patient Allergies
+    const allergies = await ctx.db
+      .select({
+        allergen: patientAllergies.allergen,
+        reaction: patientAllergies.reaction,
+        severity: patientAllergies.severity,
+      })
+      .from(patientAllergies)
+      .where(
+        and(
+          eq(patientAllergies.patientId, input.patientId),
+          isNull(patientAllergies.deletedAt)
+        )
+      );
+
+    for (const allergy of allergies) {
+      if (
+        allergy.allergen &&
+        candidateLower.includes(allergy.allergen.toLowerCase())
+      ) {
+        contraindications.push(
+          `Patient has a recorded allergy to '${allergy.allergen}' (reaction: ${allergy.reaction || "unspecified"}, severity: ${allergy.severity}).`
+        );
+      }
+    }
+
+    const safe = contraindications.length === 0;
+    const severity = !safe
+      ? "contraindicated"
+      : warnings.length > 0
+        ? "warning"
+        : "safe";
+
+    return {
+      safe,
+      severity,
+      contraindications,
+      warnings,
+    };
+  },
+};
+
+const auditMissedChargesTool: AgentTool = {
+  name: "audit_missed_charges",
+  description:
+    "Audit an appointment/visit to detect missed billing charges by cross-referencing documented SOAP procedures, administered meds, and dispense queue items against invoiced items.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      appointmentId: { type: "string", description: "Appointment UUID" },
+    },
+    required: ["appointmentId"],
+  },
+  zod: z.object({
+    appointmentId: z.string().uuid(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      appointmentId: string;
+    };
+
+    // 1. Get SOAP notes
+    const soapList = await ctx.db
+      .select({
+        id: soapNotes.id,
+        plan: soapNotes.plan,
+        objective: soapNotes.objective,
+        assessment: soapNotes.assessment,
+      })
+      .from(soapNotes)
+      .where(
+        and(
+          eq(soapNotes.practiceId, ctx.practiceId),
+          eq(soapNotes.appointmentId, input.appointmentId),
+          isNull(soapNotes.deletedAt)
+        )
+      );
+
+    // 2. Get unbilled dispense charge queue items
+    const queueItems = await ctx.db
+      .select({
+        id: dispenseChargeQueue.id,
+        descriptionSnapshot: dispenseChargeQueue.descriptionSnapshot,
+        quantity: dispenseChargeQueue.quantity,
+        status: dispenseChargeQueue.status,
+      })
+      .from(dispenseChargeQueue)
+      .where(
+        and(
+          eq(dispenseChargeQueue.practiceId, ctx.practiceId),
+          eq(dispenseChargeQueue.appointmentId, input.appointmentId),
+          eq(dispenseChargeQueue.status, "pending")
+        )
+      );
+
+    // 3. Get invoice items
+    const invoicedItems = await ctx.db
+      .select({
+        id: invoiceItems.id,
+        description: invoiceItems.description,
+        total: invoiceItems.total,
+      })
+      .from(invoiceItems)
+      .innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id))
+      .where(
+        and(
+          eq(invoices.practiceId, ctx.practiceId),
+          eq(invoices.appointmentId, input.appointmentId),
+          isNull(invoices.deletedAt),
+          isNull(invoiceItems.deletedAt)
+        )
+      );
+
+    const billedDescriptions = invoicedItems.map((i) =>
+      i.description.toLowerCase()
+    );
+    const potentialMissedCharges: Array<{
+      description: string;
+      source: string;
+      confidence: "high" | "medium";
+    }> = [];
+
+    // Check pending dispense charges
+    for (const q of queueItems) {
+      const billed = billedDescriptions.some((b) =>
+        b.includes(q.descriptionSnapshot.toLowerCase())
+      );
+      if (!billed) {
+        potentialMissedCharges.push({
+          description: `Dispensed: ${q.descriptionSnapshot} (Qty: ${q.quantity})`,
+          source: "dispense_charge_queue",
+          confidence: "high",
+        });
+      }
+    }
+
+    // Check clinical keywords in plan
+    const planText = soapList
+      .map((s) => `${s.plan || ""} ${s.objective || ""}`)
+      .join(" ")
+      .toLowerCase();
+
+    const commonProcedures = [
+      { name: "Blood Collection / Venipuncture", keyword: "odber krvi" },
+      { name: "Radiography / RTG", keyword: "rtg" },
+      { name: "Ultrasonography / USG", keyword: "usg" },
+      { name: "Cytology", keyword: "cytol" },
+      { name: "Nail Trim", keyword: "strihanie pazúrikov" },
+      { name: "Microchipping", keyword: "čipovanie" },
+    ];
+
+    for (const proc of commonProcedures) {
+      if (planText.includes(proc.keyword)) {
+        const billed = billedDescriptions.some(
+          (b) =>
+            b.includes(proc.keyword) || b.includes(proc.name.toLowerCase())
+        );
+        if (!billed) {
+          potentialMissedCharges.push({
+            description: proc.name,
+            source: "soap_notes",
+            confidence: "medium",
+          });
+        }
+      }
+    }
+
+    return {
+      appointmentId: input.appointmentId,
+      potentialMissedCount: potentialMissedCharges.length,
+      potentialMissedCharges,
+      invoicedItemsCount: invoicedItems.length,
+    };
+  },
+};
+
+const createDischargeSummaryTool: AgentTool = {
+  name: "create_discharge_summary",
+  description:
+    "Generate a structured, owner-friendly Markdown discharge summary for a patient visit, summarizing diagnosis, clinical course, home care, medication schedule, and red-flag symptoms requiring emergency attention.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      appointmentId: { type: "string", description: "Appointment UUID" },
+      patientId: {
+        type: "string",
+        description: "Optional Patient UUID if not linked to appointment",
+      },
+    },
+    required: ["appointmentId"],
+  },
+  zod: z.object({
+    appointmentId: z.string().uuid(),
+    patientId: z.string().uuid().optional(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      appointmentId: string;
+      patientId?: string;
+    };
+
+    const aptRows = await ctx.db
+      .select({
+        id: appointments.id,
+        patientId: appointments.patientId,
+        startTime: appointments.startTime,
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.id, input.appointmentId),
+          eq(appointments.practiceId, ctx.practiceId),
+          isNull(appointments.deletedAt)
+        )
+      )
+      .limit(1);
+
+    const patientId = input.patientId || aptRows[0]?.patientId;
+    if (!patientId) {
+      return { error: "Patient not found for this appointment" };
+    }
+
+    const patientRows = await ctx.db
+      .select({
+        id: patients.id,
+        name: patients.name,
+        species: patients.species,
+        breed: patients.breed,
+      })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.id, patientId),
+          eq(patients.practiceId, ctx.practiceId)
+        )
+      )
+      .limit(1);
+
+    const patient = patientRows[0];
+
+    const soapList = await ctx.db
+      .select({
+        assessment: soapNotes.assessment,
+        plan: soapNotes.plan,
+      })
+      .from(soapNotes)
+      .where(
+        and(
+          eq(soapNotes.practiceId, ctx.practiceId),
+          eq(soapNotes.appointmentId, input.appointmentId),
+          isNull(soapNotes.deletedAt)
+        )
+      )
+      .limit(1);
+
+    const activeRx = await ctx.db
+      .select({
+        medicationName: prescriptions.medicationName,
+        dosage: prescriptions.dosage,
+        frequency: prescriptions.frequency,
+      })
+      .from(prescriptions)
+      .where(
+        and(
+          eq(prescriptions.practiceId, ctx.practiceId),
+          eq(prescriptions.patientId, patientId),
+          isNull(prescriptions.deletedAt),
+          eq(prescriptions.status, "active")
+        )
+      );
+
+    const diag = soapList[0]?.assessment || "Klinické vyšetrenie";
+    const instructions =
+      soapList[0]?.plan || "Kľudový režim a monitorovanie celkového stavu.";
+
+    const dischargeMarkdown = [
+      `# Prepúšťacia správa: ${patient?.name || "Pacient"} (${patient?.species || "zviera"})`,
+      `**Dátum ošetrenia:** ${aptRows[0]?.startTime ? new Date(aptRows[0].startTime).toLocaleDateString("sk-SK") : "Dnes"}`,
+      `\n## Diagnóza a záver vyšetrenia`,
+      diag,
+      `\n## Domáca starostlivosť a režimové opatrenia`,
+      instructions,
+      `\n## Rozpis podávania liekov`,
+      activeRx.length > 0
+        ? activeRx
+            .map((r) => `- **${r.medicationName}**: ${r.dosage}, ${r.frequency}`)
+            .join("\n")
+        : "Bez nutnosti domácej medikácie.",
+      `\n## Varovné príznaky (kedy bezodkladne kontaktovať pohotovosť)`,
+      "- Apatia, kolaps, neschopnosť vstať\n- Opakované zvracanie alebo neustupujúca hnačka\n- Dýchavičnosť, sťažené dýchanie alebo modranie slizníc\n- Krvácanie z rany alebo výrazný opuch",
+    ].join("\n");
+
+    return {
+      appointmentId: input.appointmentId,
+      patientName: patient?.name,
+      markdown: dischargeMarkdown,
+    };
+  },
+};
+
+const generateRvpsReportTool: AgentTool = {
+  name: "generate_rvps_report",
+  description:
+    "Generate the official Slovak RVPS (Regionálna veterinárna a potravinová správa) rabies vaccination statutory register report (Zákon č. 39/2007 Z. z.) for a given month and year.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      year: { type: "number", description: "Reporting year (e.g. 2026)" },
+      month: { type: "number", description: "Reporting month (1 - 12)" },
+    },
+    required: ["year", "month"],
+  },
+  zod: z.object({
+    year: z.number().int().min(2020).max(2050),
+    month: z.number().int().min(1).max(12),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      year: number;
+      month: number;
+    };
+
+    const startDate = new Date(Date.UTC(input.year, input.month - 1, 1, 0, 0, 0));
+    const endDate = new Date(Date.UTC(input.year, input.month, 1, 0, 0, 0));
+
+    const records = await ctx.db
+      .select({
+        id: vaccinationRecords.id,
+        administeredAt: vaccinationRecords.administeredAt,
+        vaccineName: vaccinationRecords.vaccineName,
+        lotNumber: vaccinationRecords.lotNumber,
+        rabiesTagNumber: vaccinationRecords.rabiesTagNumber,
+        patientName: patients.name,
+        patientSpecies: patients.species,
+        microchipNumber: patients.microchipNumber,
+        clientFirstName: clients.firstName,
+        clientLastName: clients.lastName,
+        clientAddress: clients.address,
+      })
+      .from(vaccinationRecords)
+      .innerJoin(patients, eq(vaccinationRecords.patientId, patients.id))
+      .leftJoin(clients, eq(patients.clientId, clients.id))
+      .where(
+        and(
+          eq(vaccinationRecords.practiceId, ctx.practiceId),
+          isNull(vaccinationRecords.deletedAt),
+          gte(vaccinationRecords.administeredAt, startDate),
+          lt(vaccinationRecords.administeredAt, endDate),
+          ilike(vaccinationRecords.vaccineName, "%rabies%")
+        )
+      )
+      .orderBy(asc(vaccinationRecords.administeredAt));
+
+    const compliantRecords = [];
+    const unchippedViolations = [];
+
+    for (const r of records) {
+      const item = {
+        date: r.administeredAt
+          ? new Date(r.administeredAt).toISOString().slice(0, 10)
+          : "",
+        owner: `${r.clientLastName || ""} ${r.clientFirstName || ""}`.trim(),
+        ownerAddress: r.clientAddress || "Neznáma",
+        animal: `${r.patientName} (${r.patientSpecies || "pes"})`,
+        microchipNumber: r.microchipNumber || "CHÝBA",
+        vaccine: `${r.vaccineName} (Šarža: ${r.lotNumber || "N/A"})`,
+        tagNumber: r.rabiesTagNumber || "N/A",
+      };
+
+      if (!r.microchipNumber) {
+        unchippedViolations.push(item);
+      } else {
+        compliantRecords.push(item);
+      }
+    }
+
+    return {
+      legalBasis:
+        "Zákon č. 39/2007 Z. z. o veterinárnej starostlivosti - Hlásenie besnoty RVPS",
+      reportingPeriod: `${input.year}-${String(input.month).padStart(2, "0")}`,
+      totalVaccinated: records.length,
+      compliantCount: compliantRecords.length,
+      missingMicrochipViolationsCount: unchippedViolations.length,
+      records: compliantRecords,
+      violations: unchippedViolations,
+    };
+  },
+};
+
 export const AGENT_TOOLS: AgentTool[] = [
   findClient,
   findPatient,
@@ -1084,6 +1727,11 @@ export const AGENT_TOOLS: AgentTool[] = [
   calculateDrugDose,
   listTreatmentPlans,
   recordVitalSigns,
+  queryLabTrendsTool,
+  checkDrugSafetyTool,
+  auditMissedChargesTool,
+  createDischargeSummaryTool,
+  generateRvpsReportTool,
 ];
 
 export function getTool(name: string): AgentTool | undefined {

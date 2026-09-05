@@ -1,5 +1,6 @@
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, ilike, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { generateText } from "ai";
 import {
@@ -8,7 +9,18 @@ import {
   requireRole,
   requireFeature,
 } from "../../trpc";
-import { aiImagingAnalyses, files } from "@openpims/db";
+import {
+  aiImagingAnalyses,
+  files,
+  treatmentPlans,
+  treatmentPlanItems,
+  vitalSigns,
+  patients,
+  consentForms,
+  consentRequests,
+  rooms,
+  soapNotes,
+} from "@openpims/db";
 import { configuredModel } from "@/lib/agent/runner";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { readPrimaryObject } from "@/lib/s3";
@@ -215,5 +227,292 @@ export const imagingRouter = createRouter({
       }
 
       return analysis;
+    }),
+
+  /** Generuje predoperačný a anestéziologický liečebný plán na základe AI rádiologického nálezu */
+  createSurgicalPlanFromImaging: imagingProcedure
+    .input(
+      z.object({
+        analysisId: z.string().uuid(),
+        appointmentId: z.string().uuid().optional(),
+        targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        procedureTitle: z.string().max(255).optional(),
+        customNotes: z.string().max(2000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Over analýzu
+      const [analysis] = await ctx.db
+        .select()
+        .from(aiImagingAnalyses)
+        .where(
+          and(
+            eq(aiImagingAnalyses.id, input.analysisId),
+            eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+            isNull(aiImagingAnalyses.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (!analysis) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Analýza sa nenašla" });
+      }
+
+      // 2. Over pacienta a zisti váhu z vitálnych funkcií
+      const [patient] = await ctx.db
+        .select({ id: patients.id, name: patients.name, species: patients.species, clientId: patients.clientId })
+        .from(patients)
+        .where(and(eq(patients.id, analysis.patientId), eq(patients.practiceId, ctx.practiceId)))
+        .limit(1);
+
+      if (!patient) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pacient sa nenašiel" });
+      }
+
+      const [latestVitals] = await ctx.db
+        .select({ weightKg: vitalSigns.weightKg })
+        .from(vitalSigns)
+        .where(
+          and(
+            eq(vitalSigns.patientId, patient.id),
+            eq(vitalSigns.practiceId, ctx.practiceId),
+            isNull(vitalSigns.deletedAt)
+          )
+        )
+        .orderBy(desc(vitalSigns.recordedAt))
+        .limit(1);
+
+      const weightKg = parseFloat(latestVitals?.weightKg ?? "10") || 10;
+
+      // 3. Rozpoznanie indikácie a názvu zákroku
+      const resultLower = (analysis.result || "").toLowerCase();
+      let derivedTitle = input.procedureTitle;
+      if (!derivedTitle) {
+        if (resultLower.includes("fraktúr") || resultLower.includes("fractur") || resultLower.includes("zlomen")) {
+          derivedTitle = "Chirurgická osteosyntéza fraktúry";
+        } else if (resultLower.includes("cudz") || resultLower.includes("foreign")) {
+          derivedTitle = "Gastrotómia / Enterotómia (extrakcia cudzieho telesa)";
+        } else if (resultLower.includes("pyometr") || resultLower.includes("uter")) {
+          derivedTitle = "Ovariohysterektómia (Pyometra)";
+        } else if (resultLower.includes("luxác") || resultLower.includes("luxat")) {
+          derivedTitle = "Chirurgická repozícia a stabilizácia luxácie";
+        } else if (resultLower.includes("tumor") || resultLower.includes("novotvar") || resultLower.includes("útvar")) {
+          derivedTitle = "Chirurgická extirpácia útvaru a biopsia";
+        } else {
+          derivedTitle = `Chirurgický zákrok (${analysis.imageType.toUpperCase()} nález)`;
+        }
+      }
+
+      // 4. Výpočet anestéziologického protokolu podľa hmotnosti
+      const doseButorphanolMg = (weightKg * 0.2).toFixed(2);
+      const doseButorphanolMl = (weightKg * 0.2 / 10).toFixed(2); // Butomidor 10mg/ml
+      const doseMedetomidineMg = (weightKg * 0.01).toFixed(3);
+      const doseMedetomidineMl = (weightKg * 0.01 / 1).toFixed(2); // Sedator 1mg/ml
+      const dosePropofolMg = (weightKg * 3.5).toFixed(1);
+      const dosePropofolMl = (weightKg * 0.35).toFixed(1); // Propofol 10mg/ml
+      const doseMeloxicamMg = (weightKg * 0.2).toFixed(2);
+      const doseMeloxicamMl = (weightKg * 0.2 / 5).toFixed(2); // Meloxidyl 5mg/ml
+
+      const anesthesiaSummary = {
+        patientWeightKg: weightKg,
+        premedication: `Butorfanol: ${doseButorphanolMg} mg (${doseButorphanolMl} ml Butomidor 10mg/ml) + Medetomidín: ${doseMedetomidineMg} mg (${doseMedetomidineMl} ml Sedator 1mg/ml) i.m./i.v.`,
+        induction: `Propofol: cca ${dosePropofolMg} mg (${dosePropofolMl} ml Propofol 1%) i.v. do účinku + intubácia`,
+        maintenance: "Inhalačný izoflurán / sevoflurán s O2 + monitorovanie EKG/kapno/pulz",
+        analgesiaPostOp: `Meloxikam: ${doseMeloxicamMg} mg (${doseMeloxicamMl} ml Meloxidyl 5mg/ml) s.c.`,
+      };
+
+      // 5. Vytvor záznam v treatmentPlans
+      const planDate = input.targetDate ?? new Date().toISOString().slice(0, 10);
+      const [plan] = await ctx.db
+        .insert(treatmentPlans)
+        .values({
+          practiceId: ctx.practiceId,
+          patientId: patient.id,
+          title: derivedTitle,
+          description: `Chirurgický a anestéziologický plán vygenerovaný z AI rádiologickej analýzy (#${analysis.id.slice(0, 8)}).\nHmotnosť pacienta: ${weightKg} kg.\nIndikácia: ${analysis.result?.slice(0, 300)}...${input.customNotes ? `\nPoznámky: ${input.customNotes}` : ""}`,
+          status: "active",
+          startDate: planDate,
+          createdBy: ctx.user.id,
+        })
+        .returning();
+
+      if (!plan) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Nepodarilo sa vytvoriť liečebný plán" });
+      }
+
+      // 6. Vlož kroky do treatmentPlanItems
+      const itemsToInsert = [
+        {
+          planId: plan.id,
+          description: "Predoperačná príprava a kanylácia",
+          instructions: "Predoperačné zhodnotenie ASA, zavedenie i.v. kanyly do v. cephalica, zahájenie infúzie Ringer-Laktát 5-10 ml/kg/h.",
+          sortOrder: 1,
+        },
+        {
+          planId: plan.id,
+          description: `Premedikácia (${weightKg} kg)`,
+          instructions: anesthesiaSummary.premedication,
+          sortOrder: 2,
+        },
+        {
+          planId: plan.id,
+          description: "Úvod do anestézie a intubácia",
+          instructions: anesthesiaSummary.induction,
+          sortOrder: 3,
+        },
+        {
+          planId: plan.id,
+          description: `Chirurgický výkon: ${derivedTitle}`,
+          instructions: `Vykonanie operačného zákroku podľa aseptických pravidiel. Monitorovanie vitálnych funkcií (${anesthesiaSummary.maintenance}).`,
+          sortOrder: 4,
+        },
+        {
+          planId: plan.id,
+          description: "Pooperačná analgézia a prebúdzanie",
+          instructions: `${anesthesiaSummary.analgesiaPostOp}. Udržiavanie normotermie (výhrevná podložka), kontrola slizníc a CRT.`,
+          sortOrder: 5,
+        },
+        {
+          planId: plan.id,
+          description: "Pooperačná rádiologická kontrola",
+          instructions: "Zhotovenie kontrolnej pooperačnej RTG/USG snímky na overenie repozičného postavenia / úspešnosti výkonu.",
+          sortOrder: 6,
+        },
+      ];
+
+      for (const item of itemsToInsert) {
+        await ctx.db.insert(treatmentPlanItems).values(item);
+      }
+
+      // 7. Vytvor koncept súhlasu majiteľa v consentRequests
+      let consentRequestId: string | null = null;
+      let signingToken: string | null = null;
+      try {
+        const token = randomUUID();
+        const tokenHash = createHash("sha256").update(token).digest("hex");
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        const [consentReq] = await ctx.db
+          .insert(consentRequests)
+          .values({
+            practiceId: ctx.practiceId,
+            patientId: patient.id,
+            createdBy: ctx.user.id,
+            appointmentId: input.appointmentId ?? analysis.appointmentId ?? null,
+            token,
+            tokenHash,
+            expiresAt,
+            title: `Informovaný súhlas s anestéziou a operáciou: ${derivedTitle}`,
+            bodyText: `Svojím podpisom potvrdzujem, že som bol/a riadne oboznámený/á so zdravotným stavom pacienta (${patient.name}), s potrebnosťou a rizikami chirurgického zákroku "${derivedTitle}" a celkovej anestézie, ako aj s predpokladanou cenou zákroku. Súhlasím s vykonaním zákroku a podaním potrebných liečiv.`,
+            status: "pending",
+          })
+          .returning({ id: consentRequests.id });
+
+        if (consentReq) {
+          consentRequestId = consentReq.id;
+          signingToken = token;
+        }
+      } catch (err) {
+        console.warn("Consent request creation skipped or non-fatal:", err);
+      }
+
+      // 8. Zisti dostupnú operačnú sálu
+      const surgeryRooms = await ctx.db
+        .select({ id: rooms.id, name: rooms.name })
+        .from(rooms)
+        .where(
+          and(
+            eq(rooms.practiceId, ctx.practiceId),
+            isNull(rooms.deletedAt),
+            or(
+              ilike(rooms.name, "%operač%"),
+              ilike(rooms.name, "%sála%"),
+              ilike(rooms.name, "%surgery%")
+            )
+          )
+        )
+        .limit(3);
+
+      return {
+        success: true,
+        planId: plan.id,
+        planTitle: derivedTitle,
+        patientName: patient.name,
+        patientWeightKg: weightKg,
+        anesthesiaProtocol: anesthesiaSummary,
+        consentRequestId,
+        signingUrl: signingToken ? `/sign/${signingToken}` : null,
+        suggestedRooms: surgeryRooms,
+      };
+    }),
+
+  /** Vloží nález AI analýzy do SOAP záznamu vizity */
+  injectFindingsIntoSoap: imagingProcedure
+    .input(
+      z.object({
+        analysisId: z.string().uuid(),
+        appointmentId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [analysis] = await ctx.db
+        .select()
+        .from(aiImagingAnalyses)
+        .where(
+          and(
+            eq(aiImagingAnalyses.id, input.analysisId),
+            eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+            isNull(aiImagingAnalyses.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (!analysis || !analysis.result) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Analýza sa nenašla alebo nemá výsledok" });
+      }
+
+      const [existingSoap] = await ctx.db
+        .select()
+        .from(soapNotes)
+        .where(
+          and(
+            eq(soapNotes.appointmentId, input.appointmentId),
+            eq(soapNotes.practiceId, ctx.practiceId),
+            isNull(soapNotes.deletedAt)
+          )
+        )
+        .limit(1);
+
+      const imagingFinding = `[AI Rádiológia (${analysis.imageType.toUpperCase()})]:\n${analysis.result}`;
+
+      if (existingSoap) {
+        const updatedObjective = existingSoap.objective
+          ? `${existingSoap.objective}\n\n${imagingFinding}`
+          : imagingFinding;
+
+        await ctx.db
+          .update(soapNotes)
+          .set({ objective: updatedObjective })
+          .where(eq(soapNotes.id, existingSoap.id));
+
+        return { success: true, updatedSoapId: existingSoap.id };
+      }
+
+      // Vytvor nový draft SOAP note
+      const [newSoap] = await ctx.db
+        .insert(soapNotes)
+        .values({
+          practiceId: ctx.practiceId,
+          patientId: analysis.patientId,
+          appointmentId: input.appointmentId,
+          authorId: ctx.user.id,
+          authorName: ctx.user.name ?? "Veterinárny lekár",
+          status: "draft",
+          objective: imagingFinding,
+        })
+        .returning();
+
+      return { success: true, updatedSoapId: newSoap?.id };
     }),
 });

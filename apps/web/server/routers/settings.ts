@@ -2099,12 +2099,17 @@ export const settingsRouter = createRouter({
     return { ok: true, alreadyCleared: result.alreadyCleared };
   }),
 
-  /** Add the sample clients, pets, and visits back. No-op if already present. */
-  reseedDemoData: adminProcedure.mutation(async ({ ctx }) => {
-    const result = await reseedSampleClinic(ctx.db, ctx.practiceId);
-    if (!result.found) throw practiceNotFound();
-    return { ok: true, alreadyPresent: result.alreadyPresent };
-  }),
+  /** Add the sample clients, pets, and visits back. If force is true, clears old demo data first to ensure latest dataset. */
+  reseedDemoData: adminProcedure
+    .input(z.object({ force: z.boolean().optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      if (input?.force) {
+        await clearSeededDemoData(ctx.db, ctx.practiceId);
+      }
+      const result = await reseedSampleClinic(ctx.db, ctx.practiceId);
+      if (!result.found) throw practiceNotFound();
+      return { ok: true, alreadyPresent: result.alreadyPresent };
+    }),
 
   // ── Staff / Users ─────────────────────────────────────────
 

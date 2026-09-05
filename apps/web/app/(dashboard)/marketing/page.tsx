@@ -565,7 +565,7 @@ export default function MarketingStudioPage() {
         {/* Right Column (Channel Previews) */}
         <div className="lg:col-span-7 space-y-4">
           {/* Channel Tabs */}
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center justify-start gap-2 border-b pb-2">
             <div className="flex items-center gap-1.5">
               {[
                 { id: "instagram", label: "Instagram", icon: "📸" },
@@ -613,7 +613,7 @@ export default function MarketingStudioPage() {
           {activeChannel === "instagram" && (
             <div className="rounded-2xl border bg-card p-4 shadow-sm max-w-lg mx-auto space-y-3">
               {/* Profile Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-[2px]">
                     <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[10px] font-bold">

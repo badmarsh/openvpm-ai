@@ -19,6 +19,7 @@ import {
   Copy,
   Check,
   AlertTriangle,
+  Volume2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -398,6 +399,32 @@ function VoiceDictationContent() {
     [resetState, selectedPatient, audioBlob, handleProcess, dictationId, handleSave, router],
   );
 
+  const [loadingDemo, setLoadingDemo] = useState(false);
+
+  const handleLoadDemo = useCallback(async () => {
+    setLoadingDemo(true);
+    try {
+      const res = await fetch("/demo/voice-demo.webm");
+      if (!res.ok) throw new Error("Demo nahrávka nebola nájdená");
+      const blob = await res.blob();
+      // Pre istotu získame reálnu dĺžku z Audio elementu
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      await new Promise<void>((resolve, reject) => {
+        audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
+        audio.addEventListener("error", () => reject(new Error("Nepodarilo sa načítať demo audio")), { once: true });
+      });
+      const duration = Math.round(audio.duration || 5);
+      URL.revokeObjectURL(url);
+      handleRecordingComplete(blob, duration);
+      toast.success("Demo nahrávka bola načítaná");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Načítanie demo nahrávky zlyhalo");
+    } finally {
+      setLoadingDemo(false);
+    }
+  }, [handleRecordingComplete]);
+
   const handleCopySoap = () => {
     const text = `S (Subjektívne):\n${soapSections.subjective}\n\nO (Objektívne):\n${soapSections.objective}\n\nA (Posúdenie):\n${soapSections.assessment}\n\nP (Plán):\n${soapSections.plan}`;
     navigator.clipboard.writeText(text);
@@ -679,6 +706,22 @@ function VoiceDictationContent() {
                   disabled={!canRecord}
                   size="large"
                 />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadDemo}
+                  disabled={loadingDemo || !canRecord}
+                  className="text-xs gap-1.5"
+                >
+                  {loadingDemo ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Volume2 className="h-3.5 w-3.5" />
+                  )}
+                  Načítať demo nahrávku
+                </Button>
 
                 {/* Recorded Audio Preview */}
                 {hasRecording && audioUrl && (

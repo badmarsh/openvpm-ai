@@ -44,6 +44,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { AccentColorPicker } from "@/components/brand/accent-color-picker";
 import { MigrationHelpRequest } from "@/components/onboarding/migration-help-request";
 const MessagingTab = dynamic(() => import("@/components/settings/messaging-tab").then(m => ({ default: m.MessagingTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
@@ -442,20 +443,15 @@ function SettingsPageInner() {
   }
 
   return (
-    <div className="min-w-0 w-full max-w-full overflow-hidden">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-heading text-xl font-semibold">
-            {t("settings.header.title", "Settings")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t(
-              "settings.header.subtitle",
-              "Practice configuration and staff management",
-            )}
-          </p>
-        </div>
-        <Button
+    <div className="min-w-0 w-full max-w-full space-y-6 overflow-hidden">
+      <PageHeader
+        title={t("settings.header.title", "Settings")}
+        subtitle={t(
+          "settings.header.subtitle",
+          "Practice configuration and staff management",
+        )}
+        actions={
+          <Button
           variant="outline"
           size="sm"
           data-tour="settings-guides"
@@ -464,9 +460,10 @@ function SettingsPageInner() {
           <Compass className="mr-2 h-4 w-4" />
           {t("settings.header.guides", "Guides")}
         </Button>
-      </div>
+      }
+      />
 
-      <div className="mt-6 flex min-w-0 w-full max-w-full flex-col gap-6 lg:flex-row lg:gap-8">
+      <div className="flex min-w-0 w-full max-w-full flex-col gap-6 lg:flex-row lg:gap-8">
         {/* Section nav: horizontal scroll on small screens, vertical on lg+ */}
         <nav
           className="min-w-0 max-w-full overflow-hidden lg:w-56 lg:shrink-0"
@@ -2171,13 +2168,13 @@ function PlanGrid({
                 t("settings.billing.freePrice", "Free")
               ) : (
                 <>
-                  ${p.locationUnitPriceMonthlyUsd}
+                  €{p.locationUnitPriceMonthlyUsd}
                   <span className="text-sm font-normal text-muted-foreground">
                     {t("settings.billing.perLocation", "/location")}
                   </span>
                   <span className="block text-sm font-normal text-muted-foreground">
                     {p.seatUnitPriceMonthlyUsd && p.seatUnitPriceMonthlyUsd > 0
-                      ? t("settings.billing.staffUnitPrice", `+ $${p.seatUnitPriceMonthlyUsd}/staff/mo`, {
+                      ? t("settings.billing.staffUnitPrice", `+ €${p.seatUnitPriceMonthlyUsd}/staff/mo`, {
                           price: p.seatUnitPriceMonthlyUsd,
                         })
                       : t("settings.billing.unlimitedStaff", "unlimited staff")}
@@ -2207,7 +2204,7 @@ function PlanGrid({
                     count: p.includedSmsPerMonth.toLocaleString(),
                   })}
                   {p.smsOveragePriceUsd
-                    ? t("settings.billing.smsOverage", `, then $${p.smsOveragePriceUsd}/SMS`, {
+                    ? t("settings.billing.smsOverage", `, then €${p.smsOveragePriceUsd}/SMS`, {
                         price: p.smsOveragePriceUsd,
                       })
                     : ""}
@@ -2219,7 +2216,7 @@ function PlanGrid({
                     count: p.includedAiRunsPerMonth.toLocaleString(),
                   })}
                   {p.aiOveragePriceUsd
-                    ? t("settings.billing.aiActionsOverage", `, then $${p.aiOveragePriceUsd}/action`, {
+                    ? t("settings.billing.aiActionsOverage", `, then €${p.aiOveragePriceUsd}/action`, {
                         price: p.aiOveragePriceUsd,
                       })
                     : ""}
@@ -2253,13 +2250,6 @@ function PlanGrid({
                   ) : null}
                   {t("settings.billing.choosePlan", `Choose ${p.name}`, { name: p.name })}
                 </Button>
-              ) : !p.selfServe ? (
-                <a
-                  href="mailto:support@openvpm.com?subject=OpenVPM%20Enterprise"
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  {t("settings.billing.contactSales", "Contact sales")}
-                </a>
               ) : null}
             </div>
           </div>

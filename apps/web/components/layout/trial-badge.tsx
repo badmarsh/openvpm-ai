@@ -52,7 +52,7 @@ export function TrialBadge() {
     return (
       <Link
         href="/settings?tab=billing"
-        className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100"
+        className="inline-flex items-center gap-1.5 rounded-full border border-warning-muted/50 bg-warning-muted/30 px-3 py-1 text-xs font-medium text-warning-muted-foreground transition-colors hover:bg-warning-muted/50"
       >
         <CreditCard className="h-3.5 w-3.5" />
         Payment retrying · Review billing

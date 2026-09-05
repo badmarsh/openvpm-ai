@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import {
   isRabiesVaccineName,
@@ -109,6 +110,7 @@ export function VaccinationFormFields({
   providers?: VaccinationProviderOption[];
   currentUserId?: string;
 }) {
+  const { t } = useI18n();
   const rabies = isRabiesVaccineName(form.vaccineName);
   const update = <Field extends keyof VaccinationFormState>(
     field: Field,
@@ -119,7 +121,7 @@ export function VaccinationFormFields({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Vaccine *
+          {t("records.vaccinations.form.vaccine", "Vaccine *")}
         </label>
         <Input
           name="vaccineName"
@@ -141,12 +143,12 @@ export function VaccinationFormFields({
                   : ""),
             }));
           }}
-          placeholder="e.g. Rabies"
+          placeholder={t("records.vaccinations.form.vaccinePlaceholder", "e.g. Rabies")}
         />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Product name{rabies ? " *" : ""}
+          {t("records.vaccinations.form.productName", "Product name")}{rabies ? " *" : ""}
         </label>
         <Input
           name="productName"
@@ -154,12 +156,12 @@ export function VaccinationFormFields({
           value={form.productName}
           maxLength={VACCINATION_PRODUCT_NAME_MAX_LENGTH}
           onChange={(event) => update("productName", event.target.value)}
-          placeholder="e.g. Defensor 3"
+          placeholder={t("records.vaccinations.form.productNamePlaceholder", "e.g. Defensor 3")}
         />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Next due{rabies ? " *" : ""}
+          {t("records.vaccinations.form.nextDue", "Next due")}{rabies ? " *" : ""}
         </label>
         <Input
           name="nextDueDate"
@@ -172,7 +174,7 @@ export function VaccinationFormFields({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Lot number{rabies ? " *" : ""}
+          {t("records.vaccinations.form.lotNumber", "Lot number")}{rabies ? " *" : ""}
         </label>
         <Input
           name="lotNumber"
@@ -180,12 +182,12 @@ export function VaccinationFormFields({
           value={form.lotNumber}
           maxLength={VACCINATION_LOT_NUMBER_MAX_LENGTH}
           onChange={(event) => update("lotNumber", event.target.value)}
-          placeholder="e.g. RAB-2026-04"
+          placeholder={t("records.vaccinations.form.lotNumberPlaceholder", "e.g. RAB-2026-04")}
         />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Manufacturer{rabies ? " *" : ""}
+          {t("records.vaccinations.form.manufacturer", "Manufacturer")}{rabies ? " *" : ""}
         </label>
         <Input
           name="manufacturer"
@@ -193,14 +195,14 @@ export function VaccinationFormFields({
           value={form.manufacturer}
           maxLength={VACCINATION_MANUFACTURER_MAX_LENGTH}
           onChange={(event) => update("manufacturer", event.target.value)}
-          placeholder="e.g. Zoetis"
+          placeholder={t("records.vaccinations.form.manufacturerPlaceholder", "e.g. Zoetis")}
         />
       </div>
       {rabies ? (
         <>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Product expiration *
+              {t("records.vaccinations.form.productExpiration", "Product expiration *")}
             </label>
             <Input
               name="productExpirationDate"
@@ -214,7 +216,7 @@ export function VaccinationFormFields({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Dose type *
+              {t("records.vaccinations.form.doseType", "Dose type *")}
             </label>
             <select
               name="doseType"
@@ -228,14 +230,14 @@ export function VaccinationFormFields({
               }
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="">Choose dose type</option>
-              <option value="initial">Initial dose</option>
-              <option value="booster">Booster dose</option>
+              <option value="">{t("records.vaccinations.form.chooseDoseType", "Choose dose type")}</option>
+              <option value="initial">{t("records.vaccinations.form.initialDose", "Initial dose")}</option>
+              <option value="booster">{t("records.vaccinations.form.boosterDose", "Booster dose")}</option>
             </select>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Licensed duration *
+              {t("records.vaccinations.form.licensedDuration", "Licensed duration *")}
             </label>
             <select
               name="licensedDurationMonths"
@@ -246,15 +248,15 @@ export function VaccinationFormFields({
               }
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="">Choose duration</option>
-              <option value="12">1 year</option>
-              <option value="36">3 years</option>
-              <option value="48">4 years</option>
+              <option value="">{t("records.vaccinations.form.chooseDuration", "Choose duration")}</option>
+              <option value="12">{t("records.vaccinations.form.duration1Year", "1 year")}</option>
+              <option value="36">{t("records.vaccinations.form.duration3Years", "3 years")}</option>
+              <option value="48">{t("records.vaccinations.form.duration4Years", "4 years")}</option>
             </select>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Rabies tag number
+              {t("records.vaccinations.form.rabiesTagNumber", "Rabies tag number")}
             </label>
             <Input
               name="rabiesTagNumber"
@@ -265,7 +267,7 @@ export function VaccinationFormFields({
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Supervising veterinarian *
+              {t("records.vaccinations.form.supervisingVeterinarian", "Supervising veterinarian *")}
             </label>
             <select
               name="supervisingVeterinarianId"
@@ -276,19 +278,21 @@ export function VaccinationFormFields({
               }
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="">Choose veterinarian</option>
+              <option value="">{t("records.vaccinations.form.chooseVeterinarian", "Choose veterinarian")}</option>
               {providers?.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name}
                   {provider.licenseNumber
-                    ? ` — License ${provider.licenseNumber}`
-                    : " — license missing"}
+                    ? ` — ${t("records.vaccinations.form.license", "License")} ${provider.licenseNumber}`
+                    : ` — ${t("records.vaccinations.form.licenseMissing", "license missing")}`}
                 </option>
               ))}
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
-              Rabies certificates require the veterinarian&apos;s license number
-              in Staff settings.
+              {t(
+                "records.vaccinations.form.licenseNote",
+                "Rabies certificates require the veterinarian's license number in Staff settings.",
+              )}
             </p>
           </div>
         </>

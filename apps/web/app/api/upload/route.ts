@@ -9,8 +9,10 @@ import { hasBlankConfiguredNextAuthSecret } from "@/lib/auth-secret";
 import { billingEnforced, hasHostedFullAccess } from "@/lib/billing/plans";
 import {
   ALLOWED_UPLOAD_MIME_TYPES,
+  detectUploadMimeType,
   isAllowedUploadMimeType,
   uploadBytesMatchMimeType,
+  type AllowedUploadMimeType,
 } from "@/lib/upload-security";
 import {
   UPLOAD_REQUEST_MAX_BYTES,
@@ -266,23 +268,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // ---------- Validate MIME type ----------
-      const mimeType = file.type;
-      if (!isAllowedUploadMimeType(mimeType)) {
-        return NextResponse.json(
-          {
-            error: `File type not allowed. Accepted: ${Object.keys(ALLOWED_UPLOAD_MIME_TYPES).join(", ")}`,
-          },
-          { status: 400 },
-        );
-      }
-      if (!mimeType.startsWith("image/")) {
-        return NextResponse.json(
-          { error: "Dashboard uploads must be image files" },
-          { status: 400 },
-        );
-      }
-
       // ---------- Validate size ----------
       if (file.size > UPLOAD_FILE_MAX_BYTES) {
         return NextResponse.json(
@@ -292,7 +277,37 @@ export async function POST(req: NextRequest) {
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      if (!uploadBytesMatchMimeType(mimeType, buffer)) {
+
+      // ---------- Validate MIME type ----------
+      // Some browsers/devices report non-standard MIME types (e.g. image/jpg)
+      // or the file may have been renamed. Trust the actual file content first.
+      const declaredMimeType = file.type;
+      const detectedMimeType = detectUploadMimeType(buffer);
+      let effectiveMimeType: AllowedUploadMimeType | null = null;
+
+      if (isAllowedUploadMimeType(declaredMimeType)) {
+        effectiveMimeType = declaredMimeType;
+      } else if (declaredMimeType === "image/jpg") {
+        effectiveMimeType = "image/jpeg";
+      } else if (detectedMimeType && isAllowedUploadMimeType(detectedMimeType)) {
+        effectiveMimeType = detectedMimeType;
+      }
+
+      if (!effectiveMimeType) {
+        return NextResponse.json(
+          {
+            error: `File type not allowed. Accepted: ${Object.keys(ALLOWED_UPLOAD_MIME_TYPES).join(", ")}`,
+          },
+          { status: 400 },
+        );
+      }
+      if (!effectiveMimeType.startsWith("image/")) {
+        return NextResponse.json(
+          { error: "Dashboard uploads must be image files" },
+          { status: 400 },
+        );
+      }
+      if (!uploadBytesMatchMimeType(effectiveMimeType, buffer)) {
         return NextResponse.json(
           { error: "File contents do not match the declared file type" },
           { status: 400 },
@@ -324,7 +339,7 @@ export async function POST(req: NextRequest) {
           uploadedBy: session.user.id,
           idempotencyKey,
           fileName: file.name,
-          mimeType,
+          mimeType: effectiveMimeType,
           fileSizeBytes: buffer.length,
           checksumSha256,
           category: dashboardCategory,

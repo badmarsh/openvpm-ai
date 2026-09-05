@@ -1,5 +1,5 @@
 /**
- * The OpenVPM brand mark: a paw print. This is the single source for the
+ * The VET.IS brand mark: a paw print. This is the single source for the
  * in-app logo so every surface (sidebar, e-sign / capture headers) renders
  * the same shape. The geometry matches `public/logo.svg` and
  * `public/favicon.svg`. No "use client" so it works in server components too.

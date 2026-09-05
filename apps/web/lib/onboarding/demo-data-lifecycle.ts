@@ -5,6 +5,8 @@ import {
   communications,
   invoiceItems,
   invoices,
+  payments,
+  careReminders,
   patients,
   practices,
   problemList,
@@ -67,6 +69,11 @@ export function mergeDemoDataProvenance(
     invoiceItemIds: uniqueIds(
       existing?.invoiceItemIds,
       latest.invoiceItemIds,
+    ),
+    paymentIds: uniqueIds(existing?.paymentIds, latest.paymentIds),
+    careReminderIds: uniqueIds(
+      existing?.careReminderIds,
+      latest.careReminderIds,
     ),
     communicationIds: uniqueIds(
       existing?.communicationIds,
@@ -245,6 +252,36 @@ export async function clearSeededDemoData(
           and(
             eq(invoices.practiceId, practiceId),
             inArray(invoices.id, demo.invoiceIds),
+          ),
+        );
+    }
+    if (demo.paymentIds?.length) {
+      await tx
+        .update(payments)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            inArray(payments.id, demo.paymentIds),
+            sql`exists (
+              select 1
+              from ${invoices}
+              where ${invoices.id} = ${payments.invoiceId}
+                and ${invoices.practiceId} = ${practiceId}
+            )`,
+          ),
+        );
+    }
+    if (demo.careReminderIds?.length) {
+      await tx
+        .update(careReminders)
+        .set({ deletedAt: now })
+        .where(
+          and(
+            eq(careReminders.practiceId, practiceId),
+            or(
+              inArray(careReminders.id, demo.careReminderIds),
+              eq(careReminders.externalSource, "demo_data"),
+            ),
           ),
         );
     }
@@ -480,6 +517,8 @@ export async function clearSeededDemoData(
       problemIds: demo.problemIds ?? [],
       invoiceIds: demo.invoiceIds ?? [],
       invoiceItemIds: demo.invoiceItemIds ?? [],
+      paymentIds: demo.paymentIds ?? [],
+      careReminderIds: demo.careReminderIds ?? [],
       communicationIds: demo.communicationIds ?? [],
       productIds: demo.productIds ?? [],
       marketingTvSlideIds: demo.marketingTvSlideIds ?? [],

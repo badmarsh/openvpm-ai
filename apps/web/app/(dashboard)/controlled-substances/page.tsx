@@ -704,31 +704,31 @@ function ControlledSubstancesLogPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.dateTime", "Date/Time")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.drugName", "Drug Name")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.schedule", "Schedule")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.action", "Action")}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                     {t("controlledSubstances.table.qtyUnit", "Qty/Unit")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.patient", "Patient")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.performedBy", "Performed By")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.witness", "Witness")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("controlledSubstances.table.notes", "Notes")}
                   </th>
                 </tr>

@@ -6,6 +6,7 @@ import { Camera, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 
 const CAPTURE_POLL_INTERVAL_MS = 5_000;
 
@@ -22,6 +23,7 @@ export function CapturePhotos({
   patientId: string;
   appointmentId?: string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const baselineCountRef = useRef<number | null>(null);
@@ -92,7 +94,7 @@ export function CapturePhotos({
     <>
       <Button variant="outline" size="sm" onClick={handleOpen}>
         <Camera className="mr-2 h-4 w-4" />
-        Capture photos
+        {t("patients.actions.capturePhotos", "Capture photos")}
       </Button>
 
       {open && (
@@ -100,17 +102,17 @@ export function CapturePhotos({
           className="fixed inset-0 z-[90] overflow-y-auto bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Capture photos"
+          aria-label={t("records.capturePhotos.modalTitle", "Capture photos")}
         >
           <div className="flex min-h-full items-center justify-center">
             <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="font-heading text-base font-semibold">
-                    Capture photos
+                    {t("records.capturePhotos.modalTitle", "Capture photos")}
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Scan with any phone. The code works for 30 minutes.
+                    {t("records.capturePhotos.scanNotice", "Scan with any phone. The code works for 30 minutes.")}
                   </p>
                 </div>
                 <button
@@ -171,13 +173,13 @@ export function CapturePhotos({
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">
                     {addedCount === 0
-                      ? "No photos yet"
+                      ? t("records.capturePhotos.noPhotos", "No photos yet")
                       : addedCount === 1
-                        ? "1 photo added"
-                        : `${addedCount} photos added`}
+                        ? t("records.capturePhotos.onePhoto", "1 photo added")
+                        : t("records.capturePhotos.countPhotos", `${addedCount} photos added`, { count: addedCount })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    New photos show up here.
+                    {t("records.capturePhotos.newPhotosArrive", "New photos show up here.")}
                   </p>
                 </div>
                 {recentFiles.length > 0 && (

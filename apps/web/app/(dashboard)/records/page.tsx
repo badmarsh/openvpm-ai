@@ -31,6 +31,7 @@ import { soapSectionText } from "@/lib/records/soap-content";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/layout/page-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
@@ -1239,20 +1240,14 @@ function RecordsPageContent() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("records.title", "Medical Records")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("records.subtitle", "Clinical documentation and patient history")}
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("records.title", "Medical Records")}
+        subtitle={t("records.subtitle", "Clinical documentation and patient history")}
+      />
 
       {/* Patient Search */}
-      <div className="mt-6 relative">
+      <div className="relative">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input

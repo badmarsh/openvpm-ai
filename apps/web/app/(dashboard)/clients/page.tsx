@@ -102,7 +102,7 @@ export default function ClientsPage() {
             t("common.error_retry", "Unable to load clients. Please retry.")}
         </div>
       ) : isLoading ? (
-        <TableSkeleton rows={8} cols={5} />
+        <TableSkeleton rows={8} cols={5} className="mt-6" />
       ) : verifiedClientList && verifiedClientList.items.length > 0 ? (
         <>
           <div className="mt-6 space-y-3 sm:hidden">
@@ -156,19 +156,19 @@ export default function ClientsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("clients.column_name", "Name")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("clients.column_email", "Email")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("clients.column_phone", "Phone")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("clients.column_city", "City")}
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                     {t("clients.column_created", "Created")}
                   </th>
                 </tr>

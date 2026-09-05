@@ -6,7 +6,7 @@
     },
     "accessDenied": {
       "title": "Prístup odmietnutý",
-      "desc": "Táto oblasť je určená len pre operátorov platformy OpenVPM."
+      "desc": "Táto oblasť je určená len pre operátorov platformy VET.IS."
     },
     "error": {
       "title": "Nepodarilo sa načítať správu platformy",
@@ -48,15 +48,15 @@
     }
   },
   "agent": {
-    "title": "Asistent OpenVPM",
+    "title": "Asistent VET.IS",
     "subtitle": "Opýtajte sa na svoju kliniku. Dokáže vyhľadávať informácie a s vaším súhlasom vykonať potrebné úkony.",
     "checkingAccess": "Overovanie prístupu k agentovi…",
     "accessRestricted": "Prístup k agentovi je obmedzený",
-    "accessRestrictedDesc": "Spustiť asistenta OpenVPM môžu len administrátori a veterinárni lekári.",
+    "accessRestrictedDesc": "Spustiť asistenta VET.IS môžu len administrátori a veterinárni lekári.",
     "backToDashboard": "Späť na prehľad",
     "welcome": {
       "title": "S čím vám môžem pomôcť?",
-      "subtitle": "Umelá inteligencia je vstavaná v OpenVPM. Položte otázku vlastnými slovami alebo začnite jedným z návrhov."
+      "subtitle": "Umelá inteligencia je vstavaná v VET.IS. Položte otázku vlastnými slovami alebo začnite jedným z návrhov."
     },
     "suggestions": {
       "vaccinations": "Ktorí pacienti majú oneskorenú vakcináciu?",
@@ -73,7 +73,7 @@
       "addCardTitle": "Pridajte platobnú kartu na vyskúšanie AI",
       "addCardButton": "Pridať kartu",
       "askAdminCard": "Požiadajte správcu kliniky o pridanie karty.",
-      "notAvailable": "OpenVPM AI nie je pre tento pracovný priestor k dispozícii.",
+      "notAvailable": "VET.IS AI nie je pre tento pracovný priestor k dispozícii.",
       "hostedUnavailable": "Agent momentálne nie je k dispozícii. Pracujeme na tom, skúste to znova čoskoro.",
       "configVertexPrefix": "Nakonfigurujte Google Vertex AI pomocou",
       "configVertexMid": "a poverení servisného účtu pre Gemini, alebo nastavte",
@@ -94,7 +94,7 @@
     }
   },
   "agent.accessRestricted": "Prístup k agentovi je obmedzený",
-  "agent.accessRestrictedDesc": "Iba administrátori a veterinárni lekári môžu spúšťať asistenta OpenVPM.",
+  "agent.accessRestrictedDesc": "Iba administrátori a veterinárni lekári môžu spúšťať asistenta VET.IS.",
   "agent.backToDashboard": "Späť na prehľad",
   "agent.checkingAccess": "Overuje sa prístup k agentovi...",
   "agent.composer.allowWrites": "Povoliť zápis: termíny a vitálne funkcie pacienta",
@@ -112,7 +112,7 @@
   "agent.status.configVertexPrefix": "Nakonfigurujte Google Vertex AI pomocou",
   "agent.status.configVertexSuffix": "pre explicitný model Claude.",
   "agent.status.hostedUnavailable": "Agent momentálne nie je dostupný. Pracujeme na tom. Skontrolujte to prosím čoskoro.",
-  "agent.status.notAvailable": "OpenVPM AI nie je k dispozícii pre tento pracovný priestor.",
+  "agent.status.notAvailable": "VET.IS AI nie je k dispozícii pre tento pracovný priestor.",
   "agent.status.retry": "Skúsiť znova",
   "agent.status.unavailable": "Stav agenta nie je dostupný",
   "agent.status.unavailableDesc": "Nepodarilo sa overiť pripravenosť agenta. Skúste znova pred spustením.",
@@ -121,11 +121,11 @@
   "agent.suggestions.carprofen": "Aké je dávkovanie karprofénu pre 12 kg psa?",
   "agent.suggestions.clinicalSummary": "Vytiahni klinický súhrn pre ďalšieho prihláseného pacienta.",
   "agent.suggestions.vaccinations": "Ktorí pacienti meškajú s očkovaním?",
-  "agent.title": "OpenVPM Asistent (AI)",
+  "agent.title": "VET.IS Asistent (AI)",
   "agent.trace.toolCallFew": "{count} volania nástrojov",
   "agent.trace.toolCallMany": "{count} volaní nástrojov",
   "agent.trace.toolCallSingular": "1 volanie nástroja",
-  "agent.welcome.subtitle": "Umelá inteligencia je vstavaná v OpenVPM. Položte otázku bežnými slovami alebo začnite jedným z návrhov.",
+  "agent.welcome.subtitle": "Umelá inteligencia je vstavaná v VET.IS. Položte otázku bežnými slovami alebo začnite jedným z návrhov.",
   "agent.welcome.title": "S čím vám môžem pomôcť?",
   "ai": {
     "voiceInput": {
@@ -264,6 +264,28 @@
     "successDelete": "Automatizácia bola odstránená",
     "infoTitle": "💡 Ako fungujú automatizácie?",
     "infoDescription": "Pravidlá sa spúšťajú na základe udalostí (prepustenie z ambulancie, výročie návštevy…). AI generuje správu v slovenčine/maďarčine s Fear-Free tónom. Správy sú odosielané cez SMS alebo e-mail — nakonfigurujte Twilio/Resend v nastaveniach."
+  },
+  "auth": {
+    "login": {
+      "subtitle": "Prihláste sa do svojej ambulancie",
+      "subtitleDemo": "Preskúmajte živý produkt",
+      "demoBoxTitle": "Okamžitý prístup k živej ukážke",
+      "demoBoxBody": "Žiadny telefonát, predajný formulár ani kreditná karta. Váš e-mail použijeme na ochranu tejto zdieľanej ukážky pred automatizovaným zneužitím. Môžeme vám poslať jeden krátky e-mail s otázkou na váš názor; kedykoľvek sa môžete odhlásiť.",
+      "email": "E-mail",
+      "password": "Heslo",
+      "emailPlaceholder": "vas@klinika.sk",
+      "passwordPlaceholder": "Zadajte svoje heslo",
+      "errorInvalid": "Neplatný e-mail alebo heslo",
+      "demoUnavailable": "Demo je dočasne nedostupné.",
+      "openingDemo": "Otváram demo...",
+      "signingIn": "Prihlasujem...",
+      "openDemo": "Otvoriť živé demo",
+      "signIn": "Prihlásiť sa",
+      "forgotPassword": "Zabudli ste heslo?",
+      "noAccount": "Nemáte účet?",
+      "startClinic": "Založiť moju kliniku",
+      "register": "Zaregistrujte svoju ambulanciu"
+    }
   },
   "billing": {
     "page": {
@@ -775,7 +797,12 @@
     "loading": "Načítavam...",
     "error_retry": "Nepodarilo sa načítať dáta. Skúste to znova.",
     "signOut": "Odhlásiť sa",
-    "skipToMainContent": "Prejsť na hlavný obsah"
+    "skipToMainContent": "Prejsť na hlavný obsah",
+    "back": "Späť",
+    "continue": "Pokračovať",
+    "finish": "Dokončiť",
+    "retry": "Skúsiť znova",
+    "dismiss": "Zavrieť"
   },
   "common.cancel": "Zrušiť",
   "common.save": "Uložiť",
@@ -909,7 +936,16 @@
         "description": "Zarezervujte si svoju prvú návštevu a zobrazí sa tu.",
         "action": "Rezervujte si prvú návštevu"
       },
-      "error": "Nie je možné načítať nadchádzajúce stretnutia."
+      "error": "Nie je možné načítať nadchádzajúce stretnutia.",
+      "status": {
+        "confirmed": "Potvrdené",
+        "checked_in": "Príchod",
+        "in_exam": "Vyšetruje sa",
+        "scheduled": "Naplánované",
+        "completed": "Dokončené",
+        "cancelled": "Zrušené",
+        "no_show": "Nedostavil sa"
+      }
     },
     "followUps": {
       "title": "Fronta kontrol a následnej starostlivosti",
@@ -930,7 +966,16 @@
       "empty": {
         "title": "Vaše tabuľky sa zobrazia po spustení",
         "description": "Keď si rezervujete návštevy a posielate účty, vaše trendy a súčty sa vyplnia tu."
-      }
+      },
+      "appointmentsThisWeek": "Termíny tento týždeň",
+      "completed": "Dokončené",
+      "scheduled": "Naplánované",
+      "cancelled": "Zrušené",
+      "speciesDistribution": "Zastúpenie druhov zvierat",
+      "revenueLast30Days": "Tržby (posledných 30 dní)",
+      "revenue": "Tržby",
+      "productionByDoctor": "Produkcia podľa lekára (MTD)",
+      "production": "Produkcia"
     }
   },
   "encounters.chargeCapture.addButton": "Pridať",
@@ -1894,6 +1939,9 @@
       "backToPatients": "Späť na zoznam pacientov",
       "backToPatient": "Späť na kartu pacienta",
       "reviewDuplicates": "Kontrola duplikátov",
+      "capturePhotos": "Zosnímať fotografie",
+      "getSignature": "Získať podpis",
+      "downloadMedicalSummary": "Stiahnuť súhrn",
       "editPatient": "Upraviť pacienta",
       "newSoap": "Nový záznam (SOAP)",
       "newPrescription": "Nový predpis",
@@ -2282,6 +2330,25 @@
     "confirmSendMany": "Odoslať vakcinačné pripomienky {count} pacientom teraz? Doručenie použije dostupný komunikačný kanál každého klienta a zaznamená sa v komunikácii."
   },
   "records": {
+    "capturePhotos": {
+      "button": "Zosnímať fotografie",
+      "modalTitle": "Zosnímať fotografie",
+      "scanNotice": "Naskenujte akýmkoľvek telefónom. Kód je platný 30 minút.",
+      "noPhotos": "Zatiaľ žiadne fotografie",
+      "onePhoto": "1 pridaná fotografia",
+      "countPhotos": "{count} pridaných fotografií",
+      "newPhotosArrive": "Nové fotografie sa zobrazia tu."
+    },
+    "consentSign": {
+      "button": "Získať podpis",
+      "modalTitle": "Získať podpis",
+      "scanNotice": "Naskenujte akýmkoľvek telefónom. Kód je platný 60 minút.",
+      "checkNotice": "Skontrolujte text súhlasu a vytvorte kód.",
+      "makeCode": "Vytvoriť kód",
+      "signedBy": "Podpísal/a {name}",
+      "openSignedPdf": "Otvoriť podpísané PDF",
+      "savedUnderDocs": "Uložené v karte tohto pacienta v sekcii Dokumenty."
+    },
     "title": "Záznamy",
     "subtitle": "Klinické poznámky, SOAPE záznamy a história",
     "new_record": "Nový záznam",
@@ -3291,7 +3358,7 @@
   "whiteboard.unknownPatient": "Neznámy pacient",
   "nav.sectionClinical": "Klinická Prax",
   "nav.sectionMarketing": "Marketing Studio",
-  "nav.sectionAi": "AI Veterinára",
+  "nav.sectionAi": "AI nástroje",
   "nav.sectionSettings": "Správa Kliniky",
   "nav.collapseMenu": "Zbaliť menu",
   "nav.expandMenu": "Rozbaliť menu",
@@ -3316,16 +3383,16 @@
   "nav.marketingPlan": "Plán obsahu",
   "nav.marketingReviews": "Recenzie",
   "nav.marketingHandouts": "Letáky",
-  "nav.marketingMessages": "Správy a SMS fronta",
-  "nav.marketingWebsite": "Webstránka kliniky",
+  "nav.marketingMessages": "Správy & SMS",
+  "nav.marketingWebsite": "Web kliniky",
   "nav.waitingRoomTv": "Čakáreň TV",
   "nav.marketingAutomations": "Automatizácie",
-  "nav.marketingConsents": "Súhlasy (GDPR)",
+  "nav.marketingConsents": "Súhlasy & skripty",
   "nav.marketingScripts": "Operačné skripty",
-  "nav.marketingMedia": "Médiá & AI plátno",
-  "nav.marketingCompetitors": "Konkurencia",
-  "nav.marketingWellness": "Preventívne plány",
-  "nav.ekasa": "e-Kasa",
+  "nav.marketingMedia": "Knižnica médií",
+  "nav.marketingCompetitors": "Konkurencia & Trh",
+  "nav.marketingWellness": "Wellness balíčky",
+  "nav.ekasa": "e-Kasa Doklady",
   "nav.v2Import": "V2 Migrácia",
   "nav.vetIntel": "Vet Intelligence",
   "nav.agentImaging": "Analýza Snímkov",
@@ -3400,17 +3467,17 @@
   "labImport.emptyDesc": "Nahrajte CSV alebo textový export z analyzátora IDEXX, Fuji Dri-Chem alebo Mindray.",
   "labImport.saveSuccess": "Laboratórny protokol bol úspešne uložený",
   "labImport.toastReviewed": "Laboratórny protokol bol schválený lekárom",
-  "welcome.headlineAdmin": "Vitajte v OpenVPM, {practiceName}!",
+  "welcome.headlineAdmin": "Vitajte vo VET.IS, {practiceName}!",
   "welcome.headlineStaff": "Vitajte, {firstName}!",
-  "welcome.headlineFallback": "Vitajte v OpenVPM!",
+  "welcome.headlineFallback": "Vitajte vo VET.IS!",
   "welcome.yourClinic": "vaša klinika",
-  "welcome.subline": "Pozrite sa, čo OpenVPM dokáže pre vašu kliniku urobiť už dnes. Vyberte si kartu a za minútu vám to ukážeme.",
+  "welcome.subline": "Pozrite sa, čo VET.IS dokáže pre vašu kliniku urobiť už dnes. Vyberte si kartu a za minútu vám to ukážeme.",
   "welcome.skip": "Preskočiť nateraz",
   "welcome.reopenHint": "Kedykoľvek sa sem môžete vrátiť cez Sprievodcu v nastaveniach.",
   "welcome.setupInstead": "Namiesto toho nastaviť moju kliniku",
   "welcome.doneBadge": "Hotovo",
   "welcome.allDone.title": "Vyskúšali ste všetky!",
-  "welcome.allDone.body": "Prešli ste všetkých sprievodcov. Pripravení prispôsobiť si OpenVPM? Pridajte svoje logo, svoj tím a skutočných klientov.",
+  "welcome.allDone.body": "Prešli ste všetkých sprievodcov. Pripravení prispôsobiť si VET.IS? Pridajte svoje logo, svoj tím a skutočných klientov.",
   "welcome.allDone.accept": "Prispôsobiť kliniku",
   "welcome.allDone.later": "Neskôr",
   "welcome.cards.ask-ai.caption": "Spýtajte sa AI na pacienta",
@@ -3920,15 +3987,15 @@
   "settings.billing.freePrice": "Zadarmo",
   "settings.billing.perLocation": "/pracovisko",
   "settings.billing.unlimitedStaff": "neobmedzený personál",
-  "settings.billing.staffUnitPrice": "+ {price} $/zamestnanec/mes.",
+  "settings.billing.staffUnitPrice": "+ {price} €/zamestnanec/mes.",
   "settings.billing.allStaffRoles": "Všetky roly personálu v cene",
   "settings.billing.staffRolesIncluded": "{count} rolí personálu v cene",
   "settings.billing.unlimitedLocations": "Neobmedzené pobočky",
   "settings.billing.locationsCount": "{count} pobočiek",
   "settings.billing.smsIncluded": "{count} SMS/mes. v cene",
-  "settings.billing.smsOverage": ", potom {price} $/SMS",
+  "settings.billing.smsOverage": ", potom {price} €/SMS",
   "settings.billing.aiActionsIncluded": "{count} AI akcií/mes. v cene",
-  "settings.billing.aiActionsOverage": ", potom {price} $/akcia",
+  "settings.billing.aiActionsOverage": ", potom {price} €/akcia",
   "settings.billing.featureAgent": "OpenVPM Agent (AI)",
   "settings.billing.featureSms": "Odosielanie SMS",
   "settings.billing.featureAdvancedReporting": "Pokročilé reporty",
@@ -3982,11 +4049,27 @@
   "marketing.plan.published": "Publikované",
   "marketing.plan.blocked": "Zablokované",
   "marketing.plan.approve": "Schváliť",
+  "marketing.plan.calendar": "Kalendár",
+  "marketing.plan.month": "Mesiac",
+  "marketing.plan.week": "Týždeň",
+  "marketing.plan.cards": "Karty",
+  "marketing.plan.today": "Dnes",
+  "marketing.plan.schedulePost": "Naplánovať príspevok",
+  "marketing.plan.scheduleOnDate": "Naplánovať na tento deň",
+  "marketing.plan.unscheduled": "Nenaplánované koncepty",
+  "marketing.plan.moveSuccess": "Príspevok bol presunutý na {date}.",
   "common.close": "Zavrieť",
   "marketing.handouts.title": "Edukačné letáky",
   "marketing.handouts.description": "Knižnica opakovateľných letákov s QR kódmi pre klientov.",
   "marketing.handouts.newHandout": "Nový leták",
   "marketing.handouts.noHandouts": "Žiadne letáky.",
+  "marketing.handouts.aiGenerate": "AI Generátor",
+  "marketing.handouts.aiGeneratorTitle": "AI Generátor letákov & obrázkov",
+  "marketing.handouts.aiGeneratorDesc": "Vytvorte ilustráciu alebo fotografiu pre váš leták pomocou AI.",
+  "marketing.handouts.aiPrompt": "Popis obrázka (prompt)",
+  "marketing.handouts.aiToggleShow": "Otvoriť AI Generátor",
+  "marketing.handouts.aiToggleHide": "Skryť AI Generátor",
+  "marketing.handouts.aiImageReady": "AI obrázok pripravený — môžete ho použiť ako ilustračnú fotku letáku.",
   "marketing.tv.title": "Čakáreň TV – Slajdy",
   "marketing.tv.description": "Spravujte slajdy zobrazované na TV obrazovke v čakárni.",
   "marketing.tv.newSlide": "Nový slajd",
@@ -4008,16 +4091,8 @@
   "marketing.tv.active": "Aktívny",
   "marketing.tv.inactive": "Neaktívny",
   "marketing.tv.noContent": "Bez obsahu",
-  "nav.marketingPlan": "Plán obsahu",
-  "nav.marketingReviews": "Recenzie",
-  "nav.marketingHandouts": "Letáky",
-  "nav.waitingRoomTv": "Čakáreň TV",
   "marketing.messages.tabInbox": "Schránka",
   "marketing.messages.tabLogs": "Správy & Logy",
-  "nav.marketingAutomations": "Automatizácie",
-  "nav.marketingConsents": "Súhlasy (GDPR)",
-  "nav.marketingScripts": "Operačné skripty",
-  "nav.marketingWellness": "Wellness balíčky",
   "marketing.consents.title": "Súhlasy (Consent Registry)",
   "marketing.consents.subtitle": "Jediný zdroj pravdy pre GDPR a mediálne súhlasy. Žiadna fotografia bez aktívneho súhlasu sa nepublikuje.",
   "marketing.consents.createBtn": "Zaznamenať súhlas",
@@ -4080,6 +4155,14 @@
   "waitingRoom.announcement.seniorBody": "Starší psi a mačky profitujú z preventívneho krvného rozboru a kontroly obličiek a pečene. Včasné odhalenie predlžuje život.",
   "waitingRoom.announcement.parasiteTitle": "Antiparazitiká celoročne",
   "waitingRoom.announcement.parasiteBody": "Odčervovanie a antiparazitárna prevencia nie sú len letnou záležitosťou. Poradíme vám s vhodným programom na mieru.",
+  "waitingRoom.announcement.heatTitle": "Pozor na letné horúčavy a prehriatie",
+  "waitingRoom.announcement.heatBody": "Nikdy nenechávajte zviera v zaparkovanom aute ani na pár minút. Zabezpečte dostatok čerstvej vody a venčite skoro ráno alebo neskoro večer.",
+  "waitingRoom.announcement.winterTitle": "Zimná starostlivosť a ochrana labiek",
+  "waitingRoom.announcement.winterBody": "Posypová soľ a mráz môžu spôsobiť bolestivé praskliny na labkách. Po prechádzke labky opláchnite a ošetrite ochranným balzamom.",
+  "waitingRoom.announcement.felineStressTitle": "Mačky v čakárni: Pokoj a bezpečie",
+  "waitingRoom.announcement.felineStressBody": "Prepravku držte v lone alebo na vyvýšenom mieste, nie na zemi pri psoch. Zníženie stresu pomáha predchádzať idiopatickej cystitíde (FLUTD).",
+  "waitingRoom.announcement.puppySocialTitle": "Šteniatka: Socializácia a imunita",
+  "waitingRoom.announcement.puppySocialBody": "Prvé týždne sú kľúčové pre celoživotnú povahu. Do ukončenia primovakcinácie sa vyhnite kontaktu s neznámymi psami a rizikovými plochami.",
   "scribe.title": "AI Voice Scribe - Hlasová konzultácia",
   "scribe.description": "Vyhľadajte pacienta pre začatie hlasovej konzultácie a generovanie SOAP.",
   "scribe.searchPlaceholder": "Vyhľadať pacienta...",
@@ -4304,8 +4387,6 @@
   "statutory.protocols.noForms": "Žiadne formuláre nie sú k dispozícii.",
   "statutory.protocols.templateId": "Identifikátor šablóny: {slug}",
   "statutory.dateRangeTo": "do",
-  "nav.marketingMedia": "Knižnica médií",
-  "nav.marketingCompetitors": "Konkurencia & Trh",
   "marketing.media.title": "Knižnica médií a grafiky",
   "marketing.media.description": "Správa fotografií, videí a vizuálnych podkladov s prísnou kontrolou GDPR súhlasov.",
   "marketing.media.manageConsents": "Spravovať GDPR súhlasy",
@@ -4327,19 +4408,19 @@
   "marketing.competitors.title": "Konkurencia a trhová inteligencia",
   "marketing.competitors.description": "Sledovanie konkurenčných veterinárnych pracovísk, benchmarking služieb, ratingov a trhových trendov.",
   "marketing.competitors.analyzeAction": "Analyzovať trh",
-  "species.canine": "Pes (canine)",
-  "species.feline": "Mačka (feline)",
-  "species.avian": "Vták (avian)",
-  "species.rabbit": "Králik (rabbit)",
-  "species.reptile": "Plaz (reptile)",
-  "species.equine": "Kôň (equine)",
-  "species.bovine": "Hovädzí dobytok (bovine)",
-  "species.ovine": "Ovca (ovine)",
-  "species.caprine": "Koza (caprine)",
-  "species.porcine": "Ošípaná (porcine)",
-  "species.poultry": "Hydina (poultry)",
-  "species.camelid": "Lamovité (camelid)",
-  "species.other": "Iné zviera",
+  "species.canine": "Pes",
+  "species.feline": "Mačka",
+  "species.avian": "Vták",
+  "species.rabbit": "Králik",
+  "species.reptile": "Plaz",
+  "species.equine": "Kôň",
+  "species.bovine": "Hovädzí dobytok",
+  "species.ovine": "Ovca",
+  "species.caprine": "Koza",
+  "species.porcine": "Ošípaná",
+  "species.poultry": "Hydina",
+  "species.camelid": "Lama / alpaka",
+  "species.other": "Iné",
   "book.unavailableTitle": "Táto stránka na žiadosť o termín nie je dostupná",
   "book.unavailableDescription": "Odkaz môže byť nesprávny alebo sú online žiadosti o termín vypnuté. Kontaktujte prosím priamo kliniku.",
   "book.requestSentTitle": "Žiadosť bola odoslaná!",
@@ -4380,5 +4461,236 @@
   "book.sendingRequest": "Odosiela sa žiadosť…",
   "book.requestType": "Požiadať o {type}",
   "book.requestAppointment": "Požiadať o termín",
-  "book.preferToTalk": "Preferujete rozhovor?"
+  "book.preferToTalk": "Preferujete rozhovor?",
+  "dashboard.charts.appointmentsThisWeek": "Termíny tento týždeň",
+  "dashboard.charts.speciesDistribution": "Rozdelenie podľa druhov",
+  "dashboard.charts.revenueLast30Days": "Tržby (posledných 30 dní)",
+  "dashboard.charts.productionByDoctor": "Produkcia podľa lekárov (MTD)",
+  "dashboard.charts.revenue": "Tržby",
+  "dashboard.charts.production": "Produkcia",
+  "dashboard.charts.completed": "Vybavené",
+  "dashboard.charts.scheduled": "Naplánované",
+  "dashboard.charts.cancelled": "Zrušené",
+  "activation": {
+    "title": "Dokončite kontrolu nastavenia: {practiceName}",
+    "defaultPracticeName": "vaša klinika",
+    "progressSummary": "{shortLabel} · {doneCount} z {total} hotovo",
+    "hideForNow": "Zatiaľ skryť",
+    "helpMe": "Pomôžte mi s nastavením",
+    "helpRequested": "Pomoc s nastavením bola vyžiadaná",
+    "helpRequestedToast": "Žiadosť o pomoc s nastavením bola prijatá",
+    "dontShowAgain": "Toto už nezobrazovať",
+    "journey": {
+      "resume": "Pokračovať v sprievodcovi nastavením",
+      "start": "Spustiť sprievodcu nastavením",
+      "continueAt": "Pokračovať v kroku: {stage}",
+      "choosePath": "Zvoľte si postup a ukladajte si pokrok za pochodu",
+      "steps": {
+        "intent": "vaša východisková cesta",
+        "basics": "základné údaje kliniky",
+        "branding": "firemná identita",
+        "team": "váš tím",
+        "data": "import dát",
+        "agent": "AI asistent",
+        "phone": "SMS správy",
+        "billing": "fakturácia",
+        "allSet": "záverečná kontrola"
+      }
+    },
+    "milestones": {
+      "tour": {
+        "label": "Absolvujte 60-sekundovú prehliadku",
+        "hint": "Pozrite si rozvrh, záznamy, účtovníctvo a AI za minútu."
+      },
+      "brand": {
+        "label": "Prispôsobte svojej značke",
+        "hint": "Pridajte svoje logo a farbu kliniky."
+      },
+      "team": {
+        "label": "Pozvite člena tímu",
+        "hint": "Otestujte odovzdanie pacienta medzi lekárom a recepciou."
+      },
+      "teamExplore": {
+        "label": "Pozvite člena tímu",
+        "hint": "Zapojte svojich lekárov a recepciu. Počet používateľov je neobmedzený."
+      },
+      "ai": {
+        "label": "Opýtajte sa niečo AI asistenta",
+        "hint": "Skúste: „Ktoré zvieratá majú po termíne očkovania?“"
+      },
+      "data": {
+        "label": "Pridajte jedného skutočného klienta a zviera",
+        "hint": "Začnite zľahka: vytvorte jedného klienta a pridajte k nemu zviera."
+      },
+      "firstAppointment": {
+        "label": "Objednajte zviera na prvý termín",
+        "hint": "Zadajte jeden skutočný termín do kalendára. Váš súčasný PIMS môže zostať v prevádzke."
+      },
+      "firstVisit": {
+        "label": "Dokončite svoju prvú návštevu",
+        "hint": "Zaevidujte príchod, začnite vyšetrenie, ukončite odovzdanie majiteľovi, uložte položky a dokončite vyúčtovanie."
+      },
+      "booking": {
+        "label": "Nakonfigurujte online objednávanie",
+        "hint": "Vyberte typy návštev a časy, ktoré môžu klienti požadovať, a stránku zverejnite."
+      },
+      "texting": {
+        "label": "Dokončite aktiváciu SMS správ",
+        "hint": "Odošlite registráciu u operátora a počkajte na schválenie. SMS správy nie sú aktívne bez povoleného čísla."
+      },
+      "clientPayments": {
+        "label": "Nastavte platby kartou od klientov",
+        "hint": "Prepojte Stripe účet kliniky, aby platby majiteľov zvierat išli priamo na váš účet."
+      },
+      "billing": {
+        "label": "Potvrďte pripojenie fakturácie",
+        "hint": "Uložená karta zabezpečí plynulý prechod skúšobnej verzie bez prerušenia prístupu. Zrušiť môžete kedykoľvek."
+      }
+    },
+    "complete": {
+      "title": "Kontrola nastavenia je dokončená",
+      "description": "Pokračujte v overovaní reálnych klinických postupov s tímom pred prechodom zo starého systému.",
+      "dismiss": "Zavrieť"
+    },
+    "error": {
+      "title": "Kontrolný zoznam nastavenia sa nepodarilo načítať",
+      "unavailable": "Údaje kontrolného zoznamu nastavenia neboli dostupné. Skúste to znova.",
+      "retry": "Skúsiť znova"
+    }
+  },
+  "onboarding": {
+    "intents": {
+      "alongside": {
+        "label": "Používať súbežne so súčasným PIMS",
+        "shortLabel": "Súbežne so súčasným PIMS",
+        "description": "Začnite s jedným užitočným procesom, kým váš súčasný systém zostáva v prevádzke.",
+        "firstWin": "Preneste malý súbor reálnych dát",
+        "firstWinHint": "Začnite s niekoľkými klientmi a zvieratami. Váš súčasný PIMS zostáva zachovaný."
+      },
+      "replace": {
+        "label": "Nahradiť môj súčasný PIMS",
+        "shortLabel": "Náhrada súčasného PIMS",
+        "description": "Pripravte si postupný prechod dát kliniky a denných procesov.",
+        "firstWin": "Spustite postupný import dát",
+        "firstWinHint": "Nahrajte klientov a zvieratá pred prechodom živých procesov kliniky."
+      },
+      "explore": {
+        "label": "Preskúmať s ukážkovými dátami",
+        "shortLabel": "Preskúmať",
+        "description": "Spoznajte systém na pripravenej klinike bez nutnosti rozhodnutia o migrácii.",
+        "firstWin": "Absolvujte 60-sekundovú prehliadku",
+        "firstWinHint": "Pozrite si rozvrh, záznamy, účtovníctvo a AI za minútu."
+      },
+      "self_host": {
+        "label": "Vyskúšať pre vlastný hosting",
+        "shortLabel": "Vlastný hosting",
+        "description": "Vyskúšajte open-source riešenie pred plánovaním alebo spustením vlastného nasadenia.",
+        "firstWin": "Nastavte značku svojho prostredia",
+        "firstWinHint": "Najprv nastavte údaje kliniky; cloudové fakturačné kroky sú vynechané."
+      }
+    },
+    "journey": {
+      "stepCounter": "Krok {current} z {total}",
+      "canChangeLater": "Neskôr to môžete zmeniť.",
+      "finishLater": "Dokončím neskôr",
+      "finishRemainingImportLater": "Dokončiť zvyšný import neskôr",
+      "backUnavailable": "Krok späť nie je možný po uložení záznamov. Dokončite zvyšný import teraz alebo pokračujte neskôr.",
+      "steps": {
+        "intent": {
+          "title": "Platforma skutočne vytvorená pre vašu kliniku."
+        },
+        "basics": {
+          "title": "Prispôsobte si systém pre svoju kliniku."
+        },
+        "data": {
+          "title": "Preneste svoju históriu bez obáv."
+        },
+        "allSet": {
+          "title": "Váš prvý deň je pripravený."
+        }
+      }
+    }
+  },
+  "species": {
+    "dog": "Pes",
+    "cat": "Mačka",
+    "bird": "Vták",
+    "rabbit": "Králik",
+    "horse": "Kôň",
+    "reptile": "Plaz",
+    "small_mammal": "Drobný cicavec",
+    "other": "Iné",
+    "canine": "Pes",
+    "feline": "Mačka",
+    "avian": "Vták",
+    "equine": "Kôň",
+    "bovine": "Hovädzí dobytok",
+    "ovine": "Ovca",
+    "caprine": "Koza",
+    "porcine": "Ošípaná",
+    "poultry": "Hydina",
+    "camelid": "Lama / alpaka"
+  },
+  "records.vaccinations.form.vaccine": "Vakcína *",
+  "records.vaccinations.form.vaccinePlaceholder": "napr. Besnota",
+  "records.vaccinations.form.productName": "Názov lieku / produktu",
+  "records.vaccinations.form.productNamePlaceholder": "napr. Defensor 3",
+  "records.vaccinations.form.nextDue": "Dátum ďalšieho očkovania",
+  "records.vaccinations.form.lotNumber": "Číslo šarže",
+  "records.vaccinations.form.lotNumberPlaceholder": "napr. RAB-2026-04",
+  "records.vaccinations.form.manufacturer": "Výrobca",
+  "records.vaccinations.form.manufacturerPlaceholder": "napr. Zoetis",
+  "records.vaccinations.form.productExpiration": "Expirácia šarže *",
+  "records.vaccinations.form.doseType": "Typ dávky *",
+  "records.vaccinations.form.chooseDoseType": "Vyberte typ dávky",
+  "records.vaccinations.form.initialDose": "Prvá dávka (primovakcinácia)",
+  "records.vaccinations.form.boosterDose": "Preočkovanie (revakcinácia)",
+  "records.vaccinations.form.licensedDuration": "Platnosť vakcinácie *",
+  "records.vaccinations.form.chooseDuration": "Vyberte dĺžku platnosti",
+  "records.vaccinations.form.duration1Year": "1 rok",
+  "records.vaccinations.form.duration3Years": "3 roky",
+  "records.vaccinations.form.duration4Years": "4 roky",
+  "records.vaccinations.form.rabiesTagNumber": "Číslo známky besnoty",
+  "records.vaccinations.form.supervisingVeterinarian": "Dohliadajúci veterinárny lekár *",
+  "records.vaccinations.form.chooseVeterinarian": "Vyberte veterinára",
+  "records.vaccinations.form.license": "Číslo KVL SR",
+  "records.vaccinations.form.licenseMissing": "chýba číslo KVL SR",
+  "records.vaccinations.form.licenseNote": "Pre vystavenie potvrdenia o očkovaní proti besnote je potrebné číslo KVL SR v nastaveniach personálu.",
+  "records.vaccinations.saveVaccination": "Uložiť očkovanie",
+  "billing.page.ekasaReceipts": "Doklady (e-Kasa)",
+  "billing.page.ekasaClosures": "Denné uzávierky (Z-report)",
+  "nav.ekasaClosures": "Denné uzávierky (Z-report)",
+  "support": {
+    "remoteSupport": "Vzdialená podpora",
+    "description": "Zdieľajte obrazovku s technickou podporou pre rýchlejšie riešenie problémov.",
+    "instructions": "Kliknutím nižšie vytvoríte reláciu a získate 6-miestny kód, ktorý oznámite technickému podporte.",
+    "createSession": "Vytvoriť reláciu podpory",
+    "creating": "Vytváram...",
+    "shareCode": "Oznámte tento kód technickému podporte. Relácia sa aktivuje po pripojení agenta.",
+    "startSharing": "Spustiť zdieľanie",
+    "starting": "Spúšťam...",
+    "endSession": "Ukončiť reláciu",
+    "copyCode": "Kopírovať kód",
+    "join": "Pripojiť sa",
+    "sessionCreated": "Relácia podpory vytvorená",
+    "sessionCreationFailed": "Nepodarilo sa vytvoriť reláciu podpory",
+    "sharingStarted": "Zdieľanie spustené",
+    "sessionEnded": "Relácia ukončená",
+    "codeCopied": "Kód skopírovaný",
+    "adminTitle": "Admin podpora",
+    "adminDescription": "Pripojte sa k obrazovke zákazníka cez 6-miestny kód relácie.",
+    "adminInstructions": "Vyžiadajte si od zákazníka 6-miestny kód z jeho support stránky.",
+    "sessionNotFound": "Relácia s týmto kódom nebola nájdená",
+    "connected": "Pripojené k relácii"
+  },
+  "toast": {
+    "sessionCreated": "Relácia podpory vytvorená",
+    "sessionCreationFailed": "Nepodarilo sa vytvoriť reláciu podpory",
+    "sharingStarted": "Zdieľanie spustené",
+    "sessionEnded": "Relácia ukončená",
+    "codeCopied": "Kód skopírovaný"
+  },
+  "button": {
+    "copy": "Kopírovať"
+  }
 }

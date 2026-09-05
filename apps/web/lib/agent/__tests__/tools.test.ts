@@ -728,3 +728,86 @@ describe("find_client and find_patient execution", () => {
     expect(result[0]?.owner?.lastName).toBe("Keľová");
   });
 });
+
+describe("new clinical agent tools", () => {
+  it("registers all 5 new tools in AGENT_TOOLS", () => {
+    expect(getTool("query_lab_trends")).toBeDefined();
+    expect(getTool("check_drug_safety")).toBeDefined();
+    expect(getTool("audit_missed_charges")).toBeDefined();
+    expect(getTool("create_discharge_summary")).toBeDefined();
+    expect(getTool("generate_rvps_report")).toBeDefined();
+  });
+
+  it("check_drug_safety rejects invalid input", () => {
+    const tool = getTool("check_drug_safety")!;
+    expect(() => tool.zod.parse({})).toThrow();
+    expect(() => tool.zod.parse({ patientId: "not-a-uuid", candidateDrug: "Melox" })).toThrow();
+  });
+
+  it("check_drug_safety detects paracetamol toxicity in feline", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        // patient query
+        [{ id: PATIENT_ID, name: "Micka", species: "feline" }],
+        // active prescriptions
+        [],
+        // allergies
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Paracetamol 500mg" },
+      ctx
+    )) as { safe: boolean; severity: string; contraindications: string[] };
+
+    expect(result.safe).toBe(false);
+    expect(result.severity).toBe("contraindicated");
+    expect(result.contraindications.some((c) => c.includes("Acetaminophen"))).toBe(true);
+  });
+
+  it("check_drug_safety detects NSAID + Corticosteroid interaction", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        // patient query
+        [{ id: PATIENT_ID, name: "Rex", species: "canine" }],
+        // active prescriptions
+        [{ id: "rx-1", drugName: "Prednisolon 5mg", status: "active" }],
+        // allergies
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Meloxidyl 1.5mg/ml" },
+      ctx
+    )) as { safe: boolean; severity: string; contraindications: string[] };
+
+    expect(result.safe).toBe(false);
+    expect(result.severity).toBe("contraindicated");
+    expect(result.contraindications.some((c) => c.includes("Corticosteroid"))).toBe(true);
+  });
+
+  it("audit_missed_charges validates schema", () => {
+    const tool = getTool("audit_missed_charges")!;
+    expect(() => tool.zod.parse({})).toThrow();
+    expect(tool.zod.parse({ appointmentId: PATIENT_ID })).toEqual({
+      appointmentId: PATIENT_ID,
+    });
+  });
+
+  it("generate_rvps_report validates reporting month and year", () => {
+    const tool = getTool("generate_rvps_report")!;
+    expect(() => tool.zod.parse({})).toThrow();
+    expect(() => tool.zod.parse({ year: 2026, month: 13 })).toThrow();
+    expect(tool.zod.parse({ year: 2026, month: 9 })).toEqual({
+      year: 2026,
+      month: 9,
+    });
+  });
+});
+
