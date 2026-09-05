@@ -6,6 +6,7 @@ import { crszRouter } from "./crsz";
 import { accountingRouter } from "./accounting";
 import { labImportRouter } from "./lab-import";
 import { voiceRouter } from "./voice";
+import { marketingRouter } from "./marketing";
 
 /**
  * Root router for all OpenVPM custom extensions.
@@ -19,6 +20,7 @@ export const extensionsRouter = createRouter({
   accounting: accountingRouter,
   labImport: labImportRouter,
   voice: voiceRouter,
+  marketing: marketingRouter,
 });
 
 export {
@@ -29,4 +31,5 @@ export {
   accountingRouter,
   labImportRouter,
   voiceRouter,
+  marketingRouter,
 };

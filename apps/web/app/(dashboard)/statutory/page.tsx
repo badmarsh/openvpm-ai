@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -80,6 +81,160 @@ function formatDateTime(val: Date | string | null | undefined): string {
   } catch {
     return String(val);
   }
+}
+
+function getRabiesComplianceStatus(
+  administeredAt: Date | string | null | undefined,
+  createdAt?: Date | string | null | undefined,
+) {
+  if (!administeredAt) {
+    return {
+      status: "unknown",
+      label: "Neznáme",
+      badgeClass: "bg-muted text-muted-foreground border-border",
+    };
+  }
+  const adminDate = new Date(administeredAt);
+  const checkDate = createdAt ? new Date(createdAt) : new Date();
+  const diffDays = Math.floor(
+    (checkDate.getTime() - adminDate.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays <= 3) {
+    return {
+      status: "compliant",
+      label: "V lehote (≤ 3 dni)",
+      badgeClass:
+        "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+    };
+  } else {
+    return {
+      status: "overdue",
+      label: `Po lehote (${diffDays} d.)`,
+      badgeClass:
+        "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
+    };
+  }
+}
+
+function openInspectionPrintView({
+  title,
+  statutoryReference,
+  subtitle,
+  headers,
+  rows,
+  summaryNotes,
+}: {
+  title: string;
+  statutoryReference: string;
+  subtitle?: string;
+  headers: string[];
+  rows: (string | number | null | undefined)[][];
+  summaryNotes?: string;
+}) {
+  const printWindow = window.open("", "_blank", "width=1100,height=850");
+  if (!printWindow) return;
+
+  const todayStr = new Date().toLocaleDateString("sk-SK", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const tableRows = rows
+    .map((row, idx) => {
+      const cells = row
+        .map(
+          (cell) =>
+            `<td style="padding: 5px 6px; border: 1px solid #000; vertical-align: top;">${cell ?? "—"}</td>`,
+        )
+        .join("");
+      return `<tr><td style="padding: 5px 4px; border: 1px solid #000; text-align: center; font-weight: bold; width: 30px;">${idx + 1}</td>${cells}</tr>`;
+    })
+    .join("");
+
+  const headerCells = headers
+    .map(
+      (h) =>
+        `<th style="padding: 6px 6px; border: 1px solid #000; background: #eaeaea; text-align: left; font-size: 9px; text-transform: uppercase;">${h}</th>`,
+    )
+    .join("");
+
+  printWindow.document.write(`<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 9.5px; color: #000; margin: 0; padding: 10px; }
+    .header-box { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
+    .title-box { text-align: center; flex: 1; }
+    h1 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-ref { font-size: 9.5px; font-weight: bold; margin-top: 2px; color: #222; }
+    .meta-box { font-size: 8.5px; line-height: 1.3; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 9px; page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    .inspection-footer { margin-top: 20px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+    .sig-block { width: 31%; border: 1px solid #666; border-radius: 4px; padding: 6px; height: 75px; position: relative; font-size: 8px; }
+    .sig-line { position: absolute; bottom: 6px; left: 6px; right: 6px; border-top: 1px dotted #000; text-align: center; padding-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header-box">
+    <div class="meta-box">
+      <strong>VETERINÁRNE PRACOVISKO</strong><br/>
+      Komora veterinárnych lekárov SR<br/>
+      Štátna veterinárna a potravinová správa SR
+    </div>
+    <div class="title-box">
+      <h1>${title}</h1>
+      <div class="stat-ref">${statutoryReference}</div>
+      ${subtitle ? `<div style="font-size: 8.5px; color: #444; margin-top: 2px;">${subtitle}</div>` : ""}
+    </div>
+    <div class="meta-box" style="text-align: right;">
+      Vytlačené: <strong>${todayStr}</strong><br/>
+      Počet záznamov: <strong>${rows.length}</strong>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="padding: 6px 4px; border: 1px solid #000; background: #eaeaea; width: 30px; text-align: center;">P. č.</th>
+        ${headerCells}
+      </tr>
+    </thead>
+    <tbody>
+      ${tableRows}
+    </tbody>
+  </table>
+
+  ${summaryNotes ? `<div style="margin-top: 8px; font-size: 8.5px; color: #333; font-style: italic;">${summaryNotes}</div>` : ""}
+
+  <div class="inspection-footer">
+    <div class="sig-block">
+      <strong>Ošetrujúci veterinárny lekár:</strong>
+      <div class="sig-line">Meno, podpis a odtlačok pečiatky</div>
+    </div>
+    <div class="sig-block">
+      <strong>Regionálna veterinárna a potravinová správa (RVPS):</strong>
+      <div class="sig-line">Záznam o overení knihy / Dátum</div>
+    </div>
+    <div class="sig-block">
+      <strong>Inšpekčný orgán ŠVPS SR:</strong>
+      <div class="sig-line">Dátum inšpekcie a podpis inšpektora</div>
+    </div>
+  </div>
+</body>
+</html>`);
+
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+  }, 400);
 }
 
 export default function StatutoryPage() {
@@ -217,6 +372,7 @@ function RabiesRegisterTab() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [complianceFilter, setComplianceFilter] = useState<"all" | "compliant" | "overdue">("all");
 
   const { data, isLoading } = trpc.reports.rabiesRegister.useQuery({
     search: search || undefined,
@@ -225,8 +381,17 @@ function RabiesRegisterTab() {
     limit: 200,
   });
 
+  const filteredItems = useMemo(() => {
+    if (!data?.items) return [];
+    if (complianceFilter === "all") return data.items;
+    return data.items.filter((item) => {
+      const comp = getRabiesComplianceStatus(item.administeredAt, item.createdAt);
+      return comp.status === complianceFilter;
+    });
+  }, [data?.items, complianceFilter]);
+
   const handleExportCsv = () => {
-    if (!data?.items?.length) return;
+    if (!filteredItems.length) return;
     const headers = [
       "Dátum vakcinácie",
       "Pacient",
@@ -241,22 +406,27 @@ function RabiesRegisterTab() {
       "Majiteľ",
       "Adresa majiteľa",
       "Telefón majiteľa",
+      "Zákonná lehota RVPS (3 dni)",
     ];
-    const rows = data.items.map((item) => [
-      formatDate(item.administeredAt),
-      item.patientName,
-      item.species,
-      item.breed || "—",
-      item.microchipNumber || "Nečipovaný",
-      item.vaccineName,
-      item.lotNumber || "—",
-      formatDate(item.productExpirationDate),
-      formatDate(item.nextDueDate),
-      item.rabiesTagNumber || "—",
-      `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
-      `${item.clientAddress || ""}, ${item.clientCity || ""}`.trim(),
-      item.clientPhone || "—",
-    ]);
+    const rows = filteredItems.map((item) => {
+      const comp = getRabiesComplianceStatus(item.administeredAt, item.createdAt);
+      return [
+        formatDate(item.administeredAt),
+        item.patientName,
+        item.species,
+        item.breed || "—",
+        item.microchipNumber || "Nečipovaný",
+        item.vaccineName,
+        item.lotNumber || "—",
+        formatDate(item.productExpirationDate),
+        formatDate(item.nextDueDate),
+        item.rabiesTagNumber || "—",
+        `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
+        `${item.clientAddress || ""}, ${item.clientCity || ""}`.trim(),
+        item.clientPhone || "—",
+        comp.label,
+      ];
+    });
     downloadStatutoryCsv(
       `kniha_ockovania_besnota_${new Date().toISOString().slice(0, 10)}.csv`,
       headers,
@@ -264,8 +434,41 @@ function RabiesRegisterTab() {
     );
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrintInspection = () => {
+    if (!filteredItems.length) return;
+    const headers = [
+      "Dátum vakcinácie",
+      "Meno pacienta",
+      "Druh & Plemeno",
+      "Číslo mikročipu",
+      "Vakcína / Šarža",
+      "Revakcinácia",
+      "Vlastník zvieraťa",
+      "Bydlisko & Telefón",
+      "Lehota RVPS (3 dni)",
+    ];
+    const rows = filteredItems.map((item) => {
+      const comp = getRabiesComplianceStatus(item.administeredAt, item.createdAt);
+      return [
+        formatDate(item.administeredAt),
+        item.patientName,
+        `${item.species}${item.breed ? ` • ${item.breed}` : ""}`,
+        item.microchipNumber || "Nečipovaný",
+        `${item.vaccineName}${item.lotNumber ? ` (šarža: ${item.lotNumber})` : ""}`,
+        formatDate(item.nextDueDate),
+        `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
+        `${item.clientAddress || ""}, ${item.clientCity || ""} (${item.clientPhone || "—"})`.trim(),
+        comp.label,
+      ];
+    });
+    openInspectionPrintView({
+      title: "Úradná Kniha Očkovania Zvierat Proti Besnote",
+      statutoryReference: "Evidencia v zmysle § 19 ods. 1 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti",
+      subtitle: "Zákonný výkaz pre inšpekčné kontroly Regionálnej veterinárnej a potravinovej správy (RVPS) a CRSZ",
+      headers,
+      rows,
+      summaryNotes: "Zákonná povinnosť: Veterinárny lekár je povinný nahlásiť vakcináciu proti besnote do CRSZ a RVPS do 3 pracovných dní od aplikácie.",
+    });
   };
 
   return (
@@ -305,22 +508,60 @@ function RabiesRegisterTab() {
             variant="outline"
             size="sm"
             onClick={handleExportCsv}
-            disabled={!data?.items?.length}
+            disabled={!filteredItems.length}
             className="gap-2"
           >
             <Download className="h-4 w-4" />
             <span>{t("statutory.exportCsv", "Export pre RVPS (CSV)")}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintInspection}
+            disabled={!filteredItems.length}
+            className="gap-2"
+          >
             <Printer className="h-4 w-4" />
-            <span>{t("statutory.print", "Tlačiť")}</span>
+            <span>Tlačiť úradný výkaz</span>
           </Button>
         </div>
       </div>
 
-      {/* Info notice */}
+      {/* Compliance Filter Tabs & Info notice */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button
+            variant={complianceFilter === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5 rounded-lg"
+            onClick={() => setComplianceFilter("all")}
+          >
+            Všetky ({data?.items?.length ?? 0})
+          </Button>
+          <Button
+            variant={complianceFilter === "compliant" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5 rounded-lg"
+            onClick={() => setComplianceFilter("compliant")}
+          >
+            V lehote (≤ 3 dni)
+          </Button>
+          <Button
+            variant={complianceFilter === "overdue" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs px-2.5 rounded-lg"
+            onClick={() => setComplianceFilter("overdue")}
+          >
+            Po lehote (&gt; 3 dni)
+          </Button>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Zobrazených: <strong>{filteredItems.length}</strong> záznamov
+        </div>
+      </div>
+
       <div className="rounded-md border border-blue-200 bg-blue-50/50 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-300">
-        <strong>Zákonná povinnosť:</strong> Podľa § 17 ods. 1 písm. b) zákona č. 39/2007 Z. z. je vlastník alebo držiteľ vnímavých mäsožravcov povinný zabezpečiť vakcináciu proti besnote. Tento register slúži ako úradný výkaz pre kontroly Regionálnej veterinárnej a potravinovej správy (RVPS).
+        <strong>Zákonná povinnosť:</strong> Podľa § 17 ods. 1 písm. b) zákona č. 39/2007 Z. z. je vlastník alebo držiteľ vnímavých mäsožravcov povinný zabezpečiť vakcináciu proti besnote. Veterinárny lekár nahlasuje vakcináciu do CRSZ a RVPS do 3 pracovných dní od aplikácie.
       </div>
 
       {/* Table */}
@@ -329,7 +570,7 @@ function RabiesRegisterTab() {
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : !data?.items?.length ? (
+        ) : !filteredItems.length ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
             Nenašli sa žiadne záznamy o vakcinácii proti besnote podľa zadaných kritérií.
           </div>
@@ -345,64 +586,76 @@ function RabiesRegisterTab() {
                   <th className="p-3">Revakcinácia</th>
                   <th className="p-3">Majiteľ</th>
                   <th className="p-3">Kontakt</th>
+                  <th className="p-3">Lehota RVPS (3 dni)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.items.map((r) => (
-                  <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-medium whitespace-nowrap">
-                      {formatDate(r.administeredAt)}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-semibold text-foreground">{r.patientName}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {r.species} {r.breed ? `• ${r.breed}` : ""}
-                      </div>
-                    </td>
-                    <td className="p-3 font-mono text-[11px]">
-                      {r.microchipNumber ? (
-                        <span className="text-foreground">{r.microchipNumber}</span>
-                      ) : (
-                        <span className="text-amber-600 font-medium">Nečipovaný</span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-medium text-foreground">{r.vaccineName}</div>
-                      {r.lotNumber && (
+                {filteredItems.map((r) => {
+                  const comp = getRabiesComplianceStatus(r.administeredAt, r.createdAt);
+                  return (
+                    <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-3 font-medium whitespace-nowrap">
+                        {formatDate(r.administeredAt)}
+                      </td>
+                      <td className="p-3">
+                        <div className="font-semibold text-foreground">{r.patientName}</div>
                         <div className="text-[11px] text-muted-foreground">
-                          Šarža: {r.lotNumber}
+                          {r.species} {r.breed ? `• ${r.breed}` : ""}
                         </div>
-                      )}
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      {r.nextDueDate ? (
-                        <span className="font-medium text-foreground">
-                          {formatDate(r.nextDueDate)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-medium text-foreground">
-                        {r.clientFirstName} {r.clientLastName}
-                      </div>
-                      {r.clientCity && (
-                        <div className="text-[11px] text-muted-foreground">{r.clientCity}</div>
-                      )}
-                    </td>
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">
-                      {r.clientPhone || "—"}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-3 font-mono text-[11px]">
+                        {r.microchipNumber ? (
+                          <span className="text-foreground">{r.microchipNumber}</span>
+                        ) : (
+                          <span className="text-amber-600 font-medium">Nečipovaný</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="font-medium text-foreground">{r.vaccineName}</div>
+                        {r.lotNumber && (
+                          <div className="text-[11px] text-muted-foreground">
+                            Šarža: {r.lotNumber}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        {r.nextDueDate ? (
+                          <span className="font-medium text-foreground">
+                            {formatDate(r.nextDueDate)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="font-medium text-foreground">
+                          {r.clientFirstName} {r.clientLastName}
+                        </div>
+                        {r.clientCity && (
+                          <div className="text-[11px] text-muted-foreground">{r.clientCity}</div>
+                        )}
+                      </td>
+                      <td className="p-3 text-muted-foreground whitespace-nowrap">
+                        {r.clientPhone || "—"}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <Badge
+                          variant="outline"
+                          className={cn("text-[10px] font-medium border", comp.badgeClass)}
+                        >
+                          {comp.label}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
       <div className="text-right text-xs text-muted-foreground">
-        Celkovo záznamov: {data?.totalCount ?? 0}
+        Celkovo záznamov: {filteredItems.length}
       </div>
     </div>
   );
@@ -457,6 +710,36 @@ function TreatmentDiaryTab() {
     );
   };
 
+  const handlePrintInspection = () => {
+    if (!data?.items?.length) return;
+    const headers = [
+      "Dátum a čas",
+      "Meno pacienta",
+      "Druh & Číslo čipu",
+      "Vlastník zvieraťa & Kontakt",
+      "Ošetrujúci lekár",
+      "Klinická diagnóza / Nález",
+      "Terapia, liečivá & Ochranná lehota",
+    ];
+    const rows = data.items.map((i) => [
+      formatDateTime(i.createdAt),
+      i.patientName,
+      `${i.species} (čip: ${i.microchipNumber || "—"})`,
+      `${i.clientFirstName || ""} ${i.clientLastName} (${i.clientPhone || "—"})`.trim(),
+      i.authorName || "Veterinárny lekár",
+      i.assessment || "—",
+      i.plan || "—",
+    ]);
+    openInspectionPrintView({
+      title: "Klinický Denník Ošetrených Zvierat (Kniha Ošetrení)",
+      statutoryReference: "Evidencia v zmysle § 22 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti",
+      subtitle: "Zákonný denník veterinárnych úkonov a spotreby humánnych a veterinárnych liečiv",
+      headers,
+      rows,
+      summaryNotes: "Evidencia je vedená chronologicky v zmysle veterinárneho zákona a slúži ako podklad pre inšpekcie ŠVPS SR.",
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -488,16 +771,28 @@ function TreatmentDiaryTab() {
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCsv}
-          disabled={!data?.items?.length}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={!data?.items?.length}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintInspection}
+            disabled={!data?.items?.length}
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            <span>Tlačiť úradný výkaz</span>
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -592,25 +887,67 @@ function EuthanasiaRegisterTab() {
     );
   };
 
+  const handlePrintInspection = () => {
+    if (!data?.items?.length) return;
+    const headers = [
+      "Dátum",
+      "Meno pacienta",
+      "Druh & Plemeno",
+      "Číslo mikročipu",
+      "Vlastník zvieraťa",
+      "Bydlisko & Telefón",
+      "Evidencia CRSZ / Asanácia",
+    ];
+    const rows = data.items.map((i) => [
+      formatDate(i.updatedAt),
+      i.name,
+      `${i.species}${i.breed ? ` • ${i.breed}` : ""}`,
+      i.microchipNumber || "Nečipovaný",
+      `${i.clientFirstName || ""} ${i.clientLastName}`.trim(),
+      `${i.clientAddress || ""}, ${i.clientCity || ""} (${i.clientPhone || "—"})`.trim(),
+      "Ukončený / Na odhlásenie v CRSZ",
+    ]);
+    openInspectionPrintView({
+      title: "Register Eutanázií a Asanácií Tiel Uhynutých Zvierat",
+      statutoryReference: "Evidencia v zmysle § 22 ods. 5 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti",
+      subtitle: "Úradný podklad pre odhlásenie z Centrálneho registra spoločenských zvierat (CRSZ) a kontrolu ŠVPS SR",
+      headers,
+      rows,
+      summaryNotes: "Tento výkaz slúži ako úradné potvrdenie o eutanázii a predložení tiel na asanáciu kafilérnej službe.",
+    });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-border bg-card p-4 gap-3">
         <div>
           <h3 className="font-semibold text-sm">Register eutanázií a asanovaných tiel</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Zákonná evidencia uhynutých a eutanazovaných zvierat pre odhlásenie z CRSZ a evidencie obcí.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCsv}
-          disabled={!data?.items?.length}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={!data?.items?.length}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintInspection}
+            disabled={!data?.items?.length}
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            <span>Tlačiť úradný výkaz</span>
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
