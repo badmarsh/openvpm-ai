@@ -40,7 +40,7 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/billing/ekasa": { label: "e-Kasa", i18nKey: "nav.ekasa" },
   "/marketing": { label: "Marketing Studio", i18nKey: "nav.marketing" },
   "/vet-intel": { label: "Vet Intelligence", i18nKey: "nav.vetIntel" },
-  "/waiting-room": { label: "Waiting Room TV", i18nKey: "nav.waitingRoom" },
+  "/waiting-room": { label: "Waiting Room TV", i18nKey: "nav.waitingRoomTv" },
 };
 
 type UserRole =
