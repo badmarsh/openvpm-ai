@@ -3,18 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
-const COLOR_GROUPS: { label: string; colors: string[] }[] = [
+const COLOR_GROUPS: { label: string; labelKey: string; colors: string[] }[] = [
   {
     label: "Clinical",
+    labelKey: "brand.colors.clinical",
     colors: ["#0d9488", "#059669", "#0284c7", "#0f766e"],
   },
   {
     label: "Warm",
+    labelKey: "brand.colors.warm",
     colors: ["#f97316", "#db2777", "#d97706", "#8b2635"],
   },
   {
     label: "Neutral",
+    labelKey: "brand.colors.neutral",
     colors: ["#374151", "#475569", "#57534e", "#1f2937"],
   },
 ];
@@ -46,6 +50,7 @@ export function AccentColorPicker({
   onChange: (hex: string) => void;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const current = (value ?? "").toLowerCase();
   const customActive = !!current && !ALL_PRESETS.includes(current);
   const [open, setOpen] = useState(false);
@@ -129,7 +134,7 @@ export function AccentColorPicker({
           {open ? (
             <div className="absolute right-0 top-10 z-30 w-56 rounded-lg border border-border bg-popover p-3 shadow-lg">
               <p className="mb-2 text-xs font-medium text-foreground">
-                Vlastná farba
+                {t("brand.colors.customColor", "Custom color")}
               </p>
               <div className="flex items-center gap-2">
                 <input
@@ -169,7 +174,7 @@ export function AccentColorPicker({
                 disabled={!normalizeHex(draft) || disabled}
                 className="mt-2.5 h-8 w-full rounded-md bg-primary text-xs font-medium text-primary-foreground disabled:opacity-50"
               >
-                Použiť túto farbu
+                {t("brand.colors.useThisColor", "Use this color")}
               </button>
             </div>
           ) : null}
@@ -178,9 +183,9 @@ export function AccentColorPicker({
 
       <div className="flex gap-4 text-[10px] text-muted-foreground">
         {COLOR_GROUPS.map((g) => (
-          <span key={g.label}>{g.label}</span>
+          <span key={g.label}>{t(g.labelKey, g.label)}</span>
         ))}
-        <span>Vlastná</span>
+        <span>{t("brand.colors.custom", "Custom")}</span>
       </div>
     </div>
   );

@@ -58,6 +58,7 @@ import { useWelcome } from "@/components/welcome/welcome-provider";
 import { cn, isValidEmail } from "@/lib/utils";
 import { toast } from "sonner";
 import { regionDefaults } from "@/lib/locale/format";
+import { useI18n } from "@/lib/i18n";
 import {
   CLINIC_REGION_OPTIONS,
   isClinicRegionCode,
@@ -158,20 +159,90 @@ type Tab =
   | "booking"
   | "billing";
 
-const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "practice", label: "Practice Info", icon: Settings },
-  { id: "brandKit", label: "Brand Kit", icon: Palette },
-  { id: "locations", label: "Locations", icon: MapPin },
-  { id: "staff", label: "Staff", icon: Users },
-  { id: "appointmentTypes", label: "Appointment Types", icon: Calendar },
-  { id: "rooms", label: "Rooms", icon: DoorOpen },
-  { id: "services", label: "Services & Pricing", icon: ReceiptText },
-  { id: "data", label: "Data", icon: Database },
-  { id: "templates", label: "Templates", icon: Layers },
-  { id: "wellness", label: "Wellness Plans", icon: HeartPulse },
-  { id: "messaging", label: "Messaging", icon: MessageSquare },
-  { id: "booking", label: "Online Booking", icon: Globe },
-  { id: "billing", label: "Plan & Billing", icon: CreditCard },
+const tabs: {
+  id: Tab;
+  label: string;
+  labelKey: string;
+  icon: React.ElementType;
+}[] = [
+  {
+    id: "practice",
+    label: "Practice Info",
+    labelKey: "settings.tabs.practice",
+    icon: Settings,
+  },
+  {
+    id: "brandKit",
+    label: "Brand Kit",
+    labelKey: "settings.tabs.brandKit",
+    icon: Palette,
+  },
+  {
+    id: "locations",
+    label: "Locations",
+    labelKey: "settings.tabs.locations",
+    icon: MapPin,
+  },
+  {
+    id: "staff",
+    label: "Staff",
+    labelKey: "settings.tabs.staff",
+    icon: Users,
+  },
+  {
+    id: "appointmentTypes",
+    label: "Appointment Types",
+    labelKey: "settings.tabs.appointmentTypes",
+    icon: Calendar,
+  },
+  {
+    id: "rooms",
+    label: "Rooms",
+    labelKey: "settings.tabs.rooms",
+    icon: DoorOpen,
+  },
+  {
+    id: "services",
+    label: "Services & Pricing",
+    labelKey: "settings.tabs.services",
+    icon: ReceiptText,
+  },
+  {
+    id: "data",
+    label: "Data",
+    labelKey: "settings.tabs.data",
+    icon: Database,
+  },
+  {
+    id: "templates",
+    label: "Templates",
+    labelKey: "settings.tabs.templates",
+    icon: Layers,
+  },
+  {
+    id: "wellness",
+    label: "Wellness Plans",
+    labelKey: "settings.tabs.wellness",
+    icon: HeartPulse,
+  },
+  {
+    id: "messaging",
+    label: "Messaging",
+    labelKey: "settings.tabs.messaging",
+    icon: MessageSquare,
+  },
+  {
+    id: "booking",
+    label: "Online Booking",
+    labelKey: "settings.tabs.booking",
+    icon: Globe,
+  },
+  {
+    id: "billing",
+    label: "Plan & Billing",
+    labelKey: "settings.tabs.billing",
+    icon: CreditCard,
+  },
 ];
 
 const TIMEZONES = [
@@ -331,6 +402,7 @@ export default function SettingsPage() {
 }
 
 function SettingsPageInner() {
+  const { t } = useI18n();
   const { data: session, status } = useSession();
   const { openWelcome } = useWelcome();
   const searchParams = useSearchParams();
@@ -343,7 +415,8 @@ function SettingsPageInner() {
     return (
       <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Checking settings access...
+        {/* Checking settings access... */}
+        {t("settings.checkingAccess", "Checking settings access...")}
       </div>
     );
   }
@@ -352,9 +425,15 @@ function SettingsPageInner() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="font-heading text-xl font-semibold">Access Denied</h2>
+        <h2 className="font-heading text-xl font-semibold">
+          {t("settings.accessDeniedTitle", "Access Denied")}
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Only administrators can access practice settings.
+          {/* Only administrators can access practice settings. */}
+          {t(
+            "settings.accessDeniedDescription",
+            "Only administrators can access practice settings.",
+          )}
         </p>
       </div>
     );
@@ -364,9 +443,14 @@ function SettingsPageInner() {
     <div className="min-w-0 w-full max-w-full overflow-hidden">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-heading text-xl font-semibold">Settings</h2>
+          <h2 className="font-heading text-xl font-semibold">
+            {t("settings.header.title", "Settings")}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Practice configuration and staff management
+            {t(
+              "settings.header.subtitle",
+              "Practice configuration and staff management",
+            )}
           </p>
         </div>
         <Button
@@ -376,7 +460,7 @@ function SettingsPageInner() {
           onClick={openWelcome}
         >
           <Compass className="mr-2 h-4 w-4" />
-          Guides
+          {t("settings.header.guides", "Guides")}
         </Button>
       </div>
 
@@ -401,7 +485,7 @@ function SettingsPageInner() {
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  {tab.label}
+                  {t(tab.labelKey, tab.label)}
                 </button>
               );
             })}
@@ -431,6 +515,7 @@ function SettingsPageInner() {
 
 // ── Practice Info ───────────────────────────────────────────
 function PracticeInfoTab() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const {
     data: practice,
@@ -450,7 +535,7 @@ function PracticeInfoTab() {
         utils.settings.getPractice.invalidate(),
         utils.settings.getMarketingEmailPreference.invalidate(),
       ]);
-      toast.success("Practice info updated");
+      toast.success(t("settings.practice.updated", "Practice info updated"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -463,7 +548,7 @@ function PracticeInfoTab() {
     onSuccess: () => {
       utils.settings.getPractice.invalidate();
       utils.settings.getBranding.invalidate();
-      toast.success("Branding updated");
+      toast.success(t("settings.branding.updated", "Branding updated"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -475,8 +560,8 @@ function PracticeInfoTab() {
         utils.settings.getMarketingEmailPreference.invalidate();
         toast.success(
           preference.enabled
-            ? "Optional OpenVPM emails turned on"
-            : "Optional OpenVPM emails turned off",
+            ? t("settings.emails.optionalEmailsOn", "Optional OpenVPM emails are on.")
+            : t("settings.emails.optionalEmailsOff", "Optional OpenVPM emails are off."),
         );
       },
       onError: (err) => toast.error(err.message),
@@ -534,14 +619,17 @@ function PracticeInfoTab() {
         utils.settings.getPractice.invalidate(),
         utils.settings.getBranding.invalidate(),
       ]);
-      toast.success("Logo saved");
+      toast.success(t("settings.branding.logoSaved", "Logo saved"));
     } catch (err) {
       if (logoUploadAttemptRef.current === attempt) {
         logoUploadAttemptRef.current = settleManagedUploadAttempt(attempt, {
           kind: "ambiguous",
         });
       }
-      const message = err instanceof Error ? err.message : "Upload failed";
+      const message =
+        err instanceof Error
+          ? err.message
+          : t("settings.branding.uploadFailed", "Upload failed");
       setLogoUploadError(message);
       toast.error(message);
     } finally {
@@ -580,8 +668,15 @@ function PracticeInfoTab() {
     return (
       <EmptyState
         icon={Settings}
-        title="Practice settings unavailable"
-        description="The practice profile could not be found for this account."
+        /* title="Practice settings unavailable" */
+        title={t(
+          "settings.practice.unavailableTitle",
+          "Practice settings unavailable",
+        )}
+        description={t(
+          "settings.practice.unavailableDescription",
+          "The practice profile could not be found for this account.",
+        )}
       />
     );
   }
@@ -634,14 +729,21 @@ function PracticeInfoTab() {
         {/* ── Practice details ── */}
         <div className="space-y-6 rounded-lg border border-border bg-card p-6">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Practice details</h3>
+            <h3 className="text-sm font-semibold">
+              {t("settings.practice.detailsTitle", "Practice details")}
+            </h3>
             <p className="text-xs text-muted-foreground">
-              Your practice name, contact info, and timezone.
+              {t(
+                "settings.practice.detailsSubtitle",
+                "Your practice name, contact info, and timezone.",
+              )}
             </p>
           </div>
           <div className="grid gap-4">
             <label className="space-y-1.5">
-              <span className="text-sm font-medium">Practice Name</span>
+              <span className="text-sm font-medium">
+                {t("settings.practice.name", "Practice Name")}
+              </span>
               <Input
                 maxLength={PRACTICE_NAME_MAX_LENGTH}
                 value={current.name}
@@ -649,7 +751,9 @@ function PracticeInfoTab() {
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium">Address</span>
+              <span className="text-sm font-medium">
+                {t("settings.practice.address", "Address")}
+              </span>
               <Input
                 maxLength={SETTINGS_ADDRESS_MAX_LENGTH}
                 value={current.address}
@@ -658,7 +762,9 @@ function PracticeInfoTab() {
             </label>
             <div className="grid grid-cols-2 gap-4">
               <label className="space-y-1.5">
-                <span className="text-sm font-medium">Phone</span>
+                <span className="text-sm font-medium">
+                  {t("settings.practice.phone", "Phone")}
+                </span>
                 <Input
                   maxLength={SETTINGS_PHONE_MAX_LENGTH}
                   value={current.phone}
@@ -666,7 +772,9 @@ function PracticeInfoTab() {
                 />
               </label>
               <label className="space-y-1.5">
-                <span className="text-sm font-medium">Email</span>
+                <span className="text-sm font-medium">
+                  {t("settings.practice.email", "Email")}
+                </span>
                 <Input
                   type="email"
                   maxLength={SETTINGS_EMAIL_MAX_LENGTH}
@@ -676,7 +784,9 @@ function PracticeInfoTab() {
               </label>
             </div>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium">Website</span>
+              <span className="text-sm font-medium">
+                {t("settings.practice.website", "Website")}
+              </span>
               <Input
                 maxLength={SETTINGS_WEBSITE_MAX_LENGTH}
                 value={current.website}
@@ -684,7 +794,9 @@ function PracticeInfoTab() {
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium">Timezone</span>
+              <span className="text-sm font-medium">
+                {t("settings.practice.timezone", "Timezone")}
+              </span>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={current.timezone}
@@ -703,23 +815,34 @@ function PracticeInfoTab() {
         {/* ── Region & Tax ── */}
         <div className="space-y-6 rounded-lg border border-border bg-card p-6">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Region &amp; Tax</h3>
+            <h3 className="text-sm font-semibold">
+              {t("settings.regionTax.title", "Region & Tax")}
+            </h3>
             <p className="text-xs text-muted-foreground">
-              Controls invoice currency, tax rate, and date formatting. Choosing
-              a country prefills the usual defaults — adjust as needed.
+              {t(
+                "settings.regionTax.subtitle",
+                "Controls invoice currency, tax rate, and date formatting. Choosing a country prefills the usual defaults — adjust as needed.",
+              )}
             </p>
           </div>
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <label className="space-y-1.5">
-                <span className="text-sm font-medium">Country</span>
+                <span className="text-sm font-medium">
+                  {t("settings.regionTax.country", "Country")}
+                </span>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   value={current.country}
                   onChange={(e) => handleCountryChange(e.target.value)}
                   required
                 >
-                  <option value="">Choose your clinic country</option>
+                  <option value="">
+                    {t(
+                      "settings.regionTax.chooseCountry",
+                      "Choose your clinic country",
+                    )}
+                  </option>
                   {CLINIC_REGION_OPTIONS.map((c) => (
                     <option key={c.code} value={c.code}>
                       {c.label}
@@ -728,7 +851,9 @@ function PracticeInfoTab() {
                 </select>
               </label>
               <label className="space-y-1.5">
-                <span className="text-sm font-medium">Currency</span>
+                <span className="text-sm font-medium">
+                  {t("settings.regionTax.currency", "Currency")}
+                </span>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   value={current.currency}
@@ -744,7 +869,9 @@ function PracticeInfoTab() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <label className="space-y-1.5">
-                <span className="text-sm font-medium">Tax / VAT rate (%)</span>
+                <span className="text-sm font-medium">
+                  {t("settings.regionTax.taxRate", "Tax / VAT rate (%)")}
+                </span>
                 <Input
                   type="number"
                   step="0.01"
@@ -758,7 +885,7 @@ function PracticeInfoTab() {
               </label>
               <label className="space-y-1.5">
                 <span className="text-sm font-medium">
-                  VAT number (optional)
+                  {t("settings.regionTax.vatNumber", "VAT number (optional)")}
                 </span>
                 <Input
                   maxLength={SETTINGS_VAT_NUMBER_MAX_LENGTH}
@@ -773,16 +900,22 @@ function PracticeInfoTab() {
         {/* ── Branding ── */}
         <div className="space-y-6 rounded-lg border border-border bg-card p-6">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Branding</h3>
+            <h3 className="text-sm font-semibold">
+              {t("settings.branding.title", "Branding")}
+            </h3>
             <p className="text-xs text-muted-foreground">
-              Your logo and accent color appear across OpenVPM. Changes save
-              immediately.
+              {t(
+                "settings.branding.subtitle",
+                "Your logo and accent color appear across OpenVPM. Changes save immediately.",
+              )}
             </p>
           </div>
           <div className="grid gap-5">
             {/* Logo */}
             <div className="space-y-2">
-              <span className="text-sm font-medium">Logo</span>
+              <span className="text-sm font-medium">
+                {t("settings.branding.logo", "Logo")}
+              </span>
               <div className="flex items-center gap-4">
                 {practice.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -819,10 +952,16 @@ function PracticeInfoTab() {
                     ) : (
                       <Upload className="mr-2 h-4 w-4" />
                     )}
-                    {practice.logoUrl ? "Replace logo" : "Upload logo"}
+                    {/* {practice.logoUrl ? "Replace logo" : "Upload logo"} */}
+                    {practice.logoUrl
+                      ? t("settings.branding.replaceLogo", "Replace logo")
+                      : t("settings.branding.uploadLogo", "Upload logo")}
                   </Button>
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    PNG, JPG, or WebP. Square images work best.
+                    {t(
+                      "settings.branding.logoHelp",
+                      "PNG, JPG, or WebP. Square images work best.",
+                    )}
                   </p>
                   {logoUploadError ? (
                     <div className="mt-2 flex items-center gap-2 text-xs text-destructive">
@@ -834,7 +973,7 @@ function PracticeInfoTab() {
                           onClick={() => void handleLogoUpload()}
                           className="font-medium underline underline-offset-2 disabled:opacity-50"
                         >
-                          Try again
+                          {t("settings.branding.tryAgain", "Try again")}
                         </button>
                       ) : null}
                     </div>
@@ -845,7 +984,9 @@ function PracticeInfoTab() {
 
             {/* Accent color */}
             <div className="space-y-2">
-              <span className="text-sm font-medium">Accent color</span>
+              <span className="text-sm font-medium">
+                {t("settings.branding.accentColor", "Accent color")}
+              </span>
               <AccentColorPicker
                 value={currentBrandColor}
                 onChange={(c) => brandingMutation.mutate({ brandColor: c })}
@@ -858,17 +999,24 @@ function PracticeInfoTab() {
         {/* ── OpenVPM email preferences ── */}
         <div className="space-y-5 rounded-lg border border-border bg-card p-6">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Emails from OpenVPM</h3>
+            <h3 className="text-sm font-semibold">
+              {t("settings.emails.title", "Emails from OpenVPM")}
+            </h3>
             <p className="text-xs text-muted-foreground">
-              Controls optional email OpenVPM sends to your clinic, not messages
-              your clinic sends to pet owners.
+              {t(
+                "settings.emails.subtitle",
+                "Controls optional email OpenVPM sends to your clinic, not messages your clinic sends to pet owners.",
+              )}
             </p>
           </div>
 
           {marketingEmailPreferenceError ? (
             <div className="space-y-3" role="alert">
               <p className="text-sm text-destructive">
-                We couldn&apos;t load this email preference.
+                {t(
+                  "settings.emails.loadError",
+                  "We couldn't load this email preference.",
+                )}
               </p>
               <Button
                 type="button"
@@ -876,7 +1024,7 @@ function PracticeInfoTab() {
                 size="sm"
                 onClick={() => void refetchMarketingEmailPreference()}
               >
-                Try again
+                {t("settings.emails.tryAgain", "Try again")}
               </Button>
             </div>
           ) : (
@@ -900,17 +1048,21 @@ function PracticeInfoTab() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium">
-                    Product guidance and feedback
+                    {t(
+                      "settings.emails.productGuidanceTitle",
+                      "Product guidance and feedback",
+                    )}
                   </span>
                   <span
                     id="marketing-email-preference-description"
                     className="mt-1 block text-xs leading-5 text-muted-foreground"
                   >
-                    Occasional setup tips, product updates, trial guidance, and
-                    requests for feedback. Turn this off to stop marketing and
-                    research email
+                    {t(
+                      "settings.emails.productGuidanceDescription",
+                      "Occasional setup tips, product updates, trial guidance, and requests for feedback. Turn this off to stop marketing and research email",
+                    )}
                     {marketingEmailPreference?.recipientEmail
-                      ? ` to ${marketingEmailPreference.recipientEmail}`
+                      ? ` ${t("settings.emails.toRecipient", "to {email}", { email: marketingEmailPreference.recipientEmail })}`
                       : ""}
                     .
                   </span>
@@ -933,25 +1085,38 @@ function PracticeInfoTab() {
                   marketingEmailPreference?.enabled ? (
                 <p className="text-xs text-emerald-700" role="status">
                   {marketingEmailMutation.data.enabled
-                    ? "Optional OpenVPM emails are on."
-                    : "Optional OpenVPM emails are off."}
+                    ? t(
+                        "settings.emails.optionalEmailsOn",
+                        "Optional OpenVPM emails are on.",
+                      )
+                    : t(
+                        "settings.emails.optionalEmailsOff",
+                        "Optional OpenVPM emails are off.",
+                      )}
                 </p>
               ) : null}
 
               <div className="rounded-md bg-muted/50 p-3">
                 <p className="text-sm font-medium">
-                  Account, security, and billing email
+                  {t(
+                    "settings.emails.accountSecurityTitle",
+                    "Account, security, and billing email",
+                  )}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Required for sign-in, receipts, payment issues, and critical
-                  service notices. These cannot be turned off here.
+                  {t(
+                    "settings.emails.accountSecurityDescription",
+                    "Required for sign-in, receipts, payment issues, and critical service notices. These cannot be turned off here.",
+                  )}
                 </p>
               </div>
 
               {marketingEmailPreference?.configurable === false ? (
                 <p className="text-xs text-amber-700" role="status">
-                  Add a practice email above, save your changes, then manage
-                  optional email here.
+                  {t(
+                    "settings.emails.addEmailNotice",
+                    "Add a practice email above, save your changes, then manage optional email here.",
+                  )}
                 </p>
               ) : null}
             </div>
@@ -980,7 +1145,7 @@ function PracticeInfoTab() {
         ) : (
           <Save className="mr-2 h-4 w-4" />
         )}
-        Save Changes
+        {t("settings.actions.saveChanges", "Save Changes")}
       </Button>
     </div>
   );
