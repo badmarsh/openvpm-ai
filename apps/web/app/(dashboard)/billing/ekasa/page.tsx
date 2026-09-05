@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import {
@@ -79,7 +79,7 @@ const VAT_LABEL: Record<string, string> = {
 
 const PAGE_SIZE = 20;
 
-export default function EkasaReceiptsPage() {
+function EkasaReceiptsContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<ActiveTab>(
@@ -757,5 +757,19 @@ export default function EkasaReceiptsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EkasaReceiptsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <EkasaReceiptsContent />
+    </Suspense>
   );
 }
