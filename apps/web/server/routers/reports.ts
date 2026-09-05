@@ -431,6 +431,7 @@ export const reportsRouter = createRouter({
       const rows = await ctx.db
         .select({
           id: vaccinationRecords.id,
+          createdAt: vaccinationRecords.createdAt,
           administeredAt: vaccinationRecords.administeredAt,
           vaccineName: vaccinationRecords.vaccineName,
           productName: vaccinationRecords.productName,

@@ -1062,6 +1062,114 @@ export const settingsRouter = createRouter({
     };
   }),
 
+  // ── Brand Kit ─────────────────────────────────────────────
+
+  /** Extended brand kit stored inside practices.settings.brandKit. */
+  getBrandKit: protectedProcedure.query(async ({ ctx }) => {
+    const [practice] = await ctx.db
+      .select({
+        name: practices.name,
+        logoUrl: practices.logoUrl,
+        settings: practices.settings,
+      })
+      .from(practices)
+      .where(activePracticeWhere(ctx.practiceId))
+      .limit(1);
+    if (!practice) throw practiceNotFound();
+
+    const settings = (practice.settings ?? {}) as PracticeSettings;
+    const bk = (settings.brandKit ?? {}) as Record<string, unknown>;
+
+    return {
+      brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
+      secondaryColor: (bk.secondaryColor as string) ?? "#f5f5f4",
+      toneOfVoice:
+        (bk.toneOfVoice as string) ??
+        "Súcitný, jasný, upokojujúci, komunitne orientovaný.",
+      brandVoiceInstructions: (bk.brandVoiceInstructions as string) ?? "",
+      disclaimer:
+        (bk.disclaimer as string) ??
+        "Len pre všeobecné informácie o zdraví zvierat. Vždy sa poraďte s naším veterinárnym tímom.",
+      defaultHashtags: (bk.defaultHashtags as string[]) ?? [
+        "#veterinar",
+        "#zdraviezvierat",
+      ],
+      socialHandles: {
+        instagram: ((bk.socialHandles as Record<string, string>)?.instagram) ?? "",
+        facebook: ((bk.socialHandles as Record<string, string>)?.facebook) ?? "",
+        tiktok: ((bk.socialHandles as Record<string, string>)?.tiktok) ?? "",
+      },
+      clinicName: practice.name,
+      logoUrl: practice.logoUrl ?? null,
+    };
+  }),
+
+  updateBrandKit: adminProcedure
+    .input(
+      z.object({
+        brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        secondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        toneOfVoice: z.string().max(500).optional(),
+        brandVoiceInstructions: z.string().max(2000).optional(),
+        disclaimer: z.string().max(500).optional(),
+        defaultHashtags: z.array(z.string().max(64)).max(20).optional(),
+        socialHandles: z
+          .object({
+            instagram: z.string().max(100).optional(),
+            facebook: z.string().max(100).optional(),
+            tiktok: z.string().max(100).optional(),
+          })
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertActivePractice(ctx);
+
+      const [practice] = await ctx.db
+        .select({ settings: practices.settings })
+        .from(practices)
+        .where(activePracticeWhere(ctx.practiceId))
+        .limit(1);
+      if (!practice) throw practiceNotFound();
+
+      const settings = (practice.settings ?? {}) as PracticeSettings;
+      const existing = (settings.brandKit ?? {}) as Record<string, unknown>;
+      const existingSocial =
+        ((existing.socialHandles as Record<string, string>) ?? {});
+
+      const brandKitPatch: Record<string, unknown> = { ...existing };
+      if (input.secondaryColor !== undefined)
+        brandKitPatch.secondaryColor = input.secondaryColor;
+      if (input.toneOfVoice !== undefined)
+        brandKitPatch.toneOfVoice = input.toneOfVoice;
+      if (input.brandVoiceInstructions !== undefined)
+        brandKitPatch.brandVoiceInstructions = input.brandVoiceInstructions;
+      if (input.disclaimer !== undefined)
+        brandKitPatch.disclaimer = input.disclaimer;
+      if (input.defaultHashtags !== undefined)
+        brandKitPatch.defaultHashtags = input.defaultHashtags;
+      if (input.socialHandles !== undefined) {
+        brandKitPatch.socialHandles = {
+          ...existingSocial,
+          ...input.socialHandles,
+        };
+      }
+
+      const settingsPatch: Record<string, unknown> = {
+        brandKit: brandKitPatch,
+      };
+      if (input.brandColor !== undefined) {
+        settingsPatch.brandColor = input.brandColor.toLowerCase();
+      }
+
+      await ctx.db
+        .update(practices)
+        .set({ settings: settingsMergePatch(settingsPatch) })
+        .where(activePracticeWhere(ctx.practiceId));
+
+      return { success: true };
+    }),
+
   // ── Locations ─────────────────────────────────────────────
 
   listLocations: adminProcedure.query(async ({ ctx }) => {

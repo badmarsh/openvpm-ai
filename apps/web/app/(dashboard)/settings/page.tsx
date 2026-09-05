@@ -34,6 +34,7 @@ import {
   HeartPulse,
   Compass,
   ReceiptText,
+  Palette,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ import { BookingTab } from "@/components/settings/booking-tab";
 import { ProviderHours } from "@/components/settings/provider-hours";
 import { MigrationHelpRequest } from "@/components/onboarding/migration-help-request";
 import { ServicesTab } from "@/components/settings/services-tab";
+import { BrandKitTab } from "@/components/settings/brand-kit-tab";
 import { AmbulatoryWorkspaceSettingsCard } from "@/components/settings/ambulatory-workspace-settings";
 import {
   TemplateCatalogPicker,
@@ -143,6 +145,7 @@ import {
 // ── Types ───────────────────────────────────────────────────
 type Tab =
   | "practice"
+  | "brandKit"
   | "locations"
   | "staff"
   | "appointmentTypes"
@@ -157,6 +160,7 @@ type Tab =
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "practice", label: "Practice Info", icon: Settings },
+  { id: "brandKit", label: "Brand Kit", icon: Palette },
   { id: "locations", label: "Locations", icon: MapPin },
   { id: "staff", label: "Staff", icon: Users },
   { id: "appointmentTypes", label: "Appointment Types", icon: Calendar },
@@ -407,6 +411,7 @@ function SettingsPageInner() {
         {/* Tab content */}
         <div className="min-w-0 w-full max-w-full flex-1">
           {activeTab === "practice" && <PracticeInfoTab />}
+          {activeTab === "brandKit" && <BrandKitTab />}
           {activeTab === "locations" && <LocationsTab />}
           {activeTab === "staff" && <StaffTab />}
           {activeTab === "appointmentTypes" && <AppointmentTypesTab />}
