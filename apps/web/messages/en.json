@@ -774,7 +774,8 @@
     "delete": "Delete",
     "loading": "Loading...",
     "error_retry": "Unable to load data. Please retry.",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "skipToMainContent": "Skip to main content"
   },
   "common.cancel": "Cancel",
   "common.save": "Save",

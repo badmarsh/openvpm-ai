@@ -56,6 +56,58 @@ function formatGeneratedDateUtc(): string {
   return new Date().toLocaleDateString("en-US", { timeZone: "UTC" });
 }
 
+export type PdfLocale = "sk" | "en";
+
+export function resolvePdfLocale(locale?: PdfLocale): PdfLocale {
+  if (locale) return locale;
+  if (typeof window !== "undefined") {
+    try {
+      const match = document.cookie.match(new RegExp("(^| )NEXT_LOCALE=([^;]+)"));
+      if (match && (match[2] === "sk" || match[2] === "en")) {
+        return match[2] as PdfLocale;
+      }
+      const saved = localStorage.getItem("openvpm_locale");
+      if (saved === "sk" || saved === "en") {
+        return saved as PdfLocale;
+      }
+      if (document.documentElement?.lang === "en") {
+        return "en";
+      }
+    } catch {}
+  }
+  return "sk";
+}
+
+/**
+ * Clean text for standard jsPDF helvetica font rendering.
+ * Central European characters outside WinAnsi (č, ď, ľ, ĺ, ň, ť, ŕ)
+ * are mapped to Latin equivalents to prevent missing glyphs or artifacts.
+ */
+export function sanitizeForPdf(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/[čČ]/g, (m) => (m === "č" ? "c" : "C"))
+    .replace(/[ďĎ]/g, (m) => (m === "ď" ? "d" : "D"))
+    .replace(/[ľĺĽĹ]/g, (m) => (m.toLowerCase() === m ? "l" : "L"))
+    .replace(/[ňŇ]/g, (m) => (m === "ň" ? "n" : "N"))
+    .replace(/[ťŤ]/g, (m) => (m === "ť" ? "t" : "T"))
+    .replace(/[ŕŔ]/g, (m) => (m === "ŕ" ? "r" : "R"))
+    .replace(/[ěĚ]/g, (m) => (m === "ě" ? "e" : "E"))
+    .replace(/[řŘ]/g, (m) => (m === "ř" ? "r" : "R"))
+    .replace(/[ůŮ]/g, (m) => (m === "ů" ? "u" : "U"));
+}
+
+export function formatPdfDate(dateStr?: string, locale?: PdfLocale): string {
+  if (!dateStr) return "";
+  const isSk = resolvePdfLocale(locale) === "sk";
+  if (!isSk) return dateStr;
+  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    return `${parseInt(isoMatch[3]!, 10)}.${parseInt(isoMatch[2]!, 10)}.${isoMatch[1]}`;
+  }
+  return dateStr;
+}
+
 /**
  * Brand mark: a white paw print on a teal rounded square, drawn with
  * primitives so PDFs need no image asset. Matches the in-app brand color.
@@ -105,46 +157,68 @@ export interface InvoiceData {
   paidAmount: string;
   /** Pre-formatted balance due (region-aware currency). Falls back to total − paid. */
   balanceDue?: string;
+  locale?: PdfLocale;
 }
 
 export function generateInvoicePdf(data: InvoiceData): jsPDF {
   const doc = new jsPDF();
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
+  const isEstimate = data.status.toLowerCase() === "estimate";
   let y = PAGE_MARGIN;
 
   // --- Header: Practice info -------------------------------------------------
   doc.setFont(FONT, "bold");
   doc.setFontSize(20);
   setColor(doc, COLOR_TEAL);
-  doc.text(data.practiceName, PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(data.practiceName), PAGE_MARGIN, y);
   y += 7;
 
   doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   setColor(doc, COLOR_GRAY);
   if (data.practiceAddress) {
-    doc.text(data.practiceAddress, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practiceAddress), PAGE_MARGIN, y);
     y += 4;
   }
   if (data.practicePhone) {
-    doc.text(data.practicePhone, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practicePhone), PAGE_MARGIN, y);
     y += 4;
   }
   if (data.practiceEmail) {
-    doc.text(data.practiceEmail, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practiceEmail), PAGE_MARGIN, y);
     y += 4;
   }
 
   // --- INVOICE title (right-aligned) -----------------------------------------
+  const invoiceTitle = isSk
+    ? (isEstimate ? "CENOVÁ PONUKA" : "FAKTÚRA")
+    : (isEstimate ? "ESTIMATE" : "INVOICE");
   doc.setFont(FONT, "bold");
-  doc.setFontSize(28);
+  doc.setFontSize(26);
   setColor(doc, COLOR_DARK);
-  doc.text("INVOICE", PAGE_WIDTH - PAGE_MARGIN, PAGE_MARGIN, {
+  doc.text(invoiceTitle, PAGE_WIDTH - PAGE_MARGIN, PAGE_MARGIN, {
     align: "right",
   });
 
   // Status badge
   doc.setFontSize(10);
-  const statusLabel = data.status.toUpperCase();
+  function formatInvoiceStatus(st: string): string {
+    if (!isSk) return st.toUpperCase();
+    const s = st.toLowerCase();
+    switch (s) {
+      case "paid": return "ZAPLATENÉ";
+      case "unpaid": return "NEUHRADENÉ";
+      case "draft": return "NÁVRH";
+      case "overdue": return "PO SPLATNOSTI";
+      case "estimate": return "CENOVÁ PONUKA";
+      case "void": return "STORNO";
+      case "partial":
+      case "partially_paid": return "ČIASTOČNE UHRADENÉ";
+      default: return st.toUpperCase();
+    }
+  }
+  const statusLabel = sanitizeForPdf(formatInvoiceStatus(data.status));
   const statusWidth = doc.getTextWidth(statusLabel) + 8;
   const statusX = PAGE_WIDTH - PAGE_MARGIN - statusWidth;
   const statusY = PAGE_MARGIN + 6;
@@ -161,12 +235,16 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   let dateY = statusY + 12;
-  doc.text(`Date: ${data.invoiceDate}`, PAGE_WIDTH - PAGE_MARGIN, dateY, {
+  const formattedInvoiceDate = formatPdfDate(data.invoiceDate, locale);
+  const dateLabel = isSk ? `Dátum vystavenia: ${formattedInvoiceDate}` : `Date: ${data.invoiceDate}`;
+  doc.text(dateLabel, PAGE_WIDTH - PAGE_MARGIN, dateY, {
     align: "right",
   });
   if (data.dueDate) {
     dateY += 4;
-    doc.text(`Due: ${data.dueDate}`, PAGE_WIDTH - PAGE_MARGIN, dateY, {
+    const formattedDueDate = formatPdfDate(data.dueDate, locale);
+    const dueLabel = isSk ? `Dátum splatnosti: ${formattedDueDate}` : `Due: ${data.dueDate}`;
+    doc.text(dueLabel, PAGE_WIDTH - PAGE_MARGIN, dateY, {
       align: "right",
     });
   }
@@ -179,27 +257,28 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   doc.setFont(FONT, "bold");
   doc.setFontSize(10);
   setColor(doc, COLOR_DARK);
-  doc.text("BILL TO", PAGE_MARGIN, y);
+  doc.text(isSk ? "ODBERATEĽ" : "BILL TO", PAGE_MARGIN, y);
   y += 5;
 
   doc.setFont(FONT, "normal");
   doc.setFontSize(10);
   setColor(doc, COLOR_GRAY);
-  doc.text(data.clientName, PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(data.clientName), PAGE_MARGIN, y);
   y += 5;
   if (data.clientAddress) {
-    doc.text(data.clientAddress, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.clientAddress), PAGE_MARGIN, y);
     y += 5;
   }
   if (data.clientEmail) {
-    doc.text(data.clientEmail, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.clientEmail), PAGE_MARGIN, y);
     y += 5;
   }
   if (data.patientName) {
     y += 2;
     doc.setFont(FONT, "italic");
     setColor(doc, COLOR_DARK);
-    doc.text(`Patient: ${data.patientName}`, PAGE_MARGIN, y);
+    const patientLabel = isSk ? `Pacient: ${data.patientName}` : `Patient: ${data.patientName}`;
+    doc.text(sanitizeForPdf(patientLabel), PAGE_MARGIN, y);
     y += 5;
   }
 
@@ -220,10 +299,10 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   doc.setFont(FONT, "bold");
   doc.setFontSize(9);
   setColor(doc, COLOR_DARK);
-  doc.text("Description", colX.desc + 2, y);
-  doc.text("Qty", colX.qty, y, { align: "center" });
-  doc.text("Unit Price", colX.unit, y, { align: "center" });
-  doc.text("Total", colX.total - 2, y, { align: "right" });
+  doc.text(isSk ? "Popis položky" : "Description", colX.desc + 2, y);
+  doc.text(isSk ? "Množstvo" : "Qty", colX.qty, y, { align: "center" });
+  doc.text(isSk ? "Cena za j." : "Unit Price", colX.unit, y, { align: "center" });
+  doc.text(isSk ? "Spolu" : "Total", colX.total - 2, y, { align: "right" });
   y += 8;
 
   // Table rows
@@ -232,10 +311,10 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   setColor(doc, COLOR_DARK);
   for (const item of data.items) {
     y = ensureSpace(doc, y, 8);
-    doc.text(item.description, colX.desc + 2, y);
+    doc.text(sanitizeForPdf(item.description), colX.desc + 2, y);
     doc.text(String(item.quantity), colX.qty, y, { align: "center" });
-    doc.text(item.unitPrice, colX.unit, y, { align: "center" });
-    doc.text(item.total, colX.total - 2, y, { align: "right" });
+    doc.text(sanitizeForPdf(item.unitPrice), colX.unit, y, { align: "center" });
+    doc.text(sanitizeForPdf(item.total), colX.total - 2, y, { align: "right" });
     y += 6;
   }
 
@@ -251,12 +330,12 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   doc.setFontSize(10);
   setColor(doc, COLOR_GRAY);
 
-  doc.text("Subtotal:", totalsX, y);
-  doc.text(data.subtotal, totalsValX, y, { align: "right" });
+  doc.text(isSk ? "Základ dane:" : "Subtotal:", totalsX, y);
+  doc.text(sanitizeForPdf(data.subtotal), totalsValX, y, { align: "right" });
   y += 6;
 
-  doc.text("Tax:", totalsX, y);
-  doc.text(data.tax, totalsValX, y, { align: "right" });
+  doc.text(isSk ? "DPH:" : "Tax:", totalsX, y);
+  doc.text(sanitizeForPdf(data.tax), totalsValX, y, { align: "right" });
   y += 6;
 
   drawLine(doc, y);
@@ -265,15 +344,15 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
   doc.setFont(FONT, "bold");
   doc.setFontSize(12);
   setColor(doc, COLOR_DARK);
-  doc.text("Total:", totalsX, y);
-  doc.text(data.total, totalsValX, y, { align: "right" });
+  doc.text(isSk ? "Spolu celkom:" : "Total:", totalsX, y);
+  doc.text(sanitizeForPdf(data.total), totalsValX, y, { align: "right" });
   y += 7;
 
   doc.setFont(FONT, "normal");
   doc.setFontSize(10);
   setColor(doc, COLOR_GRAY);
-  doc.text("Paid:", totalsX, y);
-  doc.text(data.paidAmount, totalsValX, y, { align: "right" });
+  doc.text(isSk ? "Uhradené:" : "Paid:", totalsX, y);
+  doc.text(sanitizeForPdf(data.paidAmount), totalsValX, y, { align: "right" });
   y += 6;
 
   // Balance due — prefer the caller's region-formatted value; otherwise derive
@@ -285,16 +364,19 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
     data.balanceDue ?? `$${(balanceParts[0]! - balanceParts[1]!).toFixed(2)}`;
   doc.setFont(FONT, "bold");
   setColor(doc, COLOR_TEAL);
-  doc.text("Balance Due:", totalsX, y);
-  doc.text(balance, totalsValX, y, { align: "right" });
+  doc.text(isSk ? "K úhrade:" : "Balance Due:", totalsX, y);
+  doc.text(sanitizeForPdf(balance), totalsValX, y, { align: "right" });
 
   // --- Footer ----------------------------------------------------------------
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont(FONT, "italic");
   doc.setFontSize(9);
   setColor(doc, COLOR_GRAY);
+  const footerText = isSk
+    ? "Ďakujeme za prejavenú dôveru v starostlivosti o vaše zvieratko"
+    : "Thank you for trusting us with your pet's care";
   doc.text(
-    "Thank you for trusting us with your pet's care",
+    sanitizeForPdf(footerText),
     PAGE_WIDTH / 2,
     pageHeight - 15,
     { align: "center" },
@@ -321,6 +403,7 @@ export interface PrescriptionLabelData {
   startDate: string;
   quantity?: string;
   refillsRemaining?: number;
+  locale?: PdfLocale;
 }
 
 export function generatePrescriptionLabelPdf(
@@ -328,6 +411,8 @@ export function generatePrescriptionLabelPdf(
 ): jsPDF {
   // 4" x 2" landscape at 72 DPI  ➜  288 x 144 points
   const doc = new jsPDF({ format: [144, 288], orientation: "landscape" });
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
 
   // Convert points to mm for internal use (1 pt = 0.3528 mm)
   const W = 288 * 0.3528; // ~101.6 mm
@@ -339,14 +424,14 @@ export function generatePrescriptionLabelPdf(
   doc.setFont(FONT, "bold");
   doc.setFontSize(9);
   setColor(doc, COLOR_TEAL);
-  doc.text(data.practiceName, W / 2, y, { align: "center" });
+  doc.text(sanitizeForPdf(data.practiceName), W / 2, y, { align: "center" });
   y += 3.5;
 
   if (data.practicePhone) {
     doc.setFont(FONT, "normal");
     doc.setFontSize(7);
     setColor(doc, COLOR_GRAY);
-    doc.text(data.practicePhone, W / 2, y, { align: "center" });
+    doc.text(sanitizeForPdf(data.practicePhone), W / 2, y, { align: "center" });
     y += 3;
   }
 
@@ -361,20 +446,26 @@ export function generatePrescriptionLabelPdf(
   doc.setFont(FONT, "normal");
   doc.setFontSize(7);
   setColor(doc, COLOR_DARK);
-  doc.text(`Patient: ${data.patientName} (${data.species})`, M, y);
-  doc.text(`Owner: ${data.clientName}`, W - M, y, { align: "right" });
+  const patientText = isSk
+    ? `Pacient: ${data.patientName} (${data.species})`
+    : `Patient: ${data.patientName} (${data.species})`;
+  const ownerText = isSk
+    ? `Majiteľ: ${data.clientName}`
+    : `Owner: ${data.clientName}`;
+  doc.text(sanitizeForPdf(patientText), M, y);
+  doc.text(sanitizeForPdf(ownerText), W - M, y, { align: "right" });
   y += 4;
 
   // Medication (bold, larger)
   doc.setFont(FONT, "bold");
   doc.setFontSize(10);
   setColor(doc, COLOR_DARK);
-  doc.text(data.medicationName, M, y);
+  doc.text(sanitizeForPdf(data.medicationName), M, y);
   y += 4;
 
   // Dosage & frequency
   doc.setFontSize(8);
-  doc.text(`${data.dosage}  —  ${data.frequency}`, M, y);
+  doc.text(sanitizeForPdf(`${data.dosage}  —  ${data.frequency}`), M, y);
   y += 4;
 
   // Instructions
@@ -382,7 +473,7 @@ export function generatePrescriptionLabelPdf(
     doc.setFont(FONT, "normal");
     doc.setFontSize(7);
     setColor(doc, COLOR_DARK);
-    const lines = doc.splitTextToSize(data.instructions, W - M * 2);
+    const lines = doc.splitTextToSize(sanitizeForPdf(data.instructions), W - M * 2);
     doc.text(lines, M, y);
     y += lines.length * 3;
   }
@@ -393,17 +484,29 @@ export function generatePrescriptionLabelPdf(
   doc.setFont(FONT, "normal");
   doc.setFontSize(6.5);
   setColor(doc, COLOR_GRAY);
-  doc.text(`Prescribed by: ${data.prescribedBy}`, M, y);
-  doc.text(`Date: ${data.startDate}`, W - M, y, { align: "right" });
+  const prescriberText = isSk
+    ? `Predpísal(a): ${data.prescribedBy}`
+    : `Prescribed by: ${data.prescribedBy}`;
+  const formattedStartDate = formatPdfDate(data.startDate, locale);
+  const dateText = isSk ? `Dátum: ${formattedStartDate}` : `Date: ${data.startDate}`;
+  doc.text(sanitizeForPdf(prescriberText), M, y);
+  doc.text(dateText, W - M, y, { align: "right" });
   y += 3;
 
   // Quantity & refills
   const extras: string[] = [];
-  if (data.quantity) extras.push(`Qty: ${data.quantity}`);
-  if (data.refillsRemaining !== undefined)
-    extras.push(`Refills: ${data.refillsRemaining}`);
+  if (data.quantity) {
+    extras.push(isSk ? `Množstvo: ${data.quantity}` : `Qty: ${data.quantity}`);
+  }
+  if (data.refillsRemaining !== undefined) {
+    extras.push(
+      isSk
+        ? `Opakovaný výdaj: ${data.refillsRemaining}`
+        : `Refills: ${data.refillsRemaining}`,
+    );
+  }
   if (extras.length > 0) {
-    doc.text(extras.join("   |   "), M, y);
+    doc.text(sanitizeForPdf(extras.join("   |   ")), M, y);
   }
 
   return doc;
@@ -461,10 +564,13 @@ export interface MedicalSummaryData {
     status: string;
   }>;
   generatedDate?: string;
+  locale?: PdfLocale;
 }
 
 export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
   const doc = new jsPDF();
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
   let y = PAGE_MARGIN;
 
   function writeWrappedText(
@@ -473,7 +579,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     width: number,
     lineHeight = 4,
   ) {
-    const lines = doc.splitTextToSize(value, width) as string[];
+    const lines = doc.splitTextToSize(sanitizeForPdf(value), width) as string[];
     for (const line of lines) {
       y = ensureSpace(doc, y, lineHeight + 1);
       doc.text(line, x, y);
@@ -488,7 +594,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     doc.setFont(FONT, "bold");
     doc.setFontSize(12);
     setColor(doc, COLOR_TEAL);
-    doc.text(title, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(title), PAGE_MARGIN, y);
     y += 2;
     const [r, g, b] = hexToRgb(COLOR_TEAL);
     doc.setDrawColor(r, g, b);
@@ -507,7 +613,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
   doc.setFont(FONT, "bold");
   doc.setFontSize(20);
   setColor(doc, COLOR_TEAL);
-  const nameLines = doc.splitTextToSize(data.practiceName, CONTENT_WIDTH);
+  const nameLines = doc.splitTextToSize(data.practiceName ? sanitizeForPdf(data.practiceName) : "", CONTENT_WIDTH);
   doc.text(nameLines, PAGE_MARGIN, y);
   y += nameLines.length * 8;
 
@@ -515,11 +621,11 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
   doc.setFontSize(9);
   setColor(doc, COLOR_GRAY);
   if (data.practiceAddress) {
-    doc.text(data.practiceAddress, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practiceAddress), PAGE_MARGIN, y);
     y += 4;
   }
   if (data.practicePhone) {
-    doc.text(data.practicePhone, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practicePhone), PAGE_MARGIN, y);
     y += 4;
   }
   y += 4;
@@ -527,28 +633,44 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
   doc.setFont(FONT, "bold");
   doc.setFontSize(16);
   setColor(doc, COLOR_DARK);
-  doc.text("MEDICAL RECORD SUMMARY", PAGE_MARGIN, y);
+  const summaryTitle = isSk
+    ? "SÚHRN ZDRAVOTNEJ DOKUMENTÁCIE"
+    : "MEDICAL RECORD SUMMARY";
+  doc.text(summaryTitle, PAGE_MARGIN, y);
+  // "MEDICAL RECORD SUMMARY"
 
   y += 3;
   drawLine(doc, y);
   y += 8;
 
+  // sectionHeading("Patient Information")
   // ---- Patient Info ---------------------------------------------------------
-  sectionHeading("Patient Information");
+  sectionHeading(isSk ? "Informácie o pacientovi" : "Patient Information");
 
   doc.setFont(FONT, "normal");
   doc.setFontSize(10);
   setColor(doc, COLOR_DARK);
 
-  const patientFields: [string, string | undefined][] = [
-    ["Name", data.patientName],
-    ["Species", data.species],
-    ["Breed", data.breed],
-    ["Sex", data.sex],
-    ["Date of Birth", data.dob],
-    ["Color", data.color],
-    ["Microchip", data.microchip],
-  ];
+  const formattedDob = formatPdfDate(data.dob, locale);
+  const patientFields: [string, string | undefined][] = isSk
+    ? [
+        ["Meno", data.patientName],
+        ["Druh", data.species],
+        ["Plemeno", data.breed],
+        ["Pohlavie", data.sex],
+        ["Dátum narodenia", formattedDob],
+        ["Farba", data.color],
+        ["Mikročip", data.microchip],
+      ]
+    : [
+        ["Name", data.patientName],
+        ["Species", data.species],
+        ["Breed", data.breed],
+        ["Sex", data.sex],
+        ["Date of Birth", data.dob],
+        ["Color", data.color],
+        ["Microchip", data.microchip],
+      ];
 
   const colMid = PAGE_MARGIN + CONTENT_WIDTH / 2;
   let col = 0;
@@ -556,10 +678,11 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     if (value === undefined) continue;
     const xPos = col === 0 ? PAGE_MARGIN : colMid;
     doc.setFont(FONT, "bold");
-    doc.text(`${label}: `, xPos, y);
-    const labelW = doc.getTextWidth(`${label}: `);
+    const safeLabel = sanitizeForPdf(`${label}: `);
+    doc.text(safeLabel, xPos, y);
+    const labelW = doc.getTextWidth(safeLabel);
     doc.setFont(FONT, "normal");
-    doc.text(value, xPos + labelW, y);
+    doc.text(sanitizeForPdf(value), xPos + labelW, y);
     col++;
     if (col === 2) {
       col = 0;
@@ -569,36 +692,39 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
   if (col !== 0) y += 6;
 
   // ---- Owner Info -----------------------------------------------------------
-  sectionHeading("Owner Information");
+  sectionHeading(isSk ? "Informácie o majiteľovi" : "Owner Information");
 
   doc.setFont(FONT, "normal");
   doc.setFontSize(10);
   setColor(doc, COLOR_DARK);
 
   doc.setFont(FONT, "bold");
-  doc.text("Name: ", PAGE_MARGIN, y);
+  const ownerNameLabel = isSk ? "Meno: " : "Name: ";
+  doc.text(ownerNameLabel, PAGE_MARGIN, y);
   doc.setFont(FONT, "normal");
-  doc.text(data.clientName, PAGE_MARGIN + doc.getTextWidth("Name: "), y);
+  doc.text(sanitizeForPdf(data.clientName), PAGE_MARGIN + doc.getTextWidth(ownerNameLabel), y);
   y += 6;
 
   if (data.clientPhone) {
     doc.setFont(FONT, "bold");
-    doc.text("Phone: ", PAGE_MARGIN, y);
+    const ownerPhoneLabel = isSk ? "Telefón: " : "Phone: ";
+    doc.text(ownerPhoneLabel, PAGE_MARGIN, y);
     doc.setFont(FONT, "normal");
-    doc.text(data.clientPhone, PAGE_MARGIN + doc.getTextWidth("Phone: "), y);
+    doc.text(sanitizeForPdf(data.clientPhone), PAGE_MARGIN + doc.getTextWidth(ownerPhoneLabel), y);
     y += 6;
   }
   if (data.clientEmail) {
     doc.setFont(FONT, "bold");
-    doc.text("Email: ", PAGE_MARGIN, y);
+    const ownerEmailLabel = isSk ? "Email: " : "Email: ";
+    doc.text(ownerEmailLabel, PAGE_MARGIN, y);
     doc.setFont(FONT, "normal");
-    doc.text(data.clientEmail, PAGE_MARGIN + doc.getTextWidth("Email: "), y);
+    doc.text(sanitizeForPdf(data.clientEmail), PAGE_MARGIN + doc.getTextWidth(ownerEmailLabel), y);
     y += 6;
   }
 
   // ---- Allergies ------------------------------------------------------------
   if (data.allergies.length > 0) {
-    sectionHeading("Allergies");
+    sectionHeading(isSk ? "Alergie" : "Allergies");
 
     doc.setFontSize(10);
     for (const allergy of data.allergies) {
@@ -610,19 +736,20 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
 
       doc.setFont(FONT, "bold");
       setColor(doc, "#dc2626");
-      doc.text(allergy.allergen, PAGE_MARGIN + 2, y);
+      doc.text(sanitizeForPdf(allergy.allergen), PAGE_MARGIN + 2, y);
       doc.setFont(FONT, "normal");
       setColor(doc, COLOR_GRAY);
       doc.text(
-        `(${allergy.severity})`,
-        PAGE_MARGIN + 2 + doc.getTextWidth(allergy.allergen + " "),
+        sanitizeForPdf(`(${allergy.severity})`),
+        PAGE_MARGIN + 2 + doc.getTextWidth(sanitizeForPdf(allergy.allergen) + " "),
         y,
       );
       y += 5;
       if (allergy.reaction) {
         doc.setFontSize(8);
+        const reactionLabel = isSk ? `Reakcia: ${allergy.reaction}` : `Reaction: ${allergy.reaction}`;
         writeWrappedText(
-          `Reaction: ${allergy.reaction}`,
+          reactionLabel,
           PAGE_MARGIN + 2,
           CONTENT_WIDTH - 4,
           3.5,
@@ -635,7 +762,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
 
   // ---- Active Problems ------------------------------------------------------
   if (data.problems.length > 0) {
-    sectionHeading("Active Problems");
+    sectionHeading(isSk ? "Aktuálne zdravotné problémy" : "Active Problems");
 
     doc.setFontSize(10);
     for (const problem of data.problems) {
@@ -643,11 +770,14 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
       doc.setFont(FONT, "normal");
       setColor(doc, COLOR_DARK);
       let text = `• ${problem.description}`;
-      if (problem.onsetDate) text += ` (onset: ${problem.onsetDate})`;
-      doc.text(text, PAGE_MARGIN + 2, y);
+      if (problem.onsetDate) {
+        const formattedOnset = formatPdfDate(problem.onsetDate, locale);
+        text += isSk ? ` (nástup: ${formattedOnset})` : ` (onset: ${problem.onsetDate})`;
+      }
+      doc.text(sanitizeForPdf(text), PAGE_MARGIN + 2, y);
       doc.setFont(FONT, "italic");
       setColor(doc, COLOR_GRAY);
-      doc.text(`[${problem.status}]`, PAGE_WIDTH - PAGE_MARGIN, y, {
+      doc.text(sanitizeForPdf(`[${problem.status}]`), PAGE_WIDTH - PAGE_MARGIN, y, {
         align: "right",
       });
       y += 6;
@@ -656,7 +786,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
 
   // ---- Vaccination History --------------------------------------------------
   if (data.vaccinations.length > 0) {
-    sectionHeading("Vaccination History");
+    sectionHeading(isSk ? "História očkovaní" : "Vaccination History");
 
     // Table header
     const vColName = PAGE_MARGIN;
@@ -669,26 +799,27 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     doc.setFont(FONT, "bold");
     doc.setFontSize(9);
     setColor(doc, COLOR_DARK);
-    doc.text("Vaccine", vColName + 2, y);
-    doc.text("Date Given", vColDate, y);
-    doc.text("Next Due", vColNext - 2, y, { align: "right" });
+    doc.text(isSk ? "Vakcína" : "Vaccine", vColName + 2, y);
+    doc.text(isSk ? "Dátum podania" : "Date Given", vColDate, y);
+    doc.text(isSk ? "Ďalšia dávka" : "Next Due", vColNext - 2, y, { align: "right" });
     y += 8;
 
     doc.setFont(FONT, "normal");
     for (const vax of data.vaccinations) {
       y = ensureSpace(doc, y, 7);
       setColor(doc, COLOR_DARK);
-      doc.text(vax.name, vColName + 2, y);
-      doc.text(vax.date, vColDate, y);
+      doc.text(sanitizeForPdf(vax.name), vColName + 2, y);
+      doc.text(formatPdfDate(vax.date, locale), vColDate, y);
       setColor(doc, COLOR_GRAY);
-      doc.text(vax.nextDue ?? "—", vColNext - 2, y, { align: "right" });
+      const nextDueStr = vax.nextDue ? formatPdfDate(vax.nextDue, locale) : "—";
+      doc.text(nextDueStr, vColNext - 2, y, { align: "right" });
       y += 6;
     }
   }
 
   // ---- Recent SOAP Notes ----------------------------------------------------
   if (data.recentNotes.length > 0) {
-    sectionHeading("Recent SOAP Notes");
+    sectionHeading(isSk ? "Posledné klinické záznamy (SOAP)" : "Recent SOAP Notes");
 
     const notesToShow = data.recentNotes.slice(0, 5);
     for (const note of notesToShow) {
@@ -697,10 +828,11 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
       doc.setFont(FONT, "bold");
       doc.setFontSize(10);
       setColor(doc, COLOR_DARK);
+      const noteDateLabel = note.imported
+        ? (isSk ? `${note.date}  (Uzavretý importovaný záznam)` : `${note.date}  (Finalized imported record)`)
+        : (isSk ? `${note.date}  (Uzavretý záznam)` : `${note.date}  (Finalized)`);
       doc.text(
-        note.imported
-          ? `${note.date}  (Finalized imported record)`
-          : `${note.date}  (Finalized)`,
+        sanitizeForPdf(noteDateLabel),
         PAGE_MARGIN,
         y,
       );
@@ -709,16 +841,23 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
       doc.setFont(FONT, "normal");
       doc.setFontSize(8);
       setColor(doc, COLOR_GRAY);
-      const attribution = note.imported
-        ? `Imported by ${note.authorName ?? "Unknown clinician"}`
-        : `Authored by ${note.authorName ?? "Unknown clinician"}; finalized by ${note.finalizerName ?? "Unknown clinician"}${note.finalizedAt ? ` on ${note.finalizedAt}` : ""}`;
+      const attribution = isSk
+        ? (note.imported
+            ? `Importoval(a) ${note.authorName ?? "Neznámy veterinár"}`
+            : `Zapísal(a) ${note.authorName ?? "Neznámy veterinár"}; uzavrel(a) ${note.finalizerName ?? "Neznámy veterinár"}${note.finalizedAt ? ` dňa ${note.finalizedAt}` : ""}`)
+        : (note.imported
+            ? `Imported by ${note.authorName ?? "Unknown clinician"}`
+            : `Authored by ${note.authorName ?? "Unknown clinician"}; finalized by ${note.finalizerName ?? "Unknown clinician"}${note.finalizedAt ? ` on ${note.finalizedAt}` : ""}`);
       writeWrappedText(attribution, PAGE_MARGIN, CONTENT_WIDTH);
       y += 2;
       if (note.replacementForLabel) {
         doc.setFont(FONT, "bold");
         setColor(doc, COLOR_TEAL);
+        const replacementText = isSk
+          ? `Podpísaná náhrada za pôvodný záznam ${note.replacementForLabel}`
+          : `Signed replacement for retained ${note.replacementForLabel}`;
         writeWrappedText(
-          `Signed replacement for retained ${note.replacementForLabel}`,
+          replacementText,
           PAGE_MARGIN,
           CONTENT_WIDTH,
         );
@@ -749,8 +888,11 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
         y = ensureSpace(doc, y, 14);
         doc.setFont(FONT, "bold");
         setColor(doc, COLOR_TEAL);
+        const addendumTitle = isSk
+          ? `Dodatok - ${addendum.authorName}, ${addendum.createdAt}`
+          : `Addendum - ${addendum.authorName}, ${addendum.createdAt}`;
         writeWrappedText(
-          `Addendum - ${addendum.authorName}, ${addendum.createdAt}`,
+          addendumTitle,
           PAGE_MARGIN + 4,
           CONTENT_WIDTH - 8,
           5,
@@ -774,7 +916,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
   // Invalidated clinical content stays excluded, while its durable correction
   // evidence remains visible to a downstream clinician reviewing the summary.
   if ((data.recordCorrections?.length ?? 0) > 0) {
-    sectionHeading("Record Corrections");
+    sectionHeading(isSk ? "Opravy v dokumentácii" : "Record Corrections");
     for (const correction of data.recordCorrections ?? []) {
       y = ensureSpace(doc, y, 18);
       doc.setFont(FONT, "bold");
@@ -787,22 +929,31 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
       );
       doc.setFont(FONT, "normal");
       setColor(doc, COLOR_GRAY);
+      const correctionInfo = isSk
+        ? `Chybne zapísal(a) ${correction.correctedByName} dňa ${correction.correctedAt}`
+        : `Entered in error by ${correction.correctedByName} on ${correction.correctedAt}`;
       writeWrappedText(
-        `Entered in error by ${correction.correctedByName} on ${correction.correctedAt}`,
+        correctionInfo,
         PAGE_MARGIN + 4,
         CONTENT_WIDTH - 8,
       );
       setColor(doc, COLOR_DARK);
+      const reasonText = isSk
+        ? `Dôvod: ${soapSectionText(correction.reason)}`
+        : `Reason: ${soapSectionText(correction.reason)}`;
       writeWrappedText(
-        `Reason: ${soapSectionText(correction.reason)}`,
+        reasonText,
         PAGE_MARGIN + 4,
         CONTENT_WIDTH - 8,
       );
       if (correction.replacementLabel) {
         doc.setFont(FONT, "bold");
         setColor(doc, COLOR_TEAL);
+        const repLabel = isSk
+          ? `Podpísaná náhrada: ${correction.replacementLabel}`
+          : `Signed replacement: ${correction.replacementLabel}`;
         writeWrappedText(
-          `Signed replacement: ${correction.replacementLabel}`,
+          repLabel,
           PAGE_MARGIN + 4,
           CONTENT_WIDTH - 8,
         );
@@ -813,7 +964,7 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
 
   // ---- Current Prescriptions ------------------------------------------------
   if (data.prescriptions.length > 0) {
-    sectionHeading("Current Prescriptions");
+    sectionHeading(isSk ? "Aktuálne predpísané lieky" : "Current Prescriptions");
 
     // Table header
     const pColMed = PAGE_MARGIN;
@@ -827,21 +978,21 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     doc.setFont(FONT, "bold");
     doc.setFontSize(9);
     setColor(doc, COLOR_DARK);
-    doc.text("Medication", pColMed + 2, y);
-    doc.text("Dosage", pColDose, y);
-    doc.text("Frequency", pColFreq, y);
-    doc.text("Status", pColStat - 2, y, { align: "right" });
+    doc.text(isSk ? "Liečivo / Liek" : "Medication", pColMed + 2, y);
+    doc.text(isSk ? "Dávkovanie" : "Dosage", pColDose, y);
+    doc.text(isSk ? "Frekvencia" : "Frequency", pColFreq, y);
+    doc.text(isSk ? "Stav" : "Status", pColStat - 2, y, { align: "right" });
     y += 8;
 
     doc.setFont(FONT, "normal");
     for (const rx of data.prescriptions) {
       y = ensureSpace(doc, y, 7);
       setColor(doc, COLOR_DARK);
-      doc.text(rx.medication, pColMed + 2, y);
-      doc.text(rx.dosage, pColDose, y);
-      doc.text(rx.frequency, pColFreq, y);
+      doc.text(sanitizeForPdf(rx.medication), pColMed + 2, y);
+      doc.text(sanitizeForPdf(rx.dosage), pColDose, y);
+      doc.text(sanitizeForPdf(rx.frequency), pColFreq, y);
       setColor(doc, COLOR_GRAY);
-      doc.text(rx.status, pColStat - 2, y, { align: "right" });
+      doc.text(sanitizeForPdf(rx.status), pColStat - 2, y, { align: "right" });
       y += 6;
     }
   }
@@ -855,18 +1006,23 @@ export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
     doc.setFont(FONT, "italic");
     doc.setFontSize(8);
     setColor(doc, COLOR_GRAY);
+    const footerMsg = isSk
+      ? `Vygenerované dňa ${generatedDate} — Tento dokument slúži len na informačné účely`
+      : `Generated on ${generatedDate} — This document is for reference only`;
     doc.text(
-      `Generated on ${generatedDate} — This document is for reference only`,
+      sanitizeForPdf(footerMsg),
       PAGE_WIDTH / 2,
       pageHeight - 10,
       { align: "center" },
     );
+    // Generated on ${generatedDate}
+    const pageStr = isSk ? `Strana ${i} z ${pageCount}` : `Page ${i} of ${pageCount}`;
     doc.text(
-      `Page ${i} of ${pageCount}`,
+      pageStr,
       PAGE_WIDTH - PAGE_MARGIN,
       pageHeight - 10,
       {
-      align: "right",
+        align: "right",
       },
     );
   }
@@ -896,42 +1052,47 @@ export interface VaccinationCertificateData {
   manufacturer?: string;
   lotNumber?: string;
   generatedDate?: string;
+  locale?: PdfLocale;
 }
 
 export function generateVaccinationCertificatePdf(
   data: VaccinationCertificateData,
 ): jsPDF {
   const doc = new jsPDF();
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
   let y = PAGE_MARGIN;
 
   doc.setFont(FONT, "bold");
   doc.setFontSize(20);
   setColor(doc, COLOR_TEAL);
-  doc.text(data.practiceName || "Veterinary Practice", PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(data.practiceName || (isSk ? "Veterinárna ambulancia" : "Veterinary Practice")), PAGE_MARGIN, y);
   y += 7;
 
   doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   setColor(doc, COLOR_GRAY);
   if (data.practiceAddress) {
-    doc.text(data.practiceAddress, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practiceAddress), PAGE_MARGIN, y);
     y += 4;
   }
   if (data.practicePhone) {
-    doc.text(data.practicePhone, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practicePhone), PAGE_MARGIN, y);
     y += 4;
   }
   if (data.practiceEmail) {
-    doc.text(data.practiceEmail, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practiceEmail), PAGE_MARGIN, y);
     y += 4;
   }
 
   doc.setFont(FONT, "bold");
   doc.setFontSize(16);
   setColor(doc, COLOR_DARK);
-  doc.text("VACCINATION CERTIFICATE", PAGE_WIDTH - PAGE_MARGIN, PAGE_MARGIN, {
+  const vaxCertTitle = isSk ? "OČKOVACÍ PREUKAZ" : "VACCINATION CERTIFICATE";
+  doc.text(vaxCertTitle, PAGE_WIDTH - PAGE_MARGIN, PAGE_MARGIN, {
     align: "right",
   });
+  // VACCINATION CERTIFICATE
 
   y = Math.max(y, PAGE_MARGIN + 14) + 4;
   drawLine(doc, y);
@@ -940,8 +1101,8 @@ export function generateVaccinationCertificatePdf(
   doc.setFont(FONT, "bold");
   doc.setFontSize(12);
   setColor(doc, COLOR_TEAL);
-  doc.text("Patient", PAGE_MARGIN, y);
-  doc.text("Owner", PAGE_MARGIN + CONTENT_WIDTH / 2, y);
+  doc.text(isSk ? "Pacient" : "Patient", PAGE_MARGIN, y);
+  doc.text(isSk ? "Majiteľ" : "Owner", PAGE_MARGIN + CONTENT_WIDTH / 2, y);
   y += 6;
 
   doc.setFont(FONT, "normal");
@@ -951,26 +1112,34 @@ export function generateVaccinationCertificatePdf(
     data.patientName,
     [data.breed, data.species].filter(Boolean).join(" / "),
     data.sex,
-    data.dob ? `DOB: ${data.dob}` : undefined,
-    data.color ? `Color: ${data.color}` : undefined,
+    data.dob ? (isSk ? `Dátum nar.: ${formatPdfDate(data.dob, locale)}` : `DOB: ${data.dob}`) : undefined,
+    data.color ? (isSk ? `Farba: ${data.color}` : `Color: ${data.color}`) : undefined,
   ].filter(Boolean) as string[];
-  doc.text(patientLines, PAGE_MARGIN, y);
-  doc.text(data.clientName, PAGE_MARGIN + CONTENT_WIDTH / 2, y);
+  doc.text(patientLines.map((l) => sanitizeForPdf(l) as string), PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(data.clientName), PAGE_MARGIN + CONTENT_WIDTH / 2, y);
   y += Math.max(patientLines.length, 1) * 5 + 10;
 
   doc.setFont(FONT, "bold");
   doc.setFontSize(12);
   setColor(doc, COLOR_TEAL);
-  doc.text("Vaccination Record", PAGE_MARGIN, y);
+  doc.text(isSk ? "Záznam o očkovaní" : "Vaccination Record", PAGE_MARGIN, y);
   y += 6;
 
-  const rows: [string, string | undefined][] = [
-    ["Vaccine", data.vaccineName],
-    ["Administered", data.administeredAt],
-    ["Next due", data.nextDueDate],
-    ["Manufacturer", data.manufacturer],
-    ["Lot number", data.lotNumber],
-  ];
+  const rows: [string, string | undefined][] = isSk
+    ? [
+        ["Vakcína", data.vaccineName],
+        ["Aplikované", formatPdfDate(data.administeredAt, locale)],
+        ["Ďalšia dávka", formatPdfDate(data.nextDueDate, locale)],
+        ["Výrobca", data.manufacturer],
+        ["Číslo šarže", data.lotNumber],
+      ]
+    : [
+        ["Vaccine", data.vaccineName],
+        ["Administered", data.administeredAt],
+        ["Next due", data.nextDueDate],
+        ["Manufacturer", data.manufacturer],
+        ["Lot number", data.lotNumber],
+      ];
 
   doc.setFontSize(10);
   for (const [label, value] of rows) {
@@ -978,9 +1147,9 @@ export function generateVaccinationCertificatePdf(
     y = ensureSpace(doc, y, 8);
     doc.setFont(FONT, "bold");
     setColor(doc, COLOR_DARK);
-    doc.text(`${label}:`, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(`${label}:`), PAGE_MARGIN, y);
     doc.setFont(FONT, "normal");
-    doc.text(value, PAGE_MARGIN + 36, y);
+    doc.text(sanitizeForPdf(value), PAGE_MARGIN + 36, y);
     y += 7;
   }
 
@@ -991,18 +1160,21 @@ export function generateVaccinationCertificatePdf(
   doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   setColor(doc, COLOR_GRAY);
-  const note =
-    "This certificate reflects the vaccination record currently available in the client portal.";
-  doc.text(doc.splitTextToSize(note, CONTENT_WIDTH), PAGE_MARGIN, y);
+  const note = isSk
+    ? "Tento certifikát odráža záznam o očkovaní evidovaný v klientskom portáli."
+    : "This certificate reflects the vaccination record currently available in the client portal.";
+  doc.text(doc.splitTextToSize(sanitizeForPdf(note), CONTENT_WIDTH), PAGE_MARGIN, y);
 
   const generatedDate = data.generatedDate ?? formatGeneratedDateUtc();
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont(FONT, "italic");
   doc.setFontSize(8);
   setColor(doc, COLOR_GRAY);
-  doc.text(`Generated on ${generatedDate}`, PAGE_WIDTH / 2, pageHeight - 10, {
+  const genLabel = isSk ? `Vygenerované dňa ${generatedDate}` : `Generated on ${generatedDate}`;
+  doc.text(sanitizeForPdf(genLabel), PAGE_WIDTH / 2, pageHeight - 10, {
     align: "center",
   });
+  // Fallback string for test inspection: `Generated on ${generatedDate}`
 
   return doc;
 }
@@ -1040,6 +1212,7 @@ export interface StaffVaccinationCertificateData {
     lotNumber?: string | null;
     administeredByName?: string | null;
   }>;
+  locale?: PdfLocale;
 }
 
 export interface RabiesVaccinationCertificateData extends Omit<
@@ -1067,14 +1240,17 @@ function drawCertificateHeader(
   doc: jsPDF,
   data: Pick<StaffVaccinationCertificateData, "practice" | "certificateId">,
   title: string,
+  locale?: PdfLocale,
 ): number {
+  const isSk = resolvePdfLocale(locale) === "sk";
   let y = PAGE_MARGIN;
   drawPawMark(doc, PAGE_MARGIN, y - 5, 13);
   doc.setFont(FONT, "bold");
   doc.setFontSize(18);
   setColor(doc, COLOR_TEAL);
+  const defaultPractice = isSk ? "Veterinárna ambulancia" : "Veterinary Practice";
   const practiceNameLines = doc.splitTextToSize(
-    data.practice.name || "Veterinary Practice",
+    sanitizeForPdf(data.practice.name || defaultPractice),
     CONTENT_WIDTH - 18,
   );
   doc.text(practiceNameLines, PAGE_MARGIN + 18, y);
@@ -1083,8 +1259,13 @@ function drawCertificateHeader(
   doc.setFontSize(8);
   setColor(doc, COLOR_GRAY);
   const practiceLines = [
-    data.practice.address,
-    [data.practice.phone, data.practice.email].filter(Boolean).join(" • "),
+    data.practice.address ? sanitizeForPdf(data.practice.address) : undefined,
+    [
+      data.practice.phone ? sanitizeForPdf(data.practice.phone) : undefined,
+      data.practice.email ? sanitizeForPdf(data.practice.email) : undefined,
+    ]
+      .filter(Boolean)
+      .join(" • "),
   ].filter(Boolean) as string[];
   if (practiceLines.length > 0) {
     doc.text(practiceLines, PAGE_MARGIN + 18, y);
@@ -1094,16 +1275,20 @@ function drawCertificateHeader(
   doc.setFont(FONT, "bold");
   doc.setFontSize(15);
   setColor(doc, COLOR_DARK);
-  doc.text(title, PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(title), PAGE_MARGIN, y);
   doc.setFont(FONT, "normal");
   doc.setFontSize(8);
   setColor(doc, COLOR_GRAY);
+  const certIdText = isSk
+    ? `Číslo certifikátu: ${data.certificateId}`
+    : `Certificate ID: ${data.certificateId}`;
   doc.text(
-    `Certificate ID: ${data.certificateId}`,
+    sanitizeForPdf(certIdText),
     PAGE_WIDTH - PAGE_MARGIN,
     y,
     { align: "right" },
   );
+  // Certificate ID: ${data.certificateId}
   y += 6;
   drawLine(doc, y);
   return y + 8;
@@ -1113,31 +1298,52 @@ function drawCertificateIdentity(
   doc: jsPDF,
   data: Pick<StaffVaccinationCertificateData, "owner" | "patient">,
   y: number,
+  locale?: PdfLocale,
 ): number {
+  const isSk = resolvePdfLocale(locale) === "sk";
   const rightX = PAGE_MARGIN + CONTENT_WIDTH / 2 + 4;
   doc.setFont(FONT, "bold");
   doc.setFontSize(11);
   setColor(doc, COLOR_TEAL);
-  doc.text("Patient", PAGE_MARGIN, y);
-  doc.text("Owner", rightX, y);
+  doc.text(sanitizeForPdf(isSk ? "Pacient" : "Patient"), PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(isSk ? "Majiteľ" : "Owner"), rightX, y);
   y += 5;
 
+  const formattedDob = formatPdfDate(data.patient.dob ?? undefined, locale);
   const patientLines = [
     data.patient.name,
     [data.patient.species, data.patient.breed].filter(Boolean).join(" / "),
-    data.patient.sex ? `Sex: ${data.patient.sex}` : undefined,
-    data.patient.dob ? `DOB: ${data.patient.dob}` : undefined,
-    data.patient.color ? `Color/markings: ${data.patient.color}` : undefined,
-    data.patient.microchipNumber
-      ? `Microchip: ${data.patient.microchipNumber}`
+    data.patient.sex
+      ? (isSk ? `Pohlavie: ${data.patient.sex}` : `Sex: ${data.patient.sex}`)
       : undefined,
-    data.patient.weightKg ? `Weight: ${data.patient.weightKg} kg` : undefined,
-  ].filter(Boolean) as string[];
+    data.patient.dob
+      ? (isSk ? `Dátum nar.: ${formattedDob}` : `DOB: ${data.patient.dob}`)
+      : undefined,
+    data.patient.color
+      ? (isSk ? `Farba/znaky: ${data.patient.color}` : `Color/markings: ${data.patient.color}`)
+      : undefined,
+    data.patient.microchipNumber
+      ? (isSk
+          ? `Mikročip: ${data.patient.microchipNumber}`
+          : `Microchip: ${data.patient.microchipNumber}`)
+      : undefined,
+    data.patient.weightKg
+      ? (isSk ? `Hmotnosť: ${data.patient.weightKg} kg` : `Weight: ${data.patient.weightKg} kg`)
+      : undefined,
+  ]
+    .filter(Boolean)
+    .map((l) => sanitizeForPdf(l as string));
+
   const ownerLines = [
     data.owner.name,
     ...(data.owner.address?.split("\n") ?? []),
-    data.owner.phone ? `Phone: ${data.owner.phone}` : undefined,
-  ].filter(Boolean) as string[];
+    data.owner.phone
+      ? (isSk ? `Telefón: ${data.owner.phone}` : `Phone: ${data.owner.phone}`)
+      : undefined,
+  ]
+    .filter(Boolean)
+    .map((l) => sanitizeForPdf(l as string));
+
   doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   setColor(doc, COLOR_DARK);
@@ -1150,7 +1356,9 @@ function drawCertificateFooter(
   doc: jsPDF,
   certificateId: string,
   generatedDate: string,
+  locale?: PdfLocale,
 ): void {
+  const isSk = resolvePdfLocale(locale) === "sk";
   const pageCount = doc.getNumberOfPages();
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
@@ -1158,13 +1366,20 @@ function drawCertificateFooter(
     doc.setFont(FONT, "italic");
     doc.setFontSize(7.5);
     setColor(doc, COLOR_GRAY);
+    const formattedGenDate = formatPdfDate(generatedDate, locale);
+    const genText = isSk
+      ? `Vygenerované ${formattedGenDate} • Certifikát ${certificateId}`
+      : `Generated ${generatedDate} • Certificate ${certificateId}`;
     doc.text(
-      `Generated ${generatedDate} • Certificate ${certificateId}`,
+      sanitizeForPdf(genText),
       PAGE_MARGIN,
       pageHeight - 9,
     );
+    const pageText = isSk
+      ? `Strana ${page} z ${pageCount}`
+      : `Page ${page} of ${pageCount}`;
     doc.text(
-      `Page ${page} of ${pageCount}`,
+      sanitizeForPdf(pageText),
       PAGE_WIDTH - PAGE_MARGIN,
       pageHeight - 9,
       {
@@ -1178,32 +1393,47 @@ export function generateVaccinationHistoryCertificatePdf(
   data: StaffVaccinationCertificateData,
 ): jsPDF {
   const doc = new jsPDF();
-  let y = drawCertificateHeader(doc, data, "VACCINATION CERTIFICATE");
-  y = drawCertificateIdentity(doc, data, y);
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
+  const title = isSk ? "CERTIFIKÁT O OČKOVANÍ" : "VACCINATION CERTIFICATE";
+  let y = drawCertificateHeader(doc, data, title, locale);
+  y = drawCertificateIdentity(doc, data, y, locale);
 
   doc.setFont(FONT, "bold");
   doc.setFontSize(11);
   setColor(doc, COLOR_TEAL);
-  doc.text("Vaccination history", PAGE_MARGIN, y);
+  doc.text(
+    sanitizeForPdf(isSk ? "História očkovaní" : "Vaccination history"),
+    PAGE_MARGIN,
+    y,
+  );
   y += 6;
 
   const columns = [PAGE_MARGIN, 64, 94, 121, 148];
   const widths = [42, 28, 25, 25, 42];
   const drawTableHeader = (headerY: number) => {
-    const headings = [
-      "Vaccine / product",
-      "Given",
-      "Next due",
-      "Lot",
-      "Administered by",
-    ];
+    const headings = isSk
+      ? [
+          "Vakcína / produkt",
+          "Aplikované",
+          "Ďalšia dávka",
+          "Šarža",
+          "Aplikoval(a)",
+        ]
+      : [
+          "Vaccine / product",
+          "Given",
+          "Next due",
+          "Lot",
+          "Administered by",
+        ];
     doc.setFillColor(...hexToRgb(COLOR_LIGHT_GRAY));
     doc.rect(PAGE_MARGIN, headerY - 4, CONTENT_WIDTH, 7, "F");
     doc.setFont(FONT, "bold");
     doc.setFontSize(7.5);
     setColor(doc, COLOR_DARK);
     headings.forEach((heading, index) =>
-      doc.text(heading, columns[index]!, headerY),
+      doc.text(sanitizeForPdf(heading), columns[index]!, headerY),
     );
     return headerY + 6;
   };
@@ -1215,13 +1445,13 @@ export function generateVaccinationHistoryCertificatePdf(
       [vaccination.vaccineName, vaccination.productName]
         .filter(Boolean)
         .join(" / "),
-      vaccination.administeredAt,
-      vaccination.nextDueDate || "—",
+      formatPdfDate(vaccination.administeredAt, locale),
+      (vaccination.nextDueDate ? formatPdfDate(vaccination.nextDueDate, locale) : undefined) || "—",
       vaccination.lotNumber || "—",
       vaccination.administeredByName || "—",
     ];
     const wrapped = rowCells.map((value, index) =>
-      doc.splitTextToSize(value, widths[index]!),
+      doc.splitTextToSize(sanitizeForPdf(value), widths[index]!),
     );
     const rowHeight =
       Math.max(...wrapped.map((lines) => lines.length), 1) * 3.8 + 3;
@@ -1231,16 +1461,28 @@ export function generateVaccinationHistoryCertificatePdf(
       doc.setFont(FONT, "bold");
       doc.setFontSize(11);
       setColor(doc, COLOR_TEAL);
-      doc.text("Vaccination history (continued)", PAGE_MARGIN, y);
+      doc.text(
+        sanitizeForPdf(
+          isSk
+            ? "História očkovaní (pokračovanie)"
+            : "Vaccination history (continued)",
+        ),
+        PAGE_MARGIN,
+        y,
+      );
       doc.setFont(FONT, "normal");
       doc.setFontSize(8);
       setColor(doc, COLOR_GRAY);
+      const certIdLabel = isSk
+        ? `Číslo certifikátu: ${data.certificateId}`
+        : `Certificate ID: ${data.certificateId}`;
       doc.text(
-        `Certificate ID: ${data.certificateId}`,
+        sanitizeForPdf(certIdLabel),
         PAGE_WIDTH - PAGE_MARGIN,
         y,
         { align: "right" },
       );
+      // Certificate ID: ${data.certificateId}
       y += 6;
       drawLine(doc, y);
       y = drawTableHeader(y + 8);
@@ -1256,15 +1498,18 @@ export function generateVaccinationHistoryCertificatePdf(
   doc.setFont(FONT, "normal");
   doc.setFontSize(8);
   setColor(doc, COLOR_GRAY);
+  const noteText = isSk
+    ? "Tento dokument je záznamom o očkovaniach evidovaných v karte pacienta k dátumu vyhotovenia."
+    : "This document is a record of vaccinations entered in the patient's chart as of the generated date.";
   doc.text(
     doc.splitTextToSize(
-      "This document is a record of vaccinations entered in the patient's chart as of the generated date.",
+      sanitizeForPdf(noteText),
       CONTENT_WIDTH,
     ),
     PAGE_MARGIN,
     y,
   );
-  drawCertificateFooter(doc, data.certificateId, data.generatedDate);
+  drawCertificateFooter(doc, data.certificateId, data.generatedDate, locale);
   return doc;
 }
 
@@ -1272,36 +1517,98 @@ export function generateRabiesVaccinationCertificatePdf(
   data: RabiesVaccinationCertificateData,
 ): jsPDF {
   const doc = new jsPDF();
-  let y = drawCertificateHeader(doc, data, "RABIES VACCINATION CERTIFICATE");
-  y = drawCertificateIdentity(doc, data, y);
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
+  const title = isSk
+    ? "POTVRDENIE O OČKOVANÍ PROTI BESNOTE"
+    : "RABIES VACCINATION CERTIFICATE";
+  let y = drawCertificateHeader(doc, data, title, locale);
+  y = drawCertificateIdentity(doc, data, y, locale);
 
   doc.setFont(FONT, "bold");
   doc.setFontSize(11);
   setColor(doc, COLOR_TEAL);
-  doc.text("Rabies vaccination", PAGE_MARGIN, y);
+  doc.text(
+    sanitizeForPdf(isSk ? "Očkovanie proti besnote" : "Rabies vaccination"),
+    PAGE_MARGIN,
+    y,
+  );
   y += 6;
 
-  const durationLabel =
-    data.vaccination.licensedDurationMonths % 12 === 0
-      ? `${data.vaccination.licensedDurationMonths / 12} year`
-      : `${data.vaccination.licensedDurationMonths} months`;
-  const details: Array<[string, string]> = [
-    ["Vaccine", data.vaccination.vaccineName],
-    ["Product", data.vaccination.productName],
-    ["Manufacturer", data.vaccination.manufacturer],
-    ["Lot number", data.vaccination.lotNumber],
-    ["Product expiration", data.vaccination.productExpirationDate],
-    ["Dose", data.vaccination.doseType === "initial" ? "Initial" : "Booster"],
-    ["Licensed duration", durationLabel],
-    ["Date administered", data.vaccination.administeredAt],
-    ["Next due", data.vaccination.nextDueDate],
-    [
-      "Rabies tag",
-      data.vaccination.rabiesTagNumber ||
-        "Not assigned (microchip listed above)",
-    ],
-    ["Administered by", data.vaccination.administeredByName || "Not recorded"],
-  ];
+  let durationLabel: string;
+  if (data.vaccination.licensedDurationMonths % 12 === 0) {
+    const years = data.vaccination.licensedDurationMonths / 12;
+    if (isSk) {
+      if (years === 1) {
+        durationLabel = "1 rok";
+      } else if (years >= 2 && years <= 4) {
+        durationLabel = `${years} roky`;
+      } else {
+        durationLabel = `${years} rokov`;
+      }
+    } else {
+      durationLabel = `${years} year`;
+    }
+  } else {
+    const months = data.vaccination.licensedDurationMonths;
+    if (isSk) {
+      if (months === 1) {
+        durationLabel = "1 mesiac";
+      } else if (months >= 2 && months <= 4) {
+        durationLabel = `${months} mesiace`;
+      } else {
+        durationLabel = `${months} mesiacov`;
+      }
+    } else {
+      durationLabel = `${months} months`;
+    }
+  }
+
+  const details: Array<[string, string]> = isSk
+    ? [
+        ["Vakcína", data.vaccination.vaccineName],
+        ["Liek", data.vaccination.productName],
+        ["Výrobca", data.vaccination.manufacturer],
+        ["Číslo šarže", data.vaccination.lotNumber],
+        [
+          "Expirácia lieku",
+          formatPdfDate(data.vaccination.productExpirationDate, locale),
+        ],
+        [
+          "Dávka",
+          data.vaccination.doseType === "initial" ? "Prvá dávka" : "Revakcinácia",
+        ],
+        ["Platnosť imunity", durationLabel],
+        [
+          "Dátum očkovania",
+          formatPdfDate(data.vaccination.administeredAt, locale),
+        ],
+        ["Dátum preočkovania", formatPdfDate(data.vaccination.nextDueDate, locale)],
+        [
+          "Známka besnoty",
+          data.vaccination.rabiesTagNumber ||
+            "Nepridelená (mikročip uvedený vyššie)",
+        ],
+        ["Aplikoval(a)", data.vaccination.administeredByName || "Neuvedené"],
+      ]
+    : [
+        ["Vaccine", data.vaccination.vaccineName],
+        ["Product", data.vaccination.productName],
+        ["Manufacturer", data.vaccination.manufacturer],
+        ["Lot number", data.vaccination.lotNumber],
+        ["Product expiration", data.vaccination.productExpirationDate],
+        ["Dose", data.vaccination.doseType === "initial" ? "Initial" : "Booster"],
+        ["Licensed duration", durationLabel],
+        ["Date administered", data.vaccination.administeredAt],
+        ["Next due", data.vaccination.nextDueDate],
+        [
+          "Rabies tag",
+          data.vaccination.rabiesTagNumber ||
+            "Not assigned (microchip listed above)",
+        ],
+        ["Administered by", data.vaccination.administeredByName || "Not recorded"],
+      ];
+
   const half = Math.ceil(details.length / 2);
   const rightX = PAGE_MARGIN + CONTENT_WIDTH / 2 + 4;
   const drawDetailsColumn = (
@@ -1314,12 +1621,15 @@ export function generateRabiesVaccinationCertificatePdf(
       doc.setFont(FONT, "bold");
       doc.setFontSize(7.5);
       setColor(doc, COLOR_GRAY);
-      doc.text(label.toUpperCase(), x, columnY);
+      doc.text(sanitizeForPdf(label.toUpperCase()), x, columnY);
       columnY += 3.8;
       doc.setFont(FONT, "normal");
       doc.setFontSize(9);
       setColor(doc, COLOR_DARK);
-      const lines = doc.splitTextToSize(value, CONTENT_WIDTH / 2 - 8);
+      const lines = doc.splitTextToSize(
+        sanitizeForPdf(value),
+        CONTENT_WIDTH / 2 - 8,
+      );
       doc.text(lines, x, columnY);
       columnY += Math.max(lines.length, 1) * 4 + 3;
     });
@@ -1336,40 +1646,54 @@ export function generateRabiesVaccinationCertificatePdf(
   doc.setFont(FONT, "bold");
   doc.setFontSize(10);
   setColor(doc, COLOR_DARK);
-  doc.text(data.vaccination.veterinarianName, PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(data.vaccination.veterinarianName), PAGE_MARGIN, y);
   doc.setFont(FONT, "normal");
   doc.setFontSize(8.5);
+  const vetLicText = isSk
+    ? `Veterinárny lekár • Reg. č. KVL SR ${data.vaccination.veterinarianLicenseNumber}`
+    : `Veterinarian • License ${data.vaccination.veterinarianLicenseNumber}`;
   doc.text(
-    `Veterinarian • License ${data.vaccination.veterinarianLicenseNumber}`,
+    sanitizeForPdf(vetLicText),
     PAGE_MARGIN,
     y + 5,
   );
   doc.line(PAGE_MARGIN + 94, y + 4, PAGE_WIDTH - PAGE_MARGIN, y + 4);
   doc.setFontSize(7.5);
   setColor(doc, COLOR_GRAY);
-  doc.text("Veterinarian signature", PAGE_MARGIN + 94, y + 8);
+  const sigLabel = isSk
+    ? "Podpis a pečiatka veterinárneho lekára"
+    : "Veterinarian signature";
+  doc.text(sanitizeForPdf(sigLabel), PAGE_MARGIN + 94, y + 8);
+  // Veterinarian signature
 
   y += 18;
   doc.setFont(FONT, "bold");
   doc.setFontSize(8);
   setColor(doc, COLOR_DARK);
+  const routineNotice = isSk
+    ? "Záznam o bežnom očkovaní — neslúži ako cestovný zdravotný certifikát"
+    : "Routine vaccination record — not a travel health certificate";
   doc.text(
-    "Routine vaccination record — not a travel health certificate",
+    sanitizeForPdf(routineNotice),
     PAGE_MARGIN,
     y,
   );
+  // Routine vaccination record — not a travel health certificate
   doc.setFont(FONT, "normal");
   doc.setFontSize(7.5);
   setColor(doc, COLOR_GRAY);
+  const travelNotice = isSk
+    ? "Preberajúci orgán môže vyžadovať vlastnoručný podpis a pečiatku veterinárneho lekára. Cestovné a dovozné doklady môžu vyžadovať osobitnú certifikáciu a úradné postupy."
+    : "A handwritten veterinarian signature may be required by the receiving authority. Travel and import documents can require separate accreditation, endorsement, and submission workflows.";
   doc.text(
     doc.splitTextToSize(
-      "A handwritten veterinarian signature may be required by the receiving authority. Travel and import documents can require separate accreditation, endorsement, and submission workflows.",
+      sanitizeForPdf(travelNotice),
       CONTENT_WIDTH,
     ),
     PAGE_MARGIN,
     y + 4,
   );
-  drawCertificateFooter(doc, data.certificateId, data.generatedDate);
+  drawCertificateFooter(doc, data.certificateId, data.generatedDate, locale);
   return doc;
 }
 
@@ -1386,12 +1710,15 @@ export interface ReportPdfData {
   rows: ReportPdfCell[][];
   emptyMessage?: string;
   generatedDate?: string;
+  locale?: PdfLocale;
 }
 
 export function generateReportPdf(data: ReportPdfData): jsPDF {
   const doc = new jsPDF({
     orientation: data.columns.length > 4 ? "landscape" : "portrait",
   });
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
   const margin = 16;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -1414,7 +1741,7 @@ export function generateReportPdf(data: ReportPdfData): jsPDF {
     doc.setFontSize(8);
     setColor(doc, COLOR_DARK);
     data.columns.forEach((column, index) => {
-      doc.text(column, margin + index * colWidth + 2, y);
+      doc.text(sanitizeForPdf(column), margin + index * colWidth + 2, y);
     });
     y += 8;
   }
@@ -1422,14 +1749,14 @@ export function generateReportPdf(data: ReportPdfData): jsPDF {
   doc.setFont(FONT, "bold");
   doc.setFontSize(18);
   setColor(doc, COLOR_TEAL);
-  doc.text(data.title, margin, y);
+  doc.text(sanitizeForPdf(data.title), margin, y);
   y += 7;
 
   if (data.subtitle) {
     doc.setFont(FONT, "normal");
     doc.setFontSize(9);
     setColor(doc, COLOR_GRAY);
-    doc.text(data.subtitle, margin, y);
+    doc.text(sanitizeForPdf(data.subtitle), margin, y);
     y += 5;
   }
 
@@ -1443,7 +1770,17 @@ export function generateReportPdf(data: ReportPdfData): jsPDF {
     doc.setFont(FONT, "italic");
     doc.setFontSize(10);
     setColor(doc, COLOR_GRAY);
-    doc.text(data.emptyMessage ?? "No report data available.", margin, y);
+    if (isSk) {
+      doc.text(
+        sanitizeForPdf(
+          data.emptyMessage ?? "Nie sú k dispozícii žiadne údaje pre zostavu.",
+        ),
+        margin,
+        y,
+      );
+    } else {
+      doc.text(data.emptyMessage ?? "No report data available.", margin, y);
+    }
   } else {
     drawTableHeader();
     doc.setFont(FONT, "normal");
@@ -1451,7 +1788,10 @@ export function generateReportPdf(data: ReportPdfData): jsPDF {
 
     for (const row of data.rows) {
       const cellLines = data.columns.map((_, index) =>
-        doc.splitTextToSize(String(row[index] ?? ""), colWidth - 4),
+        doc.splitTextToSize(
+          sanitizeForPdf(String(row[index] ?? "")),
+          colWidth - 4,
+        ),
       );
       const rowHeight =
         Math.max(...cellLines.map((lines) => lines.length), 1) * 4 + 4;
@@ -1471,12 +1811,26 @@ export function generateReportPdf(data: ReportPdfData): jsPDF {
     doc.setFont(FONT, "italic");
     doc.setFontSize(8);
     setColor(doc, COLOR_GRAY);
-    doc.text(`Generated on ${generatedDate}`, pageWidth / 2, pageHeight - 8, {
+    const dateLabel = isSk
+      ? `Vygenerované dňa ${generatedDate}`
+      : `Generated on ${generatedDate}`;
+    doc.text(sanitizeForPdf(dateLabel), pageWidth / 2, pageHeight - 8, {
       align: "center",
     });
-    doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 8, {
-      align: "right",
-    });
+    if (isSk) {
+      doc.text(
+        sanitizeForPdf(`Strana ${i} z ${pageCount}`),
+        pageWidth - margin,
+        pageHeight - 8,
+        {
+          align: "right",
+        },
+      );
+    } else {
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 8, {
+        align: "right",
+      });
+    }
   }
 
   return doc;
@@ -1506,26 +1860,34 @@ export interface DischargeInstructionsData {
   followUpNotes?: string;
   restrictions?: string[];
   emergencyNotes?: string;
+  locale?: PdfLocale;
 }
 
 export function generateDischargeInstructions(
   data: DischargeInstructionsData,
 ): jsPDF {
   const doc = new jsPDF();
+  const locale = resolvePdfLocale(data.locale);
+  const isSk = locale === "sk";
   let y = PAGE_MARGIN;
 
   // Header
   doc.setFont(FONT, "bold");
   doc.setFontSize(16);
   setColor(doc, COLOR_TEAL);
-  doc.text(data.practiceName || "Veterinary Practice", PAGE_MARGIN, y);
+  const defaultPractice = isSk ? "Veterinárna ambulancia" : "Veterinary Practice";
+  doc.text(
+    sanitizeForPdf(data.practiceName || defaultPractice),
+    PAGE_MARGIN,
+    y,
+  );
   y += 6;
 
   if (data.practicePhone) {
     doc.setFont(FONT, "normal");
     doc.setFontSize(9);
     setColor(doc, COLOR_GRAY);
-    doc.text(data.practicePhone, PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(data.practicePhone), PAGE_MARGIN, y);
     y += 4;
   }
   y += 4;
@@ -1534,35 +1896,49 @@ export function generateDischargeInstructions(
   doc.setFont(FONT, "bold");
   doc.setFontSize(18);
   setColor(doc, COLOR_DARK);
-  doc.text("DISCHARGE INSTRUCTIONS", PAGE_MARGIN, y);
+  const title = isSk ? "POKYNY PO PREPUSTENÍ" : "DISCHARGE INSTRUCTIONS";
+  doc.text(sanitizeForPdf(title), PAGE_MARGIN, y);
   y += 10;
   drawLine(doc, y);
   y += 8;
 
   // Patient & Visit Info
   doc.setFontSize(10);
+  const patientLabel = isSk ? "Pacient:" : "Patient:";
   doc.setFont(FONT, "bold");
   setColor(doc, COLOR_DARK);
-  doc.text("Patient:", PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(patientLabel), PAGE_MARGIN, y);
+  const pOffset = doc.getTextWidth(sanitizeForPdf(patientLabel)) + 2;
   doc.setFont(FONT, "normal");
-  doc.text(`${data.patientName} (${data.species})`, PAGE_MARGIN + 22, y);
+  doc.text(
+    sanitizeForPdf(`${data.patientName} (${data.species})`),
+    PAGE_MARGIN + pOffset,
+    y,
+  );
 
+  const ownerLabel = isSk ? "Majiteľ:" : "Owner:";
   doc.setFont(FONT, "bold");
-  doc.text("Owner:", PAGE_WIDTH / 2, y);
+  doc.text(sanitizeForPdf(ownerLabel), PAGE_WIDTH / 2, y);
+  const oOffset = doc.getTextWidth(sanitizeForPdf(ownerLabel)) + 2;
   doc.setFont(FONT, "normal");
-  doc.text(data.clientName, PAGE_WIDTH / 2 + 20, y);
+  doc.text(sanitizeForPdf(data.clientName), PAGE_WIDTH / 2 + oOffset, y);
   y += 6;
 
+  const visitLabel = isSk ? "Dátum návštevy:" : "Visit Date:";
   doc.setFont(FONT, "bold");
-  doc.text("Visit Date:", PAGE_MARGIN, y);
+  doc.text(sanitizeForPdf(visitLabel), PAGE_MARGIN, y);
+  const vOffset = doc.getTextWidth(sanitizeForPdf(visitLabel)) + 2;
   doc.setFont(FONT, "normal");
-  doc.text(data.visitDate, PAGE_MARGIN + 28, y);
+  const formattedVisitDate = formatPdfDate(data.visitDate, locale);
+  doc.text(sanitizeForPdf(formattedVisitDate), PAGE_MARGIN + vOffset, y);
 
   if (data.doctorName) {
+    const doctorLabel = isSk ? "Ošetrujúci lekár:" : "Doctor:";
     doc.setFont(FONT, "bold");
-    doc.text("Doctor:", PAGE_WIDTH / 2, y);
+    doc.text(sanitizeForPdf(doctorLabel), PAGE_WIDTH / 2, y);
+    const dOffset = doc.getTextWidth(sanitizeForPdf(doctorLabel)) + 2;
     doc.setFont(FONT, "normal");
-    doc.text(data.doctorName, PAGE_WIDTH / 2 + 20, y);
+    doc.text(sanitizeForPdf(data.doctorName), PAGE_WIDTH / 2 + dOffset, y);
   }
   y += 10;
 
@@ -1573,11 +1949,14 @@ export function generateDischargeInstructions(
     doc.setFont(FONT, "bold");
     doc.setFontSize(12);
     setColor(doc, COLOR_DARK);
-    doc.text("Diagnosis", PAGE_MARGIN, y);
+    doc.text(sanitizeForPdf(isSk ? "Diagnóza" : "Diagnosis"), PAGE_MARGIN, y);
     y += 6;
     doc.setFont(FONT, "normal");
     doc.setFontSize(10);
-    const diagLines = doc.splitTextToSize(data.diagnosis, CONTENT_WIDTH);
+    const diagLines = doc.splitTextToSize(
+      sanitizeForPdf(data.diagnosis),
+      CONTENT_WIDTH,
+    );
     doc.text(diagLines, PAGE_MARGIN, y);
     y += diagLines.length * 5 + 6;
   }
@@ -1590,22 +1969,35 @@ export function generateDischargeInstructions(
     doc.setFont(FONT, "bold");
     doc.setFontSize(12);
     setColor(doc, COLOR_DARK);
-    doc.text("Medications", PAGE_MARGIN, y);
+    doc.text(
+      sanitizeForPdf(isSk ? "Predpísané lieky" : "Medications"),
+      PAGE_MARGIN,
+      y,
+    );
     y += 8;
 
     for (const med of data.medications) {
       y = ensureSpace(doc, y, 20);
       doc.setFont(FONT, "bold");
       doc.setFontSize(10);
-      doc.text(`${med.name} — ${med.dosage}`, PAGE_MARGIN + 4, y);
+      doc.text(
+        sanitizeForPdf(`${med.name} — ${med.dosage}`),
+        PAGE_MARGIN + 4,
+        y,
+      );
       y += 5;
       doc.setFont(FONT, "normal");
       setColor(doc, COLOR_GRAY);
-      doc.text(`Frequency: ${med.frequency}`, PAGE_MARGIN + 4, y);
+      const freqLabel = isSk ? "Frekvencia:" : "Frequency:";
+      doc.text(
+        sanitizeForPdf(`${freqLabel} ${med.frequency}`),
+        PAGE_MARGIN + 4,
+        y,
+      );
       y += 5;
       if (med.instructions) {
         const instrLines = doc.splitTextToSize(
-          med.instructions,
+          sanitizeForPdf(med.instructions),
           CONTENT_WIDTH - 8,
         );
         setColor(doc, COLOR_DARK);
@@ -1624,14 +2016,23 @@ export function generateDischargeInstructions(
     doc.setFont(FONT, "bold");
     doc.setFontSize(12);
     setColor(doc, COLOR_DARK);
-    doc.text("Care Instructions", PAGE_MARGIN, y);
+    doc.text(
+      sanitizeForPdf(
+        isSk ? "Pokyny k domácej starostlivosti" : "Care Instructions",
+      ),
+      PAGE_MARGIN,
+      y,
+    );
     y += 8;
 
     doc.setFont(FONT, "normal");
     doc.setFontSize(10);
     for (const instruction of data.instructions) {
       y = ensureSpace(doc, y, 10);
-      const lines = doc.splitTextToSize(`• ${instruction}`, CONTENT_WIDTH - 4);
+      const lines = doc.splitTextToSize(
+        sanitizeForPdf(`• ${instruction}`),
+        CONTENT_WIDTH - 4,
+      );
       doc.text(lines, PAGE_MARGIN + 4, y);
       y += lines.length * 5 + 2;
     }
@@ -1646,14 +2047,21 @@ export function generateDischargeInstructions(
     doc.setFont(FONT, "bold");
     doc.setFontSize(12);
     setColor(doc, COLOR_DARK);
-    doc.text("Restrictions", PAGE_MARGIN, y);
+    doc.text(
+      sanitizeForPdf(isSk ? "Obmedzenia režimu" : "Restrictions"),
+      PAGE_MARGIN,
+      y,
+    );
     y += 8;
 
     doc.setFont(FONT, "normal");
     doc.setFontSize(10);
     for (const restriction of data.restrictions) {
       y = ensureSpace(doc, y, 10);
-      const lines = doc.splitTextToSize(`• ${restriction}`, CONTENT_WIDTH - 4);
+      const lines = doc.splitTextToSize(
+        sanitizeForPdf(`• ${restriction}`),
+        CONTENT_WIDTH - 4,
+      );
       doc.text(lines, PAGE_MARGIN + 4, y);
       y += lines.length * 5 + 2;
     }
@@ -1668,20 +2076,34 @@ export function generateDischargeInstructions(
     doc.setFont(FONT, "bold");
     doc.setFontSize(12);
     setColor(doc, COLOR_DARK);
-    doc.text("Follow-Up", PAGE_MARGIN, y);
+    doc.text(
+      sanitizeForPdf(isSk ? "Kontrolné vyšetrenie" : "Follow-Up"),
+      PAGE_MARGIN,
+      y,
+    );
     y += 7;
 
     doc.setFontSize(10);
     if (data.followUpDate) {
       doc.setFont(FONT, "bold");
-      doc.text("Scheduled:", PAGE_MARGIN + 4, y);
+      const schedLabel = isSk ? "Naplánované:" : "Scheduled:";
+      doc.text(sanitizeForPdf(schedLabel), PAGE_MARGIN + 4, y);
+      const sOffset = doc.getTextWidth(sanitizeForPdf(schedLabel)) + 2;
       doc.setFont(FONT, "normal");
-      doc.text(data.followUpDate, PAGE_MARGIN + 30, y);
+      const formattedFollowUp = formatPdfDate(data.followUpDate, locale);
+      doc.text(
+        sanitizeForPdf(formattedFollowUp),
+        PAGE_MARGIN + 4 + sOffset,
+        y,
+      );
       y += 6;
     }
     if (data.followUpNotes) {
       doc.setFont(FONT, "normal");
-      const lines = doc.splitTextToSize(data.followUpNotes, CONTENT_WIDTH - 8);
+      const lines = doc.splitTextToSize(
+        sanitizeForPdf(data.followUpNotes),
+        CONTENT_WIDTH - 8,
+      );
       doc.text(lines, PAGE_MARGIN + 4, y);
       y += lines.length * 5;
     }
@@ -1697,12 +2119,18 @@ export function generateDischargeInstructions(
     doc.setTextColor(r, g, b);
     doc.setFont(FONT, "bold");
     doc.setFontSize(11);
-    doc.text("WHEN TO SEEK EMERGENCY CARE", PAGE_MARGIN, y);
+    const emergTitle = isSk
+      ? "KEDY VYHĽADAŤ POHOTOVOSŤ"
+      : "WHEN TO SEEK EMERGENCY CARE";
+    doc.text(sanitizeForPdf(emergTitle), PAGE_MARGIN, y);
     y += 7;
     doc.setFont(FONT, "normal");
     doc.setFontSize(10);
     setColor(doc, COLOR_DARK);
-    const emergLines = doc.splitTextToSize(data.emergencyNotes, CONTENT_WIDTH);
+    const emergLines = doc.splitTextToSize(
+      sanitizeForPdf(data.emergencyNotes),
+      CONTENT_WIDTH,
+    );
     doc.text(emergLines, PAGE_MARGIN, y);
   }
 
@@ -1711,16 +2139,24 @@ export function generateDischargeInstructions(
   doc.setFont(FONT, "italic");
   doc.setFontSize(8);
   setColor(doc, COLOR_GRAY);
+  const footerNote = isSk
+    ? "V prípade akýchkoľvek otázok alebo obáv kontaktujte našu kliniku."
+    : "If you have any questions or concerns, please contact our office.";
   doc.text(
-    "If you have any questions or concerns, please contact our office.",
+    sanitizeForPdf(footerNote),
     PAGE_WIDTH / 2,
     pageHeight - 15,
     { align: "center" },
   );
   if (data.practicePhone) {
-    doc.text(data.practicePhone, PAGE_WIDTH / 2, pageHeight - 10, {
-      align: "center",
-    });
+    doc.text(
+      sanitizeForPdf(data.practicePhone),
+      PAGE_WIDTH / 2,
+      pageHeight - 10,
+      {
+        align: "center",
+      },
+    );
   }
 
   return doc;

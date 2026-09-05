@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Database,
+  Archive,
   Download,
   Upload,
   FileSpreadsheet,
@@ -3732,7 +3733,7 @@ function DataTab() {
   const runImportPreview = useCallback(
     (text: string) => {
       if (!importMode || !migrationSource) {
-        toast.error("Choose the system you are moving from first.");
+        toast.error("Najprv vyberte zdrojový systém.");
         return;
       }
       setImportPreview(null);
@@ -3768,7 +3769,7 @@ function DataTab() {
   const handleFileSelect = useCallback(
     (file: File) => {
       if (!importMode || !migrationSource) {
-        toast.error("Choose the system you are moving from first.");
+        toast.error("Najprv vyberte zdrojový systém.");
         return;
       }
       const readVersion = ++importFileReadVersionRef.current;
@@ -3935,12 +3936,12 @@ function DataTab() {
 
   return (
     <div className="space-y-8">
-      {/* Sample data */}
+      {/* Ukážkové dáta */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Sample data</h3>
+        <h3 className="text-sm font-semibold mb-1">Ukážkové dáta</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          A practice full of made up clients and pets so you can explore. Add it
-          any time, and remove it when you are ready to work for real.
+          Klinika plná vymyslených klientov a zvierat na preskúmanie. Môžete si
+          ich kedykoľvek pridať a odstrániť, keď budete pripravení pracovať naostro.
         </p>
         <Button
           variant="outline"
@@ -3966,16 +3967,46 @@ function DataTab() {
         {onboarding.error || onboardingMissing ? (
           <p className="mt-2 text-xs text-destructive">
             {onboarding.error?.message ??
-              "Unable to load sample data status. Please retry."}
+              "Nepodarilo sa načítať stav ukážkových dát. Skúste znova."}
           </p>
         ) : null}
       </div>
 
-      {/* Export Section */}
+      {/* V2 Migrácia & Archív */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <a
+          href="/settings/import-v2"
+          className="group rounded-lg border border-border p-4 transition-colors hover:border-primary/50 hover:bg-muted/50"
+        >
+          <div className="flex items-center gap-3 mb-1">
+            <Database className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            <h3 className="text-sm font-semibold">V2 Migrácia</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Importujte dáta z predchádzajúceho systému VPM V2. Klienti, pacienti,
+            vakcíny a lekárska história.
+          </p>
+        </a>
+        <a
+          href="/migration-archive"
+          className="group rounded-lg border border-border p-4 transition-colors hover:border-primary/50 hover:bg-muted/50"
+        >
+          <div className="flex items-center gap-3 mb-1">
+            <Archive className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            <h3 className="text-sm font-semibold">Archív histórie (V2)</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Prezerajte migrovanú históriu z V2 — klienti, pacienti, očkovania a
+            návštevy v pôvodnej štruktúre.
+          </p>
+        </a>
+      </div>
+
+      {/* Export dát */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Export Data</h3>
+        <h3 className="text-sm font-semibold mb-1">Export dát</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Download your practice data.
+          Stiahnite si dáta vašej praxe.
         </p>
         <div className="mb-3 max-w-2xl">
           <Button
@@ -3996,7 +4027,7 @@ function DataTab() {
               <Download className="h-4 w-4" />
             )}
             <Database className="h-4 w-4" />
-            Export Database Backup
+            Záloha databázy
           </Button>
           {practiceSettingsError || practiceSettingsMissing ? (
             <p className="mt-2 text-xs text-destructive">
@@ -4326,23 +4357,23 @@ function DataTab() {
         </div>
       </div>
 
-      {/* Import Section */}
+      {/* Import dát */}
       <div>
-        <h3 className="text-sm font-semibold mb-1">Import Data</h3>
+        <h3 className="text-sm font-semibold mb-1">Import dát</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Moving from another system? Import clients first, then patients, then
-          vaccine history, then medical history (visit notes). Every file is
-          dry-run first so you see duplicates and missing matches before
-          anything is saved. Common column names from AVImark, Cornerstone, and
-          ezyVet are recognized. Shepherd migrations are currently guided so we
-          can verify the clinic's exact export format. Owner and patient IDs
-          stay linked across files, even when an owner has no email.
+          Prechádzate z iného systému? Importujte najprv klientov, potom pacientov,
+          očkovaciu históriu a nakoniec lekársku históriu (návštevy). Každý súbor sa
+          najprv skontroluje bez zápisu, aby ste videli duplicity a chýbajúce záznamy
+          predtým, než sa čokoľvek uloží. Bežné názvy stĺpcov z AVImark, Cornerstone
+          a ezyVet sú rozpoznávané. Migrácie zo Shepherdu sú sprevádzané, aby sme
+          overili presný formát exportu kliniky. ID vlastníkov a pacientov zostávajú
+          prepojené naprieč súbormi, aj keď vlastník nemá e-mail.
         </p>
 
         {/* Where the data is coming from (export instructions per source) */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
-            Coming from:
+            Zdroj dát:
           </span>
           {MIGRATION_SOURCES.map((source) => (
             <button
@@ -4384,7 +4415,7 @@ function DataTab() {
           </div>
         ) : (
           <p className="mb-4 text-xs font-medium text-amber-700">
-            Choose the system you are moving from before selecting an import.
+            Pred výberom importu najprv vyberte zdrojový systém.
           </p>
         )}
 

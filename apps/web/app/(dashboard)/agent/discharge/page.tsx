@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   FileText,
   Send,
@@ -228,7 +230,7 @@ export default function DischargePage() {
     }
   }, [result, t]);
 
-  // Print report
+  // Print report — render Markdown as styled HTML
   const handlePrint = useCallback(() => {
     if (!result) return;
     const printWindow = window.open("", "_blank");
@@ -236,10 +238,10 @@ export default function DischargePage() {
       window.print();
       return;
     }
-    const safeContent = result
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+
+    // Render the ReactMarkdown preview div content via the DOM
+    const previewEl = document.querySelector("[data-discharge-preview]");
+    const renderedHtml = previewEl?.innerHTML ?? "";
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -260,18 +262,19 @@ export default function DischargePage() {
               max-width: 800px;
               margin: 0 auto;
             }
-            pre {
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              font-family: inherit;
-              font-size: 14px;
-              line-height: 1.65;
-            }
             .header-bar {
               border-bottom: 2px solid #2563eb;
               padding-bottom: 12px;
               margin-bottom: 24px;
             }
+            h1 { font-size: 1.5em; margin-top: 1.5em; }
+            h2 { font-size: 1.3em; margin-top: 1.3em; }
+            h3 { font-size: 1.15em; margin-top: 1.15em; color: #1e3a8a; }
+            ul, ol { padding-left: 1.5em; }
+            li { margin-bottom: 0.3em; }
+            strong { color: #1e3a8a; }
+            hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5em 0; }
+            p { margin-bottom: 0.6em; }
           </style>
         </head>
         <body>
@@ -279,7 +282,7 @@ export default function DischargePage() {
             <h2 style="margin: 0; color: #1e3a8a;">Veterinárna ambulancia & klinika</h2>
             <small style="color: #64748b;">Záverečná prepúšťacia správa pre majiteľa zvieraťa</small>
           </div>
-          <pre>${safeContent}</pre>
+          <div class="markdown-body">${renderedHtml}</div>
           <script>
             window.onload = function() {
               window.print();
@@ -788,8 +791,14 @@ export default function DischargePage() {
                   </div>
                 ) : result ? (
                   viewMode === "preview" ? (
-                    <div className="flex-1 overflow-y-auto p-4 rounded-lg bg-muted/40 border border-border text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                      {result}
+                    <div className="flex-1 overflow-y-auto p-6 rounded-lg bg-muted/40 border border-border" data-discharge-preview>
+                      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-heading prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-hr:border-border">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                        >
+                          {result}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   ) : (
                     <Textarea

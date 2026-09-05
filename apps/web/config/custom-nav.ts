@@ -4,7 +4,6 @@ import {
   Megaphone,
   Newspaper,
   Tv,
-  Database,
   Image as ImageIcon,
   Mic,
   FileText,
@@ -54,14 +53,6 @@ export const customNavItems: CustomNavItem[] = [
     icon: ReceiptText,
     roles: ["admin", "veterinarian", "front_desk"],
     section: "clinical",
-  },
-  {
-    href: "/settings/import-v2",
-    label: "V2 Migrácia",
-    i18nKey: "nav.v2Import",
-    icon: Database,
-    roles: ["admin", "veterinarian"],
-    section: "settings",
   },
   {
     href: "/waiting-room",
