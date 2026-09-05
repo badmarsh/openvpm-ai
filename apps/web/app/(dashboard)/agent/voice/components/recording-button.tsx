@@ -8,11 +8,13 @@ import { cn } from "@/lib/utils";
 interface RecordingButtonProps {
   onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
   disabled?: boolean;
+  size?: "default" | "large";
 }
 
 export function RecordingButton({
   onRecordingComplete,
   disabled,
+  size = "default",
 }: RecordingButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -20,6 +22,8 @@ export function RecordingButton({
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isLarge = size === "large";
 
   useEffect(() => {
     return () => {
@@ -99,28 +103,54 @@ export function RecordingButton({
     return `${m}:${s}`;
   };
 
+  const buttonSize = isLarge ? "h-24 w-24" : "h-20 w-20";
+  const iconSize = isLarge ? "h-10 w-10" : "h-8 w-8";
+
   return (
     <div className="flex flex-col items-center gap-3">
-      <Button
-        type="button"
-        variant={isRecording ? "destructive" : "default"}
-        size="lg"
-        className={cn(
-          "h-20 w-20 rounded-full transition-all",
-          isRecording && "animate-pulse shadow-lg shadow-red-500/25",
+      <div className="relative">
+        {/* Outer ring animation */}
+        {isRecording && (
+          <div
+            className={cn(
+              "absolute inset-0 rounded-full bg-red-500/30",
+              isLarge ? "-m-2" : "-m-1.5",
+            )}
+            style={{
+              animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            }}
+          />
         )}
-        onClick={isRecording ? stopRecording : startRecording}
-        disabled={disabled}
-      >
-        {isRecording ? (
-          <Square className="h-8 w-8" />
-        ) : (
-          <Mic className="h-8 w-8" />
+        <Button
+          type="button"
+          variant={isRecording ? "destructive" : "default"}
+          size="lg"
+          className={cn(
+            "relative rounded-full transition-all duration-300",
+            buttonSize,
+            isRecording && "shadow-lg shadow-red-500/40",
+            !isRecording && !disabled && "hover:scale-105 hover:shadow-xl hover:shadow-violet-500/20",
+          )}
+          onClick={isRecording ? stopRecording : startRecording}
+          disabled={disabled}
+        >
+          {isRecording ? (
+            <Square className={cn(iconSize, "relative z-10")} />
+          ) : (
+            <Mic className={cn(iconSize, "relative z-10")} />
+          )}
+        </Button>
+      </div>
+      <div className="flex flex-col items-center">
+        <span className="text-sm font-mono text-muted-foreground tabular-nums">
+          {isRecording ? formatTime(elapsed) : "0:00"}
+        </span>
+        {isRecording && (
+          <span className="text-xs text-red-500 font-medium animate-pulse">
+            Nahráva sa
+          </span>
         )}
-      </Button>
-      <span className="text-sm font-mono text-muted-foreground">
-        {isRecording ? formatTime(elapsed) : "0:00"}
-      </span>
+      </div>
     </div>
   );
 }
