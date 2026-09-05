@@ -27,6 +27,7 @@ import {
   patients,
   clients,
   practices,
+  users,
   wellnessEnrollments,
 } from '@openpims/db';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
