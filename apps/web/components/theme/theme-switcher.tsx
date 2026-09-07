@@ -26,6 +26,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
     activeThemeId,
     mode,
     presets,
+    mounted,
     setTheme,
     setMode,
     toggleMode,
@@ -66,15 +67,20 @@ export function ThemeSwitcher({ className }: { className?: string }) {
           )}
           aria-label="Prepnúť tému a vzhľad GUI"
         >
-          {mode === "dark" ? (
+          {/* Render a neutral icon until localStorage is loaded to avoid hydration mismatch */}
+          {!mounted ? (
+            <Palette className="h-4 w-4 text-muted-foreground" />
+          ) : mode === "dark" ? (
             <Moon className="h-4 w-4 text-primary" />
           ) : (
             <Sun className="h-4 w-4 text-amber-500" />
           )}
           <span className="hidden md:inline text-xs font-semibold">
-            {activeThemeId === "custom"
-              ? "Custom"
-              : activePreset?.name ?? "Téma"}
+            {!mounted
+              ? "Téma"
+              : activeThemeId === "custom"
+                ? "Custom"
+                : activePreset?.name ?? "Téma"}
           </span>
         </Button>
       </PopoverTrigger>

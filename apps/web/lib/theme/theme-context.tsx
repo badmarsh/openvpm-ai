@@ -11,6 +11,8 @@ interface ThemeContextType {
   mode: ThemeMode;
   presets: ThemePreset[];
   customThemeCss: string;
+  /** False during SSR and the initial hydration render; true after localStorage is loaded. */
+  mounted: boolean;
   setTheme: (id: string) => void;
   setMode: (mode: ThemeMode) => void;
   toggleMode: () => void;
@@ -28,6 +30,7 @@ export function GuiThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("dark");
   const [customThemeCss, setCustomThemeCss] = useState<string>("");
   const [parsedCustomTheme, setParsedCustomTheme] = useState<ParsedThemeSet | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Load initial settings from localStorage on client mount
   useEffect(() => {
@@ -49,6 +52,7 @@ export function GuiThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // localStorage may be disabled
     }
+    setMounted(true);
   }, []);
 
   // Apply theme to document.documentElement whenever theme or mode changes
@@ -128,6 +132,7 @@ export function GuiThemeProvider({ children }: { children: React.ReactNode }) {
         mode,
         presets: THEME_PRESETS,
         customThemeCss,
+        mounted,
         setTheme,
         setMode,
         toggleMode,

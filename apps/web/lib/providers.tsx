@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, splitLink } from "@trpc/client";
 import { SessionProvider } from "next-auth/react";
@@ -17,6 +17,30 @@ import { GuiThemeProvider } from "./theme/theme-context";
 export const ACTIVE_THEME = "light";
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Purge any rogue service workers and stale browser caches on localhost
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1")
+    ) {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          for (const key of keys) {
+            caches.delete(key);
+          }
+        });
+      }
+    }
+  }, []);
+
   const [queryClient] = useState(() => createAppQueryClient());
   const [trpcClient] = useState(() =>
     trpc.createClient({

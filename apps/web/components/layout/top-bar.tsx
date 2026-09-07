@@ -159,10 +159,8 @@ export function TopBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <div className="contents" suppressHydrationWarning>
-          <ThemeSwitcher />
-          <LanguageSwitcher />
-        </div>
+        <ThemeSwitcher />
+        <LanguageSwitcher />
 
         {/* Below sm the pill would crush the page title into one character. */}
         <div className="hidden sm:block">
