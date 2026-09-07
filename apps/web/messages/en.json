@@ -322,7 +322,10 @@
       "dialogVoidDesc": "This cannot be undone. Any dispensed medication charges on this invoice will return to the billing work queue; inventory will not move again.",
       "dialogVoidConfirm": "Void invoice",
       "dialogVoidReasonLabel": "Reason for voiding",
-      "dialogVoidReasonPlaceholder": "Explain the correction for the audit trail"
+      "dialogVoidReasonPlaceholder": "Explain the correction for the audit trail",
+      "dialogConvertEstimateTitle": "Convert estimate to invoice?",
+      "dialogConvertEstimateDesc": "This deducts tracked product stock and creates a draft invoice. It does not charge the client or automatically reconcile visit work.",
+      "dialogConvertEstimateConfirm": "Convert to invoice"
     },
     "dispense": {
       "title": "Unbilled medication dispenses",
