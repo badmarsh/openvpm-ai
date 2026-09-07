@@ -14,20 +14,24 @@ const nextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
   experimental: {
-    optimizePackageImports: [
-      "lucide-react",
-      "@radix-ui/react-avatar",
-      "@radix-ui/react-dialog",
-      "@radix-ui/react-dropdown-menu",
-      "@radix-ui/react-popover",
-      "@radix-ui/react-separator",
-      "@radix-ui/react-slot",
-      "@radix-ui/react-tabs",
-      "@radix-ui/react-tooltip",
-      "@tanstack/react-query",
-      "recharts",
-      "sonner",
-    ],
+    ...(process.env.NODE_ENV === "production"
+      ? {
+          optimizePackageImports: [
+            "lucide-react",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+            "@tanstack/react-query",
+            "recharts",
+            "sonner",
+          ],
+        }
+      : {}),
   },
   async headers() {
     return [

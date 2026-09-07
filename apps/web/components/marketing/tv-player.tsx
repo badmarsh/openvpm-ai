@@ -30,10 +30,15 @@ export function TvPlayer({
     return () => clearInterval(timer);
   }, []);
 
-  // Register service worker for offline TV cache
+  // Register service worker for offline TV cache (production only, never on localhost)
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/tv-sw.js").catch(() => {});
+    if (
+      process.env.NODE_ENV === "production" &&
+      typeof window !== "undefined" &&
+      "serviceWorker" in navigator &&
+      !window.location.hostname.includes("localhost")
+    ) {
+      navigator.serviceWorker.register("/tv-sw.js", { scope: "/tv/" }).catch(() => {});
     }
   }, []);
 
