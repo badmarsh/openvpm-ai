@@ -322,7 +322,10 @@
       "dialogVoidDesc": "Túto akciu nemožno vrátiť späť. Všetky zaúčtované položky vydaných liečiv na tejto faktúre sa vrátia do pracovného zoznamu na fakturáciu; skladové zásoby sa znova nezmenia.",
       "dialogVoidConfirm": "Anulovať faktúru",
       "dialogVoidReasonLabel": "Dôvod anulovania",
-      "dialogVoidReasonPlaceholder": "Vysvetlite dôvod opravy pre auditný záznam"
+      "dialogVoidReasonPlaceholder": "Vysvetlite dôvod opravy pre auditný záznam",
+      "dialogConvertEstimateTitle": "Konvertovať cenovú ponuku na faktúru?",
+      "dialogConvertEstimateDesc": "Týmto sa odpočíta sledovaný tovar zo skladu a vytvorí sa koncept faktúry. Klientovi sa suma automaticky nestrhne ani sa automaticky neuzavrie práca na návšteve.",
+      "dialogConvertEstimateConfirm": "Konvertovať na faktúru"
     },
     "dispense": {
       "title": "Nezaúčtované výdaje liečiv",
