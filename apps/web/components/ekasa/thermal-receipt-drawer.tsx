@@ -22,11 +22,17 @@ import { cn } from "@/lib/utils";
 export interface EkasaReceiptDetails {
   id: string;
   receiptNumber: string;
+  receiptType?: string | null;
+  originalReceiptId?: string | null;
+  originalUid?: string | null;
+  stornoReason?: string | null;
   issuedAt: Date | string | null;
   amountTotal: string | number;
   amountBase?: string | number;
   amountVat?: string | number;
   vatRate: string;
+  taxBreakdown?: Record<string, any> | null;
+  items?: any;
   paymentMethod: string;
   status: "PENDING" | "SENT" | "CONFIRMED" | "FAILED" | "OFFLINE_STORED";
   uid?: string | null;
@@ -42,6 +48,7 @@ interface ThermalReceiptDrawerProps {
   onClose: () => void;
   onPrint?: (receiptId: string) => Promise<void>;
   onRetry?: (receiptId: string) => Promise<void>;
+  onStorno?: (receipt: EkasaReceiptDetails) => void;
   isPrinting?: boolean;
   isRetrying?: boolean;
   clinicName?: string;
@@ -73,6 +80,7 @@ export function ThermalReceiptDrawer({
   onClose,
   onPrint,
   onRetry,
+  onStorno,
   isPrinting,
   isRetrying,
   clinicName = "Veterinárna klinika VET.IS",
@@ -244,22 +252,56 @@ export function ThermalReceiptDrawer({
               </div>
             </div>
 
+            {/* Storno / Opravný doklad Banner */}
+            {receipt.receiptType === "STORNO" && (
+              <div className="my-2 p-2 text-center rounded border-2 border-dashed border-red-600 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300">
+                <p className="font-bold text-xs uppercase tracking-wider">*** STORNO DOKLADU ***</p>
+                <p className="text-[10px] mt-0.5">Pôvodný doklad UID: {receipt.originalUid ?? "—"}</p>
+                {receipt.stornoReason && (
+                  <p className="text-[10px] italic">Dôvod: {receipt.stornoReason}</p>
+                )}
+              </div>
+            )}
+
             {/* Itemized Table */}
             <div className="py-3 border-b border-dashed border-zinc-400 dark:border-zinc-700 space-y-2">
               <div className="flex justify-between font-bold text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 <span>Položka / Služba</span>
                 <span className="tabular-nums">Cena / DPH</span>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <div className="flex-1 pr-2 truncate">
-                  <p className="font-medium">Veterinárne vyšetrenie a starostlivosť</p>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 tabular-nums">1.000 ks x {totalNum.toFixed(2)} €</p>
+              {Array.isArray(receipt.items) && receipt.items.length > 0 ? (
+                receipt.items.map((it: any, idx: number) => {
+                  const qty = it.qty ?? it.quantity ?? 1;
+                  const unitPrice = Number(it.unitPrice || 0);
+                  const itemTotal = Number(it.total || unitPrice * qty);
+                  const itemVat = it.vatRate ? (VAT_PERCENT_MAP[it.vatRate] ?? it.vatRate) : activeRateNum;
+                  return (
+                    <div key={idx} className="flex justify-between text-[11px]">
+                      <div className="flex-1 pr-2 truncate">
+                        <p className="font-medium">{it.name || it.description || "Položka"}</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                          {qty}.000 ks x {unitPrice.toFixed(2)} €
+                        </p>
+                      </div>
+                      <div className="text-right tabular-nums font-semibold">
+                        <p>{itemTotal.toFixed(2)} €</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{itemVat} %</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex justify-between text-[11px]">
+                  <div className="flex-1 pr-2 truncate">
+                    <p className="font-medium">Veterinárne vyšetrenie a starostlivosť</p>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 tabular-nums">1.000 ks x {totalNum.toFixed(2)} €</p>
+                  </div>
+                  <div className="text-right tabular-nums font-semibold">
+                    <p>{totalNum.toFixed(2)} €</p>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{activeRateNum} %</p>
+                  </div>
                 </div>
-                <div className="text-right tabular-nums font-semibold">
-                  <p>{totalNum.toFixed(2)} €</p>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{activeRateNum} %</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* VAT Rates Breakdown (0%, 5%, 10%, 19%, 23%) */}
@@ -278,16 +320,19 @@ export function ThermalReceiptDrawer({
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60">
                   {VAT_RATES_SR.map((rateItem) => {
-                    const isMatched = rateItem.rate === activeRateNum;
-                    const base = isMatched ? calculatedBase : 0;
-                    const vat = isMatched ? calculatedVat : 0;
-                    const total = isMatched ? totalNum : 0;
+                    const tbBucket = receipt.taxBreakdown?.[rateItem.key];
+                    const isMatched = tbBucket ? true : rateItem.rate === activeRateNum;
+                    const base = tbBucket ? Number(tbBucket.base) : (isMatched ? calculatedBase : 0);
+                    const vat = tbBucket ? Number(tbBucket.vat) : (isMatched ? calculatedVat : 0);
+                    const total = tbBucket ? Number(tbBucket.total) : (isMatched ? totalNum : 0);
 
                     return (
                       <tr
                         key={rateItem.key}
                         className={cn(
-                          isMatched ? "font-bold text-zinc-900 dark:text-zinc-100 bg-zinc-100/60 dark:bg-zinc-800/40" : "text-zinc-500 dark:text-zinc-400 opacity-65"
+                          isMatched && (total !== 0 || !receipt.taxBreakdown)
+                            ? "font-bold text-zinc-900 dark:text-zinc-100 bg-zinc-100/60 dark:bg-zinc-800/40"
+                            : "text-zinc-500 dark:text-zinc-400 opacity-65"
                         )}
                       >
                         <td className="py-0.5">{rateItem.rate} %</td>
@@ -370,21 +415,35 @@ export function ThermalReceiptDrawer({
         </div>
 
         {/* Drawer Footer Actions */}
-        <div className="flex items-center justify-end gap-2.5 border-t border-border/60 bg-muted/10 p-4">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            {t("common.close", "Zavrieť")}
-          </Button>
-          {onPrint && (
-            <Button
-              size="sm"
-              disabled={isPrinting}
-              onClick={() => onPrint(receipt.id)}
-              className="gap-1.5"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              {t("ekasa.drawer.printReceipt", "Vytlačiť fiškálny doklad")}
+        <div className="flex items-center justify-between gap-2.5 border-t border-border/60 bg-muted/10 p-4">
+          <div>
+            {onStorno && receipt.receiptType !== "STORNO" && (receipt.status === "CONFIRMED" || receipt.status === "OFFLINE_STORED") && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onStorno(receipt)}
+                className="gap-1.5 text-xs font-semibold"
+              >
+                {t("ekasa.drawer.storno", "Storno dokladu")}
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onClose}>
+              {t("common.close", "Zavrieť")}
             </Button>
-          )}
+            {onPrint && (
+              <Button
+                size="sm"
+                disabled={isPrinting}
+                onClick={() => onPrint(receipt.id)}
+                className="gap-1.5"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                {t("ekasa.drawer.printReceipt", "Vytlačiť fiškálny doklad")}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -50,14 +50,126 @@ export type EkasaVatRateType =
   | "REDUCED_19"
   | "STANDARD_23";
 
+export type EkasaReceiptType =
+  | "STANDARD"
+  | "STORNO"
+  | "RETURN"
+  | "DEPOSIT"
+  | "WITHDRAWAL";
+
+export function normalizeVatRate(input: string | number | undefined | null): EkasaVatRateType {
+  if (!input) return "STANDARD_23";
+  const s = String(input).trim().toUpperCase();
+  if (s === "23" || s === "23%" || s === "STANDARD_23") return "STANDARD_23";
+  if (s === "19" || s === "19%" || s === "REDUCED_19") return "REDUCED_19";
+  if (s === "5" || s === "5%" || s === "REDUCED_5") return "REDUCED_5";
+  if (s === "10" || s === "10%" || s === "REDUCED") return "REDUCED";
+  if (s === "20" || s === "20%" || s === "STANDARD") return "STANDARD";
+  if (s === "0" || s === "0%" || s === "ZERO") return "ZERO";
+  return "STANDARD_23";
+}
+
+export interface MultiVatTaxBucket {
+  rate: EkasaVatRateType;
+  ratePercent: number;
+  base: string;
+  vat: string;
+  total: string;
+}
+
+export interface MultiVatResult {
+  amountBase: string;
+  amountVat: string;
+  amountTotal: string;
+  dominantVatRate: EkasaVatRateType;
+  taxBreakdown: Record<string, MultiVatTaxBucket>;
+}
+
+export function calculateMultiVatReceipt(
+  items: Array<{
+    name: string;
+    qty: number;
+    unitPrice: string | number;
+    vatRate?: string | number;
+  }>,
+  defaultRate: EkasaVatRateType = "STANDARD_23"
+): MultiVatResult {
+  const buckets: Record<
+    string,
+    { ratePercent: number; base: number; vat: number; total: number }
+  > = {
+    STANDARD_23: { ratePercent: 0.23, base: 0, vat: 0, total: 0 },
+    REDUCED_19: { ratePercent: 0.19, base: 0, vat: 0, total: 0 },
+    REDUCED_5: { ratePercent: 0.05, base: 0, vat: 0, total: 0 },
+    ZERO: { ratePercent: 0, base: 0, vat: 0, total: 0 },
+    REDUCED: { ratePercent: 0.10, base: 0, vat: 0, total: 0 },
+    STANDARD: { ratePercent: 0.20, base: 0, vat: 0, total: 0 },
+  };
+
+  let grandTotal = 0;
+  let grandBase = 0;
+  let grandVat = 0;
+
+  for (const item of items) {
+    const rateKey = normalizeVatRate(item.vatRate || defaultRate);
+    const itemTotal = Math.round(Number(item.unitPrice) * item.qty * 100) / 100;
+    const { base, vat } = calculateVatAmounts(itemTotal, rateKey);
+    const bNum = Number(base);
+    const vNum = Number(vat);
+
+    buckets[rateKey].total += itemTotal;
+    buckets[rateKey].base += bNum;
+    buckets[rateKey].vat += vNum;
+
+    grandTotal += itemTotal;
+    grandBase += bNum;
+    grandVat += vNum;
+  }
+
+  let dominantRate: EkasaVatRateType = defaultRate;
+  let maxTotal = -1;
+  for (const [rKey, b] of Object.entries(buckets)) {
+    if (b.total > maxTotal) {
+      maxTotal = b.total;
+      dominantRate = rKey as EkasaVatRateType;
+    }
+  }
+
+  const taxBreakdown: Record<string, MultiVatTaxBucket> = {};
+  for (const [rKey, b] of Object.entries(buckets)) {
+    if (b.total > 0) {
+      taxBreakdown[rKey] = {
+        rate: rKey as EkasaVatRateType,
+        ratePercent: b.ratePercent,
+        base: b.base.toFixed(2),
+        vat: b.vat.toFixed(2),
+        total: b.total.toFixed(2),
+      };
+    }
+  }
+
+  return {
+    amountBase: grandBase.toFixed(2),
+    amountVat: grandVat.toFixed(2),
+    amountTotal: grandTotal.toFixed(2),
+    dominantVatRate: dominantRate,
+    taxBreakdown,
+  };
+}
+
 export interface EkasaReceiptInput {
   practiceId: string;
   invoiceId?: string;
   paymentId?: string;
+  receiptType?: EkasaReceiptType;
+  originalReceiptId?: string;
+  originalUid?: string;
+  stornoReason?: string;
   amountBase: string;
   amountVat: string;
   amountTotal: string;
   vatRate: EkasaVatRateType;
+  taxBreakdown?: Record<string, any>;
   paymentMethod: "CASH" | "CARD" | "TRANSFER";
   items: Array<{
     name: string;
@@ -343,12 +455,18 @@ export async function processEkasaReceipt(
       invoiceId: input.invoiceId ?? null,
       paymentId: input.paymentId ?? null,
       receiptNumber,
+      receiptType: input.receiptType ?? "STANDARD",
+      originalReceiptId: input.originalReceiptId ?? null,
+      originalUid: input.originalUid ?? null,
+      stornoReason: input.stornoReason ?? null,
       okp,
       pkp: pkp ?? null,
       amountBase: input.amountBase,
       amountVat: input.amountVat,
       amountTotal: input.amountTotal,
       vatRate: input.vatRate,
+      taxBreakdown: input.taxBreakdown ?? null,
+      items: input.items ?? null,
       paymentMethod: input.paymentMethod,
       status: "PENDING",
       issuedAt,
@@ -392,6 +510,197 @@ export async function processEkasaReceipt(
 
   return {
     receiptId: receipt.id,
+    status: newStatus,
+    uid: apiResult.uid,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Storno a opravné doklady (Zákon č. 289/2008 Z. z. § 8 ods. 2 a 3)
+// ---------------------------------------------------------------------------
+export async function createCorrectionReceipt(
+  db: Database,
+  params: {
+    practiceId: string;
+    originalReceiptId: string;
+    reason: string;
+    correctionType?: "STORNO" | "RETURN";
+    closedBy?: string;
+  },
+  config: {
+    dic: string;
+    icDph?: string | null;
+    pokladnicaId: string;
+    ekasaApiUrl: string;
+    certBase64?: string | null;
+    offlineModeEnabled: boolean;
+  }
+): Promise<{
+  receiptId: string;
+  receiptNumber: string;
+  status: string;
+  uid?: string;
+}> {
+  const original = await db.query.ekasaReceipts.findFirst({
+    where: and(
+      eq(ekasaReceipts.id, params.originalReceiptId),
+      eq(ekasaReceipts.practiceId, params.practiceId),
+      isNull(ekasaReceipts.deletedAt)
+    ),
+  });
+
+  if (!original) {
+    throw new Error("Pôvodný doklad nebol nájdený");
+  }
+
+  if (original.receiptType === "STORNO") {
+    throw new Error("Tento doklad je už storno doklad a nemožno ho opätovne stornovať");
+  }
+
+  // Skontroluj či k tomuto dokladu už neexistuje vystavené storno
+  const existingStorno = await db.query.ekasaReceipts.findFirst({
+    where: and(
+      eq(ekasaReceipts.originalReceiptId, original.id),
+      eq(ekasaReceipts.practiceId, params.practiceId),
+      eq(ekasaReceipts.receiptType, "STORNO"),
+      isNull(ekasaReceipts.deletedAt)
+    ),
+  });
+
+  if (existingStorno) {
+    throw new Error(
+      `K tomuto dokladu už existuje storno doklad (${existingStorno.receiptNumber})`
+    );
+  }
+
+  const correctionType = params.correctionType ?? "STORNO";
+  const issuedAt = new Date();
+  const receiptNumber = await generateReceiptNumber(db, params.practiceId);
+
+  // Podľa Zákona č. 289/2008 Z. z. storno neguje tržbu
+  const origTotal = Number(original.amountTotal) || 0;
+  const origBase = Number(original.amountBase) || 0;
+  const origVat = Number(original.amountVat) || 0;
+
+  const amountTotal = (-Math.abs(origTotal)).toFixed(2);
+  const amountBase = (-Math.abs(origBase)).toFixed(2);
+  const amountVat = (-Math.abs(origVat)).toFixed(2);
+
+  const okp = generateOkp({
+    dic: config.dic,
+    pokladnicaId: config.pokladnicaId,
+    receiptNumber,
+    issuedAt,
+    amountTotal,
+  });
+
+  const pkp = generatePkp({
+    dic: config.dic,
+    pokladnicaId: config.pokladnicaId,
+    receiptNumber,
+    issuedAt,
+    amountTotal,
+    certBase64: config.certBase64,
+  });
+
+  const cannotFiscalize =
+    Boolean(assertEkasaOutboundAllowed(config.ekasaApiUrl)) || !pkp;
+
+  const originalItems = (Array.isArray(original.items) ? original.items : []) as Array<{
+    name?: string;
+    description?: string;
+    qty?: number;
+    quantity?: number;
+    unitPrice?: string | number;
+    vatRate?: string;
+  }>;
+
+  const stornoItems =
+    originalItems.length > 0
+      ? originalItems.map((item) => ({
+          name: `[STORNO] ${item.name || item.description || "Položka"}`,
+          qty: item.qty ?? item.quantity ?? 1,
+          unitPrice: (-Math.abs(Number(item.unitPrice || 0))).toFixed(2),
+          vatRate: item.vatRate ?? original.vatRate,
+        }))
+      : [
+          {
+            name: `[STORNO] Doklad ${original.receiptNumber}`,
+            qty: 1,
+            unitPrice: amountTotal,
+            vatRate: original.vatRate,
+          },
+        ];
+
+  const [stornoReceipt] = await db
+    .insert(ekasaReceipts)
+    .values({
+      practiceId: params.practiceId,
+      invoiceId: original.invoiceId,
+      paymentId: original.paymentId,
+      receiptNumber,
+      receiptType: correctionType,
+      originalReceiptId: original.id,
+      originalUid: original.uid ?? original.receiptNumber,
+      stornoReason: params.reason,
+      okp,
+      pkp: pkp ?? null,
+      amountBase,
+      amountVat,
+      amountTotal,
+      vatRate: original.vatRate,
+      taxBreakdown: original.taxBreakdown,
+      items: stornoItems,
+      paymentMethod: original.paymentMethod,
+      status: "PENDING",
+      issuedAt,
+    })
+    .returning();
+
+  if (!stornoReceipt) {
+    throw new Error("Nepodarilo sa uložiť storno doklad do databázy");
+  }
+
+  if (config.offlineModeEnabled || cannotFiscalize) {
+    await db
+      .update(ekasaReceipts)
+      .set({ status: "OFFLINE_STORED" })
+      .where(eq(ekasaReceipts.id, stornoReceipt.id));
+    return {
+      receiptId: stornoReceipt.id,
+      receiptNumber: stornoReceipt.receiptNumber,
+      status: "OFFLINE_STORED",
+    };
+  }
+
+  const apiResult = await sendToEkasaApi({
+    apiUrl: config.ekasaApiUrl,
+    receiptNumber,
+    dic: config.dic,
+    pokladnicaId: config.pokladnicaId,
+    amountTotal,
+    amountVat,
+    paymentMethod: original.paymentMethod,
+    okp,
+    pkp,
+    issuedAt,
+    items: stornoItems,
+  });
+
+  const newStatus = apiResult.success ? "CONFIRMED" : "FAILED";
+
+  await db
+    .update(ekasaReceipts)
+    .set({
+      status: newStatus,
+      uid: apiResult.uid ?? null,
+      rawResponse: apiResult.rawResponse ?? null,
+    })
+    .where(eq(ekasaReceipts.id, stornoReceipt.id));
+
+  return {
+    receiptId: stornoReceipt.id,
+    receiptNumber: stornoReceipt.receiptNumber,
     status: newStatus,
     uid: apiResult.uid,
   };

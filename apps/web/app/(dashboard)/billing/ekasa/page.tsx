@@ -23,6 +23,7 @@ import {
   Coins,
   CreditCard,
   Building2,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,8 @@ function EkasaReceiptsContent() {
   const [statusFilter, setStatusFilter] = useState<ReceiptStatus | undefined>();
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [stornoTarget, setStornoTarget] = useState<any | null>(null);
+  const [stornoReason, setStornoReason] = useState("");
 
   // Filter for accountant export
   const now = new Date();
@@ -152,6 +155,19 @@ function EkasaReceiptsContent() {
     },
     onError: (err) => {
       toast.error(`Chyba pri odoslaní: ${err.message}`);
+    },
+  });
+
+  const stornoMutation = trpc.ekasa.stornoReceipt.useMutation({
+    onSuccess: () => {
+      toast.success("Doklad bol úspešne stornovaný");
+      setStornoTarget(null);
+      setStornoReason("");
+      setSelectedReceipt(null);
+      refetchReceipts();
+    },
+    onError: (err) => {
+      toast.error(`Chyba pri storne: ${err.message}`);
     },
   });
 
@@ -387,9 +403,21 @@ function EkasaReceiptsContent() {
                           className="hover:bg-muted/30 cursor-pointer transition-colors group"
                         >
                           <td className="px-4 py-3 font-mono font-medium text-xs">
-                            <span className="group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
-                              {r.receiptNumber}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
+                                {r.receiptNumber}
+                              </span>
+                              {r.receiptType === "STORNO" && (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-semibold">
+                                  STORNO
+                                </Badge>
+                              )}
+                              {r.receiptType === "RETURN" && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30 font-semibold">
+                                  VRÁTENIE
+                                </Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap font-mono tabular-nums">
                             {r.issuedAt
@@ -462,6 +490,21 @@ function EkasaReceiptsContent() {
                                 )}
                                 Tlačiť
                               </button>
+
+                              {r.receiptType !== "STORNO" &&
+                                (r.status === "CONFIRMED" || r.status === "OFFLINE_STORED") && (
+                                  <button
+                                    onClick={() => {
+                                      setStornoTarget(r);
+                                      setStornoReason("");
+                                    }}
+                                    title="Stornovať doklad"
+                                    className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/15 transition-colors"
+                                  >
+                                    <Ban className="h-3 w-3" />
+                                    Storno
+                                  </button>
+                                )}
 
                               {r.status === "FAILED" && (
                                 <button
@@ -823,12 +866,96 @@ function EkasaReceiptsContent() {
         onRetry={async (id) => {
           await retryMutation.mutateAsync({ receiptId: id });
         }}
+        onStorno={(rc) => {
+          setStornoTarget(rc);
+          setStornoReason("");
+        }}
         isPrinting={printingId === selectedReceipt?.id}
         isRetrying={retryMutation.isPending}
         dic={ekasaConfig?.dic}
         icDph={ekasaConfig?.icDph}
         pokladnicaId={ekasaConfig?.pokladnicaId}
       />
+
+      {/* Storno Confirmation Modal */}
+      {stornoTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="fixed inset-0"
+            onClick={() => {
+              if (!stornoMutation.isPending) setStornoTarget(null);
+            }}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                <Ban className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-foreground">
+                  Storno pokladničného dokladu
+                </h3>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {stornoTarget.receiptNumber} ({Number(stornoTarget.amountTotal).toFixed(2)} €)
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+              V súlade so Zákonom č. 289/2008 Z. z. bude vystavený záporný opravný doklad naviazaný na pôvodný doklad ({stornoTarget.uid ?? stornoTarget.receiptNumber}) a odoslaný do evidencie FS SR.
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">
+                Dôvod storna <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                value={stornoReason}
+                onChange={(e) => setStornoReason(e.target.value)}
+                placeholder="Napr. Chybná platobná metóda, vrátenie tovaru..."
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={stornoMutation.isPending}
+                onClick={() => setStornoTarget(null)}
+              >
+                Zrušiť
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={stornoReason.trim().length < 3 || stornoMutation.isPending}
+                onClick={() =>
+                  stornoMutation.mutate({
+                    receiptId: stornoTarget.id,
+                    reason: stornoReason.trim(),
+                    correctionType: "STORNO",
+                  })
+                }
+                className="gap-1.5"
+              >
+                {stornoMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Ban className="h-3.5 w-3.5" />
+                )}
+                Potvrdiť storno
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
