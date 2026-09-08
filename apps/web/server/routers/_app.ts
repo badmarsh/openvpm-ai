@@ -35,7 +35,7 @@ import { bookingRouter } from "./booking";
 import { careRemindersRouter } from "./care-reminders";
 import { migrationArchiveRouter } from "./migration-archive";
 import { visitTreatmentPlansRouter } from "./visit-treatment-plans";
-import { extensionsRouter, ekasaRouter } from "./extensions";
+import { extensionsRouter } from "./extensions";
 
 export const appRouter = createRouter({
   auth: authRouter,
@@ -75,7 +75,6 @@ export const appRouter = createRouter({
   migrationArchive: migrationArchiveRouter,
   visitTreatmentPlans: visitTreatmentPlansRouter,
   extensions: extensionsRouter,
-  ekasa: ekasaRouter,
 });
 
 export type AppRouter = typeof appRouter;

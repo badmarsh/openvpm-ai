@@ -56,7 +56,7 @@ export const crszRouter = createRouter({
       if (!validation.valid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: validation.error || "Neplatné číslo mikročipu",
+          message: "Invalid microchip number. Must contain 15 digits (ISO 11784/11785)",
         });
       }
 
@@ -70,7 +70,7 @@ export const crszRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pacient nebol nájdený",
+          message: "Patient not found",
         });
       }
       const clientId = input.clientId || patient.clientId;
@@ -221,7 +221,7 @@ export const crszRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pacient nebol nájdený",
+          message: "Patient not found",
         });
       }
 
@@ -345,7 +345,7 @@ export const crszRouter = createRouter({
       if (!reg) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Záznam o čipovaní nebol nájdený",
+          message: "Microchip registration not found",
         });
       }
 

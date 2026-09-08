@@ -404,7 +404,7 @@ export const statutoryRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Zviera nebolo nájdené",
+          message: "Patient not found",
         });
       }
 
@@ -458,7 +458,7 @@ export const statutoryRouter = createRouter({
       if (!obs) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Záznam pozorovania nebol nájdený",
+          message: "Observation record not found",
         });
       }
 
@@ -619,7 +619,7 @@ export const statutoryRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pacient nebol nájdený",
+          message: "Patient not found",
         });
       }
 

@@ -78,7 +78,7 @@ export default function PosCheckoutPage() {
     { enabled: clientSearch.length >= 2 }
   );
 
-  const createPosSale = trpc.ekasa.createPosSale.useMutation({
+  const createPosSale = trpc.extensions.ekasa.createPosSale.useMutation({
     onSuccess: (data) => {
       toast.success("Doklad úspešne vystavený a zaevidovaný v e-Kase");
       setCompletedReceipt({

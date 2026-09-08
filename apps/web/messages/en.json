@@ -1860,7 +1860,8 @@
     "migrationArchive": "Imported History",
     "ekasa": "e-Kasa",
     "vetIntel": "Vet Intelligence",
-    "waitingRoom": "Waiting Room TV"
+    "waitingRoom": "Waiting Room TV",
+    "statutory": "Statutory Registers"
   },
   "newSoap": {
     "loadingEditor": "Loading editor...",

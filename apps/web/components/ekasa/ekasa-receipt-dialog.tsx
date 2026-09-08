@@ -69,7 +69,7 @@ export function EkasaReceiptDialog({
     try {
       let html = receipt.html;
       if (receipt.receiptId) {
-        const res = await utils.ekasa.printReceipt.fetch({
+        const res = await utils.extensions.ekasa.printReceipt.fetch({
           receiptId: receipt.receiptId,
           paperWidth,
         });

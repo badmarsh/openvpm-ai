@@ -1674,7 +1674,7 @@ function PaymentEkasaBadge({
   paymentId: string;
   invoiceId: string;
 }) {
-  const { data: receipt } = trpc.ekasa.getReceiptForPayment.useQuery(
+  const { data: receipt } = trpc.extensions.ekasa.getReceiptForPayment.useQuery(
     { paymentId, invoiceId },
     { staleTime: 30_000 }
   );
@@ -1767,12 +1767,12 @@ function PaymentSection({
     staleTime: 60_000,
   });
 
-  const ekasaReceiptMutation = trpc.ekasa.createReceiptFromPayment.useMutation({
+  const ekasaReceiptMutation = trpc.extensions.ekasa.createReceiptFromPayment.useMutation({
     onSuccess: (res) => {
       toast.success(`e-Kasa doklad #${res.receiptNumber} vystavený!`);
       setEkasaReceiptData(res);
       setEkasaReceiptOpen(true);
-      utils.ekasa.getReceiptForPayment.invalidate();
+      utils.extensions.ekasa.getReceiptForPayment.invalidate();
     },
     onError: (err) => {
       console.warn("e-Kasa automatická evidencia:", err.message);
