@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Clock,
+  Building2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -27,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { CrszPanel } from "@/components/statutory/crsz-panel";
+import { RabiesObservationPanel } from "@/components/statutory/rabies-observation-panel";
+import { CarcassDisposalPanel } from "@/components/statutory/carcass-disposal-panel";
 
 type StatutoryTab = "rabies" | "treatment" | "withdrawals" | "euthanasia" | "narcotics" | "protocols" | "crsz";
 
@@ -522,6 +525,7 @@ export default function StatutoryPage() {
 // ---------------------------------------------------------------------------
 function RabiesRegisterTab() {
   const { t } = useI18n();
+  const [subView, setSubView] = useState<"vaccinations" | "observations">("vaccinations");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -626,8 +630,34 @@ function RabiesRegisterTab() {
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Sub-view switcher */}
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <Button
+          variant={subView === "vaccinations" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSubView("vaccinations")}
+          className="gap-2 text-xs"
+        >
+          <Syringe className="h-3.5 w-3.5" />
+          <span>Kniha očkovania proti besnote (§ 19 ods. 1)</span>
+        </Button>
+        <Button
+          variant={subView === "observations" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSubView("observations")}
+          className="gap-2 text-xs"
+        >
+          <ShieldAlert className="h-3.5 w-3.5" />
+          <span>14-dňové pozorovanie po pohryznutí (§ 19 ods. 2)</span>
+        </Button>
+      </div>
+
+      {subView === "observations" ? (
+        <RabiesObservationPanel />
+      ) : (
+        <>
+          {/* Controls */}
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-3">
           <div className="relative min-w-[240px] flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -862,6 +892,8 @@ function RabiesRegisterTab() {
       <div className="text-right text-xs text-muted-foreground">
         {t("statutory.rabies.totalRecords", "Total records: {count}", { count: filteredItems.length })}
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1304,6 +1336,7 @@ function WithdrawalPeriodsTab() {
 // ---------------------------------------------------------------------------
 function EuthanasiaRegisterTab() {
   const { t } = useI18n();
+  const [subView, setSubView] = useState<"register" | "carcass">("register");
   const { data, isLoading } = trpc.reports.euthanasiaRegister.useQuery();
 
   const handleExportCsv = () => {
@@ -1367,7 +1400,33 @@ function EuthanasiaRegisterTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-border bg-card p-4 gap-3">
+      {/* Sub-view switcher */}
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <Button
+          variant={subView === "register" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSubView("register")}
+          className="gap-2 text-xs"
+        >
+          <Skull className="h-3.5 w-3.5" />
+          <span>Register eutanázií zvierat (§ 22 ods. 5)</span>
+        </Button>
+        <Button
+          variant={subView === "carcass" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSubView("carcass")}
+          className="gap-2 text-xs"
+        >
+          <Building2 className="h-3.5 w-3.5" />
+          <span>Evidencia kadáverov & Kafiléria (§ 29)</span>
+        </Button>
+      </div>
+
+      {subView === "carcass" ? (
+        <CarcassDisposalPanel />
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-border bg-card p-4 gap-3">
         <div>
           <h3 className="font-semibold text-sm">{t("statutory.euthanasia.title")}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -1451,6 +1510,8 @@ function EuthanasiaRegisterTab() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
