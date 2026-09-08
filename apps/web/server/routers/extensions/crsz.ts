@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull, desc, ilike, sql } from "drizzle-orm";
+import { eq, and, isNull, desc, ilike, sql, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import {
@@ -14,6 +14,10 @@ import {
   validateMicrochipNumber,
   calculateTravelEligibility,
   generateMicrochipCertificateHtml,
+  exportKvlSrBatchCsv,
+  exportKvlSrBatchXml,
+  lookupCrszOnline,
+  type KvlSrExportItem,
 } from "@/lib/crsz/microchip";
 
 const vetProcedure = protectedProcedure.use(
@@ -371,5 +375,79 @@ export const crszRouter = createRouter({
         verifiedAfter: reg.verifiedAfterImplant === "YES" ? "Áno" : "Nie",
         crszRecordId: reg.crszRecordId,
       });
+    }),
+
+  /** Online overenie čipu v CRSZ / medzinárodnom registri */
+  lookupChip: vetProcedure
+    .input(z.object({ microchipNumber: z.string().min(1) }))
+    .query(async ({ input }) => {
+      return lookupCrszOnline(input.microchipNumber);
+    }),
+
+  /** Hromadný export dávky pre portál KVL SR (XML / CSV) */
+  exportKvlSrBatch: vetProcedure
+    .input(
+      z.object({
+        format: z.enum(["xml", "csv"]).default("xml"),
+        registrationIds: z.array(z.string().uuid()).optional(),
+        onlyPending: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const conditions = [
+        eq(microchipRegistrations.practiceId, ctx.practiceId),
+        isNull(microchipRegistrations.deletedAt),
+      ];
+      if (input.onlyPending) {
+        conditions.push(eq(microchipRegistrations.crszStatus, "PENDING_SUBMISSION"));
+      }
+      if (input.registrationIds && input.registrationIds.length > 0) {
+        conditions.push(inArray(microchipRegistrations.id, input.registrationIds));
+      }
+
+      const rows = await ctx.db.query.microchipRegistrations.findMany({
+        where: and(...conditions),
+        with: {
+          patient: true,
+          client: true,
+          veterinarian: true,
+        },
+        orderBy: [desc(microchipRegistrations.createdAt)],
+      });
+
+      const exportItems: KvlSrExportItem[] = rows.map((r) => ({
+        microchipNumber: r.microchipNumber,
+        patientName: r.patient?.name ?? "Neznáme",
+        species: r.patient?.species ?? "canine",
+        breed: r.patient?.breed ?? null,
+        sex: r.patient?.sex ?? null,
+        dob: r.patient?.dob ?? null,
+        color: (r.patient as any)?.color ?? null,
+        implantedAt: r.implantedAt,
+        location: r.location,
+        vetName: r.veterinarian?.name ?? "Veterinárny lekár",
+        vetKvlNumber: r.vetKvlNumber ?? null,
+        ownerFirstName: r.client?.firstName ?? "",
+        ownerLastName: r.client?.lastName ?? "",
+        ownerAddress: r.client?.address ?? null,
+        ownerCity: (r.client as any)?.city ?? null,
+        ownerPostalCode: (r.client as any)?.postalCode ?? null,
+        ownerPhone: r.client?.phone ?? null,
+        ownerEmail: r.client?.email ?? null,
+      }));
+
+      const content =
+        input.format === "csv"
+          ? exportKvlSrBatchCsv(exportItems)
+          : exportKvlSrBatchXml(exportItems);
+
+      const filename = `kvl_sr_davka_${new Date().toISOString().slice(0, 10)}.${input.format}`;
+
+      return {
+        filename,
+        content,
+        count: exportItems.length,
+        format: input.format,
+      };
     }),
 });
