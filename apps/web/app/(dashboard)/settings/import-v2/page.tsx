@@ -23,8 +23,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useI18n } from "@/lib/i18n";
 
 export default function V2ImportPage() {
+  const { t } = useI18n();
   const {
     data: stats,
     isLoading: isStatsLoading,
@@ -250,10 +252,10 @@ export default function V2ImportPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-foreground">
-              Náhľad reálnych dát z ambulancie (Overenie kódovania a polí)
+              {t("settings.importV2.preview.title")}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Overte správnosť slovenskej diakritiky a Sympathy Gate pred spustením.
+              {t("settings.importV2.preview.subtitle")}
             </p>
           </div>
 
@@ -266,7 +268,7 @@ export default function V2ImportPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Pacienti
+              {t("settings.importV2.preview.tabPatients")}
             </button>
             <button
               onClick={() => setActivePreviewTab("clients")}
@@ -276,7 +278,7 @@ export default function V2ImportPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Majitelia
+              {t("settings.importV2.preview.tabClients")}
             </button>
             <button
               onClick={() => setActivePreviewTab("vaccinations")}
@@ -286,7 +288,7 @@ export default function V2ImportPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Očkovania
+              {t("settings.importV2.preview.tabVaccinations")}
             </button>
             <button
               onClick={() => setActivePreviewTab("visits")}
@@ -296,7 +298,7 @@ export default function V2ImportPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Návštevy
+              {t("settings.importV2.preview.tabVisits")}
             </button>
           </div>
         </div>
@@ -312,13 +314,13 @@ export default function V2ImportPage() {
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">ID</th>
-                      <th className="p-2.5">Meno</th>
-                      <th className="p-2.5">Druh</th>
-                      <th className="p-2.5">Plemeno</th>
-                      <th className="p-2.5">Pohlavie</th>
-                      <th className="p-2.5">Čip</th>
-                      <th className="p-2.5">Stav</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.id")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.name")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.species")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.breed")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.sex")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.chip")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.status")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -333,11 +335,11 @@ export default function V2ImportPage() {
                         <td className="p-2.5">
                           {p.status === "deceased" ? (
                             <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
-                              Uhynuté (Chránené)
+                              {t("settings.importV2.preview.statusDeceased")}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-500 text-emerald-600 bg-emerald-50">
-                              Aktívne
+                              {t("settings.importV2.preview.statusActive")}
                             </Badge>
                           )}
                         </td>
@@ -353,11 +355,11 @@ export default function V2ImportPage() {
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">ID</th>
-                      <th className="p-2.5">Meno a Priezvisko</th>
-                      <th className="p-2.5">Adresa</th>
-                      <th className="p-2.5">Telefón / Mobil</th>
-                      <th className="p-2.5">Email</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.id")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.clientName")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.address")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.phone")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.email")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -380,11 +382,11 @@ export default function V2ImportPage() {
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">ID</th>
-                      <th className="p-2.5">ID Pacienta</th>
-                      <th className="p-2.5">Vakcína</th>
-                      <th className="p-2.5">Podané dňa</th>
-                      <th className="p-2.5">Preočkovanie do</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.id")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.patientId")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.vaccine")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.administeredDate")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.revaccinationDue")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -407,10 +409,10 @@ export default function V2ImportPage() {
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">ID Návštevy</th>
-                      <th className="p-2.5">ID Pacienta</th>
-                      <th className="p-2.5">Dátum</th>
-                      <th className="p-2.5">Lekár</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.visitId")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.patientId")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.date")}</th>
+                      <th className="p-2.5">{t("settings.importV2.preview.doctor")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">

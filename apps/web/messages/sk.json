@@ -3259,6 +3259,36 @@
           "overlap": "{day}: pracovné okná sa nemôžu prekrývať."
         }
       }
+    },
+    "importV2": {
+      "preview": {
+        "title": "Náhľad reálnych dát z ambulancie (Overenie kódovania a polí)",
+        "subtitle": "Overte správnosť slovenskej diakritiky a Sympathy Gate pred spustením.",
+        "tabPatients": "Pacienti",
+        "tabClients": "Majitelia",
+        "tabVaccinations": "Očkovania",
+        "tabVisits": "Návštevy",
+        "id": "ID",
+        "name": "Meno",
+        "species": "Druh",
+        "breed": "Plemeno",
+        "sex": "Pohlavie",
+        "chip": "Čip",
+        "status": "Stav",
+        "statusDeceased": "Uhynuté (Chránené)",
+        "statusActive": "Aktívne",
+        "clientName": "Meno a Priezvisko",
+        "address": "Adresa",
+        "phone": "Telefón / Mobil",
+        "email": "Email",
+        "patientId": "ID Pacienta",
+        "vaccine": "Vakcína",
+        "administeredDate": "Podané dňa",
+        "revaccinationDue": "Preočkovanie do",
+        "visitId": "ID Návštevy",
+        "date": "Dátum",
+        "doctor": "Lekár"
+      }
     }
   },
   "website": {

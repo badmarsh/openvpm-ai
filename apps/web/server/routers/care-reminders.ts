@@ -168,6 +168,9 @@ export const careRemindersRouter = createRouter({
         isNull(clients.deletedAt),
       ];
       if (status !== "all") conditions.push(eq(careReminders.status, status));
+      if (status === "open") {
+        conditions.push(sql`${patients.status} is distinct from 'deceased'`);
+      }
       if (due === "overdue") conditions.push(lte(careReminders.dueDate, today));
       if (due === "upcoming") conditions.push(gt(careReminders.dueDate, today));
       if (input?.patientId) {

@@ -792,4 +792,33 @@ describe("c) deceased-patient sympathy gate blocks AI recall/marketing triggers"
     expect(queue).toContain('"blocked_sympathy"');
     expect(queue).toMatch(/deceased/);
   });
+
+  it("applySympathyGate auto-dismisses open care reminders in source", () => {
+    const src = readFileSync(
+      fileURLToPath(
+        new URL("../../lib/marketing/messaging.ts", import.meta.url),
+      ),
+      "utf8",
+    );
+    const start = src.indexOf("export async function applySympathyGate(");
+    const next = src.indexOf("export async function", start + 1);
+    const body = src.slice(start, next === -1 ? undefined : next);
+    expect(body).toContain("careReminders");
+    expect(body).toContain('"dismissed"');
+    expect(body).toContain("Sympathy Gate");
+  });
+
+  it("createMessagesForTrigger blocks outreach when all client patients are deceased", () => {
+    const src = readFileSync(
+      fileURLToPath(
+        new URL("../../lib/marketing/messaging.ts", import.meta.url),
+      ),
+      "utf8",
+    );
+    const start = src.indexOf("export async function createMessagesForTrigger(");
+    const next = src.indexOf("export async function", start + 1);
+    const body = src.slice(start, next === -1 ? undefined : next);
+    expect(body).toContain("clientPatients.every");
+    expect(body).toContain('p.status === "deceased"');
+  });
 });

@@ -132,7 +132,7 @@ export const statutoryRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pacient nebol nájdený",
+          message: "Patient not found",
         });
       }
 
@@ -257,7 +257,7 @@ export const statutoryRouter = createRouter({
       if (!record) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Záznam o vakcinácii nebol nájdený",
+          message: "Vaccination record not found",
         });
       }
 

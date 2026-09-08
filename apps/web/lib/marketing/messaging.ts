@@ -2,6 +2,7 @@
 import { and, desc, eq, gt, isNull, lte } from "drizzle-orm";
 import type { Database } from "@openpims/db/client";
 import {
+  careReminders,
   clients,
   patients,
   practices,
@@ -132,6 +133,31 @@ export async function createMessagesForTrigger(
         input.clientId,
         input.patientId,
         input.triggerKey
+      );
+      return 0;
+    }
+  } else {
+    // If no specific patientId is provided, check if all active patients for this client are deceased
+    const clientPatients = await db
+      .select({ status: patients.status })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.clientId, input.clientId),
+          eq(patients.practiceId, practiceId),
+          isNull(patients.deletedAt),
+        ),
+      );
+    if (
+      clientPatients.length > 0 &&
+      clientPatients.every((p: { status: string }) => p.status === "deceased")
+    ) {
+      await applySympathyGate(
+        db,
+        practiceId,
+        input.clientId,
+        undefined,
+        input.triggerKey,
       );
       return 0;
     }
@@ -490,6 +516,29 @@ export async function applySympathyGate(
         .set({ status: "blocked_sympathy" })
         .where(eq(extMarketingMessageLogs.id, m.id));
       blocked++;
+    }
+  }
+
+  // 1b. Auto-dismiss open care reminders for deceased patient
+  if (patientId) {
+    try {
+      await db
+        .update(careReminders)
+        .set({
+          status: "dismissed",
+          dismissedAt: new Date(),
+          dismissalReason: "Sympathy Gate: Pacient uhynul / bol eutanazovaný.",
+        })
+        .where(
+          and(
+            eq(careReminders.practiceId, practiceId),
+            eq(careReminders.patientId, patientId),
+            eq(careReminders.status, "open"),
+            isNull(careReminders.deletedAt)
+          )
+        );
+    } catch {
+      // Best-effort in unit/mock environments
     }
   }
 
