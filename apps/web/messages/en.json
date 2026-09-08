@@ -3259,6 +3259,36 @@
           "overlap": "{day} working windows cannot overlap."
         }
       }
+    },
+    "importV2": {
+      "preview": {
+        "title": "Practice Data Preview (Encoding and Field Verification)",
+        "subtitle": "Verify correct Slovak diacritics and Sympathy Gate before launch.",
+        "tabPatients": "Patients",
+        "tabClients": "Owners",
+        "tabVaccinations": "Vaccinations",
+        "tabVisits": "Visits",
+        "id": "ID",
+        "name": "Name",
+        "species": "Species",
+        "breed": "Breed",
+        "sex": "Sex",
+        "chip": "Microchip",
+        "status": "Status",
+        "statusDeceased": "Deceased (Protected)",
+        "statusActive": "Active",
+        "clientName": "Full Name",
+        "address": "Address",
+        "phone": "Phone / Mobile",
+        "email": "Email",
+        "patientId": "Patient ID",
+        "vaccine": "Vaccine",
+        "administeredDate": "Administered Date",
+        "revaccinationDue": "Revaccination Due",
+        "visitId": "Visit ID",
+        "date": "Date",
+        "doctor": "Doctor"
+      }
     }
   },
   "website": {
