@@ -21,6 +21,9 @@ import {
   generateQrCodeData,
   sendToEkasaApi,
   calculateVatAmounts,
+  calculateMultiVatReceipt,
+  createCorrectionReceipt,
+  normalizeVatRate,
   computeDailySummary,
   createDailyClosure,
   type EkasaVatRateType,
@@ -263,6 +266,58 @@ export const ekasaRouter = createRouter({
       return { success: apiResult.success, status: newStatus, uid: apiResult.uid };
     }),
 
+  /**
+   * Storno pokladničného dokladu (Zákon č. 289/2008 Z. z. § 8 ods. 2 a 3).
+   * Vystaví storno / opravný doklad s odkazom na pôvodný UID dokladu.
+   */
+  stornoReceipt: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        receiptId: z.string().uuid(),
+        reason: z.string().min(3, "Dôvod storna je povinný (min. 3 znaky)"),
+        correctionType: z.enum(["STORNO", "RETURN"]).default("STORNO"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const config = await ctx.db.query.ekasaConfig.findFirst({
+        where: and(
+          eq(ekasaConfig.practiceId, ctx.practiceId),
+          eq(ekasaConfig.isActive, true),
+          isNull(ekasaConfig.deletedAt)
+        ),
+      });
+
+      if (!config) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "e-Kasa nie je pre túto kliniku nakonfigurovaná. Prosím nastavte ju v Nastavenia -> e-Kasa.",
+        });
+      }
+
+      try {
+        const result = await createCorrectionReceipt(
+          ctx.db,
+          {
+            practiceId: ctx.practiceId,
+            originalReceiptId: input.receiptId,
+            reason: input.reason,
+            correctionType: input.correctionType,
+            closedBy: ctx.session?.user?.id,
+          },
+          config
+        );
+
+        return result;
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err?.message || "Nepodarilo sa vystaviť storno doklad",
+        });
+      }
+    }),
+
   /** Generuje HTML pre tlač dokladu na termálnej tlačiarni (58mm / 80mm) */
   printReceipt: protectedProcedure
     .input(
@@ -447,9 +502,9 @@ export const ekasaRouter = createRouter({
           ? "CARD"
           : "TRANSFER";
 
-      // 5. Vypočítaj základ a DPH
-      const { base, vat } = calculateVatAmounts(
-        Number(input.amount),
+      // 5. Vypočítaj viacsadzbovú DPH
+      const multiVat = calculateMultiVatReceipt(
+        mappedItems,
         input.vatRate as EkasaVatRateType
       );
 
@@ -460,10 +515,11 @@ export const ekasaRouter = createRouter({
           practiceId: ctx.practiceId,
           invoiceId: input.invoiceId,
           paymentId: input.paymentId,
-          amountBase: base,
-          amountVat: vat,
+          amountBase: multiVat.amountBase,
+          amountVat: multiVat.amountVat,
           amountTotal: input.amount,
-          vatRate: input.vatRate as EkasaVatRateType,
+          vatRate: multiVat.dominantVatRate,
+          taxBreakdown: multiVat.taxBreakdown,
           paymentMethod: mappedMethod,
           items: mappedItems,
           issuedAt: new Date(),
@@ -669,36 +725,26 @@ export const ekasaRouter = createRouter({
         }
       }
 
-      // 5. Vypočítaj DPH per-item a urči dominantnú sadzbu
-      let totalBase = 0;
-      let totalVat = 0;
-      const vatByRate = new Map<string, number>();
-      for (const it of input.items) {
-        const itemTotal = Number(it.unitPrice) * it.quantity;
-        const { base, vat } = calculateVatAmounts(itemTotal, it.vatRate as EkasaVatRateType);
-        totalBase += Number(base);
-        totalVat += Number(vat);
-        vatByRate.set(it.vatRate, (vatByRate.get(it.vatRate) ?? 0) + itemTotal);
-      }
-      // Dominant rate = highest total by rate
-      const dominantVatRate = ([...vatByRate.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "STANDARD_23") as EkasaVatRateType;
+      // 5. Vypočítaj viacsadzbovú DPH
       const mappedItems = input.items.map((it) => ({
         name: it.description,
         qty: it.quantity,
         unitPrice: it.unitPrice,
         vatRate: it.vatRate,
       }));
+      const multiVat = calculateMultiVatReceipt(mappedItems);
 
       const receiptResult = await processEkasaReceipt(
         ctx.db,
         {
           practiceId: ctx.practiceId,
           invoiceId: invoice.id,
-          amountBase: totalBase.toFixed(2),
-          amountVat: totalVat.toFixed(2),
+          amountBase: multiVat.amountBase,
+          amountVat: multiVat.amountVat,
           amountTotal: totalStr,
           paymentMethod: input.paymentMethod,
-          vatRate: dominantVatRate,
+          vatRate: multiVat.dominantVatRate,
+          taxBreakdown: multiVat.taxBreakdown,
           items: mappedItems,
         },
         {

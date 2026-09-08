@@ -40,6 +40,14 @@ export const ekasaPaymentMethodEnum = pgEnum("ekasa_payment_method", [
   "TRANSFER", // Bankový prevod
 ]);
 
+export const ekasaReceiptTypeEnum = pgEnum("ekasa_receipt_type", [
+  "STANDARD",   // Štandardný pokladničný doklad
+  "STORNO",     // Storno dokladu (kompletné zrušenie)
+  "RETURN",     // Opravný doklad (vrátenie tovaru / refundačná oprava)
+  "DEPOSIT",    // Vklad do pokladnice
+  "WITHDRAWAL", // Výber z pokladnice
+]);
+
 export const ekasaReceiptStatusEnum = pgEnum("ekasa_receipt_status", [
   "PENDING",        // Čaká na odoslanie
   "SENT",           // Odoslané do FR SR
@@ -107,11 +115,21 @@ export const ekasaReceipts = pgTable(
     uid: text("uid"),                         // Unikátny identifikátor dokladu z FR SR
     okp: text("okp"),                         // Overovací kód podnikateľa (SHA-1)
     pkp: text("pkp"),                         // Podpisový kód podnikateľa (RSA-SHA256, base64)
+    // Typ dokladu (štandardný, storno, vrátenie, vklad/výber)
+    receiptType: ekasaReceiptTypeEnum("receipt_type").notNull().default("STANDARD"),
+    // Odkaz na pôvodný doklad (povinné pre storno/opravný doklad podľa Zákona 289/2008 Z. z.)
+    originalReceiptId: uuid("original_receipt_id"),
+    originalUid: text("original_uid"),
+    stornoReason: text("storno_reason"),
     // Sumy
     amountBase: numeric("amount_base", { precision: 12, scale: 2 }).notNull().default("0.00"),
     amountVat: numeric("amount_vat", { precision: 12, scale: 2 }).notNull().default("0.00"),
     amountTotal: numeric("amount_total", { precision: 12, scale: 2 }).notNull(),
     vatRate: ekasaVatRateEnum("vat_rate").notNull().default("STANDARD_23"),
+    // Viacsadzbový rozpis DPH (pre doklady s viacerými sadzbami DPH na jednom účte)
+    taxBreakdown: jsonb("tax_breakdown"),
+    // Položky dokladu (audit položiek, množstvá, ceny a sadzby)
+    items: jsonb("items"),
     // Platba
     paymentMethod: ekasaPaymentMethodEnum("payment_method").notNull().default("CARD"),
     // Stav spracovania

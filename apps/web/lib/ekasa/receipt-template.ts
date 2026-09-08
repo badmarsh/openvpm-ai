@@ -15,6 +15,10 @@ export interface ReceiptConfig {
 
 export interface ReceiptData {
   receiptNumber: string;
+  receiptType?: string | null;
+  originalReceiptId?: string | null;
+  originalUid?: string | null;
+  stornoReason?: string | null;
   uid?: string | null;
   okp?: string | null;
   pkp?: string | null;
@@ -22,15 +26,20 @@ export interface ReceiptData {
   amountVat: string;
   amountTotal: string;
   vatRate: string;
+  taxBreakdown?: unknown;
   paymentMethod: string;
   status: string;
   issuedAt: Date | string;
-  items?: Array<{
-    name: string;
-    qty: number;
-    unitPrice: string;
-    vatRate: string;
-  }>;
+  items?:
+    | Array<{
+        name?: string;
+        description?: string;
+        qty?: number;
+        quantity?: number;
+        unitPrice: string | number;
+        vatRate?: string;
+      }>
+    | unknown;
 }
 
 const VAT_RATE_LABEL: Record<string, string> = {
@@ -91,14 +100,23 @@ export function generateReceiptHtml(
   const paymentLabel = PAYMENT_LABEL[receipt.paymentMethod] ?? receipt.paymentMethod;
   const issuedAtStr = formatDate(receipt.issuedAt);
 
+  const itemsList = (Array.isArray(receipt.items) ? receipt.items : []) as Array<{
+    name?: string;
+    description?: string;
+    qty?: number;
+    quantity?: number;
+    unitPrice: string | number;
+    vatRate?: string;
+  }>;
+
   const itemsHtml =
-    receipt.items && receipt.items.length > 0
-      ? receipt.items
+    itemsList.length > 0
+      ? itemsList
           .map(
             (item) => `
         <tr>
-          <td class="item-name">${item.name}</td>
-          <td class="item-qty">${item.qty}x</td>
+          <td class="item-name">${item.name || item.description || "Položka"}</td>
+          <td class="item-qty">${item.qty ?? item.quantity ?? 1}x</td>
           <td class="item-price">${formatAmount(item.unitPrice)} €</td>
         </tr>`
           )
@@ -107,6 +125,15 @@ export function generateReceiptHtml(
 
   const isConfirmed = receipt.status === "CONFIRMED";
   const isEmulated = !receipt.uid || receipt.uid.startsWith("MOCK-UID");
+  const isStorno = receipt.receiptType === "STORNO";
+  const isReturn = receipt.receiptType === "RETURN";
+
+  const stornoHeader = isStorno
+    ? `<div style="text-align:center;font-weight:bold;font-size:12px;border:2px solid #000;padding:4px;margin:6px 0;background:#eee;">*** STORNO DOKLADU ***<br><span style="font-size:9px;font-weight:normal;">Pôvodný doklad UID: ${receipt.originalUid ?? "—"}${receipt.stornoReason ? `<br>Dôvod: ${receipt.stornoReason}` : ""}</span></div>`
+    : isReturn
+    ? `<div style="text-align:center;font-weight:bold;font-size:12px;border:2px solid #000;padding:4px;margin:6px 0;background:#eee;">*** OPRAVNÝ DOKLAD / VRÁTENIE ***<br><span style="font-size:9px;font-weight:normal;">Pôvodný doklad UID: ${receipt.originalUid ?? "—"}${receipt.stornoReason ? `<br>Dôvod: ${receipt.stornoReason}` : ""}</span></div>`
+    : "";
+
   const statusNote = !isConfirmed
     ? `<div class="offline-note">⚠ DOKLAD NIE JE OVERENÝ v systéme FR SR (${receipt.status})</div>`
     : isEmulated
@@ -233,6 +260,7 @@ export function generateReceiptHtml(
   <hr class="divider">
 
   <div class="receipt-number">DOKLAD č. ${receipt.receiptNumber}</div>
+  ${stornoHeader}
   <div class="center small">${issuedAtStr}</div>
 
   <hr class="divider">
@@ -253,14 +281,30 @@ export function generateReceiptHtml(
   <hr class="divider">
 
   <table class="totals-table">
-    <tr>
-      <td>Základ DPH (${vatLabel}):</td>
-      <td>${formatAmount(receipt.amountBase)} €</td>
-    </tr>
-    <tr>
-      <td>DPH (${vatLabel}):</td>
-      <td>${formatAmount(receipt.amountVat)} €</td>
-    </tr>
+    ${
+      receipt.taxBreakdown && typeof receipt.taxBreakdown === "object" && Object.keys(receipt.taxBreakdown).length > 0
+        ? Object.entries(receipt.taxBreakdown)
+            .map(([rateKey, bucket]: [string, any]) => `
+              <tr>
+                <td>Základ ${VAT_RATE_LABEL[rateKey] ?? rateKey}:</td>
+                <td>${formatAmount(bucket.base)} €</td>
+              </tr>
+              <tr>
+                <td>DPH ${VAT_RATE_LABEL[rateKey] ?? rateKey}:</td>
+                <td>${formatAmount(bucket.vat)} €</td>
+              </tr>
+            `).join("")
+        : `
+          <tr>
+            <td>Základ DPH (${vatLabel}):</td>
+            <td>${formatAmount(receipt.amountBase)} €</td>
+          </tr>
+          <tr>
+            <td>DPH (${vatLabel}):</td>
+            <td>${formatAmount(receipt.amountVat)} €</td>
+          </tr>
+        `
+    }
     <tr class="total-row">
       <td class="bold large">SPOLU:</td>
       <td class="bold large">${formatAmount(receipt.amountTotal)} €</td>

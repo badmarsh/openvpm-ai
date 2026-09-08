@@ -1,12 +1,56 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateVatAmounts,
+  calculateMultiVatReceipt,
+  normalizeVatRate,
   generateOkp,
   generateQrCodeData,
 } from "../service";
 import { generateReceiptHtml } from "../receipt-template";
 
 describe("e-Kasa Service & Calculations", () => {
+  describe("normalizeVatRate", () => {
+    it("normalizes diverse string and rate formats to valid EkasaVatRateType", () => {
+      expect(normalizeVatRate("23")).toBe("STANDARD_23");
+      expect(normalizeVatRate("23%")).toBe("STANDARD_23");
+      expect(normalizeVatRate("STANDARD_23")).toBe("STANDARD_23");
+      expect(normalizeVatRate("19%")).toBe("REDUCED_19");
+      expect(normalizeVatRate("5")).toBe("REDUCED_5");
+      expect(normalizeVatRate("0%")).toBe("ZERO");
+      expect(normalizeVatRate(undefined)).toBe("STANDARD_23");
+    });
+  });
+
+  describe("calculateMultiVatReceipt", () => {
+    it("computes multi-VAT buckets and dominant rate across medical, diet and exam items", () => {
+      const items = [
+        { name: "Klinické vyšetrenie", qty: 1, unitPrice: "30.00", vatRate: "23" },
+        { name: "Antibiotiká (liek)", qty: 2, unitPrice: "10.00", vatRate: "5" },
+        { name: "Krmivo Gastrointestinal", qty: 1, unitPrice: "25.00", vatRate: "19" },
+      ];
+
+      const result = calculateMultiVatReceipt(items);
+
+      expect(result.amountTotal).toBe("75.00");
+      expect(result.dominantVatRate).toBe("STANDARD_23");
+      expect(result.taxBreakdown.STANDARD_23).toBeDefined();
+      expect(result.taxBreakdown.REDUCED_5).toBeDefined();
+      expect(result.taxBreakdown.REDUCED_19).toBeDefined();
+
+      // Check that sum of bases + sum of VAT equals grand total
+      const totalBases =
+        Number(result.taxBreakdown.STANDARD_23.base) +
+        Number(result.taxBreakdown.REDUCED_5.base) +
+        Number(result.taxBreakdown.REDUCED_19.base);
+      const totalVats =
+        Number(result.taxBreakdown.STANDARD_23.vat) +
+        Number(result.taxBreakdown.REDUCED_5.vat) +
+        Number(result.taxBreakdown.REDUCED_19.vat);
+
+      expect(Math.round((totalBases + totalVats) * 100) / 100).toBe(75.00);
+    });
+  });
+
   describe("calculateVatAmounts", () => {
     it("correctly computes 23% Slovak standard VAT (applicable from 2025)", () => {
       // 123.00 EUR at 23% => Base = 100.00 EUR, VAT = 23.00 EUR
