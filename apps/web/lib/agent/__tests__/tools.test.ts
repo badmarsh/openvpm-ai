@@ -103,6 +103,7 @@ describe("agent tool registry", () => {
     expect(writeTools).toEqual([
       "book_appointment",
       "record_vital_signs",
+      "record_vitals_from_speech",
     ]);
   });
 
@@ -117,6 +118,7 @@ describe("agent tool registry", () => {
     expect(writeToolScopes).toEqual({
       book_appointment: ["appointments:write"],
       record_vital_signs: ["records:write"],
+      record_vitals_from_speech: ["records:write"],
     });
   });
 
@@ -808,6 +810,105 @@ describe("new clinical agent tools", () => {
       year: 2026,
       month: 9,
     });
+  });
+
+  it("check_withdrawal_periods defaults activeOnly to true", () => {
+    const tool = getTool("check_withdrawal_periods")!;
+    expect(tool.readOnly).toBe(true);
+    const parsed = tool.zod.parse({});
+    expect(parsed).toMatchObject({ activeOnly: true });
+  });
+
+  it("check_withdrawal_periods accepts optional patientId and activeOnly flag", () => {
+    const tool = getTool("check_withdrawal_periods")!;
+    expect(tool.zod.parse({ patientId: PATIENT_ID, activeOnly: false })).toEqual({
+      patientId: PATIENT_ID,
+      activeOnly: false,
+    });
+    // Invalid UUID should fail
+    expect(() => tool.zod.parse({ patientId: "not-a-uuid" })).toThrow();
+  });
+
+  it("check_rabies_observations defaults includeCompleted to false", () => {
+    const tool = getTool("check_rabies_observations")!;
+    expect(tool.readOnly).toBe(true);
+    const parsed = tool.zod.parse({});
+    expect(parsed).toMatchObject({ includeCompleted: false });
+  });
+
+  it("check_rabies_observations accepts optional patientId", () => {
+    const tool = getTool("check_rabies_observations")!;
+    expect(tool.zod.parse({ patientId: PATIENT_ID, includeCompleted: true })).toEqual({
+      patientId: PATIENT_ID,
+      includeCompleted: true,
+    });
+  });
+
+  it("verify_microchip_crsz validates 15-digit chip number", () => {
+    const tool = getTool("verify_microchip_crsz")!;
+    expect(tool.readOnly).toBe(true);
+    // Valid 15-digit Slovak chip
+    expect(tool.zod.parse({ microchipNumber: "703098100123456" })).toMatchObject({
+      microchipNumber: "703098100123456",
+    });
+    // Must be exactly 15 digits
+    expect(() => tool.zod.parse({ microchipNumber: "1234" })).toThrow();
+    expect(() => tool.zod.parse({ microchipNumber: "1234567890123456" })).toThrow(); // 16 digits
+    // Requires at least one of microchipNumber or patientId
+    expect(() => tool.zod.parse({})).toThrow();
+  });
+
+  it("verify_microchip_crsz accepts patientId as alternative lookup", () => {
+    const tool = getTool("verify_microchip_crsz")!;
+    expect(tool.zod.parse({ patientId: PATIENT_ID })).toMatchObject({
+      patientId: PATIENT_ID,
+    });
+  });
+
+  it("record_vitals_from_speech requires patientId and dictationText", () => {
+    const tool = getTool("record_vitals_from_speech")!;
+    expect(tool.readOnly).toBe(false);
+    expect(tool.requiredApiScopes).toEqual(["records:write"]);
+    expect(() => tool.zod.parse({ patientId: PATIENT_ID })).toThrow(); // missing dictationText
+    expect(() => tool.zod.parse({ dictationText: "Teplota 38,5°C" })).toThrow(); // missing patientId
+  });
+
+  it("record_vitals_from_speech parses full vital signs payload", () => {
+    const tool = getTool("record_vitals_from_speech")!;
+    const result = tool.zod.parse({
+      patientId: PATIENT_ID,
+      dictationText: "Teplota 38.5 stupňa, pulz 72, dýchanie 20, hmotnosť 28 kg",
+      temperatureC: 38.5,
+      heartRateBpm: 72,
+      respiratoryRateBpm: 20,
+      weightKg: 28,
+    });
+    expect(result).toMatchObject({
+      patientId: PATIENT_ID,
+      temperatureC: 38.5,
+      heartRateBpm: 72,
+      weightKg: 28,
+    });
+  });
+
+  it("record_vitals_from_speech rejects out-of-range temperature", () => {
+    const tool = getTool("record_vitals_from_speech")!;
+    // Temperature < 30°C is physiologically implausible for a live animal
+    expect(() =>
+      tool.zod.parse({
+        patientId: PATIENT_ID,
+        dictationText: "Teplota 25 stupňov",
+        temperatureC: 25,
+      })
+    ).toThrow();
+    // Temperature > 45°C
+    expect(() =>
+      tool.zod.parse({
+        patientId: PATIENT_ID,
+        dictationText: "Teplota 50 stupňov",
+        temperatureC: 50,
+      })
+    ).toThrow();
   });
 });
 

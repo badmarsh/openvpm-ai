@@ -37,6 +37,10 @@ import {
   invoices,
   invoiceItems,
   dispenseChargeQueue,
+  extWithdrawalPeriods,
+  extRabiesObservations,
+  microchipRegistrations,
+  petPassports,
 } from "@openpims/db";
 import {
   appointmentCreatedWebhookPayload,
@@ -1715,6 +1719,456 @@ const generateRvpsReportTool: AgentTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Statutory Compliance Tools — Zákon č. 39/2007 Z. z.
+// ---------------------------------------------------------------------------
+
+/**
+ * check_withdrawal_periods
+ * Query active or past withdrawal periods from the Kniha ošetrení register.
+ * Useful when staff ask "Má krava Malina aktívnu ochrannú lehotu?" or similar.
+ */
+const checkWithdrawalPeriodsTool: AgentTool = {
+  name: "check_withdrawal_periods",
+  description:
+    "Query the Slovak statutory withdrawal period register (Ochranné lehoty — Zákon č. 39/2007 Z. z.) for a patient or for all currently active withdrawal periods in the practice. Returns medication name, batch number, administered date, safe-until date, and remaining days.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: {
+        type: "string",
+        description: "Patient UUID to filter by a specific animal. Omit to list all practice-wide active periods.",
+      },
+      activeOnly: {
+        type: "boolean",
+        description: "When true (default), return only currently active withdrawal periods (safeUntil in the future).",
+      },
+    },
+    required: [],
+  },
+  zod: z.object({
+    patientId: z.string().uuid().optional(),
+    activeOnly: z.boolean().default(true),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId?: string;
+      activeOnly: boolean;
+    };
+
+    const now = new Date();
+    const conditions = [
+      eq(extWithdrawalPeriods.practiceId, ctx.practiceId),
+      isNull(extWithdrawalPeriods.deletedAt),
+    ];
+    if (input.patientId) {
+      conditions.push(eq(extWithdrawalPeriods.patientId, input.patientId));
+    }
+    if (input.activeOnly) {
+      conditions.push(gt(extWithdrawalPeriods.safeUntil, now));
+    }
+
+    const rows = await ctx.db
+      .select({
+        id: extWithdrawalPeriods.id,
+        patientId: extWithdrawalPeriods.patientId,
+        patientName: patients.name,
+        patientSpecies: patients.species,
+        medicationName: extWithdrawalPeriods.medicationName,
+        batchNumber: extWithdrawalPeriods.batchNumber,
+        targetAnimalType: extWithdrawalPeriods.targetAnimalType,
+        meatWithdrawalDays: extWithdrawalPeriods.meatWithdrawalDays,
+        milkWithdrawalDays: extWithdrawalPeriods.milkWithdrawalDays,
+        administeredAt: extWithdrawalPeriods.administeredAt,
+        safeUntil: extWithdrawalPeriods.safeUntil,
+        notes: extWithdrawalPeriods.notes,
+      })
+      .from(extWithdrawalPeriods)
+      .innerJoin(patients, eq(extWithdrawalPeriods.patientId, patients.id))
+      .where(and(...conditions))
+      .orderBy(asc(extWithdrawalPeriods.safeUntil))
+      .limit(50);
+
+    return rows.map((r) => {
+      const safeUntil = r.safeUntil ? new Date(r.safeUntil) : null;
+      const daysRemaining = safeUntil
+        ? Math.ceil((safeUntil.getTime() - now.getTime()) / 86_400_000)
+        : null;
+      return {
+        ...r,
+        isActive: daysRemaining !== null && daysRemaining > 0,
+        daysRemaining: daysRemaining !== null && daysRemaining > 0 ? daysRemaining : 0,
+        safeUntilDate: safeUntil?.toISOString().slice(0, 10) ?? null,
+      };
+    });
+  },
+};
+
+/**
+ * check_rabies_observations
+ * Query active 14-day rabies bite observation records (Zákon č. 39/2007 Z. z. § 19).
+ * Detects which day-checkpoint is overdue today (Day 1, Day 5, Day 14).
+ */
+const checkRabiesObservationsTool: AgentTool = {
+  name: "check_rabies_observations",
+  description:
+    "Query the Slovak statutory rabies bite observation register (14-dňové klinické pozorovanie — Zákon č. 39/2007 Z. z. § 19). Returns active IN_PROGRESS observations and flags any overdue day-checkpoints (Day 1, Day 5, Day 14) based on today's date.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: {
+        type: "string",
+        description: "Patient UUID to filter by a specific animal. Omit to list all active observations.",
+      },
+      includeCompleted: {
+        type: "boolean",
+        description: "When true, also include completed observations (default false).",
+      },
+    },
+    required: [],
+  },
+  zod: z.object({
+    patientId: z.string().uuid().optional(),
+    includeCompleted: z.boolean().default(false),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId?: string;
+      includeCompleted: boolean;
+    };
+
+    const now = new Date();
+    const conditions = [
+      eq(extRabiesObservations.practiceId, ctx.practiceId),
+      isNull(extRabiesObservations.deletedAt),
+    ];
+    if (input.patientId) {
+      conditions.push(eq(extRabiesObservations.patientId, input.patientId));
+    }
+    if (!input.includeCompleted) {
+      conditions.push(eq(extRabiesObservations.status, "IN_PROGRESS"));
+    }
+
+    const rows = await ctx.db
+      .select({
+        id: extRabiesObservations.id,
+        patientId: extRabiesObservations.patientId,
+        patientName: patients.name,
+        biteDate: extRabiesObservations.biteDate,
+        injuredPersonName: extRabiesObservations.injuredPersonName,
+        injuredPersonContact: extRabiesObservations.injuredPersonContact,
+        status: extRabiesObservations.status,
+        day1ExaminedAt: extRabiesObservations.day1ExaminedAt,
+        day1Passed: extRabiesObservations.day1Passed,
+        day5ExaminedAt: extRabiesObservations.day5ExaminedAt,
+        day5Passed: extRabiesObservations.day5Passed,
+        day14ExaminedAt: extRabiesObservations.day14ExaminedAt,
+        day14Passed: extRabiesObservations.day14Passed,
+        rvpsNotified: extRabiesObservations.rvpsNotified,
+        notes: extRabiesObservations.notes,
+      })
+      .from(extRabiesObservations)
+      .innerJoin(patients, eq(extRabiesObservations.patientId, patients.id))
+      .where(and(...conditions))
+      .orderBy(desc(extRabiesObservations.biteDate))
+      .limit(30);
+
+    return rows.map((r) => {
+      const biteDate = r.biteDate ? new Date(r.biteDate) : null;
+      function daysDue(offsetDays: number) {
+        if (!biteDate) return null;
+        return new Date(biteDate.getTime() + offsetDays * 86_400_000);
+      }
+
+      const day1Due = daysDue(1);
+      const day5Due = daysDue(5);
+      const day14Due = daysDue(14);
+
+      const overdueCheckpoints: string[] = [];
+      if (!r.day1ExaminedAt && day1Due && now > day1Due) overdueCheckpoints.push("Day 1");
+      if (!r.day5ExaminedAt && day5Due && now > day5Due) overdueCheckpoints.push("Day 5");
+      if (!r.day14ExaminedAt && day14Due && now > day14Due) overdueCheckpoints.push("Day 14");
+
+      return {
+        ...r,
+        biteDateIso: biteDate?.toISOString().slice(0, 10) ?? null,
+        day1DueDate: day1Due?.toISOString().slice(0, 10) ?? null,
+        day5DueDate: day5Due?.toISOString().slice(0, 10) ?? null,
+        day14DueDate: day14Due?.toISOString().slice(0, 10) ?? null,
+        overdueCheckpoints,
+        isRvpsNotificationRequired: !r.rvpsNotified,
+      };
+    });
+  },
+};
+
+/**
+ * verify_microchip_crsz
+ * Validate a 15-digit ISO 11784/11785 microchip number and query the CRSZ
+ * registration status for that chip + PetPass EU travel readiness.
+ */
+const verifyMicrochipCrszTool: AgentTool = {
+  name: "verify_microchip_crsz",
+  description:
+    "Validate a 15-digit ISO 11784/11785 microchip number (Slovak country prefix 703) and look up its CRSZ (Centrálny register spoločenských zvierat) registration status. Also checks EU PetPass travel eligibility (rabies vaccination valid, travel eligible date reached).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      microchipNumber: {
+        type: "string",
+        description: "15-digit microchip number (ISO 11784/11785). May also be searched by patient name using patientId instead.",
+      },
+      patientId: {
+        type: "string",
+        description: "Patient UUID alternative — looks up the chip registered for this patient.",
+      },
+    },
+    required: [],
+  },
+  zod: z.object({
+    microchipNumber: z.string().regex(/^\d{15}$/).optional(),
+    patientId: z.string().uuid().optional(),
+  }).refine((v) => v.microchipNumber !== undefined || v.patientId !== undefined, {
+    message: "Provide microchipNumber or patientId",
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      microchipNumber?: string;
+      patientId?: string;
+    };
+
+    // Build chip registration query
+    const chipConditions = [
+      eq(microchipRegistrations.practiceId, ctx.practiceId),
+      isNull(microchipRegistrations.deletedAt),
+    ];
+    if (input.microchipNumber) {
+      chipConditions.push(eq(microchipRegistrations.microchipNumber, input.microchipNumber));
+    }
+    if (input.patientId) {
+      chipConditions.push(eq(microchipRegistrations.patientId, input.patientId));
+    }
+
+    const [chipReg] = await ctx.db
+      .select({
+        id: microchipRegistrations.id,
+        patientId: microchipRegistrations.patientId,
+        patientName: patients.name,
+        microchipNumber: microchipRegistrations.microchipNumber,
+        implantedAt: microchipRegistrations.implantedAt,
+        crszStatus: microchipRegistrations.crszStatus,
+        crszRegisteredAt: microchipRegistrations.crszRegisteredAt,
+        crszRecordId: microchipRegistrations.crszRecordId,
+        location: microchipRegistrations.location,
+        verifiedBeforeImplant: microchipRegistrations.verifiedBeforeImplant,
+        verifiedAfterImplant: microchipRegistrations.verifiedAfterImplant,
+      })
+      .from(microchipRegistrations)
+      .innerJoin(patients, eq(microchipRegistrations.patientId, patients.id))
+      .where(and(...chipConditions))
+      .limit(1);
+
+    // Validate chip number format (ISO 11784: 15 digits, first 3 = country code)
+    const chipNumber = input.microchipNumber ?? chipReg?.microchipNumber;
+    const isoValidation = chipNumber
+      ? {
+          valid: /^\d{15}$/.test(chipNumber),
+          countryCode: chipNumber.slice(0, 3),
+          isSlovakCountryCode: chipNumber.startsWith("703"),
+          isoCompliant: /^\d{15}$/.test(chipNumber),
+        }
+      : null;
+
+    if (!chipReg) {
+      return {
+        found: false,
+        isoValidation,
+        message: "No CRSZ chip registration found for this practice.",
+      };
+    }
+
+    // Look up PetPass / EU travel eligibility
+    const [passport] = await ctx.db
+      .select({
+        passportNumber: petPassports.passportNumber,
+        issuedAt: petPassports.issuedAt,
+        rabiesVaccineName: petPassports.rabiesVaccineName,
+        rabiesValidUntil: petPassports.rabiesValidUntil,
+        travelEligibleFrom: petPassports.travelEligibleFrom,
+      })
+      .from(petPassports)
+      .where(
+        and(
+          eq(petPassports.patientId, chipReg.patientId),
+          eq(petPassports.practiceId, ctx.practiceId),
+          isNull(petPassports.deletedAt)
+        )
+      )
+      .orderBy(desc(petPassports.createdAt))
+      .limit(1);
+
+    const now = new Date();
+    const travelReady = passport
+      ? !!(
+          passport.rabiesValidUntil &&
+          new Date(passport.rabiesValidUntil) > now &&
+          passport.travelEligibleFrom &&
+          new Date(passport.travelEligibleFrom) <= now
+        )
+      : false;
+
+    return {
+      found: true,
+      isoValidation,
+      chip: {
+        microchipNumber: chipReg.microchipNumber,
+        patientName: chipReg.patientName,
+        implantedAt: chipReg.implantedAt,
+        location: chipReg.location,
+        verifiedBeforeImplant: chipReg.verifiedBeforeImplant,
+        verifiedAfterImplant: chipReg.verifiedAfterImplant,
+      },
+      crsz: {
+        status: chipReg.crszStatus,
+        registeredAt: chipReg.crszRegisteredAt,
+        recordId: chipReg.crszRecordId,
+        isRegistered: chipReg.crszStatus === "REGISTERED",
+      },
+      petPass: passport
+        ? {
+            passportNumber: passport.passportNumber,
+            rabiesVaccineName: passport.rabiesVaccineName,
+            rabiesValidUntil: passport.rabiesValidUntil,
+            travelEligibleFrom: passport.travelEligibleFrom,
+            euTravelReady: travelReady,
+          }
+        : null,
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// AI Voice Scribe — Vital Signs from Dictation
+// ---------------------------------------------------------------------------
+
+/**
+ * record_vitals_from_speech
+ * Parse vital signs from a free-text dictation string and insert them into
+ * the vitalSigns table. The AI model extracts structured values from natural
+ * language (Slovak or English) before calling this tool.
+ *
+ * Example dictation: "Telesná teplota 38,5 stupňa, pulz 72 za minútu,
+ * frekvencia dýchania 20, hmotnosť 28 kg, kapilárny čas plnenia 1,5 sekundy."
+ */
+const recordVitalsFromSpeechTool: AgentTool = {
+  name: "record_vitals_from_speech",
+  description:
+    "Extract vital signs from a free-text dictation string (Slovak or English) and record them for the patient. The model should parse the text and provide structured values. Supports: temperature (°C), heart rate (bpm), respiratory rate (bpm), weight (kg), body condition score (1–9), pain score (0–10), capillary refill time (seconds). Always confirm extracted values with the user before saving if in doubt.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: {
+        type: "string",
+        description: "Patient UUID to record vitals for.",
+      },
+      dictationText: {
+        type: "string",
+        description: "Raw dictation text to extract vitals from. Include the original text for audit trail.",
+        maxLength: 2000,
+      },
+      temperatureC: { type: "number", description: "Body temperature in °C (e.g. 38.5)" },
+      heartRateBpm: { type: "number", description: "Heart rate in beats per minute" },
+      respiratoryRateBpm: { type: "number", description: "Respiratory rate in breaths per minute" },
+      weightKg: { type: "number", description: "Body weight in kilograms" },
+      bodyConditionScore: { type: "number", description: "Body condition score 1–9" },
+      painScore: { type: "number", description: "Pain score 0–10" },
+      capillaryRefillSec: { type: "number", description: "Capillary refill time in seconds" },
+    },
+    required: ["patientId", "dictationText"],
+  },
+  zod: z.object({
+    patientId: z.string().uuid(),
+    dictationText: z.string().min(1).max(2000),
+    temperatureC: z.number().finite().min(30).max(45).optional(),
+    heartRateBpm: z.number().int().min(0).max(400).optional(),
+    respiratoryRateBpm: z.number().int().min(0).max(300).optional(),
+    weightKg: z.number().finite().positive().max(2000).optional(),
+    bodyConditionScore: z.number().int().min(1).max(9).optional(),
+    painScore: z.number().int().min(0).max(10).optional(),
+    capillaryRefillSec: z.number().finite().min(0).max(10).optional(),
+  }),
+  readOnly: false,
+  requiredApiScopes: ["records:write"],
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      dictationText: string;
+      temperatureC?: number;
+      heartRateBpm?: number;
+      respiratoryRateBpm?: number;
+      weightKg?: number;
+      bodyConditionScore?: number;
+      painScore?: number;
+      capillaryRefillSec?: number;
+    };
+
+    if (!(await activePatient(ctx, input.patientId))) {
+      return { error: "Patient not found" };
+    }
+
+    // Require at least one vital value to avoid empty inserts
+    const hasAnyVital =
+      input.temperatureC !== undefined ||
+      input.heartRateBpm !== undefined ||
+      input.respiratoryRateBpm !== undefined ||
+      input.weightKg !== undefined ||
+      input.bodyConditionScore !== undefined ||
+      input.painScore !== undefined ||
+      input.capillaryRefillSec !== undefined;
+
+    if (!hasAnyVital) {
+      return {
+        error: "No vital signs could be extracted from the dictation. Please provide at least one measurement.",
+        dictationText: input.dictationText,
+      };
+    }
+
+    const [row] = await ctx.db
+      .insert(vitalSigns)
+      .values({
+        practiceId: ctx.practiceId,
+        patientId: input.patientId,
+        recordedBy: null, // AI agent — no user row
+        temperatureC: input.temperatureC?.toString(),
+        heartRateBpm: input.heartRateBpm,
+        respiratoryRateBpm: input.respiratoryRateBpm,
+        weightKg: input.weightKg?.toString(),
+        bodyConditionScore: input.bodyConditionScore,
+        painScore: input.painScore,
+        capillaryRefillSec: input.capillaryRefillSec?.toString(),
+        notes: `[Voice Scribe] ${input.dictationText.slice(0, 500)}`,
+      })
+      .returning({ id: vitalSigns.id, recordedAt: vitalSigns.recordedAt });
+
+    return {
+      id: row!.id,
+      recordedAt: row!.recordedAt,
+      extractedVitals: {
+        temperatureC: input.temperatureC,
+        heartRateBpm: input.heartRateBpm,
+        respiratoryRateBpm: input.respiratoryRateBpm,
+        weightKg: input.weightKg,
+        bodyConditionScore: input.bodyConditionScore,
+        painScore: input.painScore,
+        capillaryRefillSec: input.capillaryRefillSec,
+      },
+    };
+  },
+};
+
 export const AGENT_TOOLS: AgentTool[] = [
   findClient,
   findPatient,
@@ -1732,6 +2186,10 @@ export const AGENT_TOOLS: AgentTool[] = [
   auditMissedChargesTool,
   createDischargeSummaryTool,
   generateRvpsReportTool,
+  checkWithdrawalPeriodsTool,
+  checkRabiesObservationsTool,
+  verifyMicrochipCrszTool,
+  recordVitalsFromSpeechTool,
 ];
 
 export function getTool(name: string): AgentTool | undefined {
