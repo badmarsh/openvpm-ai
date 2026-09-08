@@ -308,115 +308,123 @@ export default function V2ImportPage() {
         ) : (
           <div className="border rounded-lg overflow-hidden text-xs">
             {activePreviewTab === "patients" && (
-              <table className="w-full text-left">
-                <thead className="bg-muted text-muted-foreground font-medium border-b">
-                  <tr>
-                    <th className="p-2.5">ID</th>
-                    <th className="p-2.5">Meno</th>
-                    <th className="p-2.5">Druh</th>
-                    <th className="p-2.5">Plemeno</th>
-                    <th className="p-2.5">Pohlavie</th>
-                    <th className="p-2.5">Čip</th>
-                    <th className="p-2.5">Stav</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {preview?.patients.map((p) => (
-                    <tr key={p.id} className="hover:bg-muted/50">
-                      <td className="p-2.5 font-mono text-muted-foreground">#{p.id}</td>
-                      <td className="p-2.5 font-medium">{p.name}</td>
-                      <td className="p-2.5 capitalize">{p.species}</td>
-                      <td className="p-2.5">{p.breed}</td>
-                      <td className="p-2.5 capitalize">{p.sex}</td>
-                      <td className="p-2.5 font-mono">{p.microchip}</td>
-                      <td className="p-2.5">
-                        {p.status === "deceased" ? (
-                          <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
-                            Uhynuté (Chránené)
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-500 text-emerald-600 bg-emerald-50">
-                            Aktívne
-                          </Badge>
-                        )}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-muted text-muted-foreground font-medium border-b">
+                    <tr>
+                      <th className="p-2.5">ID</th>
+                      <th className="p-2.5">Meno</th>
+                      <th className="p-2.5">Druh</th>
+                      <th className="p-2.5">Plemeno</th>
+                      <th className="p-2.5">Pohlavie</th>
+                      <th className="p-2.5">Čip</th>
+                      <th className="p-2.5">Stav</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {preview?.patients.map((p) => (
+                      <tr key={p.id} className="hover:bg-muted/50">
+                        <td className="p-2.5 font-mono text-muted-foreground">#{p.id}</td>
+                        <td className="p-2.5 font-medium">{p.name}</td>
+                        <td className="p-2.5 capitalize">{p.species}</td>
+                        <td className="p-2.5">{p.breed}</td>
+                        <td className="p-2.5 capitalize">{p.sex}</td>
+                        <td className="p-2.5 font-mono">{p.microchip}</td>
+                        <td className="p-2.5">
+                          {p.status === "deceased" ? (
+                            <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                              Uhynuté (Chránené)
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-500 text-emerald-600 bg-emerald-50">
+                              Aktívne
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             {activePreviewTab === "clients" && (
-              <table className="w-full text-left">
-                <thead className="bg-muted text-muted-foreground font-medium border-b">
-                  <tr>
-                    <th className="p-2.5">ID</th>
-                    <th className="p-2.5">Meno a Priezvisko</th>
-                    <th className="p-2.5">Adresa</th>
-                    <th className="p-2.5">Telefón / Mobil</th>
-                    <th className="p-2.5">Email</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {preview?.clients.map((c) => (
-                    <tr key={c.id} className="hover:bg-muted/50">
-                      <td className="p-2.5 font-mono text-muted-foreground">#{c.id}</td>
-                      <td className="p-2.5 font-medium">{c.name}</td>
-                      <td className="p-2.5">{c.address}</td>
-                      <td className="p-2.5">{c.phone}</td>
-                      <td className="p-2.5">{c.email}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-muted text-muted-foreground font-medium border-b">
+                    <tr>
+                      <th className="p-2.5">ID</th>
+                      <th className="p-2.5">Meno a Priezvisko</th>
+                      <th className="p-2.5">Adresa</th>
+                      <th className="p-2.5">Telefón / Mobil</th>
+                      <th className="p-2.5">Email</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {preview?.clients.map((c) => (
+                      <tr key={c.id} className="hover:bg-muted/50">
+                        <td className="p-2.5 font-mono text-muted-foreground">#{c.id}</td>
+                        <td className="p-2.5 font-medium">{c.name}</td>
+                        <td className="p-2.5">{c.address}</td>
+                        <td className="p-2.5">{c.phone}</td>
+                        <td className="p-2.5">{c.email}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             {activePreviewTab === "vaccinations" && (
-              <table className="w-full text-left">
-                <thead className="bg-muted text-muted-foreground font-medium border-b">
-                  <tr>
-                    <th className="p-2.5">ID</th>
-                    <th className="p-2.5">ID Pacienta</th>
-                    <th className="p-2.5">Vakcína</th>
-                    <th className="p-2.5">Podané dňa</th>
-                    <th className="p-2.5">Preočkovanie do</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {preview?.vaccinations.map((v) => (
-                    <tr key={v.id} className="hover:bg-muted/50">
-                      <td className="p-2.5 font-mono text-muted-foreground">#{v.id}</td>
-                      <td className="p-2.5 font-mono">#{v.patientId}</td>
-                      <td className="p-2.5 font-medium">{v.vaccine}</td>
-                      <td className="p-2.5">{new Date(v.administeredAt).toLocaleDateString("sk-SK")}</td>
-                      <td className="p-2.5">{v.nextDue !== "–" ? new Date(v.nextDue).toLocaleDateString("sk-SK") : "–"}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-muted text-muted-foreground font-medium border-b">
+                    <tr>
+                      <th className="p-2.5">ID</th>
+                      <th className="p-2.5">ID Pacienta</th>
+                      <th className="p-2.5">Vakcína</th>
+                      <th className="p-2.5">Podané dňa</th>
+                      <th className="p-2.5">Preočkovanie do</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {preview?.vaccinations.map((v) => (
+                      <tr key={v.id} className="hover:bg-muted/50">
+                        <td className="p-2.5 font-mono text-muted-foreground">#{v.id}</td>
+                        <td className="p-2.5 font-mono">#{v.patientId}</td>
+                        <td className="p-2.5 font-medium">{v.vaccine}</td>
+                        <td className="p-2.5">{new Date(v.administeredAt).toLocaleDateString("sk-SK")}</td>
+                        <td className="p-2.5">{v.nextDue !== "–" ? new Date(v.nextDue).toLocaleDateString("sk-SK") : "–"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             {activePreviewTab === "visits" && (
-              <table className="w-full text-left">
-                <thead className="bg-muted text-muted-foreground font-medium border-b">
-                  <tr>
-                    <th className="p-2.5">ID Návštevy</th>
-                    <th className="p-2.5">ID Pacienta</th>
-                    <th className="p-2.5">Dátum</th>
-                    <th className="p-2.5">Lekár</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {preview?.visits.map((vis) => (
-                    <tr key={vis.id} className="hover:bg-muted/50">
-                      <td className="p-2.5 font-mono text-muted-foreground">#{vis.id}</td>
-                      <td className="p-2.5 font-mono">#{vis.patientId}</td>
-                      <td className="p-2.5">{new Date(vis.date).toLocaleDateString("sk-SK")}</td>
-                      <td className="p-2.5 font-medium">{vis.doctor}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-muted text-muted-foreground font-medium border-b">
+                    <tr>
+                      <th className="p-2.5">ID Návštevy</th>
+                      <th className="p-2.5">ID Pacienta</th>
+                      <th className="p-2.5">Dátum</th>
+                      <th className="p-2.5">Lekár</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {preview?.visits.map((vis) => (
+                      <tr key={vis.id} className="hover:bg-muted/50">
+                        <td className="p-2.5 font-mono text-muted-foreground">#{vis.id}</td>
+                        <td className="p-2.5 font-mono">#{vis.patientId}</td>
+                        <td className="p-2.5">{new Date(vis.date).toLocaleDateString("sk-SK")}</td>
+                        <td className="p-2.5 font-medium">{vis.doctor}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
