@@ -74,7 +74,7 @@ export const voiceRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pacient sa nenašiel",
+          message: "Patient not found",
         });
       }
 
@@ -91,7 +91,7 @@ export const voiceRouter = createRouter({
       } catch (err) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa uložiť audio súbor",
+          message: "Failed to save audio file",
         });
       }
 
@@ -115,7 +115,7 @@ export const voiceRouter = createRouter({
       if (!dictation) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa vytvoriť záznam diktovania",
+          message: "Failed to create voice dictation record",
         });
       }
 
@@ -124,14 +124,14 @@ export const voiceRouter = createRouter({
       try {
         transcript = await transcribeAudio(audioKey);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Transkripcia zlyhala";
+        const message = err instanceof Error ? err.message : "Audio transcription failed";
         await ctx.db
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Transkripcia zlyhala: ${message}`,
+          message: `Audio transcription failed: ${message}`,
         });
       }
 
@@ -173,14 +173,14 @@ export const voiceRouter = createRouter({
 
         return completed ?? dictation;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Formátovanie SOAP zlyhalo";
+        const message = err instanceof Error ? err.message : "SOAP formatting failed";
         await ctx.db
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Formátovanie SOAP zlyhalo: ${message}`,
+          message: `SOAP formatting failed: ${message}`,
         });
       }
     }),
@@ -214,14 +214,14 @@ export const voiceRouter = createRouter({
       if (!patient) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Pacient sa nenašiel",
+          message: "Patient not found",
         });
       }
 
       if (!input.audioFileKey.startsWith(`${ctx.practiceId}/`)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "audioFileKey musí byť v rámci adresára praktiky",
+          message: "audioFileKey must be within practice directory",
         });
       }
 
@@ -244,7 +244,7 @@ export const voiceRouter = createRouter({
       if (!dictation) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa vytvoriť záznam diktovania",
+          message: "Failed to create voice dictation record",
         });
       }
 
@@ -270,14 +270,14 @@ export const voiceRouter = createRouter({
       if (!dictation) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Diktovanie sa nenašlo",
+          message: "Voice dictation not found",
         });
       }
 
       if (!dictation.audioFileKey) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Diktovanie nemá priradený audio súbor",
+          message: "Voice dictation has no audio file attached",
         });
       }
 
@@ -292,14 +292,14 @@ export const voiceRouter = createRouter({
         transcript = await transcribeAudio(dictation.audioFileKey);
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Transkripcia zlyhala";
+          err instanceof Error ? err.message : "Audio transcription failed";
         await ctx.db
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Transkripcia zlyhala: ${message}`,
+          message: `Audio transcription failed: ${message}`,
         });
       }
 
@@ -336,14 +336,14 @@ export const voiceRouter = createRouter({
         return updated;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Formátovanie SOAP zlyhalo";
+          err instanceof Error ? err.message : "SOAP formatting failed";
         await ctx.db
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Formátovanie SOAP zlyhalo: ${message}`,
+          message: `SOAP formatting failed: ${message}`,
         });
       }
     }),
@@ -367,7 +367,7 @@ export const voiceRouter = createRouter({
       if (!dictation) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Diktovanie sa nenašlo",
+          message: "Voice dictation not found",
         });
       }
 
@@ -546,7 +546,7 @@ export const voiceRouter = createRouter({
       if (!dictation) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Diktovanie sa nenašlo",
+          message: "Voice dictation not found",
         });
       }
 
@@ -554,7 +554,7 @@ export const voiceRouter = createRouter({
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:
-            "Diktovanie nie je priradené k otvorenej vizite. Priraďte ho k vizite pred uložením do kartotéky.",
+            "Voice dictation is not associated with an open appointment. Attach it to an appointment before saving to patient chart.",
         });
       }
       const appointmentId = dictation.appointmentId;
@@ -643,7 +643,7 @@ export const voiceRouter = createRouter({
       if (!dictation) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Diktovanie sa nenašlo",
+          message: "Voice dictation not found",
         });
       }
 
@@ -739,7 +739,7 @@ export const voiceRouter = createRouter({
         if (!patient) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Pacient nebol nájdený",
+            message: "Patient not found",
           });
         }
         resolvedClientId = patient.clientId;

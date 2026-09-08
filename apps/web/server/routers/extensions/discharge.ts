@@ -224,7 +224,7 @@ export const dischargeRouter = createRouter({
         if (!patient) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Pacient sa nenašiel",
+            message: "Patient not found",
           });
         }
       }
@@ -251,7 +251,7 @@ export const dischargeRouter = createRouter({
       if (!saved) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa uložiť prepúšťaciu správu",
+          message: "Failed to save discharge report",
         });
       }
 

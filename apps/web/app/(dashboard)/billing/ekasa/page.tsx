@@ -109,14 +109,14 @@ function EkasaReceiptsContent() {
   const [exportMonth, setExportMonth] = useState<number>(now.getMonth() + 1);
 
   const utils = trpc.useUtils();
-  const { data: ekasaConfig } = trpc.ekasa.getConfig.useQuery();
+  const { data: ekasaConfig } = trpc.extensions.ekasa.getConfig.useQuery();
 
   // Queries
   const {
     data: receipts,
     isLoading: isLoadingReceipts,
     refetch: refetchReceipts,
-  } = trpc.ekasa.getReceipts.useQuery({
+  } = trpc.extensions.ekasa.getReceipts.useQuery({
     limit: PAGE_SIZE,
     offset,
     status: statusFilter,
@@ -126,7 +126,7 @@ function EkasaReceiptsContent() {
     data: dailySummaryData,
     isLoading: isLoadingSummary,
     refetch: refetchSummary,
-  } = trpc.ekasa.getDailyClosureSummary.useQuery(undefined, {
+  } = trpc.extensions.ekasa.getDailyClosureSummary.useQuery(undefined, {
     enabled: activeTab === "closures",
   });
 
@@ -134,7 +134,7 @@ function EkasaReceiptsContent() {
     data: closures,
     isLoading: isLoadingClosures,
     refetch: refetchClosures,
-  } = trpc.ekasa.getDailyClosures.useQuery(undefined, {
+  } = trpc.extensions.ekasa.getDailyClosures.useQuery(undefined, {
     enabled: activeTab === "closures",
   });
 
@@ -142,13 +142,13 @@ function EkasaReceiptsContent() {
     data: accountantData,
     isLoading: isLoadingAccountant,
     refetch: refetchAccountant,
-  } = trpc.ekasa.getAccountantExport.useQuery(
+  } = trpc.extensions.ekasa.getAccountantExport.useQuery(
     { year: exportYear, month: exportMonth },
     { enabled: activeTab === "accountant" }
   );
 
   // Mutations
-  const retryMutation = trpc.ekasa.retryReceipt.useMutation({
+  const retryMutation = trpc.extensions.ekasa.retryReceipt.useMutation({
     onSuccess: () => {
       toast.success("Doklad bol úspešne odoslaný");
       refetchReceipts();
@@ -158,7 +158,7 @@ function EkasaReceiptsContent() {
     },
   });
 
-  const stornoMutation = trpc.ekasa.stornoReceipt.useMutation({
+  const stornoMutation = trpc.extensions.ekasa.stornoReceipt.useMutation({
     onSuccess: () => {
       toast.success("Doklad bol úspešne stornovaný");
       setStornoTarget(null);
@@ -171,7 +171,7 @@ function EkasaReceiptsContent() {
     },
   });
 
-  const closureMutation = trpc.ekasa.performDailyClosure.useMutation({
+  const closureMutation = trpc.extensions.ekasa.performDailyClosure.useMutation({
     onSuccess: (res) => {
       toast.success(`Denná uzávierka ${res.closureNumber} bola úspešne vykonaná!`);
       refetchSummary();
@@ -185,7 +185,7 @@ function EkasaReceiptsContent() {
   const handlePrint = async (receiptId: string) => {
     setPrintingId(receiptId);
     try {
-      const result = await utils.ekasa.printReceipt.fetch({
+      const result = await utils.extensions.ekasa.printReceipt.fetch({
         receiptId,
       });
       if (result?.html) {

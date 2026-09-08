@@ -170,7 +170,7 @@ export const ekasaRouter = createRouter({
       if (!config) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "e-Kasa nie je pre túto kliniku nakonfigurovaná. Nastavte ju v Nastavenia -> e-Kasa.",
+          message: "e-Kasa is not configured for this practice. Configure it in Settings -> e-Kasa.",
         });
       }
 
@@ -211,14 +211,14 @@ export const ekasaRouter = createRouter({
       if (!receipt) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Doklad nebol nájdený",
+          message: "Receipt not found",
         });
       }
 
       if (receipt.status === "CONFIRMED") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Doklad už bol úspešne odoslaný",
+          message: "Receipt already confirmed",
         });
       }
 
@@ -233,7 +233,7 @@ export const ekasaRouter = createRouter({
       if (!config) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "e-Kasa konfigurácia chýba",
+          message: "e-Kasa configuration is missing",
         });
       }
 
@@ -292,7 +292,7 @@ export const ekasaRouter = createRouter({
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:
-            "e-Kasa nie je pre túto kliniku nakonfigurovaná. Prosím nastavte ju v Nastavenia -> e-Kasa.",
+            "e-Kasa is not configured for this practice. Configure it in Settings -> e-Kasa.",
         });
       }
 
@@ -313,7 +313,7 @@ export const ekasaRouter = createRouter({
       } catch (err: any) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: err?.message || "Nepodarilo sa vystaviť storno doklad",
+          message: err?.message || "Failed to issue correction receipt",
         });
       }
     }),
@@ -338,7 +338,7 @@ export const ekasaRouter = createRouter({
       if (!receipt) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Doklad nebol nájdený",
+          message: "Receipt not found",
         });
       }
 
@@ -412,7 +412,7 @@ export const ekasaRouter = createRouter({
       if (!config) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "e-Kasa nie je pre túto kliniku nakonfigurovaná. Prosím nastavte ju v Nastavenia -> e-Kasa.",
+          message: "e-Kasa is not configured for this practice. Configure it in Settings -> e-Kasa.",
         });
       }
 
@@ -638,7 +638,7 @@ export const ekasaRouter = createRouter({
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:
-            "e-Kasa nie je pre túto kliniku nakonfigurovaná. Nastavte ju v Nastavenia -> e-Kasa.",
+            "e-Kasa is not configured for this practice. Configure it in Settings -> e-Kasa.",
         });
       }
 
@@ -694,7 +694,7 @@ export const ekasaRouter = createRouter({
       if (!invoice) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa vytvoriť faktúru pre pultový predaj",
+          message: "Failed to create walk-in invoice",
         });
       }
 
@@ -763,7 +763,7 @@ export const ekasaRouter = createRouter({
       if (!savedReceipt) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa načítať vytvorený doklad",
+          message: "Failed to load created receipt",
         });
       }
 

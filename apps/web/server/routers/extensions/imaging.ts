@@ -275,7 +275,7 @@ export const imagingRouter = createRouter({
         .limit(1);
 
       if (!patient) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Pacient sa nenašiel" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Patient not found" });
       }
 
       const [latestVitals] = await ctx.db

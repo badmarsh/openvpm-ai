@@ -48,8 +48,8 @@ const COMPLIANCE_ITEMS = [
 ];
 
 export default function EkasaSettingsPage() {
-  const { data: config, isLoading, refetch } = trpc.ekasa.getConfig.useQuery();
-  const updateConfig = trpc.ekasa.updateConfig.useMutation({ onSuccess: () => refetch() });
+  const { data: config, isLoading, refetch } = trpc.extensions.ekasa.getConfig.useQuery();
+  const updateConfig = trpc.extensions.ekasa.updateConfig.useMutation({ onSuccess: () => refetch() });
 
   const [form, setForm] = useState({
     dic: "",

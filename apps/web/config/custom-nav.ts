@@ -17,6 +17,7 @@ import {
   Building2,
   MessageSquare,
   Headphones,
+  ClipboardList,
 } from "lucide-react";
 
 export type UserRole =
@@ -50,6 +51,15 @@ export interface CustomNavItem {
  */
 export const customNavItems: CustomNavItem[] = [
   // Clinical
+  {
+    href: "/statutory",
+    label: "Štatutárne Registre",
+    i18nKey: "nav.statutory",
+    icon: ClipboardList,
+    roles: ["admin", "veterinarian"],
+    section: "clinical",
+    badge: "§",
+  },
 
   // Marketing
   {
