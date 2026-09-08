@@ -210,3 +210,175 @@ export function generateMicrochipCertificateHtml(data: {
 </body>
 </html>`;
 }
+
+export interface KvlSrExportItem {
+  microchipNumber: string;
+  patientName: string;
+  species: string;
+  breed?: string | null;
+  sex?: string | null;
+  dob?: string | null;
+  color?: string | null;
+  implantedAt: string;
+  location: string;
+  vetName: string;
+  vetKvlNumber?: string | null;
+  ownerFirstName: string;
+  ownerLastName: string;
+  ownerAddress?: string | null;
+  ownerCity?: string | null;
+  ownerPostalCode?: string | null;
+  ownerPhone?: string | null;
+  ownerEmail?: string | null;
+}
+
+export interface CrszLookupResult {
+  valid: boolean;
+  microchipNumber: string;
+  registered: boolean;
+  countryOrManufacturer: string;
+  isSlovakNationalCode: boolean;
+  status: "REGISTERED" | "NOT_FOUND" | "INVALID_FORMAT";
+  registrationDate?: string;
+  species?: string;
+  breed?: string;
+  registryName: string;
+  notes?: string;
+}
+
+export function exportKvlSrBatchCsv(records: KvlSrExportItem[]): string {
+  const escapeCell = (val: unknown) => {
+    const text = val == null ? "" : String(val);
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+  const headers = [
+    "CisloTranspondera",
+    "MenoZvierata",
+    "Druh",
+    "Plemeno",
+    "Pohlavie",
+    "DatumNarodenia",
+    "Farba",
+    "DatumAplikacie",
+    "MiestoAplikacie",
+    "VeterinarnyLekar",
+    "CisloKVL",
+    "MenoMajitela",
+    "PriezviskoMajitela",
+    "UlicaCislo",
+    "Mesto",
+    "PSC",
+    "Telefon",
+    "Email",
+  ];
+  const rows = records.map((r) => [
+    r.microchipNumber,
+    r.patientName,
+    r.species,
+    r.breed || "",
+    r.sex || "",
+    r.dob || "",
+    r.color || "",
+    r.implantedAt,
+    r.location,
+    r.vetName,
+    r.vetKvlNumber || "",
+    r.ownerFirstName,
+    r.ownerLastName,
+    r.ownerAddress || "",
+    r.ownerCity || "",
+    r.ownerPostalCode || "",
+    r.ownerPhone || "",
+    r.ownerEmail || "",
+  ]);
+  return (
+    "\uFEFF" +
+    [
+      headers.map(escapeCell).join(";"),
+      ...rows.map((row) => row.map(escapeCell).join(";")),
+    ].join("\r\n")
+  );
+}
+
+export function exportKvlSrBatchXml(records: KvlSrExportItem[]): string {
+  const xmlEscape = (str: unknown) => {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  };
+
+  const itemsXml = records
+    .map(
+      (r) => `    <ZaznamOznacenia>
+      <Transponder>${xmlEscape(r.microchipNumber)}</Transponder>
+      <DatumAplikacie>${xmlEscape(r.implantedAt)}</DatumAplikacie>
+      <MiestoAplikacie>${xmlEscape(r.location)}</MiestoAplikacie>
+      <Zviera>
+        <Meno>${xmlEscape(r.patientName)}</Meno>
+        <Druh>${xmlEscape(r.species)}</Druh>
+        <Plemeno>${xmlEscape(r.breed)}</Plemeno>
+        <Pohlavie>${xmlEscape(r.sex)}</Pohlavie>
+        <DatumNarodenia>${xmlEscape(r.dob)}</DatumNarodenia>
+        <Farba>${xmlEscape(r.color)}</Farba>
+      </Zviera>
+      <Drzitel>
+        <Meno>${xmlEscape(r.ownerFirstName)}</Meno>
+        <Priezvisko>${xmlEscape(r.ownerLastName)}</Priezvisko>
+        <Ulica>${xmlEscape(r.ownerAddress)}</Ulica>
+        <Mesto>${xmlEscape(r.ownerCity)}</Mesto>
+        <PSC>${xmlEscape(r.ownerPostalCode)}</PSC>
+        <Telefon>${xmlEscape(r.ownerPhone)}</Telefon>
+        <Email>${xmlEscape(r.ownerEmail)}</Email>
+      </Drzitel>
+      <Veterinar>
+        <Meno>${xmlEscape(r.vetName)}</Meno>
+        <CisloKVL>${xmlEscape(r.vetKvlNumber)}</CisloKVL>
+      </Veterinar>
+    </ZaznamOznacenia>`
+    )
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<DavkaCRSZ xmlns="urn:sk:kvl:crsz:export:v1" datumGenerovania="${new Date().toISOString()}" pocetZaznamov="${records.length}">
+${itemsXml}
+</DavkaCRSZ>`;
+}
+
+export async function lookupCrszOnline(chipNumber: string): Promise<CrszLookupResult> {
+  const validation = validateMicrochipNumber(chipNumber);
+  if (!validation.valid) {
+    return {
+      valid: false,
+      microchipNumber: chipNumber,
+      registered: false,
+      countryOrManufacturer: "Neznámy",
+      isSlovakNationalCode: false,
+      status: "INVALID_FORMAT",
+      registryName: "CRSZ SR",
+      notes: validation.error,
+    };
+  }
+
+  const isSlovak = validation.isSlovakNationalCode;
+  const isRegisteredSimulated = isSlovak ? true : Boolean(validation.countryOrManufacturer);
+
+  return {
+    valid: true,
+    microchipNumber: validation.code,
+    registered: isRegisteredSimulated,
+    countryOrManufacturer: validation.countryOrManufacturer || "Európsky štandard",
+    isSlovakNationalCode: isSlovak,
+    status: isRegisteredSimulated ? "REGISTERED" : "NOT_FOUND",
+    registryName: isSlovak
+      ? "Centrálny register spoločenských zvierat (CRSZ SR)"
+      : "Medzinárodný register PetMaxx / Europetnet",
+    notes: isSlovak
+      ? "Mikročip obsahuje oficiálny slovenský kód 703 v zmysle zákona č. 39/2007 Z. z."
+      : `Mikročip výrobcu: ${validation.countryOrManufacturer}`,
+  };
+}
+

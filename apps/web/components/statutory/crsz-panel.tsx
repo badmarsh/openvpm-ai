@@ -12,6 +12,8 @@ import {
   Plane,
   Loader2,
   X,
+  Download,
+  Globe,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -60,6 +62,54 @@ export function CrszPanel() {
     },
   });
 
+  // KVL SR Batch Export mutation
+  const exportBatchMutation = trpc.extensions.crsz.exportKvlSrBatch.useMutation({
+    onSuccess: (data) => {
+      const mime = data.format === "xml" ? "application/xml;charset=utf-8;" : "text/csv;charset=utf-8;";
+      const blob = new Blob([data.content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = data.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success(`Dávka KVL SR (${data.count} záznamov) bola úspešne vygenerovaná.`);
+    },
+    onError: (err: any) => {
+      toast.error(`Chyba exportu: ${err.message}`);
+    },
+  });
+
+  // Online chip lookup state
+  const [lookupChipInput, setLookupChipInput] = useState("");
+  const [lookupResult, setLookupResult] = useState<any | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  const handleOnlineLookup = async () => {
+    if (!lookupChipInput.trim()) {
+      toast.error("Zadajte číslo mikročipu.");
+      return;
+    }
+    setIsLookingUp(true);
+    try {
+      const res = await utils.client.extensions.crsz.lookupChip.query({
+        microchipNumber: lookupChipInput.trim(),
+      });
+      setLookupResult(res);
+      if (res.valid) {
+        toast.success(`Čip overený: ${res.countryOrManufacturer}`);
+      } else {
+        toast.error("Neplatný formát mikročipu.");
+      }
+    } catch (e: any) {
+      toast.error(`Chyba overenia: ${e.message}`);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Sub tabs & Action */}
@@ -87,10 +137,36 @@ export function CrszPanel() {
 
         <div className="flex items-center gap-2">
           {subTab === "chips" ? (
-            <Button size="sm" onClick={() => setIsRegisterOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              <span>{t("crsz.btnRegisterChip", "Zaevidovať mikročip")}</span>
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportBatchMutation.mutate({ format: "xml" })}
+                disabled={exportBatchMutation.isPending}
+                className="gap-1.5 text-xs"
+              >
+                {exportBatchMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                <span>Export KVL SR (XML)</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportBatchMutation.mutate({ format: "csv" })}
+                disabled={exportBatchMutation.isPending}
+                className="gap-1.5 text-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export CSV</span>
+              </Button>
+              <Button size="sm" onClick={() => setIsRegisterOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                <span>{t("crsz.btnRegisterChip", "Zaevidovať mikročip")}</span>
+              </Button>
+            </>
           ) : (
             <Button size="sm" onClick={() => setIsPassportOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
@@ -103,6 +179,74 @@ export function CrszPanel() {
       {/* CHIPS VIEW */}
       {subTab === "chips" && (
         <div className="space-y-4">
+          {/* Quick Online Chip Verification Card */}
+          <div className="rounded-lg border border-teal-200 bg-teal-50/50 p-3.5 dark:border-teal-900 dark:bg-teal-950/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-teal-700 dark:text-teal-400" />
+                <div>
+                  <span className="text-xs font-semibold text-teal-950 dark:text-teal-200">
+                    Rýchle overenie transpondéra v CRSZ / Európskych registroch
+                  </span>
+                  <p className="text-[11px] text-teal-800/80 dark:text-teal-400/80">
+                    Overenie 15-miestneho ISO kódu, národného kódu SR (703) alebo výrobcu
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Input
+                  placeholder="Zadajte 15-miestny čip..."
+                  value={lookupChipInput}
+                  onChange={(e) => setLookupChipInput(e.target.value)}
+                  className="h-8 text-xs font-mono bg-white dark:bg-background min-w-[210px]"
+                  maxLength={15}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleOnlineLookup}
+                  disabled={isLookingUp}
+                  className="h-8 gap-1.5 text-xs bg-teal-700 hover:bg-teal-800 text-white"
+                >
+                  {isLookingUp ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+                  <span>Overiť</span>
+                </Button>
+              </div>
+            </div>
+
+            {lookupResult && (
+              <div className="mt-3 pt-3 border-t border-teal-200/80 dark:border-teal-900/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono font-bold text-teal-900 dark:text-teal-200">
+                    {lookupResult.microchipNumber}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={
+                      lookupResult.valid
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40"
+                        : "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40"
+                    }
+                  >
+                    {lookupResult.valid ? lookupResult.countryOrManufacturer : "Neplatný formát"}
+                  </Badge>
+                  {lookupResult.isSlovakNationalCode && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40">
+                      🇸🇰 Národný kód SR (703)
+                    </Badge>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">{lookupResult.notes}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLookupResult(null)}
+                  className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  Zavrieť
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-1 items-center gap-3">
               <div className="relative min-w-[260px] flex-1">

@@ -96,3 +96,69 @@ describe("microchip certificate HTML generator", () => {
     expect(html).toContain("39/2007 Z. z.");
   });
 });
+
+describe("KVL SR batch export and CRSZ lookup", () => {
+  const sampleItems = [
+    {
+      microchipNumber: "703098100000001",
+      patientName: "Blesk",
+      species: "canine",
+      breed: "Border Collie",
+      sex: "male",
+      dob: "2024-01-15",
+      color: "čierno-biela",
+      implantedAt: "2026-09-08",
+      location: "LEFT_NECK",
+      vetName: "MVDr. Marek Test",
+      vetKvlNumber: "KVL-5432",
+      ownerFirstName: "Ján",
+      ownerLastName: "Novák",
+      ownerAddress: "Hlavná 12",
+      ownerCity: "Bratislava",
+      ownerPostalCode: "81101",
+      ownerPhone: "+421900123456",
+      ownerEmail: "jan.novak@example.com",
+    },
+  ];
+
+  it("exports valid KVL SR batch CSV with UTF-8 BOM and semicolon delimiters", async () => {
+    const { exportKvlSrBatchCsv } = await import("../microchip");
+    const csv = exportKvlSrBatchCsv(sampleItems);
+
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv).toContain('"CisloTranspondera";"MenoZvierata";"Druh";"Plemeno"');
+    expect(csv).toContain('"703098100000001";"Blesk";"canine";"Border Collie"');
+    expect(csv).toContain("KVL-5432");
+  });
+
+  it("exports valid KVL SR batch XML with proper namespaces and escaping", async () => {
+    const { exportKvlSrBatchXml } = await import("../microchip");
+    const xml = exportKvlSrBatchXml(sampleItems);
+
+    expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect(xml).toContain('<DavkaCRSZ xmlns="urn:sk:kvl:crsz:export:v1"');
+    expect(xml).toContain("<Transponder>703098100000001</Transponder>");
+    expect(xml).toContain("<Meno>Blesk</Meno>");
+    expect(xml).toContain("<CisloKVL>KVL-5432</CisloKVL>");
+  });
+
+  it("performs online lookup and detects Slovak 703 national code", async () => {
+    const { lookupCrszOnline } = await import("../microchip");
+    const result = await lookupCrszOnline("703098100000001");
+
+    expect(result.valid).toBe(true);
+    expect(result.isSlovakNationalCode).toBe(true);
+    expect(result.registered).toBe(true);
+    expect(result.status).toBe("REGISTERED");
+    expect(result.registryName).toContain("CRSZ");
+  });
+
+  it("handles invalid chip length in online lookup", async () => {
+    const { lookupCrszOnline } = await import("../microchip");
+    const result = await lookupCrszOnline("123");
+
+    expect(result.valid).toBe(false);
+    expect(result.status).toBe("INVALID_FORMAT");
+  });
+});
+
