@@ -8,7 +8,7 @@ import {
   requireRole,
   requireFeature,
 } from "../../trpc";
-import { voiceDictations, patients } from "@openpims/db";
+import { voiceDictations, patients, invoices, invoiceItems } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { transcribeAudio } from "@/lib/voice/transcription";
 import {
@@ -24,6 +24,7 @@ import {
   resolveAiRecordStatus,
 } from "@/lib/ai/draft-safety";
 import { formatTranscriptToSoap, type SoapStyle } from "@/lib/voice/soap-formatter";
+import { extractBillableItemsFromSoap } from "@/lib/voice/treatment-extractor";
 import { uploadFile, readPrimaryObject } from "@/lib/s3";
 
 const voiceProcedure = protectedProcedure
@@ -652,5 +653,145 @@ export const voiceRouter = createRouter({
         .where(eq(voiceDictations.id, input.id));
 
       return { success: true };
+    }),
+
+  /** AI Extrakcia spoplatniteľných liekov, úkonov a materiálu zo SOAP záznamu */
+  extractBillableItems: voiceProcedure
+    .input(
+      z.object({
+        plan: z.string().default(""),
+        assessment: z.string().optional(),
+        transcript: z.string().optional(),
+        dictationId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      let planText = input.plan;
+      let assessmentText = input.assessment;
+      let transcriptText = input.transcript;
+
+      if (input.dictationId && !planText) {
+        const [dictation] = await ctx.db
+          .select()
+          .from(voiceDictations)
+          .where(
+            and(
+              eq(voiceDictations.id, input.dictationId),
+              eq(voiceDictations.practiceId, ctx.practiceId),
+              isNull(voiceDictations.deletedAt)
+            )
+          )
+          .limit(1);
+
+        if (dictation) {
+          planText = dictation.plan ?? "";
+          assessmentText = dictation.assessment ?? "";
+          transcriptText = dictation.rawTranscript ?? "";
+        }
+      }
+
+      const items = await extractBillableItemsFromSoap({
+        plan: planText,
+        assessment: assessmentText,
+        transcript: transcriptText,
+      });
+
+      return { items };
+    }),
+
+  /** Vytvorenie konceptu účtu / faktúry z vybraných položiek */
+  createBillFromExtractedItems: voiceProcedure
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+        clientId: z.string().uuid().optional(),
+        appointmentId: z.string().uuid().optional(),
+        items: z
+          .array(
+            z.object({
+              name: z.string().min(1),
+              category: z.enum(["service", "medication", "consumable"]),
+              quantity: z.number().min(0.01),
+              unitPrice: z.number().min(0),
+              totalPrice: z.number().min(0),
+              vatRate: z.number().default(23),
+            })
+          )
+          .min(1, "Zoznam položiek nesmie byť prázdny"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Zisti clientId z pacienta ak nie je zadané
+      let resolvedClientId = input.clientId;
+      if (!resolvedClientId) {
+        const [patient] = await ctx.db
+          .select({ clientId: patients.clientId })
+          .from(patients)
+          .where(
+            and(
+              eq(patients.id, input.patientId),
+              eq(patients.practiceId, ctx.practiceId),
+              isNull(patients.deletedAt)
+            )
+          )
+          .limit(1);
+
+        if (!patient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pacient nebol nájdený",
+          });
+        }
+        resolvedClientId = patient.clientId;
+      }
+
+      // 2. Prepočítaj súčty
+      let subtotal = 0;
+      let tax = 0;
+      for (const item of input.items) {
+        const lineBase = item.quantity * item.unitPrice;
+        const lineTax = (lineBase * item.vatRate) / 100;
+        subtotal += lineBase;
+        tax += lineTax;
+      }
+      const total = subtotal + tax;
+
+      // 3. Vytvor faktúru / koncept účtu
+      const [invoice] = await ctx.db
+        .insert(invoices)
+        .values({
+          practiceId: ctx.practiceId,
+          clientId: resolvedClientId,
+          patientId: input.patientId,
+          appointmentId: input.appointmentId ?? null,
+          status: "draft",
+          subtotal: subtotal.toFixed(2),
+          tax: tax.toFixed(2),
+          total: total.toFixed(2),
+          paidAmount: "0.00",
+        })
+        .returning();
+
+      // 4. Vlož položky
+      for (const item of input.items) {
+        const lineTotal = (item.quantity * item.unitPrice).toFixed(2);
+        await ctx.db.insert(invoiceItems).values({
+          invoiceId: invoice.id,
+          description: item.name,
+          quantity: Math.max(1, Math.round(item.quantity)),
+          unitPrice: item.unitPrice.toFixed(2),
+          total: lineTotal,
+          itemType: item.category === "service" ? "service" : "product",
+          taxable: item.vatRate > 0,
+        });
+      }
+
+      return {
+        invoiceId: invoice.id,
+        subtotal,
+        tax,
+        total,
+        itemCount: input.items.length,
+      };
     }),
 });

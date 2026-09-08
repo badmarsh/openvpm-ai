@@ -20,6 +20,9 @@ import {
   Check,
   AlertTriangle,
   Volume2,
+  Receipt,
+  CreditCard,
+  Trash2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -148,6 +151,31 @@ function VoiceDictationContent() {
     { patientId: selectedPatient?.id ?? "" },
     { enabled: !!selectedPatient },
   );
+
+  // AI Billing extraction states
+  const [extractedItems, setExtractedItems] = useState<any[]>([]);
+  const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
+
+  const extractItemsMutation = trpc.extensions.voice.extractBillableItems.useMutation({
+    onSuccess: (data) => {
+      setExtractedItems(data.items);
+      setIsBillingModalOpen(true);
+      toast.success(`Rozpoznaných ${data.items.length} položiek na vyúčtovanie.`);
+    },
+    onError: (err) => {
+      toast.error(`Extrakcia položiek zlyhala: ${err.message}`);
+    },
+  });
+
+  const createInvoiceMutation = trpc.extensions.voice.createBillFromExtractedItems.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Koncept faktúry (${data.total.toFixed(2)} €) bol vytvorený v systéme.`);
+      setIsBillingModalOpen(false);
+    },
+    onError: (err) => {
+      toast.error(`Chyba pri vytváraní účtu: ${err.message}`);
+    },
+  });
 
   // Create object URL for audio preview
   useEffect(() => {
@@ -908,6 +936,33 @@ function VoiceDictationContent() {
                           </>
                         )}
                       </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          extractItemsMutation.mutate({
+                            plan: soapSections.plan,
+                            assessment: soapSections.assessment,
+                            transcript: rawTranscript,
+                            dictationId: dictationId ?? undefined,
+                          })
+                        }
+                        disabled={extractItemsMutation.isPending || !soapSections.plan}
+                        className="w-full gap-2 py-4 text-xs font-semibold border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                      >
+                        {extractItemsMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Extrahujem položky pre vyúčtovanie...
+                          </>
+                        ) : (
+                          <>
+                            <Receipt className="h-4 w-4" />
+                            Extrahovať lieky a úkony do účtu / pokladne
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -923,6 +978,188 @@ function VoiceDictationContent() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Extracted Billing Items Modal */}
+      {isBillingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-emerald-600" />
+                <h3 className="font-semibold text-base">Položky na vyúčtovanie z hlasového záznamu</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setIsBillingModalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <p className="text-xs text-muted-foreground">
+                Tieto položky a aplikované liečivá boli automaticky rozpoznané z plánu terapie. Môžete upraviť množstvá alebo ceny pred vystavením účtu.
+              </p>
+
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="p-2.5">Položka / Liečivo</th>
+                      <th className="p-2.5">Kategória</th>
+                      <th className="p-2.5 w-20">Množstvo</th>
+                      <th className="p-2.5 w-24">Cena/j (€)</th>
+                      <th className="p-2.5 w-24">Spolu (€)</th>
+                      <th className="p-2.5 w-12 text-center">Akcia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {extractedItems.map((item, idx) => (
+                      <tr key={item.id || idx} className="hover:bg-muted/20">
+                        <td className="p-2.5 font-medium">
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => {
+                              const updated = [...extractedItems];
+                              updated[idx].name = e.target.value;
+                              setExtractedItems(updated);
+                            }}
+                            className="w-full bg-transparent text-xs font-medium focus:outline-none focus:underline"
+                          />
+                          {item.dosageOrRoute && (
+                            <span className="text-[10px] text-muted-foreground block">
+                              Dávka: {item.dosageOrRoute}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-2.5">
+                          <Badge variant="outline" className="text-[10px]">
+                            {item.category === "medication" ? "Liek" : "Úkon"}
+                          </Badge>
+                        </td>
+                        <td className="p-2.5">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const updated = [...extractedItems];
+                                const q = parseFloat(e.target.value) || 0;
+                                updated[idx].quantity = q;
+                                updated[idx].totalPrice = Math.round(q * updated[idx].unitPrice * 100) / 100;
+                                setExtractedItems(updated);
+                              }}
+                              className="w-14 rounded border border-input bg-background px-1.5 py-0.5 text-xs text-right"
+                            />
+                            <span className="text-[10px] text-muted-foreground">{item.unit}</span>
+                          </div>
+                        </td>
+                        <td className="p-2.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={item.unitPrice}
+                            onChange={(e) => {
+                              const updated = [...extractedItems];
+                              const p = parseFloat(e.target.value) || 0;
+                              updated[idx].unitPrice = p;
+                              updated[idx].totalPrice = Math.round(updated[idx].quantity * p * 100) / 100;
+                              setExtractedItems(updated);
+                            }}
+                            className="w-16 rounded border border-input bg-background px-1.5 py-0.5 text-xs text-right"
+                          />
+                        </td>
+                        <td className="p-2.5 font-semibold">
+                          {item.totalPrice.toFixed(2)} €
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setExtractedItems(extractedItems.filter((_, i) => i !== idx));
+                            }}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 text-xs font-semibold">
+                <span>Celková suma za položky s DPH:</span>
+                <span className="text-base font-bold text-foreground">
+                  {extractedItems.reduce((acc, i) => acc + (i.totalPrice || 0), 0).toFixed(2)} €
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-border mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsBillingModalOpen(false)}
+              >
+                Zrušiť
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (!selectedPatient) {
+                    toast.error("Nie je vybraný pacient.");
+                    return;
+                  }
+                  createInvoiceMutation.mutate({
+                    patientId: selectedPatient.id,
+                    items: extractedItems.map((i) => ({
+                      name: i.name,
+                      category: i.category,
+                      quantity: i.quantity,
+                      unitPrice: i.unitPrice,
+                      totalPrice: i.totalPrice,
+                      vatRate: i.vatRate,
+                    })),
+                  });
+                }}
+                disabled={createInvoiceMutation.isPending || extractedItems.length === 0}
+                className="gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white"
+              >
+                {createInvoiceMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Receipt className="h-3.5 w-3.5" />
+                )}
+                <span>Vytvoriť koncept faktúry</span>
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  router.push("/billing/ekasa");
+                }}
+                className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>Prejsť do e-Kasa pokladne</span>
+              </Button>
+            </div>
           </div>
         </div>
       )}
