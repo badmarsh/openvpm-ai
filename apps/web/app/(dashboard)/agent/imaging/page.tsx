@@ -55,6 +55,7 @@ import {
   CLIENT_UPLOAD_TIMEOUT_MS,
   fetchWithClientTimeout,
 } from "@/lib/client-fetch";
+import { DicomViewer } from "@/components/imaging/dicom-viewer";
 
 const IMAGE_TYPES = [
   { value: "xray", label: "Röntgen" },
@@ -115,6 +116,7 @@ export default function ImagingPage() {
 
   // Upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dicomFile, setDicomFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -170,11 +172,29 @@ export default function ImagingPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isDcm =
+      file.name.toLowerCase().endsWith(".dcm") ||
+      file.name.toLowerCase().endsWith(".dicom") ||
+      file.type === "application/dicom";
+
+    if (isDcm) {
+      setDicomFile(file);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setFileUrl(null);
+      setFileId(null);
+      setAnalysisId(null);
+      setImageType("xray");
+      toast.info("Načítaný DICOM súbor. Prebieha dekódovanie snímky.");
+      return;
+    }
+
     if (!isImageUploadFileValid(file)) {
       toast.error(IMAGE_UPLOAD_POLICY_MESSAGE);
       return;
     }
 
+    setDicomFile(null);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setFileUrl(null);
@@ -185,6 +205,19 @@ export default function ImagingPage() {
       file,
     );
   }, []);
+
+  const handleDicomPrepared = useCallback((blob: Blob, dataUrl: string) => {
+    if (!dicomFile) return;
+    const pngName = dicomFile.name.replace(/\.(dcm|dicom)$/i, "") + ".png";
+    const convertedFile = new File([blob], pngName, { type: "image/png" });
+    setSelectedFile(convertedFile);
+    setPreviewUrl(dataUrl);
+    uploadAttemptRef.current = selectManagedUploadFile(
+      uploadAttemptRef.current,
+      convertedFile,
+    );
+    toast.success("Snímka bola spracovaná a je pripravená na nahrávanie a AI analýzu.");
+  }, [dicomFile]);
 
   const handleUpload = useCallback(async () => {
     if (!selectedFile || !selectedPatient || !uploadAttemptRef.current) return;
@@ -258,6 +291,7 @@ export default function ImagingPage() {
 
   const clearFile = useCallback(() => {
     setSelectedFile(null);
+    setDicomFile(null);
     setPreviewUrl(null);
     setFileUrl(null);
     setFileId(null);
@@ -642,11 +676,32 @@ export default function ImagingPage() {
                   Nahratie snímku *
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Podporované formáty: JPG, PNG, WebP do 10 MB
+                  Podporované formáty: JPG, PNG, WebP a medicínsky DICOM (.dcm) do 10 MB
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {!previewUrl ? (
+                {dicomFile ? (
+                  <div className="space-y-3">
+                    <DicomViewer
+                      file={dicomFile}
+                      onPreparedForAi={handleDicomPrepared}
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-xs text-muted-foreground truncate max-w-[60%]">
+                        {dicomFile.name} (DICOM formát)
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                        onClick={clearFile}
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Zatvoriť
+                      </Button>
+                    </div>
+                  </div>
+                ) : !previewUrl ? (
                   <div
                     className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
@@ -656,7 +711,7 @@ export default function ImagingPage() {
                     </div>
                     <p className="text-sm font-medium mb-1">Kliknite pre výber snímku</p>
                     <p className="text-xs text-muted-foreground text-center max-w-xs">
-                      Röntgen, CT, MRI, ultrazvuk alebo makroskopická fotka
+                      Röntgen (.dcm), CT, MRI, ultrazvuk alebo makroskopická fotka
                     </p>
                     <Button
                       variant="secondary"
@@ -710,7 +765,7 @@ export default function ImagingPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png,image/webp,.dcm,.dicom,application/dicom"
                   className="hidden"
                   onChange={handleFileSelect}
                 />
