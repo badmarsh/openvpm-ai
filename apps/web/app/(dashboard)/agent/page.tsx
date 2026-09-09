@@ -126,6 +126,9 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const [instruction, setInstruction] = useState("");
   const [allowWrites, setAllowWrites] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  // Client-only "today" label. Guarded so SSR and CSR never render a
+  // different `toLocaleDateString` output (hydration safety, Skill §4).
+  const [dateLabel, setDateLabel] = useState("");
   const idRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -185,6 +188,17 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
       behavior: "smooth",
     });
   }, [messages, run.isPending]);
+
+  // Compute the localized date only on the client after mount.
+  useEffect(() => {
+    setDateLabel(
+      new Date().toLocaleDateString("sk-SK", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }),
+    );
+  }, []);
 
   function nextId() {
     idRef.current += 1;
@@ -395,7 +409,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
         </div>
 
         {/* Mode / Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "chat" | "capabilities")}>
           <TabsList className="grid grid-cols-2 w-[280px]">
             <TabsTrigger value="chat" className="gap-1.5">
               <Bot className="h-4 w-4" />
@@ -599,10 +613,14 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
-                      Ranný prehľad — {new Date().toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "long" })}
+                      {t("agent.morningBrief.title", "Ranný prehľad")}
+                      {dateLabel ? ` — ${dateLabel}` : ""}
                     </p>
                     <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
-                      Spustite AI dopyt pre okamžitý prehľad dňa
+                      {t(
+                        "agent.morningBrief.subtitle",
+                        "Spustite AI dopyt pre okamžitý prehľad dňa",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -610,36 +628,43 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                   {[
                     {
                       icon: Stethoscope,
-                      label: "Dnes v ordinácii",
+                      labelKey: "agent.morningBrief.today",
+                      labelFallback: "Dnes v ordinácii",
                       query: "Zhrň mi dnešné termíny – počet pacientov, prvé návštevy a urgentné prípady.",
                     },
                     {
                       icon: Pill,
-                      label: "Expirujúce vakcíny",
+                      labelKey: "agent.morningBrief.vaccinesExpiring",
+                      labelFallback: "Expirujúce vakcíny",
                       query: "Ktorí pacienti majú expirované alebo čoskoro expirujúce očkovania?",
                     },
                     {
                       icon: Calendar,
-                      label: "Nedokončené záznamy",
+                      labelKey: "agent.morningBrief.unfinishedRecords",
+                      labelFallback: "Nedokončené záznamy",
                       query: "Máme nejakých pacientov z posledných 7 dní bez ukončeného SOAP záznamu alebo prepúšťacej správy?",
                     },
                     {
                       icon: ShieldAlert,
-                      label: "Aktívne hospitalizácie",
+                      labelKey: "agent.morningBrief.hospitalized",
+                      labelFallback: "Aktívne hospitalizácie",
                       query: "Zoznam aktuálne hospitalizovaných pacientov s ich diagnózou a dátumom prijatia.",
                     },
-                  ].map(({ icon: Icon, label, query }) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className="flex items-center gap-2.5 text-left rounded-lg px-3 py-2 text-xs bg-white/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 transition-colors group"
-                      onClick={() => pickSuggestion(query)}
-                    >
-                      <Icon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                      <span className="font-medium text-amber-900 dark:text-amber-200">{label}</span>
-                      <ChevronRight className="h-3 w-3 ml-auto text-amber-400 group-hover:text-amber-600 transition-colors" />
-                    </button>
-                  ))}
+                  ].map(({ icon: Icon, labelKey, labelFallback, query }) => {
+                    const label = t(labelKey, labelFallback);
+                    return (
+                      <button
+                        key={labelKey}
+                        type="button"
+                        className="flex items-center gap-2.5 text-left rounded-lg px-3 py-2 text-xs bg-white/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 transition-colors group"
+                        onClick={() => pickSuggestion(query)}
+                      >
+                        <Icon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span className="font-medium text-amber-900 dark:text-amber-200">{label}</span>
+                        <ChevronRight className="h-3 w-3 ml-auto text-amber-400 group-hover:text-amber-600 transition-colors" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

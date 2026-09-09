@@ -26,7 +26,6 @@ import {
   Megaphone,
   ShieldCheck,
   ExternalLink,
-  Share2,
   Clock,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -49,7 +48,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ClinicalPreset {
   key: string;
@@ -249,6 +248,7 @@ export default function DischargePage() {
         // Pre-fetch SMS and medication schedule
         generateSmsMutation.mutate(
           {
+            patientId: selectedPatient?.id,
             petName: petName.trim(),
             diagnosis: diagnosis.trim(),
             treatment: treatment.trim() || undefined,
@@ -275,6 +275,7 @@ export default function DischargePage() {
     }
     try {
       const res = await createMarketingPostMutation.mutateAsync({
+        patientId: selectedPatient?.id,
         petName: petName.trim() || "Pacient",
         species: species.trim() || undefined,
         diagnosis: diagnosis.trim(),
@@ -436,7 +437,7 @@ export default function DischargePage() {
         </div>
 
         {/* Mode / Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "editor" | "history")}>
           <TabsList className="grid grid-cols-2 w-[280px]">
             <TabsTrigger value="editor" className="gap-1.5">
               <FileText className="h-4 w-4" />
@@ -727,7 +728,7 @@ export default function DischargePage() {
                     </label>
                     <select
                       value={tone}
-                      onChange={(e) => setTone(e.target.value as any)}
+                      onChange={(e) => setTone(e.target.value as "empathetic" | "standard" | "formal")}
                       className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
                       <option value="empathetic">
@@ -748,7 +749,7 @@ export default function DischargePage() {
                     </label>
                     <select
                       value={language}
-                      onChange={(e) => setLanguage(e.target.value as any)}
+                      onChange={(e) => setLanguage(e.target.value as "sk" | "en")}
                       className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
                       <option value="sk">Slovenčina (SK)</option>
@@ -892,6 +893,7 @@ export default function DischargePage() {
                       if (!smsScheduleData && result) {
                         generateSmsMutation.mutate(
                           {
+                            patientId: selectedPatient?.id,
                             petName: petName.trim(),
                             diagnosis: diagnosis.trim(),
                             treatment: treatment.trim() || undefined,
