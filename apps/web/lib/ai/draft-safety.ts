@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 
 /**
  * Human-in-the-loop contract for every AI-assisted clinical surface.
@@ -84,3 +85,79 @@ export function assertAiMayWriteToSoapNote(note: {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Human-in-the-loop Audit Trail & Evidence Hash
+// ---------------------------------------------------------------------------
+
+export interface AiConfirmationAuditRecord {
+  actorId: string;
+  actorName: string;
+  confirmedAt: Date;
+  entityType: "soap_note" | "discharge_report" | "imaging_analysis" | "treatment_plan" | "prescription";
+  entityId: string;
+  originalDraftHash: string;
+  confirmedContentHash: string;
+  wasEditedByClinician: boolean;
+  ipAddress?: string;
+}
+
+export function generateContentHash(content: string | Record<string, unknown>): string {
+  const serialized = typeof content === "string" ? content.trim() : JSON.stringify(content);
+  return createHash("sha256").update(serialized).digest("hex");
+}
+
+export function buildAiConfirmationAuditTrail(params: {
+  actorId: string;
+  actorName: string;
+  entityType: AiConfirmationAuditRecord["entityType"];
+  entityId: string;
+  originalAiDraft: string | Record<string, unknown>;
+  finalClinicianContent: string | Record<string, unknown>;
+  ipAddress?: string;
+}): AiConfirmationAuditRecord {
+  const originalDraftHash = generateContentHash(params.originalAiDraft);
+  const confirmedContentHash = generateContentHash(params.finalClinicianContent);
+  return {
+    actorId: params.actorId,
+    actorName: params.actorName,
+    confirmedAt: new Date(),
+    entityType: params.entityType,
+    entityId: params.entityId,
+    originalDraftHash,
+    confirmedContentHash,
+    wasEditedByClinician: originalDraftHash !== confirmedContentHash,
+    ipAddress: params.ipAddress,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Partial Section Approvals (e.g. S & O confirmed, A & P left as draft)
+// ---------------------------------------------------------------------------
+
+export const soapSectionApprovalSchema = z.object({
+  subjective: z.boolean().default(false),
+  objective: z.boolean().default(false),
+  assessment: z.boolean().default(false),
+  plan: z.boolean().default(false),
+});
+
+export type SoapSectionApprovals = z.infer<typeof soapSectionApprovalSchema>;
+
+export function resolveSoapSectionalStatus(approvals: SoapSectionApprovals): {
+  isFullyFinalized: boolean;
+  isPartiallyApproved: boolean;
+  finalizedSections: Array<keyof SoapSectionApprovals>;
+  draftSections: Array<keyof SoapSectionApprovals>;
+} {
+  const sectionKeys: Array<keyof SoapSectionApprovals> = ["subjective", "objective", "assessment", "plan"];
+  const finalizedSections = sectionKeys.filter((s) => approvals[s]);
+  const draftSections = sectionKeys.filter((s) => !approvals[s]);
+  return {
+    isFullyFinalized: draftSections.length === 0,
+    isPartiallyApproved: finalizedSections.length > 0 && draftSections.length > 0,
+    finalizedSections,
+    draftSections,
+  };
+}
+

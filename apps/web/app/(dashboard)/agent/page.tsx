@@ -5,12 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Bot,
-  ArrowUp,
-  ChevronDown,
-  ChevronRight,
   AlertTriangle,
   CreditCard,
-  Wrench,
   Loader2,
   Sparkles,
   RotateCcw,
@@ -18,12 +14,13 @@ import {
   Calendar,
   Pill,
   ShieldAlert,
+  ChevronRight,
+  ChevronDown,
+  Wrench,
   HelpCircle,
-  Copy,
-  Check,
+  ArrowUp,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,8 +42,21 @@ import {
   isAgentInstructionValid,
 } from "@/lib/agent/policy";
 import { toast } from "sonner";
+import {
+  loadPersistedChat,
+  savePersistedChat,
+  clearPersistedChat,
+  type PersistedChatMessage,
+} from "./components/agent-chat-history";
+import { AgentCapabilitiesView } from "./components/agent-capabilities";
+import { AgentMessageBubble, TypingIndicator } from "./components/agent-message-bubble";
+import { AgentExportButtons } from "./components/agent-export-dialog";
 
-const SUGGESTIONS = [
+function canRunAgentRole(role?: string | null): boolean {
+  return role === "admin" || role === "veterinarian";
+}
+
+export const SUGGESTIONS = [
   {
     key: "agent.suggestions.vaccinations",
     fallback: "Which patients are overdue for vaccinations?",
@@ -64,19 +74,6 @@ const SUGGESTIONS = [
     fallback: "Pull a clinical summary for the next patient checked in.",
   },
 ] as const;
-
-type ToolCall = { name: string; input: unknown; error?: string | null };
-type ChatMessage = {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  toolCalls?: ToolCall[];
-  isError?: boolean;
-};
-
-function canRunAgentRole(role?: string | null): boolean {
-  return role === "admin" || role === "veterinarian";
-}
 
 export default function AgentPage() {
   const router = useRouter();
@@ -118,24 +115,43 @@ export default function AgentPage() {
 
 function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const { t } = useI18n();
   const status = trpc.agent.status.useQuery();
   const run = trpc.agent.run.useMutation();
   const [activeTab, setActiveTab] = useState<"chat" | "capabilities">("chat");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<PersistedChatMessage[]>([]);
   const [instruction, setInstruction] = useState("");
   const [allowWrites, setAllowWrites] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  // Client-only "today" label. Guarded so SSR and CSR never render a
-  // different `toLocaleDateString` output (hydration safety, Skill §4).
   const [dateLabel, setDateLabel] = useState("");
   const idRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prefilled = useRef(false);
+  const chatInitialized = useRef(false);
+
+  // Restore chat history from sessionStorage on client mount
+  useEffect(() => {
+    if (!chatInitialized.current) {
+      chatInitialized.current = true;
+      const history = loadPersistedChat(userId);
+      if (history.length > 0) {
+        setMessages(history);
+        idRef.current = Math.max(...history.map((m) => m.id), 0);
+      }
+    }
+  }, [userId]);
+
+  // Persist messages whenever updated
+  useEffect(() => {
+    if (chatInitialized.current) {
+      savePersistedChat(messages, userId);
+    }
+  }, [messages, userId]);
 
   // One-shot ?ask= prefill (guides deep-link here with a ready question).
-  // The param is stripped right away so a refresh will not re-fill.
   useEffect(() => {
     if (prefilled.current || typeof window === "undefined") return;
     prefilled.current = true;
@@ -165,9 +181,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     .reverse()
     .find((m) => m.role === "assistant" && !m.isError)?.id;
 
-  // Signal the tour AFTER the reply is committed to the DOM so its next step
-  // can spotlight the answer. Firing from onSuccess ran before render, and
-  // the tour moved on from a reply that was not on screen yet.
+  // Signal the tour AFTER the reply is committed to the DOM
   const signaledReplyId = useRef<number | null>(null);
   useEffect(() => {
     if (lastReplyId == null || signaledReplyId.current === lastReplyId) return;
@@ -181,7 +195,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     }
   }, [allowWrites, canRun]);
 
-  // Auto-scroll to the newest message (or the typing indicator) as it arrives.
+  // Auto-scroll to the newest message
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -189,7 +203,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     });
   }, [messages, run.isPending]);
 
-  // Compute the localized date only on the client after mount.
+  // Localized date
   useEffect(() => {
     setDateLabel(
       new Date().toLocaleDateString("sk-SK", {
@@ -258,6 +272,12 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     setInstruction(text);
     setActiveTab("chat");
     textareaRef.current?.focus();
+  }
+
+  function handleResetChat() {
+    setMessages([]);
+    clearPersistedChat(userId);
+    toast.success(t("agent.newSessionStarted", "Nová relácia asistenta spustená"));
   }
 
   const handleCopyMessage = (text: string, id: number) => {
@@ -356,8 +376,6 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3.5 text-xs text-amber-800 dark:text-amber-200">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
       {verifiedAgentStatus?.hosted ? (
-        // Hosted clinics can't fix a platform key. Keep it human; ops sees
-        // the missing config through /api/health checks.
         <p>
           {t(
             "agent.status.hostedUnavailable",
@@ -424,171 +442,17 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {activeTab === "capabilities" ? (
-        /* Capabilities View */
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              {t("agent.capabilitiesTitle", "Klinické a administratívne schopnosti asistenta")}
-            </CardTitle>
-            <CardDescription>
-              {t(
-                "agent.capabilitiesSubtitle",
-                "Prehľad nástrojov a automatizácií, ktoré má OpenVPM AI asistent k dispozícii v reálnom čase.",
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="border hover:border-primary/40 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Stethoscope className="h-4 w-4 text-primary" />
-                      <CardTitle className="text-base font-semibold">
-                        {t("agent.capabilities.recordsSearch.title", "Vyhľadávanie v kartotéke")}
-                      </CardTitle>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {t("agent.capabilities.badgeRead", "Čítanie")}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-xs mt-1">
-                    {t(
-                      "agent.capabilities.recordsSearch.desc",
-                      "Okamžitý prístup k záznamom pacientov, histórii liečby, preočkovaniam a laboratórnym nálezom.",
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2 flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() =>
-                      pickSuggestion(
-                        t("agent.capabilities.recordsSearch.query", "Ktorí pacienti majú expirované očkovania?"),
-                      )
-                    }
-                  >
-                    {t("agent.capabilities.tryQuery", "Vyskúšať dopyt")}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border hover:border-primary/40 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <CardTitle className="text-base font-semibold">
-                        {t("agent.capabilities.appointments.title", "Manažment termínov")}
-                      </CardTitle>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {t("agent.capabilities.badgeReadWrite", "Čítanie & Zápis")}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-xs mt-1">
-                    {t(
-                      "agent.capabilities.appointments.desc",
-                      "Prehľad dnešných návštev, kapacitné vyťaženie ordinácie a plánovanie nových kontrol v režime zápisu.",
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2 flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() =>
-                      pickSuggestion(
-                        t("agent.capabilities.appointments.query", "Zhrň dnešné termíny a objednaných pacientov."),
-                      )
-                    }
-                  >
-                    {t("agent.capabilities.tryQuery", "Vyskúšať dopyt")}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border hover:border-primary/40 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Pill className="h-4 w-4 text-primary" />
-                      <CardTitle className="text-base font-semibold">
-                        {t("agent.capabilities.pharmacology.title", "Veterinárna farmakológia")}
-                      </CardTitle>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {t("agent.capabilities.badgeCalculator", "Kalkulátor")}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-xs mt-1">
-                    {t(
-                      "agent.capabilities.pharmacology.desc",
-                      "Výpočet dávkovania liečiv (napr. NSAID, antibiotiká, anestetiká) podľa hmotnosti a druhu zvieraťa.",
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2 flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() =>
-                      pickSuggestion(
-                        t("agent.capabilities.pharmacology.query", "Aká je dávka karprofénu pre 12 kg psa?"),
-                      )
-                    }
-                  >
-                    {t("agent.capabilities.tryQuery", "Vyskúšať dopyt")}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border hover:border-primary/40 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-primary" />
-                      <CardTitle className="text-base font-semibold">
-                        {t("agent.capabilities.safeWrite.title", "Bezpečný režim zápisu")}
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
-                      {t("agent.capabilities.badgeDataProtection", "Ochrana dát")}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-xs mt-1">
-                    {t(
-                      "agent.capabilities.safeWrite.desc",
-                      "Možnosť vytvárať rezervácie alebo zaznamenať vitálne funkcie len s vaším explicitným jednorazovým súhlasom.",
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2 flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => {
-                      setAllowWrites(true);
-                      setActiveTab("chat");
-                    }}
-                  >
-                    {t("agent.capabilities.safeWrite.activate", "Aktivovať režim zápisu")}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
+        <AgentCapabilitiesView
+          onPickQuery={pickSuggestion}
+          onActivateWriteMode={() => {
+            setAllowWrites(true);
+            setActiveTab("chat");
+          }}
+        />
       ) : (
         /* Main 2-Column Chat Layout */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Status, Quick Presets & Controls */}
+          {/* Left Column: Sidebar Controls & Presets */}
           <div className="lg:col-span-5 flex flex-col gap-4">
             {/* Status & Safety Card */}
             <Card>
@@ -633,7 +497,6 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
               </CardContent>
             </Card>
 
-            {/* Quick Suggestions / Presets (like PRESETS_SK in discharge) */}
             {/* Morning Vet Brief */}
             {canRun && (
               <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-3">
@@ -760,15 +623,18 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                 </div>
 
                 {hasConversation && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMessages([])}
-                    className="h-8 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    {t("agent.newChat", "Nová relácia")}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <AgentExportButtons messages={messages} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetChat}
+                      className="h-8 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      {t("agent.newChat", "Nová relácia")}
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
 
@@ -802,7 +668,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                         key={m.id}
                         data-tour={m.id === lastReplyId ? "agent-reply" : undefined}
                       >
-                        <MessageBubble
+                        <AgentMessageBubble
                           message={m}
                           onCopy={() => handleCopyMessage(m.content, m.id)}
                           isCopied={copiedIndex === m.id}
@@ -902,124 +768,6 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function toolCallsCountLabel(
-  count: number,
-  t: (key: string, fallback: string, params?: Record<string, any>) => string,
-) {
-  if (count === 1) {
-    return t("agent.trace.toolCallSingular", "1 tool call", { count });
-  }
-  if (count >= 2 && count <= 4) {
-    return t("agent.trace.toolCallFew", `${count} tool calls`, { count });
-  }
-  return t("agent.trace.toolCallMany", `${count} tool calls`, { count });
-}
-
-function MessageBubble({
-  message,
-  onCopy,
-  isCopied,
-}: {
-  message: ChatMessage;
-  onCopy: () => void;
-  isCopied: boolean;
-}) {
-  const { t } = useI18n();
-  const [traceOpen, setTraceOpen] = useState(false);
-  const isUser = message.role === "user";
-
-  return (
-    <div className={cn("flex group", isUser ? "justify-end" : "justify-start")}>
-      <div
-        className={cn(
-          "max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed relative shadow-xs",
-          isUser
-            ? "bg-primary text-primary-foreground rounded-tr-xs"
-            : message.isError
-              ? "border border-destructive/30 bg-destructive/5 text-destructive rounded-tl-xs"
-              : "bg-muted text-foreground border border-border/40 rounded-tl-xs",
-        )}
-      >
-        <div className="whitespace-pre-wrap">{message.content}</div>
-
-        {!isUser && (
-          <button
-            type="button"
-            onClick={onCopy}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
-            title={t("agent.copyReply", "Kopírovať odpoveď")}
-          >
-            {isCopied ? (
-              <Check className="h-3 w-3 text-emerald-600" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-          </button>
-        )}
-
-        {message.toolCalls && message.toolCalls.length > 0 ? (
-          <div className="mt-2.5 border-t border-border/60 pt-2">
-            <button
-              type="button"
-              onClick={() => setTraceOpen((o) => !o)}
-              className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
-            >
-              {traceOpen ? (
-                <ChevronDown className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5" />
-              )}
-              <Wrench className="h-3.5 w-3.5" />
-              {toolCallsCountLabel(message.toolCalls.length, t)}
-            </button>
-            {traceOpen ? (
-              <ul className="mt-2 space-y-2">
-                {message.toolCalls.map((call, i) => (
-                  <li
-                    key={i}
-                    className={cn(
-                      "rounded-md border p-2 font-mono text-[11px]",
-                      call.error
-                        ? "border-destructive/30 bg-destructive/5 text-destructive"
-                        : "border-border bg-card text-muted-foreground",
-                    )}
-                  >
-                    <div className="font-semibold text-foreground">
-                      {call.name}
-                    </div>
-                    <div className="mt-1 break-all">
-                      {JSON.stringify(call.input)}
-                    </div>
-                    {call.error ? (
-                      <div className="mt-1">⚠ {call.error}</div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function TypingIndicator() {
-  return (
-    <div className="flex justify-start">
-      <div className="flex items-center gap-1.5 rounded-2xl bg-muted px-3.5 py-2.5 rounded-tl-xs">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground/60"
-            style={{ animationDelay: `${i * 0.15}s` }}
-          />
-        ))}
-      </div>
     </div>
   );
 }
