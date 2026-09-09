@@ -9,6 +9,7 @@ import {
   requireFeature,
 } from "../../trpc";
 import { dischargeReports, patients, practices, extMarketingContentItems } from "@openpims/db";
+import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { recordUsage } from "@/lib/billing/usage";
@@ -44,6 +45,30 @@ Pravidlá a štruktúra správy:
 8. Profesionálny a empatický záver s podpisom veterinárneho tímu kliniky.
 
 Formátujte text v prehľadnom a úhľadnom Markdown formáte s odrážkami a tučným písmom pre dôležité upozornenia.`;
+
+/**
+ * Sympathy-flow safety gate (Skill §3): hard-blocks automated owner SMS and
+ * promotional marketing generation for a deceased / euthanized patient before
+ * any AI work is performed. When no patient is resolved the gate is a no-op so
+ * free-form manual entries (no linked record) remain usable.
+ */
+async function assertPatientNotDeceased(
+  db: Database,
+  patientId: string | undefined,
+): Promise<void> {
+  if (!patientId) return;
+  const [patient] = await db
+    .select({ status: patients.status })
+    .from(patients)
+    .where(eq(patients.id, patientId))
+    .limit(1);
+  if (patient?.status === "deceased") {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "Sympathy Gate: Blocked for deceased patient.",
+    });
+  }
+}
 
 const DISCHARGE_SYSTEM_PROMPT_EN = `You are an expert veterinary assistant writing a discharge report for a pet owner.
 Your task is to translate clinical diagnosis, treatments given, and follow-up instructions into clear, empathetic, and easily understandable language for a non-medical pet owner.
@@ -143,8 +168,8 @@ export const dischargeRouter = createRouter({
             usedAi: true,
           };
         }
-      } catch (err) {
-        console.warn("Discharge AI generation fallback to template:", err);
+      } catch {
+        // AI generation unavailable – fall back to the validated templates below.
       }
 
       // 4. Overený deterministický fallback
@@ -346,6 +371,7 @@ export const dischargeRouter = createRouter({
   generateSmsAndSchedule: dischargeProcedure
     .input(
       z.object({
+        patientId: z.string().uuid().optional(),
         petName: z.string().min(1).max(255),
         diagnosis: z.string().min(1).max(5000),
         treatment: z.string().max(5000).optional(),
@@ -354,6 +380,9 @@ export const dischargeRouter = createRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Sympathy gate: never draft an owner SMS for a deceased patient.
+      await assertPatientNotDeceased(ctx.db, input.patientId);
+
       const [practice] = await ctx.db
         .select({ name: practices.name, phone: practices.phone })
         .from(practices)
@@ -434,8 +463,8 @@ Odpovedz VÝHRADNE čistým JSON objektom.`;
         if (Array.isArray(parsed.warningSigns) && parsed.warningSigns.length > 0) {
           warningSigns = parsed.warningSigns;
         }
-      } catch (err) {
-        console.warn("generateSmsAndSchedule fallback used:", err);
+      } catch {
+        // Fall back to the deterministic defaults above.
       }
 
       return {
@@ -449,6 +478,7 @@ Odpovedz VÝHRADNE čistým JSON objektom.`;
   createMarketingPostFromCase: dischargeProcedure
     .input(
       z.object({
+        patientId: z.string().uuid().optional(),
         petName: z.string().min(1).max(255),
         species: z.string().max(255).optional(),
         diagnosis: z.string().min(1).max(5000),
@@ -457,6 +487,9 @@ Odpovedz VÝHRADNE čistým JSON objektom.`;
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Sympathy gate: never draft a marketing post for a deceased patient.
+      await assertPatientNotDeceased(ctx.db, input.patientId);
+
       const [practice] = await ctx.db
         .select({ name: practices.name })
         .from(practices)
@@ -498,8 +531,8 @@ Vráť JSON: { "title": string, "body": string }`;
         const parsed = JSON.parse(raw);
         if (parsed.title) title = parsed.title;
         if (parsed.body) body = parsed.body;
-      } catch (err) {
-        console.warn("createMarketingPostFromCase fallback used:", err);
+      } catch {
+        // Fall back to the deterministic defaults above.
       }
 
       // Validate through the KVL SR compliance validator

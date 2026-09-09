@@ -426,8 +426,8 @@ export const imagingRouter = createRouter({
           consentRequestId = consentReq.id;
           signingToken = token;
         }
-      } catch (err) {
-        console.warn("Consent request creation skipped or non-fatal:", err);
+      } catch {
+        // Consent request creation is best-effort and must not fail imaging.
       }
 
       // 8. Zisti dostupnú operačnú sálu
