@@ -670,27 +670,46 @@ export const imagingRouter = createRouter({
         finalClinicianContent: input.finalReport,
       });
 
-      await ctx.db.insert(extAiAuditLog).values({
-        practiceId: ctx.practiceId,
-        actorId: ctx.user.id,
-        actorName: audit.actorName,
-        entityType: audit.entityType,
-        entityId: audit.entityId,
-        originalDraftHash: audit.originalDraftHash,
-        confirmedContentHash: audit.confirmedContentHash,
-        wasEditedByClinician: audit.wasEditedByClinician,
-        confirmedAt: audit.confirmedAt,
-      });
+      // IMPORTANT: audit insert and analysis update execute in the same
+      // transaction. If the audit insert fails the update is rolled back —
+      // finalization fails closed rather than leaving an un-audited record.
+      const updated = await ctx.db.transaction(async (tx) => {
+        const db = tx as unknown as Database;
+        await db.insert(extAiAuditLog).values({
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorName: audit.actorName,
+          entityType: audit.entityType,
+          entityId: audit.entityId,
+          originalDraftHash: audit.originalDraftHash,
+          confirmedContentHash: audit.confirmedContentHash,
+          wasEditedByClinician: audit.wasEditedByClinician,
+          confirmedAt: audit.confirmedAt,
+        });
 
-      const [updated] = await ctx.db
-        .update(aiImagingAnalyses)
-        .set({
-          result: input.finalReport,
-          status: "COMPLETED",
-          completedAt: new Date(),
-        })
-        .where(eq(aiImagingAnalyses.id, analysis.id))
-        .returning();
+        const [updatedAnalysis] = await db
+          .update(aiImagingAnalyses)
+          .set({
+            result: input.finalReport,
+            status: "COMPLETED",
+            completedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(aiImagingAnalyses.id, analysis.id),
+              eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+            ),
+          )
+          .returning();
+
+        if (!updatedAnalysis) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Analysis was modified concurrently. Please reload and try again.",
+          });
+        }
+        return updatedAnalysis;
+      });
 
       return {
         success: true,

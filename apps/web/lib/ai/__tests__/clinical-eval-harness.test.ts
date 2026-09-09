@@ -176,9 +176,17 @@ describe("Clinical AI Evaluation Harness (Deterministic Benchmarks)", () => {
         userRole: "front_desk",
       };
 
-      await expect(
-        tool!.execute({ limit: 10 }, mockCtx)
-      ).rejects.toThrow(/Prístup zamietnutý/);
+      // assertAgentRole produces an English-first message including the Slovak
+      // resource description. Verify both the FORBIDDEN code and Slovak text.
+      let thrown: unknown;
+      try {
+        await tool!.execute({ limit: 10 }, mockCtx);
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeDefined();
+      expect((thrown as { code?: string }).code).toBe("FORBIDDEN");
+      expect((thrown as Error).message).toMatch(/Kniha omamných/);
     });
 
     it("denies prescription creation tool to front desk and nurses", async () => {
@@ -192,17 +200,25 @@ describe("Clinical AI Evaluation Harness (Deterministic Benchmarks)", () => {
         userRole: "front_desk",
       };
 
-      await expect(
-        tool!.execute(
+      // assertAgentRole produces an English-first message including the Slovak
+      // resource description. Verify both the FORBIDDEN code and Slovak text.
+      let thrown: unknown;
+      try {
+        await tool!.execute(
           {
             patientId: "00000000-0000-0000-0000-000000000002",
             medicationName: "Amoxicillin",
             dosage: "250mg",
             frequency: "2x denne",
           },
-          mockCtx
-        )
-      ).rejects.toThrow(/Prístup zamietnutý/);
+          mockCtx,
+        );
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeDefined();
+      expect((thrown as { code?: string }).code).toBe("FORBIDDEN");
+      expect((thrown as Error).message).toMatch(/Recepty môže vystavovať/);
     });
   });
 });

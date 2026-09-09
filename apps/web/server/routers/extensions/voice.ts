@@ -574,21 +574,12 @@ export const voiceRouter = createRouter({
       try {
         if (status === "finalized") {
           assertClinicianConfirmed(input.clinicianConfirmed);
-          const note = await ctx.db.transaction((tx) =>
-            createFinalizedAppointmentSoapNote(tx as unknown as Database, {
-              practiceId: ctx.practiceId,
-              patientId: dictation.patientId,
-              appointmentId,
-              actor,
-              sections,
-            }),
-          );
-          await ctx.db
-            .update(voiceDictations)
-            .set({ soapNoteId: note.id })
-            .where(eq(voiceDictations.id, dictation.id));
 
-          // Human-in-the-loop SHA-256 audit trail (ŠVPS SR / KVL SR compliance)
+          // Human-in-the-loop SHA-256 audit trail (ŠVPS SR / KVL SR compliance).
+          // IMPORTANT: The audit log insert is executed inside the SAME transaction
+          // as the SOAP note creation. If the audit insert fails, the entire
+          // transaction is rolled back — the finalization fails closed rather than
+          // leaving an un-audited clinical record.
           const originalAiDraft = {
             subjective: dictation.subjective,
             objective: dictation.objective,
@@ -599,21 +590,49 @@ export const voiceRouter = createRouter({
             actorId: ctx.user.id,
             actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
             entityType: "soap_note",
-            entityId: note.id,
+            entityId: "", // placeholder; updated inside tx once note.id is known
             originalAiDraft,
             finalClinicianContent: sections,
           });
-          await ctx.db.insert(extAiAuditLog).values({
-            practiceId: ctx.practiceId,
-            actorId: ctx.user.id,
-            actorName: audit.actorName,
-            entityType: audit.entityType,
-            entityId: audit.entityId,
-            originalDraftHash: audit.originalDraftHash,
-            confirmedContentHash: audit.confirmedContentHash,
-            wasEditedByClinician: audit.wasEditedByClinician,
-            confirmedAt: audit.confirmedAt,
+
+          const { note } = await ctx.db.transaction(async (tx) => {
+            const createdNote = await createFinalizedAppointmentSoapNote(
+              tx as unknown as Database,
+              {
+                practiceId: ctx.practiceId,
+                patientId: dictation.patientId,
+                appointmentId,
+                actor,
+                sections,
+              },
+            );
+            // Recompute audit with the actual note ID inside the transaction
+            const txAudit = buildAiConfirmationAuditTrail({
+              actorId: ctx.user.id,
+              actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+              entityType: "soap_note",
+              entityId: createdNote.id,
+              originalAiDraft,
+              finalClinicianContent: sections,
+            });
+            await (tx as unknown as Database).insert(extAiAuditLog).values({
+              practiceId: ctx.practiceId,
+              actorId: ctx.user.id,
+              actorName: txAudit.actorName,
+              entityType: txAudit.entityType,
+              entityId: txAudit.entityId,
+              originalDraftHash: txAudit.originalDraftHash,
+              confirmedContentHash: txAudit.confirmedContentHash,
+              wasEditedByClinician: txAudit.wasEditedByClinician,
+              confirmedAt: txAudit.confirmedAt,
+            });
+            return { note: createdNote, audit: txAudit };
           });
+
+          await ctx.db
+            .update(voiceDictations)
+            .set({ soapNoteId: note.id })
+            .where(eq(voiceDictations.id, dictation.id));
 
           return { ...note, patientId: dictation.patientId, status };
         }

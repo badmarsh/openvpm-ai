@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { assertAgentRole } from "@/lib/authorization";
+
 import {
   eq,
   and,
@@ -2374,12 +2376,12 @@ const createPrescriptionTool: AgentTool = {
     };
     // Prescriptions (Zákon č. 362/2011 Z. z.) — restricted to veterinarians and admins only.
     // Front desk staff and technicians cannot create active prescriptions.
-    const allowedRoles = ["veterinarian", "admin"];
-    if (ctx.userRole && !allowedRoles.includes(ctx.userRole)) {
-      throw new Error(
-        "Prístup zamietnutý: Recepty môže vystavovať výhradne veterinárny lekár alebo administrátor. / Access denied: Prescriptions may only be created by veterinarians and admins.",
-      );
-    }
+    // SECURITY: uses fail-closed assertAgentRole — absent/unknown/disallowed roles all deny.
+    assertAgentRole(
+      ctx,
+      ["veterinarian", "admin"],
+      "Recepty môže vystavovať výhradne veterinárny lekár alebo administrátor. / Prescriptions may only be created by veterinarians and admins.",
+    );
 
     if (!(await activePatient(ctx, input.patientId))) {
       return { error: "Patient not found" };
@@ -2432,12 +2434,12 @@ const getControlledSubstancesLogTool: AgentTool = {
   async execute(args, ctx) {
     // OPL register (Zákon č. 362/2011 Z. z.) — restricted to veterinarians and admins only.
     // front_desk staff must not have access to the controlled substances ledger.
-    const allowedRoles = ["veterinarian", "admin"];
-    if (ctx.userRole && !allowedRoles.includes(ctx.userRole)) {
-      throw new Error(
-        "Prístup zamietnutý: Kniha omamných a psychotropných látok je prístupná len veterinárnym lekárom a administrátorom. / Access denied: Controlled substances log is restricted to veterinarians and admins.",
-      );
-    }
+    // SECURITY: uses fail-closed assertAgentRole — absent/unknown/disallowed roles all deny.
+    assertAgentRole(
+      ctx,
+      ["veterinarian", "admin"],
+      "Kniha omamných a psychotropných látok je prístupná len veterinárnym lekárom a administrátorom. / Controlled substances log is restricted to veterinarians and admins.",
+    );
 
     const input = this.zod.parse(args) as {
       drugName?: string;
