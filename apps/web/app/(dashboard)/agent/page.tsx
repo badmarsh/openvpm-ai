@@ -263,7 +263,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const handleCopyMessage = (text: string, id: number) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(id);
-    toast.success("Skopírované do schránky");
+    toast.success(t("agent.copiedToClipboard", "Skopírované do schránky"));
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
@@ -446,13 +446,18 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     <div className="flex items-center gap-2">
                       <Stethoscope className="h-4 w-4 text-primary" />
                       <CardTitle className="text-base font-semibold">
-                        Vyhľadávanie v kartotéke
+                        {t("agent.capabilities.recordsSearch.title", "Vyhľadávanie v kartotéke")}
                       </CardTitle>
                     </div>
-                    <Badge variant="secondary" className="text-xs">Čítanie</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {t("agent.capabilities.badgeRead", "Čítanie")}
+                    </Badge>
                   </div>
                   <CardDescription className="text-xs mt-1">
-                    Okamžitý prístup k záznamom pacientov, histórii liečby, preočkovaniam a laboratórnym nálezom.
+                    {t(
+                      "agent.capabilities.recordsSearch.desc",
+                      "Okamžitý prístup k záznamom pacientov, histórii liečby, preočkovaniam a laboratórnym nálezom.",
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-2 flex justify-end">
@@ -460,9 +465,13 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={() => pickSuggestion("Ktorí pacienti majú expirované očkovania?")}
+                    onClick={() =>
+                      pickSuggestion(
+                        t("agent.capabilities.recordsSearch.query", "Ktorí pacienti majú expirované očkovania?"),
+                      )
+                    }
                   >
-                    Vyskúšať dopyt
+                    {t("agent.capabilities.tryQuery", "Vyskúšať dopyt")}
                   </Button>
                 </CardContent>
               </Card>
@@ -473,13 +482,18 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-primary" />
                       <CardTitle className="text-base font-semibold">
-                        Manažment termínov
+                        {t("agent.capabilities.appointments.title", "Manažment termínov")}
                       </CardTitle>
                     </div>
-                    <Badge variant="secondary" className="text-xs">Čítanie & Zápis</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {t("agent.capabilities.badgeReadWrite", "Čítanie & Zápis")}
+                    </Badge>
                   </div>
                   <CardDescription className="text-xs mt-1">
-                    Prehľad dnešných návštev, kapacitné vyťaženie ordinácie a plánovanie nových kontrol v režime zápisu.
+                    {t(
+                      "agent.capabilities.appointments.desc",
+                      "Prehľad dnešných návštev, kapacitné vyťaženie ordinácie a plánovanie nových kontrol v režime zápisu.",
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-2 flex justify-end">
@@ -487,9 +501,13 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={() => pickSuggestion("Zhrň dnešné termíny a objednaných pacientov.")}
+                    onClick={() =>
+                      pickSuggestion(
+                        t("agent.capabilities.appointments.query", "Zhrň dnešné termíny a objednaných pacientov."),
+                      )
+                    }
                   >
-                    Vyskúšať dopyt
+                    {t("agent.capabilities.tryQuery", "Vyskúšať dopyt")}
                   </Button>
                 </CardContent>
               </Card>
@@ -500,13 +518,18 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     <div className="flex items-center gap-2">
                       <Pill className="h-4 w-4 text-primary" />
                       <CardTitle className="text-base font-semibold">
-                        Veterinárna farmakológia
+                        {t("agent.capabilities.pharmacology.title", "Veterinárna farmakológia")}
                       </CardTitle>
                     </div>
-                    <Badge variant="secondary" className="text-xs">Kalkulátor</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {t("agent.capabilities.badgeCalculator", "Kalkulátor")}
+                    </Badge>
                   </div>
                   <CardDescription className="text-xs mt-1">
-                    Výpočet dávkovania liečiv (napr. NSAID, antibiotiká, anestetiká) podľa hmotnosti a druhu zvieraťa.
+                    {t(
+                      "agent.capabilities.pharmacology.desc",
+                      "Výpočet dávkovania liečiv (napr. NSAID, antibiotiká, anestetiká) podľa hmotnosti a druhu zvieraťa.",
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-2 flex justify-end">
@@ -514,9 +537,13 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={() => pickSuggestion("Aká je dávka karprofénu pre 12 kg psa?")}
+                    onClick={() =>
+                      pickSuggestion(
+                        t("agent.capabilities.pharmacology.query", "Aká je dávka karprofénu pre 12 kg psa?"),
+                      )
+                    }
                   >
-                    Vyskúšať dopyt
+                    {t("agent.capabilities.tryQuery", "Vyskúšať dopyt")}
                   </Button>
                 </CardContent>
               </Card>
@@ -527,15 +554,18 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     <div className="flex items-center gap-2">
                       <ShieldAlert className="h-4 w-4 text-primary" />
                       <CardTitle className="text-base font-semibold">
-                        Bezpečný režim zápisu
+                        {t("agent.capabilities.safeWrite.title", "Bezpečný režim zápisu")}
                       </CardTitle>
                     </div>
                     <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
-                      Ochrana dát
+                      {t("agent.capabilities.badgeDataProtection", "Ochrana dát")}
                     </Badge>
                   </div>
                   <CardDescription className="text-xs mt-1">
-                    Možnosť vytvárať rezervácie alebo zaznamenať vitálne funkcie len s vaším explicitným jednorazovým súhlasom.
+                    {t(
+                      "agent.capabilities.safeWrite.desc",
+                      "Možnosť vytvárať rezervácie alebo zaznamenať vitálne funkcie len s vaším explicitným jednorazovým súhlasom.",
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-2 flex justify-end">
@@ -548,7 +578,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                       setActiveTab("chat");
                     }}
                   >
-                    Aktivovať režim zápisu
+                    {t("agent.capabilities.safeWrite.activate", "Aktivovať režim zápisu")}
                   </Button>
                 </CardContent>
               </Card>
@@ -574,7 +604,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                 ) : (
                   <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs">
                     <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>AI asistent je pripravený a plne konfigurovaný</span>
+                    <span>{t("agent.status.ready", "AI asistent je pripravený a plne konfigurovaný")}</span>
                   </div>
                 )}
 
@@ -702,9 +732,9 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground space-y-1.5 leading-relaxed">
-                <p>• Pýtajte sa prirodzenou slovenčinou na pacientov, dávkovanie či termíny.</p>
-                <p>• Asistent udržiava kontext konverzácie až 12 správ spätne.</p>
-                <p>• Pre úpravy kartotéky nezabudnite povoliť režim zápisu vyššie.</p>
+                <p>• {t("agent.tips.naturalLanguage", "Pýtajte sa prirodzenou slovenčinou na pacientov, dávkovanie či termíny.")}</p>
+                <p>• {t("agent.tips.context", "Asistent udržiava kontext konverzácie až 12 správ spätne.")}</p>
+                <p>• {t("agent.tips.writeMode", "Pre úpravy kartotéky nezabudnite povoliť režim zápisu vyššie.")}</p>
               </CardContent>
             </Card>
           </div>
@@ -721,8 +751,10 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     </CardTitle>
                     <CardDescription className="text-xs">
                       {hasConversation
-                        ? `${messages.length} správ v relácii`
-                        : "Pripravené na dopyt"}
+                        ? t("agent.chat.messagesInSession", "{count} správ v relácii", {
+                            count: messages.length,
+                          })
+                        : t("agent.chat.readyForQuery", "Pripravené na dopyt")}
                     </CardDescription>
                   </div>
                 </div>
@@ -760,7 +792,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                       )}
                     </p>
                     <p className="mt-4 text-[11px] text-muted-foreground/80">
-                      Vyberte si otázku z ľavého panelu alebo napíšte vlastnú nižšie.
+                      {t("agent.welcome.hint", "Vyberte si otázku z ľavého panelu alebo napíšte vlastnú nižšie.")}
                     </p>
                   </div>
                 ) : (
@@ -842,11 +874,11 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                       {run.isPending ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Odosielam...</span>
+                          <span>{t("agent.composer.sending", "Odosielam...")}</span>
                         </>
                       ) : (
                         <>
-                          <span>Odoslať</span>
+                          <span>{t("agent.composer.send", "Odoslať")}</span>
                           <ArrowUp className="h-3.5 w-3.5" />
                         </>
                       )}
@@ -919,7 +951,7 @@ function MessageBubble({
             type="button"
             onClick={onCopy}
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
-            title="Kopírovať odpoveď"
+            title={t("agent.copyReply", "Kopírovať odpoveď")}
           >
             {isCopied ? (
               <Check className="h-3 w-3 text-emerald-600" />

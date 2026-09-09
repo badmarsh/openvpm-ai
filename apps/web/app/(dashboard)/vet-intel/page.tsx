@@ -286,13 +286,13 @@ const AI_TIPS: AiTip[] = [
   },
 ];
 
-const TIP_CATEGORY_LABELS: Record<AiTipCategory, string> = {
-  pricing: "Cenotvorba",
-  retention: "Retencia klientov",
-  marketing: "Marketing",
-  staffing: "Personál & HR",
-  tech: "Technológia",
-  growth: "Rast & Expanzia",
+const TIP_CATEGORY_LABELS: Record<AiTipCategory, { key: string; fallback: string }> = {
+  pricing: { key: "vetIntel.tips.category.pricing", fallback: "Cenotvorba" },
+  retention: { key: "vetIntel.tips.category.retention", fallback: "Retencia klientov" },
+  marketing: { key: "vetIntel.tips.category.marketing", fallback: "Marketing" },
+  staffing: { key: "vetIntel.tips.category.staffing", fallback: "Personál & HR" },
+  tech: { key: "vetIntel.tips.category.tech", fallback: "Technológia" },
+  growth: { key: "vetIntel.tips.category.growth", fallback: "Rast & Expanzia" },
 };
 
 const TIP_CATEGORY_COLORS: Record<AiTipCategory, string> = {
@@ -304,13 +304,13 @@ const TIP_CATEGORY_COLORS: Record<AiTipCategory, string> = {
   growth: "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-950/30 dark:border-rose-800",
 };
 
-const SOURCE_TYPE_LABELS: Record<AiTip["sourceType"], string> = {
-  reddit: "Reddit",
-  linkedin: "LinkedIn",
-  hackernews: "Hacker News",
-  forum: "VetBiz Forum",
-  newsletter: "Newsletter",
-  research: "Výskumná správa",
+const SOURCE_TYPE_LABELS: Record<AiTip["sourceType"], { key: string; fallback: string }> = {
+  reddit: { key: "vetIntel.tips.source.reddit", fallback: "Reddit" },
+  linkedin: { key: "vetIntel.tips.source.linkedin", fallback: "LinkedIn" },
+  hackernews: { key: "vetIntel.tips.source.hackernews", fallback: "Hacker News" },
+  forum: { key: "vetIntel.tips.source.forum", fallback: "VetBiz fórum" },
+  newsletter: { key: "vetIntel.tips.source.newsletter", fallback: "Newsletter" },
+  research: { key: "vetIntel.tips.source.research", fallback: "Výskumná správa" },
 };
 
 // ── Competitor Types ─────────────────────────────────────────────────────────
@@ -386,32 +386,41 @@ function VetIntelContent() {
 
   const runAnalysisMutation = trpc.extensions.marketing.runCompetitorAnalysis.useMutation({
     onSuccess: () => {
-      toast.success("Konkurenčná a trhová analýza bola úspešne aktualizovaná");
+      toast.success(t("vetIntel.market.analysisUpdated", "Konkurenčná a trhová analýza bola úspešne aktualizovaná"));
       utils.extensions.marketing.listCompetitorSnapshots.invalidate();
     },
     onError: (err) => {
-      toast.error(err.message || "Nepodarilo sa spustiť analýzu trhu");
+      toast.error(err.message || t("vetIntel.market.analysisFailed", "Nepodarilo sa spustiť analýzu trhu"));
     },
   });
 
   const toggleDigestMutation = trpc.extensions.marketing.toggleCompetitorDigest.useMutation({
     onSuccess: (data) => {
       setDigestEnabled(data.enabled);
-      toast.success(data.enabled ? "Týždenný trhový digest bol zapnutý" : "Týždenný trhový digest bol vypnutý");
+      toast.success(
+        data.enabled
+          ? t("vetIntel.digest.enabledToast", "Týždenný trhový digest bol zapnutý")
+          : t("vetIntel.digest.disabledToast", "Týždenný trhový digest bol vypnutý"),
+      );
     },
     onError: (err) => {
-      toast.error(err.message || "Nepodarilo sa zmeniť nastavenie digestu");
+      toast.error(err.message || t("vetIntel.digest.toggleFailed", "Nepodarilo sa zmeniť nastavenie digestu"));
     },
   });
 
   const createPostFromBulletinMutation = trpc.extensions.marketing.createPostFromBulletin.useMutation({
     onSuccess: (data) => {
-      const verdictLabel = data.verdict === "pass" ? "✅ KVL SR: OK" : data.verdict === "warn" ? "⚠️ KVL SR: Upozornenie" : "🚫 KVL SR: Opravené";
-      toast.success(`Edukačný post bol vytvorený a uložený do plánu. ${verdictLabel}`);
+      const verdictLabel =
+        data.verdict === "pass"
+          ? t("vetIntel.bulletin.verdictPass", "✅ KVL SR: OK")
+          : data.verdict === "warn"
+            ? t("vetIntel.bulletin.verdictWarn", "⚠️ KVL SR: Upozornenie")
+            : t("vetIntel.bulletin.verdictFixed", "🚫 KVL SR: Opravené");
+      toast.success(t("vetIntel.bulletin.postCreated", "Edukačný post bol vytvorený a uložený do plánu. {verdict}", { verdict: verdictLabel }));
       setBulletinPostingId(null);
     },
     onError: (err) => {
-      toast.error(err.message || "Nepodarilo sa vytvoriť post");
+      toast.error(err.message || t("vetIntel.bulletin.postFailed", "Nepodarilo sa vytvoriť post"));
       setBulletinPostingId(null);
     },
   });
@@ -429,7 +438,7 @@ function VetIntelContent() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim().length < 2) {
-      toast.error("Zadajte aspoň 2 znaky lokality");
+      toast.error(t("vetIntel.market.minQuery", "Zadajte aspoň 2 znaky lokality"));
       return;
     }
     runAnalysisMutation.mutate({ query: query.trim() });
@@ -475,11 +484,11 @@ function VetIntelContent() {
                   Vet Intelligence
                 </h1>
                 <Badge variant="secondary" className="text-xs font-semibold bg-primary/10 text-primary border-primary/20">
-                  AI Trh & Legislatíva
+                  {t("vetIntel.badge", "AI Trh & Legislatíva")}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-0.5 max-w-3xl">
-                Centrálny hub pre trhovú inteligenciu: monitoring konkurencie, cenový benchmarking, úradné vestníky ŠVPS SR, liekové registrácie a predpisy KVL SR.
+                {t("vetIntel.hubSubtitle", "Centrálny hub pre trhovú inteligenciu: monitoring konkurencie, cenový benchmarking, úradné vestníky ŠVPS SR, liekové registrácie a predpisy KVL SR.")}
               </p>
             </div>
           </div>
@@ -494,7 +503,7 @@ function VetIntelContent() {
               className="gap-1.5 text-xs"
             >
               <Building2 className="h-3.5 w-3.5" />
-              ŠVPS SR Portál
+              {t("vetIntel.svpsPortal", "ŠVPS SR Portál")}
               <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           </Button>
@@ -506,7 +515,7 @@ function VetIntelContent() {
               className="gap-1.5 text-xs"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              KVL SR Portál
+              {t("vetIntel.kvlPortal", "KVL SR Portál")}
               <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           </Button>
@@ -522,20 +531,20 @@ function VetIntelContent() {
             {
               value: "market",
               icon: Building2,
-              label: "Trh & Konkurencia",
-              desc: "Benchmark, recenzie, analýza regiónu",
+              label: t("vetIntel.nav.market", "Trh & Konkurencia"),
+              desc: t("vetIntel.nav.marketDesc", "Benchmark, recenzie, analýza regiónu"),
             },
             {
               value: "bulletin",
               icon: ShieldAlert,
-              label: "Úradné vestníky & Právo",
-              desc: "ŠVPS SR, KVL SR, ŠÚKL",
+              label: t("vetIntel.nav.bulletin", "Úradné vestníky & Právo"),
+              desc: t("vetIntel.nav.bulletinDesc", "ŠVPS SR, KVL SR, ŠÚKL"),
             },
             {
               value: "strategy",
               icon: Lightbulb,
-              label: "AI Stratégia & Trendy",
-              desc: "Reddit, LinkedIn, svetové tipy",
+              label: t("vetIntel.nav.strategy", "AI Stratégia & Trendy"),
+              desc: t("vetIntel.nav.strategyDesc", "Reddit, LinkedIn, svetové tipy"),
             },
           ].map(({ value, icon: Icon, label, desc }) => {
             const isActive = activeTab === value;
@@ -567,7 +576,7 @@ function VetIntelContent() {
           {/* External links */}
           <div className="pt-3 border-t border-border/50 space-y-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 pb-1">
-              Portály
+              {t("vetIntel.nav.portals", "Portály")}
             </p>
             {[
               { href: "https://www.svps.sk", label: "ŠVPS SR", icon: Building2 },
@@ -601,11 +610,13 @@ function VetIntelContent() {
             <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="text-xs space-y-1">
               <p className="font-semibold">
-                Legislatívna a etická ochrana KVL SR (Zákon č. 39/2007 Z. z. a Zákon o reklame)
+                {t("vetIntel.market.complianceTitle", "Legislatívna a etická ochrana KVL SR (Zákon č. 39/2007 Z. z. a Zákon o reklame)")}
               </p>
               <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
-                Výstupy trhovej analýzy slúžia výhradne pre interné strategické rozhodovanie a optimalizáciu služieb vašej kliniky.
-                Priame menovité porovnávanie s inými ambulanciami alebo znevažovanie kolegov vo verejnej komunikácii je v rozpore s Etickým kódexom KVL SR a je automaticky blokované naším marketingovým validátorom.
+                {t(
+                  "vetIntel.market.complianceDesc",
+                  "Výstupy trhovej analýzy slúžia výhradne pre interné strategické rozhodovanie a optimalizáciu služieb vašej kliniky. Priame menovité porovnávanie s inými ambulanciami alebo znevažovanie kolegov vo verejnej komunikácii je v rozpore s Etickým kódexom KVL SR a je automaticky blokované naším marketingovým validátorom.",
+                )}
               </p>
             </div>
           </div>
@@ -618,7 +629,7 @@ function VetIntelContent() {
                   <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     className="pl-9 h-10"
-                    placeholder="Zadajte mesto, mestskú časť alebo PSČ (napr. Bratislava Ružinov, Žilina, Košice...)"
+                    placeholder={t("vetIntel.market.searchPlaceholder", "Zadajte mesto, mestskú časť alebo PSČ (napr. Bratislava Ružinov, Žilina, Košice...)")}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     disabled={runAnalysisMutation.isPending}
@@ -634,13 +645,13 @@ function VetIntelContent() {
                   ) : (
                     <Search className="h-4 w-4" />
                   )}
-                  Analyzovať trh
+                  {t("vetIntel.market.analyzeButton", "Analyzovať trh")}
                 </Button>
               </form>
 
               {/* Preset Buttons */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-xs text-muted-foreground mr-1">Rýchly výber:</span>
+                <span className="text-xs text-muted-foreground mr-1">{t("vetIntel.market.quickPick", "Rýchly výber")}:</span>
                 {REGION_PRESETS.map((preset) => (
                   <Button
                     key={preset}
@@ -669,16 +680,16 @@ function VetIntelContent() {
                   <MailPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Týždenný trhový digest na e-mail</p>
+                  <p className="text-sm font-semibold">{t("vetIntel.digest.title", "Týždenný trhový digest na e-mail")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Každý pondelok ráno prebehne kontrola zmien v regióne (nové kliniky, zmeny hodnotení, recenzie) a zašle súhrn personálu.
+                    {t("vetIntel.digest.desc", "Každý pondelok ráno prebehne kontrola zmien v regióne (nové kliniky, zmeny hodnotení, recenzie) a zašle súhrn personálu.")}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <span className="text-xs font-medium cursor-pointer">
-                  {digestEnabled ? "Zapnuté" : "Vypnuté"}
+                  {digestEnabled ? t("vetIntel.digest.on", "Zapnuté") : t("vetIntel.digest.off", "Vypnuté")}
                 </span>
                 <button
                   type="button"
@@ -719,9 +730,9 @@ function VetIntelContent() {
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
                 <Search className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-semibold">Zatiaľ žiadna konkurenčná analýza</h3>
+              <h3 className="text-lg font-semibold">{t("vetIntel.market.emptyTitle", "Zatiaľ žiadna konkurenčná analýza")}</h3>
               <p className="text-sm text-muted-foreground max-w-md mt-1 mb-4">
-                Zadajte mesto alebo lokalitu vo formulári vyššie a kliknite na tlačidlo Analyzovať trh.
+                {t("vetIntel.market.emptyDesc", "Zadajte mesto alebo lokalitu vo formulári vyššie a kliknite na tlačidlo Analyzovať trh.")}
               </p>
               <Button
                 onClick={() => runAnalysisMutation.mutate({ query: "Bratislava Ružinov" })}
@@ -729,7 +740,7 @@ function VetIntelContent() {
                 className="gap-2"
               >
                 {runAnalysisMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                Spustiť ukážkovú analýzu
+                {t("vetIntel.market.runSample", "Spustiť ukážkovú analýzu")}
               </Button>
             </div>
           ) : (
@@ -737,20 +748,20 @@ function VetIntelContent() {
               {/* Active Snapshot Info Bar */}
               <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg border bg-muted/30 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-foreground">Región:</span>
+                  <span className="font-semibold text-foreground">{t("vetIntel.market.region", "Región")}:</span>
                   <Badge variant="secondary">{latest.region}</Badge>
                   <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground">Vyhotovené: {new Date(latest.createdAt).toLocaleDateString("sk-SK")}</span>
+                  <span className="text-muted-foreground">{t("vetIntel.market.generatedAt", "Vyhotovené")}: {new Date(latest.createdAt).toLocaleDateString("sk-SK")}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {latest.isSample ? (
                     <Badge variant="outline" className="text-muted-foreground">
-                      Referenčný benchmark
+                      {t("vetIntel.market.sampleBadge", "Referenčný benchmark")}
                     </Badge>
                   ) : (
                     <Badge className="bg-emerald-600 text-white">
-                      Live Google Maps Grounding
+                      {t("vetIntel.market.liveBadge", "Živé dáta z Google Máp")}
                     </Badge>
                   )}
                 </div>
@@ -761,7 +772,7 @@ function VetIntelContent() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-muted-foreground" />
-                    Veterinárne pracoviská v regióne ({clinics.length})
+                    {t("vetIntel.market.clinicsInRegion", "Veterinárne pracoviská v regióne ({count})", { count: clinics.length })}
                   </h3>
                 </div>
 
@@ -796,7 +807,7 @@ function VetIntelContent() {
 
                           {clinic.pricingNote && (
                             <p className="text-xs text-muted-foreground italic pt-1">
-                              Cenotvorba: {clinic.pricingNote}
+                              {t("vetIntel.market.pricing", "Cenotvorba")}: {clinic.pricingNote}
                             </p>
                           )}
                         </CardHeader>
@@ -836,7 +847,7 @@ function VetIntelContent() {
                           className="w-full"
                         >
                           <Button variant="outline" size="sm" className="w-full text-xs gap-1.5">
-                            Otvoriť v Google Mapách
+                            {t("vetIntel.market.openInMaps", "Otvoriť v Google Mapách")}
                             <ExternalLink className="h-3 w-3" />
                           </Button>
                         </a>
@@ -862,15 +873,15 @@ function VetIntelContent() {
               </div>
               <div>
                 <p className="text-sm font-bold tracking-wide uppercase text-foreground">
-                  Vestník veterinárnej legislatívy SR
+                  {t("vetIntel.bulletin.gazetteTitle", "Vestník veterinárnej legislatívy SR")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  ŠVPS SR · KVL SR · ŠÚKL · ÚŠKVBL · Klinické štandardy
+                  {t("vetIntel.bulletin.gazetteSources", "ŠVPS SR · KVL SR · ŠÚKL · ÚŠKVBL · Klinické štandardy")}
                 </p>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px] font-mono">
-                  Ročník 2026
+                  {t("vetIntel.bulletin.volume", "Ročník {year}", { year: 2026 })}
                 </Badge>
                 <a
                   href="https://www.slov-lex.sk"
@@ -878,7 +889,7 @@ function VetIntelContent() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
                 >
-                  Slov-Lex portál
+                  {t("vetIntel.bulletin.slovLexPortal", "Slov-Lex portál")}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -889,7 +900,7 @@ function VetIntelContent() {
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Hľadať v legislatíve..."
+                  placeholder={t("vetIntel.bulletin.searchPlaceholder", "Hľadať v legislatíve...")}
                   value={bulletinSearch}
                   onChange={(e) => setBulletinSearch(e.target.value)}
                   className="pl-9 h-10 bg-background"
@@ -897,11 +908,11 @@ function VetIntelContent() {
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {[
-                  { key: "all", label: "Všetky" },
-                  { key: "alert", label: "Výstrahy" },
-                  { key: "regulation", label: "Predpisy KVL" },
-                  { key: "drug", label: "Liečivá" },
-                  { key: "advisory", label: "Klinické štandardy" },
+                  { key: "all", label: t("vetIntel.bulletin.filterAll", "Všetky") },
+                  { key: "alert", label: t("vetIntel.bulletin.filterAlert", "Výstrahy") },
+                  { key: "regulation", label: t("vetIntel.bulletin.filterRegulation", "Predpisy KVL") },
+                  { key: "drug", label: t("vetIntel.bulletin.filterDrug", "Liečivá") },
+                  { key: "advisory", label: t("vetIntel.bulletin.filterAdvisory", "Klinické štandardy") },
                 ].map(({ key, label }) => (
                   <Button
                     key={key}
@@ -971,7 +982,7 @@ function VetIntelContent() {
                       )}
                       <span className="flex items-center gap-1 ml-auto">
                         <Calendar className="h-3 w-3" />
-                        Vydané:{" "}
+                        {t("vetIntel.bulletin.issued", "Vydané")}:{" "}
                         {new Date(item.date).toLocaleDateString("sk-SK", {
                           day: "numeric",
                           month: "long",
@@ -981,7 +992,7 @@ function VetIntelContent() {
                       {item.effectiveDate && (
                         <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                           <CheckCircle2 className="h-3 w-3" />
-                          Účinné od:{" "}
+                          {t("vetIntel.bulletin.effectiveFrom", "Účinné od")}:{" "}
                           {new Date(item.effectiveDate).toLocaleDateString("sk-SK", {
                             day: "numeric",
                             month: "long",
@@ -1026,7 +1037,7 @@ function VetIntelContent() {
                         {isExpanded && (
                           <div className="mt-3 pt-3 border-t border-dashed text-sm text-foreground leading-relaxed space-y-2 bg-muted/10 rounded-lg p-4">
                             <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-                              Plné znenie
+                              {t("vetIntel.bulletin.fullText", "Plné znenie")}
                             </p>
                             <p>{item.body}</p>
                           </div>
@@ -1036,7 +1047,9 @@ function VetIntelContent() {
                           onClick={() => setExpandedBulletin(isExpanded ? null : item.id)}
                           className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline"
                         >
-                          {isExpanded ? "Skryť plné znenie ▲" : "Zobraziť plné znenie ▼"}
+                          {isExpanded
+                            ? t("vetIntel.bulletin.hideFullText", "Skryť plné znenie ▲")
+                            : t("vetIntel.bulletin.showFullText", "Zobraziť plné znenie ▼")}
                         </button>
                       </div>
                     )}
@@ -1050,7 +1063,7 @@ function VetIntelContent() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
                         >
-                          Officiálny portál
+                          {t("vetIntel.bulletin.officialPortal", "Oficiálny portál")}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
@@ -1079,7 +1092,7 @@ function VetIntelContent() {
 
             {filteredBulletins.length === 0 && (
               <div className="py-12 text-center text-sm text-muted-foreground bg-background">
-                Žiadne výsledky pre zvolený filter.
+                {t("vetIntel.bulletin.noResults", "Žiadne výsledky pre zvolený filter.")}
               </div>
             )}
           </div>
@@ -1188,31 +1201,33 @@ function VetIntelContent() {
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">
-                AI-kurátorované tipy z celého sveta 🌍
+                {t("vetIntel.tips.title", "AI-kurátorované tipy z celého sveta 🌍")}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Reálne skúsenosti veterinárnych lekárov z Reddit, LinkedIn, Hacker News a odborných fór.
-                Tipy sú vybrané na základe engagementu komunity a relevantnosti pre veterinárny biznis.
+                {t(
+                  "vetIntel.tips.desc",
+                  "Reálne skúsenosti veterinárnych lekárov z Reddit, LinkedIn, Hacker News a odborných fór. Tipy sú vybrané na základe engagementu komunity a relevantnosti pre veterinárny biznis.",
+                )}
               </p>
             </div>
             <Badge className="ml-auto shrink-0 bg-primary/10 text-primary border-primary/20 text-xs">
-              AI kurátorované
+              {t("vetIntel.tips.curatedBadge", "AI kurátorované")}
             </Badge>
           </div>
 
           {/* Category Filter */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">Kategória:</span>
+            <span className="text-xs text-muted-foreground font-medium">{t("vetIntel.tips.categoryLabel", "Kategória")}:</span>
             <Button
               variant={tipCategory === "all" ? "default" : "outline"}
               size="sm"
               className="h-7 text-xs rounded-full"
               onClick={() => setTipCategory("all")}
             >
-              Všetky ({AI_TIPS.length})
+              {t("vetIntel.tips.allWithCount", "Všetky ({count})", { count: AI_TIPS.length })}
             </Button>
             {(Object.keys(TIP_CATEGORY_LABELS) as AiTipCategory[]).map((cat) => {
-              const count = AI_TIPS.filter((t) => t.category === cat).length;
+              const count = AI_TIPS.filter((tip) => tip.category === cat).length;
               return (
                 <Button
                   key={cat}
@@ -1221,7 +1236,7 @@ function VetIntelContent() {
                   className="h-7 text-xs rounded-full"
                   onClick={() => setTipCategory(cat)}
                 >
-                  {TIP_CATEGORY_LABELS[cat]} ({count})
+                  {t(TIP_CATEGORY_LABELS[cat].key, TIP_CATEGORY_LABELS[cat].fallback)} ({count})
                 </Button>
               );
             })}
@@ -1242,7 +1257,7 @@ function VetIntelContent() {
                     variant="outline"
                     className="text-[10px] font-normal ml-1"
                   >
-                    {SOURCE_TYPE_LABELS[tip.sourceType]}
+                    {t(SOURCE_TYPE_LABELS[tip.sourceType].key, SOURCE_TYPE_LABELS[tip.sourceType].fallback)}
                   </Badge>
                   <span
                     className={cn(
@@ -1250,7 +1265,7 @@ function VetIntelContent() {
                       TIP_CATEGORY_COLORS[tip.category]
                     )}
                   >
-                    {TIP_CATEGORY_LABELS[tip.category]}
+                    {t(TIP_CATEGORY_LABELS[tip.category].key, TIP_CATEGORY_LABELS[tip.category].fallback)}
                   </span>
                 </div>
 
@@ -1283,11 +1298,11 @@ function VetIntelContent() {
                 <div className="flex items-center gap-4 px-5 py-2.5 border-t bg-muted/20 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
                     <ArrowUp className="h-3.5 w-3.5" />
-                    {tip.upvotes.toLocaleString("sk-SK")} hlasov
+                    {t("vetIntel.tips.votes", "{count} hlasov", { count: tip.upvotes.toLocaleString("sk-SK") })}
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
-                    {tip.comments} komentárov
+                    {t("vetIntel.tips.comments", "{count} komentárov", { count: tip.comments })}
                   </span>
                   <span className="flex items-center gap-1 ml-auto font-mono">
                     <Calendar className="h-3.5 w-3.5" />
@@ -1305,7 +1320,7 @@ function VetIntelContent() {
                       className="flex items-center gap-1 text-primary font-medium hover:underline"
                     >
                       <Globe className="h-3.5 w-3.5" />
-                      Zdroj
+                      {t("vetIntel.tips.sourceLink", "Zdroj")}
                       <ExternalLink className="h-2.5 w-2.5" />
                     </a>
                   )}
@@ -1319,7 +1334,7 @@ function VetIntelContent() {
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                AI odporúčania z vašej poslednej trhovej analýzy
+                {t("vetIntel.tips.recommendationsTitle", "AI odporúčania z vašej poslednej trhovej analýzy")}
               </h3>
               <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/10">
                 <CardContent className="pt-4">
@@ -1343,8 +1358,15 @@ function VetIntelContent() {
 }
 
 export default function VetIntelPage() {
+  const { t } = useI18n();
   return (
-    <Suspense fallback={<div className="p-8 text-center text-sm text-muted-foreground">Načítavam Vet Intelligence...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-sm text-muted-foreground">
+          {t("vetIntel.loading", "Načítavam Vet Intelligence...")}
+        </div>
+      }
+    >
       <VetIntelContent />
     </Suspense>
   );

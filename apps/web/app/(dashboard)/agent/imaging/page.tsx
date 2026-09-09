@@ -67,11 +67,11 @@ import {
 import { DicomViewer } from "@/components/imaging/dicom-viewer";
 
 const IMAGE_TYPES = [
-  { value: "xray", label: "Röntgen" },
-  { value: "ct", label: "CT" },
-  { value: "mri", label: "MRI" },
-  { value: "ultrasound", label: "Ultrazvuk" },
-  { value: "photo", label: "Klinická fotka" },
+  { value: "xray", labelKey: "imaging.types.xray", label: "Röntgen" },
+  { value: "ct", labelKey: "imaging.types.ct", label: "CT" },
+  { value: "mri", labelKey: "imaging.types.mri", label: "MRI" },
+  { value: "ultrasound", labelKey: "imaging.types.ultrasound", label: "Ultrazvuk" },
+  { value: "photo", labelKey: "imaging.types.photo", label: "Klinická fotka" },
 ] as const;
 
 type ImageType = (typeof IMAGE_TYPES)[number]["value"];
@@ -212,7 +212,7 @@ export default function ImagingPage() {
       setFileId(null);
       setAnalysisId(null);
       setImageType("xray");
-      toast.info("Načítaný DICOM súbor. Prebieha dekódovanie snímky.");
+      toast.info(t("imaging.toast.dicomLoaded", "Načítaný DICOM súbor. Prebieha dekódovanie snímky."));
       return;
     }
 
@@ -231,7 +231,7 @@ export default function ImagingPage() {
       uploadAttemptRef.current,
       file,
     );
-  }, []);
+  }, [t]);
 
   const handleDicomPrepared = useCallback((blob: Blob, dataUrl: string) => {
     if (!dicomFile) return;
@@ -243,8 +243,8 @@ export default function ImagingPage() {
       uploadAttemptRef.current,
       convertedFile,
     );
-    toast.success("Snímka bola spracovaná a je pripravená na nahrávanie a AI analýzu.");
-  }, [dicomFile]);
+    toast.success(t("imaging.toast.dicomReady", "Snímka bola spracovaná a je pripravená na nahrávanie a AI analýzu."));
+  }, [dicomFile, t]);
 
   const handleUpload = useCallback(async () => {
     if (!selectedFile || !selectedPatient || !uploadAttemptRef.current) return;
@@ -283,19 +283,19 @@ export default function ImagingPage() {
       const id = json.key?.split("/").pop() ?? null;
       setFileUrl(json.url ?? null);
       setFileId(id);
-      toast.success("Snímok úspešne nahraný");
+      toast.success(t("imaging.toast.uploaded", "Snímok úspešne nahraný"));
     } catch (err) {
       if (uploadAttemptRef.current) {
         uploadAttemptRef.current = settleManagedUploadAttempt(uploadAttemptRef.current, {
           kind: "ambiguous",
         });
       }
-      const message = err instanceof Error ? err.message : "Nahrávanie zlyhalo";
+      const message = err instanceof Error ? err.message : t("imaging.toast.uploadFailed", "Nahrávanie zlyhalo");
       toast.error(message);
     } finally {
       setUploading(false);
     }
-  }, [selectedFile, selectedPatient]);
+  }, [selectedFile, selectedPatient, t]);
 
   const handleAnalyze = useCallback(async () => {
     if (!fileId || !selectedPatient) return;
@@ -309,12 +309,12 @@ export default function ImagingPage() {
         userPrompt: userPrompt || undefined,
       });
       setAnalysisId(result.id);
-      toast.success("AI analýza snímku dokončená");
+      toast.success(t("imaging.toast.analysisDone", "AI analýza snímku dokončená"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Analýza zlyhala";
+      const message = err instanceof Error ? err.message : t("imaging.toast.analysisFailed", "Analýza zlyhala");
       toast.error(message);
     }
-  }, [fileId, selectedPatient, imageType, userPrompt, analyzeMutation]);
+  }, [fileId, selectedPatient, imageType, userPrompt, analyzeMutation, t]);
 
   const clearFile = useCallback(() => {
     setSelectedFile(null);
@@ -333,7 +333,7 @@ export default function ImagingPage() {
     const s = parseFloat(vhsShortAxisMm);
     const t4 = parseFloat(vhsT4Mm);
     if (!l || !s || !t4 || l <= 0 || s <= 0 || t4 <= 0) {
-      toast.error("Zadajte platné kladné rozmery v milimetroch");
+      toast.error(t("imaging.vhs.invalidInput", "Zadajte platné kladné rozmery v milimetroch"));
       return;
     }
     try {
@@ -344,19 +344,19 @@ export default function ImagingPage() {
         species: vhsSpecies,
       });
       setVhsResult(res);
-      toast.success(`VHS skóre: ${res.vhsScore} v (${res.statusLabelSk})`);
+      toast.success(t("imaging.vhs.scoreToast", "VHS skóre: {score} v ({status})", { score: res.vhsScore, status: res.statusLabelSk }));
     } catch (err) {
-      toast.error("Chyba pri výpočte VHS");
+      toast.error(t("imaging.vhs.calcError", "Chyba pri výpočte VHS"));
     }
   };
 
   const handleCreateQuiz = async () => {
     if (!currentAnalysis?.id) {
-      toast.error("Najprv spustite alebo vyberte AI analýzu snímku");
+      toast.error(t("imaging.quiz.needAnalysis", "Najprv spustite alebo vyberte AI analýzu snímku"));
       return;
     }
     if (!quizCorrectAnswer.trim()) {
-      toast.error("Zadajte správnu odpoveď na kvíz");
+      toast.error(t("imaging.quiz.needCorrectAnswer", "Zadajte správnu odpoveď na kvíz"));
       return;
     }
     try {
@@ -364,20 +364,23 @@ export default function ImagingPage() {
         analysisId: currentAnalysis.id,
         question: quizQuestion.trim() || undefined,
         correctAnswer: quizCorrectAnswer.trim(),
-        wrongAnswers: [quizWrong1.trim() || "Možnosť B", quizWrong2.trim() || "Možnosť C"],
+        wrongAnswers: [
+          quizWrong1.trim() || t("imaging.quiz.optionB", "Možnosť B"),
+          quizWrong2.trim() || t("imaging.quiz.optionC", "Možnosť C"),
+        ],
         channel: quizChannel,
       });
       setQuizCreatedPost(res);
-      toast.success("Rádiologický kvíz bol zaradený do marketingového plánu!");
+      toast.success(t("imaging.quiz.created", "Rádiologický kvíz bol zaradený do marketingového plánu!"));
     } catch (err) {
-      toast.error("Nepodarilo sa vytvoriť príspevok.");
+      toast.error(t("imaging.quiz.createFailed", "Nepodarilo sa vytvoriť príspevok."));
     }
   };
 
   const handleApplyPreset = (preset: ImagingPreset) => {
     setImageType(preset.imageType);
     setUserPrompt(preset.prompt);
-    toast.info(`Šablóna „${preset.name}“ aplikovaná`);
+    toast.info(t("imaging.toast.presetApplied", "Šablóna „{name}“ aplikovaná", { name: t(`imaging.presets.${preset.key}`, preset.name) }));
   };
 
   const handleSelectPatient = (p: {
@@ -390,7 +393,7 @@ export default function ImagingPage() {
   }) => {
     const clientName =
       [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ").trim() ||
-      "Klient";
+      t("imaging.defaultClientName", "Klient");
     setSelectedPatient({
       id: p.id,
       name: p.name,
@@ -415,7 +418,7 @@ export default function ImagingPage() {
     if (!currentAnalysis?.result) return;
     navigator.clipboard.writeText(currentAnalysis.result);
     setCopied(true);
-    toast.success("Nález skopírovaný do schránky");
+    toast.success(t("imaging.toast.copied", "Nález skopírovaný do schránky"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -423,7 +426,7 @@ export default function ImagingPage() {
     if (!currentAnalysis?.result) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      toast.error("Vyskakovacie okno bolo zablokované");
+      toast.error(t("imaging.toast.popupBlocked", "Vyskakovacie okno bolo zablokované"));
       return;
     }
 
@@ -484,7 +487,7 @@ export default function ImagingPage() {
       </html>
     `);
     printWindow.document.close();
-  }, [currentAnalysis, selectedPatient, imageType]);
+  }, [currentAnalysis, selectedPatient, imageType, t]);
 
   return (
     <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
@@ -493,15 +496,15 @@ export default function ImagingPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight">
-              Analýza Snímkov
+              {t("imaging.title", "Analýza snímkov")}
             </h1>
             <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
               <Sparkles className="h-3 w-3" />
-              AI Röntgen & Diagnostika
+              {t("imaging.badge", "AI Röntgen & Diagnostika")}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            AI asistovaná analýza röntgenov, CT, MRI, ultrazvuku a klinických fotografií.
+            {t("imaging.subtitle", "AI asistovaná analýza röntgenov, CT, MRI, ultrazvuku a klinických fotografií.")}
           </p>
         </div>
 
@@ -510,11 +513,11 @@ export default function ImagingPage() {
           <TabsList className="grid grid-cols-2 w-[280px]">
             <TabsTrigger value="editor" className="gap-1.5">
               <ImageIcon className="h-4 w-4" />
-              Nová analýza
+              {t("imaging.tabs.editor", "Nová analýza")}
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
               <History className="h-4 w-4" />
-              História snímkov
+              {t("imaging.tabs.history", "História snímkov")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -526,21 +529,21 @@ export default function ImagingPage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              História vyšetrení snímkov
+              {t("imaging.history.title", "História vyšetrení snímkov")}
             </CardTitle>
             <CardDescription>
               {selectedPatient
-                ? `Zoznam predchádzajúcich analýz pre pacienta ${selectedPatient.name}.`
-                : "Vyberte pacienta v editore pre zobrazenie jeho histórie snímkov."}
+                ? t("imaging.history.forPatient", "Zoznam predchádzajúcich analýz pre pacienta {name}.", { name: selectedPatient.name })
+                : t("imaging.history.selectPatientHint", "Vyberte pacienta v editore pre zobrazenie jeho histórie snímkov.")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {!selectedPatient ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm font-medium">Nie je vybraný žiadny pacient</p>
+                <p className="text-sm font-medium">{t("imaging.history.noPatient", "Nie je vybraný žiadny pacient")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Vráťte sa do editora a vyberte pacienta, ktorého snímky si prajete zobraziť.
+                  {t("imaging.history.noPatientHint", "Vráťte sa do editora a vyberte pacienta, ktorého snímky si prajete zobraziť.")}
                 </p>
                 <Button
                   variant="outline"
@@ -548,7 +551,7 @@ export default function ImagingPage() {
                   onClick={() => setActiveTab("editor")}
                   className="mt-4 text-xs"
                 >
-                  Prejsť do editora
+                  {t("imaging.history.goToEditor", "Prejsť do editora")}
                 </Button>
               </div>
             ) : historyQuery.isLoading ? (
@@ -558,7 +561,9 @@ export default function ImagingPage() {
             ) : !historyQuery.data || historyQuery.data.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Pre pacienta {selectedPatient.name} zatiaľ neboli zaznamenané žiadne analýzy.</p>
+                <p className="text-sm">
+                  {t("imaging.history.empty", "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne analýzy.", { name: selectedPatient.name })}
+                </p>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -567,7 +572,7 @@ export default function ImagingPage() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base font-semibold uppercase">
-                          {item.imageType} Snímok
+                          {t("imaging.history.itemTitle", "{type} snímok", { type: item.imageType })}
                         </CardTitle>
                         <Badge
                           variant={
@@ -580,14 +585,14 @@ export default function ImagingPage() {
                           className="text-xs"
                         >
                           {item.status === "COMPLETED"
-                            ? "Vyhodnotené"
+                            ? t("imaging.status.completed", "Vyhodnotené")
                             : item.status === "FAILED"
-                              ? "Zlyhalo"
-                              : "Prebieha"}
+                              ? t("imaging.status.failed", "Zlyhalo")
+                              : t("imaging.status.inProgress", "Prebieha")}
                         </Badge>
                       </div>
                       <CardDescription className="line-clamp-2 text-xs mt-1">
-                        {item.userPrompt || "Štandardná diagnostická analýza"}
+                        {item.userPrompt || t("imaging.history.defaultPrompt", "Štandardná diagnostická analýza")}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-2 flex items-center justify-between">
@@ -600,12 +605,12 @@ export default function ImagingPage() {
                         onClick={() => {
                           setAnalysisId(item.id);
                           setActiveTab("editor");
-                          toast.info("Analýza načítaná do náhľadu");
+                          toast.info(t("imaging.toast.loadedToPreview", "Analýza načítaná do náhľadu"));
                         }}
                         className="gap-1.5 text-xs"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        Načítať nález
+                        {t("imaging.history.loadResult", "Načítať nález")}
                       </Button>
                     </CardContent>
                   </Card>
@@ -625,7 +630,7 @@ export default function ImagingPage() {
                 <CardTitle className="text-base font-semibold flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Stethoscope className="h-4 w-4 text-primary" />
-                    Vybrať pacienta pre vyšetrenie *
+                    {t("imaging.patient.selectTitle", "Vybrať pacienta pre vyšetrenie *")}
                   </span>
                   {selectedPatient && (
                     <Button
@@ -635,7 +640,7 @@ export default function ImagingPage() {
                       className="h-7 text-xs text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-3 w-3 mr-1" />
-                      Zrušiť výber
+                      {t("imaging.patient.clearSelection", "Zrušiť výber")}
                     </Button>
                   )}
                 </CardTitle>
@@ -658,7 +663,7 @@ export default function ImagingPage() {
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          Vyhľadať pacienta podľa mena...
+                          {t("imaging.patient.searchPlaceholder", "Vyhľadať pacienta podľa mena...")}
                         </span>
                       )}
                       <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -666,7 +671,7 @@ export default function ImagingPage() {
                   </PopoverTrigger>
                   <PopoverContent className="w-[360px] sm:w-[420px] p-2" align="start">
                     <Input
-                      placeholder="Hľadať pacienta..."
+                      placeholder={t("imaging.patient.searchInputPlaceholder", "Hľadať pacienta...")}
                       value={patientSearch}
                       onChange={(e) => setPatientSearch(e.target.value)}
                       className="mb-2"
@@ -680,7 +685,7 @@ export default function ImagingPage() {
                       )}
                       {patientSearchQ.data?.length === 0 && patientSearch.length >= 2 && (
                         <p className="text-center py-4 text-xs text-muted-foreground">
-                          Žiadni pacienti sa nenašli
+                          {t("imaging.patient.noneFound", "Žiadni pacienti sa nenašli")}
                         </p>
                       )}
                       {patientSearchQ.data?.map((p) => (
@@ -696,7 +701,7 @@ export default function ImagingPage() {
                           <div>
                             <span className="font-medium">{p.name}</span>
                             <span className="text-xs text-muted-foreground ml-2">
-                              {p.species || "zviera"} — {p.clientFirstName} {p.clientLastName}
+                              {p.species || t("imaging.patient.defaultSpecies", "zviera")} — {p.clientFirstName} {p.clientLastName}
                             </span>
                           </div>
                           {selectedPatient?.id === p.id && (
@@ -713,8 +718,8 @@ export default function ImagingPage() {
                   <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="font-semibold block mb-0.5">Upozornenie na status pacienta</strong>
-                      Tento pacient je evidovaný ako uhynutý. Záznam vyšetrenia bude priradený do archivovanej karty.
+                      <strong className="font-semibold block mb-0.5">{t("imaging.deceased.title", "Upozornenie na status pacienta")}</strong>
+                      {t("imaging.deceased.desc", "Tento pacient je evidovaný ako uhynutý. Záznam vyšetrenia bude priradený do archivovanej karty.")}
                     </div>
                   </div>
                 )}
@@ -725,7 +730,7 @@ export default function ImagingPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
-                Rýchle diagnostické zamerania:
+                {t("imaging.presets.label", "Rýchle diagnostické zamerania")}:
               </label>
               <div className="flex flex-wrap gap-2">
                 {PRESETS_IMAGING.map((preset) => (
@@ -737,7 +742,7 @@ export default function ImagingPage() {
                     className="h-8 text-xs bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                     onClick={() => handleApplyPreset(preset)}
                   >
-                    {preset.name}
+                    {t(`imaging.presets.${preset.key}`, preset.name)}
                   </Button>
                 ))}
               </div>
@@ -748,10 +753,10 @@ export default function ImagingPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-primary" />
-                  Nahratie snímku *
+                  {t("imaging.upload.title", "Nahratie snímku *")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Podporované formáty: JPG, PNG, WebP a medicínsky DICOM (.dcm) do 10 MB
+                  {t("imaging.upload.formats", "Podporované formáty: JPG, PNG, WebP a medicínsky DICOM (.dcm) do 10 MB")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -763,7 +768,7 @@ export default function ImagingPage() {
                     />
                     <div className="flex items-center justify-between pt-1">
                       <p className="text-xs text-muted-foreground truncate max-w-[60%]">
-                        {dicomFile.name} (DICOM formát)
+                        {dicomFile.name} ({t("imaging.upload.dicomFormat", "DICOM formát")})
                       </p>
                       <Button
                         variant="ghost"
@@ -772,7 +777,7 @@ export default function ImagingPage() {
                         onClick={clearFile}
                       >
                         <X className="h-3.5 w-3.5 mr-1" />
-                        Zatvoriť
+                        {t("imaging.upload.close", "Zatvoriť")}
                       </Button>
                     </div>
                   </div>
@@ -784,9 +789,9 @@ export default function ImagingPage() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
                       <ImageIconLucide className="h-6 w-6" />
                     </div>
-                    <p className="text-sm font-medium mb-1">Kliknite pre výber snímku</p>
+                    <p className="text-sm font-medium mb-1">{t("imaging.upload.clickToSelect", "Kliknite pre výber snímku")}</p>
                     <p className="text-xs text-muted-foreground text-center max-w-xs">
-                      Röntgen (.dcm), CT, MRI, ultrazvuk alebo makroskopická fotka
+                      {t("imaging.upload.hint", "Röntgen (.dcm), CT, MRI, ultrazvuk alebo makroskopická fotka")}
                     </p>
                     <Button
                       variant="secondary"
@@ -798,7 +803,7 @@ export default function ImagingPage() {
                       }}
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      Vybrať súbor
+                      {t("imaging.upload.chooseFile", "Vybrať súbor")}
                     </Button>
                   </div>
                 ) : (
@@ -807,7 +812,7 @@ export default function ImagingPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={previewUrl}
-                        alt="Náhľad snímku"
+                        alt={t("imaging.upload.previewAlt", "Náhľad snímku")}
                         className="max-h-[320px] w-full object-contain"
                       />
                     </div>
@@ -823,7 +828,7 @@ export default function ImagingPage() {
                           onClick={() => fileInputRef.current?.click()}
                         >
                           <Upload className="h-3 w-3" />
-                          Zmeniť
+                          {t("imaging.upload.change", "Zmeniť")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -854,12 +859,12 @@ export default function ImagingPage() {
                     {uploading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Nahrávam snímok na zabezpečené úložisko...
+                        {t("imaging.upload.uploading", "Nahrávam snímok na zabezpečené úložisko...")}
                       </>
                     ) : (
                       <>
                         <Upload className="h-4 w-4" />
-                        Nahrať snímok k pacientovi
+                        {t("imaging.upload.uploadButton", "Nahrať snímok k pacientovi")}
                       </>
                     )}
                   </Button>
@@ -868,7 +873,7 @@ export default function ImagingPage() {
                 {fileUrl && (
                   <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs">
                     <Check className="h-4 w-4 shrink-0" />
-                    <span>Snímok je bezpečne pripravený na AI analýzu</span>
+                    <span>{t("imaging.upload.ready", "Snímok je bezpečne pripravený na AI analýzu")}</span>
                   </div>
                 )}
               </CardContent>
@@ -878,28 +883,28 @@ export default function ImagingPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">
-                  Konfigurácia analýzy
+                  {t("imaging.config.title", "Konfigurácia analýzy")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-foreground">
-                    Typ zobrazovacieho vyšetrenia
+                    {t("imaging.config.imageType", "Typ zobrazovacieho vyšetrenia")}
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {IMAGE_TYPES.map((t) => (
+                    {IMAGE_TYPES.map((type) => (
                       <button
-                        key={t.value}
+                        key={type.value}
                         type="button"
                         className={cn(
                           "px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors text-center",
-                          imageType === t.value
+                          imageType === type.value
                             ? "border-primary bg-primary/10 text-primary font-semibold"
                             : "border-border text-muted-foreground hover:bg-accent",
                         )}
-                        onClick={() => setImageType(t.value as ImageType)}
+                        onClick={() => setImageType(type.value as ImageType)}
                       >
-                        {t.label}
+                        {t(type.labelKey, type.label)}
                       </button>
                     ))}
                   </div>
@@ -907,10 +912,10 @@ export default function ImagingPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-foreground">
-                    Klinické zameranie / Otázka pre AI (voliteľné)
+                    {t("imaging.config.promptLabel", "Klinické zameranie / Otázka pre AI (voliteľné)")}
                   </label>
                   <Textarea
-                    placeholder="Napr.: Zameraj sa na pľúcne polia, podozrenie na edém alebo cudzie teleso v žalúdku..."
+                    placeholder={t("imaging.config.promptPlaceholder", "Napr.: Zameraj sa na pľúcne polia, podozrenie na edém alebo cudzie teleso v žalúdku...")}
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
                     rows={3}
@@ -927,12 +932,12 @@ export default function ImagingPage() {
                   {analyzeMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Spracúvam rádiologickú analýzu...
+                      {t("imaging.config.analyzing", "Spracúvam rádiologickú analýzu...")}
                     </>
                   ) : (
                     <>
                       <Scan className="h-4 w-4" />
-                      Spustiť AI analýzu snímku
+                      {t("imaging.config.analyzeButton", "Spustiť AI analýzu snímku")}
                     </>
                   )}
                 </Button>
@@ -947,7 +952,7 @@ export default function ImagingPage() {
                 <div className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base font-semibold">
-                    Výsledok AI analýzy
+                    {t("imaging.result.title", "Výsledok AI analýzy")}
                   </CardTitle>
                 </div>
 
@@ -964,7 +969,7 @@ export default function ImagingPage() {
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
-                      Kopírovať
+                      {t("imaging.result.copy", "Kopírovať")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -973,7 +978,7 @@ export default function ImagingPage() {
                       className="h-8 px-2.5 text-xs gap-1"
                     >
                       <Printer className="h-3.5 w-3.5" />
-                      Tlačiť / PDF
+                      {t("imaging.result.print", "Tlačiť / PDF")}
                     </Button>
                   </div>
                 )}
@@ -987,10 +992,10 @@ export default function ImagingPage() {
                       <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/10 blur-sm" />
                     </div>
                     <p className="text-sm font-semibold text-foreground">
-                      Multimodálny model spracováva snímok...
+                      {t("imaging.result.processing", "Multimodálny model spracováva snímok...")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                      Vyhodnocujem rádiologické štruktúry, hustotu tkanív a formulujem klinické posúdenie.
+                      {t("imaging.result.processingHint", "Vyhodnocujem rádiologické štruktúry, hustotu tkanív a formulujem klinické posúdenie.")}
                     </p>
                   </div>
                 ) : currentAnalysis?.status === "COMPLETED" && currentAnalysis.result ? (
@@ -998,7 +1003,7 @@ export default function ImagingPage() {
                     <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
                       <div className="flex items-center gap-2 text-xs text-primary font-medium">
                         <Sparkles className="h-4 w-4" />
-                        <span>Analýza pre: {selectedPatient?.name} ({imageType.toUpperCase()})</span>
+                        <span>{t("imaging.result.analysisFor", "Analýza pre")}: {selectedPatient?.name} ({imageType.toUpperCase()})</span>
                       </div>
                       <span className="text-[11px] text-muted-foreground">
                         {currentAnalysis.completedAt
@@ -1025,7 +1030,7 @@ export default function ImagingPage() {
                         onClick={() => setShowVhsCalc(!showVhsCalc)}
                       >
                         <Heart className="h-3.5 w-3.5 text-rose-500" />
-                        VHS Kalkulačka srdca
+                        {t("imaging.vhs.button", "VHS kalkulačka srdca")}
                       </Button>
 
                       <Button
@@ -1036,7 +1041,7 @@ export default function ImagingPage() {
                         onClick={() => setShowMarketingQuiz(!showMarketingQuiz)}
                       >
                         <Megaphone className="h-3.5 w-3.5 text-amber-500" />
-                        Edukačný RTG kvíz (KVL SR)
+                        {t("imaging.quiz.button", "Edukačný RTG kvíz (KVL SR)")}
                       </Button>
                     </div>
 
@@ -1046,17 +1051,19 @@ export default function ImagingPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs font-bold text-foreground">
                             <Heart className="h-4 w-4 text-rose-500" />
-                            <span>Vertebral Heart Score (VHS) – Buchananova metóda</span>
+                            <span>{t("imaging.vhs.title", "Vertebral Heart Score (VHS) – Buchananova metóda")}</span>
                           </div>
                           <Badge variant="outline" className="text-[10px]">
-                            {vhsSpecies === "feline" ? "Mačka: norma < 8.0 v" : "Pes: norma 8.5–10.5 v"}
+                            {vhsSpecies === "feline"
+                              ? t("imaging.vhs.normFeline", "Mačka: norma < 8.0 v")
+                              : t("imaging.vhs.normCanine", "Pes: norma 8.5–10.5 v")}
                           </Badge>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-muted-foreground">
-                              Dlhá os L (mm)
+                              {t("imaging.vhs.longAxis", "Dlhá os L (mm)")}
                             </label>
                             <Input
                               value={vhsLongAxisMm}
@@ -1068,7 +1075,7 @@ export default function ImagingPage() {
 
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-muted-foreground">
-                              Krátka os S (mm)
+                              {t("imaging.vhs.shortAxis", "Krátka os S (mm)")}
                             </label>
                             <Input
                               value={vhsShortAxisMm}
@@ -1080,7 +1087,7 @@ export default function ImagingPage() {
 
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-muted-foreground">
-                              Stavec T4 (mm)
+                              {t("imaging.vhs.t4", "Stavec T4 (mm)")}
                             </label>
                             <Input
                               value={vhsT4Mm}
@@ -1092,15 +1099,15 @@ export default function ImagingPage() {
 
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-muted-foreground">
-                              Druh pacienta
+                              {t("imaging.vhs.species", "Druh pacienta")}
                             </label>
                             <select
                               value={vhsSpecies}
                               onChange={(e) => setVhsSpecies(e.target.value as any)}
                               className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
                             >
-                              <option value="canine">Pes (canine)</option>
-                              <option value="feline">Mačka (feline)</option>
+                              <option value="canine">{t("imaging.vhs.speciesCanine", "Pes (canine)")}</option>
+                              <option value="feline">{t("imaging.vhs.speciesFeline", "Mačka (feline)")}</option>
                             </select>
                           </div>
                         </div>
@@ -1113,7 +1120,7 @@ export default function ImagingPage() {
                             className="h-8 text-xs gap-1 bg-rose-600 hover:bg-rose-700 text-white"
                           >
                             <Activity className="h-3.5 w-3.5" />
-                            Vypočítať VHS
+                            {t("imaging.vhs.calculate", "Vypočítať VHS")}
                           </Button>
 
                           {vhsResult && (
@@ -1147,7 +1154,7 @@ export default function ImagingPage() {
 
                         {vhsResult && (
                           <div className="rounded-lg bg-background p-3 text-xs text-foreground border space-y-1">
-                            <p className="font-semibold text-primary">Klinické posúdenie nálezu:</p>
+                            <p className="font-semibold text-primary">{t("imaging.vhs.interpretation", "Klinické posúdenie nálezu")}:</p>
                             <p className="text-muted-foreground leading-relaxed">
                               {vhsResult.clinicalInterpretationSk}
                             </p>
@@ -1162,21 +1169,21 @@ export default function ImagingPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs font-bold text-foreground">
                             <Megaphone className="h-4 w-4 text-amber-500" />
-                            <span>Kvíz týždňa zo snímky pre sociálne siete (KVL SR)</span>
+                            <span>{t("imaging.quiz.title", "Kvíz týždňa zo snímky pre sociálne siete (KVL SR)")}</span>
                           </div>
                           <Badge variant="outline" className="text-[10px]">
-                            Anonymizovaný edukačný príspevok
+                            {t("imaging.quiz.anonymizedBadge", "Anonymizovaný edukačný príspevok")}
                           </Badge>
                         </div>
 
                         <div className="space-y-2">
                           <label className="text-[11px] font-medium text-muted-foreground">
-                            Otázka kvízu pre verejnosť
+                            {t("imaging.quiz.questionLabel", "Otázka kvízu pre verejnosť")}
                           </label>
                           <Input
                             value={quizQuestion}
                             onChange={(e) => setQuizQuestion(e.target.value)}
-                            placeholder="Čo odhalila táto rádiologická snímka?"
+                            placeholder={t("imaging.quiz.questionPlaceholder", "Čo odhalila táto rádiologická snímka?")}
                             className="h-8 text-xs"
                           />
                         </div>
@@ -1184,36 +1191,36 @@ export default function ImagingPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 font-semibold">
-                              Správna odpoveď (A)
+                              {t("imaging.quiz.correctAnswer", "Správna odpoveď (A)")}
                             </label>
                             <Input
                               value={quizCorrectAnswer}
                               onChange={(e) => setQuizCorrectAnswer(e.target.value)}
-                              placeholder="napr. Cudzie teleso v žalúdku"
+                              placeholder={t("imaging.quiz.correctPlaceholder", "napr. Cudzie teleso v žalúdku")}
                               className="h-8 text-xs border-emerald-500/50"
                             />
                           </div>
 
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-muted-foreground">
-                              Nesprávna možnosť (B)
+                              {t("imaging.quiz.wrongB", "Nesprávna možnosť (B)")}
                             </label>
                             <Input
                               value={quizWrong1}
                               onChange={(e) => setQuizWrong1(e.target.value)}
-                              placeholder="napr. Fyziologický nález"
+                              placeholder={t("imaging.quiz.wrongBPlaceholder", "napr. Fyziologický nález")}
                               className="h-8 text-xs"
                             />
                           </div>
 
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium text-muted-foreground">
-                              Nesprávna možnosť (C)
+                              {t("imaging.quiz.wrongC", "Nesprávna možnosť (C)")}
                             </label>
                             <Input
                               value={quizWrong2}
                               onChange={(e) => setQuizWrong2(e.target.value)}
-                              placeholder="napr. Torzia žalúdka"
+                              placeholder={t("imaging.quiz.wrongCPlaceholder", "napr. Torzia žalúdka")}
                               className="h-8 text-xs"
                             />
                           </div>
@@ -1221,7 +1228,7 @@ export default function ImagingPage() {
 
                         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-muted-foreground">Kanál:</span>
+                            <span className="text-xs text-muted-foreground">{t("imaging.quiz.channel", "Kanál")}:</span>
                             {(["instagram", "facebook", "google_business"] as const).map((ch) => (
                               <Button
                                 key={ch}
@@ -1231,7 +1238,7 @@ export default function ImagingPage() {
                                 className="h-7 text-xs capitalize"
                                 onClick={() => setQuizChannel(ch)}
                               >
-                                {ch === "google_business" ? "Google Profil" : ch}
+                                {ch === "google_business" ? t("imaging.quiz.channelGoogle", "Google Profil") : ch}
                               </Button>
                             ))}
                           </div>
@@ -1248,7 +1255,7 @@ export default function ImagingPage() {
                             ) : (
                               <Sparkles className="h-3.5 w-3.5" />
                             )}
-                            Vytvoriť kvíz do plánu obsahu
+                            {t("imaging.quiz.createButton", "Vytvoriť kvíz do plánu obsahu")}
                           </Button>
                         </div>
 
@@ -1279,7 +1286,7 @@ export default function ImagingPage() {
                             <div className="flex items-center justify-end pt-1">
                               <Button variant="outline" size="sm" asChild className="h-7 text-xs gap-1">
                                 <Link href="/marketing/plan">
-                                  Zobraziť v pláne obsahu
+                                  {t("imaging.quiz.viewInPlan", "Zobraziť v pláne obsahu")}
                                   <ExternalLink className="h-3 w-3" />
                                 </Link>
                               </Button>
@@ -1290,25 +1297,25 @@ export default function ImagingPage() {
                     )}
 
                     <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t">
-                      * Upozornenie: AI analýza zobrazovacích metód má výhradne podporný a odporúčací charakter. Konečné stanovenie diagnózy patrí vždy ošetrujúcemu veterinárnemu lekárovi.
+                      * {t("imaging.result.disclaimer", "Upozornenie: AI analýza zobrazovacích metód má výhradne podporný a odporúčací charakter. Konečné stanovenie diagnózy patrí vždy ošetrujúcemu veterinárnemu lekárovi.")}
                     </p>
                   </div>
                 ) : currentAnalysis?.status === "FAILED" ? (
                   <div className="flex flex-col items-center justify-center flex-1 py-12 text-destructive text-center">
                     <AlertTriangle className="h-10 w-10 mb-3" />
-                    <p className="text-sm font-semibold">Analýza snímku zlyhala</p>
+                    <p className="text-sm font-semibold">{t("imaging.result.failed", "Analýza snímku zlyhala")}</p>
                     <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                      {currentAnalysis.errorMessage || "Došlo k neočakávanej chybe pri spracovaní snímku."}
+                      {currentAnalysis.errorMessage || t("imaging.result.failedDefault", "Došlo k neočakávanej chybe pri spracovaní snímku.")}
                     </p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center flex-1 py-16 text-muted-foreground text-center">
                     <Bot className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium text-foreground">
-                      Zatiaľ nebol vyhodnotený žiadny snímok
+                      {t("imaging.result.empty", "Zatiaľ nebol vyhodnotený žiadny snímok")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                      Vyberte pacienta, nahrajte snímok v ľavom paneli a kliknite na tlačidlo spustenia analýzy.
+                      {t("imaging.result.emptyHint", "Vyberte pacienta, nahrajte snímok v ľavom paneli a kliknite na tlačidlo spustenia analýzy.")}
                     </p>
                   </div>
                 )}

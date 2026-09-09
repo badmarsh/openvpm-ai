@@ -15,12 +15,14 @@ import { DemoConversionBar } from "@/components/demo/demo-conversion-bar";
 import { DemoFunnelTracker } from "@/components/demo/demo-funnel-tracker";
 import { RecoveryReviewBanner } from "@/components/layout/recovery-review-banner";
 import { ScribeWidget } from "@/components/layout/scribe-widget";
+import { useI18n } from "@/lib/i18n";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -55,7 +57,7 @@ export default function DashboardLayout({
             >
               <button
                 type="button"
-                aria-label="Close navigation"
+                aria-label={t("common.closeNavigation", "Zavrieť navigáciu")}
                 className="absolute inset-0 bg-black/40"
                 onClick={() => setMobileNavOpen(false)}
               />
@@ -68,7 +70,7 @@ export default function DashboardLayout({
                 />
                 <button
                   type="button"
-                  aria-label="Close navigation"
+                  aria-label={t("common.closeNavigation", "Zavrieť navigáciu")}
                   className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => setMobileNavOpen(false)}
                 >
