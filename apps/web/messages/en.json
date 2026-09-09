@@ -200,7 +200,17 @@
     },
     "newChat": "New session",
     "copiedToClipboard": "Copied to clipboard",
-    "copyReply": "Copy reply"
+    "copyReply": "Copy reply",
+    "newSessionStarted": "New assistant session started",
+    "export": {
+      "copy": "Copy",
+      "copyTitle": "Copy as Markdown",
+      "copied": "Conversation copied as Markdown",
+      "download": "Download",
+      "downloadTitle": "Download .md transcript",
+      "downloaded": "Conversation transcript downloaded",
+      "printTitle": "Print conversation"
+    }
   },
   "agent.accessRestricted": "Agent access is restricted",
   "agent.accessRestrictedDesc": "Only administrators and veterinarians can run the VET.IS Agent.",
