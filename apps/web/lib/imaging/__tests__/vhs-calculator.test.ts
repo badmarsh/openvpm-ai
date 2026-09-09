@@ -71,6 +71,35 @@ describe("Vertebral Heart Score (VHS) Calculator", () => {
     expect(result.clinicalInterpretationSk).toContain("zväčšenie srdca u mačky");
   });
 
+  it("applies breed-specific reference intervals for brachycephalic dogs (e.g. Boxer, Bulldog)", () => {
+    // Boxer with VHS 11.2v (normal for Boxer: 10.3 - 11.6v, but would be abnormal for standard dog)
+    const result = calculateVhs({
+      longAxisMm: 85,
+      shortAxisMm: 83,
+      t4VertebraLengthMm: 15,
+      species: "canine",
+      breed: "Boxer",
+    });
+
+    expect(result.vhsScore).toBe(11.2);
+    expect(result.status).toBe("normal");
+    expect(result.referenceRange).toContain("Boxer");
+  });
+
+  it("applies breed-specific reference intervals for deep-chested dogs (e.g. Doberman)", () => {
+    // Doberman with VHS 10.5v (borderline for Doberman: 9.2 - 10.2v)
+    const result = calculateVhs({
+      longAxisMm: 80,
+      shortAxisMm: 77.5,
+      t4VertebraLengthMm: 15,
+      species: "canine",
+      breed: "Doberman",
+    });
+
+    expect(result.vhsScore).toBe(10.5);
+    expect(result.status).toBe("borderline");
+  });
+
   it("rejects non-positive dimensions with descriptive error", () => {
     expect(() =>
       calculateVhs({

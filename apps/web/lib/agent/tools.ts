@@ -41,6 +41,9 @@ import {
   extRabiesObservations,
   microchipRegistrations,
   petPassports,
+  careReminders,
+  controlledSubstanceLog,
+  dischargeReports,
 } from "@openpims/db";
 import {
   appointmentCreatedWebhookPayload,
@@ -2169,6 +2172,332 @@ const recordVitalsFromSpeechTool: AgentTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Clinical Workflow & Practice Management Tools
+// ---------------------------------------------------------------------------
+
+const getInvoiceSummaryTool: AgentTool = {
+  name: "get_invoice_summary",
+  description:
+    "Get invoice and billing summary for a client or patient: total billed, paid amounts, outstanding balance, and list of recent invoices.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Optional Patient UUID" },
+      clientId: { type: "string", description: "Optional Client UUID" },
+    },
+  },
+  zod: z.object({
+    patientId: z.string().uuid().optional(),
+    clientId: z.string().uuid().optional(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId?: string;
+      clientId?: string;
+    };
+    const conditions = [
+      eq(invoices.practiceId, ctx.practiceId),
+      isNull(invoices.deletedAt),
+    ];
+    if (input.patientId) conditions.push(eq(invoices.patientId, input.patientId));
+    if (input.clientId) conditions.push(eq(invoices.clientId, input.clientId));
+
+    const rows = await ctx.db
+      .select({
+        id: invoices.id,
+        patientId: invoices.patientId,
+        clientId: invoices.clientId,
+        status: invoices.status,
+        total: invoices.total,
+        paidAmount: invoices.paidAmount,
+        createdAt: invoices.createdAt,
+      })
+      .from(invoices)
+      .where(and(...conditions))
+      .orderBy(desc(invoices.createdAt))
+      .limit(10);
+
+    let totalBilled = 0;
+    let totalPaid = 0;
+    let unpaidCount = 0;
+
+    for (const inv of rows) {
+      const tot = parseFloat(inv.total || "0");
+      const paid = parseFloat(inv.paidAmount || "0");
+      totalBilled += tot;
+      totalPaid += paid;
+      if (inv.status !== "paid" && inv.status !== "void") {
+        unpaidCount++;
+      }
+    }
+
+    return {
+      totalInvoicesCount: rows.length,
+      unpaidInvoicesCount: unpaidCount,
+      totalBilledEur: Math.round(totalBilled * 100) / 100,
+      totalPaidEur: Math.round(totalPaid * 100) / 100,
+      outstandingBalanceEur: Math.round((totalBilled - totalPaid) * 100) / 100,
+      invoices: rows,
+    };
+  },
+};
+
+const listOpenRemindersTool: AgentTool = {
+  name: "list_open_reminders",
+  description:
+    "List open clinical care reminders and follow-up tasks for a patient or practice.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Optional Patient UUID" },
+    },
+  },
+  zod: z.object({
+    patientId: z.string().uuid().optional(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as { patientId?: string };
+    const conditions = [
+      eq(careReminders.practiceId, ctx.practiceId),
+      eq(careReminders.status, "open"),
+      isNull(careReminders.deletedAt),
+    ];
+    if (input.patientId) conditions.push(eq(careReminders.patientId, input.patientId));
+
+    const rows = await ctx.db
+      .select({
+        id: careReminders.id,
+        patientId: careReminders.patientId,
+        patientName: patients.name,
+        title: careReminders.title,
+        dueDate: careReminders.dueDate,
+        notes: careReminders.notes,
+      })
+      .from(careReminders)
+      .innerJoin(patients, eq(careReminders.patientId, patients.id))
+      .where(and(...conditions))
+      .orderBy(asc(careReminders.dueDate))
+      .limit(20);
+
+    return rows;
+  },
+};
+
+const getLabResultsTool: AgentTool = {
+  name: "get_lab_results",
+  description:
+    "Get comprehensive laboratory analyzer reports and parsed analyte results for a patient.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Patient UUID" },
+      limit: { type: "number", description: "Max reports to inspect (default 5)" },
+    },
+    required: ["patientId"],
+  },
+  zod: z.object({
+    patientId: z.string().uuid(),
+    limit: z.number().int().min(1).max(20).default(5),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      limit: number;
+    };
+    const rows = await ctx.db
+      .select({
+        id: labAnalyzerReports.id,
+        sampleDate: labAnalyzerReports.sampleDate,
+        deviceModel: labAnalyzerReports.deviceModel,
+        deviceSerialNumber: labAnalyzerReports.deviceSerialNumber,
+        parsedResults: labAnalyzerReports.parsedResults,
+      })
+      .from(labAnalyzerReports)
+      .where(
+        and(
+          eq(labAnalyzerReports.practiceId, ctx.practiceId),
+          eq(labAnalyzerReports.patientId, input.patientId),
+          isNull(labAnalyzerReports.deletedAt),
+        ),
+      )
+      .orderBy(desc(labAnalyzerReports.sampleDate))
+      .limit(input.limit);
+
+    return rows.map((r) => ({
+      reportId: r.id,
+      sampleDate: r.sampleDate,
+      device: r.deviceModel,
+      results: r.parsedResults,
+    }));
+  },
+};
+
+const createPrescriptionTool: AgentTool = {
+  name: "create_prescription",
+  description:
+    "Create a medical prescription for a patient. Requires write mode. Drug name, dosage, and frequency are mandatory.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Patient UUID" },
+      medicationName: { type: "string", description: "Name of the prescribed medication" },
+      dosage: { type: "string", description: "Dosage (e.g. 50mg, 1 tablet)" },
+      frequency: { type: "string", description: "Frequency (e.g. 2x daily, q12h)" },
+      instructions: { type: "string", description: "Optional administration instructions" },
+      startDate: { type: "string", description: "YYYY-MM-DD start date (default today)" },
+    },
+    required: ["patientId", "medicationName", "dosage", "frequency"],
+  },
+  zod: z.object({
+    patientId: z.string().uuid(),
+    medicationName: z.string().min(1).max(255),
+    dosage: z.string().min(1).max(128),
+    frequency: z.string().min(1).max(128),
+    instructions: z.string().max(2000).optional(),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  }),
+  readOnly: false,
+  requiredApiScopes: ["records:write"],
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      medicationName: string;
+      dosage: string;
+      frequency: string;
+      instructions?: string;
+      startDate?: string;
+    };
+    if (!(await activePatient(ctx, input.patientId))) {
+      return { error: "Patient not found" };
+    }
+
+    const startDate = input.startDate || (await practiceDateInput(ctx));
+
+    const [created] = await ctx.db
+      .insert(prescriptions)
+      .values({
+        practiceId: ctx.practiceId,
+        patientId: input.patientId,
+        prescribedBy: ctx.userId,
+        medicationName: input.medicationName,
+        dosage: input.dosage,
+        frequency: input.frequency,
+        instructions: input.instructions ?? null,
+        startDate,
+        status: "active",
+      })
+      .returning();
+
+    return {
+      id: created!.id,
+      patientId: created!.patientId,
+      medicationName: created!.medicationName,
+      dosage: created!.dosage,
+      frequency: created!.frequency,
+      status: created!.status,
+    };
+  },
+};
+
+const getControlledSubstancesLogTool: AgentTool = {
+  name: "get_controlled_substances_log",
+  description:
+    "Query the statutory Controlled Substances Register (Kniha omamných a psychotropných látok — Zákon č. 362/2011 Z. z. / DEA Schedule) for the practice.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      drugName: { type: "string", description: "Optional medication name filter" },
+      limit: { type: "number", description: "Max log entries (default 25)" },
+    },
+  },
+  zod: z.object({
+    drugName: z.string().optional(),
+    limit: z.number().int().min(1).max(100).default(25),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as {
+      drugName?: string;
+      limit: number;
+    };
+    const conditions = [
+      eq(controlledSubstanceLog.practiceId, ctx.practiceId),
+      isNull(controlledSubstanceLog.deletedAt),
+    ];
+    if (input.drugName) {
+      conditions.push(ilike(controlledSubstanceLog.drugName, `%${input.drugName}%`));
+    }
+
+    const rows = await ctx.db
+      .select({
+        id: controlledSubstanceLog.id,
+        drugName: controlledSubstanceLog.drugName,
+        deaSchedule: controlledSubstanceLog.deaSchedule,
+        action: controlledSubstanceLog.action,
+        quantity: controlledSubstanceLog.quantity,
+        unit: controlledSubstanceLog.unit,
+        patientName: patients.name,
+        performedAt: controlledSubstanceLog.performedAt,
+        notes: controlledSubstanceLog.notes,
+      })
+      .from(controlledSubstanceLog)
+      .leftJoin(patients, eq(controlledSubstanceLog.patientId, patients.id))
+      .where(and(...conditions))
+      .orderBy(desc(controlledSubstanceLog.performedAt))
+      .limit(input.limit);
+
+    return rows;
+  },
+};
+
+const listDischargeReportsTool: AgentTool = {
+  name: "list_discharge_reports",
+  description:
+    "List previous patient discharge reports and home-care instructions.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      patientId: { type: "string", description: "Optional Patient UUID" },
+    },
+  },
+  zod: z.object({
+    patientId: z.string().uuid().optional(),
+  }),
+  readOnly: true,
+  async execute(args, ctx) {
+    const input = this.zod.parse(args) as { patientId?: string };
+    const conditions = [
+      eq(dischargeReports.practiceId, ctx.practiceId),
+      isNull(dischargeReports.deletedAt),
+    ];
+    if (input.patientId) {
+      conditions.push(eq(dischargeReports.patientId, input.patientId));
+    }
+
+    const rows = await ctx.db
+      .select({
+        id: dischargeReports.id,
+        patientId: dischargeReports.patientId,
+        petName: dischargeReports.petName,
+        diagnosis: dischargeReports.diagnosis,
+        treatment: dischargeReports.treatment,
+        followUp: dischargeReports.followUp,
+        status: dischargeReports.status,
+        createdAt: dischargeReports.createdAt,
+      })
+      .from(dischargeReports)
+      .where(and(...conditions))
+      .orderBy(desc(dischargeReports.createdAt))
+      .limit(10);
+
+    return rows;
+  },
+};
+
 export const AGENT_TOOLS: AgentTool[] = [
   findClient,
   findPatient,
@@ -2190,6 +2519,12 @@ export const AGENT_TOOLS: AgentTool[] = [
   checkRabiesObservationsTool,
   verifyMicrochipCrszTool,
   recordVitalsFromSpeechTool,
+  getInvoiceSummaryTool,
+  listOpenRemindersTool,
+  getLabResultsTool,
+  createPrescriptionTool,
+  getControlledSubstancesLogTool,
+  listDischargeReportsTool,
 ];
 
 export function getTool(name: string): AgentTool | undefined {

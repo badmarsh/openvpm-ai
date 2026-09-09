@@ -200,7 +200,17 @@
     },
     "newChat": "Nová relácia",
     "copiedToClipboard": "Skopírované do schránky",
-    "copyReply": "Kopírovať odpoveď"
+    "copyReply": "Kopírovať odpoveď",
+    "newSessionStarted": "Nová relácia asistenta spustená",
+    "export": {
+      "copy": "Kopírovať",
+      "copyTitle": "Kopírovať ako Markdown",
+      "copied": "Záznam konverzácie skopírovaný v Markdown formáte",
+      "download": "Stiahnuť",
+      "downloadTitle": "Stiahnuť .md súbor",
+      "downloaded": "Záznam konverzácie stiahnutý",
+      "printTitle": "Tlačiť konverzáciu"
+    }
   },
   "agent.accessRestricted": "Prístup k agentovi je obmedzený",
   "agent.accessRestrictedDesc": "Iba administrátori a veterinárni lekári môžu spúšťať asistenta VET.IS.",
