@@ -6,6 +6,8 @@ import {
   boolean,
   timestamp,
   index,
+  integer,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { baseColumns } from "./common";
@@ -84,6 +86,51 @@ export const extAiAuditLog = pgTable(
 
     /** Wall-clock time of clinician confirmation (not DB insert time). */
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }).notNull(),
+
+    // ── Chain Integrity Columns (v2, added 2026-09-09) ───────────────────────
+    // These columns implement the tamper-evident hash chain described in
+    // docs/ai-audit-ledger.md. All are nullable to allow safe migration of
+    // existing rows; new rows must always supply all chain fields.
+
+    /**
+     * Monotonically increasing sequence number per practiceId chain.
+     * Gaps or duplicates indicate a missing or inserted event.
+     */
+    sequenceNumber: integer("sequence_number"),
+
+    /**
+     * Role of the actor at the time of confirmation.
+     * Included in the integrity hash — excluded from actorName to keep
+     * the chain stable across legitimate name changes.
+     */
+    actorRole: text("actor_role"),
+
+    /**
+     * Stable machine-readable action identifier.
+     * e.g. "soap_note_finalized", "imaging_confirmed", "discharge_finalized".
+     */
+    actionType: text("action_type"),
+
+    /**
+     * SHA-256 hex digest of the previous event's `eventHash` in the same
+     * practice chain. NULL only for the genesis (first) event.
+     * Breaks in this linkage indicate inserted, deleted, or reordered events.
+     */
+    previousEventHash: text("previous_event_hash"),
+
+    /**
+     * SHA-256 hex digest of this event's canonical payload.
+     * Computed by `computeAiAuditEventHash()` in lib/ai/audit-chain.ts.
+     * Any alteration to the bound fields causes a recalculation mismatch.
+     */
+    eventHash: text("event_hash"),
+
+    /**
+     * Version of the canonical serialization algorithm used to compute
+     * `eventHash`. Currently always 1. Increment if the canonical format
+     * changes to allow the verifier to apply the correct algorithm.
+     */
+    canonicalizationVersion: integer("canonicalization_version").default(1),
   },
   (table) => ({
     practiceIdx: index("ext_ai_audit_log_practice_idx").on(
@@ -97,6 +144,15 @@ export const extAiAuditLog = pgTable(
     actorIdx: index("ext_ai_audit_log_actor_idx").on(
       table.actorId,
       table.confirmedAt,
+    ),
+    /**
+     * Unique constraint on (practiceId, sequenceNumber) enforces monotonic
+     * sequence integrity at the database level. NULLS are excluded from the
+     * unique constraint, allowing legacy rows without sequenceNumber.
+     */
+    practiceSeqUniq: uniqueIndex("ext_ai_audit_log_practice_seq_uniq").on(
+      table.practiceId,
+      table.sequenceNumber,
     ),
   }),
 );
