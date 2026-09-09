@@ -336,7 +336,7 @@ export default function VaccinationRecallsPage() {
                         <td className="py-4 pr-4">
                           <Link
                             href={`/patients/${recipient.patientId}`}
-                            className="font-medium text-primary hover:underline"
+                            className="font-bold text-foreground hover:underline"
                           >
                             {recipient.patientName}
                           </Link>

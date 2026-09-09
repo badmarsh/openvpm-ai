@@ -958,7 +958,7 @@ export default function CareRemindersPage() {
                         <td className="py-4 pr-4">
                           <Link
                             href={`/patients/${item.patientId}`}
-                            className="font-medium text-primary hover:underline"
+                            className="font-bold text-foreground hover:underline"
                           >
                             {item.patientName}
                           </Link>
