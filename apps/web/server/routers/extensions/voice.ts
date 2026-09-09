@@ -8,7 +8,7 @@ import {
   requireRole,
   requireFeature,
 } from "../../trpc";
-import { voiceDictations, patients, invoices, invoiceItems } from "@openpims/db";
+import { voiceDictations, patients, invoices, invoiceItems, extAiAuditLog } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { transcribeAudio } from "@/lib/voice/transcription";
 import {
@@ -20,6 +20,7 @@ import { hasSoapContent, SOAP_SECTION_MAX_LENGTH } from "@/lib/records/soap-cont
 import {
   AiDraftSafetyError,
   assertClinicianConfirmed,
+  buildAiConfirmationAuditTrail,
   optionalClinicianConfirmationInput,
   resolveAiRecordStatus,
 } from "@/lib/ai/draft-safety";
@@ -586,6 +587,34 @@ export const voiceRouter = createRouter({
             .update(voiceDictations)
             .set({ soapNoteId: note.id })
             .where(eq(voiceDictations.id, dictation.id));
+
+          // Human-in-the-loop SHA-256 audit trail (ŠVPS SR / KVL SR compliance)
+          const originalAiDraft = {
+            subjective: dictation.subjective,
+            objective: dictation.objective,
+            assessment: dictation.assessment,
+            plan: dictation.plan,
+          };
+          const audit = buildAiConfirmationAuditTrail({
+            actorId: ctx.user.id,
+            actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+            entityType: "soap_note",
+            entityId: note.id,
+            originalAiDraft,
+            finalClinicianContent: sections,
+          });
+          await ctx.db.insert(extAiAuditLog).values({
+            practiceId: ctx.practiceId,
+            actorId: ctx.user.id,
+            actorName: audit.actorName,
+            entityType: audit.entityType,
+            entityId: audit.entityId,
+            originalDraftHash: audit.originalDraftHash,
+            confirmedContentHash: audit.confirmedContentHash,
+            wasEditedByClinician: audit.wasEditedByClinician,
+            confirmedAt: audit.confirmedAt,
+          });
+
           return { ...note, patientId: dictation.patientId, status };
         }
 

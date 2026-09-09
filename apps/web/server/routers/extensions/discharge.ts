@@ -8,7 +8,7 @@ import {
   requireRole,
   requireFeature,
 } from "../../trpc";
-import { dischargeReports, patients, practices, extMarketingContentItems } from "@openpims/db";
+import { dischargeReports, patients, practices, extMarketingContentItems, extAiAuditLog } from "@openpims/db";
 import { configuredModel } from "@/lib/agent/runner";
 import { assertPatientNotDeceased } from "./_safety";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/marketing/messaging";
 import {
   CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE,
+  buildAiConfirmationAuditTrail,
   optionalClinicianConfirmationInput,
   resolveAiRecordStatus,
 } from "@/lib/ai/draft-safety";
@@ -192,6 +193,7 @@ export const dischargeRouter = createRouter({
         treatment: z.string().max(5000).optional(),
         followUp: z.string().max(5000).optional(),
         reportText: z.string().min(1).max(50_000),
+        originalAiDraft: z.string().max(50_000).optional(),
         language: z.string().max(8).default("sk"),
         status: z.enum(["draft", "finalized"]).default("draft"),
         clinicianConfirmed: optionalClinicianConfirmationInput,
@@ -263,6 +265,28 @@ export const dischargeRouter = createRouter({
       if (saved.status !== "finalized") {
         return saved;
       }
+
+      // Human-in-the-loop SHA-256 audit trail (ŠVPS SR / KVL SR compliance)
+      const originalAiDraft = input.originalAiDraft ?? input.reportText;
+      const audit = buildAiConfirmationAuditTrail({
+        actorId: ctx.user.id,
+        actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+        entityType: "discharge_report",
+        entityId: saved.id,
+        originalAiDraft,
+        finalClinicianContent: input.reportText,
+      });
+      await ctx.db.insert(extAiAuditLog).values({
+        practiceId: ctx.practiceId,
+        actorId: ctx.user.id,
+        actorName: audit.actorName,
+        entityType: audit.entityType,
+        entityId: audit.entityId,
+        originalDraftHash: audit.originalDraftHash,
+        confirmedContentHash: audit.confirmedContentHash,
+        wasEditedByClinician: audit.wasEditedByClinician,
+        confirmedAt: audit.confirmedAt,
+      });
 
       void dispatchWebhookEvent(ctx.practiceId, "discharge_report.finalized", {
         reportId: saved.id,

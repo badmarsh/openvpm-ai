@@ -24,7 +24,8 @@
     "clean": "turbo clean",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "verify:oss-release": "node scripts/verify-oss-release.mjs"
+    "verify:oss-release": "node scripts/verify-oss-release.mjs",
+    "audit:verify-ai": "pnpm --filter @openpims/db audit:verify-ai"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

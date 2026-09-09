@@ -22,6 +22,7 @@ import {
   rooms,
   soapNotes,
   extMarketingContentItems,
+  extAiAuditLog,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
@@ -36,6 +37,9 @@ import {
 import {
   AiDraftSafetyError,
   assertAiMayWriteToSoapNote,
+  assertClinicianConfirmed,
+  buildAiConfirmationAuditTrail,
+  clinicianConfirmationInput,
 } from "@/lib/ai/draft-safety";
 
 export const MEDICAL_IMAGING_SYSTEM_PROMPT = `You are a veterinary radiology AI assistant integrated into OpenVPM, an open-source veterinary practice management system.
@@ -624,6 +628,79 @@ export const imagingRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       return computeVhs(input);
+    }),
+
+  /**
+   * Formálne schválenie a potvrdenie rádiologického nálezu veterinárnym lekárom
+   * s kryptografickým audit trailom (ext_ai_audit_log).
+   */
+  confirmAnalysis: imagingProcedure
+    .input(
+      z.object({
+        analysisId: z.string().uuid(),
+        clinicianConfirmed: clinicianConfirmationInput,
+        finalReport: z.string().min(1).max(50_000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertClinicianConfirmed(input.clinicianConfirmed);
+      const [analysis] = await ctx.db
+        .select()
+        .from(aiImagingAnalyses)
+        .where(
+          and(
+            eq(aiImagingAnalyses.id, input.analysisId),
+            eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+            isNull(aiImagingAnalyses.deletedAt),
+          )
+        )
+        .limit(1);
+
+      if (!analysis) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
+      }
+
+      const originalAiDraft = analysis.result ?? "";
+      const audit = buildAiConfirmationAuditTrail({
+        actorId: ctx.user.id,
+        actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+        entityType: "imaging_analysis",
+        entityId: analysis.id,
+        originalAiDraft,
+        finalClinicianContent: input.finalReport,
+      });
+
+      await ctx.db.insert(extAiAuditLog).values({
+        practiceId: ctx.practiceId,
+        actorId: ctx.user.id,
+        actorName: audit.actorName,
+        entityType: audit.entityType,
+        entityId: audit.entityId,
+        originalDraftHash: audit.originalDraftHash,
+        confirmedContentHash: audit.confirmedContentHash,
+        wasEditedByClinician: audit.wasEditedByClinician,
+        confirmedAt: audit.confirmedAt,
+      });
+
+      const [updated] = await ctx.db
+        .update(aiImagingAnalyses)
+        .set({
+          result: input.finalReport,
+          status: "COMPLETED",
+          completedAt: new Date(),
+        })
+        .where(eq(aiImagingAnalyses.id, analysis.id))
+        .returning();
+
+      return {
+        success: true,
+        analysis: updated,
+        auditRecord: {
+          originalDraftHash: audit.originalDraftHash,
+          confirmedContentHash: audit.confirmedContentHash,
+          wasEditedByClinician: audit.wasEditedByClinician,
+        },
+      };
     }),
 
   /** Vytvorí anonymizovaný rádiologický kvíz ("Prípad týždňa") pre sociálne siete */
