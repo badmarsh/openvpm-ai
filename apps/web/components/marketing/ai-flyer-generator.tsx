@@ -274,6 +274,8 @@ export function AiFlyerGenerator({
             <img
               src={result.url}
               alt={result.prompt}
+              loading="lazy"
+              decoding="async"
               className="w-full h-auto max-h-96 object-contain bg-white"
             />
           </div>

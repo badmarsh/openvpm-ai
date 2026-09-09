@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { X } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/top-bar";
-import { CommandSearch } from "@/components/common/command-search";
 import { ErrorBoundary } from "@/components/common/error-boundary";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { OnboardingJourneyProvider } from "@/components/onboarding/journey-overlay";
@@ -16,6 +16,17 @@ import { DemoFunnelTracker } from "@/components/demo/demo-funnel-tracker";
 import { RecoveryReviewBanner } from "@/components/layout/recovery-review-banner";
 import { ScribeWidget } from "@/components/layout/scribe-widget";
 import { useI18n } from "@/lib/i18n";
+
+// The Cmd+K spotlight (cmdk + search UI) is only needed once the user opens
+// it. Code-splitting keeps it out of every dashboard page's initial bundle;
+// it renders only while open, so the chunk loads on first open at the latest.
+const CommandSearch = dynamic(
+  () =>
+    import("@/components/common/command-search").then(
+      (mod) => mod.CommandSearch,
+    ),
+  { ssr: false },
+);
 
 export default function DashboardLayout({
   children,
@@ -95,10 +106,12 @@ export default function DashboardLayout({
               <ErrorBoundary>{children}</ErrorBoundary>
             </main>
           </div>
-          <CommandSearch
-            open={searchOpen}
-            onClose={() => setSearchOpen(false)}
-          />
+          {searchOpen ? (
+            <CommandSearch
+              open={searchOpen}
+              onClose={() => setSearchOpen(false)}
+            />
+          ) : null}
           <ScribeWidget />
         </div>
         </WelcomeProvider>

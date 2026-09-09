@@ -923,6 +923,7 @@ function PracticeInfoTab() {
                   <img
                     src={practice.logoUrl}
                     alt="Practice logo"
+                    decoding="async"
                     className="h-14 w-14 rounded-lg border border-border object-cover"
                   />
                 ) : (

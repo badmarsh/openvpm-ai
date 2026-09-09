@@ -785,6 +785,8 @@ function VetIntelContent() {
                             <img
                               src={clinic.photoUrl}
                               alt={clinic.name}
+                              loading="lazy"
+                              decoding="async"
                               className="object-cover w-full h-full"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = "none";

@@ -9,7 +9,8 @@ import React, {
   useMemo,
 } from "react";
 import {
-  translations,
+  getDictionary,
+  loadDictionary,
   DEFAULT_LOCALE,
   LOCALES,
   type Locale,
@@ -87,6 +88,9 @@ export function I18nProvider({
   const [locale, setLocaleState] = useState<Locale>(
     initialLocale ?? DEFAULT_LOCALE
   );
+  // Bumped when a lazily-loaded (non-default) dictionary arrives so `t()`
+  // re-resolves against it. Default-locale users never trigger this.
+  const [extraDictLocale, setExtraDictLocale] = useState<Locale | null>(null);
 
   useEffect(() => {
     const detected = getStoredLocale();
@@ -97,6 +101,19 @@ export function I18nProvider({
       document.documentElement.lang = detected;
     }
   }, []);
+
+  // Load the code-split dictionary whenever a non-default locale is active.
+  // Until it arrives, `t()` falls back to the default-locale strings below.
+  useEffect(() => {
+    if (locale === DEFAULT_LOCALE) return;
+    let cancelled = false;
+    void loadDictionary(locale).then(() => {
+      if (!cancelled) setExtraDictLocale(locale);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
@@ -118,16 +135,16 @@ export function I18nProvider({
       params?: Record<string, string | number>
     ): string => {
       // 1. Try active locale dictionary
-      let val = getNestedValue(translations[locale] || {}, key);
+      let val = getNestedValue(getDictionary(locale) || {}, key);
 
       // 2. Upstream rule: fallback to English
       if (val === undefined && locale !== "en") {
-        val = getNestedValue(translations["en"] || {}, key);
+        val = getNestedValue(getDictionary("en") || {}, key);
       }
 
       // 3. Fallback to Slovak if active was English and key was missing
       if (val === undefined && locale !== "sk") {
-        val = getNestedValue(translations["sk"] || {}, key);
+        val = getNestedValue(getDictionary("sk") || {}, key);
       }
 
       // 4. Fallback to provided fallback string, or key itself
@@ -135,7 +152,8 @@ export function I18nProvider({
 
       return interpolate(resolved, params);
     },
-    [locale]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, extraDictLocale]
   );
 
   const value = useMemo(
@@ -163,7 +181,7 @@ export function useI18n() {
         params?: Record<string, string | number>
       ) => {
         const val =
-          getNestedValue(translations[DEFAULT_LOCALE] || {}, key) ??
+          getNestedValue(getDictionary(DEFAULT_LOCALE) || {}, key) ??
           fallback ??
           key;
         return interpolate(val, params);

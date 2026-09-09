@@ -13,6 +13,10 @@ const nextConfig = {
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
   experimental: {
     ...(process.env.NODE_ENV === "production"
       ? {
@@ -21,9 +25,12 @@ const nextConfig = {
             "@radix-ui/react-avatar",
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-label",
             "@radix-ui/react-popover",
+            "@radix-ui/react-select",
             "@radix-ui/react-separator",
             "@radix-ui/react-slot",
+            "@radix-ui/react-switch",
             "@radix-ui/react-tabs",
             "@radix-ui/react-tooltip",
             "@tanstack/react-query",

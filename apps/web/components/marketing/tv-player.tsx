@@ -36,7 +36,8 @@ export function TvPlayer({
       process.env.NODE_ENV === "production" &&
       typeof window !== "undefined" &&
       "serviceWorker" in navigator &&
-      !window.location.hostname.includes("localhost")
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1"
     ) {
       navigator.serviceWorker.register("/tv-sw.js", { scope: "/tv/" }).catch(() => {});
     }
@@ -128,6 +129,7 @@ export function TvPlayer({
               <img
                 src={currentSlide.imageUrl}
                 alt={currentSlide.title}
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             </div>

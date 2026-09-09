@@ -262,7 +262,9 @@ describe("middleware security headers", () => {
   });
 
   it("runs on dynamic public and API routes so headers are global", () => {
-    expect(config.matcher).toEqual(["/((?!_next).*)"]);
+    expect(config.matcher).toEqual([
+      "/((?!_next|.*\\.(?:avif|bmp|css|csv|gif|ico|jpg|jpeg|js|json|map|mp4|png|svg|txt|webm|webp|woff2?|xml|webmanifest)$).*)",
+    ]);
   });
 
   it("also configures app-wide headers for static and framework assets", async () => {

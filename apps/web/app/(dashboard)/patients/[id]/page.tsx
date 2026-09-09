@@ -3813,6 +3813,8 @@ function VisitDocuments({
               <img
                 src={file.fileUrl}
                 alt={file.fileName}
+                loading="lazy"
+                decoding="async"
                 className="h-16 w-16 rounded-md border border-border object-cover transition-opacity hover:opacity-80"
               />
             </a>

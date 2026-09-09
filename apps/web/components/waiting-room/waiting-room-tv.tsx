@@ -339,6 +339,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
             <img
               src={branding.logoUrl}
               alt="Logo"
+              decoding="async"
               className="h-10 w-10 rounded-lg object-cover"
             />
           ) : (

@@ -173,6 +173,7 @@ export function BrandingStep({
             <img
               src={currentLogo}
               alt="Practice logo"
+              decoding="async"
               className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
             />
           ) : (

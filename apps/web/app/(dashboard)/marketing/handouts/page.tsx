@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Copy,
   Plus,
@@ -327,11 +328,12 @@ export default function HandoutsPage() {
                 {/* 2. Flyer Thematic Inset Illustration */}
                 <div className="p-3.5 pb-0">
                   <div className="relative h-44 w-full overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-950 border border-stone-200/70 dark:border-stone-800 shadow-inner">
-                    <img
+                    <Image
                       src={theme.src}
                       alt={theme.alt}
-                      className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-transparent" />
 
