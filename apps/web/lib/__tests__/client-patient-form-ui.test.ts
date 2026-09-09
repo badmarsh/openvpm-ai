@@ -148,7 +148,7 @@ describe("client and patient form UI states", () => {
     expect(newClient).toContain("First clinic day, step 1 of 3");
     expect(newClient).toContain("&setup=first-visit`");
     expect(newPatient).toContain('searchParams.get("setup") === "first-visit"');
-    expect(newPatient).toContain("First clinic day, step 2 of 3");
+    expect(newPatient).toContain('t("patients.form.firstClinicDayStep2"');
     expect(newPatient).toContain(
       "`/schedule?setup=first-visit&patient=${encodeURIComponent(patient.name)}`"
     );

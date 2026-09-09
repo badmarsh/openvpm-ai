@@ -367,9 +367,10 @@ export default function PatientDuplicatesPage() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Never merge charts merely because pet names match. Confirm the
-            owner, species, DOB, microchip, external identity, and both charts'
-            contents. Historical records are never silently reassigned.
+            {t(
+              "patients.duplicates.mergeWarning",
+              "Nikdy nezlučujte karty len preto, že sa zhodujú mená zvierat. Overte majiteľa, druh, dátum narodenia, mikročip, externú identitu a obsah oboch kariet. Historické záznamy sa nikdy potichu nepreradia.",
+            )}
           </p>
         </div>
       </div>
@@ -410,7 +411,7 @@ export default function PatientDuplicatesPage() {
                 {t("patients.duplicates.confirmMergeTitle", "Merge safety preview")}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Preview is recalculated on the server before the merge commits.
+                {t("patients.duplicates.previewRecalculated", "Náhľad sa pred potvrdením zlúčenia prepočíta na serveri.")}
               </p>
             </div>
             <Button
@@ -449,7 +450,7 @@ export default function PatientDuplicatesPage() {
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-md border border-border p-3">
                   <h4 className="text-sm font-semibold">
-                    Retained-history checks
+                    {t("patients.duplicates.retainedHistoryChecks", "Kontroly zachovanej histórie")}
                   </h4>
                   <dl className="mt-2 space-y-1 text-sm">
                     {Object.entries(preview.data.blockerCounts).map(
@@ -484,7 +485,7 @@ export default function PatientDuplicatesPage() {
               {!preview.data.allowed ? (
                 <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
                   <p className="font-semibold">
-                    Keep both chart identities—this merge is blocked.
+                    {t("patients.duplicates.mergeBlocked", "Ponechajte obe identity kariet – toto zlúčenie je zablokované.")}
                   </p>
                   <ul className="mt-2 list-disc space-y-1 pl-5">
                     {preview.data.reasons.map((blockReason) => (
@@ -497,9 +498,10 @@ export default function PatientDuplicatesPage() {
                   <div className="flex items-start gap-2">
                     <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <p>
-                      The retiring chart has no retained history. Any explicitly
-                      listed prospective work will move atomically; an immutable
-                      identity event will preserve who merged it, when, and why.
+                      {t(
+                        "patients.duplicates.mergeAllowed",
+                        "Zanikajúca karta nemá žiadnu zachovanú históriu. Všetka výslovne uvedená budúca práca sa presunie atomicky; nemenná udalosť identity zachová, kto zlúčenie vykonal, kedy a prečo.",
+                      )}
                     </p>
                   </div>
                 </div>

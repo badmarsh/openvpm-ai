@@ -40,11 +40,67 @@
       "setup": "Setup",
       "metrics": "Metrics",
       "analytics": "Analytics",
-      "actions": "Actions"
+      "actions": "Actions",
+      "status": "Status",
+      "locations": "Locations",
+      "staff": "Staff",
+      "baseMrr": "Base MRR",
+      "clients": "Clients",
+      "patients": "Patients",
+      "country": "Country",
+      "joined": "Joined",
+      "nextAction": "Next action",
+      "cohortWeek": "Cohort week"
     },
     "actions": {
       "extendTrial": "Extend 14 days",
       "history": "History"
+    },
+    "hostedSms": {
+      "loadError": "Could not load hosted SMS configuration diagnostics."
+    },
+    "smsHealth": {
+      "loadError": "Could not load SMS operations health.",
+      "loading": "Loading SMS operations health…"
+    },
+    "recovery": {
+      "noVerifiedContact": "No verified admin contact",
+      "trialEnds": "Ends {date}",
+      "noTrialEnd": "No trial end",
+      "empty": "No clinic workspaces need activation recovery.",
+      "loadError": "Could not load activation recovery.",
+      "loading": "Loading activation recovery…"
+    },
+    "messaging": {
+      "notSubmitted": "Not submitted",
+      "noNumber": "No number",
+      "readCarrierStatus": "Read current carrier status",
+      "empty": "No clinics have submitted carrier details yet.",
+      "loadError": "Could not load messaging registrations.",
+      "loading": "Loading messaging registrations…",
+      "historyTitle": "Carrier lifecycle history",
+      "closeHistory": "Close history",
+      "historyLoadError": "Could not load carrier lifecycle history.",
+      "historyEmpty": "No carrier lifecycle evidence has been recorded.",
+      "selectHistoryAgain": "Select History again to load carrier evidence."
+    },
+    "journey": {
+      "empty": "No first-party journey cohorts recorded yet.",
+      "loadError": "Could not load journey cohorts.",
+      "loading": "Loading journey cohorts..."
+    },
+    "practices": {
+      "noActiveContact": "No active admin contact",
+      "includeInReporting": "Include this practice in conversion reporting",
+      "excludeFromReporting": "Exclude this internal or test practice from conversion reporting",
+      "extendTrialTitle": "Give this trial 14 more days",
+      "empty": "No practices yet.",
+      "extendTrialError": "Could not extend the trial",
+      "analyticsError": "Could not update funnel inclusion"
+    },
+    "funnel": {
+      "loadError": "Could not load the funnel.",
+      "loading": "Loading funnel..."
     }
   },
   "agent": {
@@ -56,7 +112,8 @@
     "backToDashboard": "Back to dashboard",
     "welcome": {
       "title": "What can I help you with?",
-      "subtitle": "AI is built into VET.IS. Ask a question in plain words, or start with one of these."
+      "subtitle": "AI is built into VET.IS. Ask a question in plain words, or start with one of these.",
+      "hint": "Pick a question from the left panel or type your own below."
     },
     "suggestions": {
       "vaccinations": "Which patients are overdue for vaccinations?",
@@ -77,7 +134,8 @@
       "hostedUnavailable": "The agent is not available right now. We are on it. Please check back soon.",
       "configVertexPrefix": "Configure Google Vertex AI with",
       "configVertexMid": "and service-account credentials for Gemini, or set",
-      "configVertexSuffix": "for an explicit Claude model."
+      "configVertexSuffix": "for an explicit Claude model.",
+      "ready": "The AI assistant is ready and fully configured"
     },
     "composer": {
       "placeholder": "Ask the agent anything…  (Enter to send, Shift+Enter for a new line)",
@@ -85,13 +143,64 @@
       "placeholderUnavailable": "The agent is not available right now.",
       "allowWrites": "Allow writes: appointments and patient vitals",
       "send": "Send",
-      "writeWarning": "Write mode can create appointments or record patient vitals. It turns off automatically after this run."
+      "writeWarning": "Write mode can create appointments or record patient vitals. It turns off automatically after this run.",
+      "sending": "Sending..."
     },
     "trace": {
       "toolCallSingular": "{count} tool call",
       "toolCallFew": "{count} tool calls",
       "toolCallMany": "{count} tool calls"
-    }
+    },
+    "badge": "Clinical AI Copilot",
+    "tabs": {
+      "chat": "Assistant",
+      "capabilities": "Capabilities"
+    },
+    "capabilitiesTitle": "Clinical and administrative capabilities of the assistant",
+    "capabilitiesSubtitle": "Overview of the tools and automations the OpenVPM AI assistant has available in real time.",
+    "capabilities": {
+      "tryQuery": "Try this query",
+      "badgeRead": "Read",
+      "badgeReadWrite": "Read & Write",
+      "badgeCalculator": "Calculator",
+      "badgeDataProtection": "Data protection",
+      "recordsSearch": {
+        "title": "Chart search",
+        "desc": "Instant access to patient records, treatment history, booster vaccinations and lab results.",
+        "query": "Which patients have expired vaccinations?"
+      },
+      "appointments": {
+        "title": "Appointment management",
+        "desc": "Overview of today's visits, clinic capacity and scheduling of new rechecks in write mode.",
+        "query": "Summarize today's appointments and booked patients."
+      },
+      "pharmacology": {
+        "title": "Veterinary pharmacology",
+        "desc": "Drug dose calculation (e.g. NSAIDs, antibiotics, anaesthetics) by body weight and species.",
+        "query": "What is the carprofen dose for a 12 kg dog?"
+      },
+      "safeWrite": {
+        "title": "Safe write mode",
+        "desc": "Bookings or patient vitals are only written with your explicit one-time consent.",
+        "activate": "Activate write mode"
+      }
+    },
+    "systemCardTitle": "Assistant status and mode",
+    "quickQuestions": "Quick veterinary questions",
+    "tipsTitle": "How to ask the assistant",
+    "tips": {
+      "naturalLanguage": "Ask in plain language about patients, dosing or appointments.",
+      "context": "The assistant keeps conversation context for up to 12 previous messages.",
+      "writeMode": "To edit the chart, remember to enable write mode above."
+    },
+    "chatTitle": "Conversation",
+    "chat": {
+      "messagesInSession": "{count} messages in this session",
+      "readyForQuery": "Ready for your query"
+    },
+    "newChat": "New session",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyReply": "Copy reply"
   },
   "agent.accessRestricted": "Agent access is restricted",
   "agent.accessRestrictedDesc": "Only administrators and veterinarians can run the VET.IS Agent.",
@@ -726,7 +835,9 @@
       "noConsentEvents": "No consent events have been recorded yet.",
       "consentGranted": "Consent granted",
       "consentRevoked": "Consent revoked",
-      "phoneChangedNotice": "The phone number changed, so prior SMS consent will be removed unless the client explicitly re-consents."
+      "phoneChangedNotice": "The phone number changed, so prior SMS consent will be removed unless the client explicitly re-consents.",
+      "smsPausedNoConsent": "Text reminders are paused until the client has current SMS consent.",
+      "doNotTextPhonePending": "Save or discard the unsaved phone change before using this action."
     },
     "detail": {
       "contactInfo": "Contact Information",
@@ -816,7 +927,11 @@
     "continue": "Continue",
     "finish": "Finish",
     "retry": "Retry",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "pleaseRetry": "Please retry.",
+    "closeNavigation": "Close navigation",
+    "saveChanges": "Save changes",
+    "edit": "Edit"
   },
   "common.cancel": "Cancel",
   "common.save": "Save",
@@ -959,7 +1074,9 @@
         "completed": "Completed",
         "cancelled": "Cancelled",
         "no_show": "No show"
-      }
+      },
+      "unknownPatient": "Unknown Patient",
+      "withDoctor": "with {name}"
     },
     "followUps": {
       "title": "Follow-up work queue",
@@ -1615,7 +1732,9 @@
       "emptyTitle": "No suppliers yet",
       "emptyDesc": "Add supplier contact details so reorder workflows have the right vendor information at hand.",
       "addFirstSupplier": "Add first supplier"
-    }
+    },
+    "adjustStockAria": "Adjust stock for {name}",
+    "startTrackingAria": "Start stock tracking for {name}"
   },
   "labResults": {
     "loadingInbox": "Loading clinic lab inbox…",
@@ -1827,6 +1946,36 @@
         "death": "Despite the vet's efforts, we lost our beloved pet. The staff was very empathetic.",
         "praise": "Excellent care! The vet was patient and our dog was calm throughout the entire examination."
       }
+    },
+    "media": {
+      "editPrefix": "edit",
+      "aiEdit": "AI edit"
+    },
+    "consents": {
+      "createSuccess": "Consent recorded successfully.",
+      "createError": "Failed to save consent.",
+      "revokeSuccess": "Consent revoked and marketing items blocked.",
+      "revokeError": "Failed to revoke consent.",
+      "selectClientError": "Select a client.",
+      "scope": "Scope"
+    },
+    "compliance": {
+      "title": "GDPR, consents and scripts",
+      "subtitle": "GDPR and media consent records together with operational scripts for staff."
+    },
+    "tv": {
+      "deleteConfirm": "Do you really want to delete the slide “{title}”?",
+      "openPublicScreen": "Open TV screen",
+      "editSlideTitle": "Edit slide",
+      "newSlideTitle": "Add new slide",
+      "fieldActive": "Active on TV screen",
+      "colActions": "Actions"
+    },
+    "website": {
+      "title": "Clinic website",
+      "subtitle": "A public showcase page generated directly from clinic data, opening hours and reviews.",
+      "statusPublished": "Online / Published",
+      "statusDraft": "In preparation (Draft)"
     }
   },
   "nav": {
@@ -1972,7 +2121,12 @@
       "creating": "Creating...",
       "cancel": "Cancel",
       "change": "Change",
-      "close": "Close"
+      "close": "Close",
+      "fieldVisitLocation": "Field visit location",
+      "selectLocation": "Select location...",
+      "startingVisit": "Starting visit...",
+      "fieldVisit": "Start field visit",
+      "chooseLocationHelp": "Choose where this field visit is managed."
     },
     "form": {
       "titleNew": "New Patient",
@@ -2008,7 +2162,11 @@
       "loadError": "Unable to load patient",
       "checkingAccess": "Checking patient access...",
       "readOnlyNotice": "Patient actions are read-only",
-      "readOnlyDesc": "Only staff roles with patient write access can manage patients."
+      "readOnlyDesc": "Only staff roles with patient write access can manage patients.",
+      "firstClinicDayStep2": "First clinic day, step 2 of 3: add this owner's pet. Booking is next.",
+      "choosePatient": "Choose a patient from the Patients list before editing.",
+      "name": "Name",
+      "microchipNumber": "Microchip Number"
     },
     "profile": {
       "age": "Age",
@@ -2063,7 +2221,9 @@
       "legacyAllergyRemoval": "Legacy removal retained. This predates permanent allergy correction attribution, so no reason or clinician is available.",
       "microchipCopied": "Microchip copied to clipboard",
       "copyMicrochip": "Click to copy microchip",
-      "callClient": "Call client"
+      "callClient": "Call client",
+      "uploadPhoto": "Upload photo",
+      "tryPhotoAgain": "Try photo again"
     },
     "vitals": {
       "title": "Vitals",
@@ -2092,7 +2252,8 @@
       "colWeight": "Weight",
       "colBcs": "BCS",
       "colPain": "Pain",
-      "colStatus": "Chart status"
+      "colStatus": "Chart status",
+      "markedErrorSuccess": "Vital signs retained and marked entered in error"
     },
     "weight": {
       "title": "Weight History",
@@ -2105,7 +2266,8 @@
       "trendFromTo": "{from} kg to {to} kg",
       "weightUnit": "Weight ({unit})",
       "weightCol": "Weight ({unit})",
-      "recordedBy": "Recorded By"
+      "recordedBy": "Recorded By",
+      "recordWeight": "Record weight"
     },
     "vaccinations": {
       "title": "Vaccinations",
@@ -2147,7 +2309,12 @@
       "editDetails": "Edit details",
       "enteredInError": "Entered in error",
       "recorded": "Recorded",
-      "loadError": "Unable to load vaccination records."
+      "loadError": "Unable to load vaccination records.",
+      "certUpdatedSuccess": "Certificate details updated with an audit entry",
+      "markedErrorSuccess": "Vaccination retained and marked entered in error",
+      "certDownloadedSuccess": "Certificate downloaded",
+      "loadErrorRetry": "Unable to load vaccination records. Please retry.",
+      "loading": "Loading vaccinations..."
     },
     "recordsTab": {
       "title": "Medical Records",
@@ -2184,7 +2351,10 @@
       "addAddendum": "Add addendum",
       "addAttributedAddendum": "Add attributed addendum",
       "addendaNotice": "Addenda cannot be edited or deleted after saving.",
-      "saveAddendum": "Save addendum"
+      "saveAddendum": "Save addendum",
+      "voidSoapSuccess": "SOAP note retained and marked entered in error",
+      "unknownAuthor": "Unknown author",
+      "addendumSuccess": "Addendum added to the finalized record"
     },
     "documentsTab": {
       "title": "Documents & Imaging",
@@ -2252,7 +2422,15 @@
       "executeMerge": "Merge and retire duplicate",
       "successToast": "Duplicate chart retired with an immutable merge record",
       "noDuplicatesTitle": "No duplicates found",
-      "noDuplicatesDesc": "All patient charts appear unique with no duplicates detected."
+      "noDuplicatesDesc": "All patient charts appear unique with no duplicates detected.",
+      "mergeWarning": "Never merge charts merely because pet names match. Confirm the owner, species, DOB, microchip, external identity, and both charts' contents. Historical records are never silently reassigned.",
+      "previewRecalculated": "Preview is recalculated on the server before the merge commits.",
+      "retainedHistoryChecks": "Retained-history checks",
+      "mergeBlocked": "Keep both chart identities—this merge is blocked.",
+      "mergeAllowed": "The retiring chart has no retained history. Any explicitly listed prospective work will move atomically; an immutable identity event will preserve who merged it, when, and why.",
+      "canonicalChartOpened": "Opened the canonical chart for a merged patient identity",
+      "mergedIntoNotice": "{name} was merged into this chart by {performedBy} on {date}.",
+      "reasonPrefix": "Reason: {reason}"
     },
     "historySearch": {
       "findTitle": "Find in patient history",
@@ -2314,6 +2492,14 @@
       "active": "Active",
       "inactive": "Inactive",
       "deceased": "Deceased"
+    },
+    "detail": {
+      "photoUpdated": "Patient photo updated",
+      "summaryDownloaded": "Medical summary downloaded",
+      "chartSectionsAria": "Patient chart sections"
+    },
+    "list": {
+      "openPatientAria": "Open patient {name}"
     }
   },
   "recalls": {
@@ -2498,7 +2684,10 @@
       "subjective": "Subjective (S)",
       "objective": "Objective (O)",
       "assessment": "Assessment (A)",
-      "plan": "Plan (P)"
+      "plan": "Plan (P)",
+      "loadingEditor": "Loading editor...",
+      "legalTamperProof": "Legal clinical record",
+      "draftNotice": "This record is in draft stage."
     }
   },
   "records.backToVisit": "Back to visit",
@@ -3094,7 +3283,8 @@
     "header": {
       "title": "Settings",
       "subtitle": "Practice configuration and staff management",
-      "guides": "Guides"
+      "guides": "Guides",
+      "sectionsAria": "Settings sections"
     },
     "access": {
       "checking": "Checking settings access...",
@@ -3117,7 +3307,8 @@
     },
     "common": {
       "loadError": "Could not load settings",
-      "retry": "Retry"
+      "retry": "Retry",
+      "create": "Create"
     },
     "practice": {
       "save": "Save Changes",
@@ -3301,6 +3492,154 @@
         "date": "Date",
         "doctor": "Doctor"
       }
+    },
+    "locations": {
+      "created": "Location created",
+      "updated": "Location updated",
+      "primaryUpdated": "Primary location updated",
+      "loadErrorTitle": "Could not load locations",
+      "loadErrorMessage": "The locations request finished without returning data. Try loading it again before editing practice locations.",
+      "description": "Locations power texting setup, room assignment, reminders, and hosted billing quantity.",
+      "add": "Add Location",
+      "namePlaceholder": "Location name",
+      "phonePlaceholder": "Phone",
+      "addressPlaceholder": "Address",
+      "makePrimary": "Make this the primary location",
+      "noAddress": "No address on file",
+      "emptyTitle": "No active locations configured",
+      "emptyDescription": "Add a location to power rooms, reminders, texting setup, and hosted billing quantities.",
+      "keepOneActive": "A practice must keep at least one active location."
+    },
+    "billing": {
+      "checkoutUnavailable": "Billing checkout is unavailable. Please try again.",
+      "clientPaymentSetupUnavailable": "Client payment setup is unavailable. Please try again.",
+      "clientPaymentStatusRefreshed": "Client payment status refreshed",
+      "loadErrorTitle": "Could not load billing details",
+      "loadErrorMessage": "The billing details request finished without returning data. Try loading it again.",
+      "activateAccount": "Activate your account",
+      "yourCloudSubscription": "Your Cloud subscription",
+      "activateDescription": "Choose a billing schedule, then add your payment details in secure Stripe Checkout. Your workspace and trial stay exactly as they are.",
+      "planKeepsActive": "{plan} keeps your clinic workspace active with unlimited staff.",
+      "readOnlyNotice": "Cloud is in read-only mode. Activating billing restores full access without changing your records.",
+      "billedYearly": "${amount} billed once per year",
+      "billedMonthly": "${amount} billed monthly",
+      "noChargeToday": "No charge today. {days} trial day(s) remaining.",
+      "stripeStoresPayment": "Stripe securely collects and stores your payment method.",
+      "perYear": "${amount} per year",
+      "perMonth": "${amount} per month",
+      "manageInStripe": "Update payment details, invoices, or cancellation securely in Stripe.",
+      "manageBilling": "Manage billing",
+      "usageThisMonth": "This month: {sms} of {smsIncluded} included texts · {ai} of {aiIncluded} included AI actions",
+      "payoutsEnabled": "Enabled",
+      "payoutsPending": "Pending",
+      "payoutsNa": "N/A"
+    },
+    "staff": {
+      "updated": "Staff member updated",
+      "loadErrorTitle": "Could not load staff",
+      "loadErrorMessage": "The staff list request finished without returning data. Try loading it again before adding or editing staff.",
+      "inviteByEmail": "Invite by email",
+      "add": "Add Staff",
+      "emailPlaceholder": "Email",
+      "nameOptionalPlaceholder": "Name (optional)",
+      "sendInvite": "Send invite",
+      "copied": "Copied",
+      "fullNamePlaceholder": "Full name",
+      "phoneOptionalPlaceholder": "Phone (optional)",
+      "licenseOptionalPlaceholder": "License # (optional)",
+      "veterinarianProviderHint": "Veterinarian provider — appears in doctor lists and can sign doctor-required visits.",
+      "emptyTitle": "No staff members found",
+      "emptyDescription": "Invite teammates or create a staff login to finish practice setup."
+    },
+    "appointmentTypes": {
+      "created": "Appointment type created",
+      "updated": "Appointment type updated",
+      "deleted": "Appointment type deleted",
+      "loadErrorTitle": "Could not load appointment types",
+      "loadErrorMessage": "The appointment type request finished without returning data. Try loading it again before editing scheduling defaults.",
+      "add": "Add Type",
+      "namePlaceholder": "Type name",
+      "durationPlaceholder": "Duration (minutes)"
+    },
+    "rooms": {
+      "created": "Room created",
+      "loadErrorTitle": "Could not load rooms",
+      "loadErrorMessage": "The room list request finished without returning data. Try loading it again before editing rooms.",
+      "add": "Add Room",
+      "namePlaceholder": "Room name",
+      "locationAria": "Clinic location",
+      "emptyTitle": "No rooms configured",
+      "emptyDescription": "Add rooms so appointments can reserve exam, treatment, surgery, or boarding spaces."
+    },
+    "wellness": {
+      "created": "Wellness plan created",
+      "loadErrorTitle": "Could not load wellness plans",
+      "loadErrorMessage": "The wellness plan request finished without returning data. Try loading it again before editing membership plans.",
+      "namePlaceholder": "Plan name",
+      "pricePlaceholder": "Price",
+      "descriptionOptionalPlaceholder": "Description (optional)",
+      "inactive": "Inactive",
+      "emptyTitle": "No wellness plans configured",
+      "emptyDescription": "Create a plan to package preventive care into scheduled invoice memberships."
+    },
+    "templates": {
+      "created": "Template created",
+      "updated": "Template updated",
+      "loadErrorTitle": "Could not load templates",
+      "loadErrorMessage": "The template list request finished without returning data. Try loading it again before editing treatment templates.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "loadingItems": "Loading template items...",
+      "itemsLoadErrorTitle": "Could not load template items",
+      "itemsLoadErrorMessage": "The template detail request finished without returning data. Try loading it again before using this treatment template.",
+      "missingProduct": "Missing or archived inventory product — recreate this template before use.",
+      "noItemsTitle": "No items in this template",
+      "noItemsDescription": "Add default services or products when creating a new treatment template.",
+      "add": "Add Template",
+      "namePlaceholder": "Template name",
+      "itemTypeAria": "Item type {index}",
+      "selectItemHint": "Search for and select an active service or inventory product for every template row.",
+      "addItem": "Add Item",
+      "emptyTitle": "No templates configured",
+      "emptyDescription": "Create reusable treatment templates for common service and product bundles."
+    },
+    "data": {
+      "backupMissingSections": "Backup is missing required sections",
+      "recheckCsv": "Check the CSV again before importing.",
+      "clientCsvChecked": "Client CSV checked",
+      "clientsImported": "Clients imported",
+      "patientCsvChecked": "Patient CSV checked",
+      "patientsImported": "Patients imported",
+      "vaccinesImported": "Vaccine history imported",
+      "medicalCsvChecked": "Medical history CSV checked",
+      "medicalImported": "Medical history imported",
+      "backupReadError": "Could not read backup JSON",
+      "csvEmpty": "CSV file is empty",
+      "csvReadError": "Could not read CSV file",
+      "fileChanged": "The file or source changed. Check the CSV again.",
+      "dropCsvHere": "Drag and drop a CSV file here, or click to select",
+      "csvSizeLimit": "CSV files must be 5 MB or less. The file is dry-run first; no rows import until you confirm.",
+      "csvMatchingHint": "Existing owners connect by one exact email. Existing pets need a matching microchip or date of birth before an ID is connected.",
+      "dryRunComplete": "Dry run complete",
+      "nothingImportedYet": "No data has been imported yet.",
+      "statRowsParsed": "Rows parsed",
+      "statWillImport": "Will import",
+      "statDuplicates": "Duplicates",
+      "statIdsToConnect": "IDs to connect",
+      "statMissingOwners": "Missing owners",
+      "statMissingPets": "Missing pets",
+      "statRowIssues": "Row issues",
+      "rowIssuesCount": "{count} row issue(s):",
+      "onlyListedChanges": "Only the {changes} listed changes will be saved. {issues} issue row(s) will be skipped.",
+      "startSmallSample": "Start with a small representative sample. A confirmed import has no one-click rollback.",
+      "confirmImport": "Confirm Import ({count} changes)",
+      "recordsImported": "{count} records imported successfully",
+      "recordIdsConnected": "{count} existing record IDs connected",
+      "errorsCount": "{count} error(s):",
+      "importFirst": "Select the source system first.",
+      "importTitle": "Data Import",
+      "importDescription": "Transitioning from another system? Import clients first, then patients, vaccination history, and finally medical history (visits). Each file is checked in a dry run first so you can see duplicates and missing records before anything is saved. Common column names from AVImark, Cornerstone, and ezyVet are recognized. Shepherd migrations are accompanied to verify the exact clinic export format. Owner and patient IDs stay linked across files, even when an owner has no email.",
+      "importSourceLabel": "Data source:"
     }
   },
   "website": {
@@ -4810,5 +5149,427 @@
     "syncFs": "Sync FS",
     "syncPending": "Syncing...",
     "viewReceipt": "View receipt"
+  },
+  "voice": {
+    "soap": {
+      "subjective": "Subjective (S)",
+      "objective": "Objective (O)",
+      "assessment": "Assessment (A)",
+      "plan": "Plan (P)",
+      "subjectiveDesc": "History, signalment, owner complaints",
+      "objectiveDesc": "Clinical triad, physical exam, findings",
+      "assessmentDesc": "Working diagnosis, differential diagnoses",
+      "planDesc": "Medication, exact doses, diet, recheck",
+      "title": "Structured SOAP record",
+      "sectionsCount": "{count}/4 sections",
+      "styleStandard": "Standard",
+      "styleDetailed": "Detailed",
+      "styleConcise": "Concise",
+      "copyFullTitle": "Copy the full SOAP record",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copiedFull": "The full SOAP record was copied",
+      "copyHeader": "CLINICAL RECORD (SOAP)",
+      "copyDate": "Date",
+      "charCount": "{count} chars",
+      "sectionPlaceholder": "Fill in {section}...",
+      "noData": "No data"
+    },
+    "page": {
+      "title": "Voice Dictation",
+      "badge": "Clinical AI transcription",
+      "subtitle": "Accurate speech transcription with veterinary terminology and automatic SOAP structuring.",
+      "tabEditor": "Dictation",
+      "tabHistory": "Dictation history",
+      "loading": "Loading voice dictation...",
+      "unknownPatient": "Unknown patient",
+      "patientSelected": "Patient “{name}” was selected",
+      "processingDone": "Transcription and SOAP analysis completed",
+      "processingFailed": "Dictation processing failed",
+      "reformatted": "SOAP reformatted in style: {style}",
+      "reformatFailed": "Reformatting failed",
+      "savedFinalized": "The SOAP record was confirmed and saved to the chart",
+      "savedDraft": "The SOAP record was saved as a draft – finalize it in the chart",
+      "viewPatient": "View patient",
+      "saveFailed": "Saving the SOAP record failed",
+      "loadedToEditor": "Dictation loaded into the editor",
+      "templateProcessed": "Template “{title}” was processed successfully",
+      "soapCopied": "SOAP record copied to clipboard"
+    },
+    "commands": {
+      "newNoteReady": "A new patient note is ready",
+      "selectPatientFirst": "Select a patient first to start the consultation",
+      "pressMic": "Press the microphone button to start dictating",
+      "readyToProcess": "Recording ready for processing",
+      "noSoapYet": "No generated SOAP record is available yet",
+      "paragraphInserted": "New paragraph inserted",
+      "bulletInserted": "Bullet point inserted",
+      "numberedInserted": "Numbered list inserted",
+      "boldInserted": "Bold text formatting inserted",
+      "recognized": "Recognized command: {phrase}"
+    },
+    "demo": {
+      "load": "Load demo recording",
+      "notFound": "Demo recording not found",
+      "loadError": "Failed to load the demo audio",
+      "loaded": "Demo recording loaded",
+      "failed": "Loading the demo recording failed"
+    },
+    "history": {
+      "title": "Voice dictation history",
+      "forPatient": "Previous dictations for patient {name}.",
+      "selectPatientHint": "Select a patient in the editor to view their dictation history.",
+      "noPatient": "No patient selected",
+      "noPatientHint": "Go back to the editor and select the patient whose history you want to view.",
+      "goToEditor": "Go to editor",
+      "empty": "No dictations have been recorded for patient {name} yet.",
+      "itemTitle": "Dictation",
+      "statusCompleted": "Processed",
+      "statusSaved": "Saved to chart",
+      "statusDraft": "Draft",
+      "noDescription": "No description of findings",
+      "audioSeconds": "{seconds} s of audio",
+      "loadToEditor": "Load into editor"
+    },
+    "patient": {
+      "selectTitle": "Select patient for dictation *",
+      "chart": "Patient chart",
+      "clear": "Clear"
+    },
+    "deceased": {
+      "title": "Patient status notice",
+      "desc": "This patient is recorded as deceased/euthanized. The record will be stored in the archive."
+    },
+    "templates": {
+      "label": "Quick templates & tools",
+      "voiceCommands": "Voice commands",
+      "allTemplates": "All templates",
+      "quick": {
+        "preventive": "Preventive check-up",
+        "gastro": "Gastroenteritis",
+        "postOp": "Post-operative recheck"
+      }
+    },
+    "recording": {
+      "title": "Voice recording of the exam",
+      "seconds": "{seconds} seconds",
+      "hintReady": "Press the microphone and dictate the history, clinical findings and medication.",
+      "hintSelectPatient": "Select a patient above first to enable recording.",
+      "playerTitle": "Dictation recording ({seconds} seconds)",
+      "recordAgain": "Record again",
+      "process": "Process with Gemini AI",
+      "processing": "AI is analysing and structuring the veterinary dictation...",
+      "processingHint": "Converting audio to text and categorising it into the SOAP structure."
+    },
+    "transcript": {
+      "title": "Raw dictation transcript",
+      "charCount": "{count} characters",
+      "placeholder": "You can paste or edit the raw text here...",
+      "reformat": "Reformat into SOAP"
+    },
+    "soapCard": {
+      "title": "Clinical SOAP record",
+      "empty": "No generated SOAP record",
+      "emptyHint": "Select a patient, record audio or choose a clinical template from the menu on the left."
+    },
+    "save": {
+      "confirmAria": "I confirm that I have reviewed the AI transcript and am finalizing the record",
+      "confirmLabel": "I confirm that I have reviewed the AI transcript and am finalizing the record under my name. Without confirmation it is saved only as a draft.",
+      "saving": "Saving SOAP to the patient chart...",
+      "saved": "Saved to the patient chart",
+      "confirmAndFinalize": "Confirm and finalize the SOAP record",
+      "saveDraft": "Save as a draft in the patient records"
+    },
+    "billing": {
+      "itemsRecognized": "{count} billable items recognized.",
+      "extractFailed": "Item extraction failed: {message}",
+      "invoiceCreated": "A draft invoice ({total} €) was created in the system.",
+      "invoiceFailed": "Error creating the bill: {message}",
+      "extracting": "Extracting billable items...",
+      "extractButton": "Extract medications and procedures to the bill / register",
+      "modalTitle": "Billable items from the voice recording",
+      "modalHint": "These items and administered medications were automatically recognized from the treatment plan. You can adjust quantities or prices before issuing the bill.",
+      "colItem": "Item / Medication",
+      "colCategory": "Category",
+      "colQuantity": "Quantity",
+      "colUnitPrice": "Unit price (€)",
+      "colTotal": "Total (€)",
+      "colAction": "Action",
+      "dose": "Dose",
+      "categoryMedication": "Medication",
+      "categoryService": "Procedure",
+      "totalWithVat": "Total for items incl. VAT",
+      "cancel": "Cancel",
+      "noPatient": "No patient selected.",
+      "createInvoice": "Create draft invoice",
+      "goToEkasa": "Go to the e-Kasa register"
+    }
+  },
+  "imaging": {
+    "title": "Image Analysis",
+    "badge": "AI X-ray & Diagnostics",
+    "subtitle": "AI-assisted analysis of X-rays, CT, MRI, ultrasound and clinical photographs.",
+    "tabs": {
+      "editor": "New analysis",
+      "history": "Image history"
+    },
+    "types": {
+      "xray": "X-ray",
+      "ct": "CT",
+      "mri": "MRI",
+      "ultrasound": "Ultrasound",
+      "photo": "Clinical photo"
+    },
+    "presets": {
+      "label": "Quick diagnostic focus",
+      "presetThorax": "Thorax / Heart & Lungs",
+      "presetAbdomen": "Abdomen / Foreign body",
+      "presetExtremity": "Limbs / Fracture",
+      "presetDental": "Dental X-ray",
+      "presetSkin": "Dermatology / Skin"
+    },
+    "defaultClientName": "Client",
+    "toast": {
+      "dicomLoaded": "DICOM file loaded. Decoding the image.",
+      "dicomReady": "The image has been processed and is ready for upload and AI analysis.",
+      "uploaded": "Image uploaded successfully",
+      "uploadFailed": "Upload failed",
+      "analysisDone": "AI image analysis completed",
+      "analysisFailed": "Analysis failed",
+      "presetApplied": "Preset “{name}” applied",
+      "copied": "Findings copied to clipboard",
+      "popupBlocked": "The pop-up window was blocked",
+      "loadedToPreview": "Analysis loaded into the preview"
+    },
+    "history": {
+      "title": "Imaging exam history",
+      "forPatient": "Previous analyses for patient {name}.",
+      "selectPatientHint": "Select a patient in the editor to view their imaging history.",
+      "noPatient": "No patient selected",
+      "noPatientHint": "Go back to the editor and select the patient whose images you want to view.",
+      "goToEditor": "Go to editor",
+      "empty": "No analyses have been recorded for patient {name} yet.",
+      "itemTitle": "{type} image",
+      "defaultPrompt": "Standard diagnostic analysis",
+      "loadResult": "Load findings"
+    },
+    "status": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "inProgress": "In progress"
+    },
+    "patient": {
+      "selectTitle": "Select patient for the exam *",
+      "clearSelection": "Clear selection",
+      "searchPlaceholder": "Search patient by name...",
+      "searchInputPlaceholder": "Search patient...",
+      "noneFound": "No patients found",
+      "defaultSpecies": "animal"
+    },
+    "deceased": {
+      "title": "Patient status notice",
+      "desc": "This patient is recorded as deceased. The exam record will be attached to the archived chart."
+    },
+    "upload": {
+      "title": "Image upload *",
+      "formats": "Supported formats: JPG, PNG, WebP and medical DICOM (.dcm) up to 10 MB",
+      "dicomFormat": "DICOM format",
+      "close": "Close",
+      "clickToSelect": "Click to select an image",
+      "hint": "X-ray (.dcm), CT, MRI, ultrasound or macroscopic photo",
+      "chooseFile": "Choose file",
+      "previewAlt": "Image preview",
+      "change": "Change",
+      "uploading": "Uploading image to secure storage...",
+      "uploadButton": "Upload image to patient",
+      "ready": "The image is securely ready for AI analysis"
+    },
+    "config": {
+      "title": "Analysis configuration",
+      "imageType": "Imaging modality",
+      "promptLabel": "Clinical focus / Question for the AI (optional)",
+      "promptPlaceholder": "E.g.: Focus on the lung fields, suspected oedema or a foreign body in the stomach...",
+      "analyzing": "Processing radiological analysis...",
+      "analyzeButton": "Run AI image analysis"
+    },
+    "result": {
+      "title": "AI analysis result",
+      "copy": "Copy",
+      "print": "Print / PDF",
+      "processing": "The multimodal model is processing the image...",
+      "processingHint": "Evaluating radiological structures and tissue density and formulating a clinical assessment.",
+      "analysisFor": "Analysis for",
+      "disclaimer": "Notice: AI analysis of diagnostic imaging is supportive and advisory only. The final diagnosis always rests with the attending veterinarian.",
+      "failed": "Image analysis failed",
+      "failedDefault": "An unexpected error occurred while processing the image.",
+      "empty": "No image has been analysed yet",
+      "emptyHint": "Select a patient, upload an image in the left panel and click the run analysis button."
+    },
+    "vhs": {
+      "button": "VHS heart calculator",
+      "title": "Vertebral Heart Score (VHS) – Buchanan method",
+      "normFeline": "Cat: normal < 8.0 v",
+      "normCanine": "Dog: normal 8.5–10.5 v",
+      "longAxis": "Long axis L (mm)",
+      "shortAxis": "Short axis S (mm)",
+      "t4": "Vertebra T4 (mm)",
+      "species": "Patient species",
+      "speciesCanine": "Dog (canine)",
+      "speciesFeline": "Cat (feline)",
+      "calculate": "Calculate VHS",
+      "interpretation": "Clinical interpretation of the finding",
+      "invalidInput": "Enter valid positive dimensions in millimetres",
+      "scoreToast": "VHS score: {score} v ({status})",
+      "calcError": "Error calculating VHS"
+    },
+    "quiz": {
+      "button": "Educational X-ray quiz (KVL SR)",
+      "title": "Image quiz of the week for social media (KVL SR)",
+      "anonymizedBadge": "Anonymised educational post",
+      "questionLabel": "Quiz question for the public",
+      "questionPlaceholder": "What did this radiograph reveal?",
+      "correctAnswer": "Correct answer (A)",
+      "correctPlaceholder": "e.g. Foreign body in the stomach",
+      "wrongB": "Wrong option (B)",
+      "wrongBPlaceholder": "e.g. Normal finding",
+      "wrongC": "Wrong option (C)",
+      "wrongCPlaceholder": "e.g. Gastric torsion",
+      "optionB": "Option B",
+      "optionC": "Option C",
+      "channel": "Channel",
+      "channelGoogle": "Google Profile",
+      "createButton": "Create quiz in content plan",
+      "viewInPlan": "View in content plan",
+      "needAnalysis": "Run or select an AI image analysis first",
+      "needCorrectAnswer": "Enter the correct quiz answer",
+      "created": "The radiology quiz was added to the marketing plan!",
+      "createFailed": "Failed to create the post."
+    }
+  },
+  "discharge": {
+    "defaultClientName": "Client",
+    "defaultPetName": "Patient",
+    "defaultSpecies": "animal",
+    "presetApplied": "Preset “{name}” applied",
+    "marketingFailed": "Failed to create the post.",
+    "copyFailed": "Failed to copy",
+    "sympathyFlow": "Sympathy Flow",
+    "languageSk": "Slovak (SK)",
+    "languageEn": "English (EN)",
+    "smsBadge": "160 chars",
+    "smsCharCount": "{count} / 160 characters",
+    "smsPreparing": "Preparing the SMS summary and medication schedule...",
+    "smsGenerating": "Generating SMS text...",
+    "smsCopied": "SMS copied to clipboard",
+    "copiedShort": "Copied",
+    "copySms": "Copy SMS",
+    "medColumn": "Medication / Dosage",
+    "regimenColumn": "Regimen / Instruction",
+    "yes": "Yes",
+    "noHomeMedication": "No specific oral home medication was prescribed for this patient.",
+    "channel": "Channel",
+    "channelGoogle": "Google Profile",
+    "marketingQueued": "Queued in the marketing studio as a draft",
+    "openInPlan": "Open in content plan"
+  },
+  "vetIntel": {
+    "badge": "AI Market & Legislation",
+    "hubSubtitle": "Central hub for market intelligence: competitor monitoring, price benchmarking, official ŠVPS SR gazettes, drug registrations and KVL SR regulations.",
+    "loading": "Loading Vet Intelligence...",
+    "nav": {
+      "market": "Market & Competition",
+      "marketDesc": "Benchmark, reviews, regional analysis",
+      "bulletin": "Official Gazettes & Law",
+      "bulletinDesc": "ŠVPS SR, KVL SR, ŠÚKL",
+      "strategy": "AI Strategy & Trends",
+      "strategyDesc": "Reddit, LinkedIn, global tips",
+      "portals": "Portals"
+    },
+    "market": {
+      "analysisUpdated": "Competitor and market analysis updated successfully",
+      "analysisFailed": "Failed to run market analysis",
+      "minQuery": "Enter at least 2 characters of the location",
+      "complianceTitle": "KVL SR legal and ethical protection (Act No. 39/2007 Coll. and the Advertising Act)",
+      "complianceDesc": "Market analysis outputs are intended solely for internal strategic decision-making and optimising your clinic's services. Naming and directly comparing other practices, or disparaging colleagues in public communication, violates the KVL SR Code of Ethics and is automatically blocked by our marketing validator.",
+      "searchPlaceholder": "Enter a city, district or postal code (e.g. Bratislava Ružinov, Žilina, Košice...)",
+      "analyzeButton": "Analyse market",
+      "quickPick": "Quick pick",
+      "emptyTitle": "No competitor analysis yet",
+      "emptyDesc": "Enter a city or location in the form above and click Analyse market.",
+      "runSample": "Run sample analysis",
+      "region": "Region",
+      "generatedAt": "Generated",
+      "sampleBadge": "Reference benchmark",
+      "liveBadge": "Live Google Maps grounding",
+      "clinicsInRegion": "Veterinary practices in the region ({count})",
+      "pricing": "Pricing",
+      "openInMaps": "Open in Google Maps"
+    },
+    "digest": {
+      "title": "Weekly market digest by e-mail",
+      "desc": "Every Monday morning the region is checked for changes (new clinics, rating changes, reviews) and a summary is sent to staff.",
+      "on": "On",
+      "off": "Off",
+      "enabledToast": "Weekly market digest enabled",
+      "disabledToast": "Weekly market digest disabled",
+      "toggleFailed": "Failed to change digest setting"
+    },
+    "bulletin": {
+      "gazetteTitle": "Slovak Veterinary Legislation Gazette",
+      "gazetteSources": "ŠVPS SR · KVL SR · ŠÚKL · ÚŠKVBL · Clinical standards",
+      "volume": "Volume {year}",
+      "slovLexPortal": "Slov-Lex portal",
+      "searchPlaceholder": "Search legislation...",
+      "filterAll": "All",
+      "filterAlert": "Alerts",
+      "filterRegulation": "KVL regulations",
+      "filterDrug": "Drugs",
+      "filterAdvisory": "Clinical standards",
+      "issued": "Issued",
+      "effectiveFrom": "Effective from",
+      "fullText": "Full text",
+      "hideFullText": "Hide full text ▲",
+      "showFullText": "Show full text ▼",
+      "officialPortal": "Official portal",
+      "noResults": "No results for the selected filter.",
+      "verdictPass": "✅ KVL SR: OK",
+      "verdictWarn": "⚠️ KVL SR: Warning",
+      "verdictFixed": "🚫 KVL SR: Corrected",
+      "postCreated": "Educational post created and saved to the plan. {verdict}",
+      "postFailed": "Failed to create post"
+    },
+    "tips": {
+      "title": "AI-curated tips from around the world 🌍",
+      "desc": "Real experiences of veterinarians from Reddit, LinkedIn, Hacker News and professional forums. Tips are selected based on community engagement and relevance to the veterinary business.",
+      "curatedBadge": "AI curated",
+      "categoryLabel": "Category",
+      "allWithCount": "All ({count})",
+      "votes": "{count} votes",
+      "comments": "{count} comments",
+      "sourceLink": "Source",
+      "recommendationsTitle": "AI recommendations from your latest market analysis",
+      "category": {
+        "pricing": "Pricing",
+        "retention": "Client retention",
+        "marketing": "Marketing",
+        "staffing": "Staffing & HR",
+        "tech": "Technology",
+        "growth": "Growth & Expansion"
+      },
+      "source": {
+        "reddit": "Reddit",
+        "linkedin": "LinkedIn",
+        "hackernews": "Hacker News",
+        "forum": "VetBiz Forum",
+        "newsletter": "Newsletter",
+        "research": "Research report"
+      }
+    }
+  },
+  "migrationArchive": {
+    "totalsAria": "Imported history totals",
+    "sectionsAria": "Imported history sections",
+    "searchAria": "Search {section}",
+    "detailsAria": "Imported record details"
   }
 }

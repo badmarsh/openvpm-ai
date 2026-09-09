@@ -269,7 +269,7 @@ export default function MediaPage() {
                           )}
                           {(asset.meta as any)?.edit?.preset && (asset.meta as any).edit.preset !== "none" && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-500/15 text-teal-800 dark:text-teal-300">
-                              edit: {(asset.meta as any).edit.preset}
+                              {t("marketing.media.editPrefix", "úprava")}: {(asset.meta as any).edit.preset}
                             </span>
                           )}
                         </div>
@@ -319,6 +319,7 @@ const PRESETS: { key: "none" | "enhance" | "warm" | "bw" | "soft"; label: string
 const CROPS: ("1:1" | "4:5" | "9:16" | "16:9")[] = ["1:1", "4:5", "9:16", "16:9"];
 
 function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => void }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [overlay, setOverlay] = useState((asset.meta as any)?.edit?.overlay ?? "");
@@ -373,7 +374,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
             onClick={() => setOpen(true)}
             className="flex-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 px-2 py-1.5 text-[11px] font-bold text-teal-850 dark:text-teal-300 hover:bg-teal-100 transition cursor-pointer inline-flex items-center justify-center gap-1 border border-teal-200/50 dark:border-teal-800/40"
           >
-            <Wand2 size={11} /> AI edit
+            <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
           </button>
           <button
             disabled={deleteMutation.isPending}
@@ -404,7 +405,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
     <div className="rounded-xl border border-teal-500/30 bg-card p-2.5 space-y-2 pt-2 text-left">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 text-teal-800 dark:text-teal-300 font-bold text-[10px] uppercase tracking-wide">
-          <Wand2 size={11} /> AI edit
+          <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
         </div>
         <button
           onClick={() => setOpen(false)}

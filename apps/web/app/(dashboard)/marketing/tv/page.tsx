@@ -121,7 +121,7 @@ export default function TvSlidesPage() {
   };
 
   const handleDelete = (slide: SlideItem) => {
-    if (window.confirm(t("marketing.tv.deleteConfirm", `Naozaj chcete vymazať slajd "${slide.title}"?`))) {
+    if (window.confirm(t("marketing.tv.deleteConfirm", `Naozaj chcete vymazať slajd "${slide.title}"?`, { title: slide.title }))) {
       deleteMutation.mutate({ id: slide.id });
     }
   };

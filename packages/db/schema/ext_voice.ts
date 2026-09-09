@@ -65,6 +65,9 @@ export const voiceDictations = pgTable(
 
     // GDPR: audio sa automaticky maže po 24 hodinách
     audioDeletedAt: timestamp("audio_deleted_at", { withTimezone: true }),
+    // GDPR: plánovaný čas zmazania surového audia (nastavený pri vytvorení záznamu = now + 24h).
+    // Nullable/aditívny stĺpec – staršie záznamy sa čistia podľa completedAt.
+    scheduledDeleteAt: timestamp("scheduled_delete_at", { withTimezone: true }),
   },
   (table) => ({
     practiceIdx: index("voice_dictations_practice_idx").on(
