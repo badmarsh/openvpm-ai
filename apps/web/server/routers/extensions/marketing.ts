@@ -294,8 +294,8 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
             usedAi: true,
           };
         }
-      } catch (err) {
-        console.warn("AI generation fallback to templates:", err);
+      } catch {
+        // AI unavailable – fall back to validated Slovak templates below.
       }
 
       // 3. Fallback na overené slovenské šablóny
