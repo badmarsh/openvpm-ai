@@ -2315,7 +2315,6 @@ const getLabResultsTool: AgentTool = {
         id: labAnalyzerReports.id,
         sampleDate: labAnalyzerReports.sampleDate,
         deviceModel: labAnalyzerReports.deviceModel,
-        deviceSerialNumber: labAnalyzerReports.deviceSerialNumber,
         parsedResults: labAnalyzerReports.parsedResults,
       })
       .from(labAnalyzerReports)
