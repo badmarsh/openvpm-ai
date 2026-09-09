@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Link from "next/link";
 import {
   FileText,
   Send,
@@ -21,6 +22,12 @@ import {
   History,
   RotateCcw,
   Stethoscope,
+  MessageSquare,
+  Megaphone,
+  ShieldCheck,
+  ExternalLink,
+  Share2,
+  Clock,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -129,9 +136,35 @@ export default function DischargePage() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"editor" | "history">("editor");
 
+  // Advanced AI pillars: SMS, Pill schedule, Marketing
+  const [resultSubTab, setResultSubTab] = useState<"report" | "sms_schedule" | "marketing">("report");
+  const [smsScheduleData, setSmsScheduleData] = useState<{
+    smsText: string;
+    medicationSchedule: Array<{
+      medicationName: string;
+      dosage: string;
+      frequency: string;
+      morning: boolean;
+      noon: boolean;
+      evening: boolean;
+      night: boolean;
+      withFood: boolean;
+      notes: string;
+    }>;
+    warningSigns: string[];
+  } | null>(null);
+  const [marketingPostData, setMarketingPostData] = useState<{
+    item: any;
+    validationReport: any;
+  } | null>(null);
+  const [smsCopied, setSmsCopied] = useState(false);
+  const [marketingChannel, setMarketingChannel] = useState<"instagram" | "facebook" | "google_business">("instagram");
+
   // Mutations
   const generateMutation = trpc.extensions.discharge.generate.useMutation();
   const saveMutation = trpc.extensions.discharge.save.useMutation();
+  const generateSmsMutation = trpc.extensions.discharge.generateSmsAndSchedule.useMutation();
+  const createMarketingPostMutation = trpc.extensions.discharge.createMarketingPostFromCase.useMutation();
 
   // History query
   const historyQuery = trpc.extensions.discharge.listRecent.useQuery(undefined, {
@@ -206,10 +239,25 @@ export default function DischargePage() {
         setResult(res.text);
         setUsedAi(res.usedAi);
         setViewMode("preview");
+        setResultSubTab("report");
         toast.success(
           res.usedAi
             ? t("discharge.aiBadge", "AI Generated")
             : t("discharge.templateBadge", "Clinical Template")
+        );
+
+        // Pre-fetch SMS and medication schedule
+        generateSmsMutation.mutate(
+          {
+            petName: petName.trim(),
+            diagnosis: diagnosis.trim(),
+            treatment: treatment.trim() || undefined,
+            followUp: followUp.trim() || undefined,
+            language,
+          },
+          {
+            onSuccess: (smsData) => setSmsScheduleData(smsData),
+          },
         );
       }
     } catch (error) {
@@ -217,6 +265,26 @@ export default function DischargePage() {
       toast.error(
         t("discharge.generationFailed", "Failed to generate report.")
       );
+    }
+  };
+
+  const handleCreateMarketingPost = async () => {
+    if (!diagnosis.trim()) {
+      toast.error(t("discharge.validationError", "Please enter at least the pet name and diagnosis."));
+      return;
+    }
+    try {
+      const res = await createMarketingPostMutation.mutateAsync({
+        petName: petName.trim() || "Pacient",
+        species: species.trim() || undefined,
+        diagnosis: diagnosis.trim(),
+        treatment: treatment.trim() || undefined,
+        channel: marketingChannel,
+      });
+      setMarketingPostData(res);
+      toast.success(t("discharge.marketingSuccess", "Post successfully drafted and added to content plan!"));
+    } catch (err) {
+      toast.error("Nepodarilo sa vytvoriť príspevok.");
     }
   };
 
@@ -800,6 +868,79 @@ export default function DischargePage() {
                 )}
               </CardHeader>
 
+              {/* Advanced AI Sub-tabs: Report / SMS & Pill Schedule / Social Marketing */}
+              {result && (
+                <div className="flex items-center border-b border-border bg-muted/20 px-3 overflow-x-auto">
+                  <button
+                    type="button"
+                    onClick={() => setResultSubTab("report")}
+                    className={cn(
+                      "px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 shrink-0",
+                      resultSubTab === "report"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    {t("discharge.tabs.report", "Discharge Report")}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResultSubTab("sms_schedule");
+                      if (!smsScheduleData && result) {
+                        generateSmsMutation.mutate(
+                          {
+                            petName: petName.trim(),
+                            diagnosis: diagnosis.trim(),
+                            treatment: treatment.trim() || undefined,
+                            followUp: followUp.trim() || undefined,
+                            language,
+                          },
+                          {
+                            onSuccess: (data) => setSmsScheduleData(data),
+                          }
+                        );
+                      }
+                    }}
+                    className={cn(
+                      "px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 shrink-0",
+                      resultSubTab === "sms_schedule"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {t("discharge.tabs.smsSchedule", "SMS & Pill Schedule")}
+                    {smsScheduleData && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+                        160z
+                      </Badge>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setResultSubTab("marketing")}
+                    className={cn(
+                      "px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 shrink-0",
+                      resultSubTab === "marketing"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Megaphone className="h-3.5 w-3.5" />
+                    {t("discharge.tabs.marketing", "Educational Post (Ethics)")}
+                    {marketingPostData && (
+                      <Badge className="bg-emerald-600 text-white text-[10px] px-1 py-0 h-4">
+                        ✓
+                      </Badge>
+                    )}
+                  </button>
+                </div>
+              )}
+
               <CardContent className="flex-1 p-4 flex flex-col min-h-0">
                 {generateMutation.isPending ? (
                   <div className="flex flex-col items-center justify-center h-full min-h-[350px] text-center p-8 text-muted-foreground gap-3">
@@ -809,22 +950,278 @@ export default function DischargePage() {
                     </p>
                   </div>
                 ) : result ? (
-                  viewMode === "preview" ? (
-                    <div className="flex-1 overflow-y-auto p-6 rounded-lg bg-muted/40 border border-border" data-discharge-preview>
-                      <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-heading prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-hr:border-border">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                        >
-                          {result}
-                        </ReactMarkdown>
+                  resultSubTab === "report" ? (
+                    viewMode === "preview" ? (
+                      <div className="flex-1 overflow-y-auto p-6 rounded-lg bg-muted/40 border border-border" data-discharge-preview>
+                        <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-heading prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-hr:border-border">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                          >
+                            {result}
+                          </ReactMarkdown>
+                        </div>
                       </div>
+                    ) : (
+                      <Textarea
+                        value={result}
+                        onChange={(e) => setResult(e.target.value)}
+                        className="flex-1 min-h-[400px] font-mono text-xs leading-relaxed resize-none"
+                      />
+                    )
+                  ) : resultSubTab === "sms_schedule" ? (
+                    <div className="space-y-5 overflow-y-auto flex-1 pr-1">
+                      {/* 160-char SMS Card */}
+                      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                            <h4 className="text-xs font-bold text-foreground">
+                              {t("discharge.smsTextLabel", "SMS Message for Owner (max 160 chars)")}
+                            </h4>
+                          </div>
+                          <Badge
+                            variant={
+                              (smsScheduleData?.smsText.length ?? 0) <= 160
+                                ? "secondary"
+                                : "destructive"
+                            }
+                            className="text-[11px] font-mono"
+                          >
+                            {smsScheduleData?.smsText.length ?? 0} / 160 znakov
+                          </Badge>
+                        </div>
+
+                        <div className="rounded-lg bg-muted/50 p-3 text-xs text-foreground font-mono leading-relaxed border border-border/60">
+                          {generateSmsMutation.isPending ? (
+                            <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Pripravujem SMS súhrn a liekový rozvrh...</span>
+                            </div>
+                          ) : (
+                            smsScheduleData?.smsText ||
+                            "SMS text sa generuje..."
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1.5"
+                            onClick={async () => {
+                              if (!smsScheduleData?.smsText) return;
+                              await navigator.clipboard.writeText(smsScheduleData.smsText);
+                              setSmsCopied(true);
+                              toast.success("SMS skopírovaná do schránky");
+                              setTimeout(() => setSmsCopied(false), 2000);
+                            }}
+                          >
+                            {smsCopied ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                            {smsCopied ? "Skopírované" : "Kopírovať SMS"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Visual Pill Schedule Table */}
+                      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <h4 className="text-xs font-bold text-foreground">
+                            {t("discharge.medScheduleTitle", "Home Medication Schedule")}
+                          </h4>
+                        </div>
+
+                        {smsScheduleData?.medicationSchedule && smsScheduleData.medicationSchedule.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-left border-collapse">
+                              <thead>
+                                <tr className="border-b text-muted-foreground">
+                                  <th className="py-2 px-2.5 font-semibold">Liek / Dávkovanie</th>
+                                  <th className="py-2 px-2 text-center font-semibold">Ráno (☀️)</th>
+                                  <th className="py-2 px-2 text-center font-semibold">Obed (🌤️)</th>
+                                  <th className="py-2 px-2 text-center font-semibold">Večer (🌙)</th>
+                                  <th className="py-2 px-2 text-center font-semibold">Noc (🌑)</th>
+                                  <th className="py-2 px-2.5 font-semibold">Režim / Pokyn</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {smsScheduleData.medicationSchedule.map((item, idx) => (
+                                  <tr key={idx} className="border-b hover:bg-muted/30">
+                                    <td className="py-2 px-2.5 font-medium text-foreground">
+                                      {item.medicationName}
+                                      {item.dosage && (
+                                        <span className="block text-[11px] text-muted-foreground">
+                                          {item.dosage}
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                      {item.morning ? (
+                                        <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] px-1.5 py-0">
+                                          Áno
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground/40">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                      {item.noon ? (
+                                        <Badge className="bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30 text-[10px] px-1.5 py-0">
+                                          Áno
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground/40">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                      {item.evening ? (
+                                        <Badge className="bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 text-[10px] px-1.5 py-0">
+                                          Áno
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground/40">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-2 text-center">
+                                      {item.night ? (
+                                        <Badge className="bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[10px] px-1.5 py-0">
+                                          Áno
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground/40">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-2.5 text-muted-foreground">
+                                      {item.withFood ? (
+                                        <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-300 mr-1">
+                                          S krmivom
+                                        </Badge>
+                                      ) : null}
+                                      {item.notes}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic py-2">
+                            Pre tohto pacienta nebola predpísaná žiadna špecifická domáca perorálna medikácia.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Warning signs box */}
+                      {smsScheduleData?.warningSigns && smsScheduleData.warningSigns.length > 0 && (
+                        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 space-y-2">
+                          <h4 className="text-xs font-bold text-destructive flex items-center gap-1.5">
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                            {t("discharge.warningSignsTitle", "Warning Signs (when to call immediately)")}
+                          </h4>
+                          <ul className="space-y-1 text-xs text-foreground list-disc pl-5">
+                            {smsScheduleData.warningSigns.map((w, idx) => (
+                              <li key={idx}>{w}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <Textarea
-                      value={result}
-                      onChange={(e) => setResult(e.target.value)}
-                      className="flex-1 min-h-[400px] font-mono text-xs leading-relaxed resize-none"
-                    />
+                    /* Marketing Post Tab */
+                    <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-1.5">
+                        <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                          <h4 className="text-xs font-bold">
+                            {t("discharge.marketingTitle", "Autonomous Marketing Brain from Clinical Case")}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                          {t(
+                            "discharge.marketingSubtitle",
+                            "Generate an anonymized educational social post compliant with veterinary ethics."
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-foreground">Kanál:</span>
+                          {(["instagram", "facebook", "google_business"] as const).map((ch) => (
+                            <Button
+                              key={ch}
+                              type="button"
+                              variant={marketingChannel === ch ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs capitalize"
+                              onClick={() => setMarketingChannel(ch)}
+                            >
+                              {ch === "google_business" ? "Google Profil" : ch}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          type="button"
+                          onClick={handleCreateMarketingPost}
+                          disabled={createMarketingPostMutation.isPending || !diagnosis.trim()}
+                          size="sm"
+                          className="gap-1.5 text-xs bg-primary text-primary-foreground"
+                        >
+                          {createMarketingPostMutation.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                          )}
+                          {t("discharge.createMarketingButton", "Create Social Media Draft")}
+                        </Button>
+                      </div>
+
+                      {marketingPostData && (
+                        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-foreground">
+                              {marketingPostData.item.title}
+                            </h4>
+                            <Badge
+                              variant={
+                                marketingPostData.validationReport?.verdict === "pass"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className={
+                                marketingPostData.validationReport?.verdict === "pass"
+                                  ? "bg-emerald-600 text-white text-[10px]"
+                                  : "bg-amber-600 text-white text-[10px]"
+                              }
+                            >
+                              KVL SR: {marketingPostData.validationReport?.verdict?.toUpperCase() ?? "PASS"}
+                            </Badge>
+                          </div>
+
+                          <div className="rounded-lg bg-muted/40 p-3 text-xs text-foreground whitespace-pre-wrap leading-relaxed border border-border/60">
+                            {marketingPostData.item.body}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[11px] text-muted-foreground">
+                              Zaradené v marketingovom štúdiu ako koncept
+                            </span>
+                            <Button variant="outline" size="sm" asChild className="h-7 text-xs gap-1">
+                              <Link href="/marketing/plan">
+                                Otvoriť v pláne obsahu
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full min-h-[350px] text-center p-8 text-muted-foreground gap-3">
