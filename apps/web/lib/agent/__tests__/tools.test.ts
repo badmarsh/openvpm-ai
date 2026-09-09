@@ -102,6 +102,7 @@ describe("agent tool registry", () => {
     const writeTools = AGENT_TOOLS.filter((t) => !t.readOnly).map((t) => t.name).sort();
     expect(writeTools).toEqual([
       "book_appointment",
+      "create_prescription",
       "record_vital_signs",
       "record_vitals_from_speech",
     ]);
@@ -117,6 +118,7 @@ describe("agent tool registry", () => {
 
     expect(writeToolScopes).toEqual({
       book_appointment: ["appointments:write"],
+      create_prescription: ["records:write"],
       record_vital_signs: ["records:write"],
       record_vitals_from_speech: ["records:write"],
     });
@@ -910,5 +912,64 @@ describe("new clinical agent tools", () => {
       })
     ).toThrow();
   });
+
+  it("registers and validates all new clinical workflow tools", () => {
+    expect(getTool("get_invoice_summary")).toBeDefined();
+    expect(getTool("list_open_reminders")).toBeDefined();
+    expect(getTool("get_lab_results")).toBeDefined();
+    expect(getTool("create_prescription")).toBeDefined();
+    expect(getTool("get_controlled_substances_log")).toBeDefined();
+    expect(getTool("list_discharge_reports")).toBeDefined();
+  });
+
+  it("create_prescription validates required fields and bounds", () => {
+    const tool = getTool("create_prescription")!;
+    expect(tool.readOnly).toBe(false);
+    expect(tool.requiredApiScopes).toEqual(["records:write"]);
+    expect(() => tool.zod.parse({ patientId: PATIENT_ID })).toThrow();
+    expect(
+      tool.zod.parse({
+        patientId: PATIENT_ID,
+        medicationName: "Kesium 250mg",
+        dosage: "1 tbl",
+        frequency: "2x daily",
+        instructions: "Podávať s krmivom",
+      })
+    ).toMatchObject({
+      medicationName: "Kesium 250mg",
+      dosage: "1 tbl",
+      frequency: "2x daily",
+    });
+  });
+
+  it("get_invoice_summary accepts optional patientId or clientId", () => {
+    const tool = getTool("get_invoice_summary")!;
+    expect(tool.readOnly).toBe(true);
+    expect(tool.zod.parse({ patientId: PATIENT_ID })).toEqual({ patientId: PATIENT_ID });
+    expect(tool.zod.parse({})).toEqual({});
+  });
+
+  it("get_lab_results requires valid patientId UUID", () => {
+    const tool = getTool("get_lab_results")!;
+    expect(tool.readOnly).toBe(true);
+    expect(() => tool.zod.parse({})).toThrow();
+    expect(tool.zod.parse({ patientId: PATIENT_ID, limit: 10 })).toEqual({
+      patientId: PATIENT_ID,
+      limit: 10,
+    });
+  });
+
+  it("get_controlled_substances_log validates optional filters", () => {
+    const tool = getTool("get_controlled_substances_log")!;
+    expect(tool.readOnly).toBe(true);
+    expect(tool.zod.parse({ drugName: "Ketamín" })).toMatchObject({ drugName: "Ketamín" });
+  });
+
+  it("list_discharge_reports accepts optional patientId", () => {
+    const tool = getTool("list_discharge_reports")!;
+    expect(tool.readOnly).toBe(true);
+    expect(tool.zod.parse({ patientId: PATIENT_ID })).toEqual({ patientId: PATIENT_ID });
+  });
 });
+
 

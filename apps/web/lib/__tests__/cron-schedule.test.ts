@@ -11,6 +11,7 @@ describe("Vercel cron schedule", () => {
     expect(paths).toEqual(
       new Set([
         "/api/cron/reminders",
+        "/api/cron/voice-audio-retention",
         "/api/cron/backup",
         "/api/cron/file-replicas",
         "/api/cron/usage-reconcile",
@@ -27,6 +28,11 @@ describe("Vercel cron schedule", () => {
         "/api/cron/prescription-expiry",
       ]),
     );
+
+    expect(
+      config.crons?.find((cron) => cron.path === "/api/cron/voice-audio-retention")
+        ?.schedule,
+    ).toBe("0 * * * *");
 
     expect(
       config.crons?.find((cron) => cron.path === "/api/cron/reminders")
