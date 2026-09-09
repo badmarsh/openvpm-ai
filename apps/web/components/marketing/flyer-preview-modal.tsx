@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   PawPrint,
   Printer,
@@ -155,10 +156,12 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
 
             {/* Flyer Hero Banner */}
             <div className="relative rounded-xl overflow-hidden border border-stone-200 shadow-inner h-44 sm:h-48 mb-4 bg-stone-100">
-              <img
+              <Image
                 src={theme.src}
                 alt={theme.alt}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 640px) 100vw, 640px"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-stone-950/20 to-transparent" />
               <div className="absolute bottom-3 left-4 right-4 text-white">

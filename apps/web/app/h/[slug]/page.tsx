@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import {
   PawPrint,
   Printer,
@@ -172,10 +173,13 @@ export default function PublicHandoutPage() {
         {/* Thematic Illustrative Hero Banner */}
         {thematicImage && (
           <div className="relative h-56 sm:h-64 w-full overflow-hidden bg-muted border-b print:hidden">
-            <img
+            <Image
               src={thematicImage.src}
               alt={thematicImage.alt}
-              className="w-full h-full object-cover"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
             <div className="absolute bottom-4 left-6 sm:left-8">

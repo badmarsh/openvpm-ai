@@ -221,6 +221,7 @@ export default function PublicBookingPage() {
             <img
               src={data.practice.logoUrl}
               alt=""
+              decoding="async"
               className="h-14 w-14 rounded-xl object-cover"
             />
           ) : (

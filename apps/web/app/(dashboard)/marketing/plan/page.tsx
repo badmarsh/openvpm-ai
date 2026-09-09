@@ -1071,6 +1071,8 @@ export default function ContentPlanPage() {
                 <img
                   src={selectedItem.mediaAsset.url}
                   alt={selectedItem.mediaAsset.altText || selectedItem.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-3 left-3 flex items-center gap-1.5">

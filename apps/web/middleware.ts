@@ -103,5 +103,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next).*)"],
+  // Skip the middleware invocation entirely for framework internals and
+  // static-file requests (favicons, public images, fonts, …). Security
+  // headers for those responses still come from next.config.js `headers()`
+  // (`/:path*`), so this only removes a redundant edge hop per asset.
+  matcher: [
+    "/((?!_next|.*\\.(?:avif|bmp|css|csv|gif|ico|jpg|jpeg|js|json|map|mp4|png|svg|txt|webm|webp|woff2?|xml|webmanifest)$).*)",
+  ],
 };

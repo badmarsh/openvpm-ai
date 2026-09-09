@@ -70,4 +70,51 @@ describe("heavy client imports", () => {
       expect(source).not.toMatch(/from ["']recharts["']/);
     }
   });
+
+  it("loads the Cmd+K spotlight as a layout-level dynamic chunk", () => {
+    const source = readFileSync("app/(dashboard)/layout.tsx", "utf8");
+    expect(source).toContain('from "next/dynamic"');
+    expect(source).toContain('import("@/components/common/command-search")');
+    expect(source).toContain("ssr: false");
+    expect(source).not.toMatch(
+      /from ["']@\/components\/common\/command-search["']/
+    );
+    // The chunk must not even start loading until the dialog opens.
+    expect(source).toContain("{searchOpen ? (");
+  });
+
+  it("loads the markdown renderer as a dynamic chunk on agent pages", () => {
+    for (const file of [
+      "app/(dashboard)/agent/discharge/page.tsx",
+      "app/(dashboard)/agent/imaging/page.tsx",
+    ]) {
+      const source = readFileSync(file, "utf8");
+      expect(source).toContain('from "next/dynamic"');
+      expect(source).toContain('import("@/components/common/markdown-view")');
+      expect(source).toContain("ssr: false");
+      expect(source).not.toMatch(/from ["']react-markdown["']/);
+      expect(source).not.toMatch(/from ["']remark-gfm["']/);
+    }
+  });
+
+  it("lazy-loads the QR encoder at generation time instead of module load", () => {
+    for (const file of [
+      "components/records/capture-photos.tsx",
+      "components/records/consent-sign.tsx",
+    ]) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toMatch(/from ["']qrcode["']/);
+      expect(source).toContain('import("qrcode")');
+    }
+  });
+
+  it("keeps the non-default i18n dictionary out of the initial bundle", () => {
+    const loader = readFileSync("lib/i18n/loader.ts", "utf8");
+    expect(loader).not.toMatch(
+      /import\s+en\s+from\s+["']@\/messages\/en\.json["']/
+    );
+    expect(loader).toContain('import("@/messages/en.json")');
+    const context = readFileSync("lib/i18n/context.tsx", "utf8");
+    expect(context).toContain("loadDictionary");
+  });
 });

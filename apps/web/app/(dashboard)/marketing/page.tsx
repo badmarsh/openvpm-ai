@@ -879,6 +879,8 @@ export default function MarketingStudioPage() {
                   <img
                     src={generatedImageUrl}
                     alt={selectedTopic}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 </div>
