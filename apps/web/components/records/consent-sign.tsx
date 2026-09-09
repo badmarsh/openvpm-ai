@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { CheckCircle2, FileSignature, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -79,7 +78,12 @@ export function ConsentSign({
       setQrDataUrl(null);
       return;
     }
-    QRCode.toDataURL(request.url, { width: 240, margin: 1 })
+    // The QR encoder ships in its own chunk: it is only needed after the
+    // consent request exists, never for the page's initial render.
+    import("qrcode")
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(request.url, { width: 240, margin: 1 }),
+      )
       .then((dataUrl) => {
         if (!cancelled) setQrDataUrl(dataUrl);
       })

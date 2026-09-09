@@ -69,7 +69,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <SessionProvider>
+        <SessionProvider refetchOnWindowFocus={false}>
           <ThemeProvider
             attribute="class"
             defaultTheme={ACTIVE_THEME}

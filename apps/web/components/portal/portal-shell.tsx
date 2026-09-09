@@ -54,6 +54,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
               <img
                 src={practice.logoUrl}
                 alt={`${practiceName} logo`}
+                decoding="async"
                 className="h-10 w-10 shrink-0 rounded-lg border border-gray-200 bg-white object-contain p-0.5"
               />
             ) : practice ? (
