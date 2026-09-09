@@ -52,20 +52,9 @@ import {
   ALIBABA_DEFAULT_VIDEO_MODEL,
 } from "@/lib/ai/alibaba-proxy";
 import { proceduralIllustration } from "@/lib/marketing/illustration";
+import { assertPatientNotDeceased } from "./_safety";
 
-async function assertPatientNotDeceased(db: any, patientId: string) {
-  const [p] = await db
-    .select({ status: patients.status })
-    .from(patients)
-    .where(eq(patients.id, patientId))
-    .limit(1);
-  if (p?.status === "deceased") {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Sympathy Gate: Blocked for deceased patient.",
-    });
-  }
-}
+// Shared Sympathy-flow safety gate (Skill §3) — single implementation in _safety.ts
 
 export async function createCondolenceTask(
   db: any,
