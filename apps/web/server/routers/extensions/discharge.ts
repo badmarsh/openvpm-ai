@@ -8,11 +8,12 @@ import {
   requireRole,
   requireFeature,
 } from "../../trpc";
-import { dischargeReports, patients, practices } from "@openpims/db";
+import { dischargeReports, patients, practices, extMarketingContentItems } from "@openpims/db";
 import { configuredModel } from "@/lib/agent/runner";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { recordUsage } from "@/lib/billing/usage";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
+import { validateMarketingText } from "@/lib/marketing/validator";
 import {
   schedulePostopCheckIn,
   applySympathyGate,
@@ -340,4 +341,188 @@ export const dischargeRouter = createRouter({
       .orderBy(desc(dischargeReports.createdAt))
       .limit(10);
   }),
+
+  /** Generuje SMS súhrn do 160 znakov a vizuálny liekový rozvrh */
+  generateSmsAndSchedule: dischargeProcedure
+    .input(
+      z.object({
+        petName: z.string().min(1).max(255),
+        diagnosis: z.string().min(1).max(5000),
+        treatment: z.string().max(5000).optional(),
+        followUp: z.string().max(5000).optional(),
+        language: z.enum(["sk", "en"]).default("sk"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ name: practices.name, phone: practices.phone })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const clinicName = practice?.name || "Klinika";
+      const clinicPhone = practice?.phone || "";
+
+      // Default fallback values
+      let smsText = `${clinicName}: ${input.petName} je po zakroku. Lieky podavajte podla planu. V pripade nudze: ${clinicPhone}`.slice(0, 160);
+      let medicationSchedule: Array<{
+        medicationName: string;
+        dosage: string;
+        frequency: string;
+        morning: boolean;
+        noon: boolean;
+        evening: boolean;
+        night: boolean;
+        withFood: boolean;
+        notes: string;
+      }> = [];
+      let warningSigns: string[] = [
+        "Apatia, slabosť alebo neschopnosť vstať",
+        "Opakované zvracanie alebo neustupujúca hnačka",
+        "Dýchavičnosť, sťažené dýchanie",
+        "Krvácanie alebo výrazný opuch operačnej rany",
+      ];
+
+      // Parse medications from treatment text deterministically as baseline
+      if (input.treatment) {
+        const lines = input.treatment.split(/[,;\n]+/).map((l) => l.trim()).filter(Boolean);
+        for (const line of lines) {
+          const isMorning = /ráno|rano|morning|1x|2x|3x/i.test(line);
+          const isEvening = /večer|vecer|evening|2x|3x/i.test(line);
+          const isNoon = /obed|noon|3x/i.test(line);
+          medicationSchedule.push({
+            medicationName: line.split(/[\d]/)[0]?.trim() || line,
+            dosage: line,
+            frequency: /2x/i.test(line) ? "2x denne" : /3x/i.test(line) ? "3x denne" : "1x denne",
+            morning: isMorning || (!isMorning && !isEvening && !isNoon),
+            noon: isNoon,
+            evening: isEvening,
+            night: false,
+            withFood: /jedl|krmiv|food/i.test(line),
+            notes: line,
+          });
+        }
+      }
+
+      // Try AI refinement if available
+      try {
+        const model = configuredModel();
+        const prompt = `Z nasledujúcich klinických údajov vygeneruj presný JSON s 3 poľami:
+1. "smsText": stručná SMS správa pre majiteľa, MAXIMÁLNE 160 ZNAKOV. Musí obsahovať meno pacienta (${input.petName}), potvrdenie stavu, hlavný liek a núdzový kontakt (${clinicPhone}).
+2. "medicationSchedule": pole objektov s kľúčmi { "medicationName": string, "dosage": string, "frequency": string, "morning": boolean, "noon": boolean, "evening": boolean, "night": boolean, "withFood": boolean, "notes": string }
+3. "warningSigns": pole 3-4 kľúčových varovných príznakov ako stringy.
+
+Klinika: ${clinicName}
+Pacient: ${input.petName}
+Diagnóza: ${input.diagnosis}
+Liečba a lieky: ${input.treatment || "N/A"}
+Kontrola: ${input.followUp || "N/A"}
+
+Odpovedz VÝHRADNE čistým JSON objektom.`;
+
+        const res = await generateText({
+          model,
+          prompt,
+        });
+
+        const raw = res.text.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
+        const parsed = JSON.parse(raw);
+        if (parsed.smsText) smsText = String(parsed.smsText).slice(0, 160);
+        if (Array.isArray(parsed.medicationSchedule) && parsed.medicationSchedule.length > 0) {
+          medicationSchedule = parsed.medicationSchedule;
+        }
+        if (Array.isArray(parsed.warningSigns) && parsed.warningSigns.length > 0) {
+          warningSigns = parsed.warningSigns;
+        }
+      } catch (err) {
+        console.warn("generateSmsAndSchedule fallback used:", err);
+      }
+
+      return {
+        smsText,
+        medicationSchedule,
+        warningSigns,
+      };
+    }),
+
+  /** Vytvorí anonymizovaný edukačný príspevok na sociálne siete z prepúšťacieho prípadu */
+  createMarketingPostFromCase: dischargeProcedure
+    .input(
+      z.object({
+        petName: z.string().min(1).max(255),
+        species: z.string().max(255).optional(),
+        diagnosis: z.string().min(1).max(5000),
+        treatment: z.string().max(5000).optional(),
+        channel: z.enum(["instagram", "facebook", "google_business"]).default("instagram"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const clinicName = practice?.name || "Naša veterinárna klinika";
+      const speciesLabel = input.species?.toLowerCase().includes("mač") ? "mačička" : "psík";
+
+      // Build compliant, educational story compliant with KVL SR ethics
+      let title = `Edukačný prípad: Liečba ochorenia (${speciesLabel})`;
+      let body = `🐾 Z našej ambulancie: Starostlivosť o pacienta po zákroku\n\n` +
+        `Nedávno nás navštívil štvornohý pacient s diagnózou: ${input.diagnosis}. ` +
+        `Vďaka včasnej diagnostike a nasadeniu vhodnej starostlivosti je pacient stabilizovaný a v domácom liečení.\n\n` +
+        `💡 Čo si všímať u vašich miláčikov doma?\n` +
+        `Ak spozorujete apatiu, nechutenstvo alebo zmenu správania, nečakajte – včasná návšteva veterinára výrazne uľahčuje liečbu a chráni zdravie zvieraťa.\n\n` +
+        `🩺 Radi vám poradíme v ${clinicName}.\n` +
+        `#veterinar #starostlivostozvierata #zdraviezvierat #veterinarnaklinika`;
+
+      try {
+        const model = configuredModel();
+        const prompt = `Si marketingový expert pre veterinárnu kliniku na Slovensku.
+Vytvor pútavý, odborný a anonymizovaný edukačný príspevok pre ${input.channel}.
+Striktne dodržiavaj Etický kódex Komory veterinárnych lekárov SR:
+- ŽIADNE uvádzanie celých mien majiteľov (plná anonymizácia pacienta).
+- ŽIADNE názvy liekov viazaných na lekársky predpis (antibiotiká, anestetiká).
+- ŽIADNA agresívna reklama typu 'sme najlepší/najlacnejší'.
+- Zameraj sa na edukáciu majiteľov (prevencia, kedy ísť k lekárovi).
+
+Klinika: ${clinicName}
+Pacient: ${speciesLabel}
+Diagnóza: ${input.diagnosis}
+Vykonaná starostlivosť: ${input.treatment || "štandardná terapia"}
+
+Vráť JSON: { "title": string, "body": string }`;
+
+        const res = await generateText({ model, prompt });
+        const raw = res.text.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
+        const parsed = JSON.parse(raw);
+        if (parsed.title) title = parsed.title;
+        if (parsed.body) body = parsed.body;
+      } catch (err) {
+        console.warn("createMarketingPostFromCase fallback used:", err);
+      }
+
+      // Validate through the KVL SR compliance validator
+      const validationReport = validateMarketingText({ text: body, context: "marketing" });
+
+      const [item] = await ctx.db
+        .insert(extMarketingContentItems)
+        .values({
+          practiceId: ctx.practiceId,
+          createdBy: ctx.user.id,
+          title,
+          body,
+          channel: input.channel,
+          status: validationReport.verdict === "block" ? "blocked" : "proposed",
+          validatorVerdict: validationReport.verdict,
+          validatorFindings: validationReport.findings,
+        })
+        .returning();
+
+      return {
+        item,
+        validationReport,
+      };
+    }),
 });
+

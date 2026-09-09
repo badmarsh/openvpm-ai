@@ -590,6 +590,61 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
             </Card>
 
             {/* Quick Suggestions / Presets (like PRESETS_SK in discharge) */}
+            {/* Morning Vet Brief */}
+            {canRun && (
+              <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                    <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                      Ranný prehľad — {new Date().toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "long" })}
+                    </p>
+                    <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
+                      Spustite AI dopyt pre okamžitý prehľad dňa
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {[
+                    {
+                      icon: Stethoscope,
+                      label: "Dnes v ordinácii",
+                      query: "Zhrň mi dnešné termíny – počet pacientov, prvé návštevy a urgentné prípady.",
+                    },
+                    {
+                      icon: Pill,
+                      label: "Expirujúce vakcíny",
+                      query: "Ktorí pacienti majú expirované alebo čoskoro expirujúce očkovania?",
+                    },
+                    {
+                      icon: Calendar,
+                      label: "Nedokončené záznamy",
+                      query: "Máme nejakých pacientov z posledných 7 dní bez ukončeného SOAP záznamu alebo prepúšťacej správy?",
+                    },
+                    {
+                      icon: ShieldAlert,
+                      label: "Aktívne hospitalizácie",
+                      query: "Zoznam aktuálne hospitalizovaných pacientov s ich diagnózou a dátumom prijatia.",
+                    },
+                  ].map(({ icon: Icon, label, query }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="flex items-center gap-2.5 text-left rounded-lg px-3 py-2 text-xs bg-white/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 transition-colors group"
+                      onClick={() => pickSuggestion(query)}
+                    >
+                      <Icon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span className="font-medium text-amber-900 dark:text-amber-200">{label}</span>
+                      <ChevronRight className="h-3 w-3 ml-auto text-amber-400 group-hover:text-amber-600 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Suggestions */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />

@@ -16,15 +16,19 @@ import {
   treatmentPlanItems,
   vitalSigns,
   patients,
+  practices,
   consentForms,
   consentRequests,
   rooms,
   soapNotes,
+  extMarketingContentItems,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { readPrimaryObject } from "@/lib/s3";
+import { calculateVhs as computeVhs } from "@/lib/imaging/vhs-calculator";
+import { validateMarketingText } from "@/lib/marketing/validator";
 import {
   saveAppointmentSoapDraft,
   SoapLifecycleError,
@@ -94,7 +98,7 @@ export const imagingRouter = createRouter({
       if (!file) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Súbor sa nenašiel",
+          message: "File not found",
         });
       }
 
@@ -231,7 +235,7 @@ export const imagingRouter = createRouter({
       if (!analysis) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Analýza sa nenašla",
+          message: "Analysis not found",
         });
       }
 
@@ -555,5 +559,107 @@ export const imagingRouter = createRouter({
         }
         throw error;
       }
+    }),
+
+  /** Vypočíta Vertebral Heart Score (VHS) z rádiologických meraní srdca */
+  calculateVhs: imagingProcedure
+    .input(
+      z.object({
+        longAxisMm: z.number().positive(),
+        shortAxisMm: z.number().positive(),
+        t4VertebraLengthMm: z.number().positive(),
+        species: z.enum(["canine", "feline"]).default("canine"),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      return computeVhs(input);
+    }),
+
+  /** Vytvorí anonymizovaný rádiologický kvíz ("Prípad týždňa") pre sociálne siete */
+  createMarketingQuizFromImaging: imagingProcedure
+    .input(
+      z.object({
+        analysisId: z.string().uuid(),
+        question: z.string().max(500).optional(),
+        correctAnswer: z.string().min(1).max(255),
+        wrongAnswers: z.array(z.string().min(1).max(255)).min(1).max(4),
+        educationalExplanation: z.string().max(2000).optional(),
+        channel: z.enum(["instagram", "facebook", "google_business"]).default("instagram"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [analysis] = await ctx.db
+        .select({
+          id: aiImagingAnalyses.id,
+          imageType: aiImagingAnalyses.imageType,
+          result: aiImagingAnalyses.result,
+          patientId: aiImagingAnalyses.patientId,
+        })
+        .from(aiImagingAnalyses)
+        .where(
+          and(
+            eq(aiImagingAnalyses.id, input.analysisId),
+            eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+            isNull(aiImagingAnalyses.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (!analysis) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Analysis not found",
+        });
+      }
+
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const clinicName = practice?.name || "Naša veterinárna klinika";
+      const qText = input.question || "Čo odhalila táto rádiologická snímka z našej ambulancie?";
+
+      // Format options for the quiz
+      const allOptions = [input.correctAnswer, ...input.wrongAnswers];
+      const letters = ["A", "B", "C", "D"];
+      const optionsText = allOptions.map((opt, i) => `${letters[i]}) ${opt}`).join("\n");
+
+      const explanation = input.educationalExplanation ||
+        `Správna odpoveď je: ${input.correctAnswer}. Včasné vyšetrenie umožňuje zachytiť nález skôr, než dôjde k dekompenzácii.`;
+
+      const title = `Rádiologický kvíz: Prípad z ambulancie (${analysis.imageType.toUpperCase()})`;
+      const body =
+        `🧠 KVÍZ TÝŽDŇA: Otestujte si svoje znalosti!\n\n` +
+        `Pozrite sa na snímku nášho pacienta a tipnite si správnu odpoveď:\n` +
+        `❓ ${qText}\n\n` +
+        `${optionsText}\n\n` +
+        `👇 Napíšte nám váš tip do komentára! Správnu odpoveď a vysvetlenie nájdete v komentári alebo v našom ďalšom príbehu.\n\n` +
+        `💡 ${explanation}\n\n` +
+        `Zdravie vašich miláčikov chránime v ${clinicName}.\n` +
+        `#veterinarnykviz #radiologia #rtg #veterinar #starostlivostozvierata`;
+
+      // Validate through the KVL SR compliance validator
+      const validationReport = validateMarketingText({ text: body, context: "marketing" });
+
+      const [item] = await ctx.db
+        .insert(extMarketingContentItems)
+        .values({
+          practiceId: ctx.practiceId,
+          createdBy: ctx.user.id,
+          title,
+          body,
+          channel: input.channel,
+          status: validationReport.verdict === "block" ? "blocked" : "proposed",
+          validatorVerdict: validationReport.verdict,
+          validatorFindings: validationReport.findings,
+        })
+        .returning();
+
+      return {
+        item,
+        validationReport,
+      };
     }),
 });

@@ -249,6 +249,7 @@ function VoiceDictationContent() {
         objective: processed.objective ?? "",
         assessment: processed.assessment ?? "",
         plan: processed.plan ?? "",
+        clientSummary: (processed as any).clientSummary ?? "",
       });
 
       setStatus("done");
@@ -288,6 +289,7 @@ function VoiceDictationContent() {
           objective: formatted.objective,
           assessment: formatted.assessment,
           plan: formatted.plan,
+          clientSummary: (formatted as any).clientSummary ?? "",
         });
         toast.success(`SOAP preformátovaný v štýle: ${style === "standard" ? "Štandardný" : style === "detailed" ? "Detailný" : "Stručný"}`);
       } catch {
@@ -980,6 +982,43 @@ function VoiceDictationContent() {
             </Card>
           </div>
         </div>
+      )}
+
+      {/* Owner-friendly Client Summary Card */}
+      {soapSections.clientSummary && (
+        <Card className="shadow-sm border-sky-200 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-950/20">
+          <CardHeader className="pb-2 border-b border-sky-100 dark:border-sky-800 flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+              <CardTitle className="text-sm font-semibold text-sky-800 dark:text-sky-200">
+                Majiteľský súhrn
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] border-sky-300 text-sky-700 dark:border-sky-700 dark:text-sky-300">
+                Pre majiteľa
+              </Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1 text-sky-700 hover:text-sky-900 hover:bg-sky-100 dark:text-sky-300"
+              onClick={() => {
+                navigator.clipboard.writeText(soapSections.clientSummary ?? "");
+                toast.success("Súhrn skopírovaný pre majiteľa");
+              }}
+            >
+              <Copy className="h-3 w-3" />
+              Kopírovať
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-3 pb-4 px-4">
+            <p className="text-xs text-muted-foreground mb-2">
+              Empatický text bez latinčiny – vhodný na odovzdanie majiteľovi alebo zaslanie správy.
+            </p>
+            <div className="rounded-lg bg-white dark:bg-sky-950/40 border border-sky-100 dark:border-sky-800 p-3 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+              {soapSections.clientSummary}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Extracted Billing Items Modal */}

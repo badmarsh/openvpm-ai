@@ -14,6 +14,7 @@ export interface SoapSectionsData {
   objective: string;
   assessment: string;
   plan: string;
+  clientSummary?: string;
 }
 
 interface SoapPreviewProps {
@@ -27,7 +28,7 @@ interface SoapPreviewProps {
 }
 
 const SECTION_LABELS: Record<
-  keyof SoapSectionsData,
+  "subjective" | "objective" | "assessment" | "plan",
   { label: string; letter: string; color: string; bgBadge: string; description: string }
 > = {
   subjective: {
@@ -162,10 +163,10 @@ export function SoapPreview({
       </div>
 
       <div className={cn("grid gap-3", layout)}>
-        {(Object.keys(SECTION_LABELS) as Array<keyof SoapSectionsData>).map(
+        {(Object.keys(SECTION_LABELS) as Array<keyof typeof SECTION_LABELS>).map(
           (key) => {
             const config = SECTION_LABELS[key];
-            const textValue = sections[key];
+            const textValue = sections[key] ?? "";
             const charCount = textValue.length;
 
             return (

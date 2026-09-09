@@ -7,6 +7,7 @@ const soapSectionsSchema = z.object({
   objective: z.string(),
   assessment: z.string(),
   plan: z.string(),
+  clientSummary: z.string().optional(),
 });
 
 export type SoapSections = z.infer<typeof soapSectionsSchema>;
@@ -26,16 +27,17 @@ function getSystemPrompt(style: SoapStyle = "standard"): string {
     concise: `Štýl: Stručný telegrafický záznam. Používaj výstižné odrážky a kľúčové fakty, vhodné pre rýchlu ambulantnú prax.`,
   }[style];
 
-  return `Si špičkový asistent veterinárneho lekára na Slovensku. Tvojou úlohou je transformovať transkripciu hovoreného diktovania do dokonale štruktúrovaného SOAP záznamu (podľa štandardov KVL SR a ŠVPS SR).
+  return `Si špičkový asistent veterinárneho lekára na Slovensku. Tvojou úlohou je transformovať transkripciu hovoreného diktovania do dokonale štruktúrovaného SOAP záznamu (podľa štandardov KVL SR a ŠVPS SR) A ZÁROVEŇ vygenerovať zrozumiteľný súhrn pre majiteľa.
 
 ${styleInstructions}
 
-Vráť výhradne JSON objekt s presne týmito 4 kľúčmi:
+Vráť výhradne JSON objekt s presne týmito 5 kľúčmi:
 {
   "subjective": string,
   "objective": string,
   "assessment": string,
-  "plan": string
+  "plan": string,
+  "clientSummary": string
 }
 
 Pravidlá pre sekcie SOAP:
@@ -65,6 +67,13 @@ Pravidlá pre sekcie SOAP:
    - Diétne opatrenia a režimové obmedzenia (kľudový režim, venčenie na vôdzke)
    - Doplňujúce odporučené vyšetrenia (opakované sono, kontrolná biochémia)
    - Termín a podmienky kontroly (alebo inštrukcie v prípade zhoršenia)
+
+5. "clientSummary" (Zrozumiteľný súhrn pre majiteľa zvieraťa):
+   - Ľudskou, empatickou slovenčinou bez zložitej latinčiny vysvetli majiteľovi:
+     - čo zvieratku je,
+     - čo bolo dnes na ambulancii vykonané a podané,
+     - ako podávať lieky doma (s jedlom/nalačno) a režimové opatrenia,
+     - na aké varovné príznaky si dávať pozor a kedy okamžite volať kliniku.
 
 Dôležité inštrukcie:
 - Všetky texty píš výhradne gramaticky správnou slovenčinou s odbornou veterinárnou terminológiou.
@@ -127,5 +136,6 @@ export async function formatTranscriptToSoap(
     objective: "",
     assessment: "",
     plan: "",
+    clientSummary: `Dnes sme vyšetrili Vášho miláčika ${patientName ? `(${patientName})` : ""}. Na ambulancii sme vykonali potrebné ošetrenie. Dodržiavajte kľudový režim a v prípade pretrvávania ťažkostí nás bezodkladne kontaktujte.`,
   };
 }

@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Link from "next/link";
 import {
   Upload,
   ImageIcon,
@@ -21,7 +22,15 @@ import {
   Sparkles,
   Stethoscope,
   FileText,
+  Heart,
+  Activity,
+  Megaphone,
+  HelpCircle,
+  CheckCircle2,
+  ExternalLink,
+  Share2,
 } from "lucide-react";
+import { calculateVhs, type VhsResult } from "@/lib/imaging/vhs-calculator";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -162,6 +171,24 @@ export default function ImagingPage() {
   });
   const [analysisId, setAnalysisId] = useState<string | null>(null);
 
+  // Advanced AI pillars: VHS Calculator & Marketing Quiz
+  const [showVhsCalc, setShowVhsCalc] = useState(false);
+  const [vhsLongAxisMm, setVhsLongAxisMm] = useState("75");
+  const [vhsShortAxisMm, setVhsShortAxisMm] = useState("65");
+  const [vhsT4Mm, setVhsT4Mm] = useState("15");
+  const [vhsSpecies, setVhsSpecies] = useState<"canine" | "feline">("canine");
+  const [vhsResult, setVhsResult] = useState<VhsResult | null>(null);
+
+  const [showMarketingQuiz, setShowMarketingQuiz] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState("Čo odhalila táto rádiologická snímka z našej ambulancie?");
+  const [quizCorrectAnswer, setQuizCorrectAnswer] = useState("");
+  const [quizWrong1, setQuizWrong1] = useState("Fyziologický nález (v norme)");
+  const [quizWrong2, setQuizWrong2] = useState("Závažná kardiovaskulárna dekompenzácia");
+  const [quizChannel, setQuizChannel] = useState<"instagram" | "facebook" | "google_business">("instagram");
+  const [quizCreatedPost, setQuizCreatedPost] = useState<any | null>(null);
+
+  const createQuizMutation = trpc.extensions.imaging.createMarketingQuizFromImaging.useMutation();
+
   // History
   const historyQuery = trpc.extensions.imaging.listByPatient.useQuery(
     { patientId: selectedPatient?.id ?? "" },
@@ -296,8 +323,56 @@ export default function ImagingPage() {
     setFileUrl(null);
     setFileId(null);
     setAnalysisId(null);
+    setVhsResult(null);
+    setQuizCreatedPost(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
+
+  const handleCalculateVhs = () => {
+    const l = parseFloat(vhsLongAxisMm);
+    const s = parseFloat(vhsShortAxisMm);
+    const t4 = parseFloat(vhsT4Mm);
+    if (!l || !s || !t4 || l <= 0 || s <= 0 || t4 <= 0) {
+      toast.error("Zadajte platné kladné rozmery v milimetroch");
+      return;
+    }
+    try {
+      const res = calculateVhs({
+        longAxisMm: l,
+        shortAxisMm: s,
+        t4VertebraLengthMm: t4,
+        species: vhsSpecies,
+      });
+      setVhsResult(res);
+      toast.success(`VHS skóre: ${res.vhsScore} v (${res.statusLabelSk})`);
+    } catch (err) {
+      toast.error("Chyba pri výpočte VHS");
+    }
+  };
+
+  const handleCreateQuiz = async () => {
+    if (!currentAnalysis?.id) {
+      toast.error("Najprv spustite alebo vyberte AI analýzu snímku");
+      return;
+    }
+    if (!quizCorrectAnswer.trim()) {
+      toast.error("Zadajte správnu odpoveď na kvíz");
+      return;
+    }
+    try {
+      const res = await createQuizMutation.mutateAsync({
+        analysisId: currentAnalysis.id,
+        question: quizQuestion.trim() || undefined,
+        correctAnswer: quizCorrectAnswer.trim(),
+        wrongAnswers: [quizWrong1.trim() || "Možnosť B", quizWrong2.trim() || "Možnosť C"],
+        channel: quizChannel,
+      });
+      setQuizCreatedPost(res);
+      toast.success("Rádiologický kvíz bol zaradený do marketingového plánu!");
+    } catch (err) {
+      toast.error("Nepodarilo sa vytvoriť príspevok.");
+    }
+  };
 
   const handleApplyPreset = (preset: ImagingPreset) => {
     setImageType(preset.imageType);
@@ -939,6 +1014,280 @@ export default function ImagingPage() {
                         </ReactMarkdown>
                       </div>
                     </div>
+
+                    {/* Advanced Diagnostic & Marketing Toolbars */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
+                      <Button
+                        type="button"
+                        variant={showVhsCalc ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => setShowVhsCalc(!showVhsCalc)}
+                      >
+                        <Heart className="h-3.5 w-3.5 text-rose-500" />
+                        VHS Kalkulačka srdca
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant={showMarketingQuiz ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => setShowMarketingQuiz(!showMarketingQuiz)}
+                      >
+                        <Megaphone className="h-3.5 w-3.5 text-amber-500" />
+                        Edukačný RTG kvíz (KVL SR)
+                      </Button>
+                    </div>
+
+                    {/* VHS Calculator Panel */}
+                    {showVhsCalc && (
+                      <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                            <Heart className="h-4 w-4 text-rose-500" />
+                            <span>Vertebral Heart Score (VHS) – Buchananova metóda</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">
+                            {vhsSpecies === "feline" ? "Mačka: norma < 8.0 v" : "Pes: norma 8.5–10.5 v"}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                              Dlhá os L (mm)
+                            </label>
+                            <Input
+                              value={vhsLongAxisMm}
+                              onChange={(e) => setVhsLongAxisMm(e.target.value)}
+                              placeholder="75"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                              Krátka os S (mm)
+                            </label>
+                            <Input
+                              value={vhsShortAxisMm}
+                              onChange={(e) => setVhsShortAxisMm(e.target.value)}
+                              placeholder="65"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                              Stavec T4 (mm)
+                            </label>
+                            <Input
+                              value={vhsT4Mm}
+                              onChange={(e) => setVhsT4Mm(e.target.value)}
+                              placeholder="15"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                              Druh pacienta
+                            </label>
+                            <select
+                              value={vhsSpecies}
+                              onChange={(e) => setVhsSpecies(e.target.value as any)}
+                              className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                            >
+                              <option value="canine">Pes (canine)</option>
+                              <option value="feline">Mačka (feline)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleCalculateVhs}
+                            className="h-8 text-xs gap-1 bg-rose-600 hover:bg-rose-700 text-white"
+                          >
+                            <Activity className="h-3.5 w-3.5" />
+                            Vypočítať VHS
+                          </Button>
+
+                          {vhsResult && (
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  vhsResult.status === "normal"
+                                    ? "secondary"
+                                    : vhsResult.status === "borderline"
+                                      ? "outline"
+                                      : "destructive"
+                                }
+                                className="text-xs font-bold font-mono px-2 py-0.5"
+                              >
+                                VHS: {vhsResult.vhsScore} v
+                              </Badge>
+                              <Badge
+                                className={
+                                  vhsResult.status === "normal"
+                                    ? "bg-emerald-600 text-white text-[11px]"
+                                    : vhsResult.status === "borderline"
+                                      ? "bg-amber-600 text-white text-[11px]"
+                                      : "bg-rose-600 text-white text-[11px]"
+                                }
+                              >
+                                {vhsResult.statusLabelSk}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+
+                        {vhsResult && (
+                          <div className="rounded-lg bg-background p-3 text-xs text-foreground border space-y-1">
+                            <p className="font-semibold text-primary">Klinické posúdenie nálezu:</p>
+                            <p className="text-muted-foreground leading-relaxed">
+                              {vhsResult.clinicalInterpretationSk}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Social Media Quiz Panel */}
+                    {showMarketingQuiz && (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                            <Megaphone className="h-4 w-4 text-amber-500" />
+                            <span>Kvíz týždňa zo snímky pre sociálne siete (KVL SR)</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">
+                            Anonymizovaný edukačný príspevok
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-medium text-muted-foreground">
+                            Otázka kvízu pre verejnosť
+                          </label>
+                          <Input
+                            value={quizQuestion}
+                            onChange={(e) => setQuizQuestion(e.target.value)}
+                            placeholder="Čo odhalila táto rádiologická snímka?"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 font-semibold">
+                              Správna odpoveď (A)
+                            </label>
+                            <Input
+                              value={quizCorrectAnswer}
+                              onChange={(e) => setQuizCorrectAnswer(e.target.value)}
+                              placeholder="napr. Cudzie teleso v žalúdku"
+                              className="h-8 text-xs border-emerald-500/50"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                              Nesprávna možnosť (B)
+                            </label>
+                            <Input
+                              value={quizWrong1}
+                              onChange={(e) => setQuizWrong1(e.target.value)}
+                              placeholder="napr. Fyziologický nález"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                              Nesprávna možnosť (C)
+                            </label>
+                            <Input
+                              value={quizWrong2}
+                              onChange={(e) => setQuizWrong2(e.target.value)}
+                              placeholder="napr. Torzia žalúdka"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground">Kanál:</span>
+                            {(["instagram", "facebook", "google_business"] as const).map((ch) => (
+                              <Button
+                                key={ch}
+                                type="button"
+                                variant={quizChannel === ch ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs capitalize"
+                                onClick={() => setQuizChannel(ch)}
+                              >
+                                {ch === "google_business" ? "Google Profil" : ch}
+                              </Button>
+                            ))}
+                          </div>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleCreateQuiz}
+                            disabled={createQuizMutation.isPending || !quizCorrectAnswer.trim()}
+                            className="h-8 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                          >
+                            {createQuizMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5" />
+                            )}
+                            Vytvoriť kvíz do plánu obsahu
+                          </Button>
+                        </div>
+
+                        {quizCreatedPost && (
+                          <div className="rounded-lg bg-background p-3 text-xs border space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-foreground">
+                                {quizCreatedPost.item.title}
+                              </span>
+                              <Badge
+                                variant={
+                                  quizCreatedPost.validationReport?.verdict === "pass"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className={
+                                  quizCreatedPost.validationReport?.verdict === "pass"
+                                    ? "bg-emerald-600 text-white text-[10px]"
+                                    : "bg-amber-600 text-white text-[10px]"
+                                }
+                              >
+                                KVL SR: {quizCreatedPost.validationReport?.verdict?.toUpperCase() ?? "PASS"}
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed line-clamp-4">
+                              {quizCreatedPost.item.body}
+                            </p>
+                            <div className="flex items-center justify-end pt-1">
+                              <Button variant="outline" size="sm" asChild className="h-7 text-xs gap-1">
+                                <Link href="/marketing/plan">
+                                  Zobraziť v pláne obsahu
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t">
                       * Upozornenie: AI analýza zobrazovacích metód má výhradne podporný a odporúčací charakter. Konečné stanovenie diagnózy patrí vždy ošetrujúcemu veterinárnemu lekárovi.

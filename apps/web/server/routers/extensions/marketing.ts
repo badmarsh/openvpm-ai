@@ -3418,4 +3418,71 @@ listStaffTasks: protectedProcedure
       practiceId: ctx.practiceId,
     };
   }),
+
+  createPostFromBulletin: protectedProcedure
+    .input(z.object({
+      bulletinTitle: z.string().min(3),
+      bulletinSummary: z.string().min(10),
+      bulletinSource: z.string(),
+      channel: z.enum(["instagram", "facebook", "email", "sms"]).default("instagram"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      let body = "";
+      try {
+        const model = configuredModel();
+        const prompt = `Si marketingový copywriter veterinárnej ambulancie "${practice?.name ?? "Veterinárna ambulancia"}" na Slovensku.
+Na základe nasledujúcej legislatívnej správy z ${input.bulletinSource} vytvor edukačný post na ${input.channel.toUpperCase()}.
+
+Téma: ${input.bulletinTitle}
+Súhrn: ${input.bulletinSummary}
+
+Požiadavky:
+- Píš v slovenčine, priateľským tónom
+- Edukuj majiteľov zvierat – NEODKAZUJ priamo na právne predpisy
+- Neporovnávaj s inými klinikami
+- Instagram/Facebook: 150-280 znakov textu + 3-5 hashtagov
+- SMS: max 160 znakov, bez hashtagov
+- Skonči výzvou k akcii (navštívte nás, zavolajte nám, atď.)
+- Neobsahuj konkrétne ceny
+
+Vráť IBAN len text postu, bez uvodzoviek.`;
+
+        const result = await generateText({ model, prompt });
+        body = result.text.trim();
+      } catch {
+        // Deterministic fallback
+        body = `Prinášame dôležité informácie pre majiteľov zvierat. Naša veterinárna ambulancia vás informuje o novinkách v starostlivosti o vašich miláčikov. Neváhajte nás kontaktovať! #veterinar #zdraviezvierat`;
+      }
+
+      // KVL SR validation
+      const report = validateMarketingText({ text: body, context: "marketing" });
+      if (report.verdict === "block") {
+        body = autoFix(body, report);
+      }
+      const KVL_DISCLAIMER = "Informácia má edukačný charakter. Poraďte sa s vašim veterinárnym lekárom.";
+      const finalBody = withDisclaimer(body, KVL_DISCLAIMER);
+
+      await ctx.db.insert(extMarketingContentItems).values({
+        practiceId: ctx.practiceId,
+        createdBy: ctx.user.id,
+        title: `Edukačný post: ${input.bulletinTitle.slice(0, 80)}`,
+        body: finalBody,
+        channel: input.channel,
+        status: report.verdict === "block" ? "blocked" : "proposed",
+        validatorVerdict: report.verdict,
+        validatorFindings: report.findings,
+      });
+
+      return {
+        body: finalBody,
+        verdict: report.verdict,
+        findings: report.findings,
+      };
+    }),
 });

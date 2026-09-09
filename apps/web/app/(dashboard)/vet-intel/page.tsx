@@ -378,6 +378,7 @@ function VetIntelContent() {
 
   // AI Tips state
   const [tipCategory, setTipCategory] = useState<AiTipCategory | "all">("all");
+  const [bulletinPostingId, setBulletinPostingId] = useState<string | null>(null);
 
 
   const utils = trpc.useUtils();
@@ -402,6 +403,28 @@ function VetIntelContent() {
       toast.error(err.message || "Nepodarilo sa zmeniť nastavenie digestu");
     },
   });
+
+  const createPostFromBulletinMutation = trpc.extensions.marketing.createPostFromBulletin.useMutation({
+    onSuccess: (data) => {
+      const verdictLabel = data.verdict === "pass" ? "✅ KVL SR: OK" : data.verdict === "warn" ? "⚠️ KVL SR: Upozornenie" : "🚫 KVL SR: Opravené";
+      toast.success(`Edukačný post bol vytvorený a uložený do plánu. ${verdictLabel}`);
+      setBulletinPostingId(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa vytvoriť post");
+      setBulletinPostingId(null);
+    },
+  });
+
+  const handleCreatePostFromBulletin = (item: IntelItem) => {
+    setBulletinPostingId(item.id);
+    createPostFromBulletinMutation.mutate({
+      bulletinTitle: item.title,
+      bulletinSummary: item.summary,
+      bulletinSource: item.sourceName,
+      channel: "instagram",
+    });
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1031,6 +1054,20 @@ function VetIntelContent() {
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5 ml-2 border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300"
+                        disabled={createPostFromBulletinMutation.isPending && bulletinPostingId === item.id}
+                        onClick={() => handleCreatePostFromBulletin(item)}
+                      >
+                        {createPostFromBulletinMutation.isPending && bulletinPostingId === item.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <MessageSquare className="h-3 w-3" />
+                        )}
+                        Edukačný post (KVL SR)
+                      </Button>
                       <span className="text-[10px] text-muted-foreground ml-auto">
                         #{String(idx + 1).padStart(3, "0")} / 2026
                       </span>
@@ -1045,6 +1082,93 @@ function VetIntelContent() {
                 Žiadne výsledky pre zvolený filter.
               </div>
             )}
+          </div>
+
+          {/* Seasonal Content Calendar */}
+          <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-950/20 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-violet-100 dark:border-violet-800 bg-white/60 dark:bg-violet-950/30">
+              <div className="h-8 w-8 rounded bg-violet-500/15 flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-violet-800 dark:text-violet-200">
+                  Sezónny marketingový kalendár
+                </p>
+                <p className="text-xs text-violet-600/80 dark:text-violet-400/80">
+                  AI-odporúčané témy pre aktuálne obdobie — kliknite na tému a vytvorte post
+                </p>
+              </div>
+              <Badge variant="outline" className="ml-auto text-[10px] border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300">
+                Jeseň 2026
+              </Badge>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                {
+                  emoji: "🍂",
+                  title: "Jesenná prevencia kliešťov a bĺch",
+                  desc: "Upozornenie majiteľov na dlhotrvajúcu aktivitu kliešťov aj v jesenných mesiacoch",
+                  source: "Sezónne odporúčanie",
+                  summary: "Kliešte zostávajú aktívne až do prvých mrazov. Odporúčame udržiavať antiparazitárnu ochranu až do novembra.",
+                },
+                {
+                  emoji: "🏠",
+                  title: "Príprava domácich miláčikov na zimu",
+                  desc: "Teplotné výkyvy, krmivo, pohyb a ošatenie pre seniorné zvieratá",
+                  source: "Sezónne odporúčanie",
+                  summary: "S príchodom jesene treba venovať zvýšenú pozornosť seniorným zvieratám — teplo, strava a pravidelné prehliadky.",
+                },
+                {
+                  emoji: "💉",
+                  title: "Jesenné preočkovania a preventívne prehliadky",
+                  desc: "Pripomenutie ročných vakcinácie pred zimnou sezónou",
+                  source: "Sezónne odporúčanie",
+                  summary: "Jeseň je ideálny čas na ročné preočkovania a komplexnú preventívnu prehliadku pred zimou.",
+                },
+                {
+                  emoji: "🐾",
+                  title: "Geriatrický protokol SAVLMZ — polročná kontrola",
+                  desc: "Edukácia o preventívnej geriatrickej starostlivosti pre psov a mačky nad 7 rokov",
+                  source: "SAVLMZ Klinický štandard 2026-G01",
+                  summary: "Psy a mačky nad 7 rokov potrebujú polročné kontroly: krv, moč, krvný tlak a hodnotenie bolesti.",
+                },
+              ].map((topic) => (
+                <div
+                  key={topic.title}
+                  className="flex flex-col gap-2 rounded-lg border border-violet-100 dark:border-violet-800 bg-white dark:bg-violet-950/20 p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-xl shrink-0">{topic.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground leading-snug">{topic.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{topic.desc}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5 w-full border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-300"
+                    disabled={createPostFromBulletinMutation.isPending && bulletinPostingId === topic.title}
+                    onClick={() => {
+                      setBulletinPostingId(topic.title);
+                      createPostFromBulletinMutation.mutate({
+                        bulletinTitle: topic.title,
+                        bulletinSummary: topic.summary,
+                        bulletinSource: topic.source,
+                        channel: "instagram",
+                      });
+                    }}
+                  >
+                    {createPostFromBulletinMutation.isPending && bulletinPostingId === topic.title ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <MessageSquare className="h-3 w-3" />
+                    )}
+                    Vytvoriť sezónny post
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>}
 
