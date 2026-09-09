@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
-import { useI18n } from "@/lib/i18n";
+import { loadDictionary, useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -18,7 +18,19 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   const current = locales.find((l) => l.code === locale) ?? locales[0];
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // The non-default dictionary is code-split: start fetching it while
+        // the user is still choosing, so the switch itself feels instant.
+        if (next) {
+          for (const option of locales) {
+            if (option.code !== locale) void loadDictionary(option.code);
+          }
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"

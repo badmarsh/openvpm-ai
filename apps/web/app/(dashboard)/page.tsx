@@ -181,11 +181,17 @@ export default function DashboardPage() {
     isLoading: dashboardQuery.isLoading,
     error: dashboardQuery.error,
   };
-  const pendingFollowUps = trpc.encounters.listPendingFollowUps.useQuery();
+  const pendingFollowUps = trpc.encounters.listPendingFollowUps.useQuery(
+    undefined,
+    { staleTime: 60 * 1000 },
+  );
   const taxConfig = trpc.billing.getTaxConfig.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
-  const calendarSettingsQuery = trpc.appointments.calendarSettings.useQuery();
+  const calendarSettingsQuery = trpc.appointments.calendarSettings.useQuery(
+    undefined,
+    { staleTime: 5 * 60 * 1000 },
+  );
   const calendarSettings = calendarSettingsQuery.data;
   const taxConfigMissing =
     !taxConfig.isLoading && !taxConfig.error && !taxConfig.data;
@@ -225,6 +231,7 @@ export default function DashboardPage() {
     },
     {
       enabled: verifiedCalendarSettings !== null,
+      staleTime: 60 * 1000,
     },
   );
   const upcomingError = calendarSettingsQuery.error ?? upcoming.error;

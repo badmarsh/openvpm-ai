@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Upload,
@@ -52,6 +51,25 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// react-markdown + remark-gfm are heavy; the analysis text only exists after
+// the first AI run, so the renderer loads lazily and never blocks page paint.
+const MarkdownView = dynamic(
+  () =>
+    import("@/components/common/markdown-view").then(
+      (mod) => mod.MarkdownView,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse space-y-2" aria-hidden="true">
+        <div className="h-4 w-3/4 rounded bg-muted" />
+        <div className="h-4 w-full rounded bg-muted" />
+        <div className="h-4 w-5/6 rounded bg-muted" />
+      </div>
+    ),
+  },
+);
 import {
   isImageUploadFileValid,
   IMAGE_UPLOAD_POLICY_MESSAGE,
@@ -1013,11 +1031,9 @@ export default function ImagingPage() {
                     </div>
 
                     <div className="flex-1 rounded-xl border border-border/80 bg-muted/20 p-5 overflow-y-auto">
-                      <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {currentAnalysis.result}
-                        </ReactMarkdown>
-                      </div>
+                      <MarkdownView className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed">
+                        {currentAnalysis.result}
+                      </MarkdownView>
                     </div>
 
                     {/* Advanced Diagnostic & Marketing Toolbars */}

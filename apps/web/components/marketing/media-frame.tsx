@@ -95,6 +95,8 @@ export function MediaFrame({
         <img
           src={asset.url}
           alt={asset.altText || "Fotografia"}
+          loading="lazy"
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-300"
           style={filter ? { filter } : undefined}
           onError={(e) => {

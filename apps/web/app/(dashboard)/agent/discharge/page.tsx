@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   FileText,
@@ -49,6 +48,25 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// react-markdown + remark-gfm are heavy; the preview only exists after the
+// first AI result, so the renderer loads lazily and never blocks page paint.
+const MarkdownView = dynamic(
+  () =>
+    import("@/components/common/markdown-view").then(
+      (mod) => mod.MarkdownView,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse space-y-2" aria-hidden="true">
+        <div className="h-4 w-3/4 rounded bg-muted" />
+        <div className="h-4 w-full rounded bg-muted" />
+        <div className="h-4 w-5/6 rounded bg-muted" />
+      </div>
+    ),
+  },
+);
 
 interface ClinicalPreset {
   key: string;
@@ -955,13 +973,9 @@ export default function DischargePage() {
                   resultSubTab === "report" ? (
                     viewMode === "preview" ? (
                       <div className="flex-1 overflow-y-auto p-6 rounded-lg bg-muted/40 border border-border" data-discharge-preview>
-                        <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-heading prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-hr:border-border">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                          >
-                            {result}
-                          </ReactMarkdown>
-                        </div>
+                        <MarkdownView className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-heading prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-hr:border-border">
+                          {result}
+                        </MarkdownView>
                       </div>
                     ) : (
                       <Textarea
