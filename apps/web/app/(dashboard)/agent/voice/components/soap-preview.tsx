@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Sparkles, RefreshCw } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 import type { SoapStyle } from "@/lib/voice/soap-formatter";
 
 export interface SoapSectionsData {
@@ -27,39 +28,69 @@ interface SoapPreviewProps {
   isReformatting?: boolean;
 }
 
-const SECTION_LABELS: Record<
-  "subjective" | "objective" | "assessment" | "plan",
-  { label: string; letter: string; color: string; bgBadge: string; description: string }
+type SoapSectionKey = "subjective" | "objective" | "assessment" | "plan";
+
+/**
+ * Static (non-translatable) section config. Human-visible labels and
+ * descriptions are resolved at render time via `t()` — Slovak is primary,
+ * English is the fallback dictionary (Skill §2).
+ */
+const SECTION_CONFIG: Record<
+  SoapSectionKey,
+  {
+    letter: string;
+    color: string;
+    bgBadge: string;
+    labelKey: string;
+    labelFallback: string;
+    descriptionKey: string;
+    descriptionFallback: string;
+  }
 > = {
   subjective: {
-    label: "Subjektívne",
     letter: "S",
     color: "border-l-blue-500",
     bgBadge: "bg-blue-500",
-    description: "Anamnéza, signament, sťažnosti majiteľa",
+    labelKey: "voice.soap.subjective",
+    labelFallback: "Subjektívne (S)",
+    descriptionKey: "voice.soap.subjectiveDesc",
+    descriptionFallback: "Anamnéza, signalement, sťažnosti majiteľa",
   },
   objective: {
-    label: "Objektívne",
     letter: "O",
     color: "border-l-emerald-500",
     bgBadge: "bg-emerald-500",
-    description: "Klinická triáda, fyzikálne vyšetrenie, nálezy",
+    labelKey: "voice.soap.objective",
+    labelFallback: "Objektívne (O)",
+    descriptionKey: "voice.soap.objectiveDesc",
+    descriptionFallback: "Klinická triáda, fyzikálne vyšetrenie, nálezy",
   },
   assessment: {
-    label: "Diagnóza",
     letter: "A",
     color: "border-l-amber-500",
     bgBadge: "bg-amber-500",
-    description: "Pracovná diagnóza, diferenciálna diagnostika",
+    labelKey: "voice.soap.assessment",
+    labelFallback: "Hodnotenie (A)",
+    descriptionKey: "voice.soap.assessmentDesc",
+    descriptionFallback: "Pracovná diagnóza, diferenciálna diagnostika",
   },
   plan: {
-    label: "Plán liečby",
     letter: "P",
     color: "border-l-purple-500",
     bgBadge: "bg-purple-500",
-    description: "Medikácia, presné dávky, diéta, kontrola",
+    labelKey: "voice.soap.plan",
+    labelFallback: "Plán (P)",
+    descriptionKey: "voice.soap.planDesc",
+    descriptionFallback: "Medikácia, presné dávky, diéta, kontrola",
   },
 };
+
+const SECTION_ORDER: SoapSectionKey[] = [
+  "subjective",
+  "objective",
+  "assessment",
+  "plan",
+];
 
 export function SoapPreview({
   sections,
@@ -70,6 +101,7 @@ export function SoapPreview({
   onReformat,
   isReformatting = false,
 }: SoapPreviewProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [activeStyle, setActiveStyle] = useState<SoapStyle>("standard");
 
@@ -77,27 +109,32 @@ export function SoapPreview({
     onChange?.({ ...sections, [key]: value });
   };
 
+  const sectionLabel = (key: SoapSectionKey) =>
+    t(SECTION_CONFIG[key].labelKey, SECTION_CONFIG[key].labelFallback);
+
   const handleCopyFullSoap = () => {
     const lines = [
-      `=== KLINICKÝ ZÁZNAM (SOAP) ${patientName ? `· ${patientName} ` : ""}===`,
-      `Dátum: ${new Date().toLocaleDateString("sk-SK")}`,
+      `=== ${t("voice.soap.copyHeader", "KLINICKÝ ZÁZNAM (SOAP)")} ${patientName ? `· ${patientName} ` : ""}===`,
+      `${t("voice.soap.copyDate", "Dátum")}: ${new Date().toLocaleDateString("sk-SK")}`,
       "",
-      `[S] SUBJEKTÍVNE:`,
+      `${sectionLabel("subjective").toUpperCase()}:`,
       sections.subjective || "—",
       "",
-      `[O] OBJEKTÍVNE:`,
+      `${sectionLabel("objective").toUpperCase()}:`,
       sections.objective || "—",
       "",
-      `[A] DIAGNÓZA / POSÚDENIE:`,
+      `${sectionLabel("assessment").toUpperCase()}:`,
       sections.assessment || "—",
       "",
-      `[P] PLÁN A TERAPIA:`,
+      `${sectionLabel("plan").toUpperCase()}:`,
       sections.plan || "—",
     ];
 
     navigator.clipboard.writeText(lines.join("\n"));
     setCopied(true);
-    toast.success("Celý SOAP záznam bol skopírovaný");
+    toast.success(
+      t("voice.soap.copiedFull", "Celý SOAP záznam bol skopírovaný"),
+    );
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -105,16 +142,28 @@ export function SoapPreview({
   if (!hasContent && !editable) return null;
 
   const layout = compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2";
+  const filledCount = SECTION_ORDER.filter(
+    (k) => (sections[k] ?? "").trim().length > 0,
+  ).length;
+
+  const styleLabel = (st: SoapStyle) =>
+    st === "standard"
+      ? t("voice.soap.styleStandard", "Štandardný")
+      : st === "detailed"
+        ? t("voice.soap.styleDetailed", "Detailný")
+        : t("voice.soap.styleConcise", "Stručný");
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold tracking-tight">
-            SOAP štruktúrovaný záznam
+            {t("voice.soap.title", "SOAP štruktúrovaný záznam")}
           </h3>
           <Badge variant="outline" className="text-[11px] font-mono">
-            {Object.values(sections).filter((s) => s.trim().length > 0).length}/4 sekcií
+            {t("voice.soap.sectionsCount", "{count}/4 sekcií", {
+              count: filledCount,
+            })}
           </Badge>
         </div>
 
@@ -138,7 +187,7 @@ export function SoapPreview({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {st === "standard" ? "Štandardný" : st === "detailed" ? "Detailný" : "Stručný"}
+                  {styleLabel(st)}
                 </button>
               ))}
             </div>
@@ -150,82 +199,95 @@ export function SoapPreview({
             size="sm"
             onClick={handleCopyFullSoap}
             className="h-7 px-2.5 text-xs gap-1.5"
-            title="Kopírovať celý SOAP záznam"
+            title={t("voice.soap.copyFullTitle", "Kopírovať celý SOAP záznam")}
           >
             {copied ? (
               <Check className="h-3.5 w-3.5 text-green-500" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
-            <span>{copied ? "Skopírované" : "Kopírovať"}</span>
+            <span>
+              {copied
+                ? t("voice.soap.copied", "Skopírované")
+                : t("voice.soap.copy", "Kopírovať")}
+            </span>
           </Button>
         </div>
       </div>
 
       <div className={cn("grid gap-3", layout)}>
-        {(Object.keys(SECTION_LABELS) as Array<keyof typeof SECTION_LABELS>).map(
-          (key) => {
-            const config = SECTION_LABELS[key];
-            const textValue = sections[key] ?? "";
-            const charCount = textValue.length;
+        {SECTION_ORDER.map((key) => {
+          const config = SECTION_CONFIG[key];
+          const label = sectionLabel(key);
+          const description = t(
+            config.descriptionKey,
+            config.descriptionFallback,
+          );
+          const textValue = sections[key] ?? "";
+          const charCount = textValue.length;
 
-            return (
-              <div
-                key={key}
-                className={cn(
-                  "rounded-xl border border-l-4 bg-card shadow-sm transition-all overflow-hidden",
-                  config.color,
-                )}
-              >
-                <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "h-5 w-5 rounded-md text-xs font-bold flex items-center justify-center text-white shadow-xs",
-                        config.bgBadge,
-                      )}
-                    >
-                      {config.letter}
-                    </span>
-                    <span className="text-xs font-semibold text-foreground">
-                      {config.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {charCount > 0 && (
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        {charCount} zn.
-                      </span>
+          return (
+            <div
+              key={key}
+              className={cn(
+                "rounded-xl border border-l-4 bg-card shadow-sm transition-all overflow-hidden",
+                config.color,
+              )}
+            >
+              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "h-5 w-5 rounded-md text-xs font-bold flex items-center justify-center text-white shadow-xs",
+                      config.bgBadge,
                     )}
-                    <span className="text-[11px] text-muted-foreground/80 hidden sm:inline">
-                      {config.description}
-                    </span>
-                  </div>
+                  >
+                    {config.letter}
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {label}
+                  </span>
                 </div>
-
-                {editable ? (
-                  <Textarea
-                    value={sections[key]}
-                    onChange={(e) => update(key, e.target.value)}
-                    rows={compact ? 2 : 3}
-                    className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-3 leading-relaxed"
-                    placeholder={`Doplňte ${config.label.toLowerCase()}...`}
-                  />
-                ) : (
-                  <div className="p-3 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap min-h-[50px]">
-                    {sections[key] ? (
-                      sections[key]
-                    ) : (
-                      <span className="text-muted-foreground italic text-xs">
-                        Žiadne údaje
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  {charCount > 0 && (
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      {t("voice.soap.charCount", "{count} zn.", {
+                        count: charCount,
+                      })}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground/80 hidden sm:inline">
+                    {description}
+                  </span>
+                </div>
               </div>
-            );
-          },
-        )}
+
+              {editable ? (
+                <Textarea
+                  value={sections[key]}
+                  onChange={(e) => update(key, e.target.value)}
+                  rows={compact ? 2 : 3}
+                  className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-3 leading-relaxed"
+                  placeholder={t(
+                    "voice.soap.sectionPlaceholder",
+                    "Doplňte {section}...",
+                    { section: label.replace(/\s*\([A-Z]\)\s*$/, "").toLowerCase() },
+                  )}
+                />
+              ) : (
+                <div className="p-3 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap min-h-[50px]">
+                  {sections[key] ? (
+                    sections[key]
+                  ) : (
+                    <span className="text-muted-foreground italic text-xs">
+                      {t("voice.soap.noData", "Žiadne údaje")}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

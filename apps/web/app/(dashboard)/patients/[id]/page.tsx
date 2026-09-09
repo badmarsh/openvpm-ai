@@ -466,7 +466,7 @@ export default function PatientDetailPage() {
         kind: "success",
       });
       await refreshPatientDetail();
-      toast.success("Patient photo updated");
+      toast.success(t("patients.detail.photoUpdated", "Fotografia pacienta aktualizovaná"));
     } catch (err) {
       if (photoUploadAttemptRef.current === attempt) {
         photoUploadAttemptRef.current = settleManagedUploadAttempt(attempt, {
@@ -901,7 +901,7 @@ export default function PatientDetailPage() {
         generatedDate: formatClinicalDate(new Date(), recordsTimeZone),
       }).save(`${patientData.name.replace(/\s+/g, "_")}_medical_summary.pdf`);
 
-      toast.success("Medical summary downloaded");
+      toast.success(t("patients.detail.summaryDownloaded", "Zdravotný súhrn stiahnutý"));
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -1640,7 +1640,7 @@ export default function PatientDetailPage() {
       <div className="mt-6 overflow-x-auto border-b border-border">
         <div
           role="tablist"
-          aria-label="Patient chart sections"
+          aria-label={t("patients.detail.chartSectionsAria", "Sekcie karty pacienta")}
           className="flex min-w-max gap-0"
         >
           {tabs.map((tab) => (

@@ -55,14 +55,17 @@ type DictationStatus =
 
 const QUICK_TEMPLATES = [
   {
+    key: "preventive",
     name: "Preventívna prehliadka",
     text: "Preventívna prehliadka psa. Celkový stav pokojný, výživný stav optimálny. Sliznice ružové a vlhké, CRT do 2 sekúnd. Auskultačne srdce a pľúca bez patologických šelestov. Palpácia brucha nebolestivá. Aplikované kombinované očkovanie DHPPiL a odčervenie tabletou. Odporúčaná kontrola o 1 rok.",
   },
   {
+    key: "gastro",
     name: "Gastroenteritída",
     text: "Pes predvedený pre akútne zvracanie a hnačku od včerajšieho večera po konzumácii zvyškov jedla. Teplota 38.6 °C, mierna dehydratácia cca 4%. Brucho mierne citlivé v epigastriu. Aplikovaný Maropitant 1mg/kg s.c. a Ringer-laktát 200ml s.c. Nasadená diéta varené kuracie s ryžou a probiotická pasta. Kontrola o 2 dni.",
   },
   {
+    key: "postOp",
     name: "Kontrola po operácii",
     text: "Kontrola po plánovanej ovariohysterektómii. Operačná rana v linea alba je čistá, kľudná, bez výtoku, dehiscencie a známok infekcie. Pacientka prijíma krmivo a vodu bez ťažkostí. Odstránenie stehov plánované o 4 dni. Pokračovať v nosení ochranného goliera.",
   },
@@ -104,13 +107,13 @@ function VoiceDictationContent() {
       const clientFullName = [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ");
       setSelectedPatient({
         id: p.id,
-        name: p.name ?? "Neznámy pacient",
+        name: p.name ?? t("voice.page.unknownPatient", "Neznámy pacient"),
         species: p.species ?? null,
         clientName: clientFullName,
       });
-      toast.success(`Pacient „${p.name}“ bol vybraný`);
+      toast.success(t("voice.page.patientSelected", "Pacient „{name}“ bol vybraný", { name: p.name ?? "" }));
     }
-  }, [patientQuery.data, selectedPatient]);
+  }, [patientQuery.data, selectedPatient, t]);
 
   const patientDetailQ = trpc.patients.getById.useQuery(
     { id: selectedPatient?.id ?? "" },
@@ -162,20 +165,20 @@ function VoiceDictationContent() {
     onSuccess: (data) => {
       setExtractedItems(data.items);
       setIsBillingModalOpen(true);
-      toast.success(`Rozpoznaných ${data.items.length} položiek na vyúčtovanie.`);
+      toast.success(t("voice.billing.itemsRecognized", "Rozpoznaných {count} položiek na vyúčtovanie.", { count: data.items.length }));
     },
     onError: (err) => {
-      toast.error(`Extrakcia položiek zlyhala: ${err.message}`);
+      toast.error(t("voice.billing.extractFailed", "Extrakcia položiek zlyhala: {message}", { message: err.message }));
     },
   });
 
   const createInvoiceMutation = trpc.extensions.voice.createBillFromExtractedItems.useMutation({
     onSuccess: (data) => {
-      toast.success(`Koncept faktúry (${data.total.toFixed(2)} €) bol vytvorený v systéme.`);
+      toast.success(t("voice.billing.invoiceCreated", "Koncept faktúry ({total} €) bol vytvorený v systéme.", { total: data.total.toFixed(2) }));
       setIsBillingModalOpen(false);
     },
     onError: (err) => {
-      toast.error(`Chyba pri vytváraní účtu: ${err.message}`);
+      toast.error(t("voice.billing.invoiceFailed", "Chyba pri vytváraní účtu: {message}", { message: err.message }));
     },
   });
 
@@ -255,13 +258,13 @@ function VoiceDictationContent() {
       });
 
       setStatus("done");
-      toast.success("Transkripcia a SOAP analýza dokončená");
+      toast.success(t("voice.page.processingDone", "Transkripcia a SOAP analýza dokončená"));
 
       utils.extensions.voice.listByPatient.invalidate({
         patientId: selectedPatient.id,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Spracovanie diktovania zlyhalo";
+      const message = err instanceof Error ? err.message : t("voice.page.processingFailed", "Spracovanie diktovania zlyhalo");
       toast.error(message);
       setStatus("error");
     }
@@ -272,6 +275,7 @@ function VoiceDictationContent() {
     activeStyle,
     uploadAndProcessMutation,
     utils,
+    t,
   ]);
 
   const handleReformat = useCallback(
@@ -293,12 +297,18 @@ function VoiceDictationContent() {
           plan: formatted.plan,
           clientSummary: (formatted as any).clientSummary ?? "",
         });
-        toast.success(`SOAP preformátovaný v štýle: ${style === "standard" ? "Štandardný" : style === "detailed" ? "Detailný" : "Stručný"}`);
+        const styleLabel =
+          style === "standard"
+            ? t("voice.soap.styleStandard", "Štandardný")
+            : style === "detailed"
+              ? t("voice.soap.styleDetailed", "Detailný")
+              : t("voice.soap.styleConcise", "Stručný");
+        toast.success(t("voice.page.reformatted", "SOAP preformátovaný v štýle: {style}", { style: styleLabel }));
       } catch {
-        toast.error("Preformátovanie zlyhalo");
+        toast.error(t("voice.page.reformatFailed", "Preformátovanie zlyhalo"));
       }
     },
-    [rawTranscript, selectedPatient, dictationId, formatTextMutation],
+    [rawTranscript, selectedPatient, dictationId, formatTextMutation, t],
   );
 
   const handleSave = useCallback(async () => {
@@ -316,11 +326,11 @@ function VoiceDictationContent() {
       setSavedNoteId(note.id);
       toast.success(
         note.status === "finalized"
-          ? "SOAP záznam bol potvrdený a uložený do kartotéky"
-          : "SOAP záznam bol uložený ako koncept – finalizujte ho v kartotéke",
+          ? t("voice.page.savedFinalized", "SOAP záznam bol potvrdený a uložený do kartotéky")
+          : t("voice.page.savedDraft", "SOAP záznam bol uložený ako koncept – finalizujte ho v kartotéke"),
         {
         action: {
-          label: "Zobraziť pacienta",
+          label: t("voice.page.viewPatient", "Zobraziť pacienta"),
           onClick: () => {
             window.location.href = `/patients/${selectedPatient.id}`;
           },
@@ -332,10 +342,10 @@ function VoiceDictationContent() {
         patientId: selectedPatient.id,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Uloženie SOAP záznamu zlyhalo";
+      const message = err instanceof Error ? err.message : t("voice.page.saveFailed", "Uloženie SOAP záznamu zlyhalo");
       toast.error(message);
     }
-  }, [dictationId, selectedPatient, soapSections, saveMutation, utils, clinicianConfirmed]);
+  }, [dictationId, selectedPatient, soapSections, saveMutation, utils, clinicianConfirmed, t]);
 
   const handleSelectHistoryItem = (item: any) => {
     setDictationId(item.id);
@@ -348,7 +358,7 @@ function VoiceDictationContent() {
     });
     setStatus(item.status === "COMPLETED" ? "done" : "idle");
     setActiveTab("editor");
-    toast.info("Diktát načítaný do editora");
+    toast.info(t("voice.page.loadedToEditor", "Diktát načítaný do editora"));
   };
 
   const handleSelectTemplate = useCallback(
@@ -371,12 +381,12 @@ function VoiceDictationContent() {
         });
 
         setStatus("done");
-        toast.success(`Vzor „${templateTitle}“ bol úspešne spracovaný`);
+        toast.success(t("voice.page.templateProcessed", "Vzor „{title}“ bol úspešne spracovaný", { title: templateTitle }));
       } catch {
         setStatus("done");
       }
     },
-    [selectedPatient, activeStyle, formatTextMutation],
+    [selectedPatient, activeStyle, formatTextMutation, t],
   );
 
   const handleExecuteVoiceCommand = useCallback(
@@ -384,44 +394,44 @@ function VoiceDictationContent() {
       switch (actionKey) {
         case "new_note":
           resetState();
-          toast.success("Pripravená nová poznámka pacienta");
+          toast.success(t("voice.commands.newNoteReady", "Pripravená nová poznámka pacienta"));
           break;
         case "start_consultation":
           if (!selectedPatient) {
-            toast.warning("Najprv vyberte pacienta pre začatie konzultácie");
+            toast.warning(t("voice.commands.selectPatientFirst", "Najprv vyberte pacienta pre začatie konzultácie"));
           } else {
-            toast.info("Stlačte tlačidlo mikrofónu pre začatie diktovania");
+            toast.info(t("voice.commands.pressMic", "Stlačte tlačidlo mikrofónu pre začatie diktovania"));
           }
           break;
         case "end_note":
           if (audioBlob) {
             handleProcess();
           } else {
-            toast.info("Záznam pripravený na spracovanie");
+            toast.info(t("voice.commands.readyToProcess", "Záznam pripravený na spracovanie"));
           }
           break;
         case "save_document":
           if (dictationId && selectedPatient) {
             handleSave();
           } else {
-            toast.warning("Zatiaľ nie je k dispozícii žiadny vygenerovaný SOAP záznam");
+            toast.warning(t("voice.commands.noSoapYet", "Zatiaľ nie je k dispozícii žiadny vygenerovaný SOAP záznam"));
           }
           break;
         case "new_paragraph":
           setRawTranscript((prev) => (prev ? `${prev}\n\n` : "\n\n"));
-          toast.success("Vložený nový odsek");
+          toast.success(t("voice.commands.paragraphInserted", "Vložený nový odsek"));
           break;
         case "bullet_point":
           setRawTranscript((prev) => (prev ? `${prev}\n• ` : "• "));
-          toast.success("Vložená odrážka");
+          toast.success(t("voice.commands.bulletInserted", "Vložená odrážka"));
           break;
         case "numbered_list":
           setRawTranscript((prev) => (prev ? `${prev}\n1. ` : "1. "));
-          toast.success("Vložený číslovaný zoznam");
+          toast.success(t("voice.commands.numberedInserted", "Vložený číslovaný zoznam"));
           break;
         case "bold_text":
           setRawTranscript((prev) => (prev ? `${prev} **Dôležité:** ` : "**Dôležité:** "));
-          toast.success("Vložený formát pre tučný text");
+          toast.success(t("voice.commands.boldInserted", "Vložený formát pre tučný text"));
           break;
         case "go_to_patients":
           router.push("/patients");
@@ -436,10 +446,10 @@ function VoiceDictationContent() {
           router.push("/records");
           break;
         default:
-          toast.info(`Rozpoznaný príkaz: ${phrase}`);
+          toast.info(t("voice.commands.recognized", "Rozpoznaný príkaz: {phrase}", { phrase }));
       }
     },
-    [resetState, selectedPatient, audioBlob, handleProcess, dictationId, handleSave, router],
+    [resetState, selectedPatient, audioBlob, handleProcess, dictationId, handleSave, router, t],
   );
 
   const [loadingDemo, setLoadingDemo] = useState(false);
@@ -448,31 +458,31 @@ function VoiceDictationContent() {
     setLoadingDemo(true);
     try {
       const res = await fetch("/demo/voice-demo.webm");
-      if (!res.ok) throw new Error("Demo nahrávka nebola nájdená");
+      if (!res.ok) throw new Error(t("voice.demo.notFound", "Demo nahrávka nebola nájdená"));
       const blob = await res.blob();
       // Pre istotu získame reálnu dĺžku z Audio elementu
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       await new Promise<void>((resolve, reject) => {
         audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
-        audio.addEventListener("error", () => reject(new Error("Nepodarilo sa načítať demo audio")), { once: true });
+        audio.addEventListener("error", () => reject(new Error(t("voice.demo.loadError", "Nepodarilo sa načítať demo audio"))), { once: true });
       });
       const duration = Math.round(audio.duration || 5);
       URL.revokeObjectURL(url);
       handleRecordingComplete(blob, duration);
-      toast.success("Demo nahrávka bola načítaná");
+      toast.success(t("voice.demo.loaded", "Demo nahrávka bola načítaná"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Načítanie demo nahrávky zlyhalo");
+      toast.error(err instanceof Error ? err.message : t("voice.demo.failed", "Načítanie demo nahrávky zlyhalo"));
     } finally {
       setLoadingDemo(false);
     }
-  }, [handleRecordingComplete]);
+  }, [handleRecordingComplete, t]);
 
   const handleCopySoap = () => {
-    const text = `S (Subjektívne):\n${soapSections.subjective}\n\nO (Objektívne):\n${soapSections.objective}\n\nA (Posúdenie):\n${soapSections.assessment}\n\nP (Plán):\n${soapSections.plan}`;
+    const text = `${t("voice.soap.subjective", "Subjektívne (S)")}:\n${soapSections.subjective}\n\n${t("voice.soap.objective", "Objektívne (O)")}:\n${soapSections.objective}\n\n${t("voice.soap.assessment", "Hodnotenie (A)")}:\n${soapSections.assessment}\n\n${t("voice.soap.plan", "Plán (P)")}:\n${soapSections.plan}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success("SOAP záznam skopírovaný do schránky");
+    toast.success(t("voice.page.soapCopied", "SOAP záznam skopírovaný do schránky"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -493,15 +503,15 @@ function VoiceDictationContent() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight">
-              Hlasové Diktovanie
+              {t("voice.page.title", "Hlasové diktovanie")}
             </h1>
             <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
               <Sparkles className="h-3 w-3" />
-              Klinický AI Prepis
+              {t("voice.page.badge", "Klinický AI prepis")}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Presná transkripcia hovoreného slova s veterinárnou terminológiou a automatickým štruktúrovaním do SOAP.
+            {t("voice.page.subtitle", "Presná transkripcia hovoreného slova s veterinárnou terminológiou a automatickým štruktúrovaním do SOAP.")}
           </p>
         </div>
 
@@ -510,11 +520,11 @@ function VoiceDictationContent() {
           <TabsList className="grid grid-cols-2 w-[280px]">
             <TabsTrigger value="editor" className="gap-1.5">
               <Mic className="h-4 w-4" />
-              Diktovanie
+              {t("voice.page.tabEditor", "Diktovanie")}
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
               <History className="h-4 w-4" />
-              História diktátov
+              {t("voice.page.tabHistory", "História diktátov")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -526,21 +536,21 @@ function VoiceDictationContent() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              História hlasových diktovaní
+              {t("voice.history.title", "História hlasových diktovaní")}
             </CardTitle>
             <CardDescription>
               {selectedPatient
-                ? `Zoznam predchádzajúcich diktovaní pre pacienta ${selectedPatient.name}.`
-                : "Vyberte pacienta v editore pre zobrazenie histórie jeho diktovaní."}
+                ? t("voice.history.forPatient", "Zoznam predchádzajúcich diktovaní pre pacienta {name}.", { name: selectedPatient.name })
+                : t("voice.history.selectPatientHint", "Vyberte pacienta v editore pre zobrazenie histórie jeho diktovaní.")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {!selectedPatient ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm font-medium">Nie je vybraný žiadny pacient</p>
+                <p className="text-sm font-medium">{t("voice.history.noPatient", "Nie je vybraný žiadny pacient")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Vráťte sa do editora a vyberte pacienta, ktorého históriu si prajete zobraziť.
+                  {t("voice.history.noPatientHint", "Vráťte sa do editora a vyberte pacienta, ktorého históriu si prajete zobraziť.")}
                 </p>
                 <Button
                   variant="outline"
@@ -548,7 +558,7 @@ function VoiceDictationContent() {
                   onClick={() => setActiveTab("editor")}
                   className="mt-4 text-xs"
                 >
-                  Prejsť do editora
+                  {t("voice.history.goToEditor", "Prejsť do editora")}
                 </Button>
               </div>
             ) : historyQuery.isLoading ? (
@@ -558,7 +568,9 @@ function VoiceDictationContent() {
             ) : !historyQuery.data || historyQuery.data.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Pre pacienta {selectedPatient.name} zatiaľ neboli zaznamenané žiadne diktáty.</p>
+                <p className="text-sm">
+                  {t("voice.history.empty", "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne diktáty.", { name: selectedPatient.name })}
+                </p>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -567,7 +579,7 @@ function VoiceDictationContent() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base font-semibold">
-                          Diktát — {new Date(item.createdAt).toLocaleDateString("sk-SK")}
+                          {t("voice.history.itemTitle", "Diktát")} — {new Date(item.createdAt).toLocaleDateString("sk-SK")}
                         </CardTitle>
                         <Badge
                           variant={
@@ -580,19 +592,21 @@ function VoiceDictationContent() {
                           className="text-xs"
                         >
                           {item.status === "COMPLETED"
-                            ? "Spracované"
+                            ? t("voice.history.statusCompleted", "Spracované")
                             : item.status === "SAVED"
-                              ? "Uložené v karte"
-                              : "Koncept"}
+                              ? t("voice.history.statusSaved", "Uložené v karte")
+                              : t("voice.history.statusDraft", "Koncept")}
                         </Badge>
                       </div>
                       <CardDescription className="line-clamp-2 text-xs mt-1">
-                        {item.assessment || item.rawTranscript || "Bez popisu nálezu"}
+                        {item.assessment || item.rawTranscript || t("voice.history.noDescription", "Bez popisu nálezu")}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-2 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        {item.audioDurationSeconds ? `${item.audioDurationSeconds} s audia` : "Diktát"}
+                        {item.audioDurationSeconds
+                          ? t("voice.history.audioSeconds", "{seconds} s audia", { seconds: item.audioDurationSeconds })
+                          : t("voice.history.itemTitle", "Diktát")}
                       </span>
                       <Button
                         variant="secondary"
@@ -601,7 +615,7 @@ function VoiceDictationContent() {
                         className="gap-1.5 text-xs"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        Načítať do editora
+                        {t("voice.history.loadToEditor", "Načítať do editora")}
                       </Button>
                     </CardContent>
                   </Card>
@@ -621,7 +635,7 @@ function VoiceDictationContent() {
                 <CardTitle className="text-base font-semibold flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Stethoscope className="h-4 w-4 text-primary" />
-                    Vybrať pacienta pre diktovanie *
+                    {t("voice.patient.selectTitle", "Vybrať pacienta pre diktovanie *")}
                   </span>
                   {selectedPatient && (
                     <div className="flex items-center gap-2">
@@ -632,7 +646,7 @@ function VoiceDictationContent() {
                         className="h-7 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <Link href={`/patients/${selectedPatient.id}`} target="_blank">
-                          <span>Karta pacienta</span>
+                          <span>{t("voice.patient.chart", "Karta pacienta")}</span>
                           <ExternalLink className="h-3 w-3 ml-1" />
                         </Link>
                       </Button>
@@ -646,7 +660,7 @@ function VoiceDictationContent() {
                         className="h-7 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <X className="h-3 w-3 mr-1" />
-                        Zrušiť
+                        {t("voice.patient.clear", "Zrušiť")}
                       </Button>
                     </div>
                   )}
@@ -666,8 +680,8 @@ function VoiceDictationContent() {
                   <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="font-semibold block mb-0.5">Upozornenie na status pacienta</strong>
-                      Tento pacient je evidovaný ako uhynutý/eutanazovaný. Záznam bude uložený do archívu.
+                      <strong className="font-semibold block mb-0.5">{t("voice.deceased.title", "Upozornenie na status pacienta")}</strong>
+                      {t("voice.deceased.desc", "Tento pacient je evidovaný ako uhynutý/eutanazovaný. Záznam bude uložený do archívu.")}
                     </div>
                   </div>
                 )}
@@ -679,7 +693,7 @@ function VoiceDictationContent() {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Rýchle vzory & pomôcky:
+                  {t("voice.templates.label", "Rýchle vzory & pomôcky")}:
                 </label>
                 <div className="flex items-center gap-1.5">
                   <Button
@@ -690,7 +704,7 @@ function VoiceDictationContent() {
                     className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
                   >
                     <MessageSquare className="h-3 w-3" />
-                    Hlasové príkazy
+                    {t("voice.templates.voiceCommands", "Hlasové príkazy")}
                   </Button>
                   <Button
                     type="button"
@@ -700,23 +714,26 @@ function VoiceDictationContent() {
                     className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
                   >
                     <BookOpen className="h-3 w-3" />
-                    Všetky vzory
+                    {t("voice.templates.allTemplates", "Všetky vzory")}
                   </Button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {QUICK_TEMPLATES.map((tpl) => (
-                  <Button
-                    key={tpl.name}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                    onClick={() => handleSelectTemplate(tpl.text, tpl.name)}
-                  >
-                    {tpl.name}
-                  </Button>
-                ))}
+                {QUICK_TEMPLATES.map((tpl) => {
+                  const tplName = t(`voice.templates.quick.${tpl.key}`, tpl.name);
+                  return (
+                    <Button
+                      key={tpl.key}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                      onClick={() => handleSelectTemplate(tpl.text, tplName)}
+                    >
+                      {tplName}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
@@ -726,18 +743,18 @@ function VoiceDictationContent() {
                 <CardTitle className="text-base font-semibold flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Mic className="h-4 w-4 text-primary" />
-                    Hlasový záznam vyšetrenia
+                    {t("voice.recording.title", "Hlasový záznam vyšetrenia")}
                   </span>
                   {audioDuration > 0 && (
                     <Badge variant="outline" className="text-xs">
-                      {audioDuration} sekúnd
+                      {t("voice.recording.seconds", "{seconds} sekúnd", { seconds: audioDuration })}
                     </Badge>
                   )}
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {selectedPatient
-                    ? "Stlačte mikrofón a diktujte anamnézu, klinický nález a medikáciu."
-                    : "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania."}
+                    ? t("voice.recording.hintReady", "Stlačte mikrofón a diktujte anamnézu, klinický nález a medikáciu.")
+                    : t("voice.recording.hintSelectPatient", "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania.")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
@@ -763,7 +780,7 @@ function VoiceDictationContent() {
                   ) : (
                     <Volume2 className="h-3.5 w-3.5" />
                   )}
-                  Načítať demo nahrávku
+                  {t("voice.demo.load", "Načítať demo nahrávku")}
                 </Button>
 
                 {/* Recorded Audio Preview */}
@@ -771,7 +788,7 @@ function VoiceDictationContent() {
                   <div className="w-full space-y-3 pt-2">
                     <AudioPlayer
                       src={audioUrl}
-                      title={`Záznam diktátu (${audioDuration} sekúnd)`}
+                      title={t("voice.recording.playerTitle", "Záznam diktátu ({seconds} sekúnd)", { seconds: audioDuration })}
                     />
 
                     <div className="flex items-center justify-between gap-2 pt-1">
@@ -786,7 +803,7 @@ function VoiceDictationContent() {
                         className="text-xs gap-1"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        Nahrať znova
+                        {t("voice.recording.recordAgain", "Nahrať znova")}
                       </Button>
 
                       <Button
@@ -795,7 +812,7 @@ function VoiceDictationContent() {
                         className="gap-2 py-4 text-xs font-semibold shadow-sm"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
-                        Spracovať cez Gemini AI
+                        {t("voice.recording.process", "Spracovať cez Gemini AI")}
                       </Button>
                     </div>
                   </div>
@@ -806,10 +823,10 @@ function VoiceDictationContent() {
                   <div className="flex flex-col items-center gap-2 py-4 text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-xs font-semibold text-foreground">
-                      AI analyzuje a štruktúruje veterinárne diktovanie...
+                      {t("voice.recording.processing", "AI analyzuje a štruktúruje veterinárne diktovanie...")}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.
+                      {t("voice.recording.processingHint", "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.")}
                     </p>
                   </div>
                 )}
@@ -822,10 +839,10 @@ function VoiceDictationContent() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold">
-                      Surový prepis diktátu
+                      {t("voice.transcript.title", "Surový prepis diktátu")}
                     </CardTitle>
                     <span className="text-[11px] text-muted-foreground font-mono">
-                      {rawTranscript.length} znakov
+                      {t("voice.transcript.charCount", "{count} znakov", { count: rawTranscript.length })}
                     </span>
                   </div>
                 </CardHeader>
@@ -834,7 +851,7 @@ function VoiceDictationContent() {
                     value={rawTranscript}
                     onChange={(e) => setRawTranscript(e.target.value)}
                     rows={3}
-                    placeholder="Sem môžete vložiť alebo upraviť surový text..."
+                    placeholder={t("voice.transcript.placeholder", "Sem môžete vložiť alebo upraviť surový text...")}
                     className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
                   />
                   <div className="flex justify-end">
@@ -851,7 +868,7 @@ function VoiceDictationContent() {
                       ) : (
                         <Sparkles className="h-3 w-3" />
                       )}
-                      Preformátovať do SOAP
+                      {t("voice.transcript.reformat", "Preformátovať do SOAP")}
                     </Button>
                   </div>
                 </CardContent>
@@ -866,7 +883,7 @@ function VoiceDictationContent() {
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base font-semibold">
-                    Klinický SOAP záznam
+                    {t("voice.soapCard.title", "Klinický SOAP záznam")}
                   </CardTitle>
                 </div>
 
@@ -883,7 +900,7 @@ function VoiceDictationContent() {
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
-                      Kopírovať
+                      {t("voice.soap.copy", "Kopírovať")}
                     </Button>
                   </div>
                 )}
@@ -909,13 +926,14 @@ function VoiceDictationContent() {
                           className="mt-0.5 h-4 w-4 rounded border-input"
                           checked={clinicianConfirmed}
                           onChange={(e) => setClinicianConfirmed(e.target.checked)}
-                          aria-label="Potvrdzujem, že som skontroloval(a) AI prepis a finalizujem záznam"
+                          aria-label={t("voice.save.confirmAria", "Potvrdzujem, že som skontroloval(a) AI prepis a finalizujem záznam")}
                           data-testid="voice-clinician-confirm"
                         />
                         <span>
-                          Potvrdzujem, že som AI prepis skontroloval(a) a záznam
-                          finalizujem pod svojím menom. Bez potvrdenia sa uloží
-                          iba ako koncept.
+                          {t(
+                            "voice.save.confirmLabel",
+                            "Potvrdzujem, že som AI prepis skontroloval(a) a záznam finalizujem pod svojím menom. Bez potvrdenia sa uloží iba ako koncept.",
+                          )}
                         </span>
                       </label>
                       <Button
@@ -927,16 +945,16 @@ function VoiceDictationContent() {
                         {saveMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Ukladám SOAP do karty pacienta...
+                            {t("voice.save.saving", "Ukladám SOAP do karty pacienta...")}
                           </>
                         ) : (
                           <>
                             <Save className="h-4 w-4" />
                             {status === "saved"
-                              ? "Uložené v kartotéke pacienta"
+                              ? t("voice.save.saved", "Uložené v kartotéke pacienta")
                               : clinicianConfirmed
-                                ? "Potvrdiť a finalizovať SOAP záznam"
-                                : "Uložiť ako koncept do záznamov pacienta"}
+                                ? t("voice.save.confirmAndFinalize", "Potvrdiť a finalizovať SOAP záznam")
+                                : t("voice.save.saveDraft", "Uložiť ako koncept do záznamov pacienta")}
                           </>
                         )}
                       </Button>
@@ -958,12 +976,12 @@ function VoiceDictationContent() {
                         {extractItemsMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Extrahujem položky pre vyúčtovanie...
+                            {t("voice.billing.extracting", "Extrahujem položky pre vyúčtovanie...")}
                           </>
                         ) : (
                           <>
                             <Receipt className="h-4 w-4" />
-                            Extrahovať lieky a úkony do účtu / pokladne
+                            {t("voice.billing.extractButton", "Extrahovať lieky a úkony do účtu / pokladne")}
                           </>
                         )}
                       </Button>
@@ -973,10 +991,10 @@ function VoiceDictationContent() {
                   <div className="flex flex-col items-center justify-center flex-1 py-16 text-muted-foreground text-center">
                     <Mic className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium text-foreground">
-                      Žiadny vygenerovaný SOAP záznam
+                      {t("voice.soapCard.empty", "Žiadny vygenerovaný SOAP záznam")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                      Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo.
+                      {t("voice.soapCard.emptyHint", "Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo.")}
                     </p>
                   </div>
                 )}
@@ -1030,7 +1048,7 @@ function VoiceDictationContent() {
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <Receipt className="h-5 w-5 text-emerald-600" />
-                <h3 className="font-semibold text-base">Položky na vyúčtovanie z hlasového záznamu</h3>
+                <h3 className="font-semibold text-base">{t("voice.billing.modalTitle", "Položky na vyúčtovanie z hlasového záznamu")}</h3>
               </div>
               <Button
                 variant="ghost"
@@ -1044,19 +1062,19 @@ function VoiceDictationContent() {
 
             <div className="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               <p className="text-xs text-muted-foreground">
-                Tieto položky a aplikované liečivá boli automaticky rozpoznané z plánu terapie. Môžete upraviť množstvá alebo ceny pred vystavením účtu.
+                {t("voice.billing.modalHint", "Tieto položky a aplikované liečivá boli automaticky rozpoznané z plánu terapie. Môžete upraviť množstvá alebo ceny pred vystavením účtu.")}
               </p>
 
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>
-                      <th className="p-2.5">Položka / Liečivo</th>
-                      <th className="p-2.5">Kategória</th>
-                      <th className="p-2.5 w-20">Množstvo</th>
-                      <th className="p-2.5 w-24">Cena/j (€)</th>
-                      <th className="p-2.5 w-24">Spolu (€)</th>
-                      <th className="p-2.5 w-12 text-center">Akcia</th>
+                      <th className="p-2.5">{t("voice.billing.colItem", "Položka / Liečivo")}</th>
+                      <th className="p-2.5">{t("voice.billing.colCategory", "Kategória")}</th>
+                      <th className="p-2.5 w-20">{t("voice.billing.colQuantity", "Množstvo")}</th>
+                      <th className="p-2.5 w-24">{t("voice.billing.colUnitPrice", "Cena/j (€)")}</th>
+                      <th className="p-2.5 w-24">{t("voice.billing.colTotal", "Spolu (€)")}</th>
+                      <th className="p-2.5 w-12 text-center">{t("voice.billing.colAction", "Akcia")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -1075,13 +1093,15 @@ function VoiceDictationContent() {
                           />
                           {item.dosageOrRoute && (
                             <span className="text-[10px] text-muted-foreground block">
-                              Dávka: {item.dosageOrRoute}
+                              {t("voice.billing.dose", "Dávka")}: {item.dosageOrRoute}
                             </span>
                           )}
                         </td>
                         <td className="p-2.5">
                           <Badge variant="outline" className="text-[10px]">
-                            {item.category === "medication" ? "Liek" : "Úkon"}
+                            {item.category === "medication"
+                              ? t("voice.billing.categoryMedication", "Liek")
+                              : t("voice.billing.categoryService", "Úkon")}
                           </Badge>
                         </td>
                         <td className="p-2.5">
@@ -1141,7 +1161,7 @@ function VoiceDictationContent() {
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 text-xs font-semibold">
-                <span>Celková suma za položky s DPH:</span>
+                <span>{t("voice.billing.totalWithVat", "Celková suma za položky s DPH")}:</span>
                 <span className="text-base font-bold text-foreground">
                   {extractedItems.reduce((acc, i) => acc + (i.totalPrice || 0), 0).toFixed(2)} €
                 </span>
@@ -1155,7 +1175,7 @@ function VoiceDictationContent() {
                 size="sm"
                 onClick={() => setIsBillingModalOpen(false)}
               >
-                Zrušiť
+                {t("voice.billing.cancel", "Zrušiť")}
               </Button>
 
               <Button
@@ -1163,7 +1183,7 @@ function VoiceDictationContent() {
                 size="sm"
                 onClick={() => {
                   if (!selectedPatient) {
-                    toast.error("Nie je vybraný pacient.");
+                    toast.error(t("voice.billing.noPatient", "Nie je vybraný pacient."));
                     return;
                   }
                   createInvoiceMutation.mutate({
@@ -1186,7 +1206,7 @@ function VoiceDictationContent() {
                 ) : (
                   <Receipt className="h-3.5 w-3.5" />
                 )}
-                <span>Vytvoriť koncept faktúry</span>
+                <span>{t("voice.billing.createInvoice", "Vytvoriť koncept faktúry")}</span>
               </Button>
 
               <Button
@@ -1198,7 +1218,7 @@ function VoiceDictationContent() {
                 className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <CreditCard className="h-3.5 w-3.5" />
-                <span>Prejsť do e-Kasa pokladne</span>
+                <span>{t("voice.billing.goToEkasa", "Prejsť do e-Kasa pokladne")}</span>
               </Button>
             </div>
           </div>
@@ -1223,13 +1243,16 @@ function VoiceDictationContent() {
 }
 
 export default function VoiceDictationPage() {
+  const { t } = useI18n();
   return (
     <Suspense
       fallback={
         <div className="flex h-96 items-center justify-center">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground">Načítavam hlasové diktovanie...</span>
+            <span className="text-xs text-muted-foreground">
+              {t("voice.page.loading", "Načítavam hlasové diktovanie...")}
+            </span>
           </div>
         </div>
       }

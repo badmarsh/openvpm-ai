@@ -26,6 +26,7 @@ import {
 import { formatTranscriptToSoap, type SoapStyle } from "@/lib/voice/soap-formatter";
 import { extractBillableItemsFromSoap } from "@/lib/voice/treatment-extractor";
 import { uploadFile, readPrimaryObject } from "@/lib/s3";
+import { VOICE_AUDIO_RETENTION_MS } from "@/lib/voice/retention";
 
 const voiceProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian"))
@@ -109,6 +110,8 @@ export const voiceRouter = createRouter({
           language: input.language,
           modelId: activeModelId(),
           status: "TRANSCRIBING",
+          // GDPR: surové audio je naplánované na zmazanie 24 h od nahratia
+          scheduledDeleteAt: new Date(Date.now() + VOICE_AUDIO_RETENTION_MS),
         })
         .returning();
 
@@ -238,6 +241,8 @@ export const voiceRouter = createRouter({
           language: input.language,
           modelId: activeModelId(),
           status: "RECORDING",
+          // GDPR: surové audio je naplánované na zmazanie 24 h od nahratia
+          scheduledDeleteAt: new Date(Date.now() + VOICE_AUDIO_RETENTION_MS),
         })
         .returning();
 

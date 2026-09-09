@@ -163,7 +163,7 @@ export default function PatientsPage() {
                   key={patient.id}
                   type="button"
                   onClick={() => router.push(`/patients/${patient.id}`)}
-                  aria-label={`Open patient ${patient.name}`}
+                  aria-label={t("patients.list.openPatientAria", "Otvoriť pacienta {name}", { name: patient.name })}
                   className="min-h-11 w-full min-w-0 overflow-hidden rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <span className="flex min-w-0 items-start justify-between gap-3">

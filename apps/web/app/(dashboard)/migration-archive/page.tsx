@@ -202,7 +202,7 @@ export default function MigrationArchivePage() {
         />
       ) : (
         <section
-          aria-label="Imported history totals"
+          aria-label={t("migrationArchive.totalsAria", "Súhrny importovanej histórie")}
           className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
         >
           {summaryCards.map((card) => (
@@ -233,7 +233,7 @@ export default function MigrationArchivePage() {
           </div>
           <div
             role="tablist"
-            aria-label="Imported history sections"
+            aria-label={t("migrationArchive.sectionsAria", "Sekcie importovanej histórie")}
             className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1"
           >
             {sections.map((item) => (
@@ -262,7 +262,7 @@ export default function MigrationArchivePage() {
               aria-hidden="true"
             />
             <Input
-              aria-label={`Search ${activeSection.label.toLowerCase()}`}
+              aria-label={t("migrationArchive.searchAria", "Hľadať: {section}", { section: activeSection.label.toLowerCase() })}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("migrationArchive.browser.searchPlaceholder", `Search ${activeSection.label.toLowerCase()}`, { section: t(activeSection.labelKey, activeSection.label) })}
@@ -459,7 +459,7 @@ export default function MigrationArchivePage() {
             </div>
 
             {selectedId && canExpand ? (
-              <aside aria-label="Imported record details" className="min-w-0">
+              <aside aria-label={t("migrationArchive.detailsAria", "Detaily importovaného záznamu")} className="min-w-0">
                 <Card className="sticky top-4">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">

@@ -72,9 +72,9 @@ describe("treatment template settings UI", () => {
     expect(source).toContain("!hasUnlinkedCatalogRows");
     expect(source).toContain("excludedIds={addItems");
     expect(source).toContain("candidate.itemType === item.itemType");
-    expect(source).toContain("Search for and select an active service");
+    expect(source).toContain('t("settings.templates.selectItemHint"');
     expect(source).toContain("item.hasActiveProductLink !== true");
-    expect(source).toContain("Missing or archived inventory product");
+    expect(source).toContain('t("settings.templates.missingProduct"');
   });
 
   it("uses a responsive item grid and labels row removal", () => {

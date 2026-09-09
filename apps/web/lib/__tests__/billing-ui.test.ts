@@ -60,7 +60,7 @@ describe("billing invoice form UX", () => {
 
   it("uses currency inputs for invoice unit prices", () => {
     expect(source).toMatch(
-      /type="number"[\s\S]*?step="0\.01"[\s\S]*?min=\{0\}[\s\S]*?max=\{BILLING_UNIT_PRICE_MAX\}[\s\S]*?placeholder="Unit Price"/
+      /type="number"[\s\S]*?step="0\.01"[\s\S]*?min=\{0\}[\s\S]*?max=\{BILLING_UNIT_PRICE_MAX\}[\s\S]*?placeholder=\{t\("billing\.new\.unitPricePlaceholder"/
     );
   });
 

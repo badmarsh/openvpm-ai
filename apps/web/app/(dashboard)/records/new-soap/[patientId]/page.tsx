@@ -41,15 +41,20 @@ import {
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useI18n } from "@/lib/i18n";
 
+function SoapEditorLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="min-h-32 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+      {t("records.soap.loadingEditor", "Načítavam editor...")}
+    </div>
+  );
+}
+
 const SoapNoteEditor = dynamic(
   () => import("@/components/SoapNoteEditor").then((mod) => mod.SoapNoteEditor),
   {
     ssr: false,
-    loading: () => (
-      <div className="min-h-32 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-        Loading editor...
-      </div>
-    ),
+    loading: () => <SoapEditorLoading />,
   },
 );
 

@@ -285,8 +285,8 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       {statsError || statsDisplayMissing ? (
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          Unable to load dashboard metrics.
-          {statsError ? ` ${statsError.message}` : " Please retry."}
+          {t("dashboard.stats.error", "Nie je možné načítať metriky informačného panela.")}
+          {statsError ? ` ${statsError.message}` : ` ${t("common.pleaseRetry", "Skúste to prosím znova.")}`}
         </div>
       ) : isStatsLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -432,8 +432,8 @@ export default function DashboardPage() {
         <div className="space-y-2 p-4">
           {upcomingError || isUpcomingMissing ? (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-              {t("dashboard.upcoming.error", "Unable to load upcoming appointments.")}
-              {upcomingError ? ` ${upcomingError.message}` : " Please retry."}
+              {t("dashboard.upcoming.error", "Nie je možné načítať nadchádzajúce stretnutia.")}
+              {upcomingError ? ` ${upcomingError.message}` : ` ${t("common.pleaseRetry", "Skúste to prosím znova.")}`}
             </div>
           ) : isUpcomingLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
@@ -469,7 +469,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
-                    {appt.patientName ?? "Unknown Patient"}
+                    {appt.patientName ?? t("dashboard.upcoming.unknownPatient", "Neznámy pacient")}
                     {appt.clientLastName && (
                       <span className="ml-1 font-normal text-muted-foreground">
                         ({appt.clientFirstName} {appt.clientLastName})
@@ -479,7 +479,7 @@ export default function DashboardPage() {
                   {appt.typeName && (
                     <p className="text-xs text-muted-foreground">
                       {appt.typeName}
-                      {appt.doctorName ? ` with ${appt.doctorName}` : ""}
+                      {appt.doctorName ? ` ${t("dashboard.upcoming.withDoctor", "s {name}", { name: appt.doctorName })}` : ""}
                     </p>
                   )}
                 </div>
@@ -506,8 +506,8 @@ export default function DashboardPage() {
       {/* Charts */}
       {chartsError || chartsDisplayMissing ? (
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          Unable to load dashboard charts.
-          {chartsError ? ` ${chartsError.message}` : " Please retry."}
+          {t("dashboard.charts.error", "Nie je možné načítať grafy informačného panela.")}
+          {chartsError ? ` ${chartsError.message}` : ` ${t("common.pleaseRetry", "Skúste to prosím znova.")}`}
         </div>
       ) : isChartsLoading ? (
         <>
@@ -523,8 +523,8 @@ export default function DashboardPage() {
       ) : chartData && !hasChartData ? (
         <EmptyState
           icon={TrendingUp}
-          title="Your charts show up once you start"
-          description="As you book visits and send bills, your trends and totals fill in here."
+          title={t("dashboard.charts.empty.title", "Vaše grafy sa zobrazia po spustení")}
+          description={t("dashboard.charts.empty.description", "Keď si rezervujete návštevy a posielate účty, vaše trendy a súčty sa vyplnia tu.")}
         />
       ) : chartData ? (
         <DashboardCharts

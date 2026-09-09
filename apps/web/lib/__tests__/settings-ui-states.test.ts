@@ -67,14 +67,14 @@ describe("settings UI states", () => {
     expect(source).toContain("error: templatesError");
     expect(source).toContain("error: selectedTemplateError");
     expect(source).toContain("error: billingError");
-    expect(source).toContain('title="Could not load billing details"');
+    expect(source).toContain('title={t("settings.billing.loadErrorTitle"');
     expect(source).toContain("onRetry={() => void refetchBilling()}");
     expect(source).toContain(
       'import { isSafeCheckoutRedirectUrl } from "@/lib/checkout-redirect"',
     );
     expect(source).toContain("function redirectToHostedBillingUrl");
     expect(source).toContain("if (!isSafeCheckoutRedirectUrl(url))");
-    expect(source).toContain("redirectToHostedBillingUrl(r.url)");
+    expect(source).toContain("redirectToHostedBillingUrl(r.url, ");
     expect(source).not.toContain("if (r.url) window.location.href = r.url");
     expect(billingTab.indexOf("if (billingError)")).toBeLessThan(
       billingTab.indexOf("if (isLoading)"),
@@ -82,9 +82,7 @@ describe("settings UI states", () => {
     expect(billingTab.indexOf("if (isLoading)")).toBeLessThan(
       billingTab.indexOf("if (!data)"),
     );
-    expect(billingTab).toContain(
-      "The billing details request finished without returning data. Try loading it again.",
-    );
+    expect(billingTab).toContain('t("settings.billing.loadErrorMessage"');
     expect(billingTab).not.toContain("if (isLoading || !data)");
   });
 
@@ -97,13 +95,13 @@ describe("settings UI states", () => {
 
   it("uses shared empty states for first-run settings panels", () => {
     expect(source).toContain('title="Practice settings unavailable"');
-    expect(source).toContain('title="No active locations configured"');
-    expect(source).toContain('title="No staff members found"');
-    expect(source).toContain('title="No appointment types configured"');
-    expect(source).toContain('title="No rooms configured"');
-    expect(source).toContain('title="No wellness plans configured"');
-    expect(source).toContain('title="No items in this template"');
-    expect(source).toContain('title="No templates configured"');
+    expect(source).toContain('title={t("settings.locations.emptyTitle"');
+    expect(source).toContain('title={t("settings.staff.emptyTitle"');
+    expect(source).toContain('title={t("settings.appointmentTypes.emptyTitle"');
+    expect(source).toContain('title={t("settings.rooms.emptyTitle"');
+    expect(source).toContain('title={t("settings.wellness.emptyTitle"');
+    expect(source).toContain('title={t("settings.templates.noItemsTitle"');
+    expect(source).toContain('title={t("settings.templates.emptyTitle"');
   });
 
   it("builds the practice form only after a practice profile is present", () => {
@@ -136,11 +134,9 @@ describe("settings UI states", () => {
   it("labels wellness plans as scheduled invoice billing instead of autopay", () => {
     expect(source).toContain("Scheduled invoice billing");
     expect(source).toContain("No auto-charge");
-    expect(source).toContain("Invoice schedule");
+    expect(source).toContain('t("settings.wellness.invoiceSchedule"');
     expect(source).toContain("Wellness plans generate due invoices by cadence");
-    expect(source).toContain(
-      "Create a plan to package preventive care into scheduled invoice memberships.",
-    );
+    expect(source).toContain('t("settings.wellness.emptyDescription"');
   });
 
   it("surfaces missing settings list payloads before empty states", () => {
@@ -170,22 +166,22 @@ describe("settings UI states", () => {
     );
 
     expect(locationsTab).toContain("const locationsMissing =");
-    expect(locationsTab).toContain('title="Could not load locations"');
+    expect(locationsTab).toContain('title={t("settings.locations.loadErrorTitle"');
     expect(locationsTab).toContain("onRetry={() => void refetchLocations()}");
     expect(locationsTab.indexOf("if (locationsMissing)")).toBeLessThan(
-      locationsTab.indexOf('title="No active locations configured"'),
+      locationsTab.indexOf('title={t("settings.locations.emptyTitle"'),
     );
 
     expect(staffTab).toContain("const staffMissing =");
-    expect(staffTab).toContain('title="Could not load staff"');
+    expect(staffTab).toContain('title={t("settings.staff.loadErrorTitle"');
     expect(staffTab).toContain("onRetry={() => void refetchStaff()}");
     expect(staffTab.indexOf("if (staffMissing)")).toBeLessThan(
-      staffTab.indexOf('title="No staff members found"'),
+      staffTab.indexOf('title={t("settings.staff.emptyTitle"'),
     );
 
     expect(appointmentTypesTab).toContain("const appointmentTypesMissing =");
     expect(appointmentTypesTab).toContain(
-      'title="Could not load appointment types"',
+      'title={t("settings.appointmentTypes.loadErrorTitle"',
     );
     expect(appointmentTypesTab).toContain(
       "onRetry={() => void refetchAppointmentTypes()}",
@@ -193,38 +189,38 @@ describe("settings UI states", () => {
     expect(
       appointmentTypesTab.indexOf("if (appointmentTypesMissing)"),
     ).toBeLessThan(
-      appointmentTypesTab.indexOf('title="No appointment types configured"'),
+      appointmentTypesTab.indexOf('title={t("settings.appointmentTypes.emptyTitle"'),
     );
 
     expect(roomsTab).toContain("const roomsMissing =");
-    expect(roomsTab).toContain('title="Could not load rooms"');
+    expect(roomsTab).toContain('title={t("settings.rooms.loadErrorTitle"');
     expect(roomsTab).toContain("onRetry={() => void refetchRooms()}");
     expect(roomsTab.indexOf("if (roomsMissing)")).toBeLessThan(
-      roomsTab.indexOf('title="No rooms configured"'),
+      roomsTab.indexOf('title={t("settings.rooms.emptyTitle"'),
     );
 
     expect(wellnessTab).toContain("const wellnessPlansMissing =");
-    expect(wellnessTab).toContain('title="Could not load wellness plans"');
+    expect(wellnessTab).toContain('title={t("settings.wellness.loadErrorTitle"');
     expect(wellnessTab).toContain(
       "onRetry={() => void refetchWellnessPlans()}",
     );
     expect(wellnessTab.indexOf("if (wellnessPlansMissing)")).toBeLessThan(
-      wellnessTab.indexOf('title="No wellness plans configured"'),
+      wellnessTab.indexOf('title={t("settings.wellness.emptyTitle"'),
     );
 
     expect(templatesTab).toContain("const templatesMissing =");
     expect(templatesTab).toContain("const selectedTemplateMissing =");
-    expect(templatesTab).toContain('title="Could not load templates"');
-    expect(templatesTab).toContain('title="Could not load template items"');
+    expect(templatesTab).toContain('title={t("settings.templates.loadErrorTitle"');
+    expect(templatesTab).toContain('title={t("settings.templates.itemsLoadErrorTitle"');
     expect(templatesTab).toContain("onRetry={() => void refetchTemplates()}");
     expect(templatesTab).toContain(
       "onRetry={() => void refetchSelectedTemplate()}",
     );
     expect(templatesTab.indexOf("if (templatesMissing)")).toBeLessThan(
-      templatesTab.indexOf('title="No templates configured"'),
+      templatesTab.indexOf('title={t("settings.templates.emptyTitle"'),
     );
     expect(templatesTab.indexOf("selectedTemplateMissing ? (")).toBeLessThan(
-      templatesTab.indexOf('title="No items in this template"'),
+      templatesTab.indexOf('title={t("settings.templates.noItemsTitle"'),
     );
   });
 
@@ -365,7 +361,7 @@ describe("settings UI states", () => {
     expect(source).toContain("isImportCsvSizeValid(text)");
     expect(source).toContain("isImportCsvSizeValid(csvText)");
     expect(source).toContain("CSV imports must be 5 MB or less.");
-    expect(source).toContain("CSV files must be 5 MB or less.");
+    expect(source).toContain('t("settings.data.csvSizeLimit"');
     expect(source).toContain('const importSource = migrationSource ?? "other"');
     expect(source).toContain("importClientsCsv.mutate({");
     expect(source).toContain("importPatientsCsv.mutate({");
@@ -379,12 +375,10 @@ describe("settings UI states", () => {
       source.match(/previewToken: importPreview\.previewToken/g),
     ).toHaveLength(4);
     expect(source).toContain("duplicates: data.duplicates");
-    expect(source).toContain('label="Row issues"');
-    expect(source).toContain("IDs to connect");
-    expect(source).toContain("Confirm Import (");
-    expect(source).toContain("changes)");
-    expect(source).toContain("Start with a small representative sample");
-    expect(source).toContain("has no one-click rollback");
+    expect(source).toContain('label={t("settings.data.statRowIssues"');
+    expect(source).toContain('t("settings.data.statIdsToConnect"');
+    expect(source).toContain('t("settings.data.confirmImport"');
+    expect(source).toContain('t("settings.data.startSmallSample"');
     expect(source).toContain("const importFileReadVersionRef = useRef(0)");
     expect(source).toContain(
       "const readVersion = ++importFileReadVersionRef.current",

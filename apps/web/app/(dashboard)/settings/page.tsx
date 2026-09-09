@@ -359,19 +359,21 @@ function requireSettingsExportData<T>(
 
 function SettingsLoadError({
   message,
-  title = "Could not load settings",
+  title,
   onRetry,
 }: {
   message: string;
   title?: string;
   onRetry?: () => void;
 }) {
+  const { t } = useI18n();
+  const resolvedTitle = title ?? t("settings.common.loadError", "Nepodarilo sa načítať nastavenia");
   return (
     <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
-          <p className="font-medium">{title}</p>
+          <p className="font-medium">{resolvedTitle}</p>
           <p className="mt-1">{message}</p>
           {onRetry ? (
             <Button
@@ -380,7 +382,7 @@ function SettingsLoadError({
               onClick={onRetry}
               className="mt-3"
             >
-              Retry
+              {t("settings.common.retry", "Skúsiť znova")}
             </Button>
           ) : null}
         </div>
@@ -467,7 +469,7 @@ function SettingsPageInner() {
         {/* Section nav: horizontal scroll on small screens, vertical on lg+ */}
         <nav
           className="min-w-0 max-w-full overflow-hidden lg:w-56 lg:shrink-0"
-          aria-label="Settings sections"
+          aria-label={t("settings.header.sectionsAria", "Sekcie nastavení")}
         >
           <div className="flex w-full max-w-full gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
             {tabs.map((tab) => {
@@ -1180,7 +1182,7 @@ function LocationsTab() {
       invalidateLocationState();
       setShowAdd(false);
       setAddForm({ name: "", address: "", phone: "", isPrimary: false });
-      toast.success("Location created");
+      toast.success(t("settings.locations.created", "Pobočka vytvorená"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -1188,14 +1190,14 @@ function LocationsTab() {
     onSuccess: () => {
       invalidateLocationState();
       setEditingId(null);
-      toast.success("Location updated");
+      toast.success(t("settings.locations.updated", "Pobočka aktualizovaná"));
     },
     onError: (err) => toast.error(err.message),
   });
   const setPrimaryMutation = trpc.settings.setPrimaryLocation.useMutation({
     onSuccess: () => {
       invalidateLocationState();
-      toast.success("Primary location updated");
+      toast.success(t("settings.locations.primaryUpdated", "Hlavná pobočka aktualizovaná"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -1249,8 +1251,8 @@ function LocationsTab() {
   if (locationsMissing) {
     return (
       <SettingsLoadError
-        title="Could not load locations"
-        message="The locations request finished without returning data. Try loading it again before editing practice locations."
+        title={t("settings.locations.loadErrorTitle", "Nepodarilo sa načítať pobočky")}
+        message={t("settings.locations.loadErrorMessage", "Požiadavka na pobočky sa skončila bez dát. Skúste ich načítať znova pred úpravou pobočiek praxe.")}
         onRetry={() => void refetchLocations()}
       />
     );
@@ -1288,8 +1290,7 @@ function LocationsTab() {
         <div>
           <h3 className="text-sm font-semibold">{t("settings.locations.title", "Practice Locations")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Locations power texting setup, room assignment, reminders, and
-            hosted billing quantity.
+            {t("settings.locations.description", "Pobočky riadia nastavenie SMS, priraďovanie miestností, pripomienky a množstvo v hostovanej fakturácii.")}
           </p>
         </div>
         <Button
@@ -1302,7 +1303,7 @@ function LocationsTab() {
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
-          Add Location
+          {t("settings.locations.add", "Pridať pobočku")}
         </Button>
       </div>
 
@@ -1311,13 +1312,13 @@ function LocationsTab() {
           <h3 className="text-sm font-semibold">{t("settings.locations.newLocation", "New Location")}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Input
-              placeholder="Location name"
+              placeholder={t("settings.locations.namePlaceholder", "Názov pobočky")}
               maxLength={LOCATION_NAME_MAX_LENGTH}
               value={addForm.name}
               onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
             />
             <Input
-              placeholder="Phone"
+              placeholder={t("settings.locations.phonePlaceholder", "Telefón")}
               maxLength={SETTINGS_PHONE_MAX_LENGTH}
               value={addForm.phone}
               onChange={(e) =>
@@ -1325,7 +1326,7 @@ function LocationsTab() {
               }
             />
             <Input
-              placeholder="Address"
+              placeholder={t("settings.locations.addressPlaceholder", "Adresa")}
               maxLength={SETTINGS_ADDRESS_MAX_LENGTH}
               value={addForm.address}
               onChange={(e) =>
@@ -1342,7 +1343,7 @@ function LocationsTab() {
                 setAddForm({ ...addForm, isPrimary: e.target.checked })
               }
             />
-            Make this the primary location
+            {t("settings.locations.makePrimary", "Nastaviť ako hlavnú pobočku")}
           </label>
           <div className="mt-4 flex gap-2">
             <Button
@@ -1357,10 +1358,10 @@ function LocationsTab() {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Create
+              {t("settings.common.create", "Vytvoriť")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
         </div>
@@ -1397,7 +1398,7 @@ function LocationsTab() {
                         />
                         <Input
                           value={editForm.address}
-                          placeholder="Address"
+                          placeholder={t("settings.locations.addressPlaceholder", "Adresa")}
                           maxLength={SETTINGS_ADDRESS_MAX_LENGTH}
                           onChange={(e) =>
                             setEditForm({
@@ -1419,7 +1420,7 @@ function LocationsTab() {
                           ) : null}
                         </div>
                         <p className="mt-1 text-muted-foreground">
-                          {location.address || "No address on file"}
+                          {location.address || t("settings.locations.noAddress", "Adresa nie je evidovaná")}
                         </p>
                       </div>
                     )}
@@ -1428,7 +1429,7 @@ function LocationsTab() {
                     {isEditing ? (
                       <Input
                         value={editForm.phone}
-                        placeholder="Phone"
+                        placeholder={t("settings.locations.phonePlaceholder", "Telefón")}
                         maxLength={SETTINGS_PHONE_MAX_LENGTH}
                         onChange={(e) =>
                           setEditForm({ ...editForm, phone: e.target.value })
@@ -1519,8 +1520,8 @@ function LocationsTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={MapPin}
-                    title="No active locations configured"
-                    description="Add a location to power rooms, reminders, texting setup, and hosted billing quantities."
+                    title={t("settings.locations.emptyTitle", "Žiadne aktívne pobočky")}
+                    description={t("settings.locations.emptyDescription", "Pridajte pobočku, aby fungovali miestnosti, pripomienky, nastavenie SMS a množstvá v hostovanej fakturácii.")}
                   />
                 </td>
               </tr>
@@ -1530,7 +1531,7 @@ function LocationsTab() {
       </div>
       {activeLocationCount <= 1 ? (
         <p className="text-xs text-muted-foreground">
-          A practice must keep at least one active location.
+          {t("settings.locations.keepOneActive", "Prax musí mať aspoň jednu aktívnu pobočku.")}
         </p>
       ) : null}
     </div>
@@ -1547,18 +1548,18 @@ const FEATURE_LABELS: Record<string, string> = {
   integrations: "Supported integrations",
 };
 
-function redirectToHostedBillingUrl(url: unknown) {
+function redirectToHostedBillingUrl(url: unknown, unavailableMessage: string) {
   if (!isSafeCheckoutRedirectUrl(url)) {
-    toast.error("Billing checkout is unavailable. Please try again.");
+    toast.error(unavailableMessage);
     return;
   }
 
   window.location.href = url;
 }
 
-function redirectToClientPaymentUrl(url: unknown) {
+function redirectToClientPaymentUrl(url: unknown, unavailableMessage: string) {
   if (!isSafeCheckoutRedirectUrl(url)) {
-    toast.error("Client payment setup is unavailable. Please try again.");
+    toast.error(unavailableMessage);
     return;
   }
 
@@ -1583,34 +1584,34 @@ function BillingTab() {
   });
   const checkout = trpc.subscription.createCheckout.useMutation({
     onSuccess: (r) => {
-      redirectToHostedBillingUrl(r.url);
+      redirectToHostedBillingUrl(r.url, t("settings.billing.checkoutUnavailable", "Platobná brána je nedostupná. Skúste to prosím znova."));
     },
     onError: (e) => toast.error(e.message),
   });
   const setupPaymentAccount =
     trpc.billing.createPaymentAccountOnboarding.useMutation({
       onSuccess: (r) => {
-        redirectToClientPaymentUrl(r.url);
+        redirectToClientPaymentUrl(r.url, t("settings.billing.clientPaymentSetupUnavailable", "Nastavenie platieb klientov je nedostupné. Skúste to prosím znova."));
       },
       onError: (e) => toast.error(e.message),
     });
   const refreshPaymentAccount = trpc.billing.refreshPaymentAccount.useMutation({
     onSuccess: () => {
       utils.billing.paymentAccountStatus.invalidate();
-      toast.success("Client payment status refreshed");
+      toast.success(t("settings.billing.clientPaymentStatusRefreshed", "Stav platieb klientov bol obnovený"));
     },
     onError: (e) => toast.error(e.message),
   });
   const openPaymentAccountDashboard =
     trpc.billing.openPaymentAccountDashboard.useMutation({
       onSuccess: (r) => {
-        redirectToClientPaymentUrl(r.url);
+        redirectToClientPaymentUrl(r.url, t("settings.billing.clientPaymentSetupUnavailable", "Nastavenie platieb klientov je nedostupné. Skúste to prosím znova."));
       },
       onError: (e) => toast.error(e.message),
     });
   const portal = trpc.subscription.openBillingPortal.useMutation({
     onSuccess: (r) => {
-      redirectToHostedBillingUrl(r.url);
+      redirectToHostedBillingUrl(r.url, t("settings.billing.checkoutUnavailable", "Platobná brána je nedostupná. Skúste to prosím znova."));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -1618,7 +1619,7 @@ function BillingTab() {
   if (billingError) {
     return (
       <SettingsLoadError
-        title="Could not load billing details"
+        title={t("settings.billing.loadErrorTitle", "Nepodarilo sa načítať fakturačné údaje")}
         message={billingError.message}
         onRetry={() => void refetchBilling()}
       />
@@ -1636,8 +1637,8 @@ function BillingTab() {
   if (!data) {
     return (
       <SettingsLoadError
-        title="Could not load billing details"
-        message="The billing details request finished without returning data. Try loading it again."
+        title={t("settings.billing.loadErrorTitle", "Nepodarilo sa načítať fakturačné údaje")}
+        message={t("settings.billing.loadErrorMessage", "Požiadavka na fakturačné údaje sa skončila bez dát. Skúste ich načítať znova.")}
         onRetry={() => void refetchBilling()}
       />
     );
@@ -1737,13 +1738,13 @@ function BillingTab() {
               </div>
               <h3 className="mt-2 font-heading text-2xl font-semibold tracking-tight">
                 {firstActivation
-                  ? "Activate your account"
-                  : "Your Cloud subscription"}
+                  ? t("settings.billing.activateAccount", "Aktivujte svoj účet")
+                  : t("settings.billing.yourCloudSubscription", "Vaše Cloud predplatné")}
               </h3>
               <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 {firstActivation
-                  ? "Choose a billing schedule, then add your payment details in secure Stripe Checkout. Your workspace and trial stay exactly as they are."
-                  : `${currentPlan?.name ?? "Cloud"} keeps your clinic workspace active with unlimited staff.`}
+                  ? t("settings.billing.activateDescription", "Vyberte fakturačný cyklus a potom zadajte platobné údaje v zabezpečenom Stripe Checkout. Váš pracovný priestor a skúšobná verzia zostanú bez zmeny.")
+                  : t("settings.billing.planKeepsActive", "{plan} udržiava pracovný priestor vašej kliniky aktívny s neobmedzeným počtom zamestnancov.", { plan: currentPlan?.name ?? "Cloud" })}
               </p>
             </div>
           </div>
@@ -1754,8 +1755,7 @@ function BillingTab() {
             <div className="mb-5 flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Cloud is in read-only mode. Activating billing restores full
-                access without changing your records.
+                {t("settings.billing.readOnlyNotice", "Cloud je v režime iba na čítanie. Aktivácia fakturácie obnoví plný prístup bez zmeny vašich záznamov.")}
               </p>
             </div>
           ) : null}
@@ -1785,13 +1785,13 @@ function BillingTab() {
                 <div>
                   <p className="text-sm font-medium">
                     {selectedCadence === "year"
-                      ? `$${data.estimatedAnnualBase} billed once per year`
-                      : `$${data.estimatedMonthlyBase} billed monthly`}
+                      ? t("settings.billing.billedYearly", "${amount} účtované raz ročne", { amount: data.estimatedAnnualBase })
+                      : t("settings.billing.billedMonthly", "${amount} účtované mesačne", { amount: data.estimatedMonthlyBase })}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {data.billingStatus === "trialing"
-                      ? `No charge today. ${daysLeft} trial day${daysLeft === 1 ? "" : "s"} remaining.`
-                      : "Stripe securely collects and stores your payment method."}
+                      ? t("settings.billing.noChargeToday", "Dnes bez platby. Zostáva {days} dní skúšobnej verzie.", { days: daysLeft })
+                      : t("settings.billing.stripeStoresPayment", "Stripe bezpečne získa a uloží váš spôsob platby.")}
                   </p>
                 </div>
                 <Button
@@ -1821,12 +1821,11 @@ function BillingTab() {
               <div>
                 <p className="text-sm font-medium">
                   {data.currentBillingCadence === "year"
-                    ? `$${data.estimatedAnnualBase} per year`
-                    : `$${data.estimatedMonthlyBase} per month`}
+                    ? t("settings.billing.perYear", "${amount} ročne", { amount: data.estimatedAnnualBase })
+                    : t("settings.billing.perMonth", "${amount} mesačne", { amount: data.estimatedMonthlyBase })}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Update payment details, invoices, or cancellation securely in
-                  Stripe.
+                  {t("settings.billing.manageInStripe", "Platobné údaje, faktúry alebo zrušenie spravujte bezpečne v Stripe.")}
                 </p>
               </div>
               <Button
@@ -1839,7 +1838,7 @@ function BillingTab() {
                 ) : (
                   <CreditCard className="mr-2 h-4 w-4" />
                 )}
-                Manage billing
+                {t("settings.billing.manageBilling", "Spravovať fakturáciu")}
               </Button>
             </div>
           )}
@@ -1860,11 +1859,12 @@ function BillingTab() {
           {(currentPlan?.includedSmsPerMonth != null ||
             currentPlan?.includedAiRunsPerMonth != null) && (
             <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
-              This month: {data.usage.sms} of{" "}
-              {currentPlan?.includedSmsPerMonth?.toLocaleString()} included
-              texts · {data.usage.aiRuns} of{" "}
-              {currentPlan?.includedAiRunsPerMonth?.toLocaleString()} included
-              AI actions
+              {t("settings.billing.usageThisMonth", "Tento mesiac: {sms} z {smsIncluded} zahrnutých SMS · {ai} z {aiIncluded} zahrnutých AI akcií", {
+                sms: data.usage.sms,
+                smsIncluded: currentPlan?.includedSmsPerMonth?.toLocaleString() ?? "—",
+                ai: data.usage.aiRuns,
+                aiIncluded: currentPlan?.includedAiRunsPerMonth?.toLocaleString() ?? "—",
+              })}
             </p>
           )}
 
@@ -2066,10 +2066,10 @@ function ClientPaymentProcessingSection({
             <p className="text-muted-foreground">{t("settings.billing.payouts", "Payouts")}</p>
             <p className="font-medium">
               {data.payoutsEnabled
-                ? "Enabled"
+                ? t("settings.billing.payoutsEnabled", "Povolené")
                 : data.connectRequired
-                  ? "Pending"
-                  : "N/A"}
+                  ? t("settings.billing.payoutsPending", "Čaká sa")
+                  : t("settings.billing.payoutsNa", "N/A")}
             </p>
           </div>
           {data.requirementsCurrentlyDue?.length ? (
@@ -2284,7 +2284,7 @@ function StaffTab() {
     onSuccess: () => {
       utils.settings.listUsers.invalidate();
       setEditingId(null);
-      toast.success("Staff member updated");
+      toast.success(t("settings.staff.updated", "Člen tímu aktualizovaný"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2407,8 +2407,8 @@ function StaffTab() {
   if (staffMissing) {
     return (
       <SettingsLoadError
-        title="Could not load staff"
-        message="The staff list request finished without returning data. Try loading it again before adding or editing staff."
+        title={t("settings.staff.loadErrorTitle", "Nepodarilo sa načítať personál")}
+        message={t("settings.staff.loadErrorMessage", "Požiadavka na zoznam personálu sa skončila bez dát. Skúste ho načítať znova pred pridávaním alebo úpravou personálu.")}
         onRetry={() => void refetchStaff()}
       />
     );
@@ -2427,7 +2427,7 @@ function StaffTab() {
           variant="outline"
         >
           <Mail className="mr-2 h-4 w-4" />
-          Invite by email
+          {t("settings.staff.inviteByEmail", "Pozvať e-mailom")}
         </Button>
         <Button
           onClick={() => {
@@ -2438,7 +2438,7 @@ function StaffTab() {
           size="sm"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Staff
+          {t("settings.staff.add", "Pridať člena tímu")}
         </Button>
       </div>
 
@@ -2451,7 +2451,7 @@ function StaffTab() {
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Email"
+              placeholder={t("settings.staff.emailPlaceholder", "E-mail")}
               type="email"
               maxLength={SETTINGS_EMAIL_MAX_LENGTH}
               value={inviteForm.email}
@@ -2460,7 +2460,7 @@ function StaffTab() {
               }
             />
             <Input
-              placeholder="Name (optional)"
+              placeholder={t("settings.staff.nameOptionalPlaceholder", "Meno (nepovinné)")}
               maxLength={STAFF_NAME_MAX_LENGTH}
               value={inviteForm.name}
               onChange={(e) =>
@@ -2501,14 +2501,14 @@ function StaffTab() {
               {inviteMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Send invite
+              {t("settings.staff.sendInvite", "Odoslať pozvánku")}
             </Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setShowInvite(false)}
             >
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
           {inviteUrl && (
@@ -2525,7 +2525,7 @@ function StaffTab() {
                   variant="ghost"
                   onClick={() => {
                     navigator.clipboard.writeText(inviteUrl);
-                    toast.success("Copied");
+                    toast.success(t("settings.staff.copied", "Skopírované"));
                   }}
                 >
                   <Copy className="h-4 w-4" />
@@ -2546,13 +2546,13 @@ function StaffTab() {
           <h3 className="text-sm font-semibold">{t("settings.staff.newMember", "New Staff Member")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Full name"
+              placeholder={t("settings.staff.fullNamePlaceholder", "Celé meno")}
               maxLength={STAFF_NAME_MAX_LENGTH}
               value={addForm.name}
               onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
             />
             <Input
-              placeholder="Email"
+              placeholder={t("settings.staff.emailPlaceholder", "E-mail")}
               type="email"
               maxLength={SETTINGS_EMAIL_MAX_LENGTH}
               value={addForm.email}
@@ -2588,7 +2588,7 @@ function StaffTab() {
               <option value="admin">{t("settings.staff.roleAdmin", "Admin")}</option>
             </select>
             <Input
-              placeholder="Phone (optional)"
+              placeholder={t("settings.staff.phoneOptionalPlaceholder", "Telefón (nepovinné)")}
               maxLength={SETTINGS_PHONE_MAX_LENGTH}
               value={addForm.phone}
               onChange={(e) =>
@@ -2596,7 +2596,7 @@ function StaffTab() {
               }
             />
             <Input
-              placeholder="License # (optional)"
+              placeholder={t("settings.staff.licenseOptionalPlaceholder", "Číslo licencie (nepovinné)")}
               maxLength={STAFF_LICENSE_NUMBER_MAX_LENGTH}
               value={addForm.licenseNumber}
               onChange={(e) =>
@@ -2617,8 +2617,7 @@ function StaffTab() {
                 }
               />
               <span>
-                Veterinarian provider — appears in doctor lists and can sign
-                doctor-required visits.
+                {t("settings.staff.veterinarianProviderHint", "Veterinárny lekár – zobrazuje sa v zoznamoch lekárov a môže podpisovať návštevy vyžadujúce lekára.")}
               </span>
             </label>
           </div>
@@ -2639,10 +2638,10 @@ function StaffTab() {
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create
+              {t("settings.common.create", "Vytvoriť")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
           {createMutation.error && (
@@ -2701,11 +2700,11 @@ function StaffTab() {
                           })
                         }
                       >
-                        <option value="front_desk">Front Desk</option>
-                        <option value="viewer">Viewer (read-only)</option>
-                        <option value="technician">Technician</option>
-                        <option value="veterinarian">Veterinarian</option>
-                        <option value="admin">Admin</option>
+                        <option value="front_desk">{t("settings.staff.roleFrontDesk", "Recepcia")}</option>
+                        <option value="viewer">{t("settings.staff.roleViewer", "Pozorovateľ (iba čítanie)")}</option>
+                        <option value="technician">{t("settings.staff.roleTechnician", "Technik")}</option>
+                        <option value="veterinarian">{t("settings.staff.roleVeterinarian", "Veterinárny lekár")}</option>
+                        <option value="admin">{t("settings.staff.roleAdmin", "Administrátor")}</option>
                       </select>
                     </td>
                     <td className="px-4 py-2">
@@ -2869,8 +2868,8 @@ function StaffTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={Users}
-                    title="No staff members found"
-                    description="Invite teammates or create a staff login to finish practice setup."
+                    title={t("settings.staff.emptyTitle", "Nenašli sa žiadni členovia tímu")}
+                    description={t("settings.staff.emptyDescription", "Pozvite kolegov alebo vytvorte prihlásenie pre personál a dokončite nastavenie praxe.")}
                   />
                 </td>
               </tr>
@@ -2898,7 +2897,7 @@ function AppointmentTypesTab() {
       utils.settings.listAppointmentTypes.invalidate();
       setShowAdd(false);
       resetAddForm();
-      toast.success("Appointment type created");
+      toast.success(t("settings.appointmentTypes.created", "Typ návštevy vytvorený"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2908,7 +2907,7 @@ function AppointmentTypesTab() {
     onSuccess: () => {
       utils.settings.listAppointmentTypes.invalidate();
       setEditingId(null);
-      toast.success("Appointment type updated");
+      toast.success(t("settings.appointmentTypes.updated", "Typ návštevy aktualizovaný"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2917,7 +2916,7 @@ function AppointmentTypesTab() {
   const deleteMutation = trpc.settings.deleteAppointmentType.useMutation({
     onSuccess: () => {
       utils.settings.listAppointmentTypes.invalidate();
-      toast.success("Appointment type deleted");
+      toast.success(t("settings.appointmentTypes.deleted", "Typ návštevy odstránený"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2966,8 +2965,8 @@ function AppointmentTypesTab() {
   if (appointmentTypesMissing) {
     return (
       <SettingsLoadError
-        title="Could not load appointment types"
-        message="The appointment type request finished without returning data. Try loading it again before editing scheduling defaults."
+        title={t("settings.appointmentTypes.loadErrorTitle", "Nepodarilo sa načítať typy návštev")}
+        message={t("settings.appointmentTypes.loadErrorMessage", "Požiadavka na typy návštev sa skončila bez dát. Skúste ich načítať znova pred úpravou predvolieb plánovania.")}
         onRetry={() => void refetchAppointmentTypes()}
       />
     );
@@ -2984,7 +2983,7 @@ function AppointmentTypesTab() {
           size="sm"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Type
+          {t("settings.appointmentTypes.add", "Pridať typ")}
         </Button>
       </div>
 
@@ -2993,14 +2992,14 @@ function AppointmentTypesTab() {
           <h3 className="text-sm font-semibold">{t("settings.appointmentTypes.newType", "New Appointment Type")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Type name"
+              placeholder={t("settings.appointmentTypes.namePlaceholder", "Názov typu")}
               maxLength={APPOINTMENT_TYPE_NAME_MAX_LENGTH}
               value={addForm.name}
               onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
             />
             <Input
               type="number"
-              placeholder="Duration (minutes)"
+              placeholder={t("settings.appointmentTypes.durationPlaceholder", "Trvanie (minúty)")}
               min={APPOINTMENT_TYPE_DURATION_MIN_MINUTES}
               max={APPOINTMENT_TYPE_DURATION_MAX_MINUTES}
               value={addForm.durationMinutes}
@@ -3060,10 +3059,10 @@ function AppointmentTypesTab() {
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create
+              {t("settings.common.create", "Vytvoriť")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
         </div>
@@ -3232,8 +3231,8 @@ function AppointmentTypesTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={Calendar}
-                    title="No appointment types configured"
-                    description="Add appointment types so scheduling can use default durations, colors, and room types."
+                    title={t("settings.appointmentTypes.emptyTitle", "Žiadne typy návštev")}
+                    description={t("settings.appointmentTypes.emptyDescription", "Pridajte typy návštev, aby plánovanie mohlo používať predvolené trvania, farby a typy miestností.")}
                   />
                 </td>
               </tr>
@@ -3382,7 +3381,7 @@ function DataTab() {
         });
         setRestoreResult(null);
         if (data.missingSections.length > 0) {
-          toast.error("Backup is missing required sections");
+          toast.error(t("settings.data.backupMissingSections", "V zálohe chýbajú povinné sekcie"));
         } else if (data.restoreErrors.length > 0) {
           toast.error("Backup has invalid restore data");
         } else {
@@ -3429,7 +3428,7 @@ function DataTab() {
       setImportRecoveryMessage(
         "This preview expired or the clinic data changed. Nothing new was imported by this attempt. Check the same file again.",
       );
-      toast.error("Check the CSV again before importing.");
+      toast.error(t("settings.data.recheckCsv", "Pred importom znova skontrolujte CSV."));
       return;
     }
     toast.error(err.message);
@@ -3455,7 +3454,7 @@ function DataTab() {
         });
         setImportRecoveryMessage("");
         setImportResult(null);
-        toast.success("Client CSV checked");
+        toast.success(t("settings.data.clientCsvChecked", "CSV klientov skontrolované"));
         return;
       }
 
@@ -3468,7 +3467,7 @@ function DataTab() {
       setCsvText("");
       setCsvFileName("");
       setImportRecoveryMessage("");
-      toast.success("Clients imported");
+      toast.success(t("settings.data.clientsImported", "Klienti importovaní"));
     },
     onError: handleCsvImportError,
   });
@@ -3493,7 +3492,7 @@ function DataTab() {
         });
         setImportRecoveryMessage("");
         setImportResult(null);
-        toast.success("Patient CSV checked");
+        toast.success(t("settings.data.patientCsvChecked", "CSV pacientov skontrolované"));
         return;
       }
 
@@ -3506,7 +3505,7 @@ function DataTab() {
       setCsvText("");
       setCsvFileName("");
       setImportRecoveryMessage("");
-      toast.success("Patients imported");
+      toast.success(t("settings.data.patientsImported", "Pacienti importovaní"));
     },
     onError: handleCsvImportError,
   });
@@ -3539,7 +3538,7 @@ function DataTab() {
       setCsvText("");
       setCsvFileName("");
       setImportRecoveryMessage("");
-      toast.success("Vaccine history imported");
+      toast.success(t("settings.data.vaccinesImported", "História očkovaní importovaná"));
     },
     onError: handleCsvImportError,
   });
@@ -3563,7 +3562,7 @@ function DataTab() {
         });
         setImportRecoveryMessage("");
         setImportResult(null);
-        toast.success("Medical history CSV checked");
+        toast.success(t("settings.data.medicalCsvChecked", "CSV zdravotnej histórie skontrolované"));
         return;
       }
 
@@ -3572,7 +3571,7 @@ function DataTab() {
       setCsvText("");
       setCsvFileName("");
       setImportRecoveryMessage("");
-      toast.success("Medical history imported");
+      toast.success(t("settings.data.medicalImported", "Zdravotná história importovaná"));
     },
     onError: handleCsvImportError,
   });
@@ -3735,7 +3734,7 @@ function DataTab() {
       };
       reader.onerror = () => {
         clearBackupFile();
-        toast.error("Could not read backup JSON");
+        toast.error(t("settings.data.backupReadError", "Záložný JSON sa nepodarilo prečítať"));
       };
       reader.readAsText(file);
     },
@@ -3840,7 +3839,7 @@ function DataTab() {
         const text = String(e.target?.result ?? "");
         if (!text.trim()) {
           setCsvFileName("");
-          toast.error("CSV file is empty");
+          toast.error(t("settings.data.csvEmpty", "CSV súbor je prázdny"));
           return;
         }
         if (!isImportCsvSizeValid(text)) {
@@ -3855,7 +3854,7 @@ function DataTab() {
       reader.onerror = () => {
         if (importFileReadVersionRef.current !== readVersion) return;
         setCsvFileName("");
-        toast.error("Could not read CSV file");
+        toast.error(t("settings.data.csvReadError", "CSV súbor sa nepodarilo prečítať"));
       };
       reader.readAsText(file);
     },
@@ -3888,7 +3887,7 @@ function DataTab() {
     if (importPreview.requestKey !== currentRequestKey) {
       importRequestKeyRef.current = null;
       setImportPreview(null);
-      toast.error("The file or source changed. Check the CSV again.");
+      toast.error(t("settings.data.fileChanged", "Súbor alebo zdroj sa zmenil. Znova skontrolujte CSV."));
       return;
     }
     if (importMode === "clients") {
@@ -4560,15 +4559,13 @@ function DataTab() {
             >
               <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                Drag and drop a CSV file here, or click to select
+                {t("settings.data.dropCsvHere", "Presuňte sem CSV súbor alebo kliknite a vyberte ho")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                CSV files must be 5 MB or less. The file is dry-run first; no
-                rows import until you confirm.
+                {t("settings.data.csvSizeLimit", "CSV súbory môžu mať maximálne 5 MB. Súbor sa najprv skontroluje nanečisto; žiadne riadky sa neimportujú, kým to nepotvrdíte.")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Existing owners connect by one exact email. Existing pets need a
-                matching microchip or date of birth before an ID is connected.
+                {t("settings.data.csvMatchingHint", "Existujúci majitelia sa spárujú podľa jedného presného e-mailu. Existujúce zvieratá potrebujú zhodný mikročip alebo dátum narodenia, kým sa prepojí ID.")}
               </p>
               <input
                 ref={fileInputRef}
@@ -4619,49 +4616,49 @@ function DataTab() {
                         importPreview.willInsert > 0 ? "success" : "warning"
                       }
                     >
-                      Dry run complete
+                      {t("settings.data.dryRunComplete", "Kontrola nanečisto dokončená")}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      No data has been imported yet.
+                      {t("settings.data.nothingImportedYet", "Zatiaľ neboli importované žiadne dáta.")}
                     </span>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <ImportStat
-                      label="Rows parsed"
+                      label={t("settings.data.statRowsParsed", "Spracované riadky")}
                       value={importPreview.total}
                     />
                     <ImportStat
-                      label="Will import"
+                      label={t("settings.data.statWillImport", "Bude importované")}
                       value={importPreview.willInsert}
                     />
                     {typeof importPreview.duplicates === "number" && (
                       <ImportStat
-                        label="Duplicates"
+                        label={t("settings.data.statDuplicates", "Duplicity")}
                         value={importPreview.duplicates ?? 0}
                       />
                     )}
                     {typeof importPreview.willReconcile === "number" &&
                       importPreview.willReconcile > 0 && (
                         <ImportStat
-                          label="IDs to connect"
+                          label={t("settings.data.statIdsToConnect", "ID na prepojenie")}
                           value={importPreview.willReconcile}
                         />
                       )}
                     {importMode === "patients" && (
                       <ImportStat
-                        label="Missing owners"
+                        label={t("settings.data.statMissingOwners", "Chýbajúci majitelia")}
                         value={importPreview.unmatchedClient ?? 0}
                       />
                     )}
                     {(importMode === "vaccinations" ||
                       importMode === "soapNotes") && (
                       <ImportStat
-                        label="Missing pets"
+                        label={t("settings.data.statMissingPets", "Chýbajúce zvieratá")}
                         value={importPreview.unmatchedPatient ?? 0}
                       />
                     )}
                     <ImportStat
-                      label="Row issues"
+                      label={t("settings.data.statRowIssues", "Problémové riadky")}
                       value={importPreview.errors.length}
                     />
                   </div>
@@ -4669,7 +4666,7 @@ function DataTab() {
                   {importPreview.errors.length > 0 && (
                     <div className="mt-4 space-y-1">
                       <p className="text-sm font-medium text-destructive">
-                        {importPreview.errors.length} row issue(s):
+                        {t("settings.data.rowIssuesCount", "{count} problémových riadkov:", { count: importPreview.errors.length })}
                       </p>
                       <ul className="max-h-40 space-y-0.5 overflow-y-auto text-xs text-destructive">
                         {importPreview.errors.map((err, i) => (
@@ -4679,15 +4676,13 @@ function DataTab() {
                     </div>
                   )}
                   <p className="mt-4 text-xs text-muted-foreground">
-                    Only the{" "}
-                    {importPreview.willInsert +
-                      (importPreview.willReconcile ?? 0)}{" "}
-                    listed changes will be saved. {importPreview.errors.length}{" "}
-                    issue row(s) will be skipped.
+                    {t("settings.data.onlyListedChanges", "Uloží sa iba {changes} uvedených zmien. {issues} problémových riadkov bude preskočených.", {
+                      changes: importPreview.willInsert + (importPreview.willReconcile ?? 0),
+                      issues: importPreview.errors.length,
+                    })}
                   </p>
                   <p className="mt-2 text-xs font-medium text-amber-700">
-                    Start with a small representative sample. A confirmed import
-                    has no one-click rollback.
+                    {t("settings.data.startSmallSample", "Začnite malou reprezentatívnou vzorkou. Potvrdený import nemá vrátenie jedným kliknutím.")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -4706,10 +4701,9 @@ function DataTab() {
                     ) : (
                       <Check className="mr-2 h-4 w-4" />
                     )}
-                    Confirm Import (
-                    {importPreview.willInsert +
-                      (importPreview.willReconcile ?? 0)}{" "}
-                    changes)
+                    {t("settings.data.confirmImport", "Potvrdiť import ({count} zmien)", {
+                      count: importPreview.willInsert + (importPreview.willReconcile ?? 0),
+                    })}
                   </Button>
                   <Button
                     size="sm"
@@ -4723,7 +4717,7 @@ function DataTab() {
                       setImportRecoveryMessage("");
                     }}
                   >
-                    Cancel
+                    {t("common.cancel", "Zrušiť")}
                   </Button>
                 </div>
               </div>
@@ -4734,15 +4728,15 @@ function DataTab() {
               <div className="rounded-lg border border-border bg-card p-4 space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
                   <Check className="h-4 w-4" />
-                  {importResult.imported} records imported successfully
+                  {t("settings.data.recordsImported", "{count} záznamov úspešne importovaných", { count: importResult.imported })}
                   {(importResult.reconciled ?? 0) > 0
-                    ? `; ${importResult.reconciled} existing record IDs connected`
+                    ? `; ${t("settings.data.recordIdsConnected", "{count} existujúcich ID záznamov prepojených", { count: importResult.reconciled ?? 0 })}`
                     : ""}
                 </div>
                 {importResult.errors && importResult.errors.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-destructive">
-                      {importResult.errors.length} error(s):
+                      {t("settings.data.errorsCount", "{count} chýb:", { count: importResult.errors.length })}
                     </p>
                     <ul className="text-xs text-destructive space-y-0.5">
                       {importResult.errors.map((err, i) => (
@@ -4805,7 +4799,7 @@ function RoomsTab() {
           locationsQuery.data?.[0]?.id ??
           "",
       });
-      toast.success("Room created");
+      toast.success(t("settings.rooms.created", "Miestnosť vytvorená"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -4856,8 +4850,8 @@ function RoomsTab() {
   if (roomsMissing) {
     return (
       <SettingsLoadError
-        title="Could not load rooms"
-        message="The room list request finished without returning data. Try loading it again before editing rooms."
+        title={t("settings.rooms.loadErrorTitle", "Nepodarilo sa načítať miestnosti")}
+        message={t("settings.rooms.loadErrorMessage", "Požiadavka na zoznam miestností sa skončila bez dát. Skúste ho načítať znova pred úpravou miestností.")}
         onRetry={() => void refetchRooms()}
       />
     );
@@ -4868,7 +4862,7 @@ function RoomsTab() {
       <div className="flex justify-end">
         <Button onClick={() => setShowAdd(!showAdd)} size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          Add Room
+          {t("settings.rooms.add", "Pridať miestnosť")}
         </Button>
       </div>
 
@@ -4877,7 +4871,7 @@ function RoomsTab() {
           <h3 className="text-sm font-semibold">{t("settings.rooms.newRoom", "New Room")}</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Input
-              placeholder="Room name"
+              placeholder={t("settings.rooms.namePlaceholder", "Názov miestnosti")}
               maxLength={ROOM_NAME_MAX_LENGTH}
               value={addForm.name}
               onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
@@ -4899,7 +4893,7 @@ function RoomsTab() {
               ))}
             </select>
             <select
-              aria-label="Clinic location"
+              aria-label={t("settings.rooms.locationAria", "Pobočka kliniky")}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={addForm.locationId}
               onChange={(event) =>
@@ -4928,10 +4922,10 @@ function RoomsTab() {
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create
+              {t("settings.common.create", "Vytvoriť")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
         </div>
@@ -4979,8 +4973,8 @@ function RoomsTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={DoorOpen}
-                    title="No rooms configured"
-                    description="Add rooms so appointments can reserve exam, treatment, surgery, or boarding spaces."
+                    title={t("settings.rooms.emptyTitle", "Žiadne miestnosti")}
+                    description={t("settings.rooms.emptyDescription", "Pridajte miestnosti, aby si termíny mohli rezervovať vyšetrovne, ošetrovne, operačné sály alebo priestory na hospitalizáciu.")}
                   />
                 </td>
               </tr>
@@ -5013,7 +5007,7 @@ function WellnessPlansTab() {
         price: "",
         billingInterval: "monthly",
       });
-      toast.success("Wellness plan created");
+      toast.success(t("settings.wellness.created", "Wellness plán vytvorený"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -5068,8 +5062,8 @@ function WellnessPlansTab() {
   if (wellnessPlansMissing) {
     return (
       <SettingsLoadError
-        title="Could not load wellness plans"
-        message="The wellness plan request finished without returning data. Try loading it again before editing membership plans."
+        title={t("settings.wellness.loadErrorTitle", "Nepodarilo sa načítať wellness plány")}
+        message={t("settings.wellness.loadErrorMessage", "Požiadavka na wellness plány sa skončila bez dát. Skúste ich načítať znova pred úpravou členských plánov.")}
         onRetry={() => void refetchWellnessPlans()}
       />
     );
@@ -5101,7 +5095,7 @@ function WellnessPlansTab() {
           <h3 className="text-sm font-semibold">{t("settings.wellness.newPlan", "New Wellness Plan")}</h3>
           <div className="grid gap-3 md:grid-cols-[1fr_9rem_9rem]">
             <Input
-              placeholder="Plan name"
+              placeholder={t("settings.wellness.namePlaceholder", "Názov plánu")}
               maxLength={WELLNESS_PLAN_NAME_MAX_LENGTH}
               value={addForm.name}
               onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
@@ -5111,7 +5105,7 @@ function WellnessPlansTab() {
               min={WELLNESS_PLAN_PRICE_MIN}
               max={WELLNESS_PLAN_PRICE_MAX}
               step={10 ** -WELLNESS_PLAN_PRICE_SCALE}
-              placeholder="Price"
+              placeholder={t("settings.wellness.pricePlaceholder", "Cena")}
               value={addForm.price}
               onChange={(e) =>
                 setAddForm({ ...addForm, price: e.target.value })
@@ -5133,7 +5127,7 @@ function WellnessPlansTab() {
             </select>
           </div>
           <Input
-            placeholder="Description (optional)"
+            placeholder={t("settings.wellness.descriptionOptionalPlaceholder", "Popis (nepovinné)")}
             maxLength={WELLNESS_PLAN_DESCRIPTION_MAX_LENGTH}
             value={addForm.description}
             onChange={(e) =>
@@ -5156,10 +5150,10 @@ function WellnessPlansTab() {
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create
+              {t("settings.common.create", "Vytvoriť")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
         </div>
@@ -5195,7 +5189,7 @@ function WellnessPlansTab() {
                     {plan.billingInterval}
                   </div>
                   <Badge variant="outline" className="mt-1">
-                    Invoice schedule
+                    {t("settings.wellness.invoiceSchedule", "Plán fakturácie")}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
@@ -5203,7 +5197,7 @@ function WellnessPlansTab() {
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={plan.active ? "default" : "secondary"}>
-                    {plan.active ? "Active" : "Inactive"}
+                    {plan.active ? t("settings.wellness.active", "Aktívny") : t("settings.wellness.inactive", "Neaktívny")}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -5229,8 +5223,8 @@ function WellnessPlansTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={HeartPulse}
-                    title="No wellness plans configured"
-                    description="Create a plan to package preventive care into scheduled invoice memberships."
+                    title={t("settings.wellness.emptyTitle", "Žiadne wellness plány")}
+                    description={t("settings.wellness.emptyDescription", "Vytvorte plán, ktorý zabalí preventívnu starostlivosť do členstva s plánovanou fakturáciou.")}
                   />
                 </td>
               </tr>
@@ -5293,7 +5287,7 @@ function TemplatesTab() {
       utils.templates.list.invalidate();
       setShowAdd(false);
       resetAddForm();
-      toast.success("Template created");
+      toast.success(t("settings.templates.created", "Šablóna vytvorená"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -5302,7 +5296,7 @@ function TemplatesTab() {
   const updateMutation = trpc.templates.update.useMutation({
     onSuccess: () => {
       utils.templates.list.invalidate();
-      toast.success("Template updated");
+      toast.success(t("settings.templates.updated", "Šablóna aktualizovaná"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -5482,8 +5476,8 @@ function TemplatesTab() {
   if (templatesMissing) {
     return (
       <SettingsLoadError
-        title="Could not load templates"
-        message="The template list request finished without returning data. Try loading it again before editing treatment templates."
+        title={t("settings.templates.loadErrorTitle", "Nepodarilo sa načítať šablóny")}
+        message={t("settings.templates.loadErrorMessage", "Požiadavka na zoznam šablón sa skončila bez dát. Skúste ho načítať znova pred úpravou liečebných šablón.")}
         onRetry={() => void refetchTemplates()}
       />
     );
@@ -5500,7 +5494,7 @@ function TemplatesTab() {
             onClick={() => setSelectedTemplateId(null)}
           >
             <X className="mr-2 h-4 w-4" />
-            Back
+            {t("common.back", "Späť")}
           </Button>
           <h3 className="text-sm font-semibold">{selectedTemplate.name}</h3>
           <span
@@ -5511,7 +5505,7 @@ function TemplatesTab() {
                 : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
             )}
           >
-            {selectedTemplate.isActive !== false ? "Active" : "Inactive"}
+            {selectedTemplate.isActive !== false ? t("settings.templates.active", "Aktívna") : t("settings.templates.inactive", "Neaktívna")}
           </span>
           <Button
             size="sm"
@@ -5541,10 +5535,10 @@ function TemplatesTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">Description</th>
-                <th className="px-4 py-3 text-left font-medium">Type</th>
-                <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                <th className="px-4 py-3 text-right font-medium">Unit Price</th>
+                <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colDescription", "Popis")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colType", "Typ")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colQuantity", "Množstvo")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("settings.templates.colUnitPrice", "Jednotková cena")}</th>
               </tr>
             </thead>
             <tbody>
@@ -5563,15 +5557,15 @@ function TemplatesTab() {
                     className="px-4 py-8 text-center text-muted-foreground"
                   >
                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                    Loading template items...
+                    {t("settings.templates.loadingItems", "Načítavam položky šablóny...")}
                   </td>
                 </tr>
               ) : selectedTemplateMissing ? (
                 <tr>
                   <td colSpan={4} className="p-4">
                     <SettingsLoadError
-                      title="Could not load template items"
-                      message="The template detail request finished without returning data. Try loading it again before using this treatment template."
+                      title={t("settings.templates.itemsLoadErrorTitle", "Nepodarilo sa načítať položky šablóny")}
+                      message={t("settings.templates.itemsLoadErrorMessage", "Požiadavka na detail šablóny sa skončila bez dát. Skúste ju načítať znova pred použitím tejto liečebnej šablóny.")}
                       onRetry={() => void refetchSelectedTemplate()}
                     />
                   </td>
@@ -5587,8 +5581,7 @@ function TemplatesTab() {
                       {item.itemType === "product" &&
                       item.hasActiveProductLink !== true ? (
                         <p className="mt-1 max-w-xs text-xs text-amber-700 dark:text-amber-400">
-                          Missing or archived inventory product — recreate this
-                          template before use.
+                          {t("settings.templates.missingProduct", "Chýbajúci alebo archivovaný skladový produkt – pred použitím šablónu vytvorte znova.")}
                         </p>
                       ) : null}
                     </td>
@@ -5606,8 +5599,8 @@ function TemplatesTab() {
                     <EmptyState
                       className="border-0 bg-transparent p-8"
                       icon={Layers}
-                      title="No items in this template"
-                      description="Add default services or products when creating a new treatment template."
+                      title={t("settings.templates.noItemsTitle", "Šablóna neobsahuje žiadne položky")}
+                      description={t("settings.templates.noItemsDescription", "Pri vytváraní novej liečebnej šablóny pridajte predvolené služby alebo produkty.")}
                     />
                   </td>
                 </tr>
@@ -5630,7 +5623,7 @@ function TemplatesTab() {
           size="sm"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Template
+          {t("settings.templates.add", "Pridať šablónu")}
         </Button>
       </div>
 
@@ -5639,7 +5632,7 @@ function TemplatesTab() {
           <h3 className="text-sm font-semibold">{t("settings.templates.newTemplate", "New Treatment Template")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Template name"
+              placeholder={t("settings.templates.namePlaceholder", "Názov šablóny")}
               maxLength={TREATMENT_TEMPLATE_NAME_MAX_LENGTH}
               value={addForm.name}
               onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
@@ -5662,7 +5655,7 @@ function TemplatesTab() {
             </select>
           </div>
           <Input
-            placeholder="Description (optional)"
+            placeholder={t("settings.wellness.descriptionOptionalPlaceholder", "Popis (nepovinné)")}
             maxLength={TREATMENT_TEMPLATE_DESCRIPTION_MAX_LENGTH}
             value={addForm.description}
             onChange={(e) =>
@@ -5698,7 +5691,7 @@ function TemplatesTab() {
                   />
                 </div>
                 <select
-                  aria-label={`Item type ${index + 1}`}
+                  aria-label={t("settings.templates.itemTypeAria", "Typ položky {index}", { index: index + 1 })}
                   className="h-10 rounded-md border border-input bg-background px-2 text-sm"
                   value={item.itemType}
                   onChange={(e) =>
@@ -5729,7 +5722,7 @@ function TemplatesTab() {
                 />
                 <Input
                   type="number"
-                  placeholder="Price"
+                  placeholder={t("settings.wellness.pricePlaceholder", "Cena")}
                   min={0}
                   max={TREATMENT_TEMPLATE_UNIT_PRICE_MAX}
                   step="0.01"
@@ -5752,8 +5745,7 @@ function TemplatesTab() {
             ))}
             {hasUnlinkedCatalogRows ? (
               <p className="text-sm text-muted-foreground">
-                Search for and select an active service or inventory product for
-                every template row.
+                {t("settings.templates.selectItemHint", "Pre každý riadok šablóny vyhľadajte a vyberte aktívnu službu alebo skladový produkt.")}
               </p>
             ) : null}
             <Button
@@ -5763,7 +5755,7 @@ function TemplatesTab() {
               onClick={addItemRow}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Item
+              {t("settings.templates.addItem", "Pridať položku")}
             </Button>
           </div>
 
@@ -5783,10 +5775,10 @@ function TemplatesTab() {
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create
+              {t("settings.common.create", "Vytvoriť")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common.cancel", "Zrušiť")}
             </Button>
           </div>
           {createMutation.error && (
@@ -5837,7 +5829,7 @@ function TemplatesTab() {
                         : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
                     )}
                   >
-                    {template.isActive !== false ? "Active" : "Inactive"}
+                    {template.isActive !== false ? t("settings.templates.active", "Aktívna") : t("settings.templates.inactive", "Neaktívna")}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -5867,8 +5859,8 @@ function TemplatesTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={Layers}
-                    title="No templates configured"
-                    description="Create reusable treatment templates for common service and product bundles."
+                    title={t("settings.templates.emptyTitle", "Žiadne šablóny")}
+                    description={t("settings.templates.emptyDescription", "Vytvorte opakovane použiteľné liečebné šablóny pre bežné balíky služieb a produktov.")}
                   />
                 </td>
               </tr>

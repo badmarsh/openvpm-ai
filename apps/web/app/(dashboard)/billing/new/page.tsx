@@ -554,7 +554,7 @@ function NewInvoiceForm() {
                   step="0.01"
                   min={0}
                   max={BILLING_UNIT_PRICE_MAX}
-                  placeholder="Unit Price"
+                  placeholder={t("billing.new.unitPricePlaceholder", "Jednotková cena")}
                   value={itemUnitPrice}
                   onChange={(e) => setItemUnitPrice(e.target.value)}
                 />
