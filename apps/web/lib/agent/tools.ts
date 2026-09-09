@@ -95,6 +95,8 @@ export interface AgentToolContext {
   db: Database;
   practiceId: string;
   userId: string;
+  /** Role of the authenticated user invoking the agent. Used for tool-level access control. */
+  userRole?: string;
   postCommitEffect?: (effect: (rootDb: Database) => Promise<void>) => void;
 }
 
@@ -2420,6 +2422,15 @@ const getControlledSubstancesLogTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    // OPL register (Zákon č. 362/2011 Z. z.) — restricted to veterinarians and admins only.
+    // front_desk staff must not have access to the controlled substances ledger.
+    const allowedRoles = ["veterinarian", "admin"];
+    if (ctx.userRole && !allowedRoles.includes(ctx.userRole)) {
+      throw new Error(
+        "Prístup zamietnutý: Kniha omamných a psychotropných látok je prístupná len veterinárnym lekárom a administrátorom. / Access denied: Controlled substances log is restricted to veterinarians and admins.",
+      );
+    }
+
     const input = this.zod.parse(args) as {
       drugName?: string;
       limit: number;
