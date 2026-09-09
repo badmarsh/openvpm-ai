@@ -9,8 +9,8 @@ import {
   requireFeature,
 } from "../../trpc";
 import { dischargeReports, patients, practices, extMarketingContentItems } from "@openpims/db";
-import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
+import { assertPatientNotDeceased } from "./_safety";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { recordUsage } from "@/lib/billing/usage";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
@@ -46,29 +46,7 @@ Pravidlá a štruktúra správy:
 
 Formátujte text v prehľadnom a úhľadnom Markdown formáte s odrážkami a tučným písmom pre dôležité upozornenia.`;
 
-/**
- * Sympathy-flow safety gate (Skill §3): hard-blocks automated owner SMS and
- * promotional marketing generation for a deceased / euthanized patient before
- * any AI work is performed. When no patient is resolved the gate is a no-op so
- * free-form manual entries (no linked record) remain usable.
- */
-async function assertPatientNotDeceased(
-  db: Database,
-  patientId: string | undefined,
-): Promise<void> {
-  if (!patientId) return;
-  const [patient] = await db
-    .select({ status: patients.status })
-    .from(patients)
-    .where(eq(patients.id, patientId))
-    .limit(1);
-  if (patient?.status === "deceased") {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Sympathy Gate: Blocked for deceased patient.",
-    });
-  }
-}
+// Sympathy-flow safety gate (Skill §3) — shared implementation in _safety.ts
 
 const DISCHARGE_SYSTEM_PROMPT_EN = `You are an expert veterinary assistant writing a discharge report for a pet owner.
 Your task is to translate clinical diagnosis, treatments given, and follow-up instructions into clear, empathetic, and easily understandable language for a non-medical pet owner.

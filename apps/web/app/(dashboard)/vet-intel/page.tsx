@@ -1066,7 +1066,7 @@ function VetIntelContent() {
                         ) : (
                           <MessageSquare className="h-3 w-3" />
                         )}
-                        Edukačný post (KVL SR)
+                        {t("vetIntel.bulletin.createPost", "Edukačný post (KVL SR)")}
                       </Button>
                       <span className="text-[10px] text-muted-foreground ml-auto">
                         #{String(idx + 1).padStart(3, "0")} / 2026
@@ -1092,14 +1092,14 @@ function VetIntelContent() {
               </div>
               <div>
                 <p className="text-sm font-bold text-violet-800 dark:text-violet-200">
-                  Sezónny marketingový kalendár
+                  {t("vetIntel.seasonalCalendar.title", "Sezónny marketingový kalendár")}
                 </p>
                 <p className="text-xs text-violet-600/80 dark:text-violet-400/80">
-                  AI-odporúčané témy pre aktuálne obdobie — kliknite na tému a vytvorte post
+                  {t("vetIntel.seasonalCalendar.subtitle", "AI-odporúčané témy pre aktuálne obdobie — kliknite na tému a vytvorte post")}
                 </p>
               </div>
               <Badge variant="outline" className="ml-auto text-[10px] border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300">
-                Jeseň 2026
+                {t("vetIntel.seasonalCalendar.season", "Jeseň 2026")}
               </Badge>
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1132,7 +1132,7 @@ function VetIntelContent() {
                   source: "SAVLMZ Klinický štandard 2026-G01",
                   summary: "Psy a mačky nad 7 rokov potrebujú polročné kontroly: krv, moč, krvný tlak a hodnotenie bolesti.",
                 },
-              ].map((topic) => (
+              ].map((topic, i) => (
                 <div
                   key={topic.title}
                   className="flex flex-col gap-2 rounded-lg border border-violet-100 dark:border-violet-800 bg-white dark:bg-violet-950/20 p-3"
@@ -1140,8 +1140,12 @@ function VetIntelContent() {
                   <div className="flex items-start gap-2">
                     <span className="text-xl shrink-0">{topic.emoji}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground leading-snug">{topic.title}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{topic.desc}</p>
+                      <p className="text-xs font-semibold text-foreground leading-snug">
+                        {t(`vetIntel.seasonalCalendar.topic${i + 1}.title`, topic.title)}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                        {t(`vetIntel.seasonalCalendar.topic${i + 1}.desc`, topic.desc)}
+                      </p>
                     </div>
                   </div>
                   <Button
@@ -1164,7 +1168,7 @@ function VetIntelContent() {
                     ) : (
                       <MessageSquare className="h-3 w-3" />
                     )}
-                    Vytvoriť sezónny post
+                    {t("vetIntel.seasonalCalendar.createPost", "Vytvoriť sezónny post")}
                   </Button>
                 </div>
               ))}
