@@ -109,10 +109,10 @@ describe("admin UI", () => {
     expect(source).toContain("{p.onboardingIntent}");
     expect(source).toContain("{p.setupStage}");
     expect(source).toContain("{p.setupHelpRequestedAt ? (");
-    expect(source).toContain(">Source</th>");
-    expect(source).toContain(">Intent</th>");
-    expect(source).toContain(">Setup</th>");
-    expect(source).toContain(">Metrics</th>");
+    expect(source).toContain('{t("admin.table.source", "Source")}</th>');
+    expect(source).toContain('{t("admin.table.intent", "Intent")}</th>');
+    expect(source).toContain('{t("admin.table.setup", "Setup")}</th>');
+    expect(source).toContain('{t("admin.table.metrics", "Metrics")}</th>');
     expect(source).toContain("setAnalyticsExcluded.mutate({");
     expect(source).toContain('{p.analyticsExcluded ? "Excluded" : "Exclude"}');
     expect(source).toContain("href={`mailto:${p.adminEmail}`}");

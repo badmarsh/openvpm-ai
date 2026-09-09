@@ -422,7 +422,7 @@ function EditClientForm() {
                     "clients.form.smsConsentRequiredForPref",
                     "Reconfirm the disclosure below before saving text reminders as the preference.",
                   )
-                : "Text reminders are paused until the client has current SMS consent."}
+                : t("clients.form.smsPausedNoConsent", "SMS pripomienky sú pozastavené, kým klient nemá platný súhlas so SMS.")}
             </p>
           ) : null}
         </div>
@@ -481,7 +481,7 @@ function EditClientForm() {
               "Use this when the client asks staff to stop texts. It immediately suppresses this phone number and clears SMS consent on every active client record that shares it. Saving the client or checking consent later will not silently remove the manual suppression.",
             )}
             {phoneChanged
-              ? " Save or discard the unsaved phone change before using this action."
+              ? ` ${t("clients.form.doNotTextPhonePending", "Pred použitím tejto akcie uložte alebo zahoďte neuloženú zmenu telefónneho čísla.")}`
               : ""}
           </p>
           <Button

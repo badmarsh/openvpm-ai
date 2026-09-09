@@ -40,11 +40,67 @@
       "setup": "Nastavenie",
       "metrics": "Metriky",
       "analytics": "Analytika",
-      "actions": "Akcie"
+      "actions": "Akcie",
+      "status": "Stav",
+      "locations": "Pobočky",
+      "staff": "Personál",
+      "baseMrr": "Základné MRR",
+      "clients": "Klienti",
+      "patients": "Pacienti",
+      "country": "Krajina",
+      "joined": "Pripojené",
+      "nextAction": "Ďalší krok",
+      "cohortWeek": "Týždeň kohorty"
     },
     "actions": {
       "extendTrial": "Predĺžiť o 14 dní",
       "history": "História"
+    },
+    "hostedSms": {
+      "loadError": "Nepodarilo sa načítať diagnostiku konfigurácie hostovaných SMS."
+    },
+    "smsHealth": {
+      "loadError": "Nepodarilo sa načítať zdravotný stav SMS operácií.",
+      "loading": "Načítavam zdravotný stav SMS operácií…"
+    },
+    "recovery": {
+      "noVerifiedContact": "Žiadny overený kontakt administrátora",
+      "trialEnds": "Končí {date}",
+      "noTrialEnd": "Bez konca skúšobnej verzie",
+      "empty": "Žiadne pracovné priestory kliník nepotrebujú obnovu aktivácie.",
+      "loadError": "Nepodarilo sa načítať obnovu aktivácie.",
+      "loading": "Načítavam obnovu aktivácie…"
+    },
+    "messaging": {
+      "notSubmitted": "Neodoslané",
+      "noNumber": "Bez čísla",
+      "readCarrierStatus": "Načítať aktuálny stav operátora",
+      "empty": "Žiadna klinika zatiaľ neodoslala údaje operátora.",
+      "loadError": "Nepodarilo sa načítať registrácie správ.",
+      "loading": "Načítavam registrácie správ…",
+      "historyTitle": "História životného cyklu operátora",
+      "closeHistory": "Zavrieť históriu",
+      "historyLoadError": "Nepodarilo sa načítať históriu životného cyklu operátora.",
+      "historyEmpty": "Nebola zaznamenaná žiadna evidencia životného cyklu operátora.",
+      "selectHistoryAgain": "Pre načítanie evidencie operátora znova kliknite na Históriu."
+    },
+    "journey": {
+      "empty": "Zatiaľ neboli zaznamenané žiadne kohorty cesty prvej strany.",
+      "loadError": "Nepodarilo sa načítať kohorty cesty.",
+      "loading": "Načítavam kohorty cesty..."
+    },
+    "practices": {
+      "noActiveContact": "Žiadny aktívny kontakt administrátora",
+      "includeInReporting": "Zahrnúť túto prax do reportu konverzií",
+      "excludeFromReporting": "Vylúčiť túto internú alebo testovaciu prax z reportu konverzií",
+      "extendTrialTitle": "Predĺžiť túto skúšobnú verziu o 14 dní",
+      "empty": "Zatiaľ žiadne praxe.",
+      "extendTrialError": "Nepodarilo sa predĺžiť skúšobnú verziu",
+      "analyticsError": "Nepodarilo sa zmeniť zahrnutie do lievika"
+    },
+    "funnel": {
+      "loadError": "Nepodarilo sa načítať lievik.",
+      "loading": "Načítavam lievik..."
     }
   },
   "agent": {
@@ -56,7 +112,8 @@
     "backToDashboard": "Späť na prehľad",
     "welcome": {
       "title": "S čím vám môžem pomôcť?",
-      "subtitle": "Umelá inteligencia je vstavaná v VET.IS. Položte otázku vlastnými slovami alebo začnite jedným z návrhov."
+      "subtitle": "Umelá inteligencia je vstavaná v VET.IS. Položte otázku vlastnými slovami alebo začnite jedným z návrhov.",
+      "hint": "Vyberte si otázku z ľavého panelu alebo napíšte vlastnú nižšie."
     },
     "suggestions": {
       "vaccinations": "Ktorí pacienti majú oneskorenú vakcináciu?",
@@ -77,7 +134,8 @@
       "hostedUnavailable": "Agent momentálne nie je k dispozícii. Pracujeme na tom, skúste to znova čoskoro.",
       "configVertexPrefix": "Nakonfigurujte Google Vertex AI pomocou",
       "configVertexMid": "a poverení servisného účtu pre Gemini, alebo nastavte",
-      "configVertexSuffix": "pre model Claude."
+      "configVertexSuffix": "pre model Claude.",
+      "ready": "AI asistent je pripravený a plne konfigurovaný"
     },
     "composer": {
       "placeholder": "Opýtajte sa agenta čokoľvek…  (Enter pre odoslanie, Shift+Enter pre nový riadok)",
@@ -85,13 +143,64 @@
       "placeholderUnavailable": "Agent momentálne nie je k dispozícii.",
       "allowWrites": "Povoliť zápis: termíny a vitálne funkcie pacientov",
       "send": "Odoslať",
-      "writeWarning": "Režim zápisu môže vytvárať termíny alebo zaznamenávať vitálne funkcie pacientov. Po tomto spustení sa automaticky vypne."
+      "writeWarning": "Režim zápisu môže vytvárať termíny alebo zaznamenávať vitálne funkcie pacientov. Po tomto spustení sa automaticky vypne.",
+      "sending": "Odosielam..."
     },
     "trace": {
       "toolCallSingular": "{count} volanie nástroja",
       "toolCallFew": "{count} volania nástrojov",
       "toolCallMany": "{count} volaní nástrojov"
-    }
+    },
+    "badge": "Klinický AI Copilot",
+    "tabs": {
+      "chat": "Asistent",
+      "capabilities": "Schopnosti"
+    },
+    "capabilitiesTitle": "Klinické a administratívne schopnosti asistenta",
+    "capabilitiesSubtitle": "Prehľad nástrojov a automatizácií, ktoré má OpenVPM AI asistent k dispozícii v reálnom čase.",
+    "capabilities": {
+      "tryQuery": "Vyskúšať dopyt",
+      "badgeRead": "Čítanie",
+      "badgeReadWrite": "Čítanie & Zápis",
+      "badgeCalculator": "Kalkulátor",
+      "badgeDataProtection": "Ochrana dát",
+      "recordsSearch": {
+        "title": "Vyhľadávanie v kartotéke",
+        "desc": "Okamžitý prístup k záznamom pacientov, histórii liečby, preočkovaniam a laboratórnym nálezom.",
+        "query": "Ktorí pacienti majú expirované očkovania?"
+      },
+      "appointments": {
+        "title": "Manažment termínov",
+        "desc": "Prehľad dnešných návštev, kapacitné vyťaženie ordinácie a plánovanie nových kontrol v režime zápisu.",
+        "query": "Zhrň dnešné termíny a objednaných pacientov."
+      },
+      "pharmacology": {
+        "title": "Veterinárna farmakológia",
+        "desc": "Výpočet dávkovania liečiv (napr. NSAID, antibiotiká, anestetiká) podľa hmotnosti a druhu zvieraťa.",
+        "query": "Aká je dávka karprofénu pre 12 kg psa?"
+      },
+      "safeWrite": {
+        "title": "Bezpečný režim zápisu",
+        "desc": "Možnosť vytvárať rezervácie alebo zaznamenať vitálne funkcie len s vaším explicitným jednorazovým súhlasom.",
+        "activate": "Aktivovať režim zápisu"
+      }
+    },
+    "systemCardTitle": "Stav a režim asistenta",
+    "quickQuestions": "Rýchle veterinárne otázky",
+    "tipsTitle": "Ako sa pýtať asistenta",
+    "tips": {
+      "naturalLanguage": "Pýtajte sa prirodzenou slovenčinou na pacientov, dávkovanie či termíny.",
+      "context": "Asistent udržiava kontext konverzácie až 12 správ spätne.",
+      "writeMode": "Pre úpravy kartotéky nezabudnite povoliť režim zápisu vyššie."
+    },
+    "chatTitle": "Konverzácia",
+    "chat": {
+      "messagesInSession": "{count} správ v relácii",
+      "readyForQuery": "Pripravené na dopyt"
+    },
+    "newChat": "Nová relácia",
+    "copiedToClipboard": "Skopírované do schránky",
+    "copyReply": "Kopírovať odpoveď"
   },
   "agent.accessRestricted": "Prístup k agentovi je obmedzený",
   "agent.accessRestrictedDesc": "Iba administrátori a veterinárni lekári môžu spúšťať asistenta VET.IS.",
@@ -726,7 +835,9 @@
       "noConsentEvents": "Zatiaľ neboli zaznamenané žiadne udalosti súhlasu.",
       "consentGranted": "Súhlas udelený",
       "consentRevoked": "Súhlas odvolaný",
-      "phoneChangedNotice": "Telefónne číslo sa zmenilo, predchádzajúci SMS súhlas bude zrušený, pokiaľ klient opätovne výslovne neudelí súhlas."
+      "phoneChangedNotice": "Telefónne číslo sa zmenilo, predchádzajúci SMS súhlas bude zrušený, pokiaľ klient opätovne výslovne neudelí súhlas.",
+      "smsPausedNoConsent": "SMS pripomienky sú pozastavené, kým klient nemá platný súhlas so SMS.",
+      "doNotTextPhonePending": "Pred použitím tejto akcie uložte alebo zahoďte neuloženú zmenu telefónneho čísla."
     },
     "detail": {
       "contactInfo": "Kontaktné údaje",
@@ -816,7 +927,11 @@
     "continue": "Pokračovať",
     "finish": "Dokončiť",
     "retry": "Skúsiť znova",
-    "dismiss": "Zavrieť"
+    "dismiss": "Zavrieť",
+    "pleaseRetry": "Skúste to prosím znova.",
+    "closeNavigation": "Zavrieť navigáciu",
+    "saveChanges": "Uložiť zmeny",
+    "edit": "Upraviť"
   },
   "common.cancel": "Zrušiť",
   "common.save": "Uložiť",
@@ -959,7 +1074,9 @@
         "completed": "Dokončené",
         "cancelled": "Zrušené",
         "no_show": "Nedostavil sa"
-      }
+      },
+      "unknownPatient": "Neznámy pacient",
+      "withDoctor": "s {name}"
     },
     "followUps": {
       "title": "Fronta kontrol a následnej starostlivosti",
@@ -1615,7 +1732,9 @@
       "emptyTitle": "Zatiaľ žiadni dodávatelia",
       "emptyDesc": "Pridajte kontaktné údaje dodávateľov, aby ste pri doobjednávaní mali potrebné informácie poruke.",
       "addFirstSupplier": "Pridať prvého dodávateľa"
-    }
+    },
+    "adjustStockAria": "Upraviť zásoby pre {name}",
+    "startTrackingAria": "Spustiť sledovanie zásob pre {name}"
   },
   "labResults": {
     "loadingInbox": "Načítava sa schránka laboratórnych výsledkov…",
@@ -1827,6 +1946,36 @@
         "death": "Aj napriek snahám veterinára sme stratili nášho miláčika. Personál bol veľmi empatický.",
         "praise": "Skvelá starostlivosť! Veterinár bol trpezlivý a náš pes bol pokojný počas celého vyšetrenia."
       }
+    },
+    "media": {
+      "editPrefix": "úprava",
+      "aiEdit": "AI úprava"
+    },
+    "consents": {
+      "createSuccess": "Súhlas bol úspešne zaznamenaný.",
+      "createError": "Nepodarilo sa uložiť súhlas.",
+      "revokeSuccess": "Súhlas bol odvolaný a marketingové položky zablokované.",
+      "revokeError": "Nepodarilo sa odvolať súhlas.",
+      "selectClientError": "Vyberte klienta.",
+      "scope": "Rozsah"
+    },
+    "compliance": {
+      "title": "GDPR, súhlasy a skripty",
+      "subtitle": "Evidencia GDPR a mediálnych súhlasov spolu s operačnými skriptami pre personál."
+    },
+    "tv": {
+      "deleteConfirm": "Naozaj chcete vymazať slajd „{title}“?",
+      "openPublicScreen": "Otvoriť TV obrazovku",
+      "editSlideTitle": "Upraviť slajd",
+      "newSlideTitle": "Pridať nový slajd",
+      "fieldActive": "Aktívny na TV obrazovke",
+      "colActions": "Akcie"
+    },
+    "website": {
+      "title": "Webstránka kliniky",
+      "subtitle": "Verejná reprezentatívna stránka generovaná priamo z údajov kliniky, ordinačných hodín a recenzií.",
+      "statusPublished": "Online / Publikovaná",
+      "statusDraft": "Príprava (Koncept)"
     }
   },
   "nav": {
@@ -1972,7 +2121,12 @@
       "creating": "Vytváram...",
       "cancel": "Zrušiť",
       "change": "Zmeniť",
-      "close": "Zavrieť"
+      "close": "Zavrieť",
+      "fieldVisitLocation": "Miesto terénnej návštevy",
+      "selectLocation": "Vyberte pobočku...",
+      "startingVisit": "Spúšťam návštevu...",
+      "fieldVisit": "Začať terénnu návštevu",
+      "chooseLocationHelp": "Vyberte, kde sa táto terénna návšteva spravuje."
     },
     "form": {
       "titleNew": "Nový pacient",
@@ -2008,7 +2162,11 @@
       "loadError": "Nepodarilo sa načítať pacienta",
       "checkingAccess": "Overujem prístup k pacientovi...",
       "readOnlyNotice": "Máte práva len na čítanie",
-      "readOnlyDesc": "Vytvárať a upravovať pacientov môžu iba oprávnení pracovníci kliniky."
+      "readOnlyDesc": "Vytvárať a upravovať pacientov môžu iba oprávnení pracovníci kliniky.",
+      "firstClinicDayStep2": "Prvý deň kliniky, krok 2 z 3: pridajte zviera tohto majiteľa. Nasleduje rezervácia.",
+      "choosePatient": "Pred úpravou vyberte pacienta zo zoznamu pacientov.",
+      "name": "Meno",
+      "microchipNumber": "Číslo mikročipu"
     },
     "profile": {
       "age": "Vek",
@@ -2063,7 +2221,9 @@
       "legacyAllergyRemoval": "Pôvodné odstránenie zachované bez detailov autora a dôvodu.",
       "microchipCopied": "Číslo čipu bolo skopírované do schránky",
       "copyMicrochip": "Kliknutím skopírujete číslo čipu",
-      "callClient": "Zavolať majiteľovi"
+      "callClient": "Zavolať majiteľovi",
+      "uploadPhoto": "Nahrať fotografiu",
+      "tryPhotoAgain": "Skúsiť fotografiu znova"
     },
     "vitals": {
       "title": "Vitálne funkcie",
@@ -2092,7 +2252,8 @@
       "colWeight": "Hmotnosť",
       "colBcs": "BCS",
       "colPain": "Bolesť",
-      "colStatus": "Stav záznamu"
+      "colStatus": "Stav záznamu",
+      "markedErrorSuccess": "Vitálne funkcie zachované a označené ako zadané omylom"
     },
     "weight": {
       "title": "História hmotnosti",
@@ -2105,7 +2266,8 @@
       "trendFromTo": "{from} kg až {to} kg",
       "weightUnit": "Hmotnosť ({unit})",
       "weightCol": "Hmotnosť ({unit})",
-      "recordedBy": "Zaznamenal"
+      "recordedBy": "Zaznamenal",
+      "recordWeight": "Zaznamenať hmotnosť"
     },
     "vaccinations": {
       "title": "Vakcinácie a odčervenia",
@@ -2147,7 +2309,12 @@
       "editDetails": "Upraviť údaje",
       "enteredInError": "Chybne zadané",
       "recorded": "Evidované",
-      "loadError": "Nepodarilo sa načítať záznamy o vakcinácii."
+      "loadError": "Nepodarilo sa načítať záznamy o vakcinácii.",
+      "certUpdatedSuccess": "Údaje certifikátu aktualizované so záznamom v audite",
+      "markedErrorSuccess": "Očkovanie zachované a označené ako zadané omylom",
+      "certDownloadedSuccess": "Certifikát stiahnutý",
+      "loadErrorRetry": "Nepodarilo sa načítať záznamy o očkovaní. Skúste to prosím znova.",
+      "loading": "Načítavam očkovania..."
     },
     "recordsTab": {
       "title": "Zdravotné záznamy",
@@ -2184,7 +2351,10 @@
       "addAddendum": "Pridať dodatok",
       "addAttributedAddendum": "Pridať autorizovaný dodatok",
       "addendaNotice": "Dodatky po uložení nie je možné upravovať ani mazať.",
-      "saveAddendum": "Uložiť dodatok"
+      "saveAddendum": "Uložiť dodatok",
+      "voidSoapSuccess": "SOAP záznam zachovaný a označený ako zadaný omylom",
+      "unknownAuthor": "Neznámy autor",
+      "addendumSuccess": "Dodatok pridaný k finalizovanému záznamu"
     },
     "documentsTab": {
       "title": "Dokumentácia a obrazové prílohy",
@@ -2252,7 +2422,15 @@
       "executeMerge": "Zlúčiť a vyradiť duplikát",
       "successToast": "Duplicitná karta bola vyradená s nemenným auditným záznamom.",
       "noDuplicatesTitle": "Žiadne duplikáty",
-      "noDuplicatesDesc": "Nenašli sa žiadne karty pacientov s podozrením na duplicitu."
+      "noDuplicatesDesc": "Nenašli sa žiadne karty pacientov s podozrením na duplicitu.",
+      "mergeWarning": "Nikdy nezlučujte karty len preto, že sa zhodujú mená zvierat. Overte majiteľa, druh, dátum narodenia, mikročip, externú identitu a obsah oboch kariet. Historické záznamy sa nikdy potichu nepreradia.",
+      "previewRecalculated": "Náhľad sa pred potvrdením zlúčenia prepočíta na serveri.",
+      "retainedHistoryChecks": "Kontroly zachovanej histórie",
+      "mergeBlocked": "Ponechajte obe identity kariet – toto zlúčenie je zablokované.",
+      "mergeAllowed": "Zanikajúca karta nemá žiadnu zachovanú históriu. Všetka výslovne uvedená budúca práca sa presunie atomicky; nemenná udalosť identity zachová, kto zlúčenie vykonal, kedy a prečo.",
+      "canonicalChartOpened": "Otvorená hlavná karta zlúčenej identity pacienta",
+      "mergedIntoNotice": "{name} bol/a zlúčený/á do tejto karty používateľom {performedBy} dňa {date}.",
+      "reasonPrefix": "Dôvod: {reason}"
     },
     "historySearch": {
       "findTitle": "Hľadať v anamnéze pacienta",
@@ -2314,6 +2492,14 @@
       "active": "Aktívny",
       "inactive": "Neaktívny",
       "deceased": "Zosnulý"
+    },
+    "detail": {
+      "photoUpdated": "Fotografia pacienta aktualizovaná",
+      "summaryDownloaded": "Zdravotný súhrn stiahnutý",
+      "chartSectionsAria": "Sekcie karty pacienta"
+    },
+    "list": {
+      "openPatientAria": "Otvoriť pacienta {name}"
     }
   },
   "recalls": {
@@ -2498,7 +2684,10 @@
       "subjective": "Subjektívne (S)",
       "objective": "Objektívne (O)",
       "assessment": "Posúdenie (A)",
-      "plan": "Plán (P)"
+      "plan": "Plán (P)",
+      "loadingEditor": "Načítavam editor...",
+      "legalTamperProof": "Zákonný klinický záznam",
+      "draftNotice": "Tento záznam je v štádiu konceptu."
     }
   },
   "records.backToVisit": "Späť na návštevu",
@@ -3094,7 +3283,8 @@
     "header": {
       "title": "Nastavenia",
       "subtitle": "Konfigurácia praxe a správa personálu",
-      "guides": "Sprievodcovia"
+      "guides": "Sprievodcovia",
+      "sectionsAria": "Sekcie nastavení"
     },
     "access": {
       "checking": "Overuje sa prístup k nastaveniam...",
@@ -3117,7 +3307,8 @@
     },
     "common": {
       "loadError": "Nepodarilo sa načítať nastavenia",
-      "retry": "Skúsiť znova"
+      "retry": "Skúsiť znova",
+      "create": "Vytvoriť"
     },
     "practice": {
       "save": "Uložiť zmeny",
@@ -3301,6 +3492,154 @@
         "date": "Dátum",
         "doctor": "Lekár"
       }
+    },
+    "locations": {
+      "created": "Pobočka vytvorená",
+      "updated": "Pobočka aktualizovaná",
+      "primaryUpdated": "Hlavná pobočka aktualizovaná",
+      "loadErrorTitle": "Nepodarilo sa načítať pobočky",
+      "loadErrorMessage": "Požiadavka na pobočky sa skončila bez dát. Skúste ich načítať znova pred úpravou pobočiek praxe.",
+      "description": "Pobočky riadia nastavenie SMS, priraďovanie miestností, pripomienky a množstvo v hostovanej fakturácii.",
+      "add": "Pridať pobočku",
+      "namePlaceholder": "Názov pobočky",
+      "phonePlaceholder": "Telefón",
+      "addressPlaceholder": "Adresa",
+      "makePrimary": "Nastaviť ako hlavnú pobočku",
+      "noAddress": "Adresa nie je evidovaná",
+      "emptyTitle": "Žiadne aktívne pobočky",
+      "emptyDescription": "Pridajte pobočku, aby fungovali miestnosti, pripomienky, nastavenie SMS a množstvá v hostovanej fakturácii.",
+      "keepOneActive": "Prax musí mať aspoň jednu aktívnu pobočku."
+    },
+    "billing": {
+      "checkoutUnavailable": "Platobná brána je nedostupná. Skúste to prosím znova.",
+      "clientPaymentSetupUnavailable": "Nastavenie platieb klientov je nedostupné. Skúste to prosím znova.",
+      "clientPaymentStatusRefreshed": "Stav platieb klientov bol obnovený",
+      "loadErrorTitle": "Nepodarilo sa načítať fakturačné údaje",
+      "loadErrorMessage": "Požiadavka na fakturačné údaje sa skončila bez dát. Skúste ich načítať znova.",
+      "activateAccount": "Aktivujte svoj účet",
+      "yourCloudSubscription": "Vaše Cloud predplatné",
+      "activateDescription": "Vyberte fakturačný cyklus a potom zadajte platobné údaje v zabezpečenom Stripe Checkout. Váš pracovný priestor a skúšobná verzia zostanú bez zmeny.",
+      "planKeepsActive": "{plan} udržiava pracovný priestor vašej kliniky aktívny s neobmedzeným počtom zamestnancov.",
+      "readOnlyNotice": "Cloud je v režime iba na čítanie. Aktivácia fakturácie obnoví plný prístup bez zmeny vašich záznamov.",
+      "billedYearly": "${amount} účtované raz ročne",
+      "billedMonthly": "${amount} účtované mesačne",
+      "noChargeToday": "Dnes bez platby. Zostáva {days} dní skúšobnej verzie.",
+      "stripeStoresPayment": "Stripe bezpečne získa a uloží váš spôsob platby.",
+      "perYear": "${amount} ročne",
+      "perMonth": "${amount} mesačne",
+      "manageInStripe": "Platobné údaje, faktúry alebo zrušenie spravujte bezpečne v Stripe.",
+      "manageBilling": "Spravovať fakturáciu",
+      "usageThisMonth": "Tento mesiac: {sms} z {smsIncluded} zahrnutých SMS · {ai} z {aiIncluded} zahrnutých AI akcií",
+      "payoutsEnabled": "Povolené",
+      "payoutsPending": "Čaká sa",
+      "payoutsNa": "N/A"
+    },
+    "staff": {
+      "updated": "Člen tímu aktualizovaný",
+      "loadErrorTitle": "Nepodarilo sa načítať personál",
+      "loadErrorMessage": "Požiadavka na zoznam personálu sa skončila bez dát. Skúste ho načítať znova pred pridávaním alebo úpravou personálu.",
+      "inviteByEmail": "Pozvať e-mailom",
+      "add": "Pridať člena tímu",
+      "emailPlaceholder": "E-mail",
+      "nameOptionalPlaceholder": "Meno (nepovinné)",
+      "sendInvite": "Odoslať pozvánku",
+      "copied": "Skopírované",
+      "fullNamePlaceholder": "Celé meno",
+      "phoneOptionalPlaceholder": "Telefón (nepovinné)",
+      "licenseOptionalPlaceholder": "Číslo licencie (nepovinné)",
+      "veterinarianProviderHint": "Veterinárny lekár – zobrazuje sa v zoznamoch lekárov a môže podpisovať návštevy vyžadujúce lekára.",
+      "emptyTitle": "Nenašli sa žiadni členovia tímu",
+      "emptyDescription": "Pozvite kolegov alebo vytvorte prihlásenie pre personál a dokončite nastavenie praxe."
+    },
+    "appointmentTypes": {
+      "created": "Typ návštevy vytvorený",
+      "updated": "Typ návštevy aktualizovaný",
+      "deleted": "Typ návštevy odstránený",
+      "loadErrorTitle": "Nepodarilo sa načítať typy návštev",
+      "loadErrorMessage": "Požiadavka na typy návštev sa skončila bez dát. Skúste ich načítať znova pred úpravou predvolieb plánovania.",
+      "add": "Pridať typ",
+      "namePlaceholder": "Názov typu",
+      "durationPlaceholder": "Trvanie (minúty)"
+    },
+    "rooms": {
+      "created": "Miestnosť vytvorená",
+      "loadErrorTitle": "Nepodarilo sa načítať miestnosti",
+      "loadErrorMessage": "Požiadavka na zoznam miestností sa skončila bez dát. Skúste ho načítať znova pred úpravou miestností.",
+      "add": "Pridať miestnosť",
+      "namePlaceholder": "Názov miestnosti",
+      "locationAria": "Pobočka kliniky",
+      "emptyTitle": "Žiadne miestnosti",
+      "emptyDescription": "Pridajte miestnosti, aby si termíny mohli rezervovať vyšetrovne, ošetrovne, operačné sály alebo priestory na hospitalizáciu."
+    },
+    "wellness": {
+      "created": "Wellness plán vytvorený",
+      "loadErrorTitle": "Nepodarilo sa načítať wellness plány",
+      "loadErrorMessage": "Požiadavka na wellness plány sa skončila bez dát. Skúste ich načítať znova pred úpravou členských plánov.",
+      "namePlaceholder": "Názov plánu",
+      "pricePlaceholder": "Cena",
+      "descriptionOptionalPlaceholder": "Popis (nepovinné)",
+      "inactive": "Neaktívny",
+      "emptyTitle": "Žiadne wellness plány",
+      "emptyDescription": "Vytvorte plán, ktorý zabalí preventívnu starostlivosť do členstva s plánovanou fakturáciou."
+    },
+    "templates": {
+      "created": "Šablóna vytvorená",
+      "updated": "Šablóna aktualizovaná",
+      "loadErrorTitle": "Nepodarilo sa načítať šablóny",
+      "loadErrorMessage": "Požiadavka na zoznam šablón sa skončila bez dát. Skúste ho načítať znova pred úpravou liečebných šablón.",
+      "active": "Aktívna",
+      "inactive": "Neaktívna",
+      "loadingItems": "Načítavam položky šablóny...",
+      "itemsLoadErrorTitle": "Nepodarilo sa načítať položky šablóny",
+      "itemsLoadErrorMessage": "Požiadavka na detail šablóny sa skončila bez dát. Skúste ju načítať znova pred použitím tejto liečebnej šablóny.",
+      "missingProduct": "Chýbajúci alebo archivovaný skladový produkt – pred použitím šablónu vytvorte znova.",
+      "noItemsTitle": "Šablóna neobsahuje žiadne položky",
+      "noItemsDescription": "Pri vytváraní novej liečebnej šablóny pridajte predvolené služby alebo produkty.",
+      "add": "Pridať šablónu",
+      "namePlaceholder": "Názov šablóny",
+      "itemTypeAria": "Typ položky {index}",
+      "selectItemHint": "Pre každý riadok šablóny vyhľadajte a vyberte aktívnu službu alebo skladový produkt.",
+      "addItem": "Pridať položku",
+      "emptyTitle": "Žiadne šablóny",
+      "emptyDescription": "Vytvorte opakovane použiteľné liečebné šablóny pre bežné balíky služieb a produktov."
+    },
+    "data": {
+      "backupMissingSections": "V zálohe chýbajú povinné sekcie",
+      "recheckCsv": "Pred importom znova skontrolujte CSV.",
+      "clientCsvChecked": "CSV klientov skontrolované",
+      "clientsImported": "Klienti importovaní",
+      "patientCsvChecked": "CSV pacientov skontrolované",
+      "patientsImported": "Pacienti importovaní",
+      "vaccinesImported": "História očkovaní importovaná",
+      "medicalCsvChecked": "CSV zdravotnej histórie skontrolované",
+      "medicalImported": "Zdravotná história importovaná",
+      "backupReadError": "Záložný JSON sa nepodarilo prečítať",
+      "csvEmpty": "CSV súbor je prázdny",
+      "csvReadError": "CSV súbor sa nepodarilo prečítať",
+      "fileChanged": "Súbor alebo zdroj sa zmenil. Znova skontrolujte CSV.",
+      "dropCsvHere": "Presuňte sem CSV súbor alebo kliknite a vyberte ho",
+      "csvSizeLimit": "CSV súbory môžu mať maximálne 5 MB. Súbor sa najprv skontroluje nanečisto; žiadne riadky sa neimportujú, kým to nepotvrdíte.",
+      "csvMatchingHint": "Existujúci majitelia sa spárujú podľa jedného presného e-mailu. Existujúce zvieratá potrebujú zhodný mikročip alebo dátum narodenia, kým sa prepojí ID.",
+      "dryRunComplete": "Kontrola nanečisto dokončená",
+      "nothingImportedYet": "Zatiaľ neboli importované žiadne dáta.",
+      "statRowsParsed": "Spracované riadky",
+      "statWillImport": "Bude importované",
+      "statDuplicates": "Duplicity",
+      "statIdsToConnect": "ID na prepojenie",
+      "statMissingOwners": "Chýbajúci majitelia",
+      "statMissingPets": "Chýbajúce zvieratá",
+      "statRowIssues": "Problémové riadky",
+      "rowIssuesCount": "{count} problémových riadkov:",
+      "onlyListedChanges": "Uloží sa iba {changes} uvedených zmien. {issues} problémových riadkov bude preskočených.",
+      "startSmallSample": "Začnite malou reprezentatívnou vzorkou. Potvrdený import nemá vrátenie jedným kliknutím.",
+      "confirmImport": "Potvrdiť import ({count} zmien)",
+      "recordsImported": "{count} záznamov úspešne importovaných",
+      "recordIdsConnected": "{count} existujúcich ID záznamov prepojených",
+      "errorsCount": "{count} chýb:",
+      "importFirst": "Najprv vyberte zdrojový systém.",
+      "importTitle": "Import dát",
+      "importDescription": "Prechádzate z iného systému? Najprv importujte klientov, potom pacientov, históriu očkovaní a nakoniec zdravotnú históriu (návštevy). Každý súbor sa najprv skontroluje nanečisto, takže duplicity a chýbajúce záznamy uvidíte skôr, než sa čokoľvek uloží. Bežné názvy stĺpcov z AVImark, Cornerstone a ezyVet sú rozpoznávané. Migrácie zo Shepherd sú sprevádzané overením presného formátu exportu kliniky. ID majiteľov a pacientov zostávajú prepojené naprieč súbormi, aj keď majiteľ nemá e-mail.",
+      "importSourceLabel": "Zdroj dát:"
     }
   },
   "website": {
@@ -4810,5 +5149,427 @@
     "syncFs": "Odoslať na FS",
     "syncPending": "Odosiela sa...",
     "viewReceipt": "Zobraziť doklad"
+  },
+  "voice": {
+    "soap": {
+      "subjective": "Subjektívne (S)",
+      "objective": "Objektívne (O)",
+      "assessment": "Hodnotenie (A)",
+      "plan": "Plán (P)",
+      "subjectiveDesc": "Anamnéza, signalement, sťažnosti majiteľa",
+      "objectiveDesc": "Klinická triáda, fyzikálne vyšetrenie, nálezy",
+      "assessmentDesc": "Pracovná diagnóza, diferenciálna diagnostika",
+      "planDesc": "Medikácia, presné dávky, diéta, kontrola",
+      "title": "SOAP štruktúrovaný záznam",
+      "sectionsCount": "{count}/4 sekcií",
+      "styleStandard": "Štandardný",
+      "styleDetailed": "Detailný",
+      "styleConcise": "Stručný",
+      "copyFullTitle": "Kopírovať celý SOAP záznam",
+      "copy": "Kopírovať",
+      "copied": "Skopírované",
+      "copiedFull": "Celý SOAP záznam bol skopírovaný",
+      "copyHeader": "KLINICKÝ ZÁZNAM (SOAP)",
+      "copyDate": "Dátum",
+      "charCount": "{count} zn.",
+      "sectionPlaceholder": "Doplňte {section}...",
+      "noData": "Žiadne údaje"
+    },
+    "page": {
+      "title": "Hlasové diktovanie",
+      "badge": "Klinický AI prepis",
+      "subtitle": "Presná transkripcia hovoreného slova s veterinárnou terminológiou a automatickým štruktúrovaním do SOAP.",
+      "tabEditor": "Diktovanie",
+      "tabHistory": "História diktátov",
+      "loading": "Načítavam hlasové diktovanie...",
+      "unknownPatient": "Neznámy pacient",
+      "patientSelected": "Pacient „{name}“ bol vybraný",
+      "processingDone": "Transkripcia a SOAP analýza dokončená",
+      "processingFailed": "Spracovanie diktovania zlyhalo",
+      "reformatted": "SOAP preformátovaný v štýle: {style}",
+      "reformatFailed": "Preformátovanie zlyhalo",
+      "savedFinalized": "SOAP záznam bol potvrdený a uložený do kartotéky",
+      "savedDraft": "SOAP záznam bol uložený ako koncept – finalizujte ho v kartotéke",
+      "viewPatient": "Zobraziť pacienta",
+      "saveFailed": "Uloženie SOAP záznamu zlyhalo",
+      "loadedToEditor": "Diktát načítaný do editora",
+      "templateProcessed": "Vzor „{title}“ bol úspešne spracovaný",
+      "soapCopied": "SOAP záznam skopírovaný do schránky"
+    },
+    "commands": {
+      "newNoteReady": "Pripravená nová poznámka pacienta",
+      "selectPatientFirst": "Najprv vyberte pacienta pre začatie konzultácie",
+      "pressMic": "Stlačte tlačidlo mikrofónu pre začatie diktovania",
+      "readyToProcess": "Záznam pripravený na spracovanie",
+      "noSoapYet": "Zatiaľ nie je k dispozícii žiadny vygenerovaný SOAP záznam",
+      "paragraphInserted": "Vložený nový odsek",
+      "bulletInserted": "Vložená odrážka",
+      "numberedInserted": "Vložený číslovaný zoznam",
+      "boldInserted": "Vložený formát pre tučný text",
+      "recognized": "Rozpoznaný príkaz: {phrase}"
+    },
+    "demo": {
+      "load": "Načítať demo nahrávku",
+      "notFound": "Demo nahrávka nebola nájdená",
+      "loadError": "Nepodarilo sa načítať demo audio",
+      "loaded": "Demo nahrávka bola načítaná",
+      "failed": "Načítanie demo nahrávky zlyhalo"
+    },
+    "history": {
+      "title": "História hlasových diktovaní",
+      "forPatient": "Zoznam predchádzajúcich diktovaní pre pacienta {name}.",
+      "selectPatientHint": "Vyberte pacienta v editore pre zobrazenie histórie jeho diktovaní.",
+      "noPatient": "Nie je vybraný žiadny pacient",
+      "noPatientHint": "Vráťte sa do editora a vyberte pacienta, ktorého históriu si prajete zobraziť.",
+      "goToEditor": "Prejsť do editora",
+      "empty": "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne diktáty.",
+      "itemTitle": "Diktát",
+      "statusCompleted": "Spracované",
+      "statusSaved": "Uložené v karte",
+      "statusDraft": "Koncept",
+      "noDescription": "Bez popisu nálezu",
+      "audioSeconds": "{seconds} s audia",
+      "loadToEditor": "Načítať do editora"
+    },
+    "patient": {
+      "selectTitle": "Vybrať pacienta pre diktovanie *",
+      "chart": "Karta pacienta",
+      "clear": "Zrušiť"
+    },
+    "deceased": {
+      "title": "Upozornenie na status pacienta",
+      "desc": "Tento pacient je evidovaný ako uhynutý/eutanazovaný. Záznam bude uložený do archívu."
+    },
+    "templates": {
+      "label": "Rýchle vzory & pomôcky",
+      "voiceCommands": "Hlasové príkazy",
+      "allTemplates": "Všetky vzory",
+      "quick": {
+        "preventive": "Preventívna prehliadka",
+        "gastro": "Gastroenteritída",
+        "postOp": "Kontrola po operácii"
+      }
+    },
+    "recording": {
+      "title": "Hlasový záznam vyšetrenia",
+      "seconds": "{seconds} sekúnd",
+      "hintReady": "Stlačte mikrofón a diktujte anamnézu, klinický nález a medikáciu.",
+      "hintSelectPatient": "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania.",
+      "playerTitle": "Záznam diktátu ({seconds} sekúnd)",
+      "recordAgain": "Nahrať znova",
+      "process": "Spracovať cez Gemini AI",
+      "processing": "AI analyzuje a štruktúruje veterinárne diktovanie...",
+      "processingHint": "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry."
+    },
+    "transcript": {
+      "title": "Surový prepis diktátu",
+      "charCount": "{count} znakov",
+      "placeholder": "Sem môžete vložiť alebo upraviť surový text...",
+      "reformat": "Preformátovať do SOAP"
+    },
+    "soapCard": {
+      "title": "Klinický SOAP záznam",
+      "empty": "Žiadny vygenerovaný SOAP záznam",
+      "emptyHint": "Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo."
+    },
+    "save": {
+      "confirmAria": "Potvrdzujem, že som skontroloval(a) AI prepis a finalizujem záznam",
+      "confirmLabel": "Potvrdzujem, že som AI prepis skontroloval(a) a záznam finalizujem pod svojím menom. Bez potvrdenia sa uloží iba ako koncept.",
+      "saving": "Ukladám SOAP do karty pacienta...",
+      "saved": "Uložené v kartotéke pacienta",
+      "confirmAndFinalize": "Potvrdiť a finalizovať SOAP záznam",
+      "saveDraft": "Uložiť ako koncept do záznamov pacienta"
+    },
+    "billing": {
+      "itemsRecognized": "Rozpoznaných {count} položiek na vyúčtovanie.",
+      "extractFailed": "Extrakcia položiek zlyhala: {message}",
+      "invoiceCreated": "Koncept faktúry ({total} €) bol vytvorený v systéme.",
+      "invoiceFailed": "Chyba pri vytváraní účtu: {message}",
+      "extracting": "Extrahujem položky pre vyúčtovanie...",
+      "extractButton": "Extrahovať lieky a úkony do účtu / pokladne",
+      "modalTitle": "Položky na vyúčtovanie z hlasového záznamu",
+      "modalHint": "Tieto položky a aplikované liečivá boli automaticky rozpoznané z plánu terapie. Môžete upraviť množstvá alebo ceny pred vystavením účtu.",
+      "colItem": "Položka / Liečivo",
+      "colCategory": "Kategória",
+      "colQuantity": "Množstvo",
+      "colUnitPrice": "Cena/j (€)",
+      "colTotal": "Spolu (€)",
+      "colAction": "Akcia",
+      "dose": "Dávka",
+      "categoryMedication": "Liek",
+      "categoryService": "Úkon",
+      "totalWithVat": "Celková suma za položky s DPH",
+      "cancel": "Zrušiť",
+      "noPatient": "Nie je vybraný pacient.",
+      "createInvoice": "Vytvoriť koncept faktúry",
+      "goToEkasa": "Prejsť do e-Kasa pokladne"
+    }
+  },
+  "imaging": {
+    "title": "Analýza snímkov",
+    "badge": "AI Röntgen & Diagnostika",
+    "subtitle": "AI asistovaná analýza röntgenov, CT, MRI, ultrazvuku a klinických fotografií.",
+    "tabs": {
+      "editor": "Nová analýza",
+      "history": "História snímkov"
+    },
+    "types": {
+      "xray": "Röntgen",
+      "ct": "CT",
+      "mri": "MRI",
+      "ultrasound": "Ultrazvuk",
+      "photo": "Klinická fotka"
+    },
+    "presets": {
+      "label": "Rýchle diagnostické zamerania",
+      "presetThorax": "Thorax / Srdce & Pľúca",
+      "presetAbdomen": "Abdomen / Cudzie teleso",
+      "presetExtremity": "Končatiny / Fraktúra",
+      "presetDental": "Dentálny RTG",
+      "presetSkin": "Dermatológia / Koža"
+    },
+    "defaultClientName": "Klient",
+    "toast": {
+      "dicomLoaded": "Načítaný DICOM súbor. Prebieha dekódovanie snímky.",
+      "dicomReady": "Snímka bola spracovaná a je pripravená na nahrávanie a AI analýzu.",
+      "uploaded": "Snímok úspešne nahraný",
+      "uploadFailed": "Nahrávanie zlyhalo",
+      "analysisDone": "AI analýza snímku dokončená",
+      "analysisFailed": "Analýza zlyhala",
+      "presetApplied": "Šablóna „{name}“ aplikovaná",
+      "copied": "Nález skopírovaný do schránky",
+      "popupBlocked": "Vyskakovacie okno bolo zablokované",
+      "loadedToPreview": "Analýza načítaná do náhľadu"
+    },
+    "history": {
+      "title": "História vyšetrení snímkov",
+      "forPatient": "Zoznam predchádzajúcich analýz pre pacienta {name}.",
+      "selectPatientHint": "Vyberte pacienta v editore pre zobrazenie jeho histórie snímkov.",
+      "noPatient": "Nie je vybraný žiadny pacient",
+      "noPatientHint": "Vráťte sa do editora a vyberte pacienta, ktorého snímky si prajete zobraziť.",
+      "goToEditor": "Prejsť do editora",
+      "empty": "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne analýzy.",
+      "itemTitle": "{type} snímok",
+      "defaultPrompt": "Štandardná diagnostická analýza",
+      "loadResult": "Načítať nález"
+    },
+    "status": {
+      "completed": "Vyhodnotené",
+      "failed": "Zlyhalo",
+      "inProgress": "Prebieha"
+    },
+    "patient": {
+      "selectTitle": "Vybrať pacienta pre vyšetrenie *",
+      "clearSelection": "Zrušiť výber",
+      "searchPlaceholder": "Vyhľadať pacienta podľa mena...",
+      "searchInputPlaceholder": "Hľadať pacienta...",
+      "noneFound": "Žiadni pacienti sa nenašli",
+      "defaultSpecies": "zviera"
+    },
+    "deceased": {
+      "title": "Upozornenie na status pacienta",
+      "desc": "Tento pacient je evidovaný ako uhynutý. Záznam vyšetrenia bude priradený do archivovanej karty."
+    },
+    "upload": {
+      "title": "Nahratie snímku *",
+      "formats": "Podporované formáty: JPG, PNG, WebP a medicínsky DICOM (.dcm) do 10 MB",
+      "dicomFormat": "DICOM formát",
+      "close": "Zatvoriť",
+      "clickToSelect": "Kliknite pre výber snímku",
+      "hint": "Röntgen (.dcm), CT, MRI, ultrazvuk alebo makroskopická fotka",
+      "chooseFile": "Vybrať súbor",
+      "previewAlt": "Náhľad snímku",
+      "change": "Zmeniť",
+      "uploading": "Nahrávam snímok na zabezpečené úložisko...",
+      "uploadButton": "Nahrať snímok k pacientovi",
+      "ready": "Snímok je bezpečne pripravený na AI analýzu"
+    },
+    "config": {
+      "title": "Konfigurácia analýzy",
+      "imageType": "Typ zobrazovacieho vyšetrenia",
+      "promptLabel": "Klinické zameranie / Otázka pre AI (voliteľné)",
+      "promptPlaceholder": "Napr.: Zameraj sa na pľúcne polia, podozrenie na edém alebo cudzie teleso v žalúdku...",
+      "analyzing": "Spracúvam rádiologickú analýzu...",
+      "analyzeButton": "Spustiť AI analýzu snímku"
+    },
+    "result": {
+      "title": "Výsledok AI analýzy",
+      "copy": "Kopírovať",
+      "print": "Tlačiť / PDF",
+      "processing": "Multimodálny model spracováva snímok...",
+      "processingHint": "Vyhodnocujem rádiologické štruktúry, hustotu tkanív a formulujem klinické posúdenie.",
+      "analysisFor": "Analýza pre",
+      "disclaimer": "Upozornenie: AI analýza zobrazovacích metód má výhradne podporný a odporúčací charakter. Konečné stanovenie diagnózy patrí vždy ošetrujúcemu veterinárnemu lekárovi.",
+      "failed": "Analýza snímku zlyhala",
+      "failedDefault": "Došlo k neočakávanej chybe pri spracovaní snímku.",
+      "empty": "Zatiaľ nebol vyhodnotený žiadny snímok",
+      "emptyHint": "Vyberte pacienta, nahrajte snímok v ľavom paneli a kliknite na tlačidlo spustenia analýzy."
+    },
+    "vhs": {
+      "button": "VHS kalkulačka srdca",
+      "title": "Vertebral Heart Score (VHS) – Buchananova metóda",
+      "normFeline": "Mačka: norma < 8.0 v",
+      "normCanine": "Pes: norma 8.5–10.5 v",
+      "longAxis": "Dlhá os L (mm)",
+      "shortAxis": "Krátka os S (mm)",
+      "t4": "Stavec T4 (mm)",
+      "species": "Druh pacienta",
+      "speciesCanine": "Pes (canine)",
+      "speciesFeline": "Mačka (feline)",
+      "calculate": "Vypočítať VHS",
+      "interpretation": "Klinické posúdenie nálezu",
+      "invalidInput": "Zadajte platné kladné rozmery v milimetroch",
+      "scoreToast": "VHS skóre: {score} v ({status})",
+      "calcError": "Chyba pri výpočte VHS"
+    },
+    "quiz": {
+      "button": "Edukačný RTG kvíz (KVL SR)",
+      "title": "Kvíz týždňa zo snímky pre sociálne siete (KVL SR)",
+      "anonymizedBadge": "Anonymizovaný edukačný príspevok",
+      "questionLabel": "Otázka kvízu pre verejnosť",
+      "questionPlaceholder": "Čo odhalila táto rádiologická snímka?",
+      "correctAnswer": "Správna odpoveď (A)",
+      "correctPlaceholder": "napr. Cudzie teleso v žalúdku",
+      "wrongB": "Nesprávna možnosť (B)",
+      "wrongBPlaceholder": "napr. Fyziologický nález",
+      "wrongC": "Nesprávna možnosť (C)",
+      "wrongCPlaceholder": "napr. Torzia žalúdka",
+      "optionB": "Možnosť B",
+      "optionC": "Možnosť C",
+      "channel": "Kanál",
+      "channelGoogle": "Google Profil",
+      "createButton": "Vytvoriť kvíz do plánu obsahu",
+      "viewInPlan": "Zobraziť v pláne obsahu",
+      "needAnalysis": "Najprv spustite alebo vyberte AI analýzu snímku",
+      "needCorrectAnswer": "Zadajte správnu odpoveď na kvíz",
+      "created": "Rádiologický kvíz bol zaradený do marketingového plánu!",
+      "createFailed": "Nepodarilo sa vytvoriť príspevok."
+    }
+  },
+  "discharge": {
+    "defaultClientName": "Klient",
+    "defaultPetName": "Pacient",
+    "defaultSpecies": "zviera",
+    "presetApplied": "Šablóna „{name}“ aplikovaná",
+    "marketingFailed": "Nepodarilo sa vytvoriť príspevok.",
+    "copyFailed": "Kopírovanie zlyhalo",
+    "sympathyFlow": "Režim sústrasti",
+    "languageSk": "Slovenčina (SK)",
+    "languageEn": "Angličtina (EN)",
+    "smsBadge": "160 zn.",
+    "smsCharCount": "{count} / 160 znakov",
+    "smsPreparing": "Pripravujem SMS súhrn a liekový rozvrh...",
+    "smsGenerating": "SMS text sa generuje...",
+    "smsCopied": "SMS skopírovaná do schránky",
+    "copiedShort": "Skopírované",
+    "copySms": "Kopírovať SMS",
+    "medColumn": "Liek / Dávkovanie",
+    "regimenColumn": "Režim / Pokyn",
+    "yes": "Áno",
+    "noHomeMedication": "Pre tohto pacienta nebola predpísaná žiadna špecifická domáca perorálna medikácia.",
+    "channel": "Kanál",
+    "channelGoogle": "Google Profil",
+    "marketingQueued": "Zaradené v marketingovom štúdiu ako koncept",
+    "openInPlan": "Otvoriť v pláne obsahu"
+  },
+  "vetIntel": {
+    "badge": "AI Trh & Legislatíva",
+    "hubSubtitle": "Centrálny hub pre trhovú inteligenciu: monitoring konkurencie, cenový benchmarking, úradné vestníky ŠVPS SR, liekové registrácie a predpisy KVL SR.",
+    "loading": "Načítavam Vet Intelligence...",
+    "nav": {
+      "market": "Trh & Konkurencia",
+      "marketDesc": "Benchmark, recenzie, analýza regiónu",
+      "bulletin": "Úradné vestníky & Právo",
+      "bulletinDesc": "ŠVPS SR, KVL SR, ŠÚKL",
+      "strategy": "AI Stratégia & Trendy",
+      "strategyDesc": "Reddit, LinkedIn, svetové tipy",
+      "portals": "Portály"
+    },
+    "market": {
+      "analysisUpdated": "Konkurenčná a trhová analýza bola úspešne aktualizovaná",
+      "analysisFailed": "Nepodarilo sa spustiť analýzu trhu",
+      "minQuery": "Zadajte aspoň 2 znaky lokality",
+      "complianceTitle": "Legislatívna a etická ochrana KVL SR (Zákon č. 39/2007 Z. z. a Zákon o reklame)",
+      "complianceDesc": "Výstupy trhovej analýzy slúžia výhradne pre interné strategické rozhodovanie a optimalizáciu služieb vašej kliniky. Priame menovité porovnávanie s inými ambulanciami alebo znevažovanie kolegov vo verejnej komunikácii je v rozpore s Etickým kódexom KVL SR a je automaticky blokované naším marketingovým validátorom.",
+      "searchPlaceholder": "Zadajte mesto, mestskú časť alebo PSČ (napr. Bratislava Ružinov, Žilina, Košice...)",
+      "analyzeButton": "Analyzovať trh",
+      "quickPick": "Rýchly výber",
+      "emptyTitle": "Zatiaľ žiadna konkurenčná analýza",
+      "emptyDesc": "Zadajte mesto alebo lokalitu vo formulári vyššie a kliknite na tlačidlo Analyzovať trh.",
+      "runSample": "Spustiť ukážkovú analýzu",
+      "region": "Región",
+      "generatedAt": "Vyhotovené",
+      "sampleBadge": "Referenčný benchmark",
+      "liveBadge": "Živé dáta z Google Máp",
+      "clinicsInRegion": "Veterinárne pracoviská v regióne ({count})",
+      "pricing": "Cenotvorba",
+      "openInMaps": "Otvoriť v Google Mapách"
+    },
+    "digest": {
+      "title": "Týždenný trhový digest na e-mail",
+      "desc": "Každý pondelok ráno prebehne kontrola zmien v regióne (nové kliniky, zmeny hodnotení, recenzie) a zašle súhrn personálu.",
+      "on": "Zapnuté",
+      "off": "Vypnuté",
+      "enabledToast": "Týždenný trhový digest bol zapnutý",
+      "disabledToast": "Týždenný trhový digest bol vypnutý",
+      "toggleFailed": "Nepodarilo sa zmeniť nastavenie digestu"
+    },
+    "bulletin": {
+      "gazetteTitle": "Vestník veterinárnej legislatívy SR",
+      "gazetteSources": "ŠVPS SR · KVL SR · ŠÚKL · ÚŠKVBL · Klinické štandardy",
+      "volume": "Ročník {year}",
+      "slovLexPortal": "Slov-Lex portál",
+      "searchPlaceholder": "Hľadať v legislatíve...",
+      "filterAll": "Všetky",
+      "filterAlert": "Výstrahy",
+      "filterRegulation": "Predpisy KVL",
+      "filterDrug": "Liečivá",
+      "filterAdvisory": "Klinické štandardy",
+      "issued": "Vydané",
+      "effectiveFrom": "Účinné od",
+      "fullText": "Plné znenie",
+      "hideFullText": "Skryť plné znenie ▲",
+      "showFullText": "Zobraziť plné znenie ▼",
+      "officialPortal": "Oficiálny portál",
+      "noResults": "Žiadne výsledky pre zvolený filter.",
+      "verdictPass": "✅ KVL SR: OK",
+      "verdictWarn": "⚠️ KVL SR: Upozornenie",
+      "verdictFixed": "🚫 KVL SR: Opravené",
+      "postCreated": "Edukačný post bol vytvorený a uložený do plánu. {verdict}",
+      "postFailed": "Nepodarilo sa vytvoriť post"
+    },
+    "tips": {
+      "title": "AI-kurátorované tipy z celého sveta 🌍",
+      "desc": "Reálne skúsenosti veterinárnych lekárov z Reddit, LinkedIn, Hacker News a odborných fór. Tipy sú vybrané na základe engagementu komunity a relevantnosti pre veterinárny biznis.",
+      "curatedBadge": "AI kurátorované",
+      "categoryLabel": "Kategória",
+      "allWithCount": "Všetky ({count})",
+      "votes": "{count} hlasov",
+      "comments": "{count} komentárov",
+      "sourceLink": "Zdroj",
+      "recommendationsTitle": "AI odporúčania z vašej poslednej trhovej analýzy",
+      "category": {
+        "pricing": "Cenotvorba",
+        "retention": "Retencia klientov",
+        "marketing": "Marketing",
+        "staffing": "Personál & HR",
+        "tech": "Technológia",
+        "growth": "Rast & Expanzia"
+      },
+      "source": {
+        "reddit": "Reddit",
+        "linkedin": "LinkedIn",
+        "hackernews": "Hacker News",
+        "forum": "VetBiz fórum",
+        "newsletter": "Newsletter",
+        "research": "Výskumná správa"
+      }
+    }
+  },
+  "migrationArchive": {
+    "totalsAria": "Súhrny importovanej histórie",
+    "sectionsAria": "Sekcie importovanej histórie",
+    "searchAria": "Hľadať: {section}",
+    "detailsAria": "Detaily importovaného záznamu"
   }
 }

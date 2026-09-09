@@ -248,7 +248,7 @@ function NewPatientForm() {
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {firstClinicDay
-          ? "First clinic day, step 2 of 3: add this owner's pet. Booking is next."
+          ? t("patients.form.firstClinicDayStep2", "Prvý deň kliniky, krok 2 z 3: pridajte zviera tohto majiteľa. Nasleduje rezervácia.")
           : t("patients.form.subtitleNew", "Add a new patient record")}
       </p>
 

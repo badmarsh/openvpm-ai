@@ -181,7 +181,7 @@ export default function DischargePage() {
   }) => {
     const clientName =
       [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ").trim() ||
-      "Klient";
+      t("discharge.defaultClientName", "Klient");
     setSelectedPatient({
       id: p.id,
       name: p.name,
@@ -207,7 +207,7 @@ export default function DischargePage() {
     setDiagnosis(preset.diagnosis);
     setTreatment(preset.treatment);
     setFollowUp(preset.followUp);
-    toast.info(`${preset.name} aplikované`);
+    toast.info(t("discharge.presetApplied", "Šablóna „{name}“ aplikovaná", { name: t(`discharge.${preset.key}`, preset.name) }));
   };
 
   // Generate report
@@ -276,7 +276,7 @@ export default function DischargePage() {
     try {
       const res = await createMarketingPostMutation.mutateAsync({
         patientId: selectedPatient?.id,
-        petName: petName.trim() || "Pacient",
+        petName: petName.trim() || t("discharge.defaultPetName", "Pacient"),
         species: species.trim() || undefined,
         diagnosis: diagnosis.trim(),
         treatment: treatment.trim() || undefined,
@@ -285,7 +285,7 @@ export default function DischargePage() {
       setMarketingPostData(res);
       toast.success(t("discharge.marketingSuccess", "Post successfully drafted and added to content plan!"));
     } catch (err) {
-      toast.error("Nepodarilo sa vytvoriť príspevok.");
+      toast.error(t("discharge.marketingFailed", "Nepodarilo sa vytvoriť príspevok."));
     }
   };
 
@@ -298,7 +298,7 @@ export default function DischargePage() {
       toast.success(t("discharge.copied", "Copied to clipboard"));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      toast.error("Failed to copy");
+      toast.error(t("discharge.copyFailed", "Kopírovanie zlyhalo"));
     }
   }, [result, t]);
 
@@ -594,7 +594,7 @@ export default function DischargePage() {
                           <div>
                             <span className="font-medium">{p.name}</span>
                             <span className="text-xs text-muted-foreground ml-2">
-                              {p.species || "zviera"} — {p.clientFirstName} {p.clientLastName}
+                              {p.species || t("discharge.defaultSpecies", "zviera")} — {p.clientFirstName} {p.clientLastName}
                             </span>
                           </div>
                           {selectedPatient?.id === p.id && (
@@ -611,7 +611,7 @@ export default function DischargePage() {
                   <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="font-semibold block mb-0.5">Sympathy Flow</strong>
+                      <strong className="font-semibold block mb-0.5">{t("discharge.sympathyFlow", "Režim sústrasti")}</strong>
                       {t(
                         "discharge.deceasedWarning",
                         "Notice: This patient is marked as deceased. The generated message will automatically be formatted as a condolence note."
@@ -752,8 +752,8 @@ export default function DischargePage() {
                       onChange={(e) => setLanguage(e.target.value as "sk" | "en")}
                       className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
-                      <option value="sk">Slovenčina (SK)</option>
-                      <option value="en">English (EN)</option>
+                      <option value="sk">{t("discharge.languageSk", "Slovenčina (SK)")}</option>
+                      <option value="en">{t("discharge.languageEn", "English (EN)")}</option>
                     </select>
                   </div>
                 </div>
@@ -917,7 +917,7 @@ export default function DischargePage() {
                     {t("discharge.tabs.smsSchedule", "SMS & Pill Schedule")}
                     {smsScheduleData && (
                       <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
-                        160z
+                        {t("discharge.smsBadge", "160 zn.")}
                       </Badge>
                     )}
                   </button>
@@ -989,7 +989,7 @@ export default function DischargePage() {
                             }
                             className="text-[11px] font-mono"
                           >
-                            {smsScheduleData?.smsText.length ?? 0} / 160 znakov
+                            {t("discharge.smsCharCount", "{count} / 160 znakov", { count: smsScheduleData?.smsText.length ?? 0 })}
                           </Badge>
                         </div>
 
@@ -997,11 +997,11 @@ export default function DischargePage() {
                           {generateSmsMutation.isPending ? (
                             <div className="flex items-center gap-2 py-2 text-muted-foreground">
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Pripravujem SMS súhrn a liekový rozvrh...</span>
+                              <span>{t("discharge.smsPreparing", "Pripravujem SMS súhrn a liekový rozvrh...")}</span>
                             </div>
                           ) : (
                             smsScheduleData?.smsText ||
-                            "SMS text sa generuje..."
+                            t("discharge.smsGenerating", "SMS text sa generuje...")
                           )}
                         </div>
 
@@ -1015,7 +1015,7 @@ export default function DischargePage() {
                               if (!smsScheduleData?.smsText) return;
                               await navigator.clipboard.writeText(smsScheduleData.smsText);
                               setSmsCopied(true);
-                              toast.success("SMS skopírovaná do schránky");
+                              toast.success(t("discharge.smsCopied", "SMS skopírovaná do schránky"));
                               setTimeout(() => setSmsCopied(false), 2000);
                             }}
                           >
@@ -1024,7 +1024,9 @@ export default function DischargePage() {
                             ) : (
                               <Copy className="h-3.5 w-3.5" />
                             )}
-                            {smsCopied ? "Skopírované" : "Kopírovať SMS"}
+                            {smsCopied
+                              ? t("discharge.copiedShort", "Skopírované")
+                              : t("discharge.copySms", "Kopírovať SMS")}
                           </Button>
                         </div>
                       </div>
@@ -1043,12 +1045,12 @@ export default function DischargePage() {
                             <table className="w-full text-xs text-left border-collapse">
                               <thead>
                                 <tr className="border-b text-muted-foreground">
-                                  <th className="py-2 px-2.5 font-semibold">Liek / Dávkovanie</th>
-                                  <th className="py-2 px-2 text-center font-semibold">Ráno (☀️)</th>
-                                  <th className="py-2 px-2 text-center font-semibold">Obed (🌤️)</th>
-                                  <th className="py-2 px-2 text-center font-semibold">Večer (🌙)</th>
-                                  <th className="py-2 px-2 text-center font-semibold">Noc (🌑)</th>
-                                  <th className="py-2 px-2.5 font-semibold">Režim / Pokyn</th>
+                                  <th className="py-2 px-2.5 font-semibold">{t("discharge.medColumn", "Liek / Dávkovanie")}</th>
+                                  <th className="py-2 px-2 text-center font-semibold">{t("discharge.morning", "Ráno")} (☀️)</th>
+                                  <th className="py-2 px-2 text-center font-semibold">{t("discharge.noon", "Obed")} (🌤️)</th>
+                                  <th className="py-2 px-2 text-center font-semibold">{t("discharge.evening", "Večer")} (🌙)</th>
+                                  <th className="py-2 px-2 text-center font-semibold">{t("discharge.night", "Noc")} (🌑)</th>
+                                  <th className="py-2 px-2.5 font-semibold">{t("discharge.regimenColumn", "Režim / Pokyn")}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1065,7 +1067,7 @@ export default function DischargePage() {
                                     <td className="py-2 px-2 text-center">
                                       {item.morning ? (
                                         <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] px-1.5 py-0">
-                                          Áno
+                                          {t("discharge.yes", "Áno")}
                                         </Badge>
                                       ) : (
                                         <span className="text-muted-foreground/40">—</span>
@@ -1074,7 +1076,7 @@ export default function DischargePage() {
                                     <td className="py-2 px-2 text-center">
                                       {item.noon ? (
                                         <Badge className="bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30 text-[10px] px-1.5 py-0">
-                                          Áno
+                                          {t("discharge.yes", "Áno")}
                                         </Badge>
                                       ) : (
                                         <span className="text-muted-foreground/40">—</span>
@@ -1083,7 +1085,7 @@ export default function DischargePage() {
                                     <td className="py-2 px-2 text-center">
                                       {item.evening ? (
                                         <Badge className="bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 text-[10px] px-1.5 py-0">
-                                          Áno
+                                          {t("discharge.yes", "Áno")}
                                         </Badge>
                                       ) : (
                                         <span className="text-muted-foreground/40">—</span>
@@ -1092,7 +1094,7 @@ export default function DischargePage() {
                                     <td className="py-2 px-2 text-center">
                                       {item.night ? (
                                         <Badge className="bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[10px] px-1.5 py-0">
-                                          Áno
+                                          {t("discharge.yes", "Áno")}
                                         </Badge>
                                       ) : (
                                         <span className="text-muted-foreground/40">—</span>
@@ -1101,7 +1103,7 @@ export default function DischargePage() {
                                     <td className="py-2 px-2.5 text-muted-foreground">
                                       {item.withFood ? (
                                         <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-300 mr-1">
-                                          S krmivom
+                                          {t("discharge.withFood", "S krmivom")}
                                         </Badge>
                                       ) : null}
                                       {item.notes}
@@ -1113,7 +1115,7 @@ export default function DischargePage() {
                           </div>
                         ) : (
                           <p className="text-xs text-muted-foreground italic py-2">
-                            Pre tohto pacienta nebola predpísaná žiadna špecifická domáca perorálna medikácia.
+                            {t("discharge.noHomeMedication", "Pre tohto pacienta nebola predpísaná žiadna špecifická domáca perorálna medikácia.")}
                           </p>
                         )}
                       </div>
@@ -1153,7 +1155,7 @@ export default function DischargePage() {
 
                       <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border bg-card">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-foreground">Kanál:</span>
+                          <span className="text-xs font-semibold text-foreground">{t("discharge.channel", "Kanál")}:</span>
                           {(["instagram", "facebook", "google_business"] as const).map((ch) => (
                             <Button
                               key={ch}
@@ -1163,7 +1165,7 @@ export default function DischargePage() {
                               className="h-7 text-xs capitalize"
                               onClick={() => setMarketingChannel(ch)}
                             >
-                              {ch === "google_business" ? "Google Profil" : ch}
+                              {ch === "google_business" ? t("discharge.channelGoogle", "Google Profil") : ch}
                             </Button>
                           ))}
                         </div>
@@ -1212,11 +1214,11 @@ export default function DischargePage() {
 
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[11px] text-muted-foreground">
-                              Zaradené v marketingovom štúdiu ako koncept
+                              {t("discharge.marketingQueued", "Zaradené v marketingovom štúdiu ako koncept")}
                             </span>
                             <Button variant="outline" size="sm" asChild className="h-7 text-xs gap-1">
                               <Link href="/marketing/plan">
-                                Otvoriť v pláne obsahu
+                                {t("discharge.openInPlan", "Otvoriť v pláne obsahu")}
                                 <ExternalLink className="h-3 w-3" />
                               </Link>
                             </Button>

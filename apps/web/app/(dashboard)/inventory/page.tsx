@@ -1452,8 +1452,8 @@ export default function InventoryPage() {
                                 }
                                 aria-label={
                                   product.inventoryTracked
-                                    ? `Adjust stock for ${product.name}`
-                                    : `Start stock tracking for ${product.name}`
+                                    ? t("inventory.adjustStockAria", "Upraviť zásoby pre {name}", { name: product.name })
+                                    : t("inventory.startTrackingAria", "Spustiť sledovanie zásob pre {name}", { name: product.name })
                                 }
                               >
                                 <Plus className="h-3.5 w-3.5" />

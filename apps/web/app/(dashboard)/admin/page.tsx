@@ -315,7 +315,7 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MessageSquare className="h-4 w-4" />
-              <span className="text-sm">SMS operations health</span>
+              <span className="text-sm">{t("admin.sections.smsHealth", "SMS operations health")}</span>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               Read-only carrier, provider-profile, provider-event, send-attempt,
@@ -340,7 +340,7 @@ export default function AdminPage() {
         {smsConfiguration ? (
           <div className="mt-4 rounded-md border border-border bg-muted/20 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium">Hosted SMS configuration</p>
+              <p className="text-sm font-medium">{t("admin.sections.hostedSms", "Hosted SMS configuration")}</p>
               <span className="text-xs text-muted-foreground">
                 {smsConfiguration.rolloutIntended
                   ? smsConfiguration.providerIsTelnyx &&
@@ -402,7 +402,7 @@ export default function AdminPage() {
           </div>
         ) : smsConfigurationError ? (
           <p className="mt-3 text-sm text-red-700">
-            Could not load hosted SMS configuration diagnostics.
+            {t("admin.hostedSms.loadError", "Could not load hosted SMS configuration diagnostics.")}
           </p>
         ) : null}
         {smsOperations ? (
@@ -471,7 +471,7 @@ export default function AdminPage() {
                       <th className="px-3 py-2 font-medium">Category</th>
                       <th className="px-3 py-2 font-medium">Age</th>
                       <th className="px-3 py-2 font-medium">Reason</th>
-                      <th className="px-3 py-2 font-medium">Next action</th>
+                      <th className="px-3 py-2 font-medium">{t("admin.table.nextAction", "Next action")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -527,8 +527,8 @@ export default function AdminPage() {
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             {smsOperationsError
-              ? "Could not load SMS operations health."
-              : "Loading SMS operations health…"}
+              ? t("admin.smsHealth.loadError", "Could not load SMS operations health.")
+              : t("admin.smsHealth.loading", "Loading SMS operations health…")}
           </p>
         )}
       </div>
@@ -539,7 +539,7 @@ export default function AdminPage() {
       <div className="mt-6 rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
-          <span className="text-sm">Clinic activation recovery</span>
+          <span className="text-sm">{t("admin.sections.activationRecovery", "Clinic activation recovery")}</span>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           Ranked by the next operator action, then by days since a real clinic
@@ -556,7 +556,7 @@ export default function AdminPage() {
                   <th className="px-3 py-2 font-medium">Setup</th>
                   <th className="px-3 py-2 font-medium">Real activity</th>
                   <th className="px-3 py-2 font-medium">Stage</th>
-                  <th className="px-3 py-2 font-medium">Next action</th>
+                  <th className="px-3 py-2 font-medium">{t("admin.table.nextAction", "Next action")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -583,7 +583,7 @@ export default function AdminPage() {
                         </a>
                       ) : (
                         <p className="mt-0.5 text-xs font-medium text-amber-700">
-                          No verified admin contact
+                          {t("admin.recovery.noVerifiedContact", "No verified admin contact")}
                         </p>
                       )}
                     </td>
@@ -598,8 +598,8 @@ export default function AdminPage() {
                       </span>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {clinic.trialEndsAt
-                          ? `Ends ${formatDate(clinic.trialEndsAt, clinic.timezone)}`
-                          : "No trial end"}
+                          ? t("admin.recovery.trialEnds", "Ends {date}", { date: formatDate(clinic.trialEndsAt, clinic.timezone) })
+                          : t("admin.recovery.noTrialEnd", "No trial end")}
                       </p>
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">
@@ -645,7 +645,7 @@ export default function AdminPage() {
                       colSpan={7}
                       className="px-3 py-6 text-center text-muted-foreground"
                     >
-                      No clinic workspaces need activation recovery.
+                      {t("admin.recovery.empty", "No clinic workspaces need activation recovery.")}
                     </td>
                   </tr>
                 ) : null}
@@ -655,8 +655,8 @@ export default function AdminPage() {
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             {recoveryError
-              ? "Could not load activation recovery."
-              : "Loading activation recovery…"}
+              ? t("admin.recovery.loadError", "Could not load activation recovery.")
+              : t("admin.recovery.loading", "Loading activation recovery…")}
           </p>
         )}
       </div>
@@ -665,7 +665,7 @@ export default function AdminPage() {
       <div className="mt-6 rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <MessageSquare className="h-4 w-4" />
-          <span className="text-sm">Messaging carrier registrations</span>
+          <span className="text-sm">{t("admin.sections.messagingCarrier", "Messaging carrier registrations")}</span>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           Brand and campaign submissions incur Telnyx charges and require an
@@ -683,7 +683,7 @@ export default function AdminPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
                   <th className="px-3 py-2 font-medium">Clinic</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">{t("admin.table.status", "Status")}</th>
                   <th className="px-3 py-2 font-medium">Brand</th>
                   <th className="px-3 py-2 font-medium">Campaign</th>
                   <th className="px-3 py-2 font-medium">Numbers</th>
@@ -727,14 +727,14 @@ export default function AdminPage() {
                         {registration.status.replace("_", " ")}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {registration.providerBrandStatus ?? "Not submitted"}
+                        {registration.providerBrandStatus ?? t("admin.messaging.notSubmitted", "Not submitted")}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {registration.providerCampaignStatus ?? "Not submitted"}
+                        {registration.providerCampaignStatus ?? t("admin.messaging.notSubmitted", "Not submitted")}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {registration.senders.length === 0
-                          ? "No number"
+                          ? t("admin.messaging.noNumber", "No number")
                           : registration.senders
                               .map(
                                 (sender) =>
@@ -917,7 +917,7 @@ export default function AdminPage() {
                           {registration.providerBrandId ? (
                             <button
                               type="button"
-                              title="Read current carrier status"
+                              title={t("admin.messaging.readCarrierStatus", "Read current carrier status")}
                               disabled={anyMutationPending}
                               className="inline-flex items-center rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
                               onClick={() =>
@@ -998,7 +998,7 @@ export default function AdminPage() {
                       colSpan={6}
                       className="px-3 py-6 text-center text-muted-foreground"
                     >
-                      No clinics have submitted carrier details yet.
+                      {t("admin.messaging.empty", "No clinics have submitted carrier details yet.")}
                     </td>
                   </tr>
                 ) : null}
@@ -1008,8 +1008,8 @@ export default function AdminPage() {
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             {messagingQueueError
-              ? "Could not load messaging registrations."
-              : "Loading messaging registrations…"}
+              ? t("admin.messaging.loadError", "Could not load messaging registrations.")
+              : t("admin.messaging.loading", "Loading messaging registrations…")}
           </p>
         )}
       </div>
@@ -1019,7 +1019,7 @@ export default function AdminPage() {
         <div className="mt-4 rounded-lg border border-border bg-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Carrier lifecycle history</p>
+              <p className="text-sm font-semibold">{t("admin.messaging.historyTitle", "Carrier lifecycle history")}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {messagingHistorySelection.practiceName} · newest first · at
                 most {MESSAGING_HISTORY_LIMIT} redacted operational events
@@ -1030,12 +1030,12 @@ export default function AdminPage() {
               className="rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted"
               onClick={() => setMessagingHistorySelection(null)}
             >
-              Close history
+              {t("admin.messaging.closeHistory", "Close history")}
             </button>
           </div>
           {messagingHistoryError ? (
             <p className="mt-3 text-sm text-destructive">
-              Could not load carrier lifecycle history.
+              {t("admin.messaging.historyLoadError", "Could not load carrier lifecycle history.")}
             </p>
           ) : messagingHistory ? (
             <>
@@ -1045,7 +1045,7 @@ export default function AdminPage() {
                     <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
                       <th className="px-3 py-2 font-medium">Recorded</th>
                       <th className="px-3 py-2 font-medium">Lifecycle event</th>
-                      <th className="px-3 py-2 font-medium">Status</th>
+                      <th className="px-3 py-2 font-medium">{t("admin.table.status", "Status")}</th>
                       <th className="px-3 py-2 font-medium">
                         Operational evidence
                       </th>
@@ -1100,7 +1100,7 @@ export default function AdminPage() {
                           colSpan={4}
                           className="px-3 py-6 text-center text-muted-foreground"
                         >
-                          No carrier lifecycle evidence has been recorded.
+                          {t("admin.messaging.historyEmpty", "No carrier lifecycle evidence has been recorded.")}
                         </td>
                       </tr>
                     ) : null}
@@ -1119,7 +1119,7 @@ export default function AdminPage() {
             <p className="mt-3 text-sm text-muted-foreground">
               {messagingHistoryFetching
                 ? "Loading redacted carrier history…"
-                : "Select History again to load carrier evidence."}
+                : t("admin.messaging.selectHistoryAgain", "Pre načítanie evidencie operátora znova kliknite na Históriu.")}
             </p>
           )}
         </div>
@@ -1129,7 +1129,7 @@ export default function AdminPage() {
       <div className="mt-6 rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
-          <span className="text-sm">Production journey cohorts (30 days)</span>
+          <span className="text-sm">{t("admin.sections.journeyCohorts", "Production journey cohorts (30 days)")}</span>
         </div>
         {journey ? (
           <>
@@ -1212,7 +1212,7 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">Cohort week</th>
+                    <th className="px-3 py-2 font-medium">{t("admin.table.cohortWeek", "Cohort week")}</th>
                     <th className="px-3 py-2 font-medium">Visit</th>
                     <th className="px-3 py-2 font-medium">Demo</th>
                     <th className="px-3 py-2 font-medium">Registered</th>
@@ -1251,7 +1251,7 @@ export default function AdminPage() {
                         colSpan={7}
                         className="px-3 py-6 text-center text-muted-foreground"
                       >
-                        No first-party journey cohorts recorded yet.
+                        {t("admin.journey.empty", "No first-party journey cohorts recorded yet.")}
                       </td>
                     </tr>
                   ) : null}
@@ -1274,8 +1274,8 @@ export default function AdminPage() {
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             {journeyError
-              ? "Could not load journey cohorts."
-              : "Loading journey cohorts..."}
+              ? t("admin.journey.loadError", "Could not load journey cohorts.")
+              : t("admin.journey.loading", "Loading journey cohorts...")}
           </p>
         )}
       </div>
@@ -1283,7 +1283,7 @@ export default function AdminPage() {
       <div className="mt-6 rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
-          <span className="text-sm">Trial funnel (30 days)</span>
+          <span className="text-sm">{t("admin.sections.trialFunnel", "Trial funnel (30 days)")}</span>
         </div>
         {funnel ? (
           <>
@@ -1467,7 +1467,7 @@ export default function AdminPage() {
           </>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
-            {funnelError ? "Could not load the funnel." : "Loading funnel..."}
+            {funnelError ? t("admin.funnel.loadError", "Could not load the funnel.") : t("admin.funnel.loading", "Loading funnel...")}
           </p>
         )}
       </div>
@@ -1475,33 +1475,33 @@ export default function AdminPage() {
       {/* Practices table */}
       {extendTrialError && (
         <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          Could not extend the trial: {extendTrialError}
+          {t("admin.practices.extendTrialError", "Nepodarilo sa predĺžiť skúšobnú verziu")}: {extendTrialError}
         </div>
       )}
       {analyticsError && (
         <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          Could not update funnel inclusion: {analyticsError}
+          {t("admin.practices.analyticsError", "Nepodarilo sa zmeniť zahrnutie do lievika")}: {analyticsError}
         </div>
       )}
       <div className="mt-8 overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Practice</th>
-              <th className="px-4 py-2.5 font-medium">Plan</th>
-              <th className="px-4 py-2.5 font-medium">Status</th>
-              <th className="px-4 py-2.5 font-medium">Source</th>
-              <th className="px-4 py-2.5 font-medium">Intent</th>
-              <th className="px-4 py-2.5 font-medium">Setup</th>
-              <th className="px-4 py-2.5 font-medium">Metrics</th>
-              <th className="px-4 py-2.5 font-medium">Trial ends</th>
-              <th className="px-4 py-2.5 font-medium text-right">Locations</th>
-              <th className="px-4 py-2.5 font-medium text-right">Staff</th>
-              <th className="px-4 py-2.5 font-medium text-right">Base MRR</th>
-              <th className="px-4 py-2.5 font-medium text-right">Clients</th>
-              <th className="px-4 py-2.5 font-medium text-right">Patients</th>
-              <th className="px-4 py-2.5 font-medium">Country</th>
-              <th className="px-4 py-2.5 font-medium">Joined</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.practice", "Practice")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.tier", "Plan")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.status", "Status")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.source", "Source")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.intent", "Intent")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.setup", "Setup")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.metrics", "Metrics")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.trialEnds", "Trial ends")}</th>
+              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.locations", "Locations")}</th>
+              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.staff", "Staff")}</th>
+              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.baseMrr", "Base MRR")}</th>
+              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.clients", "Clients")}</th>
+              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.patients", "Patients")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.country", "Country")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("admin.table.joined", "Joined")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -1520,7 +1520,7 @@ export default function AdminPage() {
                     </a>
                   ) : (
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      No active admin contact
+                      {t("admin.practices.noActiveContact", "No active admin contact")}
                     </p>
                   )}
                 </td>
@@ -1555,8 +1555,8 @@ export default function AdminPage() {
                     type="button"
                     title={
                       p.analyticsExcluded
-                        ? "Include this practice in conversion reporting"
-                        : "Exclude this internal or test practice from conversion reporting"
+                        ? t("admin.practices.includeInReporting", "Include this practice in conversion reporting")
+                        : t("admin.practices.excludeFromReporting", "Exclude this internal or test practice from conversion reporting")
                     }
                     aria-pressed={p.analyticsExcluded}
                     disabled={setAnalyticsExcluded.isPending}
@@ -1581,7 +1581,7 @@ export default function AdminPage() {
                     {p.billingStatus === "trialing" && (
                       <button
                         type="button"
-                        title="Give this trial 14 more days"
+                        title={t("admin.practices.extendTrialTitle", "Give this trial 14 more days")}
                         disabled={extendTrial.isPending}
                         onClick={() =>
                           extendTrial.mutate({ practiceId: p.id, days: 14 })
@@ -1622,7 +1622,7 @@ export default function AdminPage() {
                   colSpan={15}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
-                  No practices yet.
+                  {t("admin.practices.empty", "No practices yet.")}
                 </td>
               </tr>
             )}
