@@ -2372,6 +2372,15 @@ const createPrescriptionTool: AgentTool = {
       instructions?: string;
       startDate?: string;
     };
+    // Prescriptions (Zákon č. 362/2011 Z. z.) — restricted to veterinarians and admins only.
+    // Front desk staff and technicians cannot create active prescriptions.
+    const allowedRoles = ["veterinarian", "admin"];
+    if (ctx.userRole && !allowedRoles.includes(ctx.userRole)) {
+      throw new Error(
+        "Prístup zamietnutý: Recepty môže vystavovať výhradne veterinárny lekár alebo administrátor. / Access denied: Prescriptions may only be created by veterinarians and admins.",
+      );
+    }
+
     if (!(await activePatient(ctx, input.patientId))) {
       return { error: "Patient not found" };
     }
