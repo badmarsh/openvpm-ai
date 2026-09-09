@@ -56,7 +56,7 @@ function canRunAgentRole(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian";
 }
 
-export const SUGGESTIONS = [
+const SUGGESTIONS = [
   {
     key: "agent.suggestions.vaccinations",
     fallback: "Which patients are overdue for vaccinations?",
