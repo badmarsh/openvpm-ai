@@ -339,6 +339,11 @@ const findClient: AgentTool = {
   zod: z.object({ query: agentSearchQueryInput }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Prístup k údajom klientov je obmedzený na personál kliniky. / Client data access is restricted to clinic staff.",
+    );
     const { query } = this.zod.parse(args) as { query: string };
     const rows = await ctx.db
       .select({
@@ -412,6 +417,11 @@ const findPatient: AgentTool = {
   zod: z.object({ query: agentSearchQueryInput }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Prístup k údajom pacientov je obmedzený na personál kliniky. / Patient data access is restricted to clinic staff.",
+    );
     const { query } = this.zod.parse(args) as { query: string };
     const rows = await ctx.db
       .select({
@@ -465,6 +475,11 @@ const getPatientSummary: AgentTool = {
   zod: z.object({ patientId: z.string().uuid() }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Súhrn zdravotného záznamu pacienta je prístupný len klinickému personálu. / Patient clinical summary is restricted to clinical staff.",
+    );
     const { patientId } = this.zod.parse(args) as { patientId: string };
     const scope = and(eq(patients.practiceId, ctx.practiceId), isNull(patients.deletedAt));
 
@@ -552,6 +567,11 @@ const listLocations: AgentTool = {
   zod: z.object({}),
   readOnly: true,
   async execute(_args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Zoznam prevádzok je prístupný len personálu kliniky. / Location list is restricted to clinic staff.",
+    );
     return listActiveAppointmentLocations(ctx.db, ctx.practiceId);
   },
 };
@@ -573,6 +593,11 @@ const listAppointments: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Zoznam termínov je prístupný len personálu kliniky. / Appointment list is restricted to clinic staff.",
+    );
     const { startDate, endDate } = this.zod.parse(args) as {
       startDate: string;
       endDate: string;
@@ -671,6 +696,11 @@ const bookAppointment: AgentTool = {
   readOnly: false,
   requiredApiScopes: ["appointments:write"],
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk"],
+      "Objednávanie termínov je povolené pre recepciu, veterinárov a administrátorov. / Booking appointments is permitted for front desk, veterinarians, and admins.",
+    );
     const input = this.zod.parse(args) as {
       startTime: string;
       endTime: string;
@@ -744,6 +774,11 @@ const listOverdueVaccinations: AgentTool = {
   zod: z.object({}),
   readOnly: true,
   async execute(_args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Zoznam omeškaných očkovaní je prístupný personálu kliniky. / Overdue vaccinations list is restricted to clinic staff.",
+    );
     const today = await practiceDateInput(ctx);
     const rows = await ctx.db
       .select({
@@ -853,7 +888,12 @@ const calculateDrugDose: AgentTool = {
     concentrationMgPerMl: z.number().finite().positive().optional(),
   }),
   readOnly: true,
-  async execute(args) {
+  async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Kalkulácia dávkovania liečiv je vyhradená pre klinický personál. / Drug dose calculation is restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       drugId: string;
       species: "canine" | "feline";
@@ -877,6 +917,11 @@ const listTreatmentPlans: AgentTool = {
   zod: z.object({ patientId: z.string().uuid() }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Zoznam liečebných plánov je prístupný len klinickému personálu. / Treatment plans are restricted to clinical staff.",
+    );
     const { patientId } = this.zod.parse(args) as { patientId: string };
     const plans = await ctx.db
       .select()
@@ -950,6 +995,11 @@ const recordVitalSigns: AgentTool = {
   readOnly: false,
   requiredApiScopes: ["records:write"],
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Zaznamenávanie vitálnych funkcií je vyhradené pre klinický personál. / Recording vital signs is restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       patientId: string;
       temperatureC?: number;
@@ -1010,6 +1060,11 @@ const findOpenSlotsTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Vyhľadávanie voľných termínov je prístupné len personálu kliniky. / Finding open slots is restricted to clinic staff.",
+    );
     const input = this.zod.parse(args) as {
       date: string;
       durationMinutes?: number;
@@ -1116,6 +1171,11 @@ const queryLabTrendsTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Laboratórne trendy sú prístupné len klinickému personálu. / Lab trends are restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       patientId: string;
       analyte?: string;
@@ -1218,6 +1278,11 @@ const checkDrugSafetyTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Kontrola bezpečnosti liečiv je vyhradená pre klinický personál. / Drug safety check is restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       patientId: string;
       candidateDrug: string;
@@ -1392,6 +1457,11 @@ const auditMissedChargesTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian"],
+      "Finančný audit zmeškaných poplatkov je vyhradený pre administrátorov a veterinárov. / Missed charges audit is restricted to admins and veterinarians.",
+    );
     const input = this.zod.parse(args) as {
       appointmentId: string;
     };
@@ -1532,6 +1602,11 @@ const createDischargeSummaryTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Vytváranie prepúšťacích správ je vyhradené pre klinický personál. / Creating discharge summaries is restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       appointmentId: string;
       patientId?: string;
@@ -1654,6 +1729,11 @@ const generateRvpsReportTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian"],
+      "Generovanie hlásení pre RVPS je vyhradené pre administrátorov a veterinárov. / Generating RVPS reports is restricted to admins and veterinarians.",
+    );
     const input = this.zod.parse(args) as {
       year: number;
       month: number;
@@ -1759,6 +1839,11 @@ const checkWithdrawalPeriodsTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian"],
+      "Kontrola ochranných lehôt je vyhradená pre veterinárov a administrátorov. / Checking withdrawal periods is restricted to veterinarians and admins.",
+    );
     const input = this.zod.parse(args) as {
       patientId?: string;
       activeOnly: boolean;
@@ -1841,6 +1926,11 @@ const checkRabiesObservationsTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian"],
+      "Kontrola pozorovaní besnoty je vyhradená pre veterinárov a administrátorov. / Checking rabies observations is restricted to veterinarians and admins.",
+    );
     const input = this.zod.parse(args) as {
       patientId?: string;
       includeCompleted: boolean;
@@ -1942,6 +2032,11 @@ const verifyMicrochipCrszTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Overenie mikročipu v CRSZ je prístupné personálu kliniky. / Microchip CRSZ verification is restricted to clinic staff.",
+    );
     const input = this.zod.parse(args) as {
       microchipNumber?: string;
       patientId?: string;
@@ -2110,6 +2205,11 @@ const recordVitalsFromSpeechTool: AgentTool = {
   readOnly: false,
   requiredApiScopes: ["records:write"],
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Zaznamenávanie vitálnych funkcií z hlasu je vyhradené pre klinický personál. / Recording vitals from speech is restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       patientId: string;
       dictationText: string;
@@ -2197,6 +2297,11 @@ const getInvoiceSummaryTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk"],
+      "Prehľad fakturácie je prístupný pre recepciu, administrátorov a veterinárov. / Invoice summary is restricted to front desk, admins, and veterinarians.",
+    );
     const input = this.zod.parse(args) as {
       patientId?: string;
       clientId?: string;
@@ -2263,6 +2368,11 @@ const listOpenRemindersTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "front_desk", "technician"],
+      "Zoznam pripomienok je prístupný personálu kliniky. / Reminders list is restricted to clinic staff.",
+    );
     const input = this.zod.parse(args) as { patientId?: string };
     const conditions = [
       eq(careReminders.practiceId, ctx.practiceId),
@@ -2308,6 +2418,11 @@ const getLabResultsTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Výsledky laboratórnych vyšetrení sú prístupné len klinickému personálu. / Lab results are restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as {
       patientId: string;
       limit: number;
@@ -2366,14 +2481,6 @@ const createPrescriptionTool: AgentTool = {
   readOnly: false,
   requiredApiScopes: ["records:write"],
   async execute(args, ctx) {
-    const input = this.zod.parse(args) as {
-      patientId: string;
-      medicationName: string;
-      dosage: string;
-      frequency: string;
-      instructions?: string;
-      startDate?: string;
-    };
     // Prescriptions (Zákon č. 362/2011 Z. z.) — restricted to veterinarians and admins only.
     // Front desk staff and technicians cannot create active prescriptions.
     // SECURITY: uses fail-closed assertAgentRole — absent/unknown/disallowed roles all deny.
@@ -2382,6 +2489,15 @@ const createPrescriptionTool: AgentTool = {
       ["veterinarian", "admin"],
       "Recepty môže vystavovať výhradne veterinárny lekár alebo administrátor. / Prescriptions may only be created by veterinarians and admins.",
     );
+
+    const input = this.zod.parse(args) as {
+      patientId: string;
+      medicationName: string;
+      dosage: string;
+      frequency: string;
+      instructions?: string;
+      startDate?: string;
+    };
 
     if (!(await activePatient(ctx, input.patientId))) {
       return { error: "Patient not found" };
@@ -2490,6 +2606,11 @@ const listDischargeReportsTool: AgentTool = {
   }),
   readOnly: true,
   async execute(args, ctx) {
+    assertAgentRole(
+      ctx,
+      ["admin", "veterinarian", "technician"],
+      "Zoznam prepúšťacích správ je prístupný len klinickému personálu. / Discharge reports list is restricted to clinical staff.",
+    );
     const input = this.zod.parse(args) as { patientId?: string };
     const conditions = [
       eq(dischargeReports.practiceId, ctx.practiceId),

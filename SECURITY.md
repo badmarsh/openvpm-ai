@@ -38,5 +38,8 @@ If you deploy OpenVPM on your own infrastructure:
 - All dashboard routes require an authenticated session
 - Multi-tenant isolation combines tenant-scoped application queries with PostgreSQL row-level security
 - Role-based access control includes Admin, Veterinarian, Technician, Front Desk, and read-only Viewer roles
+- All 26 agent tools enforce fail-closed role authorization before executing database or model actions
+- AI write paths require explicit clinician confirmation with replay-safe, expiring confirmation envelopes
+- Audit logging for AI clinician confirmations utilizes a tamper-evident SHA-256 hash chain with PostgreSQL transaction-scoped advisory locking
 - Security headers are set on all responses (X-Frame-Options, X-Content-Type-Options, etc.)
 - Controlled substance logs are append-only with witness requirements
