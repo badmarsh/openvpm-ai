@@ -26,13 +26,28 @@ export const CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE =
 export const AI_FINALIZED_RECORD_IMMUTABLE_MESSAGE =
   "AI output cannot modify a finalized clinical record. Add an addendum or replacement through the clinician workflow instead.";
 
-/** Required on any mutation that finalizes AI-derived content. */
-export const clinicianConfirmationInput = z.literal(true, {
-  errorMap: () => ({ message: CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE }),
+/** Optional or required confirmation envelope carrying a bound confirmationId token. */
+export const clinicianConfirmationEnvelopeInput = z.object({
+  confirmationId: z.string().uuid(),
+  expectedRevision: z.number().int().min(0).optional(),
 });
 
+export type ClinicianConfirmationInput =
+  | true
+  | z.infer<typeof clinicianConfirmationEnvelopeInput>;
+
+/** Required on any mutation that finalizes AI-derived content. */
+export const clinicianConfirmationInput = z.union(
+  [z.literal(true), clinicianConfirmationEnvelopeInput],
+  {
+    errorMap: () => ({ message: CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE }),
+  },
+);
+
 /** Optional confirmation used where the default outcome is a draft. */
-export const optionalClinicianConfirmationInput = z.boolean().optional();
+export const optionalClinicianConfirmationInput = z
+  .union([z.boolean(), clinicianConfirmationEnvelopeInput])
+  .optional();
 
 export class AiDraftSafetyError extends Error {
   constructor(
@@ -44,10 +59,26 @@ export class AiDraftSafetyError extends Error {
   }
 }
 
+export function isClinicianConfirmed(
+  confirmed: unknown,
+): confirmed is ClinicianConfirmationInput {
+  if (confirmed === true) return true;
+  if (
+    typeof confirmed === "object" &&
+    confirmed !== null &&
+    "confirmationId" in confirmed &&
+    typeof (confirmed as { confirmationId: unknown }).confirmationId === "string" &&
+    (confirmed as { confirmationId: string }).confirmationId.trim().length > 0
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function assertClinicianConfirmed(
   confirmed: unknown,
-): asserts confirmed is true {
-  if (confirmed !== true) {
+): asserts confirmed is ClinicianConfirmationInput {
+  if (!isClinicianConfirmed(confirmed)) {
     throw new AiDraftSafetyError(
       "BAD_REQUEST",
       CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE,
@@ -57,15 +88,15 @@ export function assertClinicianConfirmed(
 
 /**
  * Resolve the persisted status for AI-derived content. Anything short of an
- * explicit `true` confirmation stays a draft, regardless of what the caller
- * asked for.
+ * explicit `true` or valid confirmation envelope stays a draft, regardless of what
+ * the caller asked for.
  */
 export function resolveAiRecordStatus(input: {
   requestedStatus?: typeof AI_DRAFT_STATUS | typeof AI_FINALIZED_STATUS;
-  clinicianConfirmed?: boolean;
+  clinicianConfirmed?: unknown;
 }): typeof AI_DRAFT_STATUS | typeof AI_FINALIZED_STATUS {
   if (input.requestedStatus !== AI_FINALIZED_STATUS) return AI_DRAFT_STATUS;
-  return input.clinicianConfirmed === true
+  return isClinicianConfirmed(input.clinicianConfirmed)
     ? AI_FINALIZED_STATUS
     : AI_DRAFT_STATUS;
 }

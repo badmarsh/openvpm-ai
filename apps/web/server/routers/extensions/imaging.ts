@@ -40,7 +40,15 @@ import {
   assertClinicianConfirmed,
   buildAiConfirmationAuditTrail,
   clinicianConfirmationInput,
+  generateContentHash,
 } from "@/lib/ai/draft-safety";
+import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
+import {
+  consumeClinicianConfirmation,
+  assertAndConsumeDirectConfirmation,
+  issueClinicianConfirmation,
+  ClinicianConfirmationError,
+} from "@/lib/ai/clinician-confirmation";
 
 export const MEDICAL_IMAGING_SYSTEM_PROMPT = `You are a veterinary radiology AI assistant integrated into OpenVPM, an open-source veterinary practice management system.
 
@@ -151,7 +159,7 @@ export const imagingRouter = createRouter({
       if (!file) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "File not found",
+          message: "Súbor sa nenašiel",
         });
       }
 
@@ -290,7 +298,7 @@ export const imagingRouter = createRouter({
       if (!analysis) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Analysis not found",
+          message: "Analýza sa nenašla",
         });
       }
 
@@ -631,19 +639,16 @@ export const imagingRouter = createRouter({
     }),
 
   /**
-   * Formálne schválenie a potvrdenie rádiologického nálezu veterinárnym lekárom
-   * s kryptografickým audit trailom (ext_ai_audit_log).
+   * Pre-issues an actor-bound, payload-bound confirmation envelope token.
    */
-  confirmAnalysis: imagingProcedure
+  prepareConfirmation: imagingProcedure
     .input(
       z.object({
         analysisId: z.string().uuid(),
-        clinicianConfirmed: clinicianConfirmationInput,
         finalReport: z.string().min(1).max(50_000),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
-      assertClinicianConfirmed(input.clinicianConfirmed);
       const [analysis] = await ctx.db
         .select()
         .from(aiImagingAnalyses)
@@ -652,72 +657,195 @@ export const imagingRouter = createRouter({
             eq(aiImagingAnalyses.id, input.analysisId),
             eq(aiImagingAnalyses.practiceId, ctx.practiceId),
             isNull(aiImagingAnalyses.deletedAt),
-          )
+          ),
         )
         .limit(1);
 
       if (!analysis) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
       }
+      if (analysis.status === "COMPLETED") {
+        throw new TRPCError({ code: "CONFLICT", message: "Analysis is already finalized." });
+      }
 
       const originalAiDraft = analysis.result ?? "";
-      const audit = buildAiConfirmationAuditTrail({
+      const originalDraftHash = generateContentHash(originalAiDraft);
+      const confirmedContentHash = generateContentHash(input.finalReport);
+      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+
+      const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
+        practiceId: ctx.practiceId,
         actorId: ctx.user.id,
-        actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+        actorRole,
+        actionType: "imaging_confirmed",
         entityType: "imaging_analysis",
         entityId: analysis.id,
-        originalAiDraft,
-        finalClinicianContent: input.finalReport,
+        expectedRevision: analysis.revision,
+        originalDraftHash,
+        confirmedContentHash,
       });
 
-      // IMPORTANT: audit insert and analysis update execute in the same
-      // transaction. If the audit insert fails the update is rolled back —
-      // finalization fails closed rather than leaving an un-audited record.
-      const updated = await ctx.db.transaction(async (tx) => {
+      return {
+        confirmationId: envelope.id,
+        expiresAt: envelope.expiresAt,
+        expectedRevision: envelope.expectedRevision,
+        originalDraftHash,
+        confirmedContentHash,
+      };
+    }),
+
+  /**
+   * Formálne schválenie a potvrdenie rádiologického nálezu veterinárnym lekárom
+   * s kryptografickým audit trailom (ext_ai_audit_log) a optimistickou konkurencionou ochranou.
+   */
+  confirmAnalysis: imagingProcedure
+    .input(
+      z.object({
+        analysisId: z.string().uuid(),
+        expectedRevision: z.number().int().min(0).optional(),
+        clinicianConfirmed: clinicianConfirmationInput,
+        finalReport: z.string().min(1).max(50_000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertClinicianConfirmed(input.clinicianConfirmed);
+      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+
+      const { updatedAnalysis, auditResult } = await ctx.db.transaction(async (tx) => {
         const db = tx as unknown as Database;
-        await db.insert(extAiAuditLog).values({
+        const [analysis] = await db
+          .select()
+          .from(aiImagingAnalyses)
+          .where(
+            and(
+              eq(aiImagingAnalyses.id, input.analysisId),
+              eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+              isNull(aiImagingAnalyses.deletedAt),
+            ),
+          )
+          .limit(1)
+          .for("update");
+
+        if (!analysis) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
+        }
+
+        if (analysis.status === "COMPLETED") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Analysis is already finalized.",
+          });
+        }
+
+        const expectedRevision = input.expectedRevision ?? analysis.revision;
+        if (analysis.revision !== expectedRevision) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Analysis was modified concurrently. Expected revision ${expectedRevision}, got ${analysis.revision}.`,
+          });
+        }
+
+        const originalAiDraft = analysis.result ?? "";
+        const originalDraftHash = generateContentHash(originalAiDraft);
+        const confirmedContentHash = generateContentHash(input.finalReport);
+        const wasEditedByClinician = originalDraftHash !== confirmedContentHash;
+
+        if (
+          typeof input.clinicianConfirmed === "object" &&
+          input.clinicianConfirmed.confirmationId
+        ) {
+          try {
+            await consumeClinicianConfirmation(db, {
+              confirmationId: input.clinicianConfirmed.confirmationId,
+              practiceId: ctx.practiceId,
+              actorId: ctx.user.id,
+              actorRole,
+              actionType: "imaging_confirmed",
+              entityType: "imaging_analysis",
+              entityId: analysis.id,
+              expectedRevision,
+              originalDraftHash,
+              confirmedContentHash,
+            });
+          } catch (err) {
+            if (err instanceof ClinicianConfirmationError) {
+              const code =
+                err.code === "NOT_FOUND"
+                  ? "NOT_FOUND"
+                  : err.code === "EXPIRED" ||
+                      err.code === "ALREADY_CONSUMED" ||
+                      err.code === "REVISION_MISMATCH"
+                    ? "CONFLICT"
+                    : "PRECONDITION_FAILED";
+              throw new TRPCError({ code, message: err.message });
+            }
+            throw err;
+          }
+        } else {
+          await assertAndConsumeDirectConfirmation(db, {
+            practiceId: ctx.practiceId,
+            actorId: ctx.user.id,
+            actorRole,
+            actionType: "imaging_confirmed",
+            entityType: "imaging_analysis",
+            entityId: analysis.id,
+            expectedRevision,
+            originalDraftHash,
+            confirmedContentHash,
+          });
+        }
+
+        const audit = await appendAiAuditEvent(db, {
           practiceId: ctx.practiceId,
           actorId: ctx.user.id,
-          actorName: audit.actorName,
-          entityType: audit.entityType,
-          entityId: audit.entityId,
-          originalDraftHash: audit.originalDraftHash,
-          confirmedContentHash: audit.confirmedContentHash,
-          wasEditedByClinician: audit.wasEditedByClinician,
-          confirmedAt: audit.confirmedAt,
+          actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+          actorRole,
+          entityType: "imaging_analysis",
+          entityId: analysis.id,
+          actionType: "imaging_confirmed",
+          originalDraftHash,
+          confirmedContentHash,
+          wasEditedByClinician,
         });
 
-        const [updatedAnalysis] = await db
+        const [updated] = await db
           .update(aiImagingAnalyses)
           .set({
             result: input.finalReport,
             status: "COMPLETED",
+            revision: analysis.revision + 1,
             completedAt: new Date(),
           })
           .where(
             and(
               eq(aiImagingAnalyses.id, analysis.id),
               eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+              eq(aiImagingAnalyses.status, "PENDING"),
+              eq(aiImagingAnalyses.revision, expectedRevision),
             ),
           )
           .returning();
 
-        if (!updatedAnalysis) {
+        if (!updated) {
           throw new TRPCError({
             code: "CONFLICT",
             message: "Analysis was modified concurrently. Please reload and try again.",
           });
         }
-        return updatedAnalysis;
+
+        return { updatedAnalysis: updated, auditResult: audit };
       });
 
       return {
         success: true,
-        analysis: updated,
+        analysis: updatedAnalysis,
         auditRecord: {
-          originalDraftHash: audit.originalDraftHash,
-          confirmedContentHash: audit.confirmedContentHash,
-          wasEditedByClinician: audit.wasEditedByClinician,
+          sequenceNumber: auditResult.sequenceNumber,
+          eventHash: auditResult.eventHash,
+          previousEventHash: auditResult.previousEventHash,
+          originalDraftHash: auditResult.payload.originalDraftHash,
+          confirmedContentHash: auditResult.payload.confirmedContentHash,
+          wasEditedByClinician: auditResult.payload.wasEditedByClinician,
         },
       };
     }),

@@ -50,7 +50,9 @@ import { AI_SOURCE_MAX_LENGTH } from "@/lib/ai/soap";
 import {
   assertClinicianConfirmed,
   clinicianConfirmationInput,
+  generateContentHash,
 } from "@/lib/ai/draft-safety";
+import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 import {
   createFinalizedAppointmentSoapNote,
   SoapLifecycleError,
@@ -273,15 +275,32 @@ export const aiRouter = createRouter({
         input.patientId,
       );
       try {
-        const note = await ctx.db.transaction((tx) =>
-          createFinalizedAppointmentSoapNote(tx as unknown as Database, {
+        const note = await ctx.db.transaction(async (tx) => {
+          const db = tx as unknown as Database;
+          const created = await createFinalizedAppointmentSoapNote(db, {
             practiceId: ctx.practiceId,
             patientId: input.patientId,
             appointmentId: input.appointmentId,
             actor: { id: ctx.user.id, name: ctx.user.name },
             sections: normalizedNote,
-          }),
-        );
+          });
+          const originalDraftHash = generateContentHash(input.source);
+          const confirmedContentHash = generateContentHash(normalizedNote);
+          const actorRole = (ctx.user.role ?? "veterinarian") as string;
+          await appendAiAuditEvent(db, {
+            practiceId: ctx.practiceId,
+            actorId: ctx.user.id,
+            actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+            actorRole,
+            entityType: "soap_note",
+            entityId: created.id,
+            actionType: "soap_note_finalized",
+            originalDraftHash,
+            confirmedContentHash,
+            wasEditedByClinician: originalDraftHash !== confirmedContentHash,
+          });
+          return created;
+        });
         return { ...note, source };
       } catch (error) {
         if (error instanceof SoapLifecycleError) {

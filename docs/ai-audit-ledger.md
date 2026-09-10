@@ -73,11 +73,26 @@ practiceId, previousEventHash, sequenceNumber, wasEditedByClinician
 
 The first event in each practice chain has `previousEventHash = null`. The verifier accepts null as valid for the first event only.
 
-### 2.5 Transactional Integrity
+### 2.5 Transactional Integrity and Concurrency Locking
 
-The audit log INSERT is executed **inside the same database transaction** as the clinical record finalization. If the audit insert fails, the transaction rolls back and the clinical finalization is rejected — the system fails closed rather than producing an un-audited clinical record.
+The audit log append is managed centrally by `appendAiAuditEvent` ([`apps/web/lib/ai/audit-ledger.ts`](../apps/web/lib/ai/audit-ledger.ts)) and executed **inside the same database transaction** as the clinical record finalization.
 
-**Enforced in:** voice SOAP (voice.ts), imaging confirmation (imaging.ts), discharge finalization (discharge.ts).
+To guarantee zero race conditions and strictly monotonic `sequenceNumber` allocation during concurrent finalizations:
+1. **Transaction-Scoped Advisory Lock:** At the start of append, PostgreSQL acquires an exclusive transaction-scoped lock:
+   ```sql
+   SELECT pg_advisory_xact_lock(hashtextextended('ai_audit_chain:' || practiceId, 0));
+   ```
+   This lock automatically releases on COMMIT or ROLLBACK.
+2. **Atomic Sequence & Linkage:** Under the lock, the ledger queries the latest row for the practice, allocates `sequenceNumber = latest.sequenceNumber + 1`, sets `previousEventHash = latest.eventHash`, and inserts the new record.
+3. **Fail-Closed Rollback:** If the audit append fails or throws, the enclosing transaction aborts and all clinical record updates roll back.
+
+**Enforced in all AI write paths:**
+- Voice SOAP finalization (`apps/web/server/routers/extensions/voice.ts`)
+- Imaging analysis confirmation (`apps/web/server/routers/extensions/imaging.ts`)
+- Discharge report saving & finalization (`apps/web/server/routers/extensions/discharge.ts`)
+- AI SOAP generation (`apps/web/server/routers/ai.ts`)
+
+**Verified by tests:** [`apps/web/lib/ai/__tests__/audit-ledger.test.ts`](../apps/web/lib/ai/__tests__/audit-ledger.test.ts) and [`apps/web/server/__tests__/extensions-ai-finalization.integration.test.ts`](../apps/web/server/__tests__/extensions-ai-finalization.integration.test.ts).
 
 ---
 

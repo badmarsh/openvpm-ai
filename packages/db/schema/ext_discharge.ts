@@ -6,6 +6,7 @@ import {
   jsonb,
   timestamp,
   index,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { baseColumns } from "./common";
@@ -42,6 +43,7 @@ export const dischargeReports = pgTable(
     language: text("language").default("sk"),
     modelId: text("model_id"),
     status: dischargeReportStatusEnum("status").notNull().default("draft"),
+    revision: integer("revision").notNull().default(0),
   },
   (table) => ({
     practiceIdx: index("discharge_reports_practice_idx").on(

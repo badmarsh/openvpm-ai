@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, uuid, text, jsonb, timestamp, index, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { baseColumns } from "./common";
 import { practices } from "./practices";
@@ -47,6 +47,7 @@ export const aiImagingAnalyses = pgTable(
     rawResponse: jsonb("raw_response"),
     status: aiImagingStatusEnum("status").notNull().default("PENDING"),
     errorMessage: text("error_message"),
+    revision: integer("revision").notNull().default(0),
     completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   (table) => ({
