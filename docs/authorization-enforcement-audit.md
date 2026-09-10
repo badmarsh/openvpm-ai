@@ -46,13 +46,25 @@ When `userRole` is `undefined` (which is structurally possible because `AgentToo
 
 **Assessment:** The tRPC `requireRole` is fail-closed. An absent session throws `UNAUTHORIZED`. An unknown/absent role throws `FORBIDDEN` because it cannot match any allowed role in the typed union.
 
-### 2.2 Agent Tool Layer
+### 2.2 Agent Tool Layer (All 26 Tools Fail-Closed)
 
-| Mechanism | File | Status |
-|---|---|---|
-| `assertAgentRole()` | `apps/web/lib/authorization.ts` | ✅ **IMPLEMENTED** — central fail-closed boundary |
-| `create_prescription` check | `apps/web/lib/agent/tools.ts` | ✅ **FIXED** — uses `assertAgentRole(ctx, ["veterinarian","admin"])` |
-| `get_controlled_substances_log` check | `apps/web/lib/agent/tools.ts` | ✅ **FIXED** — uses `assertAgentRole(ctx, ["veterinarian","admin"])` |
+All 26 tools in the agent tool inventory ([`apps/web/lib/agent/tools.ts`](../apps/web/lib/agent/tools.ts)) now enforce fail-closed authorization via `assertAgentRole()` at the very first line of their `execute()` methods. Any caller with an absent, null, empty, unknown, or insufficient role (including `viewer`) is rejected immediately with a `FORBIDDEN` error before any database access occurs.
+
+See [`docs/agent-tool-security-matrix.md`](./agent-tool-security-matrix.md) for the complete tool-by-tool inventory.
+
+| Tool Category | Tools | Permitted Roles | Test Coverage |
+|---|---|---|---|
+| **Statutory Prescribing** | `create_prescription` | `admin`, `veterinarian` | `authorization.test.ts`, `pilot-e2e-flow.integration.test.ts` |
+| **Statutory Controlled Substances** | `get_controlled_substances_log` | `admin`, `veterinarian` | `authorization.test.ts` |
+| **Statutory Veterinary Compliance** | `generate_rvps_report`, `check_withdrawal_periods`, `check_rabies_observations` | `admin`, `veterinarian` | `authorization.test.ts` |
+| **Financial / Billing Audit** | `audit_missed_charges` | `admin`, `veterinarian` | `authorization.test.ts` |
+| **Clinical Records & Diagnostics** | `get_patient_summary`, `calculate_drug_dose`, `list_treatment_plans`, `record_vital_signs`, `query_lab_trends`, `check_drug_safety`, `create_discharge_summary`, `record_vitals_from_speech`, `get_lab_results`, `list_discharge_reports` | `admin`, `veterinarian`, `technician` | `authorization.test.ts`, `extensions-ai-finalization.integration.test.ts` |
+| **Scheduling & Front-Desk Operations** | `book_appointment`, `get_invoice_summary` | `admin`, `veterinarian`, `front_desk` | `authorization.test.ts` |
+| **General Clinic Operations** | `find_client`, `find_patient`, `list_locations`, `list_appointments`, `find_open_slots`, `list_overdue_vaccinations`, `list_open_reminders`, `verify_microchip_crsz` | `admin`, `veterinarian`, `front_desk`, `technician` | `authorization.test.ts` |
+
+**Dual Guardrail for Writes:**
+- Operational gate: `runner.ts` blocks write tools (`readOnly: false`) unless `opts.allowWrites === true`.
+- Identity gate: Every tool's `execute()` enforces `assertAgentRole()`.
 
 ### 2.3 Portal Layer
 

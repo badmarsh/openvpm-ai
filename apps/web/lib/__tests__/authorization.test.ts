@@ -202,3 +202,105 @@ describe("assertAgentRole — fail-closed authorization boundary", () => {
     });
   });
 });
+
+describe("AGENT_TOOLS complete security matrix verification", async () => {
+  const { AGENT_TOOLS } = await import("../agent/tools");
+
+  const dummyContext = (role?: string) => ({
+    db: {} as never,
+    practiceId: "00000000-0000-0000-0000-0000000000aa",
+    userId: "00000000-0000-0000-0000-000000000001",
+    userRole: role,
+  });
+
+  it("verifies inventory has all 26 registered tools", () => {
+    expect(AGENT_TOOLS.length).toBe(26);
+  });
+
+  it("fail-closed: EVERY tool denies undefined role before any DB access", async () => {
+    for (const tool of AGENT_TOOLS) {
+      await expect(
+        tool.execute({}, dummyContext(undefined)),
+        `Tool ${tool.name} failed to deny undefined role`
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+  });
+
+  it("fail-closed: EVERY tool denies 'viewer' role before any DB access", async () => {
+    for (const tool of AGENT_TOOLS) {
+      await expect(
+        tool.execute({}, dummyContext("viewer")),
+        `Tool ${tool.name} failed to deny 'viewer' role`
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+  });
+
+  it("enforces admin/vet-only tools reject 'front_desk' and 'technician'", async () => {
+    const vetOnlyTools = [
+      "create_prescription",
+      "get_controlled_substances_log",
+      "audit_missed_charges",
+      "generate_rvps_report",
+      "check_withdrawal_periods",
+      "check_rabies_observations",
+    ];
+
+    for (const toolName of vetOnlyTools) {
+      const tool = AGENT_TOOLS.find((t) => t.name === toolName);
+      expect(tool, `Tool ${toolName} not found`).toBeDefined();
+
+      await expect(
+        tool!.execute({}, dummyContext("front_desk")),
+        `Tool ${toolName} failed to deny 'front_desk'`
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+      await expect(
+        tool!.execute({}, dummyContext("technician")),
+        `Tool ${toolName} failed to deny 'technician'`
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+  });
+
+  it("enforces clinical-only tools reject 'front_desk'", async () => {
+    const clinicalOnlyTools = [
+      "get_patient_summary",
+      "calculate_drug_dose",
+      "list_treatment_plans",
+      "record_vital_signs",
+      "query_lab_trends",
+      "check_drug_safety",
+      "create_discharge_summary",
+      "record_vitals_from_speech",
+      "get_lab_results",
+      "list_discharge_reports",
+    ];
+
+    for (const toolName of clinicalOnlyTools) {
+      const tool = AGENT_TOOLS.find((t) => t.name === toolName);
+      expect(tool, `Tool ${toolName} not found`).toBeDefined();
+
+      await expect(
+        tool!.execute({}, dummyContext("front_desk")),
+        `Tool ${toolName} failed to deny 'front_desk'`
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+  });
+
+  it("enforces front-desk/admin/vet tools reject 'technician'", async () => {
+    const frontDeskTools = [
+      "book_appointment",
+      "get_invoice_summary",
+    ];
+
+    for (const toolName of frontDeskTools) {
+      const tool = AGENT_TOOLS.find((t) => t.name === toolName);
+      expect(tool, `Tool ${toolName} not found`).toBeDefined();
+
+      await expect(
+        tool!.execute({}, dummyContext("technician")),
+        `Tool ${toolName} failed to deny 'technician'`
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+  });
+});
+
