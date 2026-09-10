@@ -15,7 +15,6 @@ import { DemoConversionBar } from "@/components/demo/demo-conversion-bar";
 import { DemoFunnelTracker } from "@/components/demo/demo-funnel-tracker";
 import { RecoveryReviewBanner } from "@/components/layout/recovery-review-banner";
 import { ScribeWidget } from "@/components/layout/scribe-widget";
-import { HelpButton } from "@/components/help/HelpButton";
 import { useI18n } from "@/lib/i18n";
 
 // The Cmd+K spotlight (cmdk + search UI) is only needed once the user opens
@@ -114,7 +113,6 @@ export default function DashboardLayout({
             />
           ) : null}
           <ScribeWidget />
-          <HelpButton />
         </div>
         </WelcomeProvider>
       </OnboardingJourneyProvider>

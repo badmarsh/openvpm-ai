@@ -10,11 +10,17 @@ export interface HelpStep {
   description: string;
 }
 
+export interface RelatedModule {
+  name: string;
+  href: string;
+}
+
 export interface HelpContent {
   title: string;
   intro: string;
   steps: HelpStep[];
   tips?: string[];
+  relatedModules?: RelatedModule[];
 }
 
 export const HELP_CONTENT: Record<string, HelpContent> = {
@@ -735,9 +741,132 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   },
 };
 
+/** Related modules for each section. */
+const RELATED_MODULES: Record<string, RelatedModule[]> = {
+  "/": [
+    { name: "Rozvrh", href: "/schedule" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "Čakáreň", href: "/waiting-room" },
+    { name: "Fakturácia", href: "/billing" },
+  ],
+  "/schedule": [
+    { name: "Pacienti", href: "/patients" },
+    { name: "Čakáreň", href: "/waiting-room" },
+    { name: "Záznamy", href: "/records" },
+    { name: "Fakturácia", href: "/billing" },
+  ],
+  "/patients": [
+    { name: "Záznamy", href: "/records" },
+    { name: "Rozvrh", href: "/schedule" },
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Lab výsledky", href: "/lab-results" },
+  ],
+  "/clients": [
+    { name: "Pacienti", href: "/patients" },
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Inbox", href: "/inbox" },
+    { name: "Marketing", href: "/marketing" },
+  ],
+  "/records": [
+    { name: "Pacienti", href: "/patients" },
+    { name: "AI Agent", href: "/agent" },
+    { name: "VetIntel", href: "/vet-intel" },
+    { name: "Fakturácia", href: "/billing" },
+  ],
+  "/encounters": [
+    { name: "Záznamy", href: "/records" },
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Lab výsledky", href: "/lab-results" },
+    { name: "AI Agent", href: "/agent" },
+  ],
+  "/billing": [
+    { name: "e-Kasa", href: "/billing/ekasa" },
+    { name: "Reporty", href: "/reports" },
+    { name: "Nastavenia", href: "/settings" },
+    { name: "Klienti", href: "/clients" },
+  ],
+  "/billing/ekasa": [
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Nastavenia", href: "/settings" },
+    { name: "Reporty", href: "/reports" },
+  ],
+  "/care-reminders": [
+    { name: "Pacienti", href: "/patients" },
+    { name: "Marketing", href: "/marketing" },
+    { name: "Rozvrh", href: "/schedule" },
+    { name: "Inbox", href: "/inbox" },
+  ],
+  "/inventory": [
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Kontrolované látky", href: "/controlled-substances" },
+    { name: "Záznamy", href: "/records" },
+  ],
+  "/lab-results": [
+    { name: "Záznamy", href: "/records" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "VetIntel", href: "/vet-intel" },
+  ],
+  "/statutory": [
+    { name: "Záznamy", href: "/records" },
+    { name: "Kontrolované látky", href: "/controlled-substances" },
+    { name: "Pacienti", href: "/patients" },
+  ],
+  "/controlled-substances": [
+    { name: "Zákonné registre", href: "/statutory" },
+    { name: "Sklad", href: "/inventory" },
+    { name: "Záznamy", href: "/records" },
+  ],
+  "/marketing": [
+    { name: "Klienti", href: "/clients" },
+    { name: "Inbox", href: "/inbox" },
+    { name: "Pripomienky", href: "/care-reminders" },
+    { name: "Fakturácia", href: "/billing" },
+  ],
+  "/reports": [
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Záznamy", href: "/records" },
+    { name: "Rozvrh", href: "/schedule" },
+  ],
+  "/settings": [
+    { name: "Fakturácia", href: "/billing" },
+    { name: "e-Kasa", href: "/billing/ekasa" },
+    { name: "Marketing", href: "/marketing" },
+  ],
+  "/inbox": [
+    { name: "Klienti", href: "/clients" },
+    { name: "Marketing", href: "/marketing" },
+    { name: "Pripomienky", href: "/care-reminders" },
+  ],
+  "/vet-intel": [
+    { name: "Záznamy", href: "/records" },
+    { name: "Lab výsledky", href: "/lab-results" },
+    { name: "AI Agent", href: "/agent" },
+  ],
+  "/waiting-room": [
+    { name: "Rozvrh", href: "/schedule" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "Tabuľa", href: "/whiteboard" },
+  ],
+  "/whiteboard": [
+    { name: "Čakáreň", href: "/waiting-room" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "Rozvrh", href: "/schedule" },
+  ],
+  "/agent": [
+    { name: "Záznamy", href: "/records" },
+    { name: "VetIntel", href: "/vet-intel" },
+    { name: "Lab výsledky", href: "/lab-results" },
+  ],
+  "/support": [
+    { name: "Nastavenia", href: "/settings" },
+    { name: "Dashboard", href: "/" },
+  ],
+};
+
 /**
  * Find help content for a given pathname.
  * Uses longest-prefix matching so /billing/ekasa wins over /billing.
+ * Merges relatedModules from RELATED_MODULES map.
  */
 export function getHelpContent(pathname: string): HelpContent | null {
   const candidates = Object.keys(HELP_CONTENT)
@@ -745,9 +874,14 @@ export function getHelpContent(pathname: string): HelpContent | null {
     .sort((a, b) => b.length - a.length);
 
   // Special-case root
-  if (candidates.length === 0 && pathname === "/") {
-    return HELP_CONTENT["/"] ?? null;
-  }
+  const key = candidates[0] ?? (pathname === "/" ? "/" : null);
+  if (!key) return null;
 
-  return candidates[0] ? (HELP_CONTENT[candidates[0]] ?? null) : null;
+  const base = HELP_CONTENT[key];
+  if (!base) return null;
+
+  return {
+    ...base,
+    relatedModules: RELATED_MODULES[key] ?? [],
+  };
 }
