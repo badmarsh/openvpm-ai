@@ -5,13 +5,19 @@ import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { HelpCircle } from "lucide-react";
 import { getHelpContent } from "./help-content";
+import { cn } from "@/lib/utils";
 
 const HelpModal = dynamic(
   () => import("./HelpModal").then((m) => m.HelpModal),
   { ssr: false },
 );
 
-export function HelpButton() {
+interface HelpButtonProps {
+  /** className forwarded to the trigger button */
+  className?: string;
+}
+
+export function HelpButton({ className }: HelpButtonProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -28,9 +34,12 @@ export function HelpButton() {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg transition-all hover:bg-accent hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:bottom-6 sm:right-6"
+        className={cn(
+          "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          className,
+        )}
       >
-        <HelpCircle className="h-5 w-5 text-muted-foreground" />
+        <HelpCircle className="h-4 w-4" />
       </button>
 
       {open && (
