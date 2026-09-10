@@ -159,7 +159,7 @@ export const imagingRouter = createRouter({
       if (!file) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Súbor sa nenašiel",
+          message: "File not found",
         });
       }
 
@@ -182,7 +182,7 @@ export const imagingRouter = createRouter({
       if (!analysis) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Nepodarilo sa vytvoriť záznam analýzy",
+          message: "Failed to create analysis record",
         });
       }
 
@@ -194,8 +194,8 @@ export const imagingRouter = createRouter({
         if (object.status !== "available") {
           throw new Error(
             object.status === "missing"
-              ? "Obraz sa v úložisku nenašiel"
-              : "Obraz sa nepodarilo načítať z úložiska",
+              ? "Image not found in object storage"
+              : "Failed to load image from object storage",
           );
         }
 
@@ -298,7 +298,7 @@ export const imagingRouter = createRouter({
       if (!analysis) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Analýza sa nenašla",
+          message: "Analysis not found",
         });
       }
 
@@ -331,7 +331,7 @@ export const imagingRouter = createRouter({
         .limit(1);
 
       if (!analysis) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Analýza sa nenašla" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found" });
       }
 
       // 2. Over pacienta a zisti váhu z vitálnych funkcií
@@ -413,7 +413,7 @@ export const imagingRouter = createRouter({
         .returning();
 
       if (!plan) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Nepodarilo sa vytvoriť liečebný plán" });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create treatment plan" });
       }
 
       // 6. Vlož kroky do treatmentPlanItems
@@ -553,7 +553,7 @@ export const imagingRouter = createRouter({
         .limit(1);
 
       if (!analysis || !analysis.result) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Analýza sa nenašla alebo nemá výsledok" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Analysis not found or has no result" });
       }
 
       const [existingSoap] = await ctx.db
