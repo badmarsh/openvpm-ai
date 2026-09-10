@@ -6,6 +6,7 @@ import {
   jsonb,
   timestamp,
   index,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { baseColumns } from "./common";
@@ -60,6 +61,7 @@ export const voiceDictations = pgTable(
     // Stav
     status: voiceDictationStatusEnum("status").notNull().default("RECORDING"),
     errorMessage: text("error_message"),
+    revision: integer("revision").notNull().default(0),
     transcribedAt: timestamp("transcribed_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
 

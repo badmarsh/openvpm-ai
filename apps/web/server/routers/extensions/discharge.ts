@@ -21,11 +21,22 @@ import {
   detectAndTriggerDentalRecall,
   checkAndTriggerSeniorMilestone,
 } from "@/lib/marketing/messaging";
+import type { Database } from "@openpims/db/client";
+import { assertAgentRole } from "@/lib/authorization";
+import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
+import {
+  consumeClinicianConfirmation,
+  assertAndConsumeDirectConfirmation,
+  issueClinicianConfirmation,
+  ClinicianConfirmationError,
+} from "@/lib/ai/clinician-confirmation";
 import {
   CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE,
   buildAiConfirmationAuditTrail,
   optionalClinicianConfirmationInput,
   resolveAiRecordStatus,
+  generateContentHash,
+  isClinicianConfirmed,
 } from "@/lib/ai/draft-safety";
 
 const dischargeProcedure = protectedProcedure
@@ -182,9 +193,94 @@ export const dischargeRouter = createRouter({
    * check-in, dental, or senior-milestone message is ever queued; instead the
    * sympathy gate blocks outstanding marketing and opens a condolence task.
    */
+  /**
+   * Pre-issues an actor-bound, payload-bound confirmation envelope token for discharge finalization.
+   */
+  prepareConfirmation: dischargeProcedure
+    .input(
+      z.object({
+        reportId: z.string().uuid().optional(),
+        patientId: z.string().uuid().optional(),
+        petName: z.string().min(1).max(255),
+        diagnosis: z.string().min(1).max(5000),
+        treatment: z.string().max(5000).optional(),
+        followUp: z.string().max(5000).optional(),
+        reportText: z.string().min(1).max(50_000),
+        originalAiDraft: z.string().max(50_000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      assertAgentRole(
+        { userRole: actorRole },
+        ["admin", "veterinarian"],
+        "Only veterinarians and admins may prepare confirmation envelopes for discharge.",
+      );
+
+      let expectedRevision = 0;
+      const targetEntityId = input.reportId ?? ctx.user.id;
+
+      if (input.reportId) {
+        const [existing] = await ctx.db
+          .select()
+          .from(dischargeReports)
+          .where(
+            and(
+              eq(dischargeReports.id, input.reportId),
+              eq(dischargeReports.practiceId, ctx.practiceId),
+              isNull(dischargeReports.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Discharge report not found" });
+        }
+        if (existing.status === "finalized") {
+          throw new TRPCError({ code: "CONFLICT", message: "Discharge report is already finalized." });
+        }
+        expectedRevision = existing.revision;
+      }
+
+      const originalAiDraft = input.originalAiDraft ?? input.reportText;
+      const originalDraftHash = generateContentHash(originalAiDraft);
+      const confirmedContentHash = generateContentHash(input.reportText);
+
+      const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
+        practiceId: ctx.practiceId,
+        actorId: ctx.user.id,
+        actorRole,
+        actionType: "discharge_finalized",
+        entityType: "discharge_report",
+        entityId: targetEntityId,
+        expectedRevision,
+        originalDraftHash,
+        confirmedContentHash,
+      });
+
+      return {
+        confirmationId: envelope.id,
+        expiresAt: envelope.expiresAt,
+        expectedRevision: envelope.expectedRevision,
+        originalDraftHash,
+        confirmedContentHash,
+      };
+    }),
+
+  /**
+   * Uloží vygenerovanú správu do databázy s atomickou auditnou integritou a
+   * optimistickou konkurencionou ochranou.
+   *
+   * Human-in-the-loop: AI-generated discharge text is a *draft* until a
+   * clinician explicitly confirms it (`clinicianConfirmed: true` or envelope).
+   * Only a confirmed, finalized report emits the webhook or schedules owner
+   * communication. All DB operations run in a single transaction.
+   */
   save: dischargeProcedure
     .input(
       z.object({
+        id: z.string().uuid().optional(),
+        expectedRevision: z.number().int().min(0).optional(),
         patientId: z.string().uuid().optional(),
         appointmentId: z.string().uuid().optional(),
         petName: z.string().min(1).max(255),
@@ -200,7 +296,7 @@ export const dischargeRouter = createRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (input.status === "finalized" && input.clinicianConfirmed !== true) {
+      if (input.status === "finalized" && !isClinicianConfirmed(input.clinicianConfirmed)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: CLINICIAN_CONFIRMATION_REQUIRED_MESSAGE,
@@ -211,125 +307,308 @@ export const dischargeRouter = createRouter({
         clinicianConfirmed: input.clinicianConfirmed,
       });
 
-      // Tenant scoping: a report may only reference this practice's patient.
-      let patient:
-        | { clientId: string | null; status: string }
-        | undefined;
-      if (input.patientId) {
-        [patient] = await ctx.db
-          .select({ clientId: patients.clientId, status: patients.status })
-          .from(patients)
-          .where(
-            and(
-              eq(patients.id, input.patientId),
-              eq(patients.practiceId, ctx.practiceId),
-              isNull(patients.deletedAt),
-            ),
-          )
-          .limit(1);
-        if (!patient) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Patient not found",
-          });
-        }
+      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      if (status === "finalized") {
+        assertAgentRole(
+          { userRole: actorRole },
+          ["admin", "veterinarian"],
+          "Only veterinarians and admins may finalize discharge reports.",
+        );
       }
 
-      const [saved] = await ctx.db
-        .insert(dischargeReports)
-        .values({
-          practiceId: ctx.practiceId,
-          patientId: input.patientId ?? null,
-          appointmentId: input.appointmentId ?? null,
-          createdBy: ctx.user.id,
-          petName: input.petName,
-          species: input.species ?? null,
-          diagnosis: input.diagnosis,
-          treatment: input.treatment ?? null,
-          followUp: input.followUp ?? null,
-          reportText: input.reportText,
-          language: input.language,
-          modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
-          status,
-        })
-        .returning();
-
-      if (!saved) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to save discharge report",
-        });
-      }
-
-      // Drafts never leave the chart: no webhook, no owner communication.
-      if (saved.status !== "finalized") {
-        return saved;
-      }
-
-      // Human-in-the-loop SHA-256 audit trail (ŠVPS SR / KVL SR compliance)
       const originalAiDraft = input.originalAiDraft ?? input.reportText;
-      const audit = buildAiConfirmationAuditTrail({
-        actorId: ctx.user.id,
-        actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
-        entityType: "discharge_report",
-        entityId: saved.id,
-        originalAiDraft,
-        finalClinicianContent: input.reportText,
-      });
-      await ctx.db.insert(extAiAuditLog).values({
-        practiceId: ctx.practiceId,
-        actorId: ctx.user.id,
-        actorName: audit.actorName,
-        entityType: audit.entityType,
-        entityId: audit.entityId,
-        originalDraftHash: audit.originalDraftHash,
-        confirmedContentHash: audit.confirmedContentHash,
-        wasEditedByClinician: audit.wasEditedByClinician,
-        confirmedAt: audit.confirmedAt,
+      const originalDraftHash = generateContentHash(originalAiDraft);
+      const confirmedContentHash = generateContentHash(input.reportText);
+      const wasEditedByClinician = originalDraftHash !== confirmedContentHash;
+
+      // ATOMIC TRANSACTION: discharge report (create/update) + clinician confirmation + audit ledger
+      const { saved, patient } = await ctx.db.transaction(async (tx) => {
+        const db = tx as unknown as Database;
+
+        // Tenant scoping: a report may only reference this practice's patient.
+        let patientRecord: { clientId: string | null; status: string } | undefined;
+        if (input.patientId) {
+          [patientRecord] = await db
+            .select({ clientId: patients.clientId, status: patients.status })
+            .from(patients)
+            .where(
+              and(
+                eq(patients.id, input.patientId),
+                eq(patients.practiceId, ctx.practiceId),
+                isNull(patients.deletedAt),
+              ),
+            )
+            .limit(1);
+          if (!patientRecord) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Patient not found",
+            });
+          }
+        }
+
+        let savedReport: typeof dischargeReports.$inferSelect;
+
+        if (input.id) {
+          const [existing] = await db
+            .select()
+            .from(dischargeReports)
+            .where(
+              and(
+                eq(dischargeReports.id, input.id),
+                eq(dischargeReports.practiceId, ctx.practiceId),
+                isNull(dischargeReports.deletedAt),
+              ),
+            )
+            .limit(1)
+            .for("update");
+
+          if (!existing) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Discharge report not found" });
+          }
+          if (existing.status === "finalized") {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Discharge report is already finalized.",
+            });
+          }
+
+          const expectedRevision = input.expectedRevision ?? existing.revision;
+          if (existing.revision !== expectedRevision) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `Discharge report changed concurrently. Expected revision ${expectedRevision}, got ${existing.revision}.`,
+            });
+          }
+
+          if (status === "finalized") {
+            if (
+              typeof input.clinicianConfirmed === "object" &&
+              input.clinicianConfirmed.confirmationId
+            ) {
+              try {
+                await consumeClinicianConfirmation(db, {
+                  confirmationId: input.clinicianConfirmed.confirmationId,
+                  practiceId: ctx.practiceId,
+                  actorId: ctx.user.id,
+                  actorRole,
+                  actionType: "discharge_finalized",
+                  entityType: "discharge_report",
+                  entityId: existing.id,
+                  expectedRevision,
+                  originalDraftHash,
+                  confirmedContentHash,
+                });
+              } catch (err) {
+                if (err instanceof ClinicianConfirmationError) {
+                  const code =
+                    err.code === "NOT_FOUND"
+                      ? "NOT_FOUND"
+                      : err.code === "EXPIRED" ||
+                          err.code === "ALREADY_CONSUMED" ||
+                          err.code === "REVISION_MISMATCH"
+                        ? "CONFLICT"
+                        : "PRECONDITION_FAILED";
+                  throw new TRPCError({ code, message: err.message });
+                }
+                throw err;
+              }
+            } else {
+              await assertAndConsumeDirectConfirmation(db, {
+                practiceId: ctx.practiceId,
+                actorId: ctx.user.id,
+                actorRole,
+                actionType: "discharge_finalized",
+                entityType: "discharge_report",
+                entityId: existing.id,
+                expectedRevision,
+                originalDraftHash,
+                confirmedContentHash,
+              });
+            }
+
+            await appendAiAuditEvent(db, {
+              practiceId: ctx.practiceId,
+              actorId: ctx.user.id,
+              actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+              actorRole,
+              entityType: "discharge_report",
+              entityId: existing.id,
+              actionType: "discharge_finalized",
+              originalDraftHash,
+              confirmedContentHash,
+              wasEditedByClinician,
+            });
+          }
+
+          const [updated] = await db
+            .update(dischargeReports)
+            .set({
+              patientId: input.patientId ?? existing.patientId,
+              appointmentId: input.appointmentId ?? existing.appointmentId,
+              petName: input.petName,
+              species: input.species ?? existing.species,
+              diagnosis: input.diagnosis,
+              treatment: input.treatment ?? existing.treatment,
+              followUp: input.followUp ?? existing.followUp,
+              reportText: input.reportText,
+              language: input.language,
+              status,
+              revision: existing.revision + 1,
+            })
+            .where(
+              and(
+                eq(dischargeReports.id, existing.id),
+                eq(dischargeReports.practiceId, ctx.practiceId),
+                eq(dischargeReports.status, "draft"),
+                eq(dischargeReports.revision, expectedRevision),
+              ),
+            )
+            .returning();
+
+          if (!updated) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Discharge report was modified concurrently.",
+            });
+          }
+          savedReport = updated;
+        } else {
+          // New report insert
+          const [inserted] = await db
+            .insert(dischargeReports)
+            .values({
+              practiceId: ctx.practiceId,
+              patientId: input.patientId ?? null,
+              appointmentId: input.appointmentId ?? null,
+              createdBy: ctx.user.id,
+              petName: input.petName,
+              species: input.species ?? null,
+              diagnosis: input.diagnosis,
+              treatment: input.treatment ?? null,
+              followUp: input.followUp ?? null,
+              reportText: input.reportText,
+              language: input.language,
+              modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
+              status,
+              revision: 0,
+            })
+            .returning();
+
+          if (!inserted) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to save discharge report",
+            });
+          }
+
+          if (status === "finalized") {
+            if (
+              typeof input.clinicianConfirmed === "object" &&
+              input.clinicianConfirmed.confirmationId
+            ) {
+              try {
+                await consumeClinicianConfirmation(db, {
+                  confirmationId: input.clinicianConfirmed.confirmationId,
+                  practiceId: ctx.practiceId,
+                  actorId: ctx.user.id,
+                  actorRole,
+                  actionType: "discharge_finalized",
+                  entityType: "discharge_report",
+                  entityId: inserted.id,
+                  expectedRevision: 0,
+                  originalDraftHash,
+                  confirmedContentHash,
+                });
+              } catch (err) {
+                if (err instanceof ClinicianConfirmationError) {
+                  const code =
+                    err.code === "NOT_FOUND"
+                      ? "NOT_FOUND"
+                      : err.code === "EXPIRED" ||
+                          err.code === "ALREADY_CONSUMED" ||
+                          err.code === "REVISION_MISMATCH"
+                        ? "CONFLICT"
+                        : "PRECONDITION_FAILED";
+                  throw new TRPCError({ code, message: err.message });
+                }
+                throw err;
+              }
+            } else {
+              await assertAndConsumeDirectConfirmation(db, {
+                practiceId: ctx.practiceId,
+                actorId: ctx.user.id,
+                actorRole,
+                actionType: "discharge_finalized",
+                entityType: "discharge_report",
+                entityId: inserted.id,
+                expectedRevision: 0,
+                originalDraftHash,
+                confirmedContentHash,
+              });
+            }
+
+            await appendAiAuditEvent(db, {
+              practiceId: ctx.practiceId,
+              actorId: ctx.user.id,
+              actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+              actorRole,
+              entityType: "discharge_report",
+              entityId: inserted.id,
+              actionType: "discharge_finalized",
+              originalDraftHash,
+              confirmedContentHash,
+              wasEditedByClinician,
+            });
+          }
+          savedReport = inserted;
+        }
+
+        return { saved: savedReport, patient: patientRecord };
       });
 
-      void dispatchWebhookEvent(ctx.practiceId, "discharge_report.finalized", {
-        reportId: saved.id,
-        patientId: saved.patientId,
-        appointmentId: saved.appointmentId,
-      });
+      // Side effects executed ONLY AFTER transaction commits
+      if (saved.status === "finalized") {
+        void dispatchWebhookEvent(ctx.practiceId, "discharge_report.finalized", {
+          reportId: saved.id,
+          patientId: saved.patientId,
+          appointmentId: saved.appointmentId,
+        });
 
-      if (saved.patientId && patient) {
-        if (patient.status === "deceased") {
-          // Sympathy gate: block every recall/marketing trigger for a
-          // deceased patient and route staff to a condolence task instead.
-          if (patient.clientId) {
-            await applySympathyGate(
+        if (saved.patientId && patient) {
+          if (patient.status === "deceased") {
+            if (patient.clientId) {
+              await applySympathyGate(
+                ctx.db,
+                ctx.practiceId,
+                patient.clientId,
+                saved.patientId,
+                "discharge_sympathy_gate",
+              );
+            }
+          } else if (patient.clientId) {
+            await schedulePostopCheckIn(
               ctx.db,
               ctx.practiceId,
               patient.clientId,
               saved.patientId,
-              "discharge_sympathy_gate"
+            );
+
+            const clinicalContext = `${saved.diagnosis} ${saved.treatment ?? ""} ${saved.reportText}`;
+            await detectAndTriggerDentalRecall(
+              ctx.db,
+              ctx.practiceId,
+              patient.clientId,
+              saved.patientId,
+              clinicalContext,
+            );
+            await checkAndTriggerSeniorMilestone(
+              ctx.db,
+              ctx.practiceId,
+              patient.clientId,
+              saved.patientId,
             );
           }
-        } else if (patient.clientId) {
-          await schedulePostopCheckIn(
-            ctx.db,
-            ctx.practiceId,
-            patient.clientId,
-            saved.patientId
-          );
-
-          // Automatické vyvolanie klinických recallov (dentálna hygiena a geriatrický screening)
-          const clinicalContext = `${saved.diagnosis} ${saved.treatment ?? ""} ${saved.reportText}`;
-          await detectAndTriggerDentalRecall(
-            ctx.db,
-            ctx.practiceId,
-            patient.clientId,
-            saved.patientId,
-            clinicalContext
-          );
-          await checkAndTriggerSeniorMilestone(
-            ctx.db,
-            ctx.practiceId,
-            patient.clientId,
-            saved.patientId
-          );
         }
       }
 

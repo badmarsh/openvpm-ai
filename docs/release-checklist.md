@@ -151,6 +151,10 @@ pnpm audit:verify-ai --allow-empty
 | Unit tests (all) | `pnpm --filter @openpims/web exec vitest run` |
 | Authorization tests | `pnpm --filter @openpims/web exec vitest run lib/__tests__/authorization.test.ts` |
 | Audit chain tests | `pnpm --filter @openpims/web exec vitest run lib/ai/__tests__/audit-chain.test.ts` |
+| Audit ledger tests | `pnpm --filter @openpims/web exec vitest run lib/ai/__tests__/audit-ledger.test.ts` |
+| Confirmation envelope tests | `pnpm --filter @openpims/web exec vitest run lib/ai/__tests__/clinician-confirmation.test.ts` |
+| AI finalization integration | `pnpm --filter @openpims/web exec vitest run server/__tests__/extensions-ai-finalization.integration.test.ts` |
+| Pilot E2E operational flow | `pnpm --filter @openpims/web exec vitest run server/__tests__/pilot-e2e-flow.integration.test.ts` |
 | Clinical AI eval | `pnpm --filter @openpims/web exec vitest run lib/ai/__tests__/clinical-eval-harness.test.ts` |
 | Audit chain verify | `pnpm audit:verify-ai` |
 | Audit chain verify (dev) | `pnpm audit:verify-ai --allow-empty` |

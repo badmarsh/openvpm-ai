@@ -23,7 +23,15 @@ import {
   buildAiConfirmationAuditTrail,
   optionalClinicianConfirmationInput,
   resolveAiRecordStatus,
+  generateContentHash,
 } from "@/lib/ai/draft-safety";
+import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
+import {
+  consumeClinicianConfirmation,
+  assertAndConsumeDirectConfirmation,
+  issueClinicianConfirmation,
+  ClinicianConfirmationError,
+} from "@/lib/ai/clinician-confirmation";
 import { formatTranscriptToSoap, type SoapStyle } from "@/lib/voice/soap-formatter";
 import { extractBillableItemsFromSoap } from "@/lib/voice/treatment-extractor";
 import { uploadFile, readPrimaryObject } from "@/lib/s3";
@@ -512,10 +520,93 @@ export const voiceRouter = createRouter({
    *  - Dictations without an appointment can never be finalized: there is no
    *    encounter to sign.
    */
+  /**
+   * Pre-issues an actor-bound, payload-bound confirmation envelope token for voice SOAP finalization.
+   */
+  prepareConfirmation: voiceProcedure
+    .input(
+      z.object({
+        dictationId: z.string().uuid(),
+        subjective: z.string().max(SOAP_SECTION_MAX_LENGTH).optional(),
+        objective: z.string().max(SOAP_SECTION_MAX_LENGTH).optional(),
+        assessment: z.string().max(SOAP_SECTION_MAX_LENGTH).optional(),
+        plan: z.string().max(SOAP_SECTION_MAX_LENGTH).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [dictation] = await ctx.db
+        .select()
+        .from(voiceDictations)
+        .where(
+          and(
+            eq(voiceDictations.id, input.dictationId),
+            eq(voiceDictations.practiceId, ctx.practiceId),
+            isNull(voiceDictations.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (!dictation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Voice dictation not found" });
+      }
+      if (dictation.soapNoteId) {
+        throw new TRPCError({ code: "CONFLICT", message: "Voice dictation is already finalized." });
+      }
+
+      const originalAiDraft = {
+        subjective: dictation.subjective,
+        objective: dictation.objective,
+        assessment: dictation.assessment,
+        plan: dictation.plan,
+      };
+      const finalClinicianContent = {
+        subjective: input.subjective || null,
+        objective: input.objective || null,
+        assessment: input.assessment || null,
+        plan: input.plan || null,
+      };
+      const originalDraftHash = generateContentHash(originalAiDraft);
+      const confirmedContentHash = generateContentHash(finalClinicianContent);
+      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+
+      const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
+        practiceId: ctx.practiceId,
+        actorId: ctx.user.id,
+        actorRole,
+        actionType: "soap_note_finalized",
+        entityType: "soap_note",
+        entityId: dictation.id,
+        expectedRevision: dictation.revision,
+        originalDraftHash,
+        confirmedContentHash,
+      });
+
+      return {
+        confirmationId: envelope.id,
+        expiresAt: envelope.expiresAt,
+        expectedRevision: envelope.expectedRevision,
+        originalDraftHash,
+        confirmedContentHash,
+      };
+    }),
+
+  /**
+   * Uloží SOAP note z diktovania do klinických záznamov (vanilla soapNotes).
+   *
+   * Human-in-the-loop: AI transcription never finalizes a record on its own.
+   *  - Without `clinicianConfirmed: true` the note is saved as an editable
+   *    *draft* on the open encounter.
+   *  - Only an explicit `clinicianConfirmed: true` finalizes it, and even then
+   *    the write goes through the shared SOAP lifecycle (open in-exam visit
+   *    lock, no duplicate drafts, immutable finalized notes).
+   *  - Dictations without an appointment can never be finalized: there is no
+   *    encounter to sign.
+   */
   saveAsSoapNote: voiceProcedure
     .input(
       z.object({
         dictationId: z.string().uuid(),
+        expectedRevision: z.number().int().min(0).optional(),
         subjective: z.string().max(SOAP_SECTION_MAX_LENGTH),
         objective: z.string().max(SOAP_SECTION_MAX_LENGTH),
         assessment: z.string().max(SOAP_SECTION_MAX_LENGTH),
@@ -574,65 +665,149 @@ export const voiceRouter = createRouter({
       try {
         if (status === "finalized") {
           assertClinicianConfirmed(input.clinicianConfirmed);
+          const actorRole = (ctx.user.role ?? "veterinarian") as string;
 
-          // Human-in-the-loop SHA-256 audit trail (ŠVPS SR / KVL SR compliance).
-          // IMPORTANT: The audit log insert is executed inside the SAME transaction
-          // as the SOAP note creation. If the audit insert fails, the entire
-          // transaction is rolled back — the finalization fails closed rather than
-          // leaving an un-audited clinical record.
           const originalAiDraft = {
             subjective: dictation.subjective,
             objective: dictation.objective,
             assessment: dictation.assessment,
             plan: dictation.plan,
           };
-          const audit = buildAiConfirmationAuditTrail({
-            actorId: ctx.user.id,
-            actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
-            entityType: "soap_note",
-            entityId: "", // placeholder; updated inside tx once note.id is known
-            originalAiDraft,
-            finalClinicianContent: sections,
-          });
+          const originalDraftHash = generateContentHash(originalAiDraft);
+          const confirmedContentHash = generateContentHash(sections);
+          const wasEditedByClinician = originalDraftHash !== confirmedContentHash;
 
           const { note } = await ctx.db.transaction(async (tx) => {
+            const db = tx as unknown as Database;
+            const [lockedDictation] = await db
+              .select()
+              .from(voiceDictations)
+              .where(
+                and(
+                  eq(voiceDictations.id, dictation.id),
+                  eq(voiceDictations.practiceId, ctx.practiceId),
+                  isNull(voiceDictations.deletedAt),
+                ),
+              )
+              .limit(1)
+              .for("update");
+
+            if (!lockedDictation) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Voice dictation not found",
+              });
+            }
+
+            if (lockedDictation.soapNoteId) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Voice dictation has already been finalized into a SOAP note.",
+              });
+            }
+
+            const expectedRevision = input.expectedRevision ?? lockedDictation.revision;
+            if (lockedDictation.revision !== expectedRevision) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: `Voice dictation changed concurrently. Expected revision ${expectedRevision}, got ${lockedDictation.revision}.`,
+              });
+            }
+
+            if (
+              typeof input.clinicianConfirmed === "object" &&
+              input.clinicianConfirmed.confirmationId
+            ) {
+              try {
+                await consumeClinicianConfirmation(db, {
+                  confirmationId: input.clinicianConfirmed.confirmationId,
+                  practiceId: ctx.practiceId,
+                  actorId: ctx.user.id,
+                  actorRole,
+                  actionType: "soap_note_finalized",
+                  entityType: "soap_note",
+                  entityId: lockedDictation.id,
+                  expectedRevision,
+                  originalDraftHash,
+                  confirmedContentHash,
+                });
+              } catch (err) {
+                if (err instanceof ClinicianConfirmationError) {
+                  const code =
+                    err.code === "NOT_FOUND"
+                      ? "NOT_FOUND"
+                      : err.code === "EXPIRED" ||
+                          err.code === "ALREADY_CONSUMED" ||
+                          err.code === "REVISION_MISMATCH"
+                        ? "CONFLICT"
+                        : "PRECONDITION_FAILED";
+                  throw new TRPCError({ code, message: err.message });
+                }
+                throw err;
+              }
+            } else {
+              await assertAndConsumeDirectConfirmation(db, {
+                practiceId: ctx.practiceId,
+                actorId: ctx.user.id,
+                actorRole,
+                actionType: "soap_note_finalized",
+                entityType: "soap_note",
+                entityId: lockedDictation.id,
+                expectedRevision,
+                originalDraftHash,
+                confirmedContentHash,
+              });
+            }
+
             const createdNote = await createFinalizedAppointmentSoapNote(
-              tx as unknown as Database,
+              db,
               {
                 practiceId: ctx.practiceId,
-                patientId: dictation.patientId,
+                patientId: lockedDictation.patientId,
                 appointmentId,
                 actor,
                 sections,
               },
             );
-            // Recompute audit with the actual note ID inside the transaction
-            const txAudit = buildAiConfirmationAuditTrail({
-              actorId: ctx.user.id,
-              actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
-              entityType: "soap_note",
-              entityId: createdNote.id,
-              originalAiDraft,
-              finalClinicianContent: sections,
-            });
-            await (tx as unknown as Database).insert(extAiAuditLog).values({
+
+            await appendAiAuditEvent(db, {
               practiceId: ctx.practiceId,
               actorId: ctx.user.id,
-              actorName: txAudit.actorName,
-              entityType: txAudit.entityType,
-              entityId: txAudit.entityId,
-              originalDraftHash: txAudit.originalDraftHash,
-              confirmedContentHash: txAudit.confirmedContentHash,
-              wasEditedByClinician: txAudit.wasEditedByClinician,
-              confirmedAt: txAudit.confirmedAt,
+              actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+              actorRole,
+              entityType: "soap_note",
+              entityId: createdNote.id,
+              actionType: "soap_note_finalized",
+              originalDraftHash,
+              confirmedContentHash,
+              wasEditedByClinician,
             });
-            return { note: createdNote, audit: txAudit };
-          });
 
-          await ctx.db
-            .update(voiceDictations)
-            .set({ soapNoteId: note.id })
-            .where(eq(voiceDictations.id, dictation.id));
+            const [updatedDictation] = await db
+              .update(voiceDictations)
+              .set({
+                soapNoteId: createdNote.id,
+                revision: lockedDictation.revision + 1,
+              })
+              .where(
+                and(
+                  eq(voiceDictations.id, lockedDictation.id),
+                  eq(voiceDictations.practiceId, ctx.practiceId),
+                  isNull(voiceDictations.soapNoteId),
+                  eq(voiceDictations.revision, expectedRevision),
+                ),
+              )
+              .returning();
+
+            if (!updatedDictation) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Voice dictation was modified concurrently.",
+              });
+            }
+
+            return { note: createdNote };
+          });
 
           return { ...note, patientId: dictation.patientId, status };
         }

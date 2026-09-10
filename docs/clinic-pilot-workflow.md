@@ -69,13 +69,21 @@ Every medical document transitions through distinct lifecycle states governed by
 
 ---
 
-## 3. Human Confirmation & Audit Contract
+## 3. Human Confirmation & Audit Contract (Sprint 9.3 Hardened)
 
 When an AI-generated draft transitions from `draft` to `finalized`:
-1. **Server Validation:** `clinicianConfirmationInput` (literal `true`) is strictly validated.
-2. **Actor Authorization:** User must have role `veterinarian` or `admin`.
-3. **SHA-256 Fingerprinting:**
+1. **Replay-Safe Confirmation Envelope:**
+   - Review modal calls `prepareConfirmation` to issue an actor-bound, practice-bound, revision-bound envelope in `ext_clinician_confirmations` with a 15-minute TTL.
+   - Alternatively, direct transactional confirmation (`clinicianConfirmed: true`) generates an inline nonced envelope in transaction.
+2. **Actor Authorization:** User must have role `veterinarian` or `admin` (enforced fail-closed via `assertAgentRole()` and `requireRole()`).
+3. **Optimistic Concurrency:** Current entity revision is verified against `expectedRevision` (`FOR UPDATE` row lock) and incremented upon finalization.
+4. **SHA-256 Fingerprinting:**
    - $H_{\text{original}} = \text{SHA-256}(\text{rawAiDraft})$
    - $H_{\text{confirmed}} = \text{SHA-256}(\text{finalClinicianContent})$
    - $\text{wasEdited} = (H_{\text{original}} \neq H_{\text{confirmed}})$
-4. **Audit Immutability:** Written to append-only `ext_ai_audit_log` with timestamp, clinician ID, and practice scope.
+5. **Atomic Audit Append (`appendAiAuditEvent`):**
+   - Transaction-scoped advisory lock (`pg_advisory_xact_lock`) serializes per-practice writes.
+   - Strictly monotonic `sequenceNumber` incremented per practice.
+   - Prior event's `eventHash` linked as `previousEventHash`.
+   - Canonical payload hashed with SHA-256 (`canonicalizationVersion: 1`).
+   - If audit append fails, the entire clinical transaction rolls back.
