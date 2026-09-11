@@ -619,7 +619,7 @@ describe("messaging location target safety", () => {
           trialEndsAt: new Date("2099-01-01T00:00:00Z"),
         },
       ],
-      selectResults: [[{ id: PRACTICE_ID }], [], []],
+      selectResults: [[], []],
     });
 
     await expect(
@@ -1660,7 +1660,7 @@ describe("messaging location target safety", () => {
           trialEndsAt: new Date("2099-01-01T00:00:00Z"),
         },
       ],
-      selectResults: [[{ id: PRACTICE_ID }], [{ id: LOCATION_ID }], []],
+      selectResults: [[{ id: LOCATION_ID }], []],
     });
 
     await expect(
@@ -1821,7 +1821,7 @@ describe("messaging location target safety", () => {
           trialEndsAt: null,
         },
       ],
-      selectResults: [[{ id: PRACTICE_ID }], [{ id: LOCATION_ID }], []],
+      selectResults: [[{ id: LOCATION_ID }], []],
     });
 
     await expect(
@@ -1848,7 +1848,6 @@ describe("messaging location target safety", () => {
         },
       ],
       selectResults: [
-        [{ id: PRACTICE_ID }],
         [{ id: LOCATION_ID }],
         [
           {
@@ -1914,7 +1913,7 @@ describe("messaging location target safety", () => {
       code: "PRECONDITION_FAILED",
       message: expect.stringContaining("test sends are disabled"),
     });
-    expect(select).toHaveBeenCalledTimes(1);
+    expect(select).not.toHaveBeenCalled();
     expect(mocks.sendSms).not.toHaveBeenCalled();
   });
 
