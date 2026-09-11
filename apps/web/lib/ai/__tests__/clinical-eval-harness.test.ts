@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { getSystemPrompt } from "@/lib/voice/soap-formatter";
 import { calculateVhs, getReferenceRangeForBreed } from "@/lib/imaging/vhs-calculator";
-import { calculateDose, isFormularyDrugId, FORMULARY } from "@/lib/dosing";
+import { calculateDose, isFormularyDrugId, FORMULARY, DOSING_WEIGHT_MAX_KG } from "@/lib/dosing";
 import {
   buildAiConfirmationAuditTrail,
   generateContentHash,
   resolveSoapSectionalStatus,
+  assertAiMayWriteToSoapNote,
+  isClinicianConfirmed,
+  resolveAiRecordStatus,
 } from "@/lib/ai/draft-safety";
+import {
+  buildSoapDraftPrompt,
+  parseSoapDraft,
+  SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
+} from "@/lib/ai/soap-draft";
+import { SOAP_SECTION_MAX_LENGTH } from "@/lib/records/soap-content";
 import { getTool } from "@/lib/agent/tools";
 
 describe("Clinical AI Evaluation Harness (Deterministic Benchmarks)", () => {
@@ -219,6 +228,137 @@ describe("Clinical AI Evaluation Harness (Deterministic Benchmarks)", () => {
       expect(thrown).toBeDefined();
       expect((thrown as { code?: string }).code).toBe("FORBIDDEN");
       expect((thrown as Error).message).toMatch(/Recepty môže vystavovať/);
+    });
+  });
+
+  describe("6. Dosing Fail-Closed Boundaries (Overdose Prevention)", () => {
+    it("rejects non-positive and non-finite weights instead of computing a dose", () => {
+      for (const weightKg of [0, -4.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() =>
+          calculateDose({ species: "canine", weightKg, drugId: "carprofen" })
+        ).toThrow(/Weight must be a positive number/);
+      }
+    });
+
+    it("rejects implausible weights above 200kg (unit-confusion guard)", () => {
+      // 250 "kg" is almost certainly grams entered as kilograms — a 1000x
+      // overdose vector. The calculator refuses instead of scaling linearly.
+      expect(DOSING_WEIGHT_MAX_KG).toBe(200);
+      expect(() =>
+        calculateDose({ species: "canine", weightKg: 250, drugId: "carprofen" })
+      ).toThrow(/plausible range.*units/);
+    });
+
+    it("rejects unknown drug IDs instead of guessing a dose", () => {
+      expect(() =>
+        calculateDose({ species: "canine", weightKg: 15, drugId: "not-a-real-drug" })
+      ).toThrow(/Unknown drug/);
+    });
+
+    it("caps feline meloxicam at the maximum single dose with explicit warnings", () => {
+      // 5 kg cat at 0.05–0.1 mg/kg would naively yield up to 0.5 mg;
+      // repeated NSAID dosing in cats is high-risk, so the formulary caps
+      // the single dose at 0.3 mg and says so explicitly.
+      const dose = calculateDose({ species: "feline", weightKg: 5, drugId: "meloxicam" });
+      expect(dose.cappedByMax).toBe(true);
+      expect(dose.doseHighMg).toBe(0.3);
+      expect(dose.doseLowMg).toBeLessThanOrEqual(0.3);
+      expect(dose.warnings.some((w) => w.includes("maximum single dose of 0.3 mg"))).toBe(true);
+      expect(dose.warnings.some((w) => w.includes("Single-dose use"))).toBe(true);
+    });
+
+    it("refuses cross-species extrapolation with an explicit do-not-extrapolate message", () => {
+      expect(() =>
+        calculateDose({ species: "feline", weightKg: 4, drugId: "carprofen" })
+      ).toThrow(/Do not extrapolate across species/);
+    });
+  });
+
+  describe("7. Draft Lifecycle Safety (Fail-Closed Confirmation)", () => {
+    it("allows AI writes to open drafts only — finalized/closed/archived notes are immutable", () => {
+      expect(() => assertAiMayWriteToSoapNote({ status: "draft" })).not.toThrow();
+      for (const status of ["finalized", "closed", "archived", "signed", ""]) {
+        expect(() => assertAiMayWriteToSoapNote({ status })).toThrow();
+      }
+    });
+
+    it("rejects truthy non-confirmations — only explicit true or a valid envelope counts", () => {
+      expect(isClinicianConfirmed(true)).toBe(true);
+      expect(
+        isClinicianConfirmed({ confirmationId: "b3d9f2a1-4c6e-4a8f-9e1d-2b5c7d9f0a12" })
+      ).toBe(true);
+      for (const bogus of ["yes", "true", 1, {}, { confirmationId: "" }, { confirmationId: "   " }, null, undefined, false]) {
+        expect(isClinicianConfirmed(bogus)).toBe(false);
+      }
+    });
+
+    it("keeps records as drafts unless finalization was explicitly requested AND confirmed", () => {
+      expect(resolveAiRecordStatus({})).toBe("draft");
+      expect(resolveAiRecordStatus({ requestedStatus: "finalized" })).toBe("draft");
+      expect(
+        resolveAiRecordStatus({ requestedStatus: "finalized", clinicianConfirmed: "yes" })
+      ).toBe("draft");
+      expect(
+        resolveAiRecordStatus({ requestedStatus: "finalized", clinicianConfirmed: true })
+      ).toBe("finalized");
+    });
+  });
+
+  describe("8. Prompt Construction & Draft Parse Safety", () => {
+    const baseContext = {
+      patient: { name: "Rex", species: "canine", breed: "Labrador", sex: "M", dob: "2020-01-01" },
+      allergies: [],
+      activeProblems: [],
+      latestVitals: null,
+    };
+
+    it("truncates free-form visitContext to the documented 2000-character bound", () => {
+      expect(SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH).toBe(2000);
+      const oversized = "x".repeat(5000) + "INJECTED-INSTRUCTIONS-AT-TAIL";
+      const prompt = buildSoapDraftPrompt({ ...baseContext, visitContext: oversized });
+      // The tail (where smuggled instructions would sit) must not survive.
+      expect(prompt).not.toContain("INJECTED-INSTRUCTIONS-AT-TAIL");
+      expect(prompt).toContain("x".repeat(2000));
+      expect(prompt.length).toBeLessThan(5000);
+    });
+
+    it("returns null for non-JSON and empty model output instead of throwing or hallucinating", () => {
+      expect(parseSoapDraft("not json at all")).toBeNull();
+      expect(parseSoapDraft("")).toBeNull();
+      expect(parseSoapDraft("```json\n{ not valid }\n```")).toBeNull();
+      expect(parseSoapDraft(JSON.stringify({ subjective: "", objective: "", assessment: "", plan: "" }))).toBeNull();
+      expect(parseSoapDraft(JSON.stringify(["subjective"]))).toBeNull();
+    });
+
+    it("tolerates markdown fences but coerces non-string sections to empty (no crash)", () => {
+      const draft = parseSoapDraft(
+        'Here is the note:\n```json\n' +
+          JSON.stringify({
+            subjective: "Owner reports vomiting",
+            objective: 42,
+            assessment: null,
+            plan: { nested: "object" },
+          }) +
+          '\n```\nDone.'
+      );
+      expect(draft).not.toBeNull();
+      expect(draft!.subjective).toBe("Owner reports vomiting");
+      expect(draft!.objective).toBe("");
+      expect(draft!.assessment).toBe("");
+      expect(draft!.plan).toBe("");
+    });
+
+    it("truncates overlong sections to SOAP_SECTION_MAX_LENGTH", () => {
+      const draft = parseSoapDraft(
+        JSON.stringify({
+          subjective: "y".repeat(SOAP_SECTION_MAX_LENGTH + 500),
+          objective: "ok",
+          assessment: "ok",
+          plan: "ok",
+        })
+      );
+      expect(draft).not.toBeNull();
+      expect(draft!.subjective).toHaveLength(SOAP_SECTION_MAX_LENGTH);
     });
   });
 });
