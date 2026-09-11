@@ -5245,7 +5245,9 @@
       "notFound": "Demo recording not found",
       "loadError": "Failed to load the demo audio",
       "loaded": "Demo recording loaded",
-      "failed": "Loading the demo recording failed"
+      "failed": "Loading the demo recording failed",
+      "defaultPatientName": "Bono",
+      "defaultClientName": "Owner"
     },
     "history": {
       "title": "Voice dictation history",
@@ -5371,7 +5373,17 @@
       "presetApplied": "Preset “{name}” applied",
       "copied": "Findings copied to clipboard",
       "popupBlocked": "The pop-up window was blocked",
-      "loadedToPreview": "Analysis loaded into the preview"
+      "loadedToPreview": "Analysis loaded into the preview",
+      "fileMissing": "Image is not ready for analysis"
+    },
+    "validation": {
+      "selectPatient": "Please select a patient for examination first",
+      "selectImage": "Please select a radiology image for analysis"
+    },
+    "demo": {
+      "button": "Load demo X-ray image",
+      "loaded": "Sample X-ray image (Thorax - Dog Bono) was loaded",
+      "failed": "Failed to load sample image"
     },
     "history": {
       "title": "Imaging exam history",

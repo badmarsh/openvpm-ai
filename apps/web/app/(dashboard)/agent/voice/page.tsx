@@ -457,6 +457,35 @@ function VoiceDictationContent() {
   const handleLoadDemo = useCallback(async () => {
     setLoadingDemo(true);
     try {
+      if (!selectedPatient) {
+        let pCandidate = null;
+        try {
+          const bonoResults = await utils.patients.search.fetch({ query: "Bono" });
+          if (bonoResults && bonoResults.length > 0) {
+            pCandidate = bonoResults[0];
+          }
+        } catch {}
+
+        if (!pCandidate) {
+          try {
+            const listResults = await utils.patients.list.fetch({ limit: 1 });
+            if (listResults?.items && listResults.items.length > 0) {
+              pCandidate = listResults.items[0];
+            }
+          } catch {}
+        }
+
+        if (pCandidate) {
+          const clientFullName = [pCandidate.clientFirstName, pCandidate.clientLastName].filter(Boolean).join(" ");
+          setSelectedPatient({
+            id: pCandidate.id,
+            name: pCandidate.name ?? t("voice.demo.defaultPatientName", "Bono"),
+            species: pCandidate.species ?? "canine",
+            clientName: clientFullName || t("voice.demo.defaultClientName", "Majiteľ"),
+          });
+        }
+      }
+
       const res = await fetch("/demo/voice-demo.webm");
       if (!res.ok) throw new Error(t("voice.demo.notFound", "Demo nahrávka nebola nájdená"));
       const blob = await res.blob();
@@ -467,7 +496,7 @@ function VoiceDictationContent() {
         audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
         audio.addEventListener("error", () => reject(new Error(t("voice.demo.loadError", "Nepodarilo sa načítať demo audio"))), { once: true });
       });
-      const duration = Math.round(audio.duration || 5);
+      const duration = Math.round(audio.duration || 36);
       URL.revokeObjectURL(url);
       handleRecordingComplete(blob, duration);
       toast.success(t("voice.demo.loaded", "Demo nahrávka bola načítaná"));
@@ -476,7 +505,7 @@ function VoiceDictationContent() {
     } finally {
       setLoadingDemo(false);
     }
-  }, [handleRecordingComplete, t]);
+  }, [handleRecordingComplete, selectedPatient, utils, t]);
 
   const handleCopySoap = () => {
     const text = `${t("voice.soap.subjective", "Subjektívne (S)")}:\n${soapSections.subjective}\n\n${t("voice.soap.objective", "Objektívne (O)")}:\n${soapSections.objective}\n\n${t("voice.soap.assessment", "Hodnotenie (A)")}:\n${soapSections.assessment}\n\n${t("voice.soap.plan", "Plán (P)")}:\n${soapSections.plan}`;
@@ -772,7 +801,7 @@ function VoiceDictationContent() {
                   variant="outline"
                   size="sm"
                   onClick={handleLoadDemo}
-                  disabled={loadingDemo || !canRecord}
+                  disabled={loadingDemo || isProcessing}
                   className="text-xs gap-1.5"
                 >
                   {loadingDemo ? (

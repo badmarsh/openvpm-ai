@@ -71,8 +71,8 @@ const OFFICIAL_INTEL_ITEMS: IntelItem[] = [
       "Aktualizácia reštrikčných pásiem a zvýšený dohľad nad biologickou bezpečnosťou chovov a manipuláciou s kadávermi. Veterinárni lekári sú povinní bezodkladne hlásiť akékoľvek podozrenia na nákazu.",
     body:
       "Na základe výskytu vysoko patogénnej aviárnej influenzy (HPAI H5N1) a afrického moru oviec (AMO) v susedných krajinách Štátna veterinárna a potravinová správa SR nariaďuje: (1) Rozšírenie pozorovacieho pásma v Bratislavskom a Trnavskom kraji v okruhu 10 km od hraničných priechodov. (2) Povinné hlásenie akéhokoľvek úhynu hydiny nad 3 kusy do 12 hodín. (3) Zákaz organizovania súťaží poštových holubov a chovateľských výstav až do odvolania. (4) Zvýšená frekvencia úradných inšpekcií vonkajších chovov.",
-    badgeText: "Kritická výstraha",
-    badgeVariant: "destructive",
+    badgeText: "Dôležité upozornenie",
+    badgeVariant: "secondary",
     officialUrl: "https://www.svps.sk",
     actRef: "Zákon č. 39/2007 Z. z. o veterinárnej starostlivosti",
   },
@@ -91,7 +91,7 @@ const OFFICIAL_INTEL_ITEMS: IntelItem[] = [
     body:
       "Veterinárni lekári sú povinní v súlade s § 19 ods. 9 zákona č. 39/2007 Z. z. zaznamenať každý aplikovaný mikročip a každú vakcináciu proti besnote do Centrálneho registra spoločenských zvierat (CRSZ) do 24 hodín od výkonu. Pri oneskorení zápisu hrozí správna pokuta vo výške 500 – 5 000 EUR podľa závažnosti porušenia. ŠVPS SR oznamuje, že v Q4 2026 bude realizovaná plošná kontrola 15 % veterinárnych ambulancií zameraná výhradne na dodržiavanie tejto povinnosti.",
     badgeText: "Zákonná lehota",
-    badgeVariant: "destructive",
+    badgeVariant: "secondary",
     officialUrl: "https://www.svps.sk",
     actRef: "§ 19 ods. 9 zákona č. 39/2007 Z. z.",
   },
@@ -522,84 +522,68 @@ function VetIntelContent() {
         </div>
       </div>
 
-      {/* ── Two-column layout: Left sidebar + Right content ── */}
-      <div className="flex gap-6 items-start">
+      {/* ── Standard Horizontal Tabs ── */}
+      <div className="border-b border-border pb-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full sm:w-auto">
+          <TabsList className="grid grid-cols-3 w-full sm:w-[580px] h-10">
+            <TabsTrigger value="market" className="gap-2 text-xs font-semibold">
+              <Building2 className="h-4 w-4" />
+              <span>{t("vetIntel.nav.market", "Trh & Konkurencia")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="bulletin" className="gap-2 text-xs font-semibold">
+              <Scale className="h-4 w-4" />
+              <span>{t("vetIntel.nav.bulletin", "Úradné vestníky & Právo")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="strategy" className="gap-2 text-xs font-semibold">
+              <Lightbulb className="h-4 w-4" />
+              <span>{t("vetIntel.nav.strategy", "AI Stratégia & Trendy")}</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* ── Left Sidebar Nav ── */}
-        <aside className="w-52 shrink-0 sticky top-4 space-y-1">
-          {[
-            {
-              value: "market",
-              icon: Building2,
-              label: t("vetIntel.nav.market", "Trh & Konkurencia"),
-              desc: t("vetIntel.nav.marketDesc", "Benchmark, recenzie, analýza regiónu"),
-            },
-            {
-              value: "bulletin",
-              icon: ShieldAlert,
-              label: t("vetIntel.nav.bulletin", "Úradné vestníky & Právo"),
-              desc: t("vetIntel.nav.bulletinDesc", "ŠVPS SR, KVL SR, ŠÚKL"),
-            },
-            {
-              value: "strategy",
-              icon: Lightbulb,
-              label: t("vetIntel.nav.strategy", "AI Stratégia & Trendy"),
-              desc: t("vetIntel.nav.strategyDesc", "Reddit, LinkedIn, svetové tipy"),
-            },
-          ].map(({ value, icon: Icon, label, desc }) => {
-            const isActive = activeTab === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setActiveTab(value)}
-                className={cn(
-                  "w-full text-left rounded-xl px-3 py-3 transition-all group",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "hover:bg-muted/60 text-muted-foreground border border-transparent hover:border-border"
-                )}
-              >
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary-foreground" : "text-foreground")} />
-                  <span className={cn("text-xs font-semibold leading-tight", isActive ? "text-primary-foreground" : "text-foreground")}>
-                    {label}
-                  </span>
-                </div>
-                <p className={cn("text-[10px] leading-snug pl-6", isActive ? "text-primary-foreground/75" : "text-muted-foreground")}>
-                  {desc}
-                </p>
-              </button>
-            );
-          })}
+        {/* Quick Portal Links */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href="https://www.svps.sk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              ŠVPS SR
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href="https://www.kvlsr.sk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              KVL SR
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href="https://www.slov-lex.sk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Scale className="h-3.5 w-3.5" />
+              Slov-Lex
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </a>
+          </Button>
+        </div>
+      </div>
 
-          {/* External links */}
-          <div className="pt-3 border-t border-border/50 space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 pb-1">
-              {t("vetIntel.nav.portals", "Portály")}
-            </p>
-            {[
-              { href: "https://www.svps.sk", label: "ŠVPS SR", icon: Building2 },
-              { href: "https://www.kvlsr.sk", label: "KVL SR", icon: ShieldCheck },
-              { href: "https://www.slov-lex.sk", label: "Slov-Lex", icon: Scale },
-            ].map(({ href, label, icon: Icon }) => (
-              <a
-                key={href}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                {label}
-                <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-50" />
-              </a>
-            ))}
-          </div>
-        </aside>
-
-        {/* ── Right Content Panel ── */}
-        <div className="flex-1 min-w-0 space-y-6">
+      {/* ── Main Content Panel ── */}
+      <div className="space-y-6">
 
         {/* -----------------------------------------------------------------------
             TAB 1: TRH & KONKURENCIA
@@ -936,11 +920,11 @@ function VetIntelContent() {
               const isExpanded = expandedBulletin === item.id;
               const categoryBorderColor =
                 item.category === "alert"
-                  ? "border-l-4 border-l-destructive"
+                  ? "border-l-4 border-l-amber-500/80"
                   : item.category === "regulation"
                   ? "border-l-4 border-l-primary"
                   : item.category === "drug"
-                  ? "border-l-4 border-l-amber-500"
+                  ? "border-l-4 border-l-sky-500"
                   : "border-l-4 border-l-emerald-500";
 
               return (
@@ -953,19 +937,19 @@ function VetIntelContent() {
                 >
                   {/* Article Header */}
                   <div className="px-6 pt-5 pb-4">
-                    {/* Category Icon — Large & Contrasting */}
+                    {/* Category Icon — Subtle & Professional */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-xl shadow-sm",
-                        item.category === "alert" && "bg-red-500 text-white",
-                        item.category === "regulation" && "bg-primary text-white",
-                        item.category === "drug" && "bg-amber-500 text-white",
-                        item.category === "advisory" && "bg-emerald-500 text-white",
+                        "flex h-10 w-10 items-center justify-center rounded-xl shadow-xs border",
+                        item.category === "alert" && "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+                        item.category === "regulation" && "bg-primary/10 text-primary border-primary/20",
+                        item.category === "drug" && "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20",
+                        item.category === "advisory" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
                       )}>
-                        {item.category === "alert" && <AlertTriangle className="h-5 w-5" />}
-                        {item.category === "regulation" && <Scale className="h-5 w-5" />}
-                        {item.category === "drug" && <Pill className="h-5 w-5" />}
-                        {item.category === "advisory" && <FileText className="h-5 w-5" />}
+                        {item.category === "alert" && <AlertTriangle className="h-4 w-4" />}
+                        {item.category === "regulation" && <Scale className="h-4 w-4" />}
+                        {item.category === "drug" && <Pill className="h-4 w-4" />}
+                        {item.category === "advisory" && <FileText className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         {/* Meta row */}
@@ -1018,7 +1002,13 @@ function VetIntelContent() {
 
                     {/* Badge + Legal Reference row */}
                     <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <Badge variant={item.badgeVariant} className="text-xs font-semibold">
+                      <Badge
+                        variant={item.badgeVariant}
+                        className={cn(
+                          "text-xs font-semibold",
+                          item.category === "alert" && "bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/20",
+                        )}
+                      >
                         {item.badgeText}
                       </Badge>
                       {item.actRef && (
@@ -1355,7 +1345,6 @@ function VetIntelContent() {
         </div>}
       </div>
     </div>
-  </div>
   );
 }
 

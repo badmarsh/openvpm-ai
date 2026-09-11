@@ -316,12 +316,86 @@ export default function ImagingPage() {
   }, [selectedFile, selectedPatient, t]);
 
   const handleAnalyze = useCallback(async () => {
-    if (!fileId || !selectedPatient) return;
+    if (analyzeMutation.isPending || uploading) return;
+
+    if (!selectedPatient) {
+      toast.warning(t("imaging.validation.selectPatient", "Najprv vyberte pacienta pre vyšetrenie"));
+      setPatientSearchOpen(true);
+      return;
+    }
+
+    if (!selectedFile && !fileId) {
+      toast.info(t("imaging.validation.selectImage", "Vyberte rádiologickú snímku na analýzu"));
+      fileInputRef.current?.click();
+      return;
+    }
+
+    let activeFileId = fileId;
+
+    // Automatic upload if file is selected but not yet uploaded
+    if (!activeFileId && selectedFile) {
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("category", "imaging");
+        formData.append("patientId", selectedPatient.id);
+
+        if (!uploadAttemptRef.current) {
+          uploadAttemptRef.current = selectManagedUploadFile(null, selectedFile);
+        }
+
+        const res = await fetchWithClientTimeout(
+          "/api/upload",
+          {
+            method: "POST",
+            body: formData,
+            headers: { "Idempotency-Key": uploadAttemptRef.current.idempotencyKey },
+          },
+          CLIENT_UPLOAD_TIMEOUT_MS,
+        );
+
+        const json = (await res.json().catch(() => ({}))) as { url?: string; key?: string; error?: string };
+        if (!res.ok) {
+          uploadAttemptRef.current = settleManagedUploadAttempt(uploadAttemptRef.current, {
+            kind: "response",
+            status: res.status,
+          });
+          throw new Error(json.error ?? "Upload failed");
+        }
+
+        uploadAttemptRef.current = settleManagedUploadAttempt(uploadAttemptRef.current, {
+          kind: "success",
+        });
+
+        activeFileId = json.key?.split("/").pop() ?? null;
+        setFileUrl(json.url ?? null);
+        setFileId(activeFileId);
+        toast.success(t("imaging.toast.uploaded", "Snímok úspešne nahraný"));
+      } catch (err) {
+        if (uploadAttemptRef.current) {
+          uploadAttemptRef.current = settleManagedUploadAttempt(uploadAttemptRef.current, {
+            kind: "ambiguous",
+          });
+        }
+        const message = err instanceof Error ? err.message : t("imaging.toast.uploadFailed", "Nahrávanie zlyhalo");
+        toast.error(message);
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    if (!activeFileId) {
+      toast.error(t("imaging.toast.fileMissing", "Snímok nie je pripravený na analýzu"));
+      return;
+    }
 
     setAnalysisId(null);
     try {
       const result = await analyzeMutation.mutateAsync({
-        fileId,
+        fileId: activeFileId,
         patientId: selectedPatient.id,
         imageType,
         userPrompt: userPrompt || undefined,
@@ -332,7 +406,66 @@ export default function ImagingPage() {
       const message = err instanceof Error ? err.message : t("imaging.toast.analysisFailed", "Analýza zlyhala");
       toast.error(message);
     }
-  }, [fileId, selectedPatient, imageType, userPrompt, analyzeMutation, t]);
+  }, [
+    analyzeMutation,
+    uploading,
+    selectedPatient,
+    selectedFile,
+    fileId,
+    imageType,
+    userPrompt,
+    t,
+  ]);
+
+  const handleLoadDemoImage = useCallback(async () => {
+    try {
+      if (!selectedPatient) {
+        let pCandidate = null;
+        try {
+          const bonoResults = await utils.patients.search.fetch({ query: "Bono" });
+          if (bonoResults && bonoResults.length > 0) {
+            pCandidate = bonoResults[0];
+          }
+        } catch {}
+
+        if (!pCandidate) {
+          try {
+            const listResults = await utils.patients.list.fetch({ limit: 1 });
+            if (listResults?.items && listResults.items.length > 0) {
+              pCandidate = listResults.items[0];
+            }
+          } catch {}
+        }
+
+        if (pCandidate) {
+          const clientFullName = [pCandidate.clientFirstName, pCandidate.clientLastName].filter(Boolean).join(" ");
+          setSelectedPatient({
+            id: pCandidate.id,
+            name: pCandidate.name ?? "Bono",
+            species: pCandidate.species ?? "canine",
+            breed: pCandidate.breed ?? "Labrador",
+            clientName: clientFullName || "Majiteľ",
+          });
+        }
+      }
+
+      const res = await fetch("/demo/xray-sample.jpg");
+      if (!res.ok) throw new Error("Demo snímok sa nenašiel");
+      const blob = await res.blob();
+      const file = new File([blob], "rtg-thorax-bono-lateral.jpg", { type: "image/jpeg" });
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(blob));
+      setFileUrl(null);
+      setFileId(null);
+      setAnalysisId(null);
+      setImageType("xray");
+      setUserPrompt(PRESETS_IMAGING[0].prompt);
+      uploadAttemptRef.current = selectManagedUploadFile(null, file);
+      toast.success(t("imaging.demo.loaded", "Ukážkový RTG snímok (Thorax - Pes Bono) bol načítaný"));
+    } catch (err) {
+      toast.error(t("imaging.demo.failed", "Nepodarilo sa načítať ukážkový snímok"));
+    }
+  }, [selectedPatient, utils, t]);
 
   const clearFile = useCallback(() => {
     setSelectedFile(null);
@@ -769,10 +902,22 @@ export default function ImagingPage() {
             {/* Image Upload Card */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-primary" />
-                  {t("imaging.upload.title", "Nahratie snímku *")}
-                </CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                    {t("imaging.upload.title", "Nahratie snímku *")}
+                  </CardTitle>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadDemoImage}
+                    className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10 self-start sm:self-auto"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {t("imaging.demo.button", "Načítať demo RTG snímok")}
+                  </Button>
+                </div>
                 <CardDescription className="text-xs">
                   {t("imaging.upload.formats", "Podporované formáty: JPG, PNG, WebP a medicínsky DICOM (.dcm) do 10 MB")}
                 </CardDescription>
@@ -944,13 +1089,18 @@ export default function ImagingPage() {
                 <Button
                   type="button"
                   onClick={handleAnalyze}
-                  disabled={!fileId || !selectedPatient || analyzeMutation.isPending}
+                  disabled={analyzeMutation.isPending || uploading}
                   className="w-full gap-2 py-5 text-sm font-semibold shadow-sm"
                 >
                   {analyzeMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       {t("imaging.config.analyzing", "Spracúvam rádiologickú analýzu...")}
+                    </>
+                  ) : uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t("imaging.upload.uploading", "Nahrávam snímok na zabezpečené úložisko...")}
                     </>
                   ) : (
                     <>

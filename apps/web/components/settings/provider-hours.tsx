@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 type ProviderWindow = {
   dayOfWeek: number;
@@ -23,6 +24,16 @@ const DAYS = [
   "Saturday",
 ] as const;
 
+const DAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
 function weekdayPreset(): ProviderWindow[] {
   return [1, 2, 3, 4, 5].map((dayOfWeek) => ({
     dayOfWeek,
@@ -31,19 +42,38 @@ function weekdayPreset(): ProviderWindow[] {
   }));
 }
 
-function scheduleError(windows: ProviderWindow[]): string | null {
+function scheduleError(
+  windows: ProviderWindow[],
+  t: (key: string, fallback?: string, params?: Record<string, string | number>) => string,
+): string | null {
   for (let dayOfWeek = 0; dayOfWeek < DAYS.length; dayOfWeek += 1) {
     const day = windows
       .filter((window) => window.dayOfWeek === dayOfWeek)
       .sort((left, right) => left.startTime.localeCompare(right.startTime));
-    if (day.length > 3) return "Use at most three working windows per day.";
+    if (day.length > 3) {
+      return t(
+        "settings.locations.providerHours.validation.maxThree",
+        "Use at most three working windows per day.",
+      );
+    }
+    const dayKey = DAY_KEYS[dayOfWeek] ?? "sunday";
+    const dayFallback = DAYS[dayOfWeek] ?? "Sunday";
+    const dayName = t(`settings.locations.providerHours.daysFull.${dayKey}`, dayFallback);
     for (let index = 0; index < day.length; index += 1) {
       const window = day[index]!;
       if (window.startTime >= window.endTime) {
-        return `${DAYS[dayOfWeek]} hours must end after they start.`;
+        return t(
+          "settings.locations.providerHours.validation.order",
+          "{day} hours must end after they start.",
+          { day: dayName },
+        );
       }
       if (index > 0 && window.startTime < day[index - 1]!.endTime) {
-        return `${DAYS[dayOfWeek]} working windows cannot overlap.`;
+        return t(
+          "settings.locations.providerHours.validation.overlap",
+          "{day} working windows cannot overlap.",
+          { day: dayName },
+        );
       }
     }
   }
@@ -57,6 +87,7 @@ function oneHourAfter(time: string) {
 }
 
 export function ProviderHours() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const setup = trpc.settings.providerScheduleSetup.useQuery();
   const [editingProviderId, setEditingProviderId] = useState<string | null>(
@@ -65,7 +96,7 @@ export function ProviderHours() {
   const [editingRevision, setEditingRevision] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProviderWindow[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState("");
-  const validationError = useMemo(() => scheduleError(draft), [draft]);
+  const validationError = useMemo(() => scheduleError(draft, t), [draft, t]);
   const save = trpc.settings.replaceProviderSchedule.useMutation({
     onSuccess: async () => {
       await Promise.all([
@@ -74,7 +105,9 @@ export function ProviderHours() {
       ]);
       setEditingProviderId(null);
       setEditingRevision(null);
-      toast.success("Provider hours saved");
+      toast.success(
+        t("settings.locations.providerHours.savedToast", "Provider hours saved"),
+      );
     },
     onError: (error) => toast.error(error.message),
   });
@@ -89,9 +122,12 @@ export function ProviderHours() {
   if (setup.error || !setup.data) {
     return (
       <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
-        <p className="font-medium">Provider hours could not be loaded.</p>
+        <p className="font-medium">
+          {t("settings.locations.providerHours.loadError", "Provider hours could not be loaded.")}
+        </p>
         <p className="mt-1 text-muted-foreground">
-          {setup.error?.message ?? "Refresh and try again."}
+          {setup.error?.message ??
+            t("settings.locations.providerHours.refreshHint", "Refresh and try again.")}
         </p>
         <Button
           className="mt-3"
@@ -99,7 +135,7 @@ export function ProviderHours() {
           variant="outline"
           onClick={() => void setup.refetch()}
         >
-          Try again
+          {t("settings.locations.providerHours.retry", "Try again")}
         </Button>
       </div>
     );
@@ -117,19 +153,26 @@ export function ProviderHours() {
         <div>
           <div className="flex items-center gap-2">
             <Clock3 className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Provider working hours</h3>
+            <h3 className="text-sm font-semibold">
+              {t("settings.locations.providerHours.title", "Provider working hours")}
+            </h3>
           </div>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            Set each veterinarian&apos;s weekly coverage at every clinic. Times
-            use {timezone}. Doctor-required client requests only show configured
-            provider coverage once your clinic saves its first hours.
+            {t(
+              "settings.locations.providerHours.desc",
+              "Set each veterinarian's weekly coverage at every clinic. Times use {timezone}. Doctor-required client requests only show configured provider coverage once your clinic saves its first hours.",
+              { timezone },
+            )}
           </p>
         </div>
         {locations.length > 0 ? (
           <label className="text-xs font-medium text-muted-foreground">
-            Clinic location
+            {t("settings.locations.providerHours.clinic", "Clinic location")}
             <select
-              aria-label="Provider hours clinic location"
+              aria-label={t(
+                "settings.locations.providerHours.clinicAria",
+                "Provider hours clinic location",
+              )}
               className="mt-1 block h-9 min-w-48 rounded-md border border-input bg-background px-3 text-sm text-foreground"
               value={selectedLocation?.id ?? ""}
               onChange={(event) => {
@@ -142,7 +185,9 @@ export function ProviderHours() {
               {locations.map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
-                  {location.isPrimary ? " (primary)" : ""}
+                  {location.isPrimary
+                    ? t("settings.locations.providerHours.primary", " (primary)")
+                    : ""}
                 </option>
               ))}
             </select>
@@ -152,12 +197,17 @@ export function ProviderHours() {
 
       {!selectedLocation ? (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-          Add an active clinic location before setting provider hours.
+          {t(
+            "settings.locations.providerHours.noLocation",
+            "Add an active clinic location before setting provider hours.",
+          )}
         </div>
       ) : providers.length === 0 ? (
         <div className="rounded-md bg-muted/50 p-4 text-sm text-muted-foreground">
-          Mark at least one active staff member as a veterinarian provider to
-          configure appointment coverage.
+          {t(
+            "settings.locations.providerHours.noProviders",
+            "Mark at least one active staff member as a veterinarian provider to configure appointment coverage.",
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -182,21 +232,41 @@ export function ProviderHours() {
                     <p className="text-sm font-medium">{provider.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {windows.length === 0
-                        ? `No hours set at ${selectedLocation.name}`
-                        : `${dayCount} day${dayCount === 1 ? "" : "s"} · ${windows.length} working window${windows.length === 1 ? "" : "s"}`}
+                        ? t(
+                            "settings.locations.providerHours.noHoursAt",
+                            "No hours set at {location}",
+                            { location: selectedLocation.name },
+                          )
+                        : t(
+                            dayCount === 1 && windows.length === 1
+                              ? "settings.locations.providerHours.summary.one"
+                              : dayCount <= 4
+                                ? "settings.locations.providerHours.summary.few"
+                                : "settings.locations.providerHours.summary.other",
+                            `${dayCount} day${dayCount === 1 ? "" : "s"} · ${windows.length} working window${windows.length === 1 ? "" : "s"}`,
+                            { days: dayCount, windows: windows.length },
+                          )}
                     </p>
                     {homeLocation ? (
                       <p className="text-xs text-muted-foreground">
-                        Home base: {homeLocation.name}
+                        {t(
+                          "settings.locations.providerHours.homeBase",
+                          "Home base: {location}",
+                          { location: homeLocation.name },
+                        )}
                       </p>
                     ) : null}
                     {provider.unspecifiedWindowCount > 0 ? (
                       <p className="text-xs text-amber-700">
-                        {provider.unspecifiedWindowCount} legacy practice-wide
-                        working{" "}
-                        {provider.unspecifiedWindowCount === 1
-                          ? "window"
-                          : "windows"}
+                        {t(
+                          provider.unspecifiedWindowCount === 1
+                            ? "settings.locations.providerHours.legacyWindows.one"
+                            : provider.unspecifiedWindowCount <= 4
+                              ? "settings.locations.providerHours.legacyWindows.few"
+                              : "settings.locations.providerHours.legacyWindows.other",
+                          `${provider.unspecifiedWindowCount} legacy practice-wide working window${provider.unspecifiedWindowCount === 1 ? "" : "s"}`,
+                          { count: provider.unspecifiedWindowCount },
+                        )}
                       </p>
                     ) : null}
                   </div>
@@ -215,7 +285,15 @@ export function ProviderHours() {
                       setDraft(windows.map((window) => ({ ...window })));
                     }}
                   >
-                    {editing ? "Close editor" : "Set hours"}
+                    {editing
+                      ? t(
+                          "settings.locations.providerHours.closeEditor",
+                          "Close editor",
+                        )
+                      : t(
+                          "settings.locations.providerHours.setHours",
+                          "Set hours",
+                        )}
                   </Button>
                 </div>
 
@@ -227,19 +305,31 @@ export function ProviderHours() {
                         variant="outline"
                         onClick={() => setDraft(weekdayPreset())}
                       >
-                        Use Mon–Fri, 8–6
+                        {t(
+                          "settings.locations.providerHours.presetWeekdays",
+                          "Use Mon–Fri, 8–6",
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => setDraft([])}
                       >
-                        Mark all closed
+                        {t(
+                          "settings.locations.providerHours.markAllClosed",
+                          "Mark all closed",
+                        )}
                       </Button>
                     </div>
 
                     <div className="space-y-2">
-                      {DAYS.map((dayName, dayOfWeek) => {
+                      {DAYS.map((_, dayOfWeek) => {
+                        const dayKey = DAY_KEYS[dayOfWeek] ?? "sunday";
+                        const dayFallback = DAYS[dayOfWeek] ?? "Sunday";
+                        const dayName = t(
+                          `settings.locations.providerHours.daysFull.${dayKey}`,
+                          dayFallback,
+                        );
                         const windows = draft
                           .map((window, index) => ({ window, index }))
                           .filter(
@@ -250,7 +340,7 @@ export function ProviderHours() {
                           );
                         return (
                           <div
-                            key={dayName}
+                            key={dayOfWeek}
                             className="grid gap-2 rounded-md bg-muted/30 p-2 sm:grid-cols-[7rem_1fr]"
                           >
                             <div className="flex items-center justify-between gap-2">
@@ -259,7 +349,10 @@ export function ProviderHours() {
                               </span>
                               {windows.length === 0 ? (
                                 <span className="text-xs text-muted-foreground">
-                                  Closed
+                                  {t(
+                                    "settings.locations.providerHours.closed",
+                                    "Closed",
+                                  )}
                                 </span>
                               ) : null}
                             </div>
@@ -270,7 +363,11 @@ export function ProviderHours() {
                                   className="flex items-center gap-2"
                                 >
                                   <Input
-                                    aria-label={`${dayName} start time`}
+                                    aria-label={t(
+                                      "settings.locations.providerHours.startAria",
+                                      "{day} start time",
+                                      { day: dayName },
+                                    )}
                                     className="h-8 w-32"
                                     type="time"
                                     value={window.startTime}
@@ -289,10 +386,17 @@ export function ProviderHours() {
                                     }
                                   />
                                   <span className="text-xs text-muted-foreground">
-                                    to
+                                    {t(
+                                      "settings.locations.providerHours.to",
+                                      "to",
+                                    )}
                                   </span>
                                   <Input
-                                    aria-label={`${dayName} end time`}
+                                    aria-label={t(
+                                      "settings.locations.providerHours.endAria",
+                                      "{day} end time",
+                                      { day: dayName },
+                                    )}
                                     className="h-8 w-32"
                                     type="time"
                                     value={window.endTime}
@@ -311,7 +415,11 @@ export function ProviderHours() {
                                     }
                                   />
                                   <Button
-                                    aria-label={`Remove ${dayName} working window`}
+                                    aria-label={t(
+                                      "settings.locations.providerHours.removeAria",
+                                      "Remove {day} working window",
+                                      { day: dayName },
+                                    )}
                                     size="sm"
                                     variant="ghost"
                                     onClick={() =>
@@ -349,7 +457,10 @@ export function ProviderHours() {
                                   }
                                 >
                                   <Plus className="mr-1 h-3.5 w-3.5" />
-                                  Add window
+                                  {t(
+                                    "settings.locations.providerHours.addWindow",
+                                    "Add window",
+                                  )}
                                 </Button>
                               ) : null}
                             </div>
@@ -383,7 +494,10 @@ export function ProviderHours() {
                         {save.isPending ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : null}
-                        Save provider hours
+                        {t(
+                          "settings.locations.providerHours.saveHours",
+                          "Save provider hours",
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -394,7 +508,10 @@ export function ProviderHours() {
                           setEditingRevision(null);
                         }}
                       >
-                        Cancel
+                        {t(
+                          "settings.locations.providerHours.cancel",
+                          "Cancel",
+                        )}
                       </Button>
                     </div>
                   </div>

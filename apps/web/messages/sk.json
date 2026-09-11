@@ -5245,7 +5245,9 @@
       "notFound": "Demo nahrávka nebola nájdená",
       "loadError": "Nepodarilo sa načítať demo audio",
       "loaded": "Demo nahrávka bola načítaná",
-      "failed": "Načítanie demo nahrávky zlyhalo"
+      "failed": "Načítanie demo nahrávky zlyhalo",
+      "defaultPatientName": "Bono",
+      "defaultClientName": "Majiteľ"
     },
     "history": {
       "title": "História hlasových diktovaní",
@@ -5371,7 +5373,17 @@
       "presetApplied": "Šablóna „{name}“ aplikovaná",
       "copied": "Nález skopírovaný do schránky",
       "popupBlocked": "Vyskakovacie okno bolo zablokované",
-      "loadedToPreview": "Analýza načítaná do náhľadu"
+      "loadedToPreview": "Analýza načítaná do náhľadu",
+      "fileMissing": "Snímok nie je pripravený na analýzu"
+    },
+    "validation": {
+      "selectPatient": "Najprv vyberte pacienta pre vyšetrenie",
+      "selectImage": "Vyberte rádiologickú snímku na analýzu"
+    },
+    "demo": {
+      "button": "Načítať demo RTG snímok",
+      "loaded": "Ukážkový RTG snímok (Thorax - Pes Bono) bol načítaný",
+      "failed": "Nepodarilo sa načítať ukážkový snímok"
     },
     "history": {
       "title": "História vyšetrení snímkov",

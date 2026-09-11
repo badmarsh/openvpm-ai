@@ -160,7 +160,7 @@ describe("Imaging router", () => {
         }),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
-        message: "Súbor sa nenašiel",
+        message: "File not found",
       });
 
       expect(insertValues).not.toHaveBeenCalled();
@@ -346,13 +346,13 @@ describe("Imaging router", () => {
         }),
       ).rejects.toMatchObject({
         code: "INTERNAL_SERVER_ERROR",
-        message: expect.stringContaining("Obraz sa v úložisku nenašiel"),
+        message: expect.stringContaining("Image not found in object storage"),
       });
 
       expect(updateSet).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "FAILED",
-          errorMessage: "Obraz sa v úložisku nenašiel",
+          errorMessage: "Image not found in object storage",
         }),
       );
     });
@@ -484,7 +484,7 @@ describe("Imaging router", () => {
         }),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
-        message: "Analýza sa nenašla",
+        message: "Analysis not found",
       });
     });
 
