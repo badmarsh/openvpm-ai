@@ -25,7 +25,13 @@ import {
   FlaskConical,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogOut,
+  Stethoscope,
+  Tv,
+  MessageSquare,
+  Building2,
+  Archive,
 } from "lucide-react";
 import { PawMark } from "@/components/brand/paw-mark";
 import {
@@ -71,40 +77,27 @@ interface NavSection {
   items: NavItem[];
 }
 
-// ── Vanilla nav items grouped into sections ───────────────────
+const overviewItem: NavItem = {
+  href: "/",
+  label: "Prehľad",
+  i18nKey: "nav.dashboard",
+  icon: LayoutDashboard,
+  roles: allRoles,
+  exact: true,
+};
+
+// ── 5 Clustered Sections ──────────────────────────────────────
 const vanillaSections: NavSection[] = [
   {
     id: "clinical",
-    titleKey: "nav.sectionClinical",
-    titleFallback: "Klinická Prax",
+    titleKey: "nav.sectionClinicalPatients",
+    titleFallback: "Klinika & Pacienti",
     items: [
-      {
-        href: "/",
-        label: "Prehľad",
-        i18nKey: "nav.dashboard",
-        icon: LayoutDashboard,
-        roles: allRoles,
-        exact: true,
-      },
       {
         href: "/patients",
         label: "Pacienti",
         i18nKey: "nav.patients",
         icon: PawPrint,
-        roles: allRoles,
-      },
-      {
-        href: "/clients",
-        label: "Klienti",
-        i18nKey: "nav.clients",
-        icon: Users,
-        roles: allRoles,
-      },
-      {
-        href: "/schedule",
-        label: "Rozvrh",
-        i18nKey: "nav.schedule",
-        icon: Calendar,
         roles: allRoles,
       },
       {
@@ -115,6 +108,13 @@ const vanillaSections: NavSection[] = [
         roles: allRoles,
       },
       {
+        href: "/encounters",
+        label: "Vyšetrenia",
+        i18nKey: "nav.encounters",
+        icon: Stethoscope,
+        roles: allRoles,
+      },
+      {
         href: "/lab-results",
         label: "Laboratórium",
         i18nKey: "nav.labResults",
@@ -122,18 +122,10 @@ const vanillaSections: NavSection[] = [
         roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
       },
       {
-        href: "/billing",
-        label: "Fakturácia",
-        i18nKey: "nav.billing",
-        icon: Receipt,
-        roles: allRoles,
-        exact: true,
-      },
-      {
-        href: "/inventory",
-        label: "Sklad",
-        i18nKey: "nav.inventory",
-        icon: Package,
+        href: "/care-reminders",
+        label: "Zdravotné pripomienky",
+        i18nKey: "nav.careReminders",
+        icon: BellRing,
         roles: allRoles,
       },
       {
@@ -143,42 +135,27 @@ const vanillaSections: NavSection[] = [
         icon: Syringe,
         roles: ["admin", "veterinarian", "front_desk"],
       },
+    ],
+  },
+  {
+    id: "frontDesk",
+    titleKey: "nav.sectionFrontDeskFlow",
+    titleFallback: "Recepcia & Tok",
+    items: [
       {
-        href: "/care-reminders",
-        label: "Zdravotné pripomienky",
-        i18nKey: "nav.careReminders",
-        icon: BellRing,
+        href: "/schedule",
+        label: "Rozvrh",
+        i18nKey: "nav.schedule",
+        icon: Calendar,
         roles: allRoles,
       },
-    ],
-  },
-  {
-    id: "marketing",
-    titleKey: "nav.sectionMarketing",
-    titleFallback: "Marketing Studio",
-    items: [], // populated from customNavItems
-  },
-  {
-    id: "ai",
-    titleKey: "nav.sectionAi",
-    titleFallback: "AI Veterinary",
-    items: [
       {
-        href: "/agent",
-        label: "Agent",
-        i18nKey: "nav.agent",
-        icon: Bot,
-        roles: ["admin", "veterinarian"],
-        badge: "AI",
-        exact: true,
+        href: "/waiting-room",
+        label: "Čakáreň",
+        i18nKey: "nav.waitingRoom",
+        icon: Tv,
+        roles: allRoles,
       },
-    ],
-  },
-  {
-    id: "settings",
-    titleKey: "nav.sectionSettings",
-    titleFallback: "Správa Kliniky",
-    items: [
       {
         href: "/whiteboard",
         label: "Prevádzková tabuľa",
@@ -187,11 +164,54 @@ const vanillaSections: NavSection[] = [
         roles: allRoles,
       },
       {
+        href: "/clients",
+        label: "Klienti",
+        i18nKey: "nav.clients",
+        icon: Users,
+        roles: allRoles,
+      },
+      {
+        href: "/inbox",
+        label: "Správy",
+        i18nKey: "nav.inbox",
+        icon: MessageSquare,
+        roles: ["admin", "veterinarian", "technician", "front_desk"],
+      },
+    ],
+  },
+  {
+    id: "pharmacy",
+    titleKey: "nav.sectionPharmacyInventory",
+    titleFallback: "Lekáreň & Sklad",
+    items: [
+      {
+        href: "/inventory",
+        label: "Sklad",
+        i18nKey: "nav.inventory",
+        icon: Package,
+        roles: allRoles,
+      },
+      {
         href: "/controlled-substances",
         label: "Omamné látky",
         i18nKey: "nav.controlledSubstances",
         icon: ShieldAlert,
         roles: ["admin", "veterinarian"],
+      },
+    ],
+  },
+  {
+    id: "billing",
+    titleKey: "nav.sectionStatutoryBilling",
+    titleFallback: "Účtovníctvo & Predpisy",
+    items: [
+      {
+        href: "/billing",
+        label: "Fakturácia",
+        i18nKey: "nav.billing",
+        icon: Receipt,
+        roles: allRoles,
+        exact: true,
       },
       {
         href: "/statutory",
@@ -207,12 +227,42 @@ const vanillaSections: NavSection[] = [
         icon: BarChart3,
         roles: ["admin", "veterinarian"],
       },
+    ],
+  },
+  {
+    id: "admin",
+    titleKey: "nav.sectionManagementAdmin",
+    titleFallback: "Správa & Manažment",
+    items: [
+      {
+        href: "/admin",
+        label: "Platform Admin",
+        i18nKey: "nav.admin",
+        icon: Building2,
+        roles: ["admin"],
+      },
       {
         href: "/settings",
         label: "Nastavenia",
         i18nKey: "nav.settings",
         icon: Settings,
         roles: ["admin"],
+      },
+      {
+        href: "/migration-archive",
+        label: "Archív migrácie",
+        i18nKey: "nav.migrationArchive",
+        icon: Archive,
+        roles: ["admin"],
+      },
+      {
+        href: "/agent",
+        label: "Agent",
+        i18nKey: "nav.agent",
+        icon: Bot,
+        roles: ["admin", "veterinarian"],
+        badge: "AI",
+        exact: true,
       },
     ],
   },
@@ -233,12 +283,20 @@ export function Sidebar({
 }: SidebarProps = {}) {
   const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const role = isUserRole(session?.user?.role) ? session.user.role : undefined;
   const { data: branding } = trpc.settings.getBranding.useQuery();
   const isCollapsed = collapsible && collapsed;
   const canShowNav = status === "authenticated" && role !== undefined;
+
+  const toggleSection = (id: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   // Merge customNavItems into their declared sections
   const sections: NavSection[] = vanillaSections.map((section) => {
@@ -298,10 +356,45 @@ export function Sidebar({
 
       {/* Navigation Sections */}
       <nav
-        className="flex-1 overflow-y-auto px-2 py-3 space-y-5 custom-scrollbar"
+        className="flex-1 overflow-y-auto px-2 py-3 space-y-4 custom-scrollbar"
         role="navigation"
         aria-label="Main navigation"
       >
+        {canShowNav && (
+          <div className="space-y-1">
+            <Link
+              href={overviewItem.href}
+              prefetch={false}
+              data-tour={`nav-${overviewItem.href}`}
+              aria-current={pathname === "/" ? "page" : undefined}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                pathname === "/"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              <span className="relative shrink-0">
+                <overviewItem.icon
+                  className={cn(
+                    "h-4 w-4",
+                    pathname === "/"
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground",
+                  )}
+                />
+              </span>
+              {!isCollapsed && (
+                <span className="truncate flex-1 text-left">
+                  {t(overviewItem.i18nKey!, overviewItem.label)}
+                </span>
+              )}
+            </Link>
+            <div className="my-2 border-t border-border/50 mx-2" />
+          </div>
+        )}
+
         {canShowNav &&
           sections.map((section, idx) => {
             const visibleItems = section.items.filter((item) =>
@@ -309,78 +402,89 @@ export function Sidebar({
             );
             if (visibleItems.length === 0) return null;
 
+            const isSectionCollapsed = Boolean(collapsedSections[section.id]);
+
             return (
               <div key={section.id} className="space-y-1">
                 {!isCollapsed && (
-                  <div className={cn(
-                    "px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70"
-                  )}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.id)}
+                    className="flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer group"
+                  >
                     <span>{t(section.titleKey, section.titleFallback)}</span>
-                  </div>
+                    {isSectionCollapsed ? (
+                      <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                    )}
+                  </button>
                 )}
                 {isCollapsed && idx > 0 && (
                   <div className="my-2 border-t border-border/50 mx-2" />
                 )}
 
-                <ul className="space-y-0.5">
-                  {visibleItems.map((item) => {
-                    const isActive = item.exact
-                      ? pathname === item.href
-                      : pathname === item.href ||
-                        (item.href !== "/" &&
-                          pathname.startsWith(item.href));
+                {(!isSectionCollapsed || isCollapsed) && (
+                  <ul className="space-y-0.5">
+                    {visibleItems.map((item) => {
+                      const isActive = item.exact
+                        ? pathname === item.href
+                        : pathname === item.href ||
+                          (item.href !== "/" &&
+                            pathname.startsWith(item.href));
 
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          prefetch={false}
-                          data-tour={`nav-${item.href}`}
-                          aria-current={isActive ? "page" : undefined}
-                          onClick={onNavigate}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                            isActive
-                              ? "bg-primary text-primary-foreground shadow-xs font-bold"
-                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                          )}
-                        >
-                          <span className="relative shrink-0">
-                            <item.icon
-                              className={cn(
-                                "h-4 w-4",
-                                isActive
-                                  ? "text-primary-foreground"
-                                  : "text-muted-foreground",
-                              )}
-                            />
-                          </span>
-
-                          {!isCollapsed && (
-                            <span className="truncate flex-1 text-left">
-                              {item.i18nKey
-                                ? t(item.i18nKey, item.label)
-                                : item.label}
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            prefetch={false}
+                            data-tour={`nav-${item.href}`}
+                            aria-current={isActive ? "page" : undefined}
+                            onClick={onNavigate}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                              isActive
+                                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                            )}
+                          >
+                            <span className="relative shrink-0">
+                              <item.icon
+                                className={cn(
+                                  "h-4 w-4",
+                                  isActive
+                                    ? "text-primary-foreground"
+                                    : "text-muted-foreground",
+                                )}
+                              />
                             </span>
-                          )}
 
-                          {!isCollapsed && item.badge && (
-                            <span
-                              className={cn(
-                                "ml-auto rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-wider",
-                                isActive
-                                  ? "bg-white/25 text-white"
-                                  : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-                              )}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
+                            {!isCollapsed && (
+                              <span className="truncate flex-1 text-left">
+                                {item.i18nKey
+                                  ? t(item.i18nKey, item.label)
+                                  : item.label}
+                              </span>
+                            )}
+
+                            {!isCollapsed && item.badge && (
+                              <span
+                                className={cn(
+                                  "ml-auto rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-wider",
+                                  isActive
+                                    ? "bg-white/25 text-white"
+                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+                                )}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             );
           })}

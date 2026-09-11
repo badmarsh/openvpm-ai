@@ -463,8 +463,11 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       },
     ],
     tips: [
-      "Systém automaticky blokuje marketingové kampane pre klientov zosnulých pacientov.",
-      "Brand Kit obsahuje vaše logo a farby – použije sa pri všetkých komunikáciách.",
+      "Systém automaticky blokuje marketingové kampane pre klientov zosnulých pacientov – Sympathy Gate je vždy aktívny.",
+      "Brand Kit obsahuje vaše logo a farby – aplikuje sa automaticky na všetky komunikácie, letáky a web ambulancie.",
+      "Začnite s tromi kľúčovými automatizáciami – potvrdenie termínu, poďakovanie po vizite a upomienka vakcinácie.",
+      "Wellness plány sú najúčinnejším nástrojom pre zvýšenie celoročnej hodnoty klienta a retencie.",
+      "Recenzie oslovujte do 3 hodín po vizite – konverzný kurz je v ten moment najvyšší.",
     ],
   },
 
@@ -739,6 +742,558 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       "Ctrl+K otvorí globálne vyhľadávanie – rýchly prístup k pacientovi, klientovi alebo záznamu.",
     ],
   },
+
+  "/marketing/handouts": {
+    title: "Letáky a edukačné materiály",
+    intro:
+      "Modul Letáky umožňuje vytvárať profesionálne edukačné materiály a marketingové letáky pomocou AI generátora prispôsobeného veterinárnej praxi. Každý leták je možné personalizovať podľa druhu zvierat, témy kampane a vizuálnej identity ambulancie definovanej v Brand Kite. Hotové materiály možno vytlačiť, stiahnuť ako PDF alebo zdieľať cez automaticky generovaný QR kód priamo z aplikácie. Efektívne edukačné letáky zvyšujú záujem klientov o preventívnu starostlivosť a posilňujú lojalitu.",
+    steps: [
+      {
+        icon: "➕",
+        title: "Vytvoriť nový leták",
+        description:
+          "Kliknite na tlačidlo Nový leták a zadajte názov, tému a cieľovú skupinu – napr. psy, mačky alebo hospodárske zvieratá. Vyberte šablónu alebo nechajte AI vybrať najvhodnejšiu pre danú tému.",
+      },
+      {
+        icon: "🤖",
+        title: "AI generátor obsahu",
+        description:
+          "Kliknite na Generovať obsah – AI vytvorí profesionálny text letáku vrátane nadpisu, hlavného textu a výzvy k akcii. Text môžete ľubovoľne upraviť, doplniť o špecifické informácie ambulancie alebo lokálne kontaktné údaje.",
+      },
+      {
+        icon: "🖼️",
+        title: "Upraviť vizuálny dizajn",
+        description:
+          "V editore zmeňte farby, písma a obrázky podľa Brand Kitu vašej ambulancie. Leták automaticky prevezme logo a korporátne farby nastavené v sekcii Brand Kit pre jednotný profesionálny vzhľad.",
+      },
+      {
+        icon: "🔒",
+        title: "Nastaviť viditeľnosť",
+        description:
+          "Prepínač Verejný alebo Súkromný určuje, či bude leták dostupný na verejnom webe ambulancie alebo len interne pre personál. Verejné letáky sa automaticky zobrazia na webe ambulancie.",
+      },
+      {
+        icon: "📱",
+        title: "QR kód a zdieľanie",
+        description:
+          "Každý leták automaticky generuje unikátny QR kód, ktorý možno vytlačiť na papierový plagát, zobraziť na TV displeji v čakárni alebo vložiť do e-mailových kampaní. QR kód otvorí online verziu materiálu.",
+      },
+      {
+        icon: "🖨️",
+        title: "Tlač a export",
+        description:
+          "Tlačidlo Vytlačiť otvorí optimalizovaný PDF náhľad pre tlač na formáte A4 s farebnými profilmi pre profesionálnu tlačiareň. Môžete tiež exportovať do PDF alebo PNG pre digitálne použitie na sociálnych sieťach.",
+      },
+    ],
+    tips: [
+      "Letáky vytvorené s filtrom druhu zvieraťa sa zobrazujú len relevantným klientom pri personalizovanej komunikácii.",
+      "Brand Kit zabezpečuje jednotný vizuál – logo a farby sa aplikujú automaticky na všetky nové letáky bez manuálneho nastavenia.",
+      "Archív letákov uchováva všetky verzie – môžete sa vrátiť k staršiemu dizajnu alebo ho reaktivovať kedykoľvek.",
+      "QR kódy letákov možno použiť priamo na tlačovinách, plagátoch v čakárni aj v e-mailových kampaniach.",
+      "AI generátor podporuje slovenský aj anglický jazyk – obsah môžete vygenerovať pre medzinárodných klientov.",
+    ],
+  },
+
+  "/marketing/brand-kit": {
+    title: "Brand Kit – identita ambulancie",
+    intro:
+      "Brand Kit je centrálne úložisko vizuálnej identity vašej veterinárnej ambulancie – logo, farby, písma a kontaktné údaje. Všetky marketingové materiály, letáky, e-maily a web automaticky čerpajú z Brand Kitu, čo zaistuje jednotný a profesionálny vzhľad bez manuálneho nastavovania. Správne nastavený Brand Kit zvyšuje dôveru klientov a posilňuje rozpoznateľnosť ambulancie v lokálnom prostredí. Nastavenie je jednorazové a automaticky sa aplikuje na celý systém.",
+    steps: [
+      {
+        icon: "🖼️",
+        title: "Nahrať logo",
+        description:
+          "Kliknite na Zmeniť logo a nahrajte SVG alebo PNG súbor s transparentným pozadím. Odporúčané minimálne rozlíšenie je 512x512 px pre ostré zobrazenie na všetkých zariadeniach vrátane Retina displejov.",
+      },
+      {
+        icon: "🎨",
+        title: "Nastaviť firemné farby",
+        description:
+          "Zadajte primárnu a sekundárnu farbu ambulancie ako HEX kód alebo vyberte z farebného kolieska. Farby sa použijú na letákoch, e-mailoch, webe ambulancie a na TV displeji v čakárni.",
+      },
+      {
+        icon: "✏️",
+        title: "Vybrať písma",
+        description:
+          "Vyberte písmové rodiny pre nadpisy a telo textu zo zoznamu dostupných Google Fonts. Konzistentné písma pôsobia profesionálnejšie a zlepšujú čitateľnosť na rôznych zariadeniach a veľkostiach obrazoviek.",
+      },
+      {
+        icon: "📋",
+        title: "Vyplniť kontaktné údaje",
+        description:
+          "Zadajte názov ambulancie, adresu, telefón, e-mail a webovú stránku. Tieto údaje sa automaticky vkladajú do päty letákov, e-mailov a kontaktnej stránky webu bez nutnosti opakovaného zadávania.",
+      },
+      {
+        icon: "👁️",
+        title: "Zobraziť náhľad",
+        description:
+          "Tlačidlo Zobraziť náhľad ukazuje, ako bude Brand Kit vyzerať na letáku, e-maile a webe ambulancie. Skontrolujte kontrast farieb pre čitateľnosť textu – odporúčame minimálne WCAG AA štandard.",
+      },
+    ],
+    tips: [
+      "SVG formát loga zaistuje ostré zobrazenie pri akomkoľvek rozlíšení a zoomu – preferujte ho pred PNG.",
+      "Použite farby s dostatočným kontrastom pre čitateľnosť textu – vstavaný test kontrastu vám pomôže.",
+      "Zmena Brand Kitu sa prejaví v nových materiáloch – existujúce publikované letáky si zachovajú starý dizajn.",
+      "Firemná paleta môže obsahovať až 5 doplnkových farieb pre rôzne typy komunikácie a kanálov.",
+    ],
+  },
+
+  "/marketing/reviews": {
+    title: "Recenzie – správa hodnotení",
+    intro:
+      "Modul Recenzie automatizuje zber spätnej väzby od spokojných klientov a generuje žiadosti o hodnotenie na Google alebo iných platformách v správnom čase po vizite. Pozitívne recenzie sú kľúčové pre potenciálnych klientov, ktorí vyberajú veterinára online – väčšina z nich číta recenzie pred prvou návštevou. Systém inteligentne oslovuje len klientov po úspešnej vizite a automaticky blokuje oslovovanie pri zosnulých pacientoch alebo klientoch, ktorí odvolali súhlas. Pravidelný monitoring hodnotení pomáha včas identifikovať problémy v kvalite služieb.",
+    steps: [
+      {
+        icon: "⚙️",
+        title: "Nakonfigurovať kampaň",
+        description:
+          "V nastaveniach recenzií zadajte odkaz na váš Google Business profil alebo Facebook stránku. Nastavte časový odstup po vizite, po ktorom sa odošle žiadosť – odporúčame 2 až 4 hodiny po ukončení vizity.",
+      },
+      {
+        icon: "📝",
+        title: "Upraviť šablónu správy",
+        description:
+          "Personalizujte text SMS alebo e-mailu so žiadosťou o recenziu. Použite premenné ako meno klienta a meno pacienta pre osobnejší dojem – personalizácia výrazne zvyšuje klikanosť a mieru odpovede.",
+      },
+      {
+        icon: "🚀",
+        title: "Aktivovať automatizáciu",
+        description:
+          "Prepnite prepínač Automatická kampaň do polohy Zapnuté. Systém bude od tej chvíle automaticky oslovovať klientov po každej ukončenej vizite bez nutnosti manuálneho zásahu personálu.",
+      },
+      {
+        icon: "📊",
+        title: "Sledovať štatistiky",
+        description:
+          "Záložka Štatistiky zobrazuje počet odoslaných žiadostí, mieru otvorenia, kliknutí a nových recenzií v časovom rozlíšení. Tieto dáta pomáhajú optimalizovať načasovanie a znenie správy pre vyšší dosah.",
+      },
+      {
+        icon: "🔕",
+        title: "Spravovať výnimky",
+        description:
+          "Klientom, ktorí nechcú dostávať žiadosti, nastavte príznak Nepožadovať o recenziu v ich karte. Systém ich automaticky vylúči zo všetkých budúcich kampaní so žiadosťami o hodnotenie.",
+      },
+    ],
+    tips: [
+      "Najvyššia miera odpovede je pri oslovení do 3 hodín po vizite – klient má ešte živé dojmy zo skúsenosti.",
+      "Personalizované správy s menom klienta a pacienta dosahujú výrazne vyššiu mieru kliknutí.",
+      "Systém automaticky blokuje žiadosti pre klientov so zosnulým pacientom – empatická ochrana je vždy aktívna.",
+      "Negatívne hodnotenia monitorujte v reálnom čase a rýchlo reagujte verejnou odpoveďou cez sekciu Inbox.",
+      "Prepojte viaceré platformy – Google aj Facebook – pre širší záber spätnej väzby od klientov.",
+    ],
+  },
+
+  "/marketing/messages": {
+    title: "Správy – SMS a e-mailová fronta",
+    intro:
+      "Modul Správy poskytuje centrálny prehľad a správu všetkých odoslaných aj čakajúcich SMS a e-mailových správ smerujúcich ku klientom vašej ambulancie. Fronta zobrazuje stav doručenia v reálnom čase – odoslané, doručené, neúspešné a čakajúce správy s plnou históriou pokusov. Manuálne správy z tohto modulu dopĺňajú automatické kampane z modulu Automatizácie pre úplný obraz komunikácie. Kompletná história komunikácie je pre každého klienta dostupná priamo v jeho karte.",
+    steps: [
+      {
+        icon: "📨",
+        title: "Zobraziť frontu",
+        description:
+          "Hlavná tabuľka zobrazuje všetky správy s ich aktuálnym stavom – zelená pre doručené, červená pre chybu, oranžová pre čakajúce. Filtrujte podľa dátumu, kanálu alebo konkrétneho klienta.",
+      },
+      {
+        icon: "✉️",
+        title: "Manuálna správa",
+        description:
+          "Kliknite na Nová správa, vyberte klienta a zadajte text. Vyberte kanál – SMS cez Telnyx alebo e-mail cez Resend – a potvrďte odoslanie. Správa sa zaradí do fronty a okamžite odošle.",
+      },
+      {
+        icon: "🔁",
+        title: "Znovu odoslať",
+        description:
+          "Pri správach so stavom Neúspešné kliknite na ikonu obnovenia – systém znovu odošle správu a zaznamená pokus do auditného denníka s presnou časovou pečiatkou.",
+      },
+      {
+        icon: "📊",
+        title: "Štatistiky doručiteľnosti",
+        description:
+          "Záložka Štatistiky ukazuje celkovú mieru doručiteľnosti SMS a e-mailov zvlásť a trend v čase. Pomáha identifikovať problémy s SMS bránami alebo neplatnými e-mailovými adresami v databáze.",
+      },
+      {
+        icon: "📋",
+        title: "Export komunikácie",
+        description:
+          "Celú komunikáciu s klientom môžete exportovať do PDF alebo CSV – užitočné pre auditné účely, právne spory alebo odovzdanie spisu pri zmene veterinára.",
+      },
+    ],
+    tips: [
+      "SMS sa doručia spoľahlivejšie ako e-mail – použite SMS pre urgentné oznámenia a blízkodobé pripomienky.",
+      "E-mail odporúčame pre dlhšie edukačné správy, faktúry a letáky s prílohami.",
+      "Nastavte fallback – ak SMS zlyhá, systém automaticky prepne na e-mail pre maximálnu doručiteľnosť.",
+      "Zlyhané správy staršie ako 48 hodín sú automaticky označené na preskúmanie personálom.",
+      "Pravidelne filtrujte Neúspešné správy a aktualizujte telefónne čísla klientov.",
+    ],
+  },
+
+  "/marketing/automations": {
+    title: "Automatizácie – triggery a workflow",
+    intro:
+      "Modul Automatizácie umožňuje nastaviť pravidlá, ktoré automaticky odosielajú správy klientom na základe udalostí v systéme – potvrdenie termínu, ukončenie vizity, blížiaca sa expirácia vakcíny alebo narodeniny pacienta. Automatizácie šetria čas personálu a zaistujú konzistentnú komunikáciu bez potreby manuálneho sledovania stoviek klientov. Každé pravidlo možno plne personalizovať a obmedziť na špecifické druhy zvierat, vek pacienta alebo typ vizity. Auditný záznam zaznamenáva každé spustenie automatizácie pre úplnú sledovateľnosť.",
+    steps: [
+      {
+        icon: "➕",
+        title: "Vytvoriť novú automatizáciu",
+        description:
+          "Kliknite na Nová automatizácia a vyberte spúšťač – napr. Po ukončení vizity, Pred termínom, Expirácia vakcinácie alebo Narodeniny pacienta. Každý spúšťač má vlastné parametre nastavenia a podmienky.",
+      },
+      {
+        icon: "🎯",
+        title: "Nastaviť podmienky",
+        description:
+          "Pridajte podmienky pre spustenie – napr. len pre psov, len pre klientov bez návštevy za posledných 6 mesiacov alebo len pri určitej diagnóze. Podmienky možno kombinovať logickými operátormi AND a OR.",
+      },
+      {
+        icon: "✉️",
+        title: "Definovať správu",
+        description:
+          "Napíšte text SMS alebo e-mailu a použite premenné pre automatickú personalizáciu. Nastavte časový offset – napr. 2 hodiny po vizite alebo 7 dní pred expiráciou vakcíny.",
+      },
+      {
+        icon: "🔀",
+        title: "Multi-kanálový workflow",
+        description:
+          "Automatizáciu nastavte tak, aby skúsila SMS a pri nedoručení automaticky prešla na e-mail. Týmto sa maximalizuje miera doručenia bez nutnosti manuálneho zásahu personálu.",
+      },
+      {
+        icon: "▶️",
+        title: "Aktivovať a monitorovať",
+        description:
+          "Prepnite automatizáciu do stavu Aktívna. V záložke História vidíte všetky spustenia, stav doručenia a prípadné chyby. Automatizáciu môžete kedykoľvek pozastaviť alebo deaktivovať.",
+      },
+      {
+        icon: "📊",
+        title: "Analýza výkonnosti",
+        description:
+          "Záložka Výkonnosť zobrazuje počet spustení, mieru kliknutí na správy a konverzných klientov, ktorí si následne rezervovali termín. Tieto dáta pomáhajú optimalizovať obsah a načasovanie.",
+      },
+    ],
+    tips: [
+      "Začnite s tromi základnými automatizáciami – potvrdenie termínu, poďakovanie po vizite a expirácia vakcíny.",
+      "Nastavte časový rozostup – neposielajte správy v noci medzi 22:00 a 8:00 pre lepšiu recepciu klientmi.",
+      "Testujte automatizácie na testovacích klientoch pred aktiváciou pre celú databázu.",
+      "Sympathy Gate automaticky blokuje všetky automatizácie pri zosnulom pacientovi – nie je potrebná ručná intervencia.",
+      "Kombinujte automatizácie s osobným follow-up telefonátom pre VIP klientov.",
+      "Pravidelne kontrolujte históriu spustení – pomáha odhaliť chýbajúce telefónne čísla alebo e-maily.",
+    ],
+  },
+
+  "/marketing/consents": {
+    title: "GDPR súhlasy – správa súhlasov",
+    intro:
+      "Modul GDPR Súhlasy centralizuje zber, evidenciu a audit súhlasov klientov so spracúvaním osobných údajov v súlade s nariadením EÚ 2016/679 (GDPR) a zákonom č. 18/2018 Z. z. Každý súhlas je timestampovaný, verzionovaný a neimutabilne uložený v auditnom reťazci pre úplnú právnu ochranu ambulancie. Revokácia súhlasu okamžite blokuje všetky marketingové komunikácie pre daného klienta bez nutnosti manuálneho zásahu. Systém generuje certifikované výpisy súhlasov pre kontrolu Úradom na ochranu osobných údajov SR.",
+    steps: [
+      {
+        icon: "📋",
+        title: "Prehľad súhlasov",
+        description:
+          "Hlavná tabuľka zobrazuje všetkých klientov s ich aktuálnym stavom súhlasov – marketingové oslovovanie, zdieľanie údajov a newslettery. Filtrácia podľa stavu umožňuje rýchlu identifikáciu klientov bez platného súhlasu.",
+      },
+      {
+        icon: "✍️",
+        title: "Zaznamenať nový súhlas",
+        description:
+          "Kliknite na klienta a vyberte Zaznamenať súhlas. Vyberte typ súhlasu a kanál zberu – osobne, e-mail alebo web – a potvrďte. Systém automaticky zaznamená časovú pečiatku a IP adresu pri online zbere.",
+      },
+      {
+        icon: "🚫",
+        title: "Spravovať odvolanie",
+        description:
+          "Klientom, ktorí odvolali súhlas, kliknite na Odvolať súhlas. Všetky aktívne marketingové automatizácie pre tohto klienta sú okamžite pozastavené a odvolanie zaznamenané v auditnom denníku.",
+      },
+      {
+        icon: "📤",
+        title: "Export pre audit",
+        description:
+          "Tlačidlo Exportovať vygeneruje podpísaný PDF alebo CSV výpis všetkých súhlasov klienta. Dokument je použiteľný ako právny doklad pri kontrole ÚOOÚ SR alebo v prípadných právnych sporoch.",
+      },
+      {
+        icon: "🔔",
+        title: "Upozornenie na expiráciu",
+        description:
+          "Súhlasy s obmedzenou platnosťou sú automaticky sledované. Systém upozorní 30 dní pred expiráciou a umožňuje odoslať žiadosť o obnovenie súhlasu automatizovane cez SMS alebo e-mail.",
+      },
+    ],
+    tips: [
+      "Použite QR kód na recepcii pre rýchly digitálny zber súhlasov od klientov počas registrácie.",
+      "Nastavte automatické obnovenie súhlasov e-mailom pred expiráciou – minimalizuje manuálnu prácu.",
+      "Všetky odvolania súhlasov sú neimutabilne zaznamenané – dokladá súlad pri GDPR auditoch.",
+      "Linkujte konkrétnu verziu Zásad ochrany osobných údajov k zaznamenanému súhlasu pre úplný audit trail.",
+      "Pri akomkoľvek spore o súhlas exportujte certifikovaný PDF doklad z tohto modulu ako právny dôkaz.",
+    ],
+  },
+
+  "/marketing/media": {
+    title: "Knižnica médií – AI canvas",
+    intro:
+      "Modul Médiá slúži ako centrálne úložisko pre všetky obrázky, videá, PDF dokumenty a iné mediálne súbory používané vo vašich marketingových materiáloch. AI canvas umožňuje upravovať a generovať obrázky priamo v prehliadači bez nutnosti externých nástrojov ako Photoshop alebo Canva. Súbory sú organizované do priečinkov a tagov pre rýchle dohľadanie aj v rozsiahlej knižnici. Všetky mediálne súbory sú bezpečne uložené v cloudovom úložisku s automatickým zálohovaním.",
+    steps: [
+      {
+        icon: "📁",
+        title: "Organizovať mediálne súbory",
+        description:
+          "Vytvárajte priečinky pre rôzne typy obsahu – logo, fotky tímu, edukačné materiály a kampane. Súbory označte tagmi pre rýchle filtrovanie a vyhľadávanie v rozsiahlej knižnici.",
+      },
+      {
+        icon: "⬆️",
+        title: "Nahrať súbory",
+        description:
+          "Pretiahnutím alebo kliknutím na Nahrať pridajte obrázky vo formátoch JPG, PNG, SVG alebo WebP, PDF dokumenty alebo videoklip. Maximálna veľkosť súboru je 50 MB na jeden súbor.",
+      },
+      {
+        icon: "🎨",
+        title: "AI canvas editor",
+        description:
+          "Kliknite na Upraviť v AI Canvas pre otvorenie vstavaného editora. Môžete odstrániť pozadie, zmeniť farby, pridať text alebo nechať AI vygenerovať varianty obrázka pre rôzne formáty a kanály.",
+      },
+      {
+        icon: "🔗",
+        title: "Použiť v materiáloch",
+        description:
+          "Každý súbor má tlačidlo Kopírovať odkaz alebo Vložiť do letáku. Priame prepojenie s modulom Letáky umožňuje rýchle použitie mediálnych súborov bez opakovaného nahrávania obsahu.",
+      },
+      {
+        icon: "🗑️",
+        title: "Archivovanie a mazanie",
+        description:
+          "Nepoužívané súbory archivujte pre prehľadnosť bez trvalého mazania. Trvalé zmazanie je nevratné – systém vyžaduje potvrdenie a zaznamená akciu v auditnom denníku.",
+      },
+    ],
+    tips: [
+      "SVG a WebP formáty sú optimálne pre web – menšia veľkosť súboru a lepšia kvalita pri všetkých rozlíšeniach.",
+      "AI canvas dokáže automaticky zmeniť rozmer obrázka pre rôzne kanály – Instagram, web, leták.",
+      "Mediálna knižnica je zdieľaná pre celý tím – vytvorte jasné konvencie pomenovania súborov.",
+      "Videá do 2 minút majú najvyššiu mieru doskovedenia v e-mailových kampaniach.",
+      "Pravidelne archivujte zastaralé kampane pre zachovanie prehľadnosti knižnice.",
+    ],
+  },
+
+  "/marketing/plan": {
+    title: "Obsahový plán – editoriálny kalendár",
+    intro:
+      "Modul Obsahový plán poskytuje vizuálny kalendár pre plánovanie a koordináciu všetkých marketingových aktivít vašej ambulancie v predstihu. Tu plánujete kampane, letáky, príspevky na sociálne siete, e-mailové newslettery a iné komunikácie s klientmi. AI asistent môže navrhnúť optimálny harmonogram na základe sezónnych trendov vo veterinárnej starostlivosti – kliešte, vakcinácie, preventívne prehliadky. Tímová spolupráca na pláne je podporovaná v reálnom čase so synchronizáciou zmien.",
+    steps: [
+      {
+        icon: "📅",
+        title: "Zobraziť kalendár",
+        description:
+          "Prepínajte medzi mesačným, týždenným a denným pohľadom. Každá naplánovaná aktivita je farebne odlíšená podľa kanálu – SMS, e-mail, sociálne siete alebo tlačený leták.",
+      },
+      {
+        icon: "➕",
+        title: "Pridať novú aktivitu",
+        description:
+          "Kliknite na dátum v kalendári alebo na Pridať aktivitu. Zadajte typ obsahu, cieľovú skupinu, kanál a deadline pre prípravu obsahu. Aktivitu môžete priamo prepojiť s existujúcim letákom alebo kampaňou.",
+      },
+      {
+        icon: "🤖",
+        title: "AI návrh plánu",
+        description:
+          "Tlačidlo AI navrhnúť plán analyzuje vašich pacientov, sezónu a históriu kampaní a navrhne optimálny mesačný plán. Môžete akceptovať celý návrh alebo upraviť jednotlivé položky podľa vlastných potrieb.",
+      },
+      {
+        icon: "👥",
+        title: "Priradiť zodpovedné osoby",
+        description:
+          "Každú aktivitu môžete priradiť konkrétnemu členovi tímu. Zodpovedná osoba dostane notifikáciu a môže označiť aktivitu ako hotovú priamo z vlastného pohľadu.",
+      },
+      {
+        icon: "📊",
+        title: "Sledovať plnenie",
+        description:
+          "Farebné indikátory ukazujú stav každej aktivity – plánovaná, v príprave, hotová, odoslaná. Progress bar zobrazuje celkové plnenie mesačného plánu pre rýchly prehľad o stave kampane.",
+      },
+    ],
+    tips: [
+      "Plánujte obsah aspoň 2 týždne vopred pre dostatočný čas na prípravu a schválenie materiálov.",
+      "Sezónne kampane – letné výlety, zimná antiparazitika – naplánujte mesiac vopred pre optimálny dosah.",
+      "AI odporúčania zohľadňujú veterinárne sezóny – kliešte, vakcinácie a preventívne prehliadky.",
+      "Exportujte mesačný plán do PDF pre prezentáciu celému tímu na porade.",
+      "Prepojte aktivity v pláne priamo na letáky a kampane – šetrí čas pri realizácii.",
+    ],
+  },
+
+  "/marketing/website": {
+    title: "Web ambulancie – editor stránky",
+    intro:
+      "Modul Web umožňuje priamu editáciu obsahu vašej veterinárnej webovej stránky bez nutnosti programovania alebo kontaktovania webmastera. Zmeny sa prejavujú v reálnom čase na vašej verejnej webovej stránke hneď po uložení bez technickej závisosti. Editor obsahuje správu otváracích hodín, cenníka, tímu veterinárov, aktualít a kontaktných údajov s plnou kontrolou obsahu. SEO nastavenia zabezpečujú, aby noví klienti našli vašu ambulanciu pri hľadaní veterinára v okolí cez Google.",
+    steps: [
+      {
+        icon: "🏠",
+        title: "Upraviť domovskú stránku",
+        description:
+          "Záložka Domov – upravte uvítací text, obrázok hero bannera, kľúčové informácie a tlačidlá výzvy k akcii. Zmeny sa prejavia okamžite po uložení bez technickej závisosti.",
+      },
+      {
+        icon: "⏰",
+        title: "Aktualizovať otváracie hodiny",
+        description:
+          "Záložka Kontakt – Otváracie hodiny. Nastavte pravidelné hodiny pre každý deň týždňa a špeciálne hodiny pre sviatky alebo dovolenku ambulancie. Klienti uvidia vždy aktuálne informácie.",
+      },
+      {
+        icon: "💰",
+        title: "Spravovať cenník",
+        description:
+          "Záložka Cenník zobrazuje verejné ceny výkonov synchronizované s interným cenníkom. Môžete vybrať, ktoré položky sa zobrazia verejne a ktoré zostanú len interné pre personál.",
+      },
+      {
+        icon: "📰",
+        title: "Pridať aktualitu",
+        description:
+          "Záložka Aktuality – Nový príspevok. Napíšte nadpis, text a pridajte obrázok. Aktuality informujú klientov o novinkách, preventívnych kampaniach, zmenách v tíme alebo nových službách.",
+      },
+      {
+        icon: "🔍",
+        title: "SEO nastavenia",
+        description:
+          "Záložka SEO – nastavte meta titulok, meta popis a kľúčové slová pre každú stránku. Správne SEO zabezpečuje, že noví klienti nájdu vašu ambulanciu na prvej strane Google výsledkov.",
+      },
+    ],
+    tips: [
+      "Aktualizujte web pri každej zmene otváracích hodín – neaktuálne informácie frustrujú prichádzajúcich klientov.",
+      "Pridávajte aktuality aspoň raz mesačne – Google uprednostňuje často aktualizované weby vo výsledkoch.",
+      "Použite fotky reálnych zamestnancov a priestorov ambulancie – zvyšujú dôveru potenciálnych klientov.",
+      "SEO meta popis by mal mať 150 až 160 znakov a obsahovať hlavné kľúčové slovo a lokalitu ambulancie.",
+      "Skontrolujte web na mobilnom zariadení pred každou veľkou zmenou – väčšina klientov hľadá na telefóne.",
+    ],
+  },
+
+  "/marketing/tv": {
+    title: "TV displej – čakáreň",
+    intro:
+      "Modul TV Displej umožňuje zobrazovať edukačný a marketingový obsah na TV obrazovke v čakárni ambulancie bez nutnosti inštalácie akéhokoľvek softvéru na TV. Obsah sa riadi priamo z aplikácie a na TV sa zobrazuje cez webovú adresu v prehliadači – žiadna špeciálna krabička ani licencia nie je potrebná. Môžete zobrazovať letáky, aktuality, edukačné videá, otváracie hodiny alebo live čakaciu frontu pacientov. Rotácia obsahu je plne automatizovaná podľa nastaveného harmonogramu pre minimálnu manuálnu obsluhu.",
+    steps: [
+      {
+        icon: "📺",
+        title: "Nastaviť TV displej",
+        description:
+          "Na TV v čakárni otvorte prehliadač a zadajte URL zobrazenú v module TV Displej. Obrazovka sa automaticky spáruje s vaším účtom bez potreby prihlásenia alebo inštalácie aplikácie.",
+      },
+      {
+        icon: "➕",
+        title: "Pridať obsah na rotáciu",
+        description:
+          "Kliknite na Pridať obrazovku a vyberte obsah z knižnice – leták, video, obrázok alebo live widget ako čakacia fronta. Nastavte dobu zobrazenia v sekundách pre každý obsah zvlásť.",
+      },
+      {
+        icon: "⏱️",
+        title: "Nastaviť harmonogram",
+        description:
+          "Definujte časový harmonogram rotácie – iný obsah ráno, poobede a večer. Napríklad preventívne informácie počas rušných hodín a upokojujúci vizuálny obsah pri tichých hodinách čakárne.",
+      },
+      {
+        icon: "📡",
+        title: "Live widgety",
+        description:
+          "Widget Čakacia fronta zobrazuje čakajúcich pacientov v reálnom čase s odhadovaným časom čakania. Widget Aktuality zobrazuje najnovšie príspevky z webu ambulancie automaticky bez manuálnej aktualizácie.",
+      },
+      {
+        icon: "🔄",
+        title: "Vzdialené ovládanie",
+        description:
+          "Obsah na TV môžete meniť vzdialene z počítača alebo telefónu – napríklad pri kampani alebo pri aktualizácii informácií bez nutnosti ísť k TV fyzicky na recepciu.",
+      },
+    ],
+    tips: [
+      "Použite TV Displej na zobrazovanie QR kódov letákov – klienti ich môžu naskenovať priamo v čakárni.",
+      "Rotácia obsahu 15 až 30 sekúnd na slajd je optimálna pre udržanie pozornosti čakajúcich klientov.",
+      "Edukačné videá o preventívnej starostlivosti zvyšujú povedomie a znižujú počet opakujúcich sa otázok personálu.",
+      "Počas sezóny kliešťov alebo iných rizík zobrazujte preventívne informácie pre zvýšenie záujmu o ochranu.",
+      "Widget čakacej fronty znižuje neistotu klientov o čase čakania a zlepšuje zážitok z návštevy.",
+    ],
+  },
+
+  "/marketing/wellness": {
+    title: "Wellness plány – preventívna starostlivosť",
+    intro:
+      "Modul Wellness plány umožňuje vytvárať a spravovať individuálne preventívne plány starostlivosti pre každého pacienta so sledovaním plnenia a automatickými pripomienkami. Plány zahŕňajú vakcinačný harmonogram, antiparazitárnu liečbu, dentálne prehliadky a iné pravidelné úkony prispôsobené druhu a veku zvieraťa. Systém automaticky generuje pripomienky pre klientov pri blížiacich sa termínoch, čím zvyšuje compliance bez ďalšej práce personálu. Wellness plány sú jedným z najúčinnejších nástrojov pre zvýšenie retencie klientov a priemernej hodnoty ročnej návštevy.",
+    steps: [
+      {
+        icon: "📋",
+        title: "Vytvoriť wellness plán",
+        description:
+          "V karte pacienta záložka Wellness plán – Nový plán. Vyberte šablónu podľa druhu a veku zvieraťa alebo vytvorte vlastný plán na mieru. AI navrhne odporúčané úkony na základe profilu a histórie pacienta.",
+      },
+      {
+        icon: "📅",
+        title: "Nastaviť harmonogram",
+        description:
+          "Pre každý úkon v pláne nastavte frekvenciu – ročne, polročne, kvartálne alebo individuálne. Systém automaticky vypočíta najbližšie termíny a zaradí ich do kalendára ambulancie.",
+      },
+      {
+        icon: "🔔",
+        title: "Aktivovať pripomienky",
+        description:
+          "Zapnite automatické pripomienky pre klientov. Systém odošle SMS alebo e-mail 30, 14 a 3 dni pred plánovaným termínom – miera splnenia plánu sa tak výrazne zvyšuje bez manuálneho sledovania.",
+      },
+      {
+        icon: "📊",
+        title: "Sledovať plnenie",
+        description:
+          "Dashboard wellness plánov zobrazuje plnenie pre všetkých pacientov – zelená pre splnené, žltá pre blízky termín, červená pre po termíne. Filtrujte podľa druhu zvieraťa, veku alebo veterinára.",
+      },
+      {
+        icon: "💰",
+        title: "Wellness balíky",
+        description:
+          "Vytvorte predplatné wellness balíky, ktoré si klienti môžu zakúpiť mesačne alebo ročne. Balíky zahŕňajú určité počty návštev a výkonov za výhodné ceny a výrazne zvyšujú lojalitu klientov.",
+      },
+    ],
+    tips: [
+      "Wellness plány sú najúčinnejším nástrojom zvýšenia celoročnej hodnoty klienta a retencie.",
+      "Odporúčajte wellness plán aktívne po každej preventívnej prehliadke – konverzný kurz je v tom momente najvyšší.",
+      "Prispôsobte šablóny plánov pre seniorských pacientov nad 7 rokov s frekventnejším monitoringom zdravia.",
+      "Klienti s wellness plánom navštevujú ambulanciu výrazne častejšie – kľúčový retencný nástroj.",
+      "Exportujte zoznam pacientov so zaostávajúcimi plánmi na aktívnu outreach kampaň cez modul Správy.",
+    ],
+  },
+
+  "/marketing/competitors": {
+    title: "Analýza konkurencie",
+    intro:
+      "Modul Analýza konkurencie poskytuje prehľad o veterinárnych ambulanciách a klinikách v okolí – ich online prítomnosti, hodnoteniach na Google a marketingových aktivitách. Pravidelná analýza pomáha identifikovať príležitosti na diferenciáciu a oblasti, kde môžete zlepšiť svoje služby oproti konkurencii. AI pravidelne aktualizuje dáta z verejných zdrojov – Google Maps, sociálne siete a verejné cenníky – bez manuálneho vyhľadávania. Výstupy analýzy pomáhajú formulovať marketingovú stratégiu ambulancie na základe reálnych trhových dát.",
+    steps: [
+      {
+        icon: "🗺️",
+        title: "Prehľad okolia",
+        description:
+          "Mapa zobrazuje veterinárne ambulancie v nastaviteľnom okruhu – 5, 10 alebo 20 km. Každá ambulancia je zobrazená s hodnotením, počtom recenzií a odhadom veľkosti a špecializácie.",
+      },
+      {
+        icon: "⭐",
+        title: "Porovnanie hodnotení",
+        description:
+          "Tabuľka porovnáva vaše Google hodnotenie s konkurenciou v čase. Vidíte, či sa vaše hodnotenie zlepšuje rýchlejšie alebo pomalšie ako ostatní veterinári v regióne.",
+      },
+      {
+        icon: "📊",
+        title: "Analýza silných a slabých stránok",
+        description:
+          "AI analyzuje recenzie konkurencie a identifikuje časté sťažnosti klientov – dlhé čakanie, ceny, komunikácia. Tieto informácie sú príležitosťou – vyniknite tam, kde konkurencia zaostáva.",
+      },
+      {
+        icon: "📰",
+        title: "Marketing konkurencie",
+        description:
+          "Prehľad verejných kampaní, príspevkov na sociálnych sieťach a akcií konkurencie. Inšpirujte svoju stratégiu a načasujte vlastné kampane najefektívnejšie voči konkurenčným aktivitám.",
+      },
+      {
+        icon: "🔔",
+        title: "Automatické upozornenia",
+        description:
+          "Nastavte upozornenia pri zmene hodnotenia konkurenta alebo novej kampani. Systém vás proaktívne informuje o dôležitých zmenách v konkurenčnom prostredí v reálnom čase.",
+      },
+    ],
+    tips: [
+      "Analyzujte 1-hviezdičkové recenzie konkurentov – odhaľujú opakujúce sa problémy, ktoré môžete riešiť lepšie.",
+      "Sledujte cenník konkurencie pre informované rozhodovanie o vlastných cenách a akciovej politike.",
+      "Diferenciácia na základe špecialistov alebo vybavenia je dlhodobejšia konkurenčná výhoda ako cena.",
+      "Reagujte na recenzie rýchlejšie ako konkurencia – klienti si to všímajú a oceňujú záujem ambulancie.",
+      "Exportujte mesačný report konkurencie pre strategickú poradu vedenia ambulancie.",
+    ],
+  },
 };
 
 /** Related modules for each section. */
@@ -860,6 +1415,76 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
   "/support": [
     { name: "Nastavenia", href: "/settings" },
     { name: "Dashboard", href: "/" },
+  ],
+  "/marketing/handouts": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Brand Kit", href: "/marketing/brand-kit" },
+    { name: "Médiá", href: "/marketing/media" },
+    { name: "Pacienti", href: "/patients" },
+  ],
+  "/marketing/brand-kit": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Letáky", href: "/marketing/handouts" },
+    { name: "Web", href: "/marketing/website" },
+    { name: "TV Displej", href: "/marketing/tv" },
+  ],
+  "/marketing/reviews": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Automatizácie", href: "/marketing/automations" },
+    { name: "Správy", href: "/marketing/messages" },
+    { name: "Klienti", href: "/clients" },
+  ],
+  "/marketing/messages": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Automatizácie", href: "/marketing/automations" },
+    { name: "Inbox", href: "/inbox" },
+    { name: "Klienti", href: "/clients" },
+  ],
+  "/marketing/automations": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Správy", href: "/marketing/messages" },
+    { name: "Recenzie", href: "/marketing/reviews" },
+    { name: "Pripomienky", href: "/care-reminders" },
+  ],
+  "/marketing/consents": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Klienti", href: "/clients" },
+    { name: "Nastavenia", href: "/settings" },
+  ],
+  "/marketing/media": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Letáky", href: "/marketing/handouts" },
+    { name: "Brand Kit", href: "/marketing/brand-kit" },
+    { name: "Obsahový plán", href: "/marketing/plan" },
+  ],
+  "/marketing/plan": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Letáky", href: "/marketing/handouts" },
+    { name: "Automatizácie", href: "/marketing/automations" },
+    { name: "Správy", href: "/marketing/messages" },
+  ],
+  "/marketing/website": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Brand Kit", href: "/marketing/brand-kit" },
+    { name: "Obsahový plán", href: "/marketing/plan" },
+    { name: "Médiá", href: "/marketing/media" },
+  ],
+  "/marketing/tv": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Letáky", href: "/marketing/handouts" },
+    { name: "Médiá", href: "/marketing/media" },
+    { name: "Čakáreň", href: "/waiting-room" },
+  ],
+  "/marketing/wellness": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "Pripomienky", href: "/care-reminders" },
+    { name: "Rozvrh", href: "/schedule" },
+  ],
+  "/marketing/competitors": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Recenzie", href: "/marketing/reviews" },
+    { name: "Reporty", href: "/reports" },
   ],
 };
 

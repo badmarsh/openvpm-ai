@@ -1040,6 +1040,7 @@ export const appointmentsRouter = createRouter({
         id: z.string().uuid(),
         status: appointmentStatusInput,
         confirmationContactMethod: confirmationContactMethodInput.optional(),
+        doctorId: z.string().uuid().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1122,10 +1123,15 @@ export const appointmentsRouter = createRouter({
             message: `Cannot change appointment status from ${current.status} to ${input.status}.`,
           });
         }
+        const effectiveDoctorId =
+          input.status === "checked_in" && input.doctorId
+            ? input.doctorId
+            : current.doctorId;
+
         if (
           (input.status === "confirmed" || input.status === "checked_in") &&
           current.typeRequiresDoctor === 1 &&
-          !current.doctorId
+          !effectiveDoctorId
         ) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
@@ -1134,6 +1140,12 @@ export const appointmentsRouter = createRouter({
                 ? "Assign a doctor before confirming this appointment."
                 : "Assign a doctor before checking in this appointment.",
           });
+        }
+        if (input.status === "checked_in" && input.doctorId) {
+          await assertDoctorBelongsToPractice(
+            { db: tx as unknown as Database, practiceId: ctx.practiceId } as AppointmentsContext,
+            input.doctorId,
+          );
         }
         if (
           input.status === "in_exam" &&
@@ -1295,6 +1307,9 @@ export const appointmentsRouter = createRouter({
           .set({
             status: input.status,
             ...(restoredLocationId ? { locationId: restoredLocationId } : {}),
+            ...(input.status === "checked_in" && input.doctorId
+              ? { doctorId: input.doctorId }
+              : {}),
           })
           .where(
             and(

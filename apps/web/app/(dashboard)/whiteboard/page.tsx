@@ -10,6 +10,7 @@ import {
   Clock,
   Loader2,
   MapPin,
+  RotateCw,
   User,
   X,
 } from "lucide-react";
@@ -50,6 +51,8 @@ type WhiteboardAppointment = {
   locationId: string | null;
   typeName: string | null;
   typeColor: string | null;
+  doctorId?: string | null;
+  typeRequiresDoctor?: number | null;
 };
 
 const DIALOG_FOCUSABLE_SELECTOR =
@@ -217,16 +220,69 @@ function formatAppointmentTime(date: Date, timeZone?: string | null): string {
 
 // --- Components ---
 
-function LiveIndicator() {
+function SyncStatusIndicator({
+  isFetching,
+  lastSyncedAt,
+  onRefresh,
+  timeZone,
+}: {
+  isFetching: boolean;
+  lastSyncedAt?: number | null;
+  onRefresh: () => void;
+  timeZone?: string | null;
+}) {
   const { t } = useI18n();
+
+  const formattedTime = useMemo(() => {
+    if (!lastSyncedAt) return "";
+    const date = new Date(lastSyncedAt);
+    try {
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+        timeZone: timeZone || undefined,
+      });
+    } catch {
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+    }
+  }, [lastSyncedAt, timeZone]);
+
+  const tooltipText = formattedTime
+    ? t("whiteboard.sync.lastSynced", "Last synced: {time}", { time: formattedTime })
+    : t("whiteboard.sync.interval", "Auto-refreshes every 30s");
+
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+    <div
+      className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground shadow-2xs transition-colors hover:bg-muted/50"
+      title={tooltipText}
+    >
+      <span className="flex h-2 w-2 rounded-full bg-emerald-500/80 shrink-0" />
+      <span className="font-medium text-[11px]">
+        {t("whiteboard.sync.interval", "Auto-refreshes every 30s")}
       </span>
-      {t("whiteboard.live", "Live")}
-    </span>
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={isFetching}
+        aria-label={t("whiteboard.sync.refreshNow", "Refresh now")}
+        title={tooltipText}
+        className="rounded-full p-0.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+      >
+        <RotateCw
+          className={cn(
+            "h-3 w-3 transition-transform",
+            isFetching && "animate-spin text-primary"
+          )}
+        />
+      </button>
+    </div>
   );
 }
 
@@ -328,16 +384,20 @@ function AppointmentDetailModal({
   appointment: WhiteboardAppointment;
   timeZone?: string | null;
   onClose: () => void;
-  onStatusChange: (id: string, status: AppointmentStatus) => void;
+  onStatusChange: (id: string, status: AppointmentStatus, doctorId?: string) => void;
   canUpdateStatus: boolean;
   isUpdating: boolean;
 }) {
   const { t } = useI18n();
+  const doctorsQuery = trpc.appointments.listDoctors.useQuery();
+  const [inlineDoctorId, setInlineDoctorId] = useState<string>("");
   const modalRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const restoreFocusRef = useRef(true);
   const dialogTitleId = useId();
   const start = new Date(appointment.startTime);
+  const needsDoctorAssignment =
+    appointment.typeRequiresDoctor === 1 && !appointment.doctorId;
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -562,28 +622,61 @@ function AppointmentDetailModal({
                    : t("whiteboard.openVisit", "Open visit")}
               </Link>
             </Button>
-            {visibleStatusActions.map((action) => (
-              <Button
-                key={action.status}
-                size="sm"
-                variant={action.variant}
-                disabled={
-                  isUpdating ||
-                  (action.status === "in_exam" && missingClinicalTarget)
-                }
-                title={
-                  action.status === "in_exam" && missingClinicalTarget
-                    ? t("whiteboard.attachPatientWarning", "Open the visit and attach an active patient before starting the exam.")
-                    : undefined
-                }
-                onClick={() => onStatusChange(appointment.id, action.status)}
-              >
-                {isUpdating ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                ) : null}
-                {action.label}
-              </Button>
-            ))}
+            {visibleStatusActions.map((action) => {
+              if (action.status === "checked_in" && needsDoctorAssignment) {
+                return (
+                  <div key="inline-doctor-checkin" className="flex items-center gap-1.5">
+                    <select
+                      aria-label={t("whiteboard.selectDoctorPrompt", "Select doctor")}
+                      value={inlineDoctorId}
+                      onChange={(e) => setInlineDoctorId(e.target.value)}
+                      className="h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">{t("whiteboard.selectDoctorPrompt", "Select doctor...")}</option>
+                      {(doctorsQuery.data ?? []).map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {t("whiteboard.doctor", "Dr. {name}", { name: doc.name })}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant={action.variant}
+                      disabled={isUpdating || !inlineDoctorId}
+                      title={!inlineDoctorId ? t("whiteboard.selectDoctorPrompt", "Select doctor") : undefined}
+                      onClick={() => onStatusChange(appointment.id, action.status, inlineDoctorId)}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                      ) : null}
+                      {t("whiteboard.actions.assignAndCheckIn", "Assign & Check In")}
+                    </Button>
+                  </div>
+                );
+              }
+              return (
+                <Button
+                  key={action.status}
+                  size="sm"
+                  variant={action.variant}
+                  disabled={
+                    isUpdating ||
+                    (action.status === "in_exam" && missingClinicalTarget)
+                  }
+                  title={
+                    action.status === "in_exam" && missingClinicalTarget
+                      ? t("whiteboard.attachPatientWarning", "Open the visit and attach an active patient before starting the exam.")
+                      : undefined
+                  }
+                  onClick={() => onStatusChange(appointment.id, action.status)}
+                >
+                  {isUpdating ? (
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  ) : null}
+                  {action.label}
+                </Button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -613,6 +706,8 @@ export default function WhiteboardPage() {
   const {
     data: activeAppointments,
     isLoading,
+    isFetching,
+    dataUpdatedAt,
     error,
   } = trpc.whiteboard.getActive.useQuery(undefined, {
     refetchInterval: 30000,
@@ -654,8 +749,8 @@ export default function WhiteboardPage() {
     },
   });
 
-  const handleStatusChange = (id: string, status: AppointmentStatus) => {
-    updateStatus.mutate({ id, status });
+  const handleStatusChange = (id: string, status: AppointmentStatus, doctorId?: string) => {
+    updateStatus.mutate({ id, status, doctorId });
   };
 
   const selectedAppointmentFromList = selectedAppointment
@@ -730,7 +825,12 @@ export default function WhiteboardPage() {
             <h2 className="font-heading text-xl font-semibold">
               {t("whiteboard.title", "Practice Whiteboard")}
             </h2>
-            <LiveIndicator />
+            <SyncStatusIndicator
+              isFetching={isFetching}
+              lastSyncedAt={dataUpdatedAt}
+              onRefresh={() => void utils.whiteboard.getActive.invalidate()}
+              timeZone={verifiedPracticeSettings?.timezone}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             {t("whiteboard.subtitle", "Live patient status board")}

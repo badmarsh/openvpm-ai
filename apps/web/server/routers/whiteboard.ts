@@ -106,6 +106,8 @@ export const whiteboardRouter = createRouter({
         locationId: appointments.locationId,
         typeName: appointmentTypes.name,
         typeColor: appointmentTypes.color,
+        doctorId: appointments.doctorId,
+        typeRequiresDoctor: appointmentTypes.requiresDoctor,
       })
       .from(appointments)
       .leftJoin(
@@ -187,6 +189,7 @@ export const whiteboardRouter = createRouter({
       z.object({
         id: z.string().uuid(),
         status: z.enum(appointmentStatusValues),
+        doctorId: z.string().uuid().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -208,8 +211,17 @@ export const whiteboardRouter = createRouter({
             activeClientId: clients.id,
             startTime: appointments.startTime,
             endTime: appointments.endTime,
+            typeRequiresDoctor: appointmentTypes.requiresDoctor,
           })
           .from(appointments)
+          .leftJoin(
+            appointmentTypes,
+            and(
+              eq(appointments.typeId, appointmentTypes.id),
+              eq(appointmentTypes.practiceId, ctx.practiceId),
+              isNull(appointmentTypes.deletedAt),
+            ),
+          )
           .leftJoin(
             patients,
             and(
@@ -256,6 +268,39 @@ export const whiteboardRouter = createRouter({
             code: "BAD_REQUEST",
             message: `Cannot change appointment status from ${current.status} to ${input.status}.`,
           });
+        }
+        const effectiveDoctorId =
+          input.status === "checked_in" && input.doctorId
+            ? input.doctorId
+            : current.doctorId;
+
+        if (
+          input.status === "checked_in" &&
+          current.typeRequiresDoctor === 1 &&
+          !effectiveDoctorId
+        ) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Assign a doctor before checking in this appointment.",
+          });
+        }
+        if (input.status === "checked_in" && input.doctorId) {
+          const [doc] = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(
+              and(
+                eq(users.id, input.doctorId),
+                eq(users.practiceId, ctx.practiceId),
+                eq(users.isVeterinarian, true),
+                activePracticePredicate(ctx.practiceId),
+                isNull(users.deletedAt),
+              ),
+            )
+            .limit(1);
+          if (!doc) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Doctor not found" });
+          }
         }
         if (
           input.status === "in_exam" &&
@@ -358,6 +403,9 @@ export const whiteboardRouter = createRouter({
           .set({
             status: input.status,
             ...(restoredLocationId ? { locationId: restoredLocationId } : {}),
+            ...(input.status === "checked_in" && input.doctorId
+              ? { doctorId: input.doctorId }
+              : {}),
           })
           .where(
             and(
