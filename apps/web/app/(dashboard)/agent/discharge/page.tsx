@@ -180,6 +180,8 @@ export default function DischargePage() {
   // Mutations
   const generateMutation = trpc.extensions.discharge.generate.useMutation();
   const saveMutation = trpc.extensions.discharge.save.useMutation();
+  const prepareConfirmationMutation =
+    trpc.extensions.discharge.prepareConfirmation.useMutation();
   const generateSmsMutation = trpc.extensions.discharge.generateSmsAndSchedule.useMutation();
   const createMarketingPostMutation = trpc.extensions.discharge.createMarketingPostFromCase.useMutation();
 
@@ -384,12 +386,50 @@ export default function DischargePage() {
     printWindow.document.close();
   }, [result, petName]);
 
-  // Save to database
+  // Save to database. Finalization uses a pre-issued one-time confirmation
+  // envelope (prepareConfirmation -> save) for replay protection; the
+  // prepare step creates the server-side draft the envelope binds to.
   const handleSave = async () => {
     if (!result.trim() || !petName.trim() || !diagnosis.trim()) return;
 
     try {
+      let confirmation:
+        | { reportId: string; confirmationId: string; expectedRevision: number }
+        | undefined;
+      if (clinicianConfirmed) {
+        try {
+          const prepared = await prepareConfirmationMutation.mutateAsync({
+            patientId: selectedPatient?.id,
+            petName: petName.trim(),
+            species: species.trim() || undefined,
+            diagnosis: diagnosis.trim(),
+            treatment: treatment.trim() || undefined,
+            followUp: followUp.trim() || undefined,
+            reportText: result,
+            language,
+          });
+          confirmation = {
+            reportId: prepared.reportId,
+            confirmationId: prepared.confirmationId,
+            expectedRevision: prepared.expectedRevision,
+          };
+        } catch {
+          toast.error(
+            t(
+              "discharge.confirmPrepareFailed",
+              "Could not prepare clinician confirmation. Please review and retry.",
+            ),
+          );
+          return;
+        }
+      }
       await saveMutation.mutateAsync({
+        ...(confirmation
+          ? {
+              id: confirmation.reportId,
+              expectedRevision: confirmation.expectedRevision,
+            }
+          : {}),
         patientId: selectedPatient?.id,
         petName: petName.trim(),
         species: species.trim() || undefined,
@@ -399,7 +439,9 @@ export default function DischargePage() {
         reportText: result,
         language,
         status: clinicianConfirmed ? "finalized" : "draft",
-        clinicianConfirmed: clinicianConfirmed ? true : undefined,
+        clinicianConfirmed: confirmation
+          ? { confirmationId: confirmation.confirmationId }
+          : undefined,
       });
       toast.success(
         clinicianConfirmed
@@ -408,7 +450,23 @@ export default function DischargePage() {
       );
       utils.extensions.discharge.listRecent.invalidate();
     } catch (err) {
-      toast.error(t("discharge.saveFailed", "Failed to save report"));
+      const code =
+        err && typeof err === "object" && "data" in err
+          ? (err as { data?: { code?: string } }).data?.code
+          : undefined;
+      toast.error(
+        code === "CONFLICT"
+          ? t(
+              "discharge.saveConflict",
+              "Záznam bol medzičasom zmenený. Obnovte dáta a skúste znova.",
+            )
+          : code === "PRECONDITION_FAILED"
+            ? t(
+                "discharge.confirmationExpired",
+                "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova.",
+              )
+            : t("discharge.saveFailed", "Failed to save report"),
+      );
     }
   };
 
