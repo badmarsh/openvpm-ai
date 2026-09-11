@@ -9,13 +9,15 @@ describe("mobile clinic-day UI", () => {
     const source = readDashboardPage("schedule");
 
     expect(source).toContain("function PhoneAgenda({");
-    expect(source).toContain("aria-label={`${rangeLabel} appointment agenda`}");
+    expect(source).toMatch(
+      /aria-label=(?:\{`\$\{rangeLabel\} appointment agenda`\}|\{t\("schedule\.agendaAria")/,
+    );
     expect(source).toContain(
       'className="mt-4 max-w-full space-y-4 overflow-hidden sm:hidden"'
     );
     expect(source).toContain('className="hidden sm:block"');
-    expect(source).toContain(
-      "aria-label={`Open ${patientName} appointment at ${formatTime(start, timeZone)}`}"
+    expect(source).toMatch(
+      /aria-label=(?:\{`Open \$\{patientName\} appointment at|\{t\("schedule\.openAppointmentAria")/,
     );
     expect(source).toContain(
       'className="min-h-11 w-full overflow-hidden rounded-lg border border-border bg-card p-3'
@@ -30,7 +32,9 @@ describe("mobile clinic-day UI", () => {
     const source = readDashboardPage("clients");
 
     expect(source).toContain('className="mt-6 space-y-3 sm:hidden"');
-    expect(source).toContain("aria-label={`Open client ${fullName}`}");
+    expect(source).toMatch(
+      /aria-label=(?:\{`Open client \$\{fullName\}`\}|\{t\("clients\.openClient")/,
+    );
     expect(source).toContain(
       'className="min-h-11 w-full min-w-0 overflow-hidden rounded-lg border'
     );
@@ -44,8 +48,12 @@ describe("mobile clinic-day UI", () => {
     const source = readDashboardPage("patients");
 
     expect(source).toContain('className="mt-6 space-y-3 sm:hidden"');
-    expect(source).toContain("aria-label={`Open patient ${patient.name}`}");
-    expect(source).toContain("Owner: {ownerName}");
+    expect(source).toMatch(
+      /aria-label=(?:\{`Open patient \$\{patient\.name\}`\}|\{t\("patients\.list\.openPatientAria")/,
+    );
+    expect(source).toMatch(
+      /(?:Owner: \{ownerName\}|\{t\([^)]*owner"[^)]*\)\}:\s*\{ownerName\})/,
+    );
     expect(source).toContain(
       'className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block"'
     );
