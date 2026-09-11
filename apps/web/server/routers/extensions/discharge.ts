@@ -10,7 +10,11 @@ import {
 } from "../../trpc";
 import { dischargeReports, patients, practices, extMarketingContentItems, extAiAuditLog } from "@openpims/db";
 import { configuredModel } from "@/lib/agent/runner";
-import { assertPatientNotDeceased } from "./_safety";
+import {
+  assertPatientNotDeceased,
+  requireConfirmationEnvelopeId,
+  requireExpectedRevision,
+} from "./_safety";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { recordUsage } from "@/lib/billing/usage";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
@@ -22,11 +26,10 @@ import {
   checkAndTriggerSeniorMilestone,
 } from "@/lib/marketing/messaging";
 import type { Database } from "@openpims/db/client";
-import { assertAgentRole } from "@/lib/authorization";
+import { assertAgentRole, requireTrustedActorRole } from "@/lib/authorization";
 import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 import {
   consumeClinicianConfirmation,
-  assertAndConsumeDirectConfirmation,
   issueClinicianConfirmation,
   ClinicianConfirmationError,
 } from "@/lib/ai/clinician-confirmation";
@@ -195,71 +198,137 @@ export const dischargeRouter = createRouter({
    */
   /**
    * Pre-issues an actor-bound, payload-bound confirmation envelope token for discharge finalization.
+   *
+   * New-entity binding: when no `reportId` is supplied, a server-side draft
+   * report row is created first and the envelope is issued against its real
+   * ID. Confirmations are NEVER bound to a surrogate identity (such as the
+   * clinician's user ID) — the envelope must always authorize the exact
+   * entity that `save` will finalize.
    */
   prepareConfirmation: dischargeProcedure
     .input(
       z.object({
         reportId: z.string().uuid().optional(),
         patientId: z.string().uuid().optional(),
+        appointmentId: z.string().uuid().optional(),
         petName: z.string().min(1).max(255),
+        species: z.string().max(255).optional(),
         diagnosis: z.string().min(1).max(5000),
         treatment: z.string().max(5000).optional(),
         followUp: z.string().max(5000).optional(),
         reportText: z.string().min(1).max(50_000),
         originalAiDraft: z.string().max(50_000).optional(),
+        language: z.string().max(8).default("sk"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      const actorRole = requireTrustedActorRole(
+        ctx.user.role,
+        "Discharge confirmation requires an authenticated staff role.",
+      );
       assertAgentRole(
         { userRole: actorRole },
         ["admin", "veterinarian"],
         "Only veterinarians and admins may prepare confirmation envelopes for discharge.",
       );
 
-      let expectedRevision = 0;
-      const targetEntityId = input.reportId ?? ctx.user.id;
-
-      if (input.reportId) {
-        const [existing] = await ctx.db
-          .select()
-          .from(dischargeReports)
-          .where(
-            and(
-              eq(dischargeReports.id, input.reportId),
-              eq(dischargeReports.practiceId, ctx.practiceId),
-              isNull(dischargeReports.deletedAt),
-            ),
-          )
-          .limit(1);
-
-        if (!existing) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Discharge report not found" });
-        }
-        if (existing.status === "finalized") {
-          throw new TRPCError({ code: "CONFLICT", message: "Discharge report is already finalized." });
-        }
-        expectedRevision = existing.revision;
-      }
-
       const originalAiDraft = input.originalAiDraft ?? input.reportText;
       const originalDraftHash = generateContentHash(originalAiDraft);
       const confirmedContentHash = generateContentHash(input.reportText);
 
-      const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
-        practiceId: ctx.practiceId,
-        actorId: ctx.user.id,
-        actorRole,
-        actionType: "discharge_finalized",
-        entityType: "discharge_report",
-        entityId: targetEntityId,
-        expectedRevision,
-        originalDraftHash,
-        confirmedContentHash,
+      // Draft creation + envelope issuance run atomically so the envelope can
+      // never reference a report row that failed to persist.
+      const { envelope, reportId } = await ctx.db.transaction(async (tx) => {
+        const db = tx as unknown as Database;
+        let targetEntityId = input.reportId;
+        let expectedRevision = 0;
+
+        if (targetEntityId) {
+          const [existing] = await db
+            .select()
+            .from(dischargeReports)
+            .where(
+              and(
+                eq(dischargeReports.id, targetEntityId),
+                eq(dischargeReports.practiceId, ctx.practiceId),
+                isNull(dischargeReports.deletedAt),
+              ),
+            )
+            .limit(1);
+
+          if (!existing) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Discharge report not found" });
+          }
+          if (existing.status === "finalized") {
+            throw new TRPCError({ code: "CONFLICT", message: "Discharge report is already finalized." });
+          }
+          expectedRevision = existing.revision;
+        } else {
+          if (input.patientId) {
+            const [patientRecord] = await db
+              .select({ id: patients.id })
+              .from(patients)
+              .where(
+                and(
+                  eq(patients.id, input.patientId),
+                  eq(patients.practiceId, ctx.practiceId),
+                  isNull(patients.deletedAt),
+                ),
+              )
+              .limit(1);
+            if (!patientRecord) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Patient not found",
+              });
+            }
+          }
+          const [draft] = await db
+            .insert(dischargeReports)
+            .values({
+              practiceId: ctx.practiceId,
+              patientId: input.patientId ?? null,
+              appointmentId: input.appointmentId ?? null,
+              createdBy: ctx.user.id,
+              petName: input.petName,
+              species: input.species ?? null,
+              diagnosis: input.diagnosis,
+              treatment: input.treatment ?? null,
+              followUp: input.followUp ?? null,
+              reportText: input.reportText,
+              language: input.language,
+              modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
+              status: "draft",
+              revision: 0,
+            })
+            .returning({ id: dischargeReports.id });
+          if (!draft) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create discharge draft",
+            });
+          }
+          targetEntityId = draft.id;
+          expectedRevision = 0;
+        }
+
+        const issued = await issueClinicianConfirmation(db, {
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorRole,
+          actionType: "discharge_finalized",
+          entityType: "discharge_report",
+          entityId: targetEntityId,
+          expectedRevision,
+          originalDraftHash,
+          confirmedContentHash,
+        });
+        return { envelope: issued, reportId: targetEntityId };
       });
 
       return {
         confirmationId: envelope.id,
+        reportId,
         expiresAt: envelope.expiresAt,
         expectedRevision: envelope.expectedRevision,
         originalDraftHash,
@@ -272,14 +341,24 @@ export const dischargeRouter = createRouter({
    * optimistickou konkurencionou ochranou.
    *
    * Human-in-the-loop: AI-generated discharge text is a *draft* until a
-   * clinician explicitly confirms it (`clinicianConfirmed: true` or envelope).
-   * Only a confirmed, finalized report emits the webhook or schedules owner
-   * communication. All DB operations run in a single transaction.
+   * clinician finalizes it with a pre-issued one-time confirmation envelope
+   * (see `prepareConfirmation`). Only a confirmed, finalized report emits the
+   * webhook or schedules owner communication. All DB operations run in a
+   * single transaction.
+   *
+   * Finalization always targets an existing draft: `prepareConfirmation`
+   * creates the server-side draft when needed and returns its `reportId`.
+   * Updates of an existing report (draft or finalize) require
+   * `expectedRevision`; only brand-new draft creation omits it.
    */
   save: dischargeProcedure
     .input(
       z.object({
         id: z.string().uuid().optional(),
+        // Optional at the schema layer so a missing token on update/finalize
+        // paths fails with the explicit PRECONDITION_FAILED contract
+        // (requireExpectedRevision), never with silent fallback to the
+        // stored revision. Only brand-new draft creation omits it.
         expectedRevision: z.number().int().min(0).optional(),
         patientId: z.string().uuid().optional(),
         appointmentId: z.string().uuid().optional(),
@@ -307,13 +386,34 @@ export const dischargeRouter = createRouter({
         clinicianConfirmed: input.clinicianConfirmed,
       });
 
-      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      const actorRole = requireTrustedActorRole(
+        ctx.user.role,
+        "Discharge save requires an authenticated staff role.",
+      );
+      // Option 1 (envelope required): bare `clinicianConfirmed: true` is
+      // rejected — only a pre-issued one-time confirmation token finalizes.
+      const confirmationId =
+        status === "finalized"
+          ? requireConfirmationEnvelopeId(input.clinicianConfirmed)
+          : null;
       if (status === "finalized") {
         assertAgentRole(
           { userRole: actorRole },
           ["admin", "veterinarian"],
           "Only veterinarians and admins may finalize discharge reports.",
         );
+        if (!input.id) {
+          // A confirmation envelope always binds an existing draft entity
+          // (prepareConfirmation creates it when needed). Finalizing a
+          // not-yet-existing report cannot be entity-bound — reject so the
+          // caller follows the prepare-first flow instead of silently
+          // recording an unbound confirmation.
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Finalization requires an existing draft. Call prepareConfirmation first and finalize with the returned reportId.",
+          });
+        }
       }
 
       const originalAiDraft = input.originalAiDraft ?? input.reportText;
@@ -373,7 +473,9 @@ export const dischargeRouter = createRouter({
             });
           }
 
-          const expectedRevision = input.expectedRevision ?? existing.revision;
+          const expectedRevision = requireExpectedRevision(
+            input.expectedRevision,
+          );
           if (existing.revision !== expectedRevision) {
             throw new TRPCError({
               code: "CONFLICT",
@@ -382,39 +484,9 @@ export const dischargeRouter = createRouter({
           }
 
           if (status === "finalized") {
-            if (
-              typeof input.clinicianConfirmed === "object" &&
-              input.clinicianConfirmed.confirmationId
-            ) {
-              try {
-                await consumeClinicianConfirmation(db, {
-                  confirmationId: input.clinicianConfirmed.confirmationId,
-                  practiceId: ctx.practiceId,
-                  actorId: ctx.user.id,
-                  actorRole,
-                  actionType: "discharge_finalized",
-                  entityType: "discharge_report",
-                  entityId: existing.id,
-                  expectedRevision,
-                  originalDraftHash,
-                  confirmedContentHash,
-                });
-              } catch (err) {
-                if (err instanceof ClinicianConfirmationError) {
-                  const code =
-                    err.code === "NOT_FOUND"
-                      ? "NOT_FOUND"
-                      : err.code === "EXPIRED" ||
-                          err.code === "ALREADY_CONSUMED" ||
-                          err.code === "REVISION_MISMATCH"
-                        ? "CONFLICT"
-                        : "PRECONDITION_FAILED";
-                  throw new TRPCError({ code, message: err.message });
-                }
-                throw err;
-              }
-            } else {
-              await assertAndConsumeDirectConfirmation(db, {
+            try {
+              await consumeClinicianConfirmation(db, {
+                confirmationId: confirmationId as string,
                 practiceId: ctx.practiceId,
                 actorId: ctx.user.id,
                 actorRole,
@@ -425,6 +497,19 @@ export const dischargeRouter = createRouter({
                 originalDraftHash,
                 confirmedContentHash,
               });
+            } catch (err) {
+              if (err instanceof ClinicianConfirmationError) {
+                const code =
+                  err.code === "NOT_FOUND"
+                    ? "NOT_FOUND"
+                    : err.code === "EXPIRED" ||
+                        err.code === "ALREADY_CONSUMED" ||
+                        err.code === "REVISION_MISMATCH"
+                      ? "CONFLICT"
+                      : "PRECONDITION_FAILED";
+                throw new TRPCError({ code, message: err.message });
+              }
+              throw err;
             }
 
             await appendAiAuditEvent(db, {
@@ -502,65 +587,9 @@ export const dischargeRouter = createRouter({
             });
           }
 
-          if (status === "finalized") {
-            if (
-              typeof input.clinicianConfirmed === "object" &&
-              input.clinicianConfirmed.confirmationId
-            ) {
-              try {
-                await consumeClinicianConfirmation(db, {
-                  confirmationId: input.clinicianConfirmed.confirmationId,
-                  practiceId: ctx.practiceId,
-                  actorId: ctx.user.id,
-                  actorRole,
-                  actionType: "discharge_finalized",
-                  entityType: "discharge_report",
-                  entityId: inserted.id,
-                  expectedRevision: 0,
-                  originalDraftHash,
-                  confirmedContentHash,
-                });
-              } catch (err) {
-                if (err instanceof ClinicianConfirmationError) {
-                  const code =
-                    err.code === "NOT_FOUND"
-                      ? "NOT_FOUND"
-                      : err.code === "EXPIRED" ||
-                          err.code === "ALREADY_CONSUMED" ||
-                          err.code === "REVISION_MISMATCH"
-                        ? "CONFLICT"
-                        : "PRECONDITION_FAILED";
-                  throw new TRPCError({ code, message: err.message });
-                }
-                throw err;
-              }
-            } else {
-              await assertAndConsumeDirectConfirmation(db, {
-                practiceId: ctx.practiceId,
-                actorId: ctx.user.id,
-                actorRole,
-                actionType: "discharge_finalized",
-                entityType: "discharge_report",
-                entityId: inserted.id,
-                expectedRevision: 0,
-                originalDraftHash,
-                confirmedContentHash,
-              });
-            }
-
-            await appendAiAuditEvent(db, {
-              practiceId: ctx.practiceId,
-              actorId: ctx.user.id,
-              actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
-              actorRole,
-              entityType: "discharge_report",
-              entityId: inserted.id,
-              actionType: "discharge_finalized",
-              originalDraftHash,
-              confirmedContentHash,
-              wasEditedByClinician,
-            });
-          }
+          // NOTE: finalize-on-create is rejected before the transaction
+          // (a confirmation envelope always binds an existing draft entity
+          // issued by prepareConfirmation). This branch only persists drafts.
           savedReport = inserted;
         }
 

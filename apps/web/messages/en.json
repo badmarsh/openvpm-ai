@@ -5266,7 +5266,10 @@
       "saveFailed": "Saving the SOAP record failed",
       "loadedToEditor": "Dictation loaded into the editor",
       "templateProcessed": "Template “{title}” was processed successfully",
-      "soapCopied": "SOAP record copied to clipboard"
+      "soapCopied": "SOAP record copied to clipboard",
+      "confirmPrepareFailed": "Could not prepare clinician confirmation. Please review and retry.",
+      "saveConflict": "The record changed concurrently. Reload and retry.",
+      "confirmationExpired": "The confirmation expired or is invalid. Review the content and confirm again."
     },
     "commands": {
       "newNoteReady": "A new patient note is ready",
@@ -5554,7 +5557,10 @@
     "channel": "Channel",
     "channelGoogle": "Google Profile",
     "marketingQueued": "Queued in the marketing studio as a draft",
-    "openInPlan": "Open in content plan"
+    "openInPlan": "Open in content plan",
+    "confirmPrepareFailed": "Could not prepare clinician confirmation. Please review and retry.",
+    "saveConflict": "The record changed concurrently. Reload and retry.",
+    "confirmationExpired": "The confirmation expired or is invalid. Review the content and confirm again."
   },
   "vetIntel": {
     "badge": "AI Market & Legislation",

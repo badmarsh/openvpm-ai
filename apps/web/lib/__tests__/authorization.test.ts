@@ -304,3 +304,94 @@ describe("AGENT_TOOLS complete security matrix verification", async () => {
   });
 });
 
+describe("requireTrustedActorRole - fail-closed role resolution (no privileged fallback)", () => {
+  it("resolves every known staff role unchanged", async () => {
+    const { requireTrustedActorRole } = await import("../authorization");
+    for (const role of ["admin", "veterinarian", "technician", "front_desk", "viewer"]) {
+      expect(requireTrustedActorRole(role)).toBe(role);
+    }
+  });
+
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["empty string", ""],
+    ["whitespace", "   "],
+    ["unknown role", "superuser"],
+    ["portal role", "portal_user"],
+    ["service role", "service_cron"],
+    ["legacy role", "doctor"],
+    ["SQL injection", "'; DROP TABLE users; --"],
+    ["JSON spoof", '{"role":"admin"}'],
+    ["numeric", 42],
+    ["object", { role: "admin" }],
+  ])("DENIES %s (never defaults to a privileged role)", async (_label, role) => {
+    const { requireTrustedActorRole } = await import("../authorization");
+    expect(() => requireTrustedActorRole(role)).toThrowError(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+  });
+
+  it("DENIES case-variant roles (exact match only)", async () => {
+    const { requireTrustedActorRole } = await import("../authorization");
+    for (const role of ["Admin", "VETERINARIAN", " Veterinarian ", "veterinarian\n"]) {
+      expect(() => requireTrustedActorRole(role)).toThrowError(
+        expect.objectContaining({ code: "FORBIDDEN" }),
+      );
+    }
+  });
+});
+
+describe("requireClinicalActorRole - clinical allow-list resolution", () => {
+  it("resolves admin and veterinarian", async () => {
+    const { requireClinicalActorRole } = await import("../authorization");
+    expect(requireClinicalActorRole("admin")).toBe("admin");
+    expect(requireClinicalActorRole("veterinarian")).toBe("veterinarian");
+  });
+
+  it.each([["technician"], ["front_desk"], ["viewer"], [undefined], [null], [""], ["superuser"]])(
+    "DENIES %s for clinical boundaries",
+    async (role) => {
+      const { requireClinicalActorRole } = await import("../authorization");
+      expect(() => requireClinicalActorRole(role)).toThrowError(
+        expect.objectContaining({ code: "FORBIDDEN" }),
+      );
+    },
+  );
+});
+
+describe("privileged-role fallback regression guard (static source scan)", () => {
+  it("contains no ?? / || fallback to a privileged role in server runtime code", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const serverDir = path.resolve(__dirname, "../../server");
+    const offenders: string[] = [];
+    const pattern =
+      /(\?\?|\|\|)\s*["'](veterinarian|admin)\s*["']/;
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (
+          entry.name.endsWith(".ts") &&
+          !entry.name.endsWith(".test.ts") &&
+          !full.includes("__tests__")
+        ) {
+          const text = fs.readFileSync(full, "utf8");
+          const lines = text.split("\n");
+          lines.forEach((line, idx) => {
+            if (pattern.test(line)) {
+              offenders.push(`${path.relative(serverDir, full)}:${idx + 1}: ${line.trim()}`);
+            }
+          });
+        }
+      }
+    };
+    walk(serverDir);
+    expect(
+      offenders,
+      `Fail-open role fallbacks detected:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+});

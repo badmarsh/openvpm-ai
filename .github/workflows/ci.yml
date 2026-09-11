@@ -256,6 +256,17 @@ jobs:
           REMINDER_POLICY_DB_INTEGRATION: "1"
         run: pnpm --filter @openpims/web exec vitest run lib/messaging/__tests__/appointment-reminder-eligibility.integration.test.ts
 
+      # AI clinical finalization (imaging / voice SOAP / discharge) is the
+      # highest-risk write path. Prove against real PostgreSQL that envelope
+      # issue/consume/replay/expiry, revision conflicts, concurrent audit
+      # appends, advisory-lock serialization, RLS tenant isolation, ledger
+      # immutability grants, rollback atomicity, and post-commit side-effect
+      # ordering all hold with synthetic fixtures only.
+      - name: Execute AI clinical finalization database contract
+        env:
+          AI_FINALIZATION_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/ai-clinical-finalization.integration.test.ts
+
       - name: Prove tenant/RLS pool-reuse isolation
         run: pnpm --filter @openpims/db db:rls:test
 

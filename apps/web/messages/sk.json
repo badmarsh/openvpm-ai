@@ -5266,7 +5266,10 @@
       "saveFailed": "Uloženie SOAP záznamu zlyhalo",
       "loadedToEditor": "Diktát načítaný do editora",
       "templateProcessed": "Vzor „{title}“ bol úspešne spracovaný",
-      "soapCopied": "SOAP záznam skopírovaný do schránky"
+      "soapCopied": "SOAP záznam skopírovaný do schránky",
+      "confirmPrepareFailed": "Nepodarilo sa pripraviť potvrdenie klinika. Skontrolujte obsah a skúste znova.",
+      "saveConflict": "Záznam bol medzičasom zmenený. Obnovte dáta a skúste znova.",
+      "confirmationExpired": "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova."
     },
     "commands": {
       "newNoteReady": "Pripravená nová poznámka pacienta",
@@ -5554,7 +5557,10 @@
     "channel": "Kanál",
     "channelGoogle": "Google Profil",
     "marketingQueued": "Zaradené v marketingovom štúdiu ako koncept",
-    "openInPlan": "Otvoriť v pláne obsahu"
+    "openInPlan": "Otvoriť v pláne obsahu",
+    "confirmPrepareFailed": "Nepodarilo sa pripraviť potvrdenie klinika. Skontrolujte obsah a skúste znova.",
+    "saveConflict": "Záznam bol medzičasom zmenený. Obnovte dáta a skúste znova.",
+    "confirmationExpired": "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova."
   },
   "vetIntel": {
     "badge": "AI Trh & Legislatíva",

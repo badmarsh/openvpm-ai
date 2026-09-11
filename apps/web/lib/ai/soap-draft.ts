@@ -83,7 +83,11 @@ export function buildSoapDraftPrompt(context: SoapDraftContext): string {
   }
 
   if (context.visitContext) {
-    prompt += `\nVisit context from staff:\n${context.visitContext}\n`;
+    // Fail-closed bound: visitContext is free-form staff input (prompt-injection
+    // and token-cost vector). Truncate to the documented limit so an oversized
+    // paste can neither smuggle in trailing instructions nor blow up cost.
+    const bounded = context.visitContext.slice(0, SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH);
+    prompt += `\nVisit context from staff:\n${bounded}\n`;
   }
 
   prompt +=

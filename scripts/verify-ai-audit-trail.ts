@@ -52,6 +52,19 @@ function outputJson(data: unknown): void {
   process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }
 
+/**
+ * Redacts any UUID-shaped identifiers embedded in free-text details.
+ * Error detail strings may interpolate row IDs (event, practice) — leaking
+ * them into CI logs would let an observer link verification output back to
+ * patient-attributable records. Only a discriminating suffix is kept.
+ */
+function redactIds(text: string): string {
+  return text.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-([0-9a-f]{12})/gi,
+    "...$1",
+  );
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -118,9 +131,14 @@ async function main() {
             confirmed_at             AS "confirmedAt",
             previous_event_hash      AS "previousEventHash",
             event_hash               AS "eventHash",
-            canonicalization_version AS "canonicalizationVersion"
+            canonicalization_version AS "canonicalizationVersion",
+            created_at               AS "createdAt",
+            updated_at               AS "updatedAt",
+            deleted_at               AS "deletedAt"
           FROM ext_ai_audit_log
-          WHERE deleted_at IS NULL
+          -- NOTE: intentionally NO "WHERE deleted_at IS NULL" filter.
+          -- A soft-deleted audit event is destroyed evidence and must FAIL
+          -- verification (SOFT_DELETED_ROW), not be silently skipped.
           ORDER BY practice_id ASC, sequence_number ASC NULLS LAST, confirmed_at ASC;
         `
       : await sql`

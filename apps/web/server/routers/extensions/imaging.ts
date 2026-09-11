@@ -42,10 +42,14 @@ import {
   clinicianConfirmationInput,
   generateContentHash,
 } from "@/lib/ai/draft-safety";
+import { requireTrustedActorRole } from "@/lib/authorization";
+import {
+  requireConfirmationEnvelopeId,
+  requireExpectedRevision,
+} from "./_safety";
 import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 import {
   consumeClinicianConfirmation,
-  assertAndConsumeDirectConfirmation,
   issueClinicianConfirmation,
   ClinicianConfirmationError,
 } from "@/lib/ai/clinician-confirmation";
@@ -671,7 +675,10 @@ export const imagingRouter = createRouter({
       const originalAiDraft = analysis.result ?? "";
       const originalDraftHash = generateContentHash(originalAiDraft);
       const confirmedContentHash = generateContentHash(input.finalReport);
-      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      const actorRole = requireTrustedActorRole(
+        ctx.user.role,
+        "Imaging confirmation requires an authenticated staff role.",
+      );
 
       const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
         practiceId: ctx.practiceId,
@@ -702,6 +709,9 @@ export const imagingRouter = createRouter({
     .input(
       z.object({
         analysisId: z.string().uuid(),
+        // Optional at the schema layer so a missing token fails with the
+        // explicit PRECONDITION_FAILED contract (requireExpectedRevision),
+        // never with silent fallback to the stored revision.
         expectedRevision: z.number().int().min(0).optional(),
         clinicianConfirmed: clinicianConfirmationInput,
         finalReport: z.string().min(1).max(50_000),
@@ -709,7 +719,15 @@ export const imagingRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       assertClinicianConfirmed(input.clinicianConfirmed);
-      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      // Option 1 (envelope required): bare `clinicianConfirmed: true` is
+      // rejected — only a pre-issued one-time confirmation token finalizes.
+      const confirmationId = requireConfirmationEnvelopeId(
+        input.clinicianConfirmed,
+      );
+      const actorRole = requireTrustedActorRole(
+        ctx.user.role,
+        "Imaging finalization requires an authenticated staff role.",
+      );
 
       const { updatedAnalysis, auditResult } = await ctx.db.transaction(async (tx) => {
         const db = tx as unknown as Database;
@@ -737,7 +755,9 @@ export const imagingRouter = createRouter({
           });
         }
 
-        const expectedRevision = input.expectedRevision ?? analysis.revision;
+        const expectedRevision = requireExpectedRevision(
+          input.expectedRevision,
+        );
         if (analysis.revision !== expectedRevision) {
           throw new TRPCError({
             code: "CONFLICT",
@@ -750,39 +770,9 @@ export const imagingRouter = createRouter({
         const confirmedContentHash = generateContentHash(input.finalReport);
         const wasEditedByClinician = originalDraftHash !== confirmedContentHash;
 
-        if (
-          typeof input.clinicianConfirmed === "object" &&
-          input.clinicianConfirmed.confirmationId
-        ) {
-          try {
-            await consumeClinicianConfirmation(db, {
-              confirmationId: input.clinicianConfirmed.confirmationId,
-              practiceId: ctx.practiceId,
-              actorId: ctx.user.id,
-              actorRole,
-              actionType: "imaging_confirmed",
-              entityType: "imaging_analysis",
-              entityId: analysis.id,
-              expectedRevision,
-              originalDraftHash,
-              confirmedContentHash,
-            });
-          } catch (err) {
-            if (err instanceof ClinicianConfirmationError) {
-              const code =
-                err.code === "NOT_FOUND"
-                  ? "NOT_FOUND"
-                  : err.code === "EXPIRED" ||
-                      err.code === "ALREADY_CONSUMED" ||
-                      err.code === "REVISION_MISMATCH"
-                    ? "CONFLICT"
-                    : "PRECONDITION_FAILED";
-              throw new TRPCError({ code, message: err.message });
-            }
-            throw err;
-          }
-        } else {
-          await assertAndConsumeDirectConfirmation(db, {
+        try {
+          await consumeClinicianConfirmation(db, {
+            confirmationId,
             practiceId: ctx.practiceId,
             actorId: ctx.user.id,
             actorRole,
@@ -793,6 +783,19 @@ export const imagingRouter = createRouter({
             originalDraftHash,
             confirmedContentHash,
           });
+        } catch (err) {
+          if (err instanceof ClinicianConfirmationError) {
+            const code =
+              err.code === "NOT_FOUND"
+                ? "NOT_FOUND"
+                : err.code === "EXPIRED" ||
+                    err.code === "ALREADY_CONSUMED" ||
+                    err.code === "REVISION_MISMATCH"
+                  ? "CONFLICT"
+                  : "PRECONDITION_FAILED";
+            throw new TRPCError({ code, message: err.message });
+          }
+          throw err;
         }
 
         const audit = await appendAiAuditEvent(db, {

@@ -151,6 +151,8 @@ function VoiceDictationContent() {
   const uploadAndProcessMutation = trpc.extensions.voice.uploadAndProcess.useMutation();
   const formatTextMutation = trpc.extensions.voice.formatTextToSoap.useMutation();
   const saveMutation = trpc.extensions.voice.saveAsSoapNote.useMutation();
+  const prepareConfirmationMutation =
+    trpc.extensions.voice.prepareConfirmation.useMutation();
 
   const historyQuery = trpc.extensions.voice.listByPatient.useQuery(
     { patientId: selectedPatient?.id ?? "" },
@@ -316,10 +318,39 @@ function VoiceDictationContent() {
     try {
       // Human-in-the-loop: the clinician must tick the confirmation to
       // finalize; otherwise the note is saved as an editable chart draft.
+      // Finalization uses a pre-issued one-time confirmation envelope
+      // (prepareConfirmation -> saveAsSoapNote) for replay protection.
+      let confirmation: { confirmationId: string; expectedRevision: number } | undefined;
+      if (clinicianConfirmed) {
+        try {
+          const prepared = await prepareConfirmationMutation.mutateAsync({
+            dictationId,
+            subjective: soapSections.subjective || undefined,
+            objective: soapSections.objective || undefined,
+            assessment: soapSections.assessment || undefined,
+            plan: soapSections.plan || undefined,
+          });
+          confirmation = {
+            confirmationId: prepared.confirmationId,
+            expectedRevision: prepared.expectedRevision,
+          };
+        } catch {
+          toast.error(
+            t(
+              "voice.page.confirmPrepareFailed",
+              "Could not prepare clinician confirmation. Please review and retry.",
+            ),
+          );
+          return;
+        }
+      }
       const note = await saveMutation.mutateAsync({
         dictationId,
+        ...(confirmation ? { expectedRevision: confirmation.expectedRevision } : {}),
         ...soapSections,
-        clinicianConfirmed: clinicianConfirmed ? true : undefined,
+        clinicianConfirmed: confirmation
+          ? { confirmationId: confirmation.confirmationId }
+          : undefined,
       });
 
       setStatus("saved");
@@ -342,10 +373,27 @@ function VoiceDictationContent() {
         patientId: selectedPatient.id,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("voice.page.saveFailed", "Uloženie SOAP záznamu zlyhalo");
+      const code =
+        err && typeof err === "object" && "data" in err
+          ? (err as { data?: { code?: string } }).data?.code
+          : undefined;
+      const message =
+        code === "CONFLICT"
+          ? t(
+              "voice.page.saveConflict",
+              "Záznam bol medzičasom zmenený. Obnovte dáta a skúste znova.",
+            )
+          : code === "PRECONDITION_FAILED"
+            ? t(
+                "voice.page.confirmationExpired",
+                "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova.",
+              )
+            : err instanceof Error
+              ? err.message
+              : t("voice.page.saveFailed", "Uloženie SOAP záznamu zlyhalo");
       toast.error(message);
     }
-  }, [dictationId, selectedPatient, soapSections, saveMutation, utils, clinicianConfirmed, t]);
+  }, [dictationId, selectedPatient, soapSections, saveMutation, prepareConfirmationMutation, utils, clinicianConfirmed, t]);
 
   const handleSelectHistoryItem = (item: any) => {
     setDictationId(item.id);

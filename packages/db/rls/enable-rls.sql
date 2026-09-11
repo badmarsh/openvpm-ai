@@ -124,6 +124,28 @@ GRANT SELECT, INSERT, UPDATE ON consent_receipt_capabilities TO openpims_app;
 REVOKE ALL ON FUNCTION public.protect_consent_receipt_capability()
   FROM PUBLIC, openpims_app;
 
+-- AI audit ledger (ext_ai_audit_log) is append-only application evidence for
+-- every clinician confirmation of AI-derived clinical content. The
+-- application role may insert new events and read them back for verification,
+-- but it can never update or delete them: UPDATE/DELETE are revoked AND
+-- blocked by an immutability trigger. The trigger fires for every role
+-- including the table owner; only explicit owner maintenance with
+-- app.ledger_maintenance='on' (e.g. a documented, reviewed retention or
+-- repair procedure) may bypass it. This does NOT constrain a superuser or a
+-- DBA who can disable triggers — that residual risk is documented in
+-- docs/ai-audit-ledger.md.
+REVOKE ALL ON ext_ai_audit_log FROM PUBLIC;
+REVOKE ALL ON ext_ai_audit_log FROM openpims_app;
+GRANT SELECT, INSERT ON ext_ai_audit_log TO openpims_app;
+-- (Direct EXECUTE on public.protect_ai_audit_ledger() is revoked where the
+-- trigger is created below; the function does not exist yet at this point.)
+
+-- Clinician confirmation envelopes (ext_clinician_confirmations) are consumed
+-- by atomic PENDING -> CONSUMED updates inside finalization transactions, so
+-- the application role keeps UPDATE but can never DELETE an envelope.
+-- Expired envelopes are rejected by time comparison, not by deletion.
+REVOKE DELETE ON ext_clinician_confirmations FROM openpims_app;
+
 -- Consent snapshots and signed evidence are protected by state-machine and
 -- deferred cross-table triggers. The application can advance the narrowly
 -- enumerated transitions but cannot delete a request or call trigger bodies.
@@ -607,6 +629,33 @@ DROP TRIGGER IF EXISTS clinic_pilot_events_immutable ON clinic_pilot_events;
 CREATE TRIGGER clinic_pilot_events_immutable
 BEFORE UPDATE OR DELETE ON clinic_pilot_events
 FOR EACH ROW EXECUTE FUNCTION reject_clinic_pilot_event_mutation();
+
+CREATE OR REPLACE FUNCTION protect_ai_audit_ledger()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF coalesce(current_setting('app.ledger_maintenance', true), '') = 'on'
+    AND current_user = (
+      SELECT pg_catalog.pg_get_userbyid(class.relowner)
+      FROM pg_catalog.pg_class class
+      JOIN pg_catalog.pg_namespace namespace ON namespace.oid = class.relnamespace
+      WHERE namespace.nspname = TG_TABLE_SCHEMA AND class.relname = TG_TABLE_NAME
+    )
+  THEN
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION USING ERRCODE = '55000', MESSAGE = 'AI audit ledger rows are immutable. Use the documented owner maintenance procedure for retention or repair.';
+END;
+$$;
+DROP TRIGGER IF EXISTS ext_ai_audit_log_immutable ON ext_ai_audit_log;
+CREATE TRIGGER ext_ai_audit_log_immutable
+BEFORE UPDATE OR DELETE ON ext_ai_audit_log
+FOR EACH ROW EXECUTE FUNCTION protect_ai_audit_ledger();
+REVOKE ALL ON FUNCTION public.protect_ai_audit_ledger()
+  FROM PUBLIC, openpims_app;
 
 -- Durable rate-limit buckets are also global/system state.
 ALTER TABLE rate_limit_buckets ENABLE ROW LEVEL SECURITY;

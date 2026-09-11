@@ -87,6 +87,7 @@ const ANALYSIS_ID = "00000000-0000-0000-0000-000000000005";
 const NOTE_ID = "00000000-0000-0000-0000-000000000006";
 const CLIENT_ID = "00000000-0000-0000-0000-000000000007";
 const REPORT_ID = "00000000-0000-0000-0000-000000000008";
+const ENVELOPE_ID = "123e4567-e89b-12d3-a456-426614174000";
 
 const IN_EXAM_APPOINTMENT = {
   id: APPOINTMENT_ID,
@@ -537,25 +538,44 @@ describe("b) AI cannot sign or finalize a record on behalf of a doctor", () => {
     expect(JSON.stringify(values)).not.toContain("scribe");
   });
 
-  it("voice.saveAsSoapNote finalizes only with clinicianConfirmed: true and attributes the human", async () => {
-    const { db, insertValues } = createDb({
-      selectResults: [
-        [{ id: DICTATION_ID, patientId: PATIENT_ID, appointmentId: APPOINTMENT_ID }],
-        [IN_EXAM_APPOINTMENT],
-        [],
-        [], // no draft
-        [], // no finalized
-      ],
-      insertedRows: [{ id: NOTE_ID, status: "finalized" }],
-    });
-
-    const result = await voice(db).saveAsSoapNote({
-      dictationId: DICTATION_ID,
+  it("voice.saveAsSoapNote finalizes only with a pre-issued envelope and attributes the human", async () => {
+    const dictationRow = {
+      id: DICTATION_ID,
+      practiceId: PRACTICE_ID,
+      patientId: PATIENT_ID,
+      appointmentId: APPOINTMENT_ID,
+      soapNoteId: null,
+      revision: 1,
       subjective: "S",
       objective: "O",
       assessment: "A",
       plan: "P",
-      clinicianConfirmed: true,
+    };
+    const { db, insertValues } = createDb({
+      // Scripted in true call order: dictation, locked dictation, open-visit
+      // appointment, closeout (none), draft (none), finalized (none), audit
+      // latest (genesis).
+      selectResults: [
+        [dictationRow],
+        [dictationRow],
+        [IN_EXAM_APPOINTMENT],
+        [],
+        [], // no draft
+        [], // no finalized
+        [], // no prior audit event (genesis)
+      ],
+      insertedRows: [{ id: NOTE_ID, status: "finalized" }],
+      updateResults: [{ id: "conf-1", status: "CONSUMED" }],
+    });
+
+    const result = await voice(db).saveAsSoapNote({
+      dictationId: DICTATION_ID,
+      expectedRevision: 1,
+      subjective: "S",
+      objective: "O",
+      assessment: "A",
+      plan: "P",
+      clinicianConfirmed: { confirmationId: ENVELOPE_ID },
     });
 
     expect(result.status).toBe("finalized");
@@ -585,29 +605,53 @@ describe("b) AI cannot sign or finalize a record on behalf of a doctor", () => {
         plan: "",
         clinicianConfirmed: true,
       }),
-    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Voice dictation is not associated with an open appointment. Attach it to an appointment before saving to patient chart.",
+    });
     expect(insertValues).not.toHaveBeenCalled();
   });
 
   it("voice.saveAsSoapNote cannot finalize outside an open in-exam visit", async () => {
+    const dictationRow = {
+      id: DICTATION_ID,
+      practiceId: PRACTICE_ID,
+      patientId: PATIENT_ID,
+      appointmentId: APPOINTMENT_ID,
+      soapNoteId: null,
+      revision: 1,
+      subjective: "S",
+      objective: "O",
+      assessment: "A",
+      plan: "P",
+    };
     const { db, insertValues } = createDb({
+      // Scripted in true call order: dictation, locked dictation, then the
+      // open-visit appointment lookup (completed visit -> lifecycle refusal).
       selectResults: [
-        [{ id: DICTATION_ID, patientId: PATIENT_ID, appointmentId: APPOINTMENT_ID }],
+        [dictationRow],
+        [dictationRow],
         [{ ...IN_EXAM_APPOINTMENT, status: "completed" }],
-        [],
       ],
+      updateResults: [{ id: "conf-1", status: "CONSUMED" }],
     });
 
     await expect(
       voice(db).saveAsSoapNote({
         dictationId: DICTATION_ID,
+        expectedRevision: 1,
         subjective: "S",
-        objective: "",
-        assessment: "",
-        plan: "",
-        clinicianConfirmed: true,
+        objective: "O",
+        assessment: "A",
+        plan: "P",
+        clinicianConfirmed: { confirmationId: ENVELOPE_ID },
       }),
-    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message:
+        "SOAP documentation can only be changed while the visit is in exam.",
+    });
     expect(insertValues).not.toHaveBeenCalled();
   });
 
@@ -698,20 +742,37 @@ describe("b) AI cannot sign or finalize a record on behalf of a doctor", () => {
 
 describe("c) deceased-patient sympathy gate blocks AI recall/marketing triggers", () => {
   it("a confirmed discharge for a deceased patient applies the sympathy gate and schedules nothing", async () => {
+    const existingDraft = {
+      id: REPORT_ID,
+      practiceId: PRACTICE_ID,
+      status: "draft",
+      revision: 1,
+      patientId: PATIENT_ID,
+      petName: "Rex",
+      diagnosis: "Zubný kameň",
+    };
     const { db } = createDb({
-      selectResults: [[{ clientId: CLIENT_ID, status: "deceased" }]],
-      insertedRows: [
+      // Scripted in true call order: patient, locked draft, audit latest.
+      selectResults: [
+        [{ clientId: CLIENT_ID, status: "deceased" }],
+        [existingDraft],
+        [], // no prior audit event (genesis)
+      ],
+      insertedRows: [{ id: "audit-1" }],
+      updateResults: [
         { id: REPORT_ID, status: "finalized", patientId: PATIENT_ID, diagnosis: "Zubný kameň", treatment: null, reportText: "tartar" },
       ],
     });
 
     const saved = await discharge(db).save({
+      id: REPORT_ID,
+      expectedRevision: 1,
       patientId: PATIENT_ID,
       petName: "Rex",
       diagnosis: "Zubný kameň",
       reportText: "tartar",
       status: "finalized",
-      clinicianConfirmed: true,
+      clinicianConfirmed: { confirmationId: ENVELOPE_ID },
     });
 
     expect(saved.status).toBe("finalized");
@@ -728,20 +789,37 @@ describe("c) deceased-patient sympathy gate blocks AI recall/marketing triggers"
   });
 
   it("a confirmed discharge for a living patient may schedule recall but only after confirmation", async () => {
+    const existingDraft = {
+      id: REPORT_ID,
+      practiceId: PRACTICE_ID,
+      status: "draft",
+      revision: 1,
+      patientId: PATIENT_ID,
+      petName: "Rex",
+      diagnosis: "Zubný kameň",
+    };
     const { db } = createDb({
-      selectResults: [[{ clientId: CLIENT_ID, status: "active" }]],
-      insertedRows: [
+      // Scripted in true call order: patient, locked draft, audit latest.
+      selectResults: [
+        [{ clientId: CLIENT_ID, status: "active" }],
+        [existingDraft],
+        [], // no prior audit event (genesis)
+      ],
+      insertedRows: [{ id: "audit-1" }],
+      updateResults: [
         { id: REPORT_ID, status: "finalized", patientId: PATIENT_ID, diagnosis: "Zubný kameň", treatment: null, reportText: "tartar" },
       ],
     });
 
     await discharge(db).save({
+      id: REPORT_ID,
+      expectedRevision: 1,
       patientId: PATIENT_ID,
       petName: "Rex",
       diagnosis: "Zubný kameň",
       reportText: "tartar",
       status: "finalized",
-      clinicianConfirmed: true,
+      clinicianConfirmed: { confirmationId: ENVELOPE_ID },
     });
 
     expect(mocks.applySympathyGate).not.toHaveBeenCalled();

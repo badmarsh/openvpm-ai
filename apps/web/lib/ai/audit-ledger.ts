@@ -122,15 +122,37 @@ export async function appendAiAuditEvent(
   let sequenceNumber = 1;
   let previousEventHash: string | null = null;
 
-  if (latest && latest.sequenceNumber !== null && latest.sequenceNumber !== undefined) {
+  if (!latest) {
+    // Empty ledger for this practice: genesis event. (Whether a genesis may
+    // be minted when legacy v1 rows exist is governed by the cutover policy
+    // in docs/audit-chain-cutover-and-backfill.md — the v1/v2 boundary is a
+    // deployment/release decision, not a silent runtime fallback.)
+    sequenceNumber = 1;
+    previousEventHash = null;
+  } else {
+    // Any existing row MUST carry a usable v2 sequence allocation and a
+    // verifiable predecessor hash. Fail closed — never silently fork the
+    // chain, never re-mint sequence 1 over existing rows.
+    if (
+      latest.sequenceNumber === null ||
+      latest.sequenceNumber === undefined
+    ) {
+      throw new AuditLedgerError(
+        "CHAIN_BROKEN",
+        "Existing audit log rows for this practice lack v2 sequence allocation. Run backfill before appending new chain events.",
+      );
+    }
+    if (
+      !latest.eventHash ||
+      !HEX_SHA256_REGEX.test(latest.eventHash)
+    ) {
+      throw new AuditLedgerError(
+        "CHAIN_BROKEN",
+        "Latest audit event for this practice has a missing or invalid event hash; the predecessor cannot be verified. Halt appends and investigate before continuing the chain.",
+      );
+    }
     sequenceNumber = latest.sequenceNumber + 1;
     previousEventHash = latest.eventHash;
-  } else if (latest && latest.sequenceNumber === null) {
-    // Legacy row exists without sequence number
-    throw new AuditLedgerError(
-      "CHAIN_BROKEN",
-      "Existing audit log rows for this practice lack v2 sequence allocation. Run backfill before appending new chain events.",
-    );
   }
 
   const confirmedAt = input.confirmedAt ?? new Date();

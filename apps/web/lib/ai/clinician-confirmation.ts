@@ -248,8 +248,19 @@ export async function consumeClinicianConfirmation(
 }
 
 /**
- * Creates and atomically consumes an inline confirmation envelope inside a single transaction.
- * Used for direct confirmation flows where a pre-issued separate token was not requested.
+ * RESTRICTED — transitional direct confirmation (Option 2).
+ *
+ * Creates and atomically consumes an inline confirmation envelope inside a
+ * single transaction. This MUST NOT be used by standard browser/API finalize
+ * paths: those require a pre-issued one-time envelope consumed via
+ * `consumeClinicianConfirmation()` (Option 1).
+ *
+ * The single approved caller is the create-only external AI-scribe hook
+ * (`ai.createSoapFromAI`), which has no pre-existing draft entity to bind a
+ * pre-issued envelope to. It MUST pass a distinct `correlationId`
+ * (`direct:<caller>`) so direct confirmations are auditable, and it MUST rely
+ * on lifecycle-level guards (CONFLICT on duplicate) for whole-request replay
+ * protection. See docs/confirmation-protocol.md for the deprecation plan.
  */
 export async function assertAndConsumeDirectConfirmation(
   tx: Database,
