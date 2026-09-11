@@ -92,8 +92,11 @@ deployment itself.
 ## 6. Conditions for GO
 
 1. CI runs green on the new gates: RLS job (16-test contract), unit
-   suites, and the Playwright pilot spec **with a real browser**
-   (`PILOT_E2E=1` against a disposable `openpims_pilot_*` database).
+   suites, `type-check`, and `build` (with network). The Playwright pilot
+   spec **with a real browser** runs as the release deploy gate per
+   `docs/production-readiness/RELEASE_RUNBOOK.md` step 3 (`PILOT_E2E=1`
+   against a disposable `openpims_pilot_*` database) — it is not PR CI
+   by repository design.
 2. First pilot database is fresh-migrated (`db:migrate` + `db:rls` +
    `audit:verify-ai --allow-empty`); brownfield cutover follows
    `docs/ai-audit-cutover.md` with archived evidence.
