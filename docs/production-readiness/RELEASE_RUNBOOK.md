@@ -12,7 +12,11 @@ Root [`CHANGELOG.md`](../../CHANGELOG.md) — Keep a Changelog. Unreleased notes
 
 1. SHA on the integration branch is green: `pnpm install --frozen-lockfile`, `verify:oss-release`, `type-check`, `test`, `build`, `pnpm audit --prod --audit-level high`, RLS job equivalent.
 2. Migration integrity: `db:migrations:check`; no drizzle drift.
-3. E2E critical path on a disposable env (`pnpm test:e2e` subset).
+3. E2E critical path on a disposable env (`pnpm test:e2e` subset), including
+   the AI-finalization pilot smoke with a real browser (see
+   `e2e/ai-finalization-pilot.spec.ts` header for setup):
+   `PILOT_E2E=1 PILOT_E2E_DATABASE_URL="$DATABASE_URL" DATABASE_URL="$DATABASE_URL"
+   PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm test:e2e ai-finalization-pilot`.
 4. Write changelog; bump version.
 5. Tag `vX.Y.Z-rc.N` **only when the repository owner authorizes**. This agent does not publish GitHub Releases.
 
