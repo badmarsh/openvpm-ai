@@ -15,12 +15,20 @@ export interface RelatedModule {
   href: string;
 }
 
+export interface PracticalExample {
+  title: string;
+  scenario: string;
+  solution: string;
+  badge?: string;
+}
+
 export interface HelpContent {
   title: string;
   intro: string;
   steps: HelpStep[];
   tips?: string[];
   relatedModules?: RelatedModule[];
+  practicalExample?: PracticalExample;
 }
 
 export const HELP_CONTENT: Record<string, HelpContent> = {
@@ -58,6 +66,12 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       "Klávesová skratka Ctrl+K otvorí rýchle vyhľadávanie.",
       "Farebné kategórie termínov si nastavíte v Nastavenia → Rozvrh.",
     ],
+    practicalExample: {
+      title: "Akútny pacient bez predošlej rezervácie",
+      badge: "Klinická prax",
+      scenario: "Do ambulancie vstúpi majiteľ so psom s podozrením na torziu žalúdka (GDV). Nemá vytvorený termín vopred.",
+      solution: "Kliknite na aktuálny časový slot v kalendári, zvoľte typ 'Akútny príjem (Urgent)' a označte 'Potvrdiť príchod'. Pacient sa ihneď zobrazí vo Whiteboarde a Čakárni pre celý personál.",
+    },
   },
 
   "/patients": {
@@ -94,6 +108,12 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       "Duplicitných pacientov nájdete cez Pacienti → Duplikáty.",
       "Zosnulých pacientov systém automaticky blokuje v marketingových kampaniach.",
     ],
+    practicalExample: {
+      title: "Registrácia šteňaťa a mikročipovanie do CRSZ",
+      badge: "Legislatíva",
+      scenario: "Majiteľ priniesol 8-týždňové šteňa na prvé očkovanie a čipovanie pred predajom.",
+      solution: "Vytvorte kartu pacienta, zadajte číslo mikročipu a vykonajte vakcináciu. Systém vás automaticky upozorní na 24-hodinovú lehotu zápisu do CRSZ podľa § 19 ods. 9 zákona č. 39/2007 Z. z.",
+    },
   },
 
   "/clients": {
@@ -265,6 +285,12 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
     tips: [
       "Pokladňa (POS) je optimalizovaná pre rýchlu obsluhu pri recepcii – klávesnicové skratky.",
     ],
+    practicalExample: {
+      title: "Rozdelenie platby (časť v hotovosti, časť platobnou kartou)",
+      badge: "e-Kasa",
+      scenario: "Klient platí vyšetrenie a operáciu v hodnote 180 € – 80 € chce zaplatiť v hotovosti a zvyšných 100 € platobnou kartou.",
+      solution: "Pri uzatváraní dokladu v e-Kase zvoľte 'Kombinovaná platba', zadajte sumu pre Hotovosť a Karta a vytlačte fiškálny bloček v súlade so zákonom č. 289/2008 Z. z.",
+    },
   },
 
   "/care-reminders": {
@@ -570,33 +596,39 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   },
 
   "/vet-intel": {
-    title: "VetIntel – AI analýzy",
+    title: "Veterinárny trhový radar & legislatívny vestník",
     intro:
-      "Prehľad AI analýz a odporúčaní vygenerovaných pre pacientov vašej ambulancie.",
+      "Strategický prehľad regionálneho trhu, konkurencie, úradných vestníkov (ŠVPS SR, KVL SR, ŠÚKL) a globálnych manažérskych trendov.",
     steps: [
       {
-        icon: "🧠",
-        title: "Zobraziť AI analýzu",
+        icon: "🏢",
+        title: "Trh & Konkurencia",
         description:
-          "Kliknite na záznam pre detail AI nálezu – diagnóza, diferenciálna diagnóza, odporúčaný postup.",
+          "Zadajte PSČ alebo mesto – získate analýzu cien, vybavenia a hodnotení kliník v regióne.",
       },
       {
-        icon: "✅",
-        title: "Schváliť alebo zamietnuť",
+        icon: "⚖️",
+        title: "Úradné vestníky & Právo",
         description:
-          "Každý AI návrh musí schváliť veterinár. Kliknite na „Schváliť\" alebo „Zamietnuť a upraviť\".",
+          "Prehľad platných nariadení, núdzových opatrení (AMO, HPAI), stavovských predpisov a monitorovania liečiv.",
       },
       {
-        icon: "📊",
-        title: "Prehľad presnosti",
+        icon: "💡",
+        title: "AI Stratégia & Trendy",
         description:
-          "Záložka „Štatistiky\" zobrazuje, ako presne AI odhadovala diagnózy v porovnaní s finálnymi lekárskymi závermi.",
+          "Overené manažérske skúsenosti zo svetových kliník, cenotvorba a retencia pacientov.",
       },
     ],
     tips: [
-      "AI nikdy nerozhoduje sama – všetky návrhy vyžadujú veterinárne potvrdenie (clinician confirmation).",
-      "Auditný denník záznamu uchováva celú históriu AI návrhov a ľudských schválení.",
+      "Všetky trhové porovnania sú v súlade s Etickým kódexom KVL SR – slúžia výhradne pre interné rozhodovanie.",
+      "Upozornenia ŠVPS SR sa aktualizujú podľa najnovších výnosov a vestníkov.",
     ],
+    practicalExample: {
+      title: "Preverenie cenotvorby a nových nariadení ŠVPS SR",
+      badge: "Strategické riadenie",
+      scenario: "Chcete nastaviť férovú cenu za vakcináciu a dentálnu hygienu v regióne a overiť povinnosti pri výskyte nákazy v okrese.",
+      solution: "V záložke 'Trh & Konkurencia' zadajte vaše PSČ pre lokálny cenový benchmark. V záložke 'Úradné vestníky & Právo' okamžite vidíte platné mimoriadne núdzové opatrenia ŠVPS SR.",
+    },
   },
 
   "/waiting-room": {
@@ -655,6 +687,90 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
     tips: [
       "Tabuľa je zdieľaná v reálnom čase – zmeny sa zobrazia všetkým prihláseným okamžite.",
     ],
+  },
+
+  "/agent/voice": {
+    title: "Hlasové diktovanie vyšetrenia",
+    intro:
+      "Vysoko presný klinický prepis hovoreného slova so slovenskou veterinárnou terminológiou a automatickým štruktúrovaním do SOAP.",
+    steps: [
+      {
+        icon: "🐕",
+        title: "Vybrať pacienta",
+        description:
+          "Zvoľte pacienta, ku ktorému bude diktát priradený, alebo kliknite na „Načítať demo nahrávku\" pre okamžité otestovanie.",
+      },
+      {
+        icon: "🎙️",
+        title: "Nahrať diktát alebo načítať vzor",
+        description:
+          "Stlačte mikrofón a hovorte, alebo načítajte ukážkovú nahrávku psa Bona s kontrolou artrózy.",
+      },
+      {
+        icon: "✨",
+        title: "Spracovať cez Gemini AI",
+        description:
+          "AI prevedie reč na text, zatriedi fakty do S-O-A-P a pripraví položky na vyúčtovanie.",
+      },
+      {
+        icon: "📋",
+        title: "Potvrdiť a uložiť do karty",
+        description:
+          "Veterinár skontroluje nález, potvrdí klinickú správnosť a uloží záznam priamo do kartotéky pacienta.",
+      },
+    ],
+    tips: [
+      "Hovorte prirodzeným tempom; AI rozumie skratkám (s.c., i.v., CRT, DKK, Meloxoral, Synulox).",
+      "Využite tlačidlo „Načítať demo nahrávku\" na okamžité zoznámenie sa so systémom bez nutnosti nahrávať vlastné audio.",
+    ],
+    practicalExample: {
+      title: "Rýchly záznam kontrolnej vizity psa",
+      badge: "Klinická prax",
+      scenario: "Máte 2 minúty medzi pacientmi a potrebujete zapísať výsledok kontroly lakťového kĺbu u labradora.",
+      solution: "Otvorte /agent/voice, stlačte mikrofón a za 30 sekúnd nadiktujte nález. AI rozdelí text do SOAP, navrhne dávkovanie liečiv a jedným klikom vytvorí koncept účtu.",
+    },
+  },
+
+  "/agent/imaging": {
+    title: "AI analýza rádiologických snímkov",
+    intro:
+      "Multimodálna analýza röntgenových snímkov (RTG), DICOM dát, CT, MRI, USG a klinických fotografií s výpočtom VHS indexu.",
+    steps: [
+      {
+        icon: "🐾",
+        title: "Vybrať pacienta a snímku",
+        description:
+          "Vyberte pacienta, pretiahnite súbor (JPG, PNG, DICOM .dcm) alebo zvoľte ukážkovú RTG snímku.",
+      },
+      {
+        icon: "🎯",
+        title: "Rýchle diagnostické zameranie",
+        description:
+          "Kliknite na prednastavenú šablónu (Thorax/Srdce, Abdomen/Cudzie teleso, Končatiny/Fraktúra, Dentálny RTG).",
+      },
+      {
+        icon: "⚡",
+        title: "Spustiť AI analýzu snímku",
+        description:
+          "Jedným kliknutím sa snímok bezpečne nahrá a AI vygeneruje objektívny rádiologický popis nálezov.",
+      },
+      {
+        icon: "❤️",
+        title: "VHS kalkulačka a tlač správy",
+        description:
+          "Využite integrovanú kalkulačku kardiovertebrálneho indexu (VHS) a vytlačte oficiálnu lekársku správu pre majiteľa.",
+      },
+    ],
+    tips: [
+      "Systém podporuje medicínske DICOM súbory (.dcm) priamo v prehliadači bez nutnosti externej PACS stanice.",
+      "Tlačidlo „Spustiť AI analýzu snímku\" automaticky spracuje a analyzuje vybranú snímku bez zbytočných medzikrokov.",
+    ],
+    practicalExample: {
+      title: "Posúdenie kardiomegálie u kašľajúceho psa",
+      badge: "Diagnostika",
+      scenario: "10-ročný pes s kašľom a podozrením na kongestívne zlyhanie srdca. Máte laterálny RTG hrudníka.",
+      solution: "Nahrajte RTG snímku do /agent/imaging, zvoľte šablónu 'Thorax / Srdce & Pľúca' a po analýze otvorte VHS kalkulačku pre presné vertebrálne skóre.",
+    },
   },
 
   "/agent": {

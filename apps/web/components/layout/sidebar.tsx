@@ -31,7 +31,6 @@ import {
   Tv,
   MessageSquare,
   Building2,
-  Archive,
 } from "lucide-react";
 import { PawMark } from "@/components/brand/paw-mark";
 import {
@@ -249,13 +248,6 @@ const vanillaSections: NavSection[] = [
         roles: ["admin"],
       },
       {
-        href: "/migration-archive",
-        label: "Archív migrácie",
-        i18nKey: "nav.migrationArchive",
-        icon: Archive,
-        roles: ["admin"],
-      },
-      {
         href: "/agent",
         label: "Agent",
         i18nKey: "nav.agent",
@@ -328,12 +320,13 @@ export function Sidebar({
           href="/"
           prefetch={false}
           className="flex items-center gap-2.5 min-w-0"
+          title="MVDr. Martin Sýkora - Súkromná veterinárna ambulancia"
         >
           {branding?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={branding.logoUrl}
-              alt={branding.name ?? "Practice logo"}
+              alt={branding.name ?? "MVDr. Martin Sýkora"}
               className="h-8 w-8 rounded-lg object-cover shrink-0"
             />
           ) : (
@@ -343,11 +336,14 @@ export function Sidebar({
           )}
           {!isCollapsed && (
             <div className="min-w-0">
-              <span className="font-heading text-base font-bold tracking-tight block truncate">
-                {branding?.name ?? "VET.IS"}
+              <span className="font-heading text-sm font-bold tracking-tight block truncate leading-tight text-foreground">
+                MVDr. Martin Sýkora
               </span>
-              <span className="text-[10px] text-muted-foreground block -mt-0.5 font-medium truncate">
-                MVDr.Sýkora
+              <span
+                className="text-[10px] text-muted-foreground block font-medium truncate leading-tight mt-0.5"
+                title="Súkromná veterinárna ambulancia"
+              >
+                Súkromná veterinárna ambulancia
               </span>
             </div>
           )}

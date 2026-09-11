@@ -133,6 +133,15 @@ export default function MigrationArchivePage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Link
+          href="/settings?tab=data"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span>{t("nav.settings", "Nastavenia")} &rarr; {t("settings.tabs.data", "Data")}</span>
+        </Link>
+      </div>
       <header className="space-y-2">
         <div className="flex items-center gap-2 text-primary">
           <Archive className="h-5 w-5" aria-hidden="true" />

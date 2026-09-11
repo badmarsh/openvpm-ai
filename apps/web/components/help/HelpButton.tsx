@@ -35,11 +35,11 @@ export function HelpButton({ className }: HelpButtonProps) {
         aria-expanded={open}
         onClick={() => setOpen(true)}
         className={cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background shadow-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group",
           className,
         )}
       >
-        <HelpCircle className="h-4 w-4" />
+        <HelpCircle className="h-4 w-4 text-sky-600 dark:text-sky-400 fill-sky-500/15 group-hover:text-sky-500 dark:group-hover:text-sky-300 transition-colors" />
       </button>
 
       {open && (
