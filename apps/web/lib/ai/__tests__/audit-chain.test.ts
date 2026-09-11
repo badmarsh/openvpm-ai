@@ -340,12 +340,12 @@ describe("verifyAiAuditChain", () => {
 
   // Missing fields (pre-migration / legacy rows)
   describe("missing required chain fields", () => {
-    it("reports MISSING_REQUIRED_FIELD for events without sequenceNumber", () => {
+    it("reports LEGACY_ROW for pre-chain events without sequenceNumber", () => {
       const chain = buildValidChain(PRACTICE_A, 1);
       chain[0]!.sequenceNumber = null;
       const result = verifyAiAuditChain(chain);
       expect(result.ok).toBe(false);
-      expect(result.errors.some((e) => e.type === "MISSING_REQUIRED_FIELD")).toBe(true);
+      expect(result.errors.some((e) => e.type === "LEGACY_ROW")).toBe(true);
     });
 
     it("reports MISSING_REQUIRED_FIELD for missing actorRole", () => {
