@@ -583,20 +583,29 @@ describeWithAiFinalizationPostgres(
 
         // Defense-in-depth: the RLS policy itself hides practice-A rows when
         // the session context is practice B.
+        // NOTE: .unsafe() with parameters instead of template tags — the
+        // postgres.js TransactionSql type (Omit<Sql, ...>) drops template-tag
+        // call signatures, so txSql`...` does not typecheck. Runtime-identical.
         await f().appSql.begin(async (txSql) => {
-          await txSql`select set_config('app.current_practice_id', ${practiceB}, true)`;
-          const foreign = await txSql`
-            select id from ai_imaging_analyses
-            where id = ${analysis.id} and deleted_at is null
-          `;
+          await txSql.unsafe(
+            `select set_config('app.current_practice_id', $1, true)`,
+            [practiceB],
+          );
+          const foreign = await txSql.unsafe(
+            `select id from ai_imaging_analyses where id = $1 and deleted_at is null`,
+            [analysis.id],
+          );
           expect(foreign).toHaveLength(0);
         });
         await f().appSql.begin(async (txSql) => {
-          await txSql`select set_config('app.current_practice_id', ${practiceA}, true)`;
-          const own = await txSql`
-            select id from ai_imaging_analyses
-            where id = ${analysis.id} and deleted_at is null
-          `;
+          await txSql.unsafe(
+            `select set_config('app.current_practice_id', $1, true)`,
+            [practiceA],
+          );
+          const own = await txSql.unsafe(
+            `select id from ai_imaging_analyses where id = $1 and deleted_at is null`,
+            [analysis.id],
+          );
           expect(own).toHaveLength(1);
         });
       },

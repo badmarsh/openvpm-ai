@@ -45,7 +45,7 @@ deployment itself.
 | Pilot flow vs live server + real PG16 (login→prepare→finalize→replay) | **7/7** | headless (no browser in sandbox); Playwright spec runs in CI |
 | Branch-vs-baseline full-suite failure diff | **0 regressions** (67 vs 69; deltas are fixed/renamed tests) | recorded pre-reset; tree re-verified post-reset |
 | `db:generate` drift | clean ("No schema changes") | |
-| `tsc --noEmit` on touched areas | 0 errors | |
+| `tsc --noEmit` repo-wide (`@openpims/web`) | 0 errors (exit 0) | |
 
 ## 4. Deliverables
 
@@ -82,8 +82,12 @@ deployment itself.
    role-gated, distinctly correlated, lifecycle CONFLICT on replay) with a
    measurable deprecation plan — but direct confirmations should trend to
    zero during the pilot.
-5. **TypeScript overall status** was verified clean only for touched areas;
-   repo-wide `tsc` may carry pre-existing errors.
+5. **Production build** (`next build`) could not complete in this sandbox:
+   it fails only at fetching `Inter`/`DM Sans` from Google Fonts (TLS to
+   Google is blocked here; `app/layout.tsx` is untouched by this work, so
+   baseline fails identically). Mitigations: repo-wide `tsc` exits 0, the
+   dev server compiles and serves all pilot routes, and CI runs
+   `pnpm build` with network as a merge gate (condition §6.1).
 
 ## 6. Conditions for GO
 
