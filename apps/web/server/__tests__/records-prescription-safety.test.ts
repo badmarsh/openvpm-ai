@@ -778,7 +778,7 @@ describe("records prescription retry UX", () => {
   it("keeps URL-linked prescription creation behind a prerender-safe boundary", () => {
     expect(source).toContain("function RecordsPageContent()");
     expect(source).toContain(
-      '<Suspense fallback={<RecordsLoadingPanel label="Loading records..." />}>',
+      '<Suspense fallback={<RecordsLoadingPanel label={t("records.loading", "Loading records...")} />}>',
     );
     expect(source).toContain("<RecordsPageContent />");
   });
