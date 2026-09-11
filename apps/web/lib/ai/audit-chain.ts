@@ -32,6 +32,16 @@ export const CANONICALIZATION_VERSION = 1;
 export const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 /**
+ * Tolerance for post-insert mutation detection (5 seconds). At INSERT time
+ * both `created_at` and `updated_at` default to the same transaction clock,
+ * so any drift beyond this window proves the row was touched afterwards —
+ * necessarily via the ledger-maintenance bypass (superuser/owner with
+ * `app.ledger_maintenance=on`), since the immutability trigger blocks all
+ * other UPDATE/DELETE paths.
+ */
+export const POST_INSERT_MUTATION_TOLERANCE_MS = 5 * 1000;
+
+/**
  * The predecessor hash value for the first (genesis) event in each practice
  * chain. Using an explicit sentinel rather than null makes the genesis
  * condition unambiguous in the canonical payload.
@@ -62,10 +72,13 @@ export interface AuditChainError {
     | "FUTURE_TIMESTAMP"
     | "HASH_MISMATCH"
     | "INVALID_CANON_VERSION"
+    | "LEGACY_ROW"
     | "MISSING_REQUIRED_FIELD"
+    | "MUTATED_ROW"
     | "PREDECESSOR_MISMATCH"
     | "SEQUENCE_DUPLICATE"
-    | "SEQUENCE_GAP";
+    | "SEQUENCE_GAP"
+    | "SOFT_DELETED_ROW";
   sequenceNumber?: number;
   eventId?: string;
   detail: string;
@@ -102,6 +115,15 @@ export interface AuditLogDbRow {
   previousEventHash: string | null;
   eventHash: string | null;
   canonicalizationVersion: number | null;
+  /**
+   * Optional lifecycle columns. When provided by the caller (ops verifier),
+   * the verifier additionally detects soft-deleted rows (evidence deletion)
+   * and post-insert mutations (update-marker drift). Plain unit callers may
+   * omit them; lifecycle checks are then skipped.
+   */
+  createdAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  deletedAt?: Date | string | null;
 }
 
 /**
@@ -205,12 +227,52 @@ export function verifyAiAuditChain(
       const ev = sorted[i]!;
       const seqNum = ev.sequenceNumber;
 
-      // Missing sequenceNumber
+      // Soft-deleted row. A deleted audit event is destroyed evidence:
+      // flag it and EXCLUDE it from chain verification so it cannot
+      // silently shift sequences or break predecessor linkage.
+      if (ev.deletedAt !== null && ev.deletedAt !== undefined) {
+        errors.push({
+          type: "SOFT_DELETED_ROW",
+          sequenceNumber:
+            seqNum === null || seqNum === undefined ? undefined : seqNum,
+          eventId: ev.id,
+          detail: `Audit event has deletedAt set — possible evidence deletion; excluded from chain verification`,
+        });
+        continue;
+      }
+
+      // Post-insert mutation marker. The immutability trigger blocks UPDATE/DELETE,
+      // but a drifted updated_at reveals a change that bypassed the app
+      // (superuser maintenance, trigger disabled, restore anomaly).
+      if (
+        ev.createdAt !== null &&
+        ev.createdAt !== undefined &&
+        ev.updatedAt !== null &&
+        ev.updatedAt !== undefined
+      ) {
+        const createdMs = new Date(ev.createdAt).getTime();
+        const updatedMs = new Date(ev.updatedAt).getTime();
+        if (
+          Number.isFinite(createdMs) &&
+          Number.isFinite(updatedMs) &&
+          updatedMs - createdMs > POST_INSERT_MUTATION_TOLERANCE_MS
+        ) {
+          errors.push({
+            type: "MUTATED_ROW",
+            sequenceNumber:
+              seqNum === null || seqNum === undefined ? undefined : seqNum,
+            eventId: ev.id,
+            detail: `updatedAt is ${Math.round((updatedMs - createdMs) / 1000)}s after createdAt — row was modified post-insert`,
+          });
+        }
+      }
+
+      // Missing sequenceNumber — pre-chain (legacy) row, not backfilled yet
       if (seqNum === null || seqNum === undefined) {
         errors.push({
-          type: "MISSING_REQUIRED_FIELD",
+          type: "LEGACY_ROW",
           eventId: ev.id,
-          detail: `Event id=${ev.id}: missing sequenceNumber — chain columns not migrated yet`,
+          detail: `Row predates the hash chain (sequenceNumber is null) — pending cutover/backfill`,
         });
         continue;
       }
