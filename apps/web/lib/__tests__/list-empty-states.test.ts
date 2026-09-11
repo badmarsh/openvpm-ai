@@ -24,8 +24,8 @@ describe("dashboard list empty/error states", () => {
     expect(page).toContain("search: hasSearch ? trimmedSearch : undefined");
     expect(page).toContain("maxLength={CLIENT_SEARCH_MAX_LENGTH}");
     expect(page).toContain("const clientsMissing =");
-    expect(page).toContain(
-      "formatClinicalDate(\n                      client.createdAt,\n                      clientListTimeZone"
+    expect(page).toMatch(
+      /formatClinicalDate\(\s*client\.createdAt,\s*clientListTimeZone/,
     );
     expect(page).toContain("{verifiedClientList && (");
     expect(page).toContain("verifiedClientList.items.map");
@@ -72,7 +72,9 @@ describe("dashboard list empty/error states", () => {
     );
     expect(page).toContain(") : isLoading ? (");
     expect(page).toContain("<EmptyState");
-    expect(page).toContain('title={\n            search\n              ? "No entries match your filter"');
+    expect(page).toMatch(
+      /title=\{?\s*search\s*\?\s*(?:t\([^)]*"No entries match your filter"[^)]*\)|"No entries match your filter")/,
+    );
     expect(page).toContain("function InlineLookupError");
     expect(page).toContain("patientLookupUnavailable");
     expect(page).toContain("witnessLookupUnavailable");
@@ -85,7 +87,9 @@ describe("dashboard list empty/error states", () => {
     );
     expect(page).toContain("Unable to load patients");
     expect(page).toContain("Unable to load witnesses");
-    expect(page).toContain('title="No balance data yet"');
+    expect(page).toMatch(
+      /title=(?:\{t\([^)]*"No balance data yet"[^)]*\)\}|"No balance data yet")/,
+    );
   });
 
   it("keeps Inventory product and supplier errors exclusive from empty states", () => {
@@ -104,9 +108,15 @@ describe("dashboard list empty/error states", () => {
     expect(page.indexOf("suppliersQuery.error || suppliersMissing")).toBeLessThan(
       page.indexOf("No suppliers yet")
     );
-    expect(page).toContain('title="No suppliers yet"');
-    expect(page).toContain('label: "Add first product"');
-    expect(page).toContain('label: "Add first supplier"');
+    expect(page).toMatch(
+      /title=(?:\{t\([^)]*"No suppliers yet"[^)]*\)\}|"No suppliers yet")/,
+    );
+    expect(page).toMatch(
+      /label:\s*(?:t\([^)]*"Add first product"[^)]*\)|"Add first product")/,
+    );
+    expect(page).toMatch(
+      /label:\s*(?:t\([^)]*"Add first supplier"[^)]*\)|"Add first supplier")/,
+    );
   });
 
   it("keeps Billing invoice-list errors exclusive from empty states", () => {
@@ -122,7 +132,9 @@ describe("dashboard list empty/error states", () => {
       page.indexOf("No invoices yet")
     );
     expect(page).toContain("<EmptyState");
-    expect(page).toContain('label: tab.isEstimate ? "Create estimate" : "Create invoice"');
+    expect(page).toMatch(
+      /label:\s*tab\.isEstimate\s*\?\s*(?:t\([^)]*"Create estimate"[^)]*\)|"Create estimate")\s*:\s*(?:t\([^)]*"Create invoice"[^)]*\)|"Create invoice")/,
+    );
     expect(page).not.toContain("{error && (");
   });
 
@@ -141,7 +153,9 @@ describe("dashboard list empty/error states", () => {
       page.indexOf("No patients on the whiteboard")
     );
     expect(page).toContain("<EmptyState");
-    expect(page).toContain('label: "Open schedule"');
+    expect(page).toMatch(
+      /label:\s*(?:t\([^)]*"Open schedule"[^)]*\)|"Open schedule")/,
+    );
     expect(page).not.toContain("{error && (");
   });
 
@@ -185,9 +199,15 @@ describe("dashboard list empty/error states", () => {
     expect(page).not.toContain("stats.data?.");
     expect(page).not.toContain("calendarSettings?.timezone");
     expect(page).not.toContain("const upcomingAppointments = (upcoming.data ?? [])");
-    expect(page).toContain('title="No visits booked yet"');
-    expect(page).toContain('title="Your charts show up once you start"');
-    expect(page).toContain('label: "Book your first visit"');
+    expect(page).toMatch(
+      /title=(?:\{t\([^)]*"No visits booked yet"[^)]*\)\}|"No visits booked yet")/,
+    );
+    expect(page).toMatch(
+      /title=(?:\{t\([^)]*(?:dashboard\.charts\.empty\.title|Your charts show up once you start|Vaše grafy sa zobrazia)[^)]*\)\}|"Your charts show up once you start")/,
+    );
+    expect(page).toMatch(
+      /label:\s*(?:t\([^)]*"Book your first visit"[^)]*\)|"Book your first visit")/,
+    );
   });
 
   it("supports icon-bearing empty-state actions", () => {
