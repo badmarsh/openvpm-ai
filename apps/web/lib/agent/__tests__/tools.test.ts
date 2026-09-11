@@ -30,7 +30,7 @@ import {
 
 // The DB is never touched by these tests — only pure tools (calculate_drug_dose)
 // are executed; DB-backed tools are exercised at the validation layer.
-const fakeCtx = { practiceId: "p", userId: "u" } as unknown as AgentToolContext;
+const fakeCtx = { practiceId: "p", userId: "u", userRole: "veterinarian" } as unknown as AgentToolContext;
 const PRACTICE_ID = "00000000-0000-0000-0000-000000000001";
 const CLIENT_ID = "00000000-0000-0000-0000-000000000002";
 const PATIENT_ID = "00000000-0000-0000-0000-000000000003";
@@ -81,6 +81,7 @@ function toolDb(selectResults: unknown[][], insertRow: Record<string, unknown>) 
   const ctx = {
     practiceId: PRACTICE_ID,
     userId: "agent-user",
+    userRole: "veterinarian",
     db: { select, insert, execute: vi.fn(async () => undefined) },
   } as unknown as AgentToolContext;
 
