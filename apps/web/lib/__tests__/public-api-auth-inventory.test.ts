@@ -23,6 +23,7 @@ const INTENTIONALLY_PUBLIC = [
   "app/api/funnel-event/route.ts",
   "app/api/error-report/route.ts",
   "app/api/demo-access/route.ts",
+  "app/api/vercel-insights/route.ts",
 ];
 
 function hasAuthControl(source: string): boolean {

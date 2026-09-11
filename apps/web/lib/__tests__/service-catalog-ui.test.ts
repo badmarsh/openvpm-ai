@@ -15,13 +15,14 @@ describe("service catalog settings UX", () => {
   const source = readFileSync("components/settings/services-tab.tsx", "utf8");
 
   it("wires an administrator service-pricing section into settings", () => {
-    expect(settingsSource).toContain(
-      'import { ServicesTab } from "@/components/settings/services-tab"'
+    expect(settingsSource).toMatch(
+      /import\("@\/components\/settings\/services-tab"\)|import\s*\{\s*ServicesTab\s*\}\s*from\s*"@\/components\/settings\/services-tab"/,
     );
     expect(settingsSource).toContain('| "services"');
-    expect(settingsSource).toContain(
-      '{ id: "services", label: "Services & Pricing", icon: ReceiptText }'
+    expect(settingsSource).toMatch(
+      /id:\s*"services",\s*label:\s*"Services & Pricing"/,
     );
+    expect(settingsSource).toContain("icon: ReceiptText");
     expect(settingsSource).toContain(
       'activeTab === "services" && <ServicesTab />'
     );

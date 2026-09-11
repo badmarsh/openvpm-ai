@@ -8,6 +8,12 @@ import {
   type PrevisitIntakeFieldKey,
 } from "@/lib/booking/previsit-intake";
 
+vi.mock("@/lib/i18n", () => ({
+  useI18n: () => ({
+    t: (_key: string, fallback?: string) => fallback ?? _key,
+  }),
+}));
+
 function renderFields(enabledFieldKeys: readonly PrevisitIntakeFieldKey[]) {
   return renderToStaticMarkup(
     createElement(PrevisitIntakeFields, {
