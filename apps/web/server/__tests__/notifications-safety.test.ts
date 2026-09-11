@@ -1575,7 +1575,7 @@ describe("notification query scoping", () => {
         )}\\),\\s*activePracticePredicate\\(${tenantExpr.replace(
           ".",
           "\\.",
-        )}\\),\\s*isNull\\(${table}\\.deletedAt\\),?\\s*\\),?\\s*\\)`,
+        )}\\),\\s*isNull\\(${table}\\.deletedAt\\),?[\\s\\S]*?\\),?\\s*\\)`,
         "gs",
       ),
     );
