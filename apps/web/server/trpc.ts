@@ -502,10 +502,11 @@ export const protectedProcedure = t.procedure.use(
               trialEndsAt,
             )
           ) {
+            const appName = process.env.NEXT_PUBLIC_APP_NAME || "OpenVPM";
             throw new TRPCError({
               code: "FORBIDDEN",
               message:
-                "VET.IS Cloud is read-only until your trial or subscription is active. You can still manage billing and export your data.",
+                `${appName} is read-only until your trial or subscription is active. You can still manage billing and export your data.`,
             });
           }
         }
@@ -612,9 +613,10 @@ export function requireFeature(feature: Feature) {
           throw practiceNotFound();
         }
         if (!access.allowed) {
+          const appName = process.env.NEXT_PUBLIC_APP_NAME || "OpenVPM";
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: access.message ?? "VET.IS AI is not available.",
+            message: access.message ?? `${appName} AI is not available.`,
           });
         }
         return next({

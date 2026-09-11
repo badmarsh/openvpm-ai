@@ -45,11 +45,11 @@ export function HelpModal({ content, onClose }: HelpModalProps) {
         aria-modal="true"
         aria-labelledby="help-modal-title"
         tabIndex={-1}
-        className="relative z-10 flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl focus:outline-none"
-        style={{ maxHeight: "min(90vh, 780px)" }}
+        className="relative z-10 flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl focus:outline-none"
+        style={{ maxHeight: "min(92vh, 860px)" }}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-muted/30 px-7 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-muted/30 px-8 py-5">
           <div>
             <h2
               id="help-modal-title"
@@ -71,10 +71,10 @@ export function HelpModal({ content, onClose }: HelpModalProps) {
 
         {/* 2-column body */}
         <div className="overflow-y-auto">
-          <div className="grid grid-cols-1 gap-0 lg:grid-cols-[1fr_320px]">
+          <div className="grid grid-cols-1 gap-0 lg:grid-cols-[1fr_360px]">
 
             {/* Left column — Účel + Postup */}
-            <div className="border-r border-border px-7 py-6 space-y-7">
+            <div className="border-r border-border px-8 py-7 space-y-7">
 
               {/* Účel modulu */}
               <section>
@@ -122,7 +122,7 @@ export function HelpModal({ content, onClose }: HelpModalProps) {
             </div>
 
             {/* Right column — Tipy + Súvisí s */}
-            <div className="px-6 py-6 space-y-6 bg-muted/20">
+            <div className="px-7 py-7 space-y-7 bg-muted/20">
 
               {/* Tipy */}
               {content.tips && content.tips.length > 0 && (

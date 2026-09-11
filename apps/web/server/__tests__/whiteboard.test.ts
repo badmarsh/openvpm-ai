@@ -236,6 +236,87 @@ describe("whiteboard workflows", () => {
     );
   });
 
+  it("atomically assigns a doctor during check-in when inline doctorId is provided", async () => {
+    const NEW_DOCTOR_ID = "00000000-0000-0000-0000-000000000099";
+    const { db, updateSet } = createStatusDb({
+      selectResults: [
+        [
+          {
+            id: APPOINTMENT_ID,
+            status: "confirmed",
+            doctorId: null,
+            typeRequiresDoctor: 1,
+          },
+        ],
+        [{ id: NEW_DOCTOR_ID }],
+        [],
+      ],
+      updatedRows: [
+        {
+          id: APPOINTMENT_ID,
+          status: "checked_in",
+          patientId: "00000000-0000-0000-0000-000000000003",
+          clientId: "00000000-0000-0000-0000-000000000004",
+          doctorId: NEW_DOCTOR_ID,
+          typeId: "00000000-0000-0000-0000-000000000006",
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+        },
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).updateStatus({
+        id: APPOINTMENT_ID,
+        status: "checked_in",
+        doctorId: NEW_DOCTOR_ID,
+      })
+    ).resolves.toMatchObject({ id: APPOINTMENT_ID, status: "checked_in" });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      status: "checked_in",
+      doctorId: NEW_DOCTOR_ID,
+    });
+    expect(mocks.dispatchWebhookEvent).toHaveBeenCalledWith(
+      PRACTICE_ID,
+      "appointment.checked_in",
+      expect.objectContaining({
+        id: APPOINTMENT_ID,
+        appointmentId: APPOINTMENT_ID,
+        status: "checked_in",
+        previousStatus: "confirmed",
+        doctorId: NEW_DOCTOR_ID,
+      })
+    );
+  });
+
+  it("rejects check-in without doctor when appointment type requires doctor", async () => {
+    const { db, updateSet } = createStatusDb({
+      selectResults: [
+        [
+          {
+            id: APPOINTMENT_ID,
+            status: "confirmed",
+            doctorId: null,
+            typeRequiresDoctor: 1,
+          },
+        ],
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).updateStatus({
+        id: APPOINTMENT_ID,
+        status: "checked_in",
+      })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: "Assign a doctor before checking in this appointment.",
+    });
+
+    expect(updateSet).not.toHaveBeenCalled();
+  });
+
   it("emits appointment.cancelled when whiteboard status cancels an appointment", async () => {
     const { db, updateSet } = createStatusDb({
       selectResults: [[{ id: APPOINTMENT_ID, status: "confirmed" }]],

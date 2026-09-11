@@ -1150,7 +1150,8 @@ function AppointmentDetailPopover({
   onStatusChange: (
     id: string,
     status: AppointmentStatus,
-    confirmationContactMethod?: ConfirmationContactMethod
+    confirmationContactMethod?: ConfirmationContactMethod,
+    doctorId?: string
   ) => void;
   onReschedule: (input: {
     id: string;
@@ -1169,6 +1170,7 @@ function AppointmentDetailPopover({
   isCancellingSeries: boolean;
 }) {
   const { t } = useI18n();
+  const [inlineDoctorId, setInlineDoctorId] = useState<string>("");
   const popoverRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const restoreFocusRef = useRef(true);
@@ -1326,10 +1328,11 @@ function AppointmentDetailPopover({
   }[] = [];
   const current = appointment.status as AppointmentStatus;
   const canMoveAppointment = current === "scheduled" || current === "confirmed";
+  const needsDoctorAssignment =
+    appointment.typeRequiresDoctor === 1 && !appointment.doctorId;
   const doctorRequiredForAdvance =
     current === "scheduled" &&
-    appointment.typeRequiresDoctor === 1 &&
-    !appointment.doctorId;
+    needsDoctorAssignment;
   const resourceOptionsUnavailable =
     !rescheduleLocationId ||
     locationsQuery.isLoading ||
@@ -1351,15 +1354,14 @@ function AppointmentDetailPopover({
         : undefined,
     });
     statusActions.push({
-      label: t("schedule.statusCheckIn", "Check In"),
+      label: needsDoctorAssignment
+        ? t("schedule.assignAndCheckIn", "Assign & Check In")
+        : t("schedule.statusCheckIn", "Check In"),
       status: "checked_in",
       variant: "outline",
-      disabled: doctorRequiredForAdvance,
-      disabledReason: doctorRequiredForAdvance
-        ? t(
-            "schedule.assignDoctorCheckIn",
-            "Assign a doctor before checking in this appointment."
-          )
+      disabled: needsDoctorAssignment ? !inlineDoctorId : false,
+      disabledReason: needsDoctorAssignment && !inlineDoctorId
+        ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in")
         : undefined,
     });
     statusActions.push({
@@ -1374,9 +1376,15 @@ function AppointmentDetailPopover({
     });
   } else if (current === "confirmed") {
     statusActions.push({
-      label: t("schedule.statusCheckIn", "Check In"),
+      label: needsDoctorAssignment
+        ? t("schedule.assignAndCheckIn", "Assign & Check In")
+        : t("schedule.statusCheckIn", "Check In"),
       status: "checked_in",
       variant: "default",
+      disabled: needsDoctorAssignment ? !inlineDoctorId : false,
+      disabledReason: needsDoctorAssignment && !inlineDoctorId
+        ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in")
+        : undefined,
     });
     statusActions.push({
       label: t("schedule.statusNoShowAction", "No Show"),
@@ -1885,28 +1893,61 @@ function AppointmentDetailPopover({
                 {t("schedule.btnCancelFutureSeries", "Cancel Future Series")}
               </Button>
             )}
-            {visibleStatusActions.map((action) => (
-              <Button
-                key={action.status}
-                size="sm"
-                variant={action.variant}
-                disabled={isUpdating || action.disabled}
-                title={action.disabledReason}
-                onClick={() => {
-                  if (action.status === "confirmed") {
-                    setShowRescheduleForm(false);
-                    setShowConfirmationForm(true);
-                    return;
-                  }
-                  onStatusChange(appointment.id, action.status);
-                }}
-              >
-                {isUpdating ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                ) : null}
-                {action.label}
-              </Button>
-            ))}
+            {visibleStatusActions.map((action) => {
+              if (action.status === "checked_in" && needsDoctorAssignment) {
+                return (
+                  <div key="inline-doctor-checkin" className="flex items-center gap-1.5">
+                    <select
+                      aria-label={t("schedule.selectDoctorToAssign", "Select doctor to assign")}
+                      value={inlineDoctorId}
+                      onChange={(e) => setInlineDoctorId(e.target.value)}
+                      className="h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">{t("schedule.selectDoctorToAssign", "Select doctor...")}</option>
+                      {eligibleRescheduleDoctors.map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {t("schedule.drPrefix", "Dr. {name}", { name: doc.name })}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant={action.variant}
+                      disabled={isUpdating || !inlineDoctorId}
+                      title={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}
+                      onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                      ) : null}
+                      {action.label}
+                    </Button>
+                  </div>
+                );
+              }
+              return (
+                <Button
+                  key={action.status}
+                  size="sm"
+                  variant={action.variant}
+                  disabled={isUpdating || action.disabled}
+                  title={action.disabledReason}
+                  onClick={() => {
+                    if (action.status === "confirmed") {
+                      setShowRescheduleForm(false);
+                      setShowConfirmationForm(true);
+                      return;
+                    }
+                    onStatusChange(appointment.id, action.status);
+                  }}
+                >
+                  {isUpdating ? (
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  ) : null}
+                  {action.label}
+                </Button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -2825,10 +2866,11 @@ function SchedulePageContent() {
   const handleStatusChange = (
     id: string,
     status: AppointmentStatus,
-    confirmationContactMethod?: ConfirmationContactMethod
+    confirmationContactMethod?: ConfirmationContactMethod,
+    doctorId?: string
   ) => {
     updateStatus.mutate(
-      { id, status, confirmationContactMethod },
+      { id, status, confirmationContactMethod, doctorId },
       {
         onSuccess: () => {
           utils.appointments.list.invalidate();

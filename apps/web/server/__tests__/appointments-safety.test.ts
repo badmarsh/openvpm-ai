@@ -588,6 +588,56 @@ describe("appointments target safety", () => {
     expect(updateSet).not.toHaveBeenCalled();
   });
 
+  it("atomically assigns a doctor during check-in when inline doctorId is provided", async () => {
+    const { db, updateSet } = createDb({
+      selectResults: [
+        [
+          {
+            id: APPOINTMENT_ID,
+            status: "scheduled",
+            doctorId: null,
+            typeRequiresDoctor: 1,
+            clientId: CLIENT_ID,
+            startTime: new Date(startTime),
+            updatedAt: new Date("2026-06-30T18:00:00.000Z"),
+          },
+        ],
+        [{ id: DOCTOR_ID }],
+        [],
+      ],
+      updatedRows: [
+        {
+          id: APPOINTMENT_ID,
+          status: "checked_in",
+          doctorId: DOCTOR_ID,
+          patientId: PATIENT_ID,
+          clientId: CLIENT_ID,
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+        },
+      ],
+    });
+
+    await expect(
+      callerWithDb(db).updateStatus({
+        id: APPOINTMENT_ID,
+        status: "checked_in",
+        doctorId: DOCTOR_ID,
+      }),
+    ).resolves.toMatchObject({
+      id: APPOINTMENT_ID,
+      status: "checked_in",
+      doctorId: DOCTOR_ID,
+    });
+
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "checked_in",
+        doctorId: DOCTOR_ID,
+      }),
+    );
+  });
+
   it("confirms a doctor-required appointment after a doctor is assigned", async () => {
     const scheduledStateUpdatedAt = new Date("2026-06-30T18:00:00.000Z");
     const { db, updateSet, insertValues } = createDb({
