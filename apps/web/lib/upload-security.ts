@@ -20,6 +20,7 @@ export const ALLOWED_UPLOAD_CATEGORIES = [
   "lab-results",
   "branding",
   "consents",
+  "imaging",
 ] as const;
 
 export type AllowedUploadCategory = (typeof ALLOWED_UPLOAD_CATEGORIES)[number];

@@ -398,8 +398,22 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
       let imageUrl = "/marketing/tick-prevention.jpg";
       try {
         const gen = await generateAlibabaImage({ prompt: p });
-        if (gen?.url) {
-          imageUrl = gen.url;
+        if (gen?.b64_json) {
+          imageUrl = `data:image/png;base64,${gen.b64_json}`;
+        } else if (gen?.url) {
+          try {
+            const imgRes = await fetch(gen.url, { signal: AbortSignal.timeout(10_000) });
+            if (imgRes.ok) {
+              const arrayBuf = await imgRes.arrayBuffer();
+              const base64 = Buffer.from(arrayBuf).toString("base64");
+              const mime = imgRes.headers.get("content-type") || "image/png";
+              imageUrl = `data:${mime};base64,${base64}`;
+            } else {
+              imageUrl = gen.url;
+            }
+          } catch {
+            imageUrl = gen.url;
+          }
         }
       } catch {
         // Fallback relevant topic match

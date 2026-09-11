@@ -25,14 +25,17 @@ import {
 interface DicomViewerProps {
   file: File;
   onPreparedForAi?: (imageBlob: Blob, dataUrl: string) => void;
+  onImagePrepared?: (imageBlob: Blob, dataUrl: string) => void;
   className?: string;
 }
 
 export function DicomViewer({
   file,
   onPreparedForAi,
+  onImagePrepared,
   className = "",
 }: DicomViewerProps) {
+  const prepareCallback = onPreparedForAi || onImagePrepared;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -112,25 +115,32 @@ export function DicomViewer({
     });
   }, [buffer, metadata, windowCenter, windowWidth, inverted]);
 
-  useEffect(() => {
-    renderFrame();
-  }, [renderFrame]);
-
   // Export current frame to AI
   const handleExportForAi = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !onPreparedForAi) return;
+    if (!canvas || !prepareCallback) return;
 
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
         const dataUrl = canvas.toDataURL("image/png");
-        onPreparedForAi(blob, dataUrl);
+        prepareCallback(blob, dataUrl);
       },
       "image/png",
       0.95
     );
-  }, [onPreparedForAi]);
+  }, [prepareCallback]);
+
+  const hasAutoExportedRef = useRef(false);
+  useEffect(() => {
+    renderFrame();
+    if (!hasAutoExportedRef.current && buffer && metadata && prepareCallback && canvasRef.current) {
+      hasAutoExportedRef.current = true;
+      setTimeout(() => {
+        handleExportForAi();
+      }, 50);
+    }
+  }, [renderFrame, buffer, metadata, prepareCallback, handleExportForAi]);
 
   // Preset switch
   const applyPreset = (preset: (typeof DICOM_WINDOW_PRESETS)[number]) => {
@@ -323,7 +333,7 @@ export function DicomViewer({
           </div>
         </div>
 
-        {onPreparedForAi && (
+        {prepareCallback && (
           <Button
             size="sm"
             onClick={handleExportForAi}

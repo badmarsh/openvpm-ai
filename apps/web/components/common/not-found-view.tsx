@@ -1,9 +1,14 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import { Home, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 
 export function NotFoundView() {
+  const { t } = useI18n();
+
   return (
     <main
       id="main-content"
@@ -15,16 +20,19 @@ export function NotFoundView() {
       <div className="mt-4 text-center">
         <p className="text-sm font-medium text-primary">404</p>
         <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground">
-          Page not found
+          {t("common.notFound.title", "Page not found")}
         </h1>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          This page may have moved, or the link may no longer be available.
+          {t(
+            "common.notFound.description",
+            "This page may have moved, or the link may no longer be available."
+          )}
         </p>
       </div>
       <Button asChild className="mt-6 gap-2">
         <Link href="/">
           <Home className="h-4 w-4" aria-hidden="true" />
-          Go to Dashboard
+          {t("common.notFound.goDashboard", "Go to Dashboard")}
         </Link>
       </Button>
     </main>

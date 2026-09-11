@@ -138,7 +138,7 @@ export const files = pgTable(
     ),
     primaryNamespaceCheck: check(
       "files_primary_namespace_check",
-      sql`${table.category} in ('patient-photos', 'documents', 'lab-results', 'branding', 'consents') and ${table.fileKey} ~ ('^' || ${table.practiceId}::text || '/' || ${table.category} || '/[^/]+$') and ${table.fileUrl} = '/api/files/' || ${table.fileKey}`,
+      sql`${table.category} in ('patient-photos', 'documents', 'lab-results', 'branding', 'consents', 'imaging') and ${table.fileKey} ~ ('^' || ${table.practiceId}::text || '/' || ${table.category} || '/[^/]+$') and ${table.fileUrl} = '/api/files/' || ${table.fileKey}`,
     ),
     categoryRequiredCheck: check(
       "files_category_required_check",
