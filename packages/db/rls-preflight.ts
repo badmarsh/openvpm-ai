@@ -50,6 +50,7 @@ export async function inspectRlsDeploymentCapability(
           'app_current_practice_id',
           'app_rls_bypass',
           'enforce_clinic_pilot_projection_audit',
+          'protect_ai_audit_ledger',
           'reject_clinic_pilot_event_mutation',
           'restore_soap_note_addendum',
           'restore_soap_note_replacement',

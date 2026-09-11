@@ -22,6 +22,7 @@ import {
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { AgentNotConfiguredError } from "@/lib/agent";
+import { requireTrustedActorRole } from "@/lib/authorization";
 import {
   SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
   SoapDraftUnavailableError,
@@ -53,6 +54,7 @@ import {
   generateContentHash,
 } from "@/lib/ai/draft-safety";
 import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
+import { assertAndConsumeDirectConfirmation } from "@/lib/ai/clinician-confirmation";
 import {
   createFinalizedAppointmentSoapNote,
   SoapLifecycleError,
@@ -214,7 +216,9 @@ export const aiRouter = createRouter({
    *
    * Safety gate: the note is finalized under the signed-in clinician's
    * identity, so `clinicianConfirmed: true` is mandatory. AI output alone can
-   * never sign a record.
+   * never sign a record. This create-only hook is the single documented
+   * transitional direct-confirmation path (Option 2): the confirmation is
+   * recorded distinctly and replay is refused by the SOAP lifecycle.
    */
   createSoapFromAI: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
@@ -277,6 +281,13 @@ export const aiRouter = createRouter({
       try {
         const note = await ctx.db.transaction(async (tx) => {
           const db = tx as unknown as Database;
+          // Serialize finalization per encounter: without this, concurrent
+          // scribe POSTs for one appointment could both pass the
+          // check-then-insert lifecycle guards and create duplicate finalized
+          // notes. Released at COMMIT/ROLLBACK.
+          await db.execute(
+            sql`SELECT pg_advisory_xact_lock(hashtextextended(${`soap_finalize:${ctx.practiceId}:${input.appointmentId}`}, 0))`,
+          );
           const created = await createFinalizedAppointmentSoapNote(db, {
             practiceId: ctx.practiceId,
             patientId: input.patientId,
@@ -286,7 +297,30 @@ export const aiRouter = createRouter({
           });
           const originalDraftHash = generateContentHash(input.source);
           const confirmedContentHash = generateContentHash(normalizedNote);
-          const actorRole = (ctx.user.role ?? "veterinarian") as string;
+          const actorRole = requireTrustedActorRole(
+            ctx.user.role,
+            "AI SOAP finalization requires an authenticated staff role.",
+          );
+          // Transitional direct confirmation (Option 2): this create-only
+          // external-scribe hook has no pre-existing draft entity to bind a
+          // pre-issued envelope to. It is recorded distinctly
+          // (correlationId `direct:createSoapFromAI`) and whole-request
+          // replay is refused by the SOAP lifecycle (a second POST for the
+          // same encounter fails with CONFLICT). Deprecation plan: migrate
+          // scribes to draft-first finalize; see
+          // docs/confirmation-protocol.md.
+          await assertAndConsumeDirectConfirmation(db, {
+            practiceId: ctx.practiceId,
+            actorId: ctx.user.id,
+            actorRole,
+            actionType: "soap_note_finalized",
+            entityType: "soap_note",
+            entityId: created.id,
+            expectedRevision: 0,
+            originalDraftHash,
+            confirmedContentHash,
+            correlationId: "direct:createSoapFromAI",
+          });
           await appendAiAuditEvent(db, {
             practiceId: ctx.practiceId,
             actorId: ctx.user.id,

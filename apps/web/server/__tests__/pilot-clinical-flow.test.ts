@@ -41,7 +41,16 @@ const APPOINTMENT_ID = "00000000-0000-0000-0000-000000000004";
 const DICTATION_ID = "00000000-0000-0000-0000-000000000005";
 const REPORT_ID = "00000000-0000-0000-0000-000000000006";
 
-describe("Deterministic Synthetic Pilot E2E Flow — Clinic Operational Lifecycle", () => {
+/**
+ * Service-level simulation of the pilot clinical flow (agent tools +
+ * confirmation envelopes + audit ledger) against an in-memory simulated
+ * database. This is NOT a browser E2E test and NOT a database integration
+ * test: it proves service-layer protocol behavior (issue/consume/replay/
+ * chain-linking logic) with synthetic fixtures only. Real PostgreSQL
+ * behavior is proven by `ai-clinical-finalization.integration.test.ts`
+ * and the real browser pilot flow lives in /e2e (Playwright).
+ */
+describe("Deterministic Synthetic Pilot Clinical Flow — Service Simulation", () => {
   // Shared state across the chronological flow
   const ledger: Array<{
     sequenceNumber: number;

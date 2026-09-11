@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
   createRouter,
@@ -25,10 +25,14 @@ import {
   resolveAiRecordStatus,
   generateContentHash,
 } from "@/lib/ai/draft-safety";
+import { requireTrustedActorRole } from "@/lib/authorization";
+import {
+  requireConfirmationEnvelopeId,
+  requireExpectedRevision,
+} from "./_safety";
 import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 import {
   consumeClinicianConfirmation,
-  assertAndConsumeDirectConfirmation,
   issueClinicianConfirmation,
   ClinicianConfirmationError,
 } from "@/lib/ai/clinician-confirmation";
@@ -567,7 +571,10 @@ export const voiceRouter = createRouter({
       };
       const originalDraftHash = generateContentHash(originalAiDraft);
       const confirmedContentHash = generateContentHash(finalClinicianContent);
-      const actorRole = (ctx.user.role ?? "veterinarian") as string;
+      const actorRole = requireTrustedActorRole(
+        ctx.user.role,
+        "Voice SOAP confirmation requires an authenticated staff role.",
+      );
 
       const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
         practiceId: ctx.practiceId,
@@ -606,6 +613,10 @@ export const voiceRouter = createRouter({
     .input(
       z.object({
         dictationId: z.string().uuid(),
+        // Optional at the schema layer so a missing token on the finalize
+        // path fails with the explicit PRECONDITION_FAILED contract
+        // (requireExpectedRevision), never with silent fallback to the
+        // stored revision. Draft saves do not consume the token.
         expectedRevision: z.number().int().min(0).optional(),
         subjective: z.string().max(SOAP_SECTION_MAX_LENGTH),
         objective: z.string().max(SOAP_SECTION_MAX_LENGTH),
@@ -665,7 +676,15 @@ export const voiceRouter = createRouter({
       try {
         if (status === "finalized") {
           assertClinicianConfirmed(input.clinicianConfirmed);
-          const actorRole = (ctx.user.role ?? "veterinarian") as string;
+          // Option 1 (envelope required): bare `clinicianConfirmed: true` is
+          // rejected — only a pre-issued one-time confirmation token finalizes.
+          const confirmationId = requireConfirmationEnvelopeId(
+            input.clinicianConfirmed,
+          );
+          const actorRole = requireTrustedActorRole(
+            ctx.user.role,
+            "Voice SOAP finalization requires an authenticated staff role.",
+          );
 
           const originalAiDraft = {
             subjective: dictation.subjective,
@@ -679,6 +698,13 @@ export const voiceRouter = createRouter({
 
           const { note } = await ctx.db.transaction(async (tx) => {
             const db = tx as unknown as Database;
+            // Serialize finalization per encounter: without this, two
+            // dictations (or concurrent scribe POSTs) for one appointment
+            // could both pass the check-then-insert lifecycle guards and
+            // create duplicate finalized notes. Released at COMMIT/ROLLBACK.
+            await db.execute(
+              sql`SELECT pg_advisory_xact_lock(hashtextextended(${`soap_finalize:${ctx.practiceId}:${appointmentId}`}, 0))`,
+            );
             const [lockedDictation] = await db
               .select()
               .from(voiceDictations)
@@ -706,7 +732,9 @@ export const voiceRouter = createRouter({
               });
             }
 
-            const expectedRevision = input.expectedRevision ?? lockedDictation.revision;
+            const expectedRevision = requireExpectedRevision(
+              input.expectedRevision,
+            );
             if (lockedDictation.revision !== expectedRevision) {
               throw new TRPCError({
                 code: "CONFLICT",
@@ -714,39 +742,12 @@ export const voiceRouter = createRouter({
               });
             }
 
-            if (
-              typeof input.clinicianConfirmed === "object" &&
-              input.clinicianConfirmed.confirmationId
-            ) {
-              try {
-                await consumeClinicianConfirmation(db, {
-                  confirmationId: input.clinicianConfirmed.confirmationId,
-                  practiceId: ctx.practiceId,
-                  actorId: ctx.user.id,
-                  actorRole,
-                  actionType: "soap_note_finalized",
-                  entityType: "soap_note",
-                  entityId: lockedDictation.id,
-                  expectedRevision,
-                  originalDraftHash,
-                  confirmedContentHash,
-                });
-              } catch (err) {
-                if (err instanceof ClinicianConfirmationError) {
-                  const code =
-                    err.code === "NOT_FOUND"
-                      ? "NOT_FOUND"
-                      : err.code === "EXPIRED" ||
-                          err.code === "ALREADY_CONSUMED" ||
-                          err.code === "REVISION_MISMATCH"
-                        ? "CONFLICT"
-                        : "PRECONDITION_FAILED";
-                  throw new TRPCError({ code, message: err.message });
-                }
-                throw err;
-              }
-            } else {
-              await assertAndConsumeDirectConfirmation(db, {
+            // The envelope binds the stable draft identity (the dictation
+            // row); the audit event below binds the created SOAP note. The
+            // dictation.soapNoteId link connects the two atomically.
+            try {
+              await consumeClinicianConfirmation(db, {
+                confirmationId,
                 practiceId: ctx.practiceId,
                 actorId: ctx.user.id,
                 actorRole,
@@ -757,6 +758,19 @@ export const voiceRouter = createRouter({
                 originalDraftHash,
                 confirmedContentHash,
               });
+            } catch (err) {
+              if (err instanceof ClinicianConfirmationError) {
+                const code =
+                  err.code === "NOT_FOUND"
+                    ? "NOT_FOUND"
+                    : err.code === "EXPIRED" ||
+                        err.code === "ALREADY_CONSUMED" ||
+                        err.code === "REVISION_MISMATCH"
+                      ? "CONFLICT"
+                      : "PRECONDITION_FAILED";
+                throw new TRPCError({ code, message: err.message });
+              }
+              throw err;
             }
 
             const createdNote = await createFinalizedAppointmentSoapNote(

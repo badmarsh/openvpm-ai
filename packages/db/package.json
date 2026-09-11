@@ -37,7 +37,8 @@
     "db:drift": "tsx check-drift.ts",
     "db:baseline": "tsx baseline.ts",
     "db:studio": "drizzle-kit studio",
-    "audit:verify-ai": "tsx ../../scripts/verify-ai-audit-trail.ts"
+    "audit:verify-ai": "tsx ../../scripts/verify-ai-audit-trail.ts",
+    "audit:backfill-ai": "tsx ../../scripts/backfill-ai-audit-chain.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.0",
