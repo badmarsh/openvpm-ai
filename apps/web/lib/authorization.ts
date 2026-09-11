@@ -14,7 +14,13 @@
  *   - role not in the allowedRoles list
  *
  * The tRPC `requireRole()` middleware in server/trpc.ts handles the staff
- * session boundary; this module handles the agent tool layer.
+ * session boundary; this module handles the agent tool layer and the
+ * defense-in-depth re-validation of the session role at the point of
+ * security-sensitive use (audit attribution, confirmation issuance/consumption).
+ *
+ * NEVER use `ctx.user.role ?? "veterinarian"` (or any `??` / `||` fallback to
+ * a privileged role): a missing, null, blank, malformed, or unknown role must
+ * DENY via `requireTrustedActorRole()`, never silently escalate.
  */
 
 /**
@@ -35,6 +41,36 @@ export const ALL_AGENT_ROLES: readonly AgentUserRole[] = [
   "front_desk",
   "viewer",
 ];
+
+/**
+ * Canonical role groups for the permission/action matrix.
+ * See docs/authorization-matrix.md and docs/agent-tool-security-matrix.md.
+ *
+ * - CLINICAL_ROLES: may issue/consume clinical confirmation envelopes,
+ *   finalize AI-derived clinical content, and append AI audit events.
+ * - PRESCRIPTION_ROLES: may author/sign prescriptions.
+ * - CS_LOG_ROLES: may write controlled-substance register entries.
+ * - ALL_STAFF_ROLES: any authenticated staff session.
+ *
+ * Portal users, cron/service accounts, and unauthenticated traffic are NOT
+ * staff roles and are denied by every helper in this module.
+ */
+export const CLINICAL_ROLES: readonly AgentUserRole[] = [
+  "admin",
+  "veterinarian",
+];
+
+export const PRESCRIPTION_ROLES: readonly AgentUserRole[] = [
+  "admin",
+  "veterinarian",
+];
+
+export const CS_LOG_ROLES: readonly AgentUserRole[] = [
+  "admin",
+  "veterinarian",
+];
+
+export const ALL_STAFF_ROLES: readonly AgentUserRole[] = ALL_AGENT_ROLES;
 
 /**
  * Asserts that `ctx.userRole` is a known, non-empty role AND is in the
@@ -96,4 +132,63 @@ export function assertAgentRole(
       { code: "FORBIDDEN" as const },
     );
   }
+}
+
+/**
+ * Fail-closed resolution of a trusted actor role from server session context.
+ *
+ * This is the ONLY approved way to derive an actor role for audit attribution
+ * and clinical confirmation flows. It replaces every `role ?? "veterinarian"`
+ * (and equivalent) fallback, which silently escalates a missing/malformed role
+ * to a privileged clinical identity.
+ *
+ * Returns the validated role, or throws a structured FORBIDDEN error for:
+ * missing, null, blank, whitespace-only, non-string, or unknown roles.
+ *
+ * @param role - Raw role value from trusted server context (e.g. ctx.user.role)
+ * @param resourceDescription - Optional human-readable description for the error message
+ */
+export function requireTrustedActorRole(
+  role: unknown,
+  resourceDescription?: string,
+): AgentUserRole {
+  if (typeof role !== "string" || role.trim() === "") {
+    throw Object.assign(
+      new Error(
+        [
+          "Access denied: an authenticated role is required.",
+          resourceDescription,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      ),
+      { code: "FORBIDDEN" as const },
+    );
+  }
+  if (!ALL_AGENT_ROLES.includes(role as AgentUserRole)) {
+    throw Object.assign(
+      new Error(
+        [`Access denied: unknown role "${role}".`, resourceDescription]
+          .filter(Boolean)
+          .join(" "),
+      ),
+      { code: "FORBIDDEN" as const },
+    );
+  }
+  return role as AgentUserRole;
+}
+
+/**
+ * Fail-closed resolution of a trusted CLINICAL actor role (admin/veterinarian).
+ *
+ * Combines `requireTrustedActorRole()` with the clinical allow-list in one
+ * call for confirmation/audit/finalization boundaries.
+ */
+export function requireClinicalActorRole(
+  role: unknown,
+  resourceDescription?: string,
+): "admin" | "veterinarian" {
+  const trusted = requireTrustedActorRole(role, resourceDescription);
+  assertAgentRole({ userRole: trusted }, CLINICAL_ROLES, resourceDescription);
+  return trusted as "admin" | "veterinarian";
 }
