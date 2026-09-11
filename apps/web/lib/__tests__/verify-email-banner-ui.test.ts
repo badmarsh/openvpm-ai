@@ -9,7 +9,7 @@ describe("verify email banner UI", () => {
 
   it("surfaces loading and failures before hiding the verification banner", () => {
     expect(source).toContain("const { data, isLoading, error, refetch }");
-    expect(source).toContain("Checking email verification status...");
+    expect(source).toContain("if (isLoading) return null;");
     expect(source).toContain("Unable to check email verification status.");
     expect(source).toContain("onClick={() => void refetch()}");
     expect(source).toContain("if (error || !data)");

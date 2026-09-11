@@ -25,6 +25,7 @@ vi.mock("@/lib/recovery-hold", () => ({
 }));
 
 const { billingRouter } = await import("../routers/billing");
+const { invalidatePracticeBillingCache } = await import("../trpc");
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -120,6 +121,7 @@ function createDb(selectResults: unknown[][]) {
 }
 
 afterEach(() => {
+  invalidatePracticeBillingCache();
   vi.clearAllMocks();
   vi.unstubAllEnvs();
   mocks.createCheckoutSession.mockResolvedValue({

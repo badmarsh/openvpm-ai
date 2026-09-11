@@ -14,6 +14,7 @@ describe("webhook event catalog", () => {
       "app/api/v1/appointments/route.ts",
       "app/api/webhooks/stripe/route.ts",
       "server/routers/portal.ts",
+      "server/routers/extensions/discharge.ts",
       "lib/agent/tools.ts",
       "app/api/cron/prescription-expiry/route.ts",
     ]
@@ -27,6 +28,8 @@ describe("webhook event catalog", () => {
       "appointment.cancelled",
       "client.created",
       "patient.created",
+      "patient.status_changed",
+      "discharge_report.finalized",
       "soap_note.created",
       "vaccination.recorded",
       "problem.created",
