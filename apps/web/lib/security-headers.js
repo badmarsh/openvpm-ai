@@ -2,7 +2,11 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
-  "frame-ancestors 'self'",
+  // Preview deployments (e.g. sandboxed live-preview iframes) can extend the
+  // allowed framers via PREVIEW_FRAME_ANCESTORS="https://host ..." — unset by
+  // default, so production stays 'self'. When both policies are present CSP
+  // frame-ancestors takes precedence over X-Frame-Options in modern browsers.
+  `frame-ancestors 'self'${process.env.PREVIEW_FRAME_ANCESTORS ? ` ${process.env.PREVIEW_FRAME_ANCESTORS.trim()}` : ""}`,
   "form-action 'self'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
