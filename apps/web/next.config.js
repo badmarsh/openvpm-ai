@@ -54,6 +54,18 @@ const nextConfig = {
       { source: "/api/treatment-plan/:path*", headers: capabilityHeaders },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/_vercel/insights/script.js",
+        destination: "/api/vercel-insights",
+      },
+      {
+        source: "/_vercel/insights/:match*",
+        destination: "/api/vercel-insights",
+      },
+    ];
+  },
 };
 
 module.exports = withBundleAnalyzer(nextConfig);

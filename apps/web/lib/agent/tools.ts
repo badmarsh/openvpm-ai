@@ -2641,32 +2641,32 @@ const listDischargeReportsTool: AgentTool = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
-  findClient,
-  findPatient,
-  getPatientSummary,
-  listLocations,
-  listAppointments,
-  findOpenSlotsTool,
-  bookAppointment,
-  listOverdueVaccinations,
-  calculateDrugDose,
-  listTreatmentPlans,
-  recordVitalSigns,
-  queryLabTrendsTool,
-  checkDrugSafetyTool,
-  auditMissedChargesTool,
-  createDischargeSummaryTool,
-  generateRvpsReportTool,
-  checkWithdrawalPeriodsTool,
-  checkRabiesObservationsTool,
-  verifyMicrochipCrszTool,
-  recordVitalsFromSpeechTool,
-  getInvoiceSummaryTool,
-  listOpenRemindersTool,
-  getLabResultsTool,
-  createPrescriptionTool,
-  getControlledSubstancesLogTool,
-  listDischargeReportsTool,
+  findClient, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L330-401]
+  findPatient, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L403-464]
+  getPatientSummary, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L466-559]
+  listLocations, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L562-577]
+  listAppointments, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L579-662]
+  findOpenSlotsTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1039-1146]
+  bookAppointment, // readOnly: false [VERIFIED: apps/web/lib/agent/tools.ts:L664-768] - INSERTS into appointments table
+  listOverdueVaccinations, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L770-858]
+  calculateDrugDose, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L861-906]
+  listTreatmentPlans, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L908-963]
+  recordVitalSigns, // readOnly: false [VERIFIED: apps/web/lib/agent/tools.ts:L965-1037] - INSERTS into vitalSigns table
+  queryLabTrendsTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1148-1258]
+  checkDrugSafetyTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1260-1442]
+  auditMissedChargesTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1444-1582]
+  createDischargeSummaryTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1584-1712] - only generates markdown, does not store to DB
+  generateRvpsReportTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1714-1807]
+  checkWithdrawalPeriodsTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1818-1898]
+  checkRabiesObservationsTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L1900-2002]
+  verifyMicrochipCrszTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L2009-2153]
+  recordVitalsFromSpeechTool, // readOnly: false [VERIFIED: apps/web/lib/agent/tools.ts:L2169-2277] - INSERTS into vitalSigns table
+  getInvoiceSummaryTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L2283-2354]
+  listOpenRemindersTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L2356-2401]
+  getLabResultsTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L2403-2455]
+  createPrescriptionTool, // readOnly: false [VERIFIED: apps/web/lib/agent/tools.ts:L2457-2532] - INSERTS into prescriptions table
+  getControlledSubstancesLogTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L2534-2592]
+  listDischargeReportsTool, // readOnly: true [VERIFIED: apps/web/lib/agent/tools.ts:L2594-2641]
 ];
 
 export function getTool(name: string): AgentTool | undefined {

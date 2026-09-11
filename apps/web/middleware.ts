@@ -67,12 +67,28 @@ function isVercelObservabilityPath(pathname: string): boolean {
   return /^\/[a-f0-9]{16}\/(?:script\.js|view|event|session)$/i.test(pathname);
 }
 
+const VERCEL_INSIGHTS_STUB_SCRIPT =
+  "(function(){window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};})();";
+
 export async function middleware(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
 
   if (isVercelObservabilityPath(pathname)) {
-    return applySecurityHeaders(NextResponse.next());
+    if (pathname.endsWith("/script.js")) {
+      return applySecurityHeaders(
+        new NextResponse(VERCEL_INSIGHTS_STUB_SCRIPT, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/javascript; charset=utf-8",
+            "Cache-Control": "public, max-age=3600, immutable",
+          },
+        }),
+      );
+    }
+    return applySecurityHeaders(
+      NextResponse.json({ ok: true }, { status: 200 }),
+    );
   }
 
   if (isCapabilityPath(pathname)) {

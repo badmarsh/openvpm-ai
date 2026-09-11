@@ -149,6 +149,7 @@ export default function ContentPlanPage() {
   const utils = trpc.useUtils();
 
   const [activeView, setActiveView] = useState<"calendar" | "grid">("calendar");
+  const DEFAULT_MARKETING_FALLBACK_IMAGE = "/marketing/tick-prevention.jpg";
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
 
   const [status, setStatus] = useState("all");
@@ -657,6 +658,11 @@ export default function ContentPlanPage() {
                               <img
                                 src={item.mediaAsset.url}
                                 alt={item.title}
+                                onError={(e) => {
+                                  if (e.currentTarget.src !== DEFAULT_MARKETING_FALLBACK_IMAGE) {
+                                    e.currentTarget.src = DEFAULT_MARKETING_FALLBACK_IMAGE;
+                                  }
+                                }}
                                 className="w-5 h-5 rounded-md object-cover shrink-0 border"
                               />
                             ) : (
@@ -826,6 +832,11 @@ export default function ContentPlanPage() {
                         <img
                           src={item.mediaAsset.url}
                           alt={item.mediaAsset.altText || item.title}
+                          onError={(e) => {
+                            if (e.currentTarget.src !== DEFAULT_MARKETING_FALLBACK_IMAGE) {
+                              e.currentTarget.src = DEFAULT_MARKETING_FALLBACK_IMAGE;
+                            }
+                          }}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         <div className="absolute top-2 left-2 flex items-center gap-1">
@@ -1071,6 +1082,11 @@ export default function ContentPlanPage() {
                 <img
                   src={selectedItem.mediaAsset.url}
                   alt={selectedItem.mediaAsset.altText || selectedItem.title}
+                  onError={(e) => {
+                    if (e.currentTarget.src !== DEFAULT_MARKETING_FALLBACK_IMAGE) {
+                      e.currentTarget.src = DEFAULT_MARKETING_FALLBACK_IMAGE;
+                    }
+                  }}
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-cover"
