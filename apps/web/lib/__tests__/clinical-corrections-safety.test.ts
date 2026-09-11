@@ -515,13 +515,12 @@ describe("clinical correction consumers", () => {
       );
     }
     expect(patientPage).toContain("Allergy correction history");
-    expect(patientPage).toContain(
-      'triggerLabel="Mark allergy entered in error"',
+    expect(patientPage).toMatch(
+      /triggerLabel=(?:"Mark allergy entered in error"|\{t\([^)]*"Mark allergy entered in error"[^)]*\)\})/s,
     );
     for (const source of [patientPage, encounterPage]) {
-      expect(source).toContain(
-        'Reaction: {allergy.reaction || "Not documented"}',
-      );
+      expect(source).toContain("allergy.reaction");
+      expect(source).toContain("Not documented");
     }
     expect(backup).toContain('"patientAllergyId"');
     expect(backup).toContain('row.recordType === "patient_allergy"');

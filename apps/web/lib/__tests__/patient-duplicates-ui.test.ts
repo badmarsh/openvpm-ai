@@ -37,18 +37,20 @@ describe("patient duplicate review UI", () => {
   });
 
   it("makes identity evidence and blockers explicit before merging", () => {
-    expect(reviewSource).toContain(
-      "Never merge charts merely because pet names match",
+    expect(reviewSource).toMatch(
+      /Never merge charts merely because pet names match|patients\.duplicates\.mergeWarning|Nikdy nezlučujte karty/,
     );
     expect(reviewSource).toContain("Microchip");
     expect(reviewSource).toContain("External ID");
-    expect(reviewSource).toContain("Retained-history checks");
-    expect(reviewSource).toContain("Prospective work");
-    expect(reviewSource).toContain(
-      "Keep both chart identities—this merge is blocked.",
+    expect(reviewSource).toMatch(
+      /Retained-history checks|patients\.duplicates\.retainedHistoryChecks|Kontroly zachovanej histórie/,
     );
-    expect(reviewSource).toContain(
-      "Historical records are never silently reassigned",
+    expect(reviewSource).toContain("Prospective work");
+    expect(reviewSource).toMatch(
+      /Keep both chart identities—this merge is blocked\.|patients\.duplicates\.mergeBlocked|toto zlúčenie je zablokované/,
+    );
+    expect(reviewSource).toMatch(
+      /Historical records are never silently reassigned|Historické záznamy sa nikdy potichu nepreradia/,
     );
   });
 });

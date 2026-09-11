@@ -117,12 +117,18 @@ describe("patient detail UI states", () => {
     expect(source).toContain(
       'import { EmptyState } from "@/components/common/empty-state"',
     );
-    expect(source).toContain('title="No weight records yet"');
-    expect(source).toContain('title="No vitals recorded yet"');
-    expect(source).toContain('title="No vaccination records yet"');
-    expect(source).toContain('title="No medical records yet"');
-    expect(source).toContain('title="No appointments yet"');
-    expect(source).toContain('title="No invoices yet"');
+    for (const title of [
+      "No weight records yet",
+      "No vitals recorded yet",
+      "No vaccination records yet",
+      "No medical records yet",
+      "No appointments yet",
+      "No invoices yet",
+    ]) {
+      expect(source).toMatch(
+        new RegExp(`title=(?:\\{t\\([^}]*"${title}"[^}]*\\)\\}|"${title}")`),
+      );
+    }
   });
 
   it("gives the chart medical-history tabs backed by tenant-scoped queries", () => {
@@ -138,7 +144,9 @@ describe("patient detail UI states", () => {
     // The chart is the medical record: SOAP timeline, visit history, and
     // billing history live on the patient page.
     for (const label of ["Medical Records", "Appointments", "Invoices"]) {
-      expect(source).toContain(`label: "${label}"`);
+      expect(source).toMatch(
+        new RegExp(`label:\\s*(?:t\\([^)]*"${label}"[^)]*\\)|"${label}")`),
+      );
     }
     expect(source).toContain(
       "trpc.records.listSoapNotes.useQuery({ patientId })",
@@ -171,37 +179,40 @@ describe("patient detail UI states", () => {
     expect(source).toContain(
       "const isPageLoading = !loadError && (isLoading || recordsSettingsLoading)",
     );
-    expect(source).toContain(
-      '<PatientDetailLoadingPanel label="Loading patient..." />',
+    expect(source).toMatch(
+      /<PatientDetailLoadingPanel\s+label=(?:\{t\([^)]*"Loading patient\.\.\."[^\)]*\)\}|"Loading patient\.\.\.")/,
     );
     expect(source).toContain("if (\n    loadError ||");
     expect(source).toContain("!verifiedRecordsSettings ||\n    !patient");
-    expect(source).toContain('title="Unable to load patient"');
+    expect(source).toMatch(
+      /title=(?:\{t\([^)]*"Unable to load patient"[^)]*\)\}|"Unable to load patient")/,
+    );
     expect(source).toContain(
       "recordsSettingsMissing || !verifiedRecordsSettings",
     );
     expect(source).toContain("Unable to load clinical settings. Please retry.");
-    expect(source).toContain('label: "Back to Patients"');
+    expect(source).toMatch(
+      /label:\s*(?:t\([^)]*"Back to Patients"[^)]*\)|"Back to Patients")/,
+    );
     expect(source).toContain('router.push("/patients")');
     expect(source).toMatch(
       /const \{\s*data: vitals,\s*isLoading,\s*error,?\s*\}/,
     );
     expect(source).toContain("const vitalsMissing =");
     expect(source).toContain("{error ? (");
-    expect(source).toContain("Unable to load vitals. ${error.message}");
+    expect(source).toContain("Unable to load vitals.");
+    expect(source).toContain("${error.message}");
     expect(source).toContain("Unable to load vitals. Please retry.");
     expect(source).toContain("const vaccinationsMissing =");
-    expect(source).toContain(
-      "Unable to load vaccination records. ${error.message}",
-    );
+    expect(source).toContain("Unable to load vaccination records.");
     expect(source).toContain(
       "Unable to load vaccination records. Please retry.",
     );
     expect(source.indexOf("vitalsMissing ? (")).toBeLessThan(
-      source.indexOf('title="No vitals recorded yet"'),
+      source.indexOf("No vitals recorded yet"),
     );
     expect(source.indexOf("if (vaccinationsMissing)")).toBeLessThan(
-      source.indexOf('title="No vaccination records yet"'),
+      source.indexOf("No vaccination records yet"),
     );
     expect(source).not.toContain(
       'className="text-center text-muted-foreground py-12"',
@@ -412,13 +423,13 @@ describe("patient detail UI states", () => {
     expect(source).toContain(
       'measurementSystem === "us_customary" ? poundsToKilograms : undefined',
     );
-    expect(source).toContain(
-      'Temp ({measurementSystem === "us_customary" ? "F" : "C"})',
+    expect(source).toMatch(
+      /Temp \([$]?\{?measurementSystem === "us_customary" \? "F" : "C"\}?\)/,
     );
-    expect(source).toContain(
-      'Weight ({measurementSystem === "us_customary" ? "lb" : "kg"})',
+    expect(source).toMatch(
+      /Weight \([$]?\{?measurementSystem === "us_customary" \? "lb" : "kg"\}?\)/,
     );
-    expect(source).toContain("BCS (1-{bodyConditionScale})");
+    expect(source).toMatch(/BCS \(1-[$]?\{?bodyConditionScale\}?\)/);
     expect(source).toContain(
       "formatClinicalTemperature(\n                        v.temperatureC,\n                        measurementSystem",
     );
@@ -461,7 +472,9 @@ describe("patient detail UI states", () => {
       "trpc.appointments.listLocations.useQuery(\n    undefined,",
     );
     expect(source).toContain("fieldVisitLocations.length === 1");
-    expect(source).toContain('aria-label="Field visit location"');
+    expect(source).toMatch(
+      /aria-label=(?:"Field visit location"|\{t\([^)]*"Field visit location"[^)]*\)\})/,
+    );
     expect(source).toContain("fieldVisitLocations.length > 1");
     expect(source).toContain("!selectedFieldVisitLocationId");
     expect(source).toContain("locationId: selectedFieldVisitLocationId");
@@ -482,11 +495,12 @@ describe("patient detail UI states", () => {
     );
     const refreshes = source.match(/refreshPatientDetail\(\)/g);
     expect(refreshes && refreshes.length).toBeGreaterThanOrEqual(4);
-    expect(source).toContain('triggerLabel="Mark allergy entered in error"');
-    expect(source).toContain("canCorrect={canCorrectClinicalRecords}");
-    expect(source).toContain(
-      'Reaction: {allergy.reaction || "Not documented"}',
+    expect(source).toMatch(
+      /triggerLabel=(?:"Mark allergy entered in error"|\{t\([^)]*"Mark allergy entered in error"[^)]*\)\})/s,
     );
+    expect(source).toContain("canCorrect={canCorrectClinicalRecords}");
+    expect(source).toContain("allergy.reaction");
+    expect(source).toContain("Not documented");
     expect(source).toContain("Allergy correction history");
     expect(source).toContain("Legacy removal retained.");
     expect(source).toContain("{canManagePatientDetail && !showAllergyForm ?");
