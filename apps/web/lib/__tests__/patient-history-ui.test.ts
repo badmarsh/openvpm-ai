@@ -27,9 +27,7 @@ describe("patient history search UI", () => {
     );
     expect(component).toContain("onSearchModeChange(true)");
     expect(component).toContain("onSearchModeChange(false)");
-    expect(component).toContain(
-      "The complete SOAP\n          timeline remains below.",
-    );
+    expect(component).toContain("The complete SOAP timeline remains below.");
   });
 
   it("uses an explicit POST operation so clinical terms never enter URLs", () => {
@@ -63,8 +61,10 @@ describe("patient history search UI", () => {
   });
 
   it("provides responsive accessible filters, result states, counts, and paging", () => {
+    expect(component).toMatch(
+      /aria-label=(?:"Find in patient history"|\{t\("patients\.historySearch\.findTitle",\s*"Find in patient history"\)\})/,
+    );
     for (const marker of [
-      'aria-label="Find in patient history"',
       "aria-pressed={selected}",
       "aria-pressed={state === value}",
       'aria-live="polite"',

@@ -19,7 +19,7 @@ describe("portal branding UI", () => {
     expect(shell).toContain("practice?.logoUrl");
     expect(shell).toContain("practiceName");
     expect(shell).toContain("Pet Portal");
-    expect(shell).toContain("Powered by OpenVPM");
+    expect(shell).toMatch(/Powered by (?:OpenVPM|VET\.IS)/);
   });
 
   it("keeps safe branding fallbacks for unbranded or invalid links", () => {
