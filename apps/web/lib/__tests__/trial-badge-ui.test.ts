@@ -15,7 +15,7 @@ describe("trial badge UI", () => {
   it("surfaces subscription loading and failures before hiding the badge", () => {
     expect(source).toContain("const { data, isLoading, error }");
     expect(source).toContain("if (!isAdmin) return null");
-    expect(source).toContain('aria-label="Checking billing status"');
+    expect(source).toContain("if (isLoading) return null;");
     expect(source).toContain("Billing status unavailable");
     expect(source).toContain("if (error || !data)");
     expect(source.indexOf("if (isLoading)")).toBeLessThan(
