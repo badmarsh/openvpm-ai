@@ -169,9 +169,10 @@ export function computeAiAuditEventHash(
 /**
  * Converts a DB row's confirmedAt to a stable ISO 8601 UTC string.
  * Ensures consistent serialization whether the DB driver returns a Date
- * object or a string.
+ * object or a string. Exported so the chain backfill script serializes
+ * timestamps identically (single implementation, no drift).
  */
-function toUtcIsoString(value: Date | string): string {
+export function toUtcIsoString(value: Date | string): string {
   if (typeof value === "string") {
     return new Date(value).toISOString();
   }
@@ -193,7 +194,10 @@ function toUtcIsoString(value: Date | string): string {
  *   - Future timestamps beyond clock-skew allowance
  *   - Invalid canonicalization versions
  *   - Altered wasEditedByClinician flags
- *   - Missing required fields (sequenceNumber, actorRole, actionType)
+ *   - Missing required fields (actorRole, actionType)
+ *   - Legacy pre-chain rows (LEGACY_ROW: sequenceNumber is null)
+ *   - Soft-deleted rows (SOFT_DELETED_ROW: evidence deletion)
+ *   - Post-insert mutations (MUTATED_ROW: updated_at drift)
  */
 export function verifyAiAuditChain(
   events: AuditLogDbRow[],

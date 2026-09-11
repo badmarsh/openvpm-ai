@@ -92,7 +92,7 @@ To guarantee zero race conditions and strictly monotonic `sequenceNumber` alloca
 - Discharge report saving & finalization (`apps/web/server/routers/extensions/discharge.ts`)
 - AI SOAP generation (`apps/web/server/routers/ai.ts`)
 
-**Verified by tests:** [`apps/web/lib/ai/__tests__/audit-ledger.test.ts`](../apps/web/lib/ai/__tests__/audit-ledger.test.ts) and [`apps/web/server/__tests__/extensions-ai-finalization.integration.test.ts`](../apps/web/server/__tests__/extensions-ai-finalization.integration.test.ts).
+**Verified by tests:** [`apps/web/lib/ai/__tests__/audit-ledger.test.ts`](../apps/web/lib/ai/__tests__/audit-ledger.test.ts), the real-DB contract [`apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts`](../apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts) (16 tests, run in the CI RLS job), and the pilot smoke [`e2e/ai-finalization-pilot.spec.ts`](../e2e/ai-finalization-pilot.spec.ts).
 
 ---
 
@@ -114,12 +114,18 @@ pnpm --filter @openpims/web exec vitest run lib/ai/__tests__/audit-chain.test.ts
 
 The verifier (`scripts/verify-ai-audit-trail.ts`):
 - Fails with nonzero exit code on ANY integrity error
-- Queries events in deterministic `(practice_id, sequence_number)` order
+- Queries events in deterministic `(practice_id, sequence_number)` order,
+  **including soft-deleted rows** (a filtered check could not detect
+  evidence deletion)
 - Recalculates every event hash from stored fields
 - Validates predecessor linkage for every non-genesis event
 - Validates sequence continuity (detects gaps, duplicates)
 - Detects future timestamps beyond 5-minute clock-skew allowance
-- Redacts sensitive data (practiceId suffix only) in output
+- Detects legacy pre-chain rows (`LEGACY_ROW`, `sequence_number IS NULL`)
+- Detects soft-deleted rows (`SOFT_DELETED_ROW`) and post-insert mutations
+  (`MUTATED_ROW`, `updated_at` drift beyond 5 s)
+- Redacts sensitive data (practiceId suffix only; UUIDs scrubbed from
+  free-text details; `eventId` omitted) in output
 - Supports `--allow-empty` for dev/first-run, `--json` for machine consumption
 
 ---
@@ -140,6 +146,9 @@ The verifier (`scripts/verify-ai-audit-trail.ts`):
 | Duplicated sequence number | ✅ | Duplicate detection |
 | Future-dated events | ✅ | Clock skew check (5 min) |
 | Cross-tenant event injection | ✅ | practiceId bound in hash |
+| Soft-deleted event (evidence deletion) | ✅ | `SOFT_DELETED_ROW`, excluded from linkage to avoid cascade noise |
+| Post-insert row mutation | ✅ | `MUTATED_ROW` via `updated_at`/`created_at` drift (5 s tolerance) |
+| Pre-chain legacy row | ✅ | `LEGACY_ROW` — integrate via `docs/ai-audit-cutover.md` |
 | Modified `actorName` | ⚠️ | NOT detected — excluded from hash by design |
 | DBA alters rows + recomputes hashes | ❌ | Requires external anchoring |
 | Full DB restore to earlier state | ❌ | Requires external checkpointing |
@@ -190,8 +199,8 @@ export interface AuditAnchorProvider {
 
 | Requirement | Status |
 |---|---|
-| Run `pnpm db:push` after deployment to add chain columns | DEPLOYMENT_REQUIREMENT |
-| Backfill `sequenceNumber`, `actorRole`, `actionType`, `eventHash` for existing rows | DEPLOYMENT_REQUIREMENT (script needed) |
-| Schedule `pnpm audit:verify-ai` in CI/CD | DEPLOYMENT_REQUIREMENT |
+| Run `pnpm db:migrate` (fresh DBs) so migration 0105 creates the ledger with chain columns | DEPLOYMENT_REQUIREMENT |
+| Integrate legacy (`sequence_number IS NULL`) rows before pilot sign-off | DONE — `scripts/backfill-ai-audit-chain.ts`, see `docs/ai-audit-cutover.md` |
+| Schedule `pnpm audit:verify-ai` in CI/CD (and daily in ops) | DEPLOYMENT_REQUIREMENT — see `docs/ai-finalization-operations.md` |
 | Configure external anchoring for regulatory strength | PILOT_TARGET |
 | Implement scheduled anchor checkpoint cron | PILOT_TARGET |
