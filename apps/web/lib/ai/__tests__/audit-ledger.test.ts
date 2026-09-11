@@ -149,6 +149,45 @@ describe("appendAiAuditEvent", () => {
         code: "CHAIN_BROKEN",
       });
     });
+
+    it("throws CHAIN_BROKEN if latest sequenced row has no event hash (unverifiable predecessor)", async () => {
+      const { mockTx } = createMockTx({
+        latestRow: { sequenceNumber: 7, eventHash: null },
+      });
+
+      await expect(
+        appendAiAuditEvent(mockTx as never, baseInput),
+      ).rejects.toMatchObject({
+        code: "CHAIN_BROKEN",
+      });
+    });
+
+    it("throws CHAIN_BROKEN if latest event hash is malformed (tamper/corruption)", async () => {
+      const { mockTx } = createMockTx({
+        latestRow: { sequenceNumber: 7, eventHash: "not-a-sha256-hash" },
+      });
+
+      await expect(
+        appendAiAuditEvent(mockTx as never, baseInput),
+      ).rejects.toMatchObject({
+        code: "CHAIN_BROKEN",
+      });
+    });
+
+    it("throws CHAIN_BROKEN if latest row has an undefined sequence (never re-mints genesis)", async () => {
+      const { mockTx } = createMockTx({
+        latestRow: { sequenceNumber: undefined, eventHash: HASH_PREV } as unknown as {
+          sequenceNumber: number | null;
+          eventHash: string | null;
+        },
+      });
+
+      await expect(
+        appendAiAuditEvent(mockTx as never, baseInput),
+      ).rejects.toMatchObject({
+        code: "CHAIN_BROKEN",
+      });
+    });
   });
 
   describe("Clinician edit detection", () => {
