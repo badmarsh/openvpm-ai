@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Clock,
   Building2,
+  Globe,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -31,8 +32,9 @@ import { CrszPanel } from "@/components/statutory/crsz-panel";
 import { RabiesObservationPanel } from "@/components/statutory/rabies-observation-panel";
 import { CarcassDisposalPanel } from "@/components/statutory/carcass-disposal-panel";
 import { WithdrawalPeriodPanel } from "@/components/statutory/withdrawal-period-panel";
+import { KvepisPanel } from "@/components/statutory/kvepis-panel";
 
-type StatutoryTab = "rabies" | "treatment" | "withdrawals" | "euthanasia" | "narcotics" | "protocols" | "crsz";
+type StatutoryTab = "rabies" | "treatment" | "withdrawals" | "euthanasia" | "narcotics" | "protocols" | "crsz" | "kvepis";
 
 function downloadStatutoryCsv(
   filename: string,
@@ -505,6 +507,15 @@ export default function StatutoryPage() {
           <ShieldCheck className="h-4 w-4" />
           <span>{t("statutory.tabs.crsz", "CRSZ & Mikročipy / PetPass")}</span>
         </Button>
+        <Button
+          variant={activeTab === "kvepis" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("kvepis")}
+          className="gap-2"
+        >
+          <Globe className="h-4 w-4" />
+          <span>{t("statutory.tabs.kvepis", "KVEPIS & ÚPVS (ŠVPS)")}</span>
+        </Button>
       </div>
 
       {/* Tab Panels */}
@@ -516,6 +527,7 @@ export default function StatutoryPage() {
         {activeTab === "narcotics" && <NarcoticsTab />}
         {activeTab === "protocols" && <ProtocolsTab />}
         {activeTab === "crsz" && <CrszPanel />}
+        {activeTab === "kvepis" && <KvepisPanel />}
       </div>
     </div>
   );
