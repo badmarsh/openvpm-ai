@@ -57,7 +57,7 @@ export function WholesalerImportDialog({
     },
   });
 
-  const applyMutation = trpc.extensions.wholesalerImport.apply.useMutation({
+  const applyMutation = trpc.extensions.wholesalerImport.applyDeliveryNote.useMutation({
     onSuccess: (res) => {
       toast.success(
         `Sklad úspešne aktualizovaný: ${res.updatedCount} produktov naskladnených, ${res.createdCount} nových produktov vytvorených.`
