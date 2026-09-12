@@ -90,6 +90,29 @@ OpenVPM AI presadzuje férové a transparentné podmienky bez skrytých poplatko
 | **Cloud Klinika** | **119 € / mesiac**<br>*(1 190 € / rok)* | Štandardná veterinárna klinika (2–6 lekárov) | **Neobmedzený počet zamestnancov**, PetExpert poistný modul, import dodacích listov Cymedica/Pharmos, KVEPIS XSD validátor, 500 AI klinických dopytov/mes., prednostná podpora. |
 | **Cloud Nemocnica** | **229 € / mesiac**<br>*(2 290 € / rok)* | Nemocnice s 24/7 prevádzkou alebo viaceré pobočky | Neobmedzené pobočky, DICOM PACS cloudové úložisko snímok, neobmedzená AI asistencia, vyhradený B2G integračný kanál, garantované SLA 99.9% a telefonická podpora. |
 
+Všetky cloudové plány zahŕňajú 14-dňovú bezplatnú skúšobnú verziu (no credit card required — bez zadania platobnej karty).
+
+---
+
+## Technologický stack & Architektúra
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15 (App Router), TypeScript, React 19 |
+| **UI** | shadcn/ui + Radix UI + Tailwind CSS |
+| **API** | tRPC dashboard API + versioned `/api/v1` REST |
+| **Database** | PostgreSQL 16 + Drizzle ORM (Row-Level Security) |
+| **Auth** | NextAuth.js, role-based access, optional TOTP MFA, recovery codes |
+| **Email/SMS** | Resend + Telnyx SMS (Twilio fallback) |
+| **Payments** | Stripe |
+| **File Storage** | S3-compatible or MinIO (automatic MinIO bucket bootstrap) |
+| **Security Headers** | CSP, HSTS, Permissions-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy |
+| **Database Roles** | least-privilege `openpims_app` database role |
+| **Monorepo** | Turborepo + pnpm workspaces |
+| **Testing** | Vitest + Playwright |
+| **Deployment** | Docker Compose (self-host) or Vercel (cloud) |
+
+
 ---
 
 ## Pilot Validation & PoC Evidence
@@ -201,6 +224,9 @@ pnpm verify:oss-release
 pnpm db:migrate
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls:test
+# Pre produkčné nasadenie nastavte vlastné silné heslo:
+# OPENPIMS_APP_DB_PASSWORD='<strong>' pnpm db:rls
+# OPENPIMS_APP_DB_PASSWORD='<same>' pnpm db:rls:test
 
 # 7. Naplnenie ukážkovými slovenskými dátami
 pnpm db:seed
