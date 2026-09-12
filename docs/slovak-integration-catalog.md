@@ -1,63 +1,65 @@
-# Slovenský Integračný Katalóg & Migrácie (Slovak Integration Catalog)
+# Slovak Integration Catalog
 
-Tento katalóg mapuje hardvérové zariadenia, laboratóriá, externé databázy a legacy systémy bežne používané na veterinárnych klinikách na Slovensku.
-
----
-
-## 1. Laboratórne a Diagnostické Prístroje (In-Clinic Analyzers)
-
-OpenVPM AI podporuje príjem laboratórnych výsledkov cez ASTM E1381/E1394 a HL7 štandardy:
-
-| Výrobca / Zariadenie | Typ Prístroja | Integračný Protokol | Formát Dát |
-| :--- | :--- | :--- | :--- |
-| **IDEXX VetLab Station** | Biomechánia, Hematológia, Moč | LAN / TCP socket (port 5100) | HL7 v2.3 / XML |
-| **Fuji Dri-Chem (NX500/700)** | Suchá klinická biochémia | Serial RS-232 / USB Ethernet | ASTM formát výsledkov |
-| **scil Vet abc Plus / abc 19** | Automatický hematologický analyzátor | Serial / TCP LAN | ASTM E1394 |
-| **Bionote Vcheck V200** | Fluorescenčná imunoanalýza | USB / LAN REST bridge | JSON / CSV export |
-| **Heska Element DC / HT5** | Biochémia a hematológia | Ethernet | HL7 / Heska Connect |
+Architektonická mapa integrácií pre slovenské veterinárne kliniky. Každá
+integrácia má označený stav: **implementované**, **v pláne (fáza 2)**, alebo
+**na vyžiadanie**.
 
 ---
 
-## 2. Referenčné Veterinárne Laboratóriá (External Labs)
+## 1. Analyzátory a diagnostické prístroje
 
-| Laboratórium | Spôsob Odoslania Žiadanky | Príjem Výsledkov |
-| :--- | :--- | :--- |
-| **Laboklin (Bratislava / Nemecko)** | Automatická elektronická žiadanka (tRPC) | Automatický nočný import cez HL7 / PDF doručenku s párovaním na čip zvieraťa |
-| **Synlab Slovensko** | Online objednávka / čiarový kód skúmavky | REST API / E-mail parser so šifrovaným výsledkovým PDF |
-| **Štátny veterinárny a potravinový ústav (ŠVÚ Zvolen / Bratislava)** | Oficiálna štátna sprievodka KVEPIS | Certifikovaný inšpekčný protokol |
+| Prístroj | Konektor | Stav | Poznámka |
+|---|---|---|---|
+| IDEXX VetLab Station | tRPC konektor + lokálny serial-to-REST bridge | v pláne | výsledky ako lab-result záznam |
+| Fuji Dri-Chem NX500 | lokálny bridge | v pláne | |
+| scil Vet abc Plus | lokálny bridge | v pláne | hematológia |
+
+Architektúra: prístroj → lokálny serial/USB-to-REST bridge (na klinike) →
+`apps/web/server/routers/extensions/lab-import.ts` → párovanie s pacientom.
+
+## 2. Veterinárne laboratóriá
+
+| Laboratórium | Formát | Stav | Párovanie |
+|---|---|---|---|
+| Laboklin | HL7 / PDF | v pláne | podľa čísla vzorky / čipu |
+| Synlab | HL7 / PDF | v pláne | podľa čísla vzorky / čipu |
+| ŠVÚ (Zvolen / Bratislava) | HL7 / PDF | na vyžiadanie | podľa čísla vzorky / čipu |
+
+Automatické párovanie výsledkov je riešené v `lib/lab` a
+`server/routers/extensions/lab-import.ts`.
+
+## 3. Registre a štátne systémy
+
+| Systém | Účel | Integrácia | Stav |
+|---|---|---|---|
+| **KVEPIS** (ŠVPS SR) | zákonné hlásenia | `lib/kvepis/*`, `/statutory/kvepis` | fáza 1 (Guided Hub), fáza 2 (B2G) |
+| **CRSZ** (Centrálny register spoločenských zvierat) | registrácia čipov | `lib/crsz`, `extensions/crsz.ts` | implementované |
+| **CEHZ** (Centrálna evidencia hospodárskych zvierat) | evidencia chovov | validačné pole v `lib/kvepis/validator.ts` | fáza 1 (validácia), fáza 2 (API) |
+| **ÚPVS** (Ústredný portál verejnej správy) | elektronické schránky, doručenky | `lib/kvepis/builder.ts`, GovBox obálka | fáza 1 (XML), fáza 2 (B2G brána) |
+
+## 4. Platobné terminály
+
+| Poskytovateľ | Integrácia | Stav |
+|---|---|---|
+| FiskalPRO | `FiskalProDriver` (LAN/REST) | Tier-1 |
+| Nexi | cez platebný terminál + e-Kasa | v pláne |
+| ČSOB / Tatra banka POS | cez POS bránu | v pláne |
+
+## 5. Poisťovne zvierat
+
+| Poisťovňa | Integrácia | Stav |
+|---|---|---|
+| PetExpert Slovensko | automatický export poistnej udalosti z uzavretej návštevy | v pláne |
+
+Export poistnej udalosti: po uzavretí návštevy (`visit_closeouts`) sa vygeneruje
+štruktúrovaný podklad (diagnózy, výkony, faktúra) pre poisťovňu; odoslanie
+vždy vyžaduje súhlas klienta (consent).
 
 ---
 
-## 3. Liekové a Nomenklatúrne Databázy
+## 6. Referencie XSD / formátov
 
-- **ÚŠKVBL SR (Ústav štátnej kontroly veterinárnych biopreparátov a liečiv Nitra):**
-  - Oficiálny číselník schválených veterinárnych liekov, ATCvet klasifikácia, ochranné lehoty a SPC súhrny.
-- **ŠÚKL SR:**
-  - Číselník humánnych liekov používaných vo veterinárnej medicíne v režime kaskády (Zákon č. 362/2011 Z. z. o liekoch).
-
----
-
-## 4. Poisťovne Spoločenských Zvierat
-
-- **PetExpert Slovensko:**
-  - Priame prepojenie s likvidačným portálom poisťovne.
-  - Odoslanie lekárskej správy, položkového účtu a súhlasu majiteľa jedným kliknutím z uzavretej návštevy.
-- **Colonnade Insurance S.A.:**
-  - Export poistnej udalosti do štruktúrovaného PDF formulára pre poistenie psa a mačky.
-
----
-
-## 5. Migrácie ako Produkt (Legacy Migration Playbook)
-
-OpenVPM AI poskytuje dedikovaný migračný engine pre bezpečný prechod z lokálnych desktopových systémov:
-
-| Zdrojový Systém | Databázový Engine | Migrované Entity | Validačný Krok |
-| :--- | :--- | :--- | :--- |
-| **WinVet** | Firebird / InterBase (.fdb, .gdb) | Klienti, pacienti, vakcinácie, história návštev, cenník | Kontrola formátu telefónnych čísel (+421), 15-miestnych čipov |
-| **Vetis / VetProf** | Microsoft SQL Server / Access | Kompletné karty, účtovné doklady, skladové zásoby | Rekonciliácia skladových zostatkov a pohľadávok |
-| **Veto** | Paradox / dBase | Základné karty zvierat a majiteľov | Deduplikácia klientov podľa mena a adresy |
-
-### 3-Krokový Migračný Protokol:
-1. **Dry-Run & Validácia:** Spustenie migračného skriptu nanečisto s vygenerovaním podrobného reportu nekonzistentných záznamov (napr. chýbajúce čipy, neplatné e-maily).
-2. **Paralelný beh (1 týždeň):** Nová inštancia beží paralelne so starým systémom pre overenie dennej praxe.
-3. **Zapečatenie a Protokol o Odovzdaní:** Formálny podpisový protokol potvrdzujúci 100% zhodu prenesených údajov pred odstavením pôvodného servera.
+- KVEPIS: menný priestor `https://www.svps.sk/kvepis/schemas/submission/v1`
+  (verziu XSD pripnúť pred produkciou — pozri `lib/kvepis/builder.ts`).
+- UPVS GovBox: obálka XML + doručenka (ZEP / ASiC-E).
+- e-Kasa VRP2: API Finančnej správy SR.

@@ -1,39 +1,58 @@
-# Dátová Suverenita, Šifrovanie a Retenčná Matica
+# Dátová suverenita & retenčná matica (Slovenská republika)
 
-Tento dokument stanovuje architektonické zásady uchovávania, ochrany a bezpečného vymazávania dát v prostredí OpenVPM AI.
-
----
-
-## 1. Zákonom Stanovená Retenčná Matica (Slovakia)
-
-V zmysle platných právnych predpisov Slovenskej republiky uplatňuje OpenVPM AI tieto retenčné doby:
-
-| Kategória Údajov | Zákonný Predpis | Minimálna Doba Uchovávania | Režim po Uplynutí Doby |
-| :--- | :--- | :--- | :--- |
-| **Zdravotná dokumentácia pacientov** (anamnézy, SOAP, vyšetrenia) | Zákon č. 39/2007 Z. z. o veterinárnej starostlivosti | **10 rokov** od posledného ošetrenia | Archivácia / Možnosť exportu a výmazu na žiadosť |
-| **Register omamných a psychotropných látok** (opiátová kniha) | Zákon č. 139/1998 Z. z. | **10 rokov** od vykonania zápisu | Trvalá nemenná archivácia (append-only ledger) |
-| **Kniha besnoty a záznamy o pohryznutí** | Zákon č. 39/2007 Z. z. § 17 a § 19 | **5 rokov** | Archivácia |
-| **Kniha ošetrení hospodárskych zvierat** | Zákon č. 39/2007 Z. z. | **5 rokov** | Archivácia / KVEPIS synchronizácia |
-| **Účtovné a daňové doklady e-Kasa** | Zákon č. 431/2002 Z. z. o účtovníctve | **10 rokov** od konca účtovného roka | Daňový archív |
-| **Hlasové nahrávky klinických diktátov** | GDPR / Nariadenie EÚ 2016/679 | **Max. 24 hodín** | **Automatický nevratný výmaz** (S3 lifecycle cron) |
-| **Auditné záznamy prístupov a potvrdení AI** | Zákon č. 18/2018 Z. z. | **5 rokov** | Neupraviteľný hash chain |
+> **Právne predpisy:** Zákon č. 39/2007 Z. z. (veterinárna starostlivosť),
+> Zákon č. 139/1998 Z. z. (omamné a psychotropné látky), Zákon č. 431/2002 Z. z.
+> (účtovníctvo), Zákon č. 18/2018 Z. z. (ochrana osobných údajov), GDPR.
 
 ---
 
-## 2. Šifrovanie a Správa Kryptografických Kľúčov
+## 1. Retenčná matica
 
-- **V tranzite (In Transit):** TLS 1.3 (fallback TLS 1.2), podpora výhradne bezpečných cipher suites (ECDHE-ECDSA-AES128-GCM-SHA256, ECDHE-RSA-AES256-GCM-SHA384). HSTS vynútené na úrovni reverzného proxy (`max-age=63072000; includeSubDomains; preload`).
-- **V pokoji (At Rest):** 
-  - Databázové zväzky šifrované pomocou AWS KMS spravovaných kľúčov (AES-256).
-  - Zdravotnícke snímky (DICOM/PNG) v S3 uložené so server-side šifrovaním (SSE-S3 / SSE-KMS).
-  - Hash chain v `ext_ai_audit_log` používa kryptografickú hašovaciu funkciu SHA-256 viazanú na identifikátor predchádzajúceho bloku.
+| Kategória údajov | Doba uchovávania | Právny základ | Po uplynutí |
+|---|---|---|---|
+| Zdravotná dokumentácia zvierat | **10 rokov** | Zákon č. 39/2007 Z. z. | anonymizácia / výmaz |
+| Register omamných a psychotropných látok | **10 rokov** | Zákon č. 139/1998 Z. z. | výmaz |
+| Účtovné a daňové doklady (e-Kasa) | **10 rokov** | Zákon č. 431/2002 Z. z. | výmaz |
+| Kniha besnoty / RVPS hlásenia | **10 rokov** | Zákon č. 39/2007 Z. z. | výmaz |
+| KVEPIS podania a doručenky | **10 rokov** | Zákon č. 39/2007 Z. z. | výmaz |
+| Audit trail (audit_log, AI ledger) | 10 rokov (s právnym záznamom) | čl. 5(2) GDPR, § 39 zák. 18/2018 | výmaz |
+| Audio nahrávky hlasového diktátu | **max. 24 hodín** (automatický výmaz) | minimalizácia údajov (čl. 5(1)(c) GDPR) | automatický výmaz |
+
+> **Audio diktát:** prepis sa ukladá ako text; surové audio sa automaticky
+> maže do 24 hodín od vytvorenia (implementované v `lib/voice` a
+> `schema/ext_voice.ts`).
 
 ---
 
-## 3. Právo na Výmaz a Prenositeľnosť (GDPR čl. 17 a čl. 20)
+## 2. Dátová suverenita (lokalizácia dát)
 
-1. **Prenositeľnosť údajov (Export):**
-   - Majiteľ zvieraťa alebo lekár môže kedykoľvek exportovať kompletnú kartu pacienta v strojovo čitateľnom formáte (štruktúrovaný JSON a tlačový PDF balíček).
-2. **Výmaz osobných údajov:**
-   - Na žiadosť dotknutej osoby sa vykoná anonymizácia mena, adresy a kontaktných údajov majiteľa v tabuľke `clients`.
-   - Zdravotné záznamy o zvierati a použité lieky zostávajú v anonymizovanej forme zachované pre splnenie zákonnej povinnosti podľa Zákona č. 39/2007 Z. z. (zákonná výnimka z práva na výmaz podľa čl. 17 ods. 3 písm. b GDPR).
+| Vrstva | Lokalita | Poznámka |
+|---|---|---|
+| Databáza (PostgreSQL) | EÚ (Supabase / Frankfurt) | RLS tenant izolácia |
+| Objektové úložisko (súbory, zálohy) | EÚ (AWS eu-central-1) | AES-256, versioning |
+| AI inferencia | EÚ/US API, **Zero Data Retention** | žiadne trénovanie na dátach klientov |
+| e-Kasa / KVEPIS | SK (Finančná správa SR, ÚPVS) | štátne systémy |
+
+## 3. Zabezpečenie (technické opatrenia)
+
+- **V tranzite:** TLS 1.3 (povinné), HSTS, certificate pinning pre štátne API.
+- **V pokoji:** AES-256 pre objektové úložisko a zálohy; šifrované heslá
+  (bcrypt), šifrované certifikáty/tokeny (digest-only storage).
+- **Izolácia nájomníkov:** Row-Level Security (`practice_id`), každý dopyt
+  tenant-scoped cez `withTenant`/`withSystem`.
+- **Prístupy:** RBAC (admin / veterinarian / technician / front_desk / viewer),
+  MFA-ready, session versioning.
+
+## 4. Práva dotknutých osôb a portál
+
+- Klient má prístup k údajom svojich zvierat cez klientsky portál
+  (token/relácia viazaná na klienta).
+- Právo na prístup, opravu, výmaz a prenosnosť sa realizuje cez podporu +
+  administrátorské nástroje; výmaz rešpektuje zákonné retenčné lehoty (údaje,
+  ktoré zákon vyžaduje uchovávať 10 rokov, sa nevykonajú, ale obmedzí sa ich
+  spracúvanie).
+
+## 5. Register subprocesorov
+
+Zhodný s Prílohou A dokumentu `DPA_SLOVAKIA.md`. Zmeny subprocesorov podliehajú
+oznamovacej povinnosti voči prevádzkovateľovi.

@@ -35,3 +35,44 @@ export function isControlledSubstanceOptionalTextInputValid(
 ): boolean {
   return value.trim().length <= maxLength;
 }
+
+/**
+ * Svedok pri výdaji omamných a psychotropných látok (Zákon č. 139/1998 Z. z.
+ * a vyhláška MZ SR). Pri akciách `administered` a `wasted` je povinný druhý
+ * kvalifikovaný pracovník (technik / lekár). Vracia null, ak je postup OK,
+ * inak chybové hlásenie.
+ */
+export function controlledSubstanceWitnessError(params: {
+  action: "received" | "administered" | "wasted" | "returned";
+  witnessedBy: string | null | undefined;
+}): string | null {
+  const requiresWitness =
+    params.action === "administered" || params.action === "wasted";
+  if (requiresWitness && !params.witnessedBy) {
+    return "Pri podaní / likvidácii omamnej látky je povinný svedok (technik alebo lekár).";
+  }
+  return null;
+}
+
+export interface ControlledSubstanceEntry {
+  action: "received" | "administered" | "wasted" | "returned";
+  quantity: number;
+}
+
+/**
+ * Stav trezoru = prijaté − podané − zlikvidované + vrátené. Slúži na odpočet
+ * z trezoru pri každej manipulácii a na kontrolu, že stav nikdy neklesne pod 0.
+ */
+export function computeControlledSubstanceBalance(
+  entries: ControlledSubstanceEntry[]
+): number {
+  let balance = 0;
+  for (const entry of entries) {
+    if (entry.action === "received" || entry.action === "returned") {
+      balance += entry.quantity;
+    } else {
+      balance -= entry.quantity;
+    }
+  }
+  return Math.round(balance * 1000) / 1000;
+}

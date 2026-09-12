@@ -1,88 +1,86 @@
-# Zmluva o Spracúvaní Osobných Údajov (DPA — Data Processing Agreement)
+# Zmluva o spracúvaní osobných údajov (DPA) — Slovenská republika
 
-uzatvorená v zmysle **čl. 28 Nariadenia Európskeho parlamentu a Rady (EÚ) 2016/679 (GDPR)**
-a **§ 34 Zákona č. 18/2018 Z. z. o ochrane osobných údajov**
-
----
-
-### Medzi zmluvnými stranami:
-
-1. **Prevádzkovateľ:**
-   Veterinárna ambulancia / klinika (zákazník používajúci OpenVPM AI)
-   (ďalej len *„Prevádzkovateľ“*)
-
-   a
-
-2. **Sprostredkovateľ:**
-   OpenVPM AI / poskytovateľ SaaS platformy
-   (ďalej len *„Sprostredkovateľ“*)
+> **Vzor dokumentu** pre zmluvný vzťah medzi:
+> - **Prevádzkovateľ:** veterinárna klinika / ambulancia (zmluvný partner OpenVPM)
+> - **Sprostredkovateľ:** prevádzkovateľ systému OpenVPM (VET.IS / OpenVPM AI)
+>
+> **Právny rámec:** Nariadenie (EÚ) 2016/679 (GDPR), Zákon č. 18/2018 Z. z.
+> o ochrane osobných údajov.
+>
+> ⚠️ Toto je **vzor**, ktorý musí byť pred použitím posúdený právnikom
+> prevádzkovateľa. Čísla paragrafov a rozsah spracúvania je potrebné prispôsobiť
+> konkrétnemu zmluvnému vzťahu.
 
 ---
 
-## Článok 1 — Predmet a Účel Zmluvy
+## 1. Predmet a účel spracúvania
 
-1. Táto zmluva upravuje práva a povinnosti zmluvných strán pri spracúvaní osobných údajov klientov (vlastníkov a držiteľov zvierat) a zamestnancov Prevádzkovateľa v rámci poskytovania veterinárneho informačného systému OpenVPM AI.
-2. Účelom spracúvania je:
-   - Vedenie odbornej veterinárnej zdravotnej dokumentácie v zmysle Zákona č. 39/2007 Z. z.
-   - Správa zákonných registrov (Kniha besnoty, Kniha ošetrení hospodárskych zvierat, Register omamných a psychotropných látok, PetPass / CRSZ).
-   - Správa objednávkového kalendára, komunikácia s majiteľmi (SMS/e-mail pripomienky) a vystavovanie daňových a pokladničných dokladov (e-Kasa — Zákon č. 289/2008 Z. z.).
-   - Asistované prepisovanie hlasových klinických poznámok (Voice-to-SOAP).
+1.1 Sprostredkovateľ spracúva osobné údaje výlučne v rozsahu a na účel
+poskytovania veterinárneho informačného systému OpenVPM (vedenie zdravotnej
+dokumentácie zvierat, objednávanie, fakturácia, zákonné registre, e-Kasa,
+KVEPIS/ÚPVS hlásenia).
 
----
+1.2 Kategórie dotknutých osôb: klienti kliniky (majitelia zvierat), ich
+zamestnanci, ošetrujúci personál kliniky.
 
-## Článok 2 — Kategórie Dotknutých Osôb a Rozsah Údajov
+1.3 Kategórie osobných údajov: identifikačné a kontaktné údaje klientov, údaje
+o zvieratách (vrátane mikročipu/transpondéra), zdravotná dokumentácia,
+fakturačné a platobné údaje, údaje o oprávneniach používateľov.
 
-1. **Dotknuté osoby:**
-   - Majitelia, držitelia a sprevádzajúce osoby zvierat (fyzické osoby a SZČO).
-   - Ošetrujúci personál (veterinárni lekári, technici, recepcia).
-2. **Kategórie bežných osobných údajov:**
-   - Meno, priezvisko, titul.
-   - Trvalý pobyt, doručovacia adresa.
-   - Telefónne číslo, e-mailová adresa.
-   - IČO / DIČ (ak ide o farmárov a chovateľov).
-   - Číslo občianskeho preukazu / mandátneho certifikátu (pre účely KEP / KVEPIS podaní).
-3. **Osobitné kategórie údajov:**
-   - Platforma NESPRACÚVA genetické, biometrické ani zdravotné údaje o fyzických osobách (zdravotné údaje sa týkajú výhradne zvieracích pacientov).
+## 2. Povinnosti sprostredkovateľa (čl. 28 GDPR, § 34 zákona č. 18/2018 Z. z.)
 
----
+2.1 Spracúva údaje len na základe zdokumentovaných pokynov prevádzkovateľa.
 
-## Článok 3 — Miesto Spracúvania a Dátová Suverenita
+2.2 Zaväzuje osoby oprávnené spracúvať údaje k mlčanlivosti.
 
-1. Sprostredkovateľ garantuje, že **všetky produkčné databázy, aplikačné servery a objektové úložiská sú fyzicky umiestnené v regióne Európskej únie (primárne Frankfurt, Nemecko)**.
-2. Žiadne osobné údaje nie sú prenášané do tretích krajín bez primeraných záruk (Standard Contractual Clauses — SCC).
+2.3 Prijíma primerané technické a organizačné opatrenia (čl. 32 GDPR):
+- šifrovanie v tranzite (TLS 1.3) a v pokoji (AES-256),
+- tenant izolácia (Row-Level Security), riadenie prístupov na základe rolí,
+- záznamy o prístupe (audit trail) a monitorovanie incidentov.
 
----
+2.4 Využíva ďalších sprostredkovateľov (subprocesorov) len so súhlasom
+prevádzkovateľa; zoznam je vedený v prílohe a v
+`DATA_SOVEREIGNTY_AND_RETENTION.md`.
 
-## Článok 4 — Schválení Subprocesori (Ďalší Sprostredkovatelia)
+2.5 Pomáha prevádzkovateľovi plniť povinnosti voči dotknutým osobám (právo na
+prístup, opravu, výmaz, prenosnosť) a pri ohlasovaní porušení (§ 38 zákona
+č. 18/2018 Z. z.).
 
-Prevádzkovateľ udeľuje všeobecný súhlas so zapojením týchto subprocesorov:
+2.6 Po ukončení zmluvy vymaže alebo vráti všetky osobné údaje a zmaže existujúce
+kópie, pokiaľ právo nevyžaduje ich uchovávanie.
 
-| Subprocesor | Sídlo / Región | Poskytovaná Služba | Záruka Ochrany Údajov |
-| :--- | :--- | :--- | :--- |
-| **Amazon Web Services (AWS)** | Frankfurt (EÚ) | Cloudová infraštruktúra, S3 šifrované úložisko, zálohy | ISO 27001, SOC 2, EÚ Data Boundary |
-| **Supabase / PostgreSQL** | EÚ Región | RLS Tenant-izolovaná databáza | EÚ DPA, RLS presadzovanie na úrovni jadra DB |
-| **Anthropic PBC** | EÚ Endpoint | Textové LLM inferencie (SOAP drafting) | Zero Data Retention zmluva (zákaz trénovania na dátach) |
-| **Google Cloud Platform** | EÚ Región | Multimodálne RTG inferencie (Vision) | EÚ Model Clauses, žiadne ukladanie snímkov |
-| **Resend / Twilio** | EÚ infraštruktúra | Transakčný e-mail a SMS pripomienky | EÚ DPA, ISO 27001 |
+## 3. Práva prevádzkovateľa
 
----
+3.1 Právo na audit a inšpekciu spracúvania (vrátane doloženia certifikátov
+bezpečnosti).
 
-## Článok 5 — Technické a Organizačné Opatrenia (TOMs)
+3.2 Právo dávať pokyny k rozsahu, spôsobu a dobe spracúvania.
 
-1. **Šifrovanie:**
-   - Šifrovanie všetkých dát v tranzite: TLS 1.3 s HSTS.
-   - Šifrovanie dát v pokoji (Encryption at Rest): AES-256 na úrovni databázových zväzkov a S3 bucketov.
-2. **Prístupové práva (RBAC):**
-   - Striktné oddelenie rolí (`admin`, `veterinarian`, `technician`, `front_desk`, `viewer`).
-   - Audit trail zaznamenávajúci každý prístup, zmenu a export.
-3. **Multi-Tenant Izolácia (Row-Level Security):**
-   - Každý dopyt do databázy je nútene izolovaný cez `practice_id` pomocou PostgreSQL Row-Level Security. Prístup k dátam inej kliniky je na úrovni databázového enginu nemožný.
-4. **Hlasové diktáty (GDPR 24-hodinový limit):**
-   - Audio nahrávky hlasových diktátov sú po vygenerovaní textovej správy zaradené do automatického bezpečného výmazu, najneskôr do 24 hodín.
+## 4. Medzinárodné prenosy
+
+4.1 Osobné údaje sa primárne spracúvajú v EÚ (AWS Frankfurt, Supabase EÚ).
+Prenos do tretích krajín (napr. AI provideri) prebieha len s primeranými
+zárukami podľa kapitoly V GDPR a s Zero Data Retention politikou.
+
+## 5. Doba trvania a zodpovednosť
+
+5.1 Zmluva trvá počas trvania hlavnej zmluvy o poskytovaní služieb.
+
+5.2 Sprostredkovateľ zodpovedá za škodu spôsobenú porušením povinností podľa
+čl. 82 GDPR v rozsahu stanovenom zmluvou.
 
 ---
 
-## Článok 6 — Hlásenie Bezpečnostných Incidentov
+## Príloha A — Subprocesori (aktuálny stav)
 
-1. V prípade zistenia porušenia ochrany osobných údajov (data breach) sa Sprostredkovateľ zaväzuje informovať Prevádzkovateľa **bez zbytočného odkladu, najneskôr do 24 hodín** od zistenia incidentu.
-2. Oznámenie obsahuje povahu incidentu, kategórie dotknutých osôb, predpokladané dôsledky a prijaté nápravné opatrenia.
+| Subprocesor | Účel | Lokalita dát | Poznámka |
+|---|---|---|---|
+| AWS (S3, Frankfurt) | úložisko súborov/záloh | EÚ (eu-central-1) | šifrovanie AES-256 |
+| Supabase / PostgreSQL | databáza | EÚ | RLS tenant izolácia |
+| Anthropic (Claude) | AI asistencia | API | Zero Data Retention |
+| Google Vertex (Gemini) | AI vízia | API (EÚ) | Zero Data Retention |
+| Stripe | platby | EÚ/US | PCI-DSS |
+| Resend / Twilio | e-mail / SMS | EÚ/US | len nevyhnutné údaje |
+
+Prevádzkovateľ berie na vedomie zoznam subprocesorov a môže namietať zmenu
+s 30-dňovou výpovednou lehotou.
