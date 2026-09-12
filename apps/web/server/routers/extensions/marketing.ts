@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { createRouter, protectedProcedure, publicProcedure, requireRole } from "../../trpc";
 import { TRPCError } from "@trpc/server";
 import { configuredModel } from "@/lib/agent/runner";
-import { readHostedAiAccess } from "@/lib/billing/ai-access";
+import { assertHostedAiGate } from "@/lib/billing/ai-gate";
 import { recordUsage } from "@/lib/billing/usage";
 import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import {
@@ -206,14 +206,10 @@ export const marketingRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // AI access gate — consistent with agent runner
-      const aiAccess = await readHostedAiAccess(ctx.db, ctx.practiceId);
-      if (!aiAccess?.allowed) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: aiAccess?.message ?? "AI funkcie nie sú k dispozícii",
-        });
-      }
+      // Billing entitlement + shared 20/min per-practice rate limit,
+      // consistent with the agent runner and the other marketing AI
+      // generators (generateImageForPost/generateImage/submitVideo).
+      await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
 
       // 1. Vyhľadá existujúcu šablónu ako vzor
       const matchedTemplate = CAMPAIGN_TEMPLATES.find(
@@ -378,6 +374,10 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Billing entitlement + 20/min per-practice rate limit, before any
+      // paid Alibaba image-generation call.
+      await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
+
       const [item] = await ctx.db
         .select()
         .from(extMarketingContentItems)
@@ -449,6 +449,9 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
         .update(extMarketingContentItems)
         .set({ mediaAssetId: asset.id })
         .where(eq(extMarketingContentItems.id, item.id));
+
+      // Meter only successful generations (no-op on self-host).
+      await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
 
       return { asset, item };
     }),
@@ -673,6 +676,7 @@ generateImage: protectedProcedure
     })
   )
   .mutation(async ({ ctx, input }) => {
+    await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
     try {
       const result = await generateAlibabaImage({
         prompt: input.prompt,
@@ -698,6 +702,7 @@ submitVideo: protectedProcedure
     })
   )
   .mutation(async ({ ctx, input }) => {
+    await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
     try {
       const result = await submitAlibabaVideo({
         prompt: input.prompt,
@@ -1011,6 +1016,7 @@ generateReviewReply: protectedProcedure
     })
   )
   .mutation(async ({ ctx, input }) => {
+    await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
     try {
       const model = configuredModel();
       const toneMap = {
