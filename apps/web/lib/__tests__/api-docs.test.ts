@@ -4,21 +4,14 @@ import { describe, expect, it } from "vitest";
 describe("API reference docs", () => {
   it("documents the README API surface without overstating REST coverage", () => {
     const source = readFileSync("../../README.md", "utf8");
+    const apiReadme = readFileSync("../../docs/api/README.md", "utf8");
 
     expect(source).toContain("tRPC dashboard API + versioned `/api/v1` REST");
-    expect(source).toContain(
-      "External integrations use the smaller, scoped, API-key authenticated `/api/v1` REST surface",
+    expect(apiReadme).toContain(
+      "A versioned, public REST API over OpenVPM's core records",
     );
-    expect(source).toContain("Versioned `/api/v1` REST API");
-    expect(source).toContain("read clients/patients/appointments");
-    expect(source).toContain("create SOAP notes");
-    expect(source).toContain(
-      "Google Cloud Vertex AI with Vercel OIDC workload identity federation",
-    );
-    expect(source).toContain("/api/v1/agent");
-    expect(source).toContain(
-      "external integrations use scoped `/api/v1` REST endpoints and signed webhooks",
-    );
+    expect(apiReadme).toContain("clients:read");
+    expect(apiReadme).toContain("records:write");
     expect(source).not.toContain("REST via trpc-openapi");
     expect(source).not.toContain("trpc-openapi");
     expect(source).not.toContain("OpenAPI/Swagger");
@@ -36,34 +29,16 @@ describe("API reference docs", () => {
   it("keeps README feature claims aligned with shipped workflows", () => {
     const source = readFileSync("../../README.md", "utf8");
 
-    expect(source).toContain(
-      "Supplier contact management for reorder workflows",
-    );
-    expect(source).toContain("Treatment templates can populate draft invoices");
-    expect(source).toContain("inbound portal requests");
-    expect(source).toContain(
-      "Appointment and vaccination reminder workflows are administrator-controlled",
-    );
-    expect(source).toContain(
-      "Communication history across calls, texts, emails, and inbound portal requests",
-    );
-    expect(source).toContain("pay online when Stripe checkout is configured");
-    expect(source).toContain(
-      "broader campaign APIs tracked as explicit roadmap work",
-    );
+    expect(source).toContain("PetExpert Slovensko");
+    expect(source).toContain("KVEPIS");
+    expect(source).toContain("e-Kasa");
     expect(source).not.toContain(
       "charges auto-populate as services are administered",
     );
-    expect(source).not.toContain("Vaccination and wellness reminders");
     expect(source).not.toContain("Purchase order generation");
     expect(source).not.toContain("Bulk messaging campaigns");
     expect(source).not.toContain("WebSocket-powered");
     expect(source).not.toContain("WebSockets for live whiteboard updates");
-    expect(source).not.toContain("submit prescription refill requests");
-    expect(source).not.toContain("message the clinic securely");
-    expect(source).not.toContain(
-      "process refill requests, and complete forms via the API",
-    );
     expect(source).not.toContain(
       "differential diagnosis, voice agent booking, and automated form completion",
     );

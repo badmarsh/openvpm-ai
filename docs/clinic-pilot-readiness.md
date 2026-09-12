@@ -39,6 +39,87 @@ The strongest first pilots are companion-animal or house-call clinics that:
 | Herd or group medicine                                                                                                                | Not supported                   | Current records and billing are patient based. Herd quantities, group treatments, and production-animal workflows are not ready.                                                                            |
 | Direct lab, distributor, reference, or legacy-PIMS integrations                                                                       | Not supported                   | IDEXX, Antech, Zoetis, Vetcove, Rhapsody, e-prescribing, accounting sync, and similar vendor connections are not generally available today.                                                                 |
 | Automated regulatory reporting                                                                                                        | Not supported                   | Clinics must keep using their existing state and federal reporting process unless a specific integration has been validated.                                                                                |
+| **KVEPIS (SVPS SR) — direct B2G submission**                                                                                          | **XML-only export**             | XML is generated and validated against XSD. Direct submission to SVPS production endpoint has NOT been performed — no production token has been assigned. Clinics must upload via e-schranku manually.      |
+| **e-Kasa (FR SR) — fiscal receipt submission**                                                                                        | **Driver ready, not certified** | The offline-capable driver is implemented and tested. Formal integration certification with FR SR is pending. Clinics should not rely on this for primary fiscal compliance until certification completes.  |
+| **PetExpert insurance claims**                                                                                                        | **Payload-ready, not live**     | Claim payloads are built and validated. Live API credentials and production submission have not been tested. Do not promise automated insurance settlement to pet owners yet.                                |
+| **IDEXX / Zoetis / lab analyzers — live API**                                                                                         | **Parser-ready, not live**      | Result parsers exist for common file formats. No live API connection to external lab systems exists in production.                                                                                          |
+| **Anesthesia / ICU / surgery workflows**                                                                                              | **Not supported**               | No anesthesia protocol, intubation logging, ICU flowsheet, or perioperative record module exists. Do not use for surgical monitoring.                                                                       |
+| **Triage scoring**                                                                                                                    | **Not supported**               | No triage category or urgency flag. Do not rely on OpenVPM for emergency triage decisions.                                                                                                                  |
+
+## Pre-Pilot Gate
+
+The following 10 conditions must be green before a real clinic goes live. Current score: **0/10**.
+
+| # | Condition | Status |
+|---|-----------|--------|
+| G-01 | At least 1 clinic signed pilot agreement | Missing |
+| G-02 | DPA signed with all AI sub-processors | Missing |
+| G-03 | Disaster recovery drill documented (< 90 days) | Partial |
+| G-04 | E2E tests in CI pipeline (green gate) | Partial |
+| G-05 | External security audit report available | Missing |
+| G-06 | Onboarding time < 2 hours for non-technical user | Missing |
+| G-07 | KVEPIS test endpoint assigned by SVPS | Missing |
+| G-08 | e-Kasa void/storno flow tested in FRSR test env | Missing |
+| G-09 | AI eval dataset approved by licensed veterinarian | Partial |
+| G-10 | Incident response playbook documented | Partial |
+
+Full details and issue tracking: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md)
+
+## Pilot launch path
+
+1. **Confirm fit.** Agree on the clinic, location, users, devices, target
+   workflow, and any capability that would block adoption.
+2. **Start alongside.** Keep the current PIMS as the source of truth while the
+   team completes guided setup and learns OpenVPM with sample data.
+3. **Import a small real sample.** Dry-run a few clients and patients first,
+   then vaccine and visit history. Resolve every unexpected match or skipped
+   row before a larger import.
+4. **Complete one real visit.** Book, check in, chart, record vitals, close out,
+   invoice or document a no-charge reason, and verify the client handoff.
+5. **Validate the edges.** Confirm roles, exports, appointment requests,
+   payments, communications, an interrupted connection, and the clinic's
+   rollback path.
+6. **Run a pilot week.** Use the agreed workflow for at least five clinic days.
+   Record friction and review it with the clinic champion each day.
+7. **Make a go-live decision.** Move more work only after the clinic signs off
+   on record accuracy, billing, team handoffs, support coverage, and data exit.
+
+## Migration safety rules
+
+- Never send patient, client, financial, or credential data through a public
+  issue or ordinary email attachment. Email support only to arrange an approved
+  secure transfer method.
+- Use an administrator account for imports. Start with a small representative
+  sample and always review the dry run before confirming.
+- Use the same migration source for every related file so external owner and
+  patient IDs remain linked.
+- Keep the source export unchanged until the migration is accepted. Store the
+  source file and import issue report according to the clinic's retention
+  policy.
+- Compare source and destination counts, then spot-check active patients,
+  inactive patients, duplicate names, missing emails, vaccines, and dated
+  notes.
+- Agree on a cutoff time before the final import. Record any work entered in the
+  old system after that time and reconcile it explicitly.
+- Export an OpenVPM backup after acceptance and before expanding the rollout.
+
+## Go-live evidence
+
+The clinic owner and OpenVPM operator should record:
+
+- the supported workflow and location in scope;
+- the staff roles that were tested;
+- import counts, issues, and sample-validation results;
+- completed-visit and billing evidence using non-sensitive identifiers;
+- payment, booking, email, and SMS status;
+- backup/export confirmation;
+- known limitations and the rollback owner; and
+- the decision date and approvers.
+
+No single green dashboard makes a clinic ready. Readiness is the combination of
+working software, a validated clinic workflow, honest limits, recoverable data,
+and a team that knows what to do when something goes wrong.
+
 
 ## Pilot launch path
 
