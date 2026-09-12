@@ -17,6 +17,9 @@ import {
 } from "@openpims/db";
 import { getBrand, type ClinicBrand } from "./planner";
 import { smsRateLimitOk } from "./sms-rate-limit";
+import { isQuietHours } from "@/lib/messaging/reminders";
+import { sendSms } from "@/lib/sms-dispatch";
+import { sendEmail } from "@/lib/email";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -68,7 +71,8 @@ export function renderTemplate(body: string, vars: Record<string, string>): stri
     .trim();
 }
 
-export function isQuiet(now: Date, brand: ClinicBrand): boolean {
+/** @deprecated Use isQuietHours(now, brand.timezone) — this function uses server-local clock and is kept only for nextAllowedTime calculations. */
+function _isQuietServerLocal(now: Date, brand: ClinicBrand): boolean {
   const h = now.getHours();
   const start = brand.quietHoursStart ?? 20;
   const end = brand.quietHoursEnd ?? 8;
@@ -76,6 +80,16 @@ export function isQuiet(now: Date, brand: ClinicBrand): boolean {
     return h >= start || h < end;
   }
   return h >= start && h < end;
+}
+
+/** Timezone-aware quiet-hours check using practice IANA timezone (TCPA/GDPR compliant). */
+export function isQuiet(now: Date, brand: ClinicBrand): boolean {
+  // Use timezone-aware check when practice timezone is available; fall back to
+  // server-local clock only when no timezone is configured.
+  if (brand.timezone) {
+    return isQuietHours(now, brand.timezone);
+  }
+  return _isQuietServerLocal(now, brand);
 }
 
 export function nextAllowedTime(now: Date, brand: ClinicBrand): Date {
@@ -404,14 +418,15 @@ export async function processQueue(
       continue;
     }
 
-    // Sympathy gate check before send
+    // Sympathy gate — SKILL.md §3: unconditionally block ALL automated outreach
+    // for deceased patients regardless of legalBasis or templateKey.
     if (m.patientId) {
       const [p] = await db
         .select({ status: patients.status })
         .from(patients)
         .where(eq(patients.id, m.patientId))
         .limit(1);
-      if (p?.status === "deceased" && (m.legalBasis === "consent" || SYMPATHY_BLOCKED.has(m.templateKey))) {
+      if (p?.status === "deceased") {
         await db
           .update(extMarketingMessageLogs)
           .set({ status: "blocked_sympathy" })
@@ -443,22 +458,74 @@ export async function processQueue(
       }
     }
 
-    // Delivered
-    await db
-      .update(extMarketingMessageLogs)
-      .set({ status: "delivered", sentAt: now })
-      .where(eq(extMarketingMessageLogs.id, m.id));
+    // Fetch recipient contact details
+    const [recipient] = await db
+      .select({ phone: clients.phone, email: clients.email })
+      .from(clients)
+      .where(eq(clients.id, m.clientId))
+      .limit(1);
 
-    // Write to unified delivery log
-    await db.insert(extSmsDeliveryLog).values({
-      practiceId,
-      clientId: m.clientId,
-      source: "marketing",
-      sourceRecordId: m.id,
-      sentAt: now,
-    });
+    // Dispatch via appropriate channel
+    let dispatchOk = false;
+    if (m.channel === "sms" && recipient?.phone) {
+      const result = await sendSms({
+        to: recipient.phone,
+        body: m.bodyRendered,
+        practiceId,
+        clientId: m.clientId,
+        source: "marketing",
+        sourceId: m.id,
+        idempotencyKey: `mktg:${m.id}`,
+      });
+      dispatchOk = result.success;
+      if (!result.success) {
+        await db
+          .update(extMarketingMessageLogs)
+          .set({ status: "failed" })
+          .where(eq(extMarketingMessageLogs.id, m.id));
+        continue;
+      }
+    } else if (m.channel === "email" && recipient?.email) {
+      const result = await sendEmail({
+        to: recipient.email,
+        subject: m.subject ?? brand.name,
+        html: `<p>${m.bodyRendered.replace(/\n/g, "<br>")}</p>`,
+      });
+      dispatchOk = result.success;
+      if (!result.success) {
+        await db
+          .update(extMarketingMessageLogs)
+          .set({ status: "failed" })
+          .where(eq(extMarketingMessageLogs.id, m.id));
+        continue;
+      }
+    } else {
+      // No usable contact channel — suppress
+      await db
+        .update(extMarketingMessageLogs)
+        .set({ status: "suppressed_no_channel" })
+        .where(eq(extMarketingMessageLogs.id, m.id));
+      suppressed++;
+      continue;
+    }
 
-    sent++;
+    if (dispatchOk) {
+      // Mark as delivered and write to unified delivery log
+      await db
+        .update(extMarketingMessageLogs)
+        .set({ status: "delivered", sentAt: now })
+        .where(eq(extMarketingMessageLogs.id, m.id));
+
+      await db.insert(extSmsDeliveryLog).values({
+        practiceId,
+        clientId: m.clientId,
+        source: "marketing",
+        sourceRecordId: m.id,
+        sentAt: now,
+      });
+
+      sent++;
+    }
   }
 
   return { sent, suppressed };

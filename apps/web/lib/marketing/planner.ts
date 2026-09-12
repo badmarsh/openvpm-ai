@@ -30,6 +30,8 @@ export interface ClinicBrand {
   marketingRateLimitDays: number;
   quietHoursStart: number;
   quietHoursEnd: number;
+  /** IANA timezone of the practice (e.g. "Europe/Bratislava"). Used for timezone-aware quiet-hours checks. */
+  timezone: string | null;
   emergencyPhone?: string;
   openingHours?: Record<string, string>;
   autoReply5star?: boolean;
@@ -43,6 +45,7 @@ export async function getBrand(db: Database | any, practiceId: string): Promise<
       phone: practices.phone,
       email: practices.email,
       website: practices.website,
+      timezone: practices.timezone,
       settings: practices.settings,
     })
     .from(practices)
@@ -75,6 +78,7 @@ export async function getBrand(db: Database | any, practiceId: string): Promise<
     marketingRateLimitDays: (bk.marketingRateLimitDays as number) ?? 7,
     quietHoursStart: (bk.quietHoursStart as number) ?? 20,
     quietHoursEnd: (bk.quietHoursEnd as number) ?? 8,
+    timezone: practice.timezone ?? null,
     emergencyPhone: (bk.emergencyPhone as string) ?? practice.phone ?? undefined,
     openingHours: (bk.openingHours as Record<string, string>) ?? {
       po_pia: "08:00 - 19:00",
