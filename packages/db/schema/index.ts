@@ -58,3 +58,7 @@ export * from "./ext_statutory";
 export * from "./ext_ai_audit_log";
 export * from "./ext_confirmations";
 export * from "./ext_kvepis";
+export * from "./ext_automation";
+export * from "./ext_crm";
+export * from "./ext_content_calendar";
+export * from "./ext_channel_accounts";
