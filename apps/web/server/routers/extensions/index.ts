@@ -15,6 +15,10 @@ import { auditExportRouter } from "./audit-export";
 import { insuranceRouter } from "./insurance";
 import { dentalRouter } from "./dental";
 import { wholesalerImportRouter } from "./wholesaler-import";
+import { automationEventsRouter } from "./automation-events";
+import { automationRulesRouter } from "./automation-rules";
+import { automationJourneysRouter } from "./automation-journeys";
+import { automationEnrollmentsRouter } from "./automation-enrollments";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -37,6 +41,10 @@ export const extensionsRouter = createRouter({
   insurance: insuranceRouter,
   dental: dentalRouter,
   wholesalerImport: wholesalerImportRouter,
+  automationEvents: automationEventsRouter,
+  automationRules: automationRulesRouter,
+  automationJourneys: automationJourneysRouter,
+  automationEnrollments: automationEnrollmentsRouter,
 });
 
 export {
@@ -56,5 +64,9 @@ export {
   insuranceRouter,
   dentalRouter,
   wholesalerImportRouter,
+  automationEventsRouter,
+  automationRulesRouter,
+  automationJourneysRouter,
+  automationEnrollmentsRouter,
 };
 
