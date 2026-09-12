@@ -269,9 +269,10 @@ export const ekasaRouter = createRouter({
   /**
    * Storno pokladničného dokladu (Zákon č. 289/2008 Z. z. § 8 ods. 2 a 3).
    * Vystaví storno / opravný doklad s odkazom na pôvodný UID dokladu.
+   * Povolené výhradne pre admin / veterinarian (nie front_desk).
    */
   stornoReceipt: protectedProcedure
-    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .use(requireRole("admin", "veterinarian"))
     .input(
       z.object({
         receiptId: z.string().uuid(),
@@ -305,6 +306,7 @@ export const ekasaRouter = createRouter({
             reason: input.reason,
             correctionType: input.correctionType,
             closedBy: ctx.session?.user?.id,
+            actorRole: ctx.session?.user?.role,
           },
           config
         );

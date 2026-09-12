@@ -57,6 +57,26 @@ export type EkasaReceiptType =
   | "DEPOSIT"
   | "WITHDRAWAL";
 
+/**
+ * Storno / opravný doklad je daňovo-právny úkon (Zákon č. 289/2008 Z. z.
+ * § 8 ods. 2 a 3), preto je povolený výhradne pre roly `admin` a
+ * `veterinarian`. Recepčný personál (front_desk) ani read-only roly nesmú
+ * stornovať fiškálny doklad.
+ */
+export const EKASA_VOID_ROLES = ["admin", "veterinarian"] as const;
+export type EkasaVoidRole = (typeof EKASA_VOID_ROLES)[number];
+
+/** Vrstva defense-in-depth: storno bez zodpovedajúcej roly okamžite zlyhá. */
+export function assertCanVoidReceipt(
+  role: string | null | undefined
+): void {
+  if (!role || !(EKASA_VOID_ROLES as readonly string[]).includes(role)) {
+    throw new Error(
+      "Storno dokladu je povolené iba pre rolu admin alebo veterinarian"
+    );
+  }
+}
+
 export function normalizeVatRate(input: string | number | undefined | null): EkasaVatRateType {
   if (!input) return "STANDARD_23";
   const s = String(input).trim().toUpperCase();
@@ -526,6 +546,8 @@ export async function createCorrectionReceipt(
     reason: string;
     correctionType?: "STORNO" | "RETURN";
     closedBy?: string;
+    /** Rola vykonávajúceho (admin | veterinarian). Povinné. */
+    actorRole?: string | null;
   },
   config: {
     dic: string;
@@ -549,12 +571,27 @@ export async function createCorrectionReceipt(
     ),
   });
 
+  // Oprávnenie: iba admin / veterinarian (defense-in-depth, kontroluje sa aj
+  // na úrovni tRPC procedúry).
+  assertCanVoidReceipt(params.actorRole);
+
   if (!original) {
     throw new Error("Pôvodný doklad nebol nájdený");
   }
 
   if (original.receiptType === "STORNO") {
     throw new Error("Tento doklad je už storno doklad a nemožno ho opätovne stornovať");
+  }
+
+  // Povinná referencia originalReceiptUid. Podľa § 8 ods. 2 Zákona
+  // č. 289/2008 Z. z. sa storno viaže na UID pôvodného dokladu z FR SR.
+  // Výnimka: doklad uložený offline (48-hodinový núdzový režim) ešte nemá UID
+  // a viaže sa na pôvodné číslo dokladu.
+  const originalReceiptUid = original.uid;
+  if (!originalReceiptUid && original.status !== "OFFLINE_STORED") {
+    throw new Error(
+      "Pôvodný doklad nemá UID z Finančnej správy SR — storno nie je možné"
+    );
   }
 
   // Skontroluj či k tomuto dokladu už neexistuje vystavené storno
@@ -641,7 +678,7 @@ export async function createCorrectionReceipt(
       receiptNumber,
       receiptType: correctionType,
       originalReceiptId: original.id,
-      originalUid: original.uid ?? original.receiptNumber,
+      originalUid: originalReceiptUid ?? original.receiptNumber,
       stornoReason: params.reason,
       okp,
       pkp: pkp ?? null,

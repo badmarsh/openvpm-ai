@@ -743,6 +743,13 @@
       "when": 1789161931416,
       "tag": "0105_nifty_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1789176064585,
+      "tag": "0106_vengeful_mauler",
+      "breakpoints": true
     }
   ]
 }
