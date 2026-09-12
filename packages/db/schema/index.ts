@@ -56,3 +56,4 @@ export * from "./ext_support";
 export * from "./ext_statutory";
 export * from "./ext_ai_audit_log";
 export * from "./ext_confirmations";
+export * from "./ext_kvepis";
