@@ -8,6 +8,15 @@ export type SpeciesType = "canine" | "feline" | "other";
 
 export type ResultFlag = "NORMAL" | "LOW" | "HIGH" | "CRITICAL";
 
+export type AnalyzerType =
+  | "IDEXX"
+  | "FUJI_DRI_CHEM"
+  | "MINDRAY"
+  | "LABTECHNIK"
+  | "INLAB"
+  | "QUICKSEAL"
+  | "GENERIC_CSV";
+
 export interface LabAnalyteResult {
   code: string;
   name: string;
@@ -401,6 +410,206 @@ export function parseMindray(rawText: string, species: SpeciesType = "canine"): 
 }
 
 /**
+ * Resolves a raw analyte name/code (e.g. "ALT", "Alanínaminotransferáza") to a
+ * canonical REFERENCE_RANGES key, or undefined when it cannot be matched.
+ */
+function resolveAnalyteCode(raw: string): string | undefined {
+  const upper = raw.trim().toUpperCase();
+  if (!upper) return undefined;
+  if (REFERENCE_RANGES[upper]) return upper;
+  for (const [code, ref] of Object.entries(REFERENCE_RANGES)) {
+    const refName = ref.name.toUpperCase();
+    if (refName === upper || refName.includes(upper) || upper.includes(refName)) {
+      return code;
+    }
+  }
+  return undefined;
+}
+
+function refRangeFor(
+  code: string,
+  species: SpeciesType,
+  customLow: number | null,
+  customHigh: number | null
+): { low: number | null; high: number | null } {
+  const ref = REFERENCE_RANGES[code];
+  const low = customLow ?? (ref ? (species === "feline" ? ref.feline.low : ref.canine.low) : null);
+  const high = customHigh ?? (ref ? (species === "feline" ? ref.feline.high : ref.canine.high) : null);
+  return { low, high };
+}
+
+/**
+ * Parser výstupov Labtechnik (Abaxis / Zoetis VetScan).
+ * Formát CSV: TEST_NAME,VALUE,UNIT,REF_LOW,REF_HIGH,FLAG
+ */
+export function parseLabtechnik(rawText: string, species: SpeciesType = "canine"): LabAnalyteResult[] {
+  const results: LabAnalyteResult[] = [];
+  const lines = rawText.split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const parts = trimmed.split(/[,;\t]/).map((p) => p.trim());
+    if (parts.length < 2) continue;
+
+    const rawName = parts[0].replace(/['"]/g, "");
+    const header = rawName.toLowerCase();
+    if (header === "test_name" || header === "test" || header === "analyte" || header === "name") continue;
+
+    const rawVal = parts[1].replace(/['"]/g, "").replace(",", ".");
+    const val = parseFloat(rawVal);
+    if (isNaN(val)) continue;
+
+    const code = resolveAnalyteCode(rawName) ?? rawName.toUpperCase();
+    const ref = REFERENCE_RANGES[code];
+    const unit = parts[2]?.replace(/['"]/g, "") || ref?.unit || "";
+
+    let customLow: number | null = null;
+    let customHigh: number | null = null;
+    if (parts.length >= 4) {
+      const lowVal = parseFloat(parts[3].replace(",", "."));
+      if (!isNaN(lowVal)) customLow = lowVal;
+    }
+    if (parts.length >= 5) {
+      const highVal = parseFloat(parts[4].replace(",", "."));
+      if (!isNaN(highVal)) customHigh = highVal;
+    }
+
+    const { low, high } = refRangeFor(code, species, customLow, customHigh);
+    const flag = evaluateResultFlag(code, val, species, customLow, customHigh);
+
+    results.push({
+      code,
+      name: ref?.name ?? rawName,
+      value: val,
+      valueString: rawVal,
+      unit,
+      refLow: low,
+      refHigh: high,
+      flag,
+      category: ref?.category ?? "OTHER",
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Parser výstupov INLAB (INBAL) — nemecký analyzátor exportujúci TXT:
+ *   ANALYTIK: VALUE EINHEIT [REF_LOW - REF_HIGH]   (jedna analytika na riadok)
+ */
+export function parseInlab(rawText: string, species: SpeciesType = "canine"): LabAnalyteResult[] {
+  const results: LabAnalyteResult[] = [];
+  const lines = rawText.split(/\r?\n/);
+  const re = /^([A-Z][A-Z0-9_\-\/]*):\s*([\d.,]+)\s*([^\[\]]*?)\s*(?:\[([\d.,]*)\s*-\s*([\d.,]*)\])?\s*$/i;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const match = re.exec(trimmed);
+    if (!match) continue;
+
+    const rawCode = match[1].trim();
+    const rawVal = match[2].trim().replace(",", ".");
+    const val = parseFloat(rawVal);
+    if (isNaN(val)) continue;
+
+    const code = resolveAnalyteCode(rawCode) ?? rawCode.toUpperCase();
+    const ref = REFERENCE_RANGES[code];
+    const unit = (match[3] ?? "").trim() || ref?.unit || "";
+
+    let customLow: number | null = null;
+    let customHigh: number | null = null;
+    if (match[4] !== undefined && match[4].trim() !== "") {
+      const lowVal = parseFloat(match[4].replace(",", "."));
+      if (!isNaN(lowVal)) customLow = lowVal;
+    }
+    if (match[5] !== undefined && match[5].trim() !== "") {
+      const highVal = parseFloat(match[5].replace(",", "."));
+      if (!isNaN(highVal)) customHigh = highVal;
+    }
+
+    const { low, high } = refRangeFor(code, species, customLow, customHigh);
+    const flag = evaluateResultFlag(code, val, species, customLow, customHigh);
+
+    results.push({
+      code,
+      name: ref?.name ?? rawCode,
+      value: val,
+      valueString: rawVal,
+      unit,
+      refLow: low,
+      refHigh: high,
+      flag,
+      category: ref?.category ?? "OTHER",
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Parser QuickSeal (point-of-care) — tab-separated TXT:
+ *   ANALYTE\tVALUE\tUNIT\tSTATUS   kde STATUS je N/H/L/C
+ */
+export function parseQuickSeal(rawText: string, species: SpeciesType = "canine"): LabAnalyteResult[] {
+  const statusMap: Record<string, ResultFlag> = {
+    N: "NORMAL",
+    H: "HIGH",
+    L: "LOW",
+    C: "CRITICAL",
+    NORMAL: "NORMAL",
+    HIGH: "HIGH",
+    LOW: "LOW",
+    CRITICAL: "CRITICAL",
+  };
+  const results: LabAnalyteResult[] = [];
+  const lines = rawText.split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const parts = (trimmed.includes("\t") ? trimmed.split("\t") : trimmed.split(/\s+/)).map(
+      (p) => p.trim()
+    );
+    if (parts.length < 2) continue;
+
+    const rawCode = parts[0];
+    const header = rawCode.toLowerCase();
+    if (header === "analyte" || header === "test" || header === "parameter") continue;
+
+    const rawVal = parts[1].replace(",", ".");
+    const val = parseFloat(rawVal);
+    if (isNaN(val)) continue;
+
+    const code = resolveAnalyteCode(rawCode) ?? rawCode.toUpperCase();
+    const ref = REFERENCE_RANGES[code];
+    const unit = parts[2] || ref?.unit || "";
+    const statusRaw = (parts[3] ?? "").trim().toUpperCase();
+    const flag = statusMap[statusRaw] ?? evaluateResultFlag(code, val, species);
+
+    const { low, high } = refRangeFor(code, species, null, null);
+
+    results.push({
+      code,
+      name: ref?.name ?? rawCode,
+      value: val,
+      valueString: rawVal,
+      unit,
+      refLow: low,
+      refHigh: high,
+      flag,
+      category: ref?.category ?? "OTHER",
+    });
+  }
+
+  return results;
+}
+
+/**
  * Automatická detekcia a parser ľubovoľného laboratórneho súboru
  */
 export function autoDetectAndParse(params: {
@@ -408,7 +617,7 @@ export function autoDetectAndParse(params: {
   filename?: string;
   species?: SpeciesType;
 }): {
-  analyzerType: "IDEXX" | "FUJI_DRI_CHEM" | "MINDRAY" | "GENERIC_CSV";
+  analyzerType: AnalyzerType;
   deviceModel?: string;
   results: LabAnalyteResult[];
   abnormalCount: number;
@@ -418,7 +627,7 @@ export function autoDetectAndParse(params: {
   const lower = content.toLowerCase();
   const lowerFilename = filename.toLowerCase();
 
-  let analyzerType: "IDEXX" | "FUJI_DRI_CHEM" | "MINDRAY" | "GENERIC_CSV" = "GENERIC_CSV";
+  let analyzerType: AnalyzerType = "GENERIC_CSV";
   let deviceModel: string | undefined;
   let results: LabAnalyteResult[] = [];
 
@@ -434,6 +643,18 @@ export function autoDetectAndParse(params: {
     analyzerType = "MINDRAY";
     deviceModel = "Mindray BC-Vet";
     results = parseMindray(content, species);
+  } else if (lower.includes("labtechnik") || lower.includes("vetscan") || lower.includes("abaxis") || lowerFilename.includes("ltk")) {
+    analyzerType = "LABTECHNIK";
+    deviceModel = "Labtechnik / Zoetis VetScan";
+    results = parseLabtechnik(content, species);
+  } else if (lower.includes("inlab") || lower.includes("inbal") || lower.includes("i-lab") || lowerFilename.includes("inl") || lowerFilename.includes("ibl")) {
+    analyzerType = "INLAB";
+    deviceModel = "INLAB Analyzer";
+    results = parseInlab(content, species);
+  } else if (lower.includes("quickseal") || lower.includes("quick seal") || lowerFilename.includes("qs")) {
+    analyzerType = "QUICKSEAL";
+    deviceModel = "QuickSeal Point-of-Care";
+    results = parseQuickSeal(content, species);
   } else {
     // Fallback IDEXX / CSV parser
     results = parseIdexx(content, species);

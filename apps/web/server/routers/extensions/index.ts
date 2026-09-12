@@ -13,6 +13,7 @@ import { statutoryRouter } from "./statutory";
 import { kvepisRouter } from "./kvepis";
 import { auditExportRouter } from "./audit-export";
 import { insuranceRouter } from "./insurance";
+import { dentalRouter } from "./dental";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -33,6 +34,7 @@ export const extensionsRouter = createRouter({
   kvepis: kvepisRouter,
   auditExport: auditExportRouter,
   insurance: insuranceRouter,
+  dental: dentalRouter,
 });
 
 export {
@@ -50,5 +52,6 @@ export {
   kvepisRouter,
   auditExportRouter,
   insuranceRouter,
+  dentalRouter,
 };
 

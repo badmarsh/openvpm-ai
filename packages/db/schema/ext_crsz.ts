@@ -166,6 +166,82 @@ export const microchipRegistrationsRelations = relations(
   })
 );
 
+// ---------------------------------------------------------------------------
+// Evidencia pasov KVL ČR (Komora veterinárních lékařů České republiky)
+// České pasy spoločenských zvierat pre cestovanie (ekvivalent PetPass v ČR).
+// ---------------------------------------------------------------------------
+export const kvlCrPassports = pgTable(
+  "kvl_cr_passports",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    issuedBy: uuid("issued_by")
+      .notNull()
+      .references(() => users.id),
+
+    // Číslo pasu v tvare napr. "CZ 0123456"
+    passportNumber: varchar("passport_number", { length: 32 }).notNull(),
+    issuedAt: date("issued_at").notNull(),
+    issuingClinicName: text("issuing_clinic_name"),
+    issuingVetName: text("issuing_vet_name"),
+    // Registračné číslo veterinára v KVL ČR
+    issuingVetKvlCr: varchar("issuing_vet_kvl_cr", { length: 64 }),
+
+    // Mikročip (ISO 11784/11785) — povinný pre pasy KVL ČR
+    microchipNumber: varchar("microchip_number", { length: 32 }),
+
+    // Aktuálna platnosť očkovania proti besnote pre cestovanie
+    rabiesVaccineName: varchar("rabies_vaccine_name", { length: 128 }),
+    rabiesBatchNumber: varchar("rabies_batch_number", { length: 64 }),
+    rabiesAdministeredAt: date("rabies_administered_at"),
+    rabiesValidUntil: date("rabies_valid_until"),
+    travelEligibleFrom: date("travel_eligible_from"),
+
+    notes: text("notes"),
+  },
+  (table) => ({
+    practiceIdx: index("kvl_cr_passports_practice_idx").on(
+      table.practiceId,
+      table.deletedAt
+    ),
+    patientIdx: index("kvl_cr_passports_patient_idx").on(
+      table.practiceId,
+      table.patientId,
+      table.deletedAt
+    ),
+    passportNumberIdx: uniqueIndex("kvl_cr_passports_number_uq").on(
+      table.passportNumber
+    ),
+  })
+);
+
+export const kvlCrPassportsRelations = relations(kvlCrPassports, ({ one }) => ({
+  practice: one(practices, {
+    fields: [kvlCrPassports.practiceId],
+    references: [practices.id],
+  }),
+  patient: one(patients, {
+    fields: [kvlCrPassports.patientId],
+    references: [patients.id],
+  }),
+  client: one(clients, {
+    fields: [kvlCrPassports.clientId],
+    references: [clients.id],
+  }),
+  issuer: one(users, {
+    fields: [kvlCrPassports.issuedBy],
+    references: [users.id],
+  }),
+}));
+
 export const petPassportsRelations = relations(petPassports, ({ one }) => ({
   practice: one(practices, {
     fields: [petPassports.practiceId],
