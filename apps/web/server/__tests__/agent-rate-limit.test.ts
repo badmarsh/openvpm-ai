@@ -87,8 +87,13 @@ const HOSTED_TRIAL_PRACTICE = {
   recoveryHold: false,
 };
 
-function caller(opts?: { selectResults?: unknown[][] }) {
-  const selectResults = [...(opts?.selectResults ?? [[{ id: PRACTICE_ID }]])];
+function caller(
+  opts?: { selectResults?: unknown[][] } & { role?: string },
+) {
+  const role = opts?.role ?? "veterinarian";
+  const selectResults = [
+    ...(opts?.selectResults ?? [[{ id: PRACTICE_ID }]]),
+  ];
   const select = vi.fn(() => {
     const result = selectResults.shift() ?? [];
     const afterWhere = {
@@ -118,7 +123,7 @@ function caller(opts?: { selectResults?: unknown[][] }) {
       id: USER_ID,
       email: "doctor@example.com",
       name: "Doctor",
-      role: "veterinarian",
+      role,
       practiceId: PRACTICE_ID,
     },
   };
@@ -259,5 +264,47 @@ describe("agent router rate limits", () => {
       code: "FORBIDDEN",
       message: expect.stringContaining("Add a card to your trial"),
     });
+  });
+
+  // Regression: AgentToolContext.userRole was never populated by the router,
+  // so every tool calling assertAgentRole() failed closed with "an
+  // authenticated role is required" — all 26 tools were unusable.
+  it("injects the session user role into the agent tool context", async () => {
+    mocks.runAgent.mockResolvedValueOnce({
+      text: "Done",
+      toolCalls: [],
+      iterations: 1,
+      stopReason: "stop",
+    });
+
+    await caller({ role: "veterinarian" }).run({
+      instruction: "Check drug safety for Micka",
+      allowWrites: false,
+    });
+
+    expect(mocks.runAgent).toHaveBeenCalledTimes(1);
+    const [arg] = mocks.runAgent.mock.calls[0]!;
+    expect(arg.context).toMatchObject({
+      practiceId: PRACTICE_ID,
+      userId: USER_ID,
+      userRole: "veterinarian",
+    });
+  });
+
+  it("passes the admin role through unchanged (no privileged fallback)", async () => {
+    mocks.runAgent.mockResolvedValueOnce({
+      text: "Done",
+      toolCalls: [],
+      iterations: 1,
+      stopReason: "stop",
+    });
+
+    await caller({ role: "admin" }).run({
+      instruction: "Summarize today's schedule",
+      allowWrites: false,
+    });
+
+    const [arg] = mocks.runAgent.mock.calls[0]!;
+    expect(arg.context.userRole).toBe("admin");
   });
 });
