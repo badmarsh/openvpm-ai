@@ -575,15 +575,15 @@ export async function applySympathyGate(
       )
     );
 
+  // SKILL.md §3: Unconditional block — ALL queued messages for deceased patient
+  // must be blocked regardless of legalBasis or templateKey.
   let blocked = 0;
   for (const m of queued) {
-    if (m.legalBasis === "consent" || SYMPATHY_BLOCKED.has(m.templateKey)) {
-      await db
-        .update(extMarketingMessageLogs)
-        .set({ status: "blocked_sympathy" })
-        .where(eq(extMarketingMessageLogs.id, m.id));
-      blocked++;
-    }
+    await db
+      .update(extMarketingMessageLogs)
+      .set({ status: "blocked_sympathy" })
+      .where(eq(extMarketingMessageLogs.id, m.id));
+    blocked++;
   }
 
   // 1b. Auto-dismiss open care reminders for deceased patient
