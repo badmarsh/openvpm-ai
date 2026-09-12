@@ -4,7 +4,7 @@ export const PORTAL_ACCESS_TOKEN_MAX_LENGTH = 64;
 export const PORTAL_ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
 export const PORTAL_SESSION_TOKEN_MAX_LENGTH = 64;
 export const PORTAL_SESSION_ABSOLUTE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const PORTAL_SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
+export const PORTAL_SESSION_IDLE_TTL_MS = 60 * 60 * 1000; // 60 min — extended from 30 min (BUG-8: practitioners need more time with animals)
 export const PORTAL_SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 
 export function generatePortalAccessToken(): string {
