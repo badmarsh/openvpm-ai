@@ -144,8 +144,8 @@ export const customNavItems: CustomNavItem[] = [
   },
   {
     href: '/marketing/wellness',
-    label: 'Wellness balíčky',
-    i18nKey: 'nav.marketingWellness',
+    label: 'Čerpanie benefitov',
+    i18nKey: 'nav.wellnessRedemptions',
     icon: Heart,
     roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'admin',
