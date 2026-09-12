@@ -3847,6 +3847,7 @@
   "whiteboard.actions.assignAndCheckIn": "Priradiť a prijať",
   "whiteboard.selectDoctorPrompt": "Vyberte lekára",
   "whiteboard.sync.interval": "Automatická obnova každých 30s",
+  "whiteboard.sync.live": "Naživo",
   "whiteboard.sync.lastSynced": "Posledná synchronizácia: {time}",
   "whiteboard.sync.refreshNow": "Obnoviť teraz",
   "nav.sectionClinicalPatients": "Klinika & Pacienti",
