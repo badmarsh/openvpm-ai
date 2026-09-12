@@ -69,6 +69,10 @@
     {
       "path": "/api/cron/conversion-reconcile",
       "schedule": "35 * * * *"
+    },
+    {
+      "path": "/api/cron/automation-worker",
+      "schedule": "*/1 * * * *"
     }
   ]
 }
