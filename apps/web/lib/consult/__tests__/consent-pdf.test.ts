@@ -127,7 +127,7 @@ describe("buildConsentPdf", () => {
         v2: {
           creationDate: "D:20260710120000+00'00'",
           sha256:
-            "f9c28dab9207d980bf831d42ee4c7960b8a81a2e6b9dfd0905e3434a00b15a7d",
+            "504d33672734c391c8a3e78fa042e0e11a2a7bfeb4aa91176ed50448f483e5dc",
         },
       },
       utc: {
@@ -139,7 +139,7 @@ describe("buildConsentPdf", () => {
         v2: {
           creationDate: "D:20260710120000+00'00'",
           sha256:
-            "f9c28dab9207d980bf831d42ee4c7960b8a81a2e6b9dfd0905e3434a00b15a7d",
+            "504d33672734c391c8a3e78fa042e0e11a2a7bfeb4aa91176ed50448f483e5dc",
         },
       },
       auckland: {
@@ -151,7 +151,7 @@ describe("buildConsentPdf", () => {
         v2: {
           creationDate: "D:20260710120000+00'00'",
           sha256:
-            "f9c28dab9207d980bf831d42ee4c7960b8a81a2e6b9dfd0905e3434a00b15a7d",
+            "504d33672734c391c8a3e78fa042e0e11a2a7bfeb4aa91176ed50448f483e5dc",
         },
       },
     });

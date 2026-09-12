@@ -1,5 +1,21 @@
-import jsPDF from "jspdf";
+import jsPDF, { type jsPDFOptions } from "jspdf";
 import { soapSectionText } from "@/lib/records/soap-content";
+import {
+  PDF_FONT_FAMILY,
+  registerUnicodeFonts,
+} from "@/lib/pdf/fonts";
+
+/**
+ * Create a jsPDF document with the embedded Unicode Roboto family already
+ * registered (regular, bold, italic, bold-italic). Roboto carries the full
+ * Latin Extended-A set, so Slovak diacritics render instead of being
+ * stripped. jsPDF's font VFS is per document, hence every export must go
+ * through this helper rather than `new jsPDF()` directly.
+ */
+export function createPdf(options?: jsPDFOptions): jsPDF {
+  const doc = new jsPDF(options);
+  return registerUnicodeFonts(doc);
+}
 
 // ---------------------------------------------------------------------------
 // Shared constants
@@ -9,7 +25,7 @@ const COLOR_TEAL = "#0d9488";
 const COLOR_DARK = "#333333";
 const COLOR_GRAY = "#666666";
 const COLOR_LIGHT_GRAY = "#eeeeee";
-const FONT = "helvetica";
+const FONT = PDF_FONT_FAMILY;
 const PAGE_MARGIN = 20; // mm
 const PAGE_WIDTH = 210; // A4 / letter approximate usable width
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2;
@@ -79,22 +95,19 @@ export function resolvePdfLocale(locale?: PdfLocale): PdfLocale {
 }
 
 /**
- * Clean text for standard jsPDF helvetica font rendering.
- * Central European characters outside WinAnsi (č, ď, ľ, ĺ, ň, ť, ŕ)
- * are mapped to Latin equivalents to prevent missing glyphs or artifacts.
+ * Text normalization for jsPDF rendering.
+ *
+ * Historically this mapped Central European characters outside the
+ * WinAnsi-encoded Helvetica (č, ď, ľ, ĺ, ň, ť, ŕ, …) to ASCII equivalents,
+ * which stripped Slovak diacritics from every exported PDF
+ * (I18N-COLLISION-5). All exports now embed the Unicode Roboto family
+ * (see lib/pdf/fonts), which covers the full Latin Extended-A set, so no
+ * substitution is needed. The helper is kept as a pass-through to preserve
+ * call sites; it only guards against nullish input. Do NOT reintroduce
+ * diacritic stripping here.
  */
 export function sanitizeForPdf(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/[čČ]/g, (m) => (m === "č" ? "c" : "C"))
-    .replace(/[ďĎ]/g, (m) => (m === "ď" ? "d" : "D"))
-    .replace(/[ľĺĽĹ]/g, (m) => (m.toLowerCase() === m ? "l" : "L"))
-    .replace(/[ňŇ]/g, (m) => (m === "ň" ? "n" : "N"))
-    .replace(/[ťŤ]/g, (m) => (m === "ť" ? "t" : "T"))
-    .replace(/[ŕŔ]/g, (m) => (m === "ŕ" ? "r" : "R"))
-    .replace(/[ěĚ]/g, (m) => (m === "ě" ? "e" : "E"))
-    .replace(/[řŘ]/g, (m) => (m === "ř" ? "r" : "R"))
-    .replace(/[ůŮ]/g, (m) => (m === "ů" ? "u" : "U"));
+  return text ?? "";
 }
 
 export function formatPdfDate(dateStr?: string, locale?: PdfLocale): string {
@@ -161,7 +174,7 @@ export interface InvoiceData {
 }
 
 export function generateInvoicePdf(data: InvoiceData): jsPDF {
-  const doc = new jsPDF();
+  const doc = createPdf();
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
   const isEstimate = data.status.toLowerCase() === "estimate";
@@ -410,7 +423,7 @@ export function generatePrescriptionLabelPdf(
   data: PrescriptionLabelData,
 ): jsPDF {
   // 4" x 2" landscape at 72 DPI  ➜  288 x 144 points
-  const doc = new jsPDF({ format: [144, 288], orientation: "landscape" });
+  const doc = createPdf({ format: [144, 288], orientation: "landscape" });
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
 
@@ -568,7 +581,7 @@ export interface MedicalSummaryData {
 }
 
 export function generateMedicalSummaryPdf(data: MedicalSummaryData): jsPDF {
-  const doc = new jsPDF();
+  const doc = createPdf();
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
   let y = PAGE_MARGIN;
@@ -1058,7 +1071,7 @@ export interface VaccinationCertificateData {
 export function generateVaccinationCertificatePdf(
   data: VaccinationCertificateData,
 ): jsPDF {
-  const doc = new jsPDF();
+  const doc = createPdf();
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
   let y = PAGE_MARGIN;
@@ -1392,7 +1405,7 @@ function drawCertificateFooter(
 export function generateVaccinationHistoryCertificatePdf(
   data: StaffVaccinationCertificateData,
 ): jsPDF {
-  const doc = new jsPDF();
+  const doc = createPdf();
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
   const title = isSk ? "CERTIFIKÁT O OČKOVANÍ" : "VACCINATION CERTIFICATE";
@@ -1516,7 +1529,7 @@ export function generateVaccinationHistoryCertificatePdf(
 export function generateRabiesVaccinationCertificatePdf(
   data: RabiesVaccinationCertificateData,
 ): jsPDF {
-  const doc = new jsPDF();
+  const doc = createPdf();
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
   const title = isSk
@@ -1714,7 +1727,7 @@ export interface ReportPdfData {
 }
 
 export function generateReportPdf(data: ReportPdfData): jsPDF {
-  const doc = new jsPDF({
+  const doc = createPdf({
     orientation: data.columns.length > 4 ? "landscape" : "portrait",
   });
   const locale = resolvePdfLocale(data.locale);
@@ -1866,7 +1879,7 @@ export interface DischargeInstructionsData {
 export function generateDischargeInstructions(
   data: DischargeInstructionsData,
 ): jsPDF {
-  const doc = new jsPDF();
+  const doc = createPdf();
   const locale = resolvePdfLocale(data.locale);
   const isSk = locale === "sk";
   let y = PAGE_MARGIN;
