@@ -1,0 +1,33 @@
+{
+  "marketing": {
+    "automations": {
+      "title": "Automated Rules",
+      "subtitle": "Deterministic message triggers. The system automatically monitors vaccination due dates, post-op check-in windows, review requests, and preventive recalls — all without LLM involvement.",
+      "loading": "Loading automation rules...",
+      "noRules": "No rules are configured",
+      "active": "Active",
+      "paused": "Paused",
+      "timing": "Timing",
+      "channel": "Channel",
+      "legalBasis": "Legal Basis",
+      "trigger": "Trigger",
+      "ruleKey": "Rule Key",
+      "recentEvents": "Recent Events",
+      "eventType": "Event Type",
+      "status": "Status",
+      "occurredAt": "Occurred At",
+      "client": "Client",
+      "patient": "Patient",
+      "noEvents": "No events",
+      "complianceTitle": "Clinical Policies & Regulatory Limits (SK)",
+      "quietHours": "Quiet Hours",
+      "quietHoursDesc": "No messages are sent between 8:00 PM and 8:00 AM, nor on Sundays (they queue for the next available morning).",
+      "smsRateLimit": "SMS Rate Limit",
+      "smsRateLimitDesc": "Maximum 1 marketing SMS per client every 14 days (protects against owner spam).",
+      "sympathyGate": "Sympathy Gate",
+      "sympathyGateDesc": "When a patient passes away, all automated messages and recalls for that pet are immediately blocked and a staff task is created.",
+      "legalBasisRule": "Legal Basis",
+      "legalBasisRuleDesc": "Contractual messages (vaccination reminders, post-op checks) don't require marketing opt-in; promotional messages and reviews do."
+    }
+  }
+}
