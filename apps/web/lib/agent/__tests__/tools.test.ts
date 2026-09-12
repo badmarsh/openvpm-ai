@@ -1091,6 +1091,67 @@ describe("new clinical agent tools", () => {
     });
   });
 
+  it("create_prescription rejects non-UUID actor ids before the prescribed_by FK insert", async () => {
+    const tool = getTool("create_prescription")!;
+    // Regression: REST API runs without veterinarian_user_id used actor
+    // "apikey:<id>", which is not a UUID and crashed Postgres with 22P02
+    // invalid input syntax for type uuid on prescriptions.prescribed_by.
+    const { ctx, insert } = toolDb([], {});
+    (ctx as unknown as { userId: string }).userId = `apikey:key-1`;
+
+    await expect(
+      tool.execute(
+        {
+          patientId: PATIENT_ID,
+          medicationName: "Meloxicam",
+          dosage: "0.1mg/kg",
+          frequency: "1x daily",
+        },
+        ctx,
+      ),
+    ).rejects.toThrow(/veterinarian_user_id|identified veterinarian/i);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("create_prescription inserts for a properly identified veterinarian actor", async () => {
+    const tool = getTool("create_prescription")!;
+    const { ctx, insertValues } = toolDb(
+      [
+        // activePatient lookup
+        [{ id: PATIENT_ID, clientId: CLIENT_ID }],
+        // practice timezone lookup
+        [{ timezone: null }],
+      ],
+      {
+        id: "rx-new",
+        patientId: PATIENT_ID,
+        medicationName: "Meloxicam",
+        dosage: "0.1mg/kg",
+        frequency: "1x daily",
+        status: "active",
+      },
+    );
+    (ctx as unknown as { userId: string }).userId = DOCTOR_ID;
+
+    const result = (await tool.execute(
+      {
+        patientId: PATIENT_ID,
+        medicationName: "Meloxicam",
+        dosage: "0.1mg/kg",
+        frequency: "1x daily",
+      },
+      ctx,
+    )) as { id: string; status: string };
+
+    expect(result.id).toBe("rx-new");
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        patientId: PATIENT_ID,
+        prescribedBy: DOCTOR_ID,
+      }),
+    );
+  });
+
   it("get_invoice_summary accepts optional patientId or clientId", () => {
     const tool = getTool("get_invoice_summary")!;
     expect(tool.readOnly).toBe(true);

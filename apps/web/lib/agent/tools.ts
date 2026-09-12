@@ -2797,6 +2797,17 @@ const getLabResultsTool: AgentTool = {
   },
 };
 
+/**
+ * prescriptions.prescribed_by is a NOT NULL UUID foreign key to users.id.
+ * A non-UUID actor id (e.g. the REST API's "apikey:<id>" placeholder) would
+ * crash the insert with PostgreSQL 22P02 ("invalid input syntax for type
+ * uuid") / foreign-key failure. Validate up front so API callers get an
+ * actionable error; the REST route resolves a real signing veterinarian via
+ * `veterinarian_user_id`.
+ */
+const USER_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const createPrescriptionTool: AgentTool = {
   name: "create_prescription",
   description:
@@ -2832,6 +2843,19 @@ const createPrescriptionTool: AgentTool = {
       ["veterinarian", "admin"],
       "Recepty môže vystavovať výhradne veterinárny lekár alebo administrátor. / Prescriptions may only be created by veterinarians and admins.",
     );
+
+    // Defense-in-depth: prescribed_by is a UUID FK to users.id. A role is
+    // present but the actor is not a real user (e.g. an API-key run without
+    // veterinarian_user_id resolved) — fail with guidance instead of the
+    // database 22P02 UUID syntax error.
+    if (!ctx.userId || !USER_UUID_RE.test(ctx.userId)) {
+      throw Object.assign(
+        new Error(
+          "Prescriptions require an identified veterinarian user. API callers must supply veterinarian_user_id referencing an active veterinarian or administrator in the practice. / Predpis vyžaduje identifikovaného veterinára – API volanie musí uviesť veterinarian_user_id.",
+        ),
+        { code: "FORBIDDEN" as const },
+      );
+    }
 
     const input = this.zod.parse(args) as {
       patientId: string;
