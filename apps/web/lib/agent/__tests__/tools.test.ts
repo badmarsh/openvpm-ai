@@ -778,7 +778,7 @@ describe("new clinical agent tools", () => {
     const { ctx } = toolDb(
       [
         // patient query
-        [{ id: PATIENT_ID, name: "Rex", species: "canine" }],
+        [{ id: PATIENT_ID, name: "Rex", species: "canine", dob: null }],
         // active prescriptions
         [{ id: "rx-1", drugName: "Prednisolon 5mg", status: "active" }],
         // allergies
@@ -794,7 +794,155 @@ describe("new clinical agent tools", () => {
 
     expect(result.safe).toBe(false);
     expect(result.severity).toBe("contraindicated");
-    expect(result.contraindications.some((c) => c.includes("Corticosteroid"))).toBe(true);
+    expect(result.contraindications.some((c) => /corticosteroid/i.test(c))).toBe(true);
+  });
+
+  it("check_drug_safety detects tramadol + MAOI (selegiline) serotonin syndrome risk", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        [{ id: PATIENT_ID, name: "Rex", species: "canine", dob: null }],
+        // Selegiline (Anipryl) is an MAOI commonly used for Cushing's disease.
+        [{ id: "rx-1", drugName: "Selegiline HCl (Anipryl)", status: "active" }],
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Tramadol 50mg" },
+      ctx
+    )) as { safe: boolean; severity: string; contraindications: string[] };
+
+    expect(result.safe).toBe(false);
+    expect(result.severity).toBe("contraindicated");
+    expect(
+      result.contraindications.some((c) => /serotonin syndrome/i.test(c)),
+    ).toBe(true);
+  });
+
+  it("check_drug_safety detects aminoglycoside + loop diuretic interaction in either direction", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        [{ id: PATIENT_ID, name: "Rex", species: "canine", dob: null }],
+        // Patient already on furosemide; candidate is gentamicin.
+        [{ id: "rx-1", drugName: "Furosemid 40mg", status: "active" }],
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Gentamicin injections" },
+      ctx
+    )) as { safe: boolean; severity: string; contraindications: string[] };
+
+    expect(result.safe).toBe(false);
+    expect(
+      result.contraindications.some(
+        (c) => /ototoxicity|nephrotoxicity/i.test(c) && /furosemid/i.test(c),
+      ),
+    ).toBe(true);
+  });
+
+  it("check_drug_safety rejects fluoroquinolones in juvenile animals", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const juvenileDob = new Date(Date.now() - 100 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const { ctx } = toolDb(
+      [
+        [{ id: PATIENT_ID, name: "Lassy", species: "canine", dob: juvenileDob }],
+        [],
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Enrofloxacin (Baytril) 50mg" },
+      ctx
+    )) as { safe: boolean; severity: string; contraindications: string[] };
+
+    expect(result.safe).toBe(false);
+    expect(
+      result.contraindications.some((c) => /cartilage/i.test(c)),
+    ).toBe(true);
+  });
+
+  it("check_drug_safety matches trade-name allergies against generic candidates", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        [{ id: PATIENT_ID, name: "Rex", species: "canine", dob: null }],
+        [],
+        // Allergy recorded under the trade name; proposal uses the generic.
+        [
+          {
+            allergen: "Metacam",
+            reaction: "facial swelling",
+            severity: "moderate",
+          },
+        ],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "meloxicam 1.5mg/ml" },
+      ctx
+    )) as { safe: boolean; severity: string; contraindications: string[] };
+
+    expect(result.safe).toBe(false);
+    expect(
+      result.contraindications.some((c) => c.includes("Metacam")),
+    ).toBe(true);
+  });
+
+  it("check_drug_safety fails safe with 'unknown' for unrecognized drugs", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        [{ id: PATIENT_ID, name: "Rex", species: "canine", dob: null }],
+        [],
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Zzzunknown Elixir X1" },
+      ctx
+    )) as { safe: boolean; severity: string; warnings: string[] };
+
+    // Critical false-negative guard: never report safe:true for a drug that
+    // none of the local rules cover.
+    expect(result.safe).toBe(false);
+    expect(result.severity).toBe("unknown");
+    expect(
+      result.warnings.some((w) => w.includes("does not recognize")),
+    ).toBe(true);
+  });
+
+  it("check_drug_safety reports safe for a recognized drug with no findings", async () => {
+    const tool = getTool("check_drug_safety")!;
+    const { ctx } = toolDb(
+      [
+        [{ id: PATIENT_ID, name: "Rex", species: "canine", dob: "2020-01-01" }],
+        [],
+        [],
+      ],
+      {}
+    );
+
+    const result = (await tool.execute(
+      { patientId: PATIENT_ID, candidateDrug: "Maropitant (Cerenia) 16mg" },
+      ctx
+    )) as { safe: boolean; severity: string };
+
+    expect(result.safe).toBe(true);
+    expect(result.severity).toBe("safe");
   });
 
   it("audit_missed_charges validates schema", () => {
