@@ -127,7 +127,7 @@ export const wholesalerImportRouter = createRouter({
   /**
    * Apply delivery note items into inventory (stock adjustments & new product additions).
    */
-  apply: staffProcedure
+  applyDeliveryNote: staffProcedure
     .input(
       z.object({
         deliveryNoteNumber: z.string().min(1),
