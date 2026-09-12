@@ -21,7 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { toast } from "sonner";
-import type { LabAnalyteResult } from "@/lib/lab/analyzer-parser";
+import type {
+  LabAnalyteResult,
+  AnalyzerType,
+} from "@/lib/lab/analyzer-parser";
 
 export function AnalyzerImportPanel() {
   const { t } = useI18n();
@@ -306,7 +309,7 @@ function AnalyzerUploadModal({
   const [selectedPatientId, setSelectedPatientId] = useState("");
 
   const [parsedPreview, setParsedPreview] = useState<{
-    analyzerType: "IDEXX" | "FUJI_DRI_CHEM" | "MINDRAY" | "GENERIC_CSV";
+    analyzerType: AnalyzerType;
     deviceModel?: string;
     results: LabAnalyteResult[];
     abnormalCount: number;

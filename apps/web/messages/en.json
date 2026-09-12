@@ -626,6 +626,13 @@
       "createEstimateButton": "Create Estimate",
       "createInvoiceButton": "Create Invoice",
       "cancelButton": "Cancel"
+    },
+    "pos": {
+      "discount": "Discount",
+      "subtotal": "Subtotal",
+      "totalDue": "Total due",
+      "scannerAdded": "{name} added to cart",
+      "scannerNotFound": "Product not found for code {code}"
     }
   },
   "canvas": {
@@ -2745,6 +2752,9 @@
       "loadingEditor": "Loading editor...",
       "legalTamperProof": "Legal clinical record",
       "draftNotice": "This record is in draft stage."
+    },
+    "tabs": {
+      "dental": "Dental Chart"
     }
   },
   "records.backToVisit": "Back to visit",
@@ -5661,5 +5671,56 @@
     "sectionsAria": "Imported history sections",
     "searchAria": "Search {section}",
     "detailsAria": "Imported record details"
-  }
+  },
+  "accounting.isdocDesc": "ISDOC 6.0.2 XML for Pohoda, Omega, Money, ABRA",
+  "accounting.isdocSuccess": "ISDOC export downloaded: {invoiceCount} invoices",
+  "accounting.isdocError": "Failed to generate ISDOC export",
+  "crsz.subtabKvlCr": "KVL ČR passports",
+  "crsz.kvlCrBtnIssue": "Issue KVL ČR passport",
+  "crsz.kvlCrTitle": "Issue KVL ČR passport",
+  "crsz.kvlCrEmptyTitle": "No KVL ČR passports",
+  "crsz.kvlCrEmptyDesc": "Track Czech pet passports issued for travel",
+  "crsz.kvlCrPassportColumn": "Passport number",
+  "crsz.kvlCrOwnerColumn": "Animal & owner",
+  "crsz.kvlCrVetColumn": "Veterinarian (KVL ČR)",
+  "crsz.kvlCrIssueDateColumn": "Issue date",
+  "crsz.kvlCrRabiesColumn": "Rabies vaccination",
+  "crsz.kvlCrPassportNumberLabel": "Passport number *",
+  "crsz.kvlCrIssuedAtLabel": "Issue date *",
+  "crsz.kvlCrVetKvlNumberLabel": "KVL ČR registration number",
+  "crsz.kvlCrMicrochipLabel": "Microchip number (ISO)",
+  "crsz.kvlCrRabiesDateLabel": "Rabies vaccination date",
+  "crsz.kvlCrRabiesValidUntilLabel": "Rabies valid until",
+  "crsz.kvlCrRabiesVaccineLabel": "Vaccine name",
+  "crsz.kvlCrRabiesBatchLabel": "Vaccine batch",
+  "crsz.kvlCrIssuedSuccess": "KVL ČR passport issued",
+  "crsz.kvlCrError": "Error issuing KVL ČR passport",
+  "dental.addEntry": "Add dental entry",
+  "dental.toothColumn": "Tooth",
+  "dental.conditionColumn": "Condition",
+  "dental.treatmentColumn": "Treatment",
+  "dental.dateColumn": "Date",
+  "dental.vetColumn": "Veterinarian",
+  "dental.actionsColumn": "Actions",
+  "dental.emptyTitle": "No dental records",
+  "dental.toothLabel": "Tooth (FDI) *",
+  "dental.toothPlaceholder": "e.g. 104",
+  "dental.dateLabel": "Date *",
+  "dental.conditionLabel": "Condition",
+  "dental.treatmentLabel": "Treatment",
+  "dental.treatmentPlaceholder": "e.g. Extraction",
+  "dental.notesLabel": "Notes",
+  "dental.notesPlaceholder": "Additional notes",
+  "dental.toothRequired": "Enter a tooth code",
+  "dental.createdSuccess": "Dental entry saved",
+  "dental.saveError": "Error saving dental entry",
+  "dental.removedSuccess": "Dental entry removed",
+  "dental.condition.healthy": "Healthy",
+  "dental.condition.missing": "Missing",
+  "dental.condition.fractured": "Fractured",
+  "dental.condition.decayed": "Decayed",
+  "dental.condition.mobile": "Mobile",
+  "dental.condition.abraded": "Abraded",
+  "dental.condition.crowned": "Crowned",
+  "dental.condition.other": "Other"
 }

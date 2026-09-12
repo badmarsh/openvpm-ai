@@ -20,6 +20,9 @@ export const analyzerTypeEnum = pgEnum("analyzer_type", [
   "IDEXX",
   "FUJI_DRI_CHEM",
   "MINDRAY",
+  "LABTECHNIK",
+  "INLAB",
+  "QUICKSEAL",
   "GENERIC_CSV",
   "MANUAL",
 ]);
