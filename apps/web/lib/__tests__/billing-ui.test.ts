@@ -188,7 +188,9 @@ describe("billing invoice payment actions", () => {
   const source = readFileSync("app/(dashboard)/billing/page.tsx", "utf8");
 
   it("requires explicit versioned confirmation before converting an estimate", () => {
-    expect(source).toContain('title="Convert estimate to invoice?"');
+    expect(source).toMatch(
+      /title=(?:"Convert estimate to invoice\?"|\{t\([^)]*dialogConvertEstimateTitle[^)]*\)\})/,
+    );
     expect(source).toContain(
       "This deducts tracked product stock and creates a draft invoice.",
     );
@@ -197,8 +199,8 @@ describe("billing invoice payment actions", () => {
     expect(source).toContain(
       "expectedUpdatedAt: pendingEstimateConversion.updatedAt",
     );
-    expect(source).toContain(
-      'toast.success("Estimate converted to draft invoice")',
+    expect(source).toMatch(
+      /toast\.success[\s\S]*?(?:Estimate converted to draft invoice|toastEstimateConverted)/,
     );
     expect(source).toContain("isPending={convertEstimate.isPending}");
     expect(source).toContain("if (convertEstimate.isPending) return");

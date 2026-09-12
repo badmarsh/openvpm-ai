@@ -93,12 +93,14 @@ describe("controlled substances UI bounds", () => {
     expect(source).toContain(
       "Witness lookup is unavailable. Please retry."
     );
+    const noPatientIdx = source.search(/:\s*(?:"No patient"|t\([^)]*noPatient)/);
     expect(source.indexOf("patientsQuery.error || patientsMissing")).toBeLessThan(
-      source.indexOf(': "No patient"')
+      noPatientIdx
     );
+    const noWitnessIdx = source.search(/:\s*(?:"No witness"|t\([^)]*noWitness)/);
     expect(
       source.indexOf("witnessesQuery.error || witnessesMissing")
-    ).toBeLessThan(source.indexOf(': "No witness"'));
+    ).toBeLessThan(noWitnessIdx);
     expect(source).not.toContain("patientsQuery.data?.items.map");
     expect(source).not.toContain("witnessesQuery.data?.map");
   });

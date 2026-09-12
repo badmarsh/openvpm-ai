@@ -73,10 +73,13 @@ describe("guide recipes", () => {
         `anchor "${step.anchor}" has no source mapping in ANCHOR_SOURCES`
       ).toBeTruthy();
       const file = readFileSync(source!, "utf8");
+      const hasAnchor =
+        file.includes(`data-tour="${step.anchor}"`) ||
+        new RegExp(`data-tour=\\{[^}]*["']${step.anchor}["']`).test(file);
       expect(
-        file,
+        hasAnchor,
         `expected ${source} to contain data-tour="${step.anchor}"`
-      ).toContain(`data-tour="${step.anchor}"`);
+      ).toBe(true);
     }
   });
 

@@ -33,7 +33,7 @@ describe("client SMS consent forms", () => {
   it("offers an explicit text-reminder preference in both client forms", () => {
     for (const source of [NEW_CLIENT_SOURCE, EDIT_CLIENT_SOURCE]) {
       expect(source).toContain("Preferred contact for reminders");
-      expect(source).toContain('<option value="sms">Text message</option>');
+      expect(source).toMatch(/<option\s+value="sms">[\s\S]*?(?:Text message|contactSms)[\s\S]*?<\/option>/);
       expect(source).toContain("appointment and vaccination reminders");
       expect(source).toContain("preferredContactMethod");
     }
@@ -64,8 +64,8 @@ describe("client SMS consent forms", () => {
       "!persistedSmsPhone || phoneChanged || revokeSms.isPending",
     );
     expect(EDIT_CLIENT_SOURCE).toContain("expectedPhone: persistedSmsPhone!");
-    expect(EDIT_CLIENT_SOURCE).toContain(
-      "Save or discard the unsaved phone change",
+    expect(EDIT_CLIENT_SOURCE).toMatch(
+      /Save or discard the unsaved phone change|clients\.form\.doNotTextPhonePending/,
     );
   });
 });

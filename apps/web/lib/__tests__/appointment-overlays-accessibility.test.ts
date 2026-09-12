@@ -23,7 +23,9 @@ describe("appointment detail overlay accessibility", () => {
       expect(source).toContain('aria-modal="true"');
       expect(source).toContain("aria-labelledby={dialogTitleId}");
       expect(source).toContain("id={dialogTitleId}");
-      expect(source).toContain('aria-label="Close appointment details"');
+      expect(source).toMatch(
+        /aria-label=(?:"Close appointment details"|\{t\([^)]*Close appointment details[^)]*\)\})/,
+      );
       expect(source).toContain("tabIndex={-1}");
     },
   );
