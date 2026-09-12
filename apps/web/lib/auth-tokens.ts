@@ -14,7 +14,7 @@ export type AuthTokenType = "email_verify" | "password_reset" | "invite";
 
 const TTL_MS: Record<AuthTokenType, number> = {
   email_verify: 24 * 60 * 60 * 1000, // 24h
-  password_reset: 60 * 60 * 1000, // 1h
+  password_reset: 4 * 60 * 60 * 1000, // 4h — extended from 1h (BUG-10: vets often unavailable for 1h+)
   invite: 72 * 60 * 60 * 1000, // 72h
 };
 
