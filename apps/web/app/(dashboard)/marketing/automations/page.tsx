@@ -3,7 +3,6 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { AutomationBlurbIcon } from "@/components/marketing/automation-illustrations";
 
 export default function MarketingAutomationsPage() {
   const { t } = useI18n();
@@ -11,11 +10,6 @@ export default function MarketingAutomationsPage() {
 
   // Load automation rules
   const rulesQuery = trpc.extensions.automationRules.list.useQuery();
-
-  // Load recent events
-  const eventsQuery = trpc.extensions.automationEvents.list.useQuery({
-    limit: 50,
-  });
 
   // Toggle rule mutation
   const toggleMutation = trpc.extensions.automationRules.toggle.useMutation({
@@ -26,7 +20,6 @@ export default function MarketingAutomationsPage() {
           : `Pravidlo "${data.name}" bolo pozastavené.`
       );
       utils.extensions.automationRules.list.invalidate();
-      utils.extensions.automationEvents.list.invalidate();
     },
     onError: (err) => {
       toast.error(err.message || "Nepodarilo sa zmeniť stav pravidla.");
@@ -72,49 +65,22 @@ export default function MarketingAutomationsPage() {
             return (
               <div
                 key={rule.id}
-                className={`group rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md p-5 flex flex-col justify-between ${
+                className={`group rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md p-5 ${
                   rule.enabled
                     ? "bg-card border-border hover:border-primary/40"
                     : "bg-muted/20 border-muted opacity-75 hover:opacity-90"
                 }`}
               >
-                <div className="space-y-3.5">
-                  {/* Blurb Header Row: Icon + Title & Description + Switch Toggle */}
-                  <div className="flex items-start justify-between gap-3.5">
-                    <div className="flex items-start gap-3.5 min-w-0">
-                      {/* Blurb Icon */}
-                      <div className="shrink-0 transition-transform duration-200 group-hover:scale-105 shadow-sm rounded-2xl overflow-hidden">
-                        <AutomationBlurbIcon
-                          ruleKey={rule.ruleKey}
-                          triggerKey={rule.triggerEvent}
-                          enabled={rule.enabled}
-                          className="w-14 h-14"
-                        />
-                      </div>
-
-                      {/* Title, Badge & Description */}
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                            {rule.name}
-                          </h2>
-                          {rule.enabled ? (
-                            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">
-                              {t("marketing.automations.active", "Aktívne")}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground text-[10px] px-2 py-0.5 rounded-full">
-                              {t("marketing.automations.paused", "Pozastavené")}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {rule.description}
-                        </p>
-                      </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                        {rule.name}
+                      </h2>
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                        {rule.description}
+                      </p>
                     </div>
-
-                    {/* Switch Toggle */}
                     <button
                       type="button"
                       disabled={isToggling}
@@ -131,124 +97,22 @@ export default function MarketingAutomationsPage() {
                       />
                     </button>
                   </div>
-
-                  {/* Metadata: Timing, Channel, Legal Basis */}
                   <div className="pt-2 border-t border-border/60 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-primary" />
-                      <span>
-                        {t("marketing.automations.timing", "Časovanie")}: <strong>{rule.triggerEvent}</strong>
-                      </span>
+                      <span>{t("marketing.automations.timing", "Časovanie")}: <strong>{rule.triggerEvent}</strong></span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Smartphone className="w-3.5 h-3.5 text-primary" />
-                      <span>
-                        {t("marketing.automations.channel", "Kanál")}: <strong>{rule.actionType.toUpperCase()}</strong>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                      <span>
-                        {t("marketing.automations.legalBasis", "Základ")}: <strong>{rule.legalBasis}</strong>
-                      </span>
+                      <span>{t("marketing.automations.channel", "Kanál")}: <strong>{rule.actionType.toUpperCase()}</strong></span>
                     </div>
                   </div>
-                </div>
-
-                {/* Footer: Triggers */}
-                <div className="mt-3 pt-2.5 border-t border-border/60 text-[11px] text-muted-foreground flex items-center justify-between font-mono">
-                  <span>
-                    {t("marketing.automations.trigger", "Trigger")}: <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{rule.triggerEvent}</code>
-                  </span>
-                  <span>
-                    {t("marketing.automations.ruleKey", "Kľúč pravidla")}: <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{rule.ruleKey}</code>
-                  </span>
                 </div>
               </div>
             );
           })}
         </div>
       )}
-
-      {/* Recent Events Section */}
-      <div className="border rounded-xl p-5">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Zap className="w-5 h-5 text-primary" />
-          {t("marketing.automations.recentEvents", "Nedávne udalosti")}
-        </h2>
-
-        {eventsQuery.isLoading ? (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-            {t("marketing.automations.loadingEvents", "Načítavam nedávne udalosti...")}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border/60">
-                <tr>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
-                    {t("marketing.automations.eventType", "Typ udalosti")}
-                  </th>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
-                    {t("marketing.automations.status", "Stav")}
-                  </th>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
-                    {t("marketing.automations.occurredAt", "Dátum")}
-                  </th>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
-                    {t("marketing.automations.client", "Klient")}
-                  </th>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">
-                    {t("marketing.automations.patient", "Pacient")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {eventsQuery.data?.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-center text-muted-foreground">
-                      {t("marketing.automations.noEvents", "Žiadne udalosti")}
-                    </td>
-                  </tr>
-                ) : (
-                  eventsQuery.data?.map((event) => (
-                    <tr key={event.id} className="border-b border-border/30 last:border-b-0">
-                      <td className="py-2 px-3 font-mono">
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {event.eventType}
-                        </code>
-                      </td>
-                      <td className="py-2 px-3">
-                        <Badge
-                          variant={
-                            event.status === "pending"
-                              ? "default"
-                              : event.status === "processed"
-                              ? "secondary"
-                              : "destructive"
-                          }
-                        >
-                          {t(`marketing.automations.status.${event.status}`, event.status)}
-                        </Badge>
-                      </td>
-                      <td className="py-2 px-3">
-                        {new Date(event.occurredAt).toLocaleString()}
-                      </td>
-                      <td className="py-2 px-3">
-                        {event.clientId ? event.clientId.substring(0, 8) : "—"}
-                      </td>
-                      <td className="py-2 px-3">
-                        {event.patientId ? event.patientId.substring(0, 8) : "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* Compliance Information Card */}
       <div className="p-5 rounded-xl border bg-muted/30 space-y-2">
@@ -258,4 +122,31 @@ export default function MarketingAutomationsPage() {
         </h3>
         <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 leading-relaxed">
           <li>
-            <strong>{t("marketing.automations.quietHours", "Tichý nočný režim")}</strong>:{
+            <strong>{t("marketing.automations.quietHours", "Tichý nočný režim")}</strong>: {t(
+              "marketing.automations.quietHoursDesc",
+              "Žiadne správy neodchádzajú medzi 20:00 a 08:00 ani v nedeľu (zaradia sa do fronty na najbližšie povolené ráno)."
+            )}
+          </li>
+          <li>
+            <strong>{t("marketing.automations.smsRateLimit", "SMS Rate Limit")}</strong>: {t(
+              "marketing.automations.smsRateLimitDesc",
+              "Maximálne 1 marketingová správa za 14 dní na jedného klienta (chráni pred spamovaním majiteľa)."
+            )}
+          </li>
+          <li>
+            <strong>{t("marketing.automations.sympathyGate", "Sympathy Gate")}</strong>: {t(
+              "marketing.automations.sympathyGateDesc",
+              "Pri úmrtí pacienta sa všetky automatizované správy a recall pre zviera okamžite blokujú a vytvorí sa úloha pre personál."
+            )}
+          </li>
+          <li>
+            <strong>{t("marketing.automations.legalBasisRule", "Právny základ")}</strong>: {t(
+              "marketing.automations.legalBasisRuleDesc",
+              "Zmluvné správy (pripomienka očkovania, kontrola po operácii) nevyžadujú marketingový opt-in; propagačné správy a recenzie áno."
+            )}
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
