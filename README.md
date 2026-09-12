@@ -90,22 +90,47 @@ OpenVPM AI presadzuje férové a transparentné podmienky bez skrytých poplatko
 | **Cloud Klinika** | **119 € / mesiac**<br>*(1 190 € / rok)* | Štandardná veterinárna klinika (2–6 lekárov) | **Neobmedzený počet zamestnancov**, PetExpert poistný modul, import dodacích listov Cymedica/Pharmos, KVEPIS XSD validátor, 500 AI klinických dopytov/mes., prednostná podpora. |
 | **Cloud Nemocnica** | **229 € / mesiac**<br>*(2 290 € / rok)* | Nemocnice s 24/7 prevádzkou alebo viaceré pobočky | Neobmedzené pobočky, DICOM PACS cloudové úložisko snímok, neobmedzená AI asistencia, vyhradený B2G integračný kanál, garantované SLA 99.9% a telefonická podpora. |
 
+Všetky cloudové plány zahŕňajú 14-dňovú bezplatnú skúšobnú verziu (no credit card required — bez zadania platobnej karty).
+
+---
+
+## Technologický stack & Architektúra
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15 (App Router), TypeScript, React 19 |
+| **UI** | shadcn/ui + Radix UI + Tailwind CSS |
+| **API** | tRPC dashboard API + versioned `/api/v1` REST |
+| **Database** | PostgreSQL 16 + Drizzle ORM (Row-Level Security) |
+| **Auth** | NextAuth.js, role-based access, optional TOTP MFA, recovery codes |
+| **Email/SMS** | Resend + Telnyx SMS (Twilio fallback) |
+| **Payments** | Stripe |
+| **File Storage** | S3-compatible or MinIO (automatic MinIO bucket bootstrap) |
+| **Security Headers** | CSP, HSTS, Permissions-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy |
+| **Database Roles** | least-privilege `openpims_app` database role |
+| **Monorepo** | Turborepo + pnpm workspaces |
+| **Testing** | Vitest + Playwright |
+| **Deployment** | Docker Compose (self-host) or Vercel (cloud) |
+
+
 ---
 
 ## Pilot Validation & PoC Evidence
 
-> **Aktuálny stav: PILOT-READY (v0.6)**  
-> Systém úspešne absolvoval 14-dňové pilotné testovanie v režime paralelného tieňového zápisu (shadow-run) a je schválený na kontrolované ostré pilotné nasadenie.
+> **Aktuálny stav: PILOT-READY (v0.6)** — systém je schválený na kontrolované ostré pilotné nasadenie.  
+> Zatial ziadna produkcna klinika nie je aktivna. Vsledky nizsie pochádzajú zo **simulovaného tienoveho behu** (shadow-run), nie z realnej produkcnej prevadzky.
 
-### Pilot Persona: Veterinárna ambulancia MVDr. Martin Sýkora
-- **Lokalita:** Žilina / okolie (kombinovaná prax: malé spoločenské zvieratá v ambulancii + výjazdy k hospodárskym zvieratám)
-- **Tím:** 2 veterinárni lekári, 1 veterinárna asistentka
-- **Priebeh PoC (14 dní paralelného chodu):**
-  * **342 ošetrených pacientov** (218 psov, 89 mačiek, 35 hospodárskych zvierat)
-  * **100 % e-Kasa spoľahlivosť:** 412 vystavených pokladničných dokladov. Počas simulovaného 45-minútového výpadku internetového pripojenia offline front korektne zachoval transakcie s idempotenciou a po obnovení siete bezchybne odoslal všetky bločky do CHDÚ bez duplicity.
-  * **KVEPIS súlad:** Mesačné hlásenie ambulantnej knihy a zoznamu ošetrení bolo vygenerované vo formáte XML a úspešne overené voči oficiálnej XSD schéme ŠVPS SR bez jedinej syntaktickej či sémantickej chyby.
-  * **PetExpert poistné plnenia:** Úspešne spracovaných 14 poistných udalostí s automatickým výpočtom 10 % spoluúčasti klienta a vygenerovaním PDF podkladov pre poisťovňu.
-  * **Úspora času:** Skrátenie času administratívneho zápisu návštevy a uzavretia účtu z pôvodných **7.2 minút na 4.1 minúty na pacienta** (úspora **42 % času personálu**).
+> **Poznamka:** "Pilot-ready" nie je ekvivalent "battle-tested". Uplna GAP analyza: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md). Aktualny pre-pilot gate score: **0/10 zelenych podmienok**.
+
+### Simulovany PoC: Veterinarna ambulancia MVDr. Martin Sykora (tienovy beh)
+- **Lokalita:** Zilina / okolie (kombinovana prax: male spolocenske zvierata v ambulancii + vyjazdy k hospodarskym zvieratam)
+- **Tim:** 2 veterinarni lekari, 1 veterinarna asistentka
+- **Priebeh simulovaneho PoC (14 dni paralelneho tienoveho chodu — nie produkcne data):**
+  * **342 osetrenych pacientov** (218 psov, 89 maciek, 35 hospodarskych zvierat) — data generovane v testovacom prostredi
+  * **e-Kasa offline front:** Pocas simulovaneho 45-min. vypadku offline front korektne zachoval transakcie; realne podanie do CHDU v produkcii zatial neuskutocnene
+  * **KVEPIS sulad:** XML subory overene voci XSD scheme SVPS SR; **realne podanie na SVPS zatial neuskutocnene** (testovaci endpoint este nebol prideleny)
+  * **PetExpert:** 14 poistnch udalosti spracovanych v demo prostredi; **live API integracia s produkcnymi credentials neprebehla**
+  * **Uspora casu (simulovana):** Skratenie administrativneho zapisu z 7.2 na 4.1 min/pacienta (42%) — merane v simulovanom prostredi
 
 ---
 
@@ -141,7 +166,7 @@ Detailné technické špecifikácie nájdete v dokumente [docs/slovak-integratio
    - **KVEPIS** (ŠVPS SR) — Zákon 39/2007 Z.z., validačný XSD engine.
    - **CRSZ** — Centrálny register spoločenských zvierat (mikročipy a petpasy).
    - **CEHZ** — Centrálna evidencia hospodárskych zvierat (kódy chovov).
-   - **e-Kasa** — Zákon 289/2008 Z.z., certifikovaný hardvér **FiskalPRO** a VRP2.
+   - **e-Kasa** — Zakon 289/2008 Z.z., **podporovany hardver** FiskalPRO a VRP2 (hardverova podpora != certifikovana integracia s FR SR; certifikacia prebieha).
 
 ---
 
@@ -199,6 +224,9 @@ pnpm verify:oss-release
 pnpm db:migrate
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls:test
+# Pre produkčné nasadenie nastavte vlastné silné heslo:
+# OPENPIMS_APP_DB_PASSWORD='<strong>' pnpm db:rls
+# OPENPIMS_APP_DB_PASSWORD='<same>' pnpm db:rls:test
 
 # 7. Naplnenie ukážkovými slovenskými dátami
 pnpm db:seed
