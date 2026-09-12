@@ -34,7 +34,7 @@ import { messagingRouter } from "./messaging";
 import { bookingRouter } from "./booking";
 import { careRemindersRouter } from "./care-reminders";
 import { migrationArchiveRouter } from "./migration-archive";
-import { visitTreatmentPlansRouter } from "./visit-treatment-plans";
+import { visitTreatmentPlansRouter as treatmentEstimatesRouter } from "./visit-treatment-plans";
 import { extensionsRouter } from "./extensions";
 
 export const appRouter = createRouter({
@@ -73,7 +73,11 @@ export const appRouter = createRouter({
   booking: bookingRouter,
   careReminders: careRemindersRouter,
   migrationArchive: migrationArchiveRouter,
-  visitTreatmentPlans: visitTreatmentPlansRouter,
+  // FEAT-4: renamed from visitTreatmentPlans to treatmentEstimates — these are client-facing
+  // treatment estimates/proposals, architecturally unrelated to longitudinal treatmentPlans.
+  treatmentEstimates: treatmentEstimatesRouter,
+  /** @deprecated Use treatmentEstimates instead */
+  visitTreatmentPlans: treatmentEstimatesRouter,
   extensions: extensionsRouter,
 });
 
