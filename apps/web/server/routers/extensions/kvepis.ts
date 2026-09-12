@@ -415,8 +415,61 @@ export const kvepisRouter = createRouter({
         });
       }
 
-      const messageId =
-        input.upvsMessageId ?? `UPVS-${submission.referenceNumber}`;
+      const realMode = process.env.KVEPIS_REAL_MODE === "true";
+      let messageId = input.upvsMessageId ?? `UPVS-${submission.referenceNumber}`;
+
+      if (realMode) {
+        // ── Real B2G transport to ÚPVS eDesk ────────────────────────────────
+        const upvsEndpoint = process.env.KVEPIS_UPVS_ENDPOINT;
+        const upvsApiKey = process.env.KVEPIS_UPVS_API_KEY;
+
+        if (!upvsEndpoint || !upvsApiKey) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "KVEPIS_REAL_MODE=true ale KVEPIS_UPVS_ENDPOINT alebo KVEPIS_UPVS_API_KEY nie sú nastavené.",
+          });
+        }
+
+        const payload = {
+          referenceNumber: submission.referenceNumber,
+          practiceId: ctx.practiceId,
+          submissionId: submission.id,
+          submittedAt: new Date().toISOString(),
+          xmlPayload: submission.payloadXml,
+        };
+
+        let upvsResponse: Response;
+        try {
+          upvsResponse = await fetch(upvsEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Api-Key": upvsApiKey,
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(30_000),
+          });
+        } catch (err) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `ÚPVS endpoint nedostupný: ${err instanceof Error ? err.message : String(err)}`,
+          });
+        }
+
+        if (!upvsResponse.ok) {
+          const body = await upvsResponse.text().catch(() => "(no body)");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `ÚPVS vrátil chybu ${upvsResponse.status}: ${body.slice(0, 300)}`,
+          });
+        }
+
+        const responseData = (await upvsResponse.json()) as { messageId?: string };
+        if (responseData.messageId) {
+          messageId = responseData.messageId;
+        }
+      }
 
       const [updated] = await ctx.db
         .update(extKvepisSubmissions)
@@ -428,7 +481,11 @@ export const kvepisRouter = createRouter({
         .where(eq(extKvepisSubmissions.id, submission.id))
         .returning();
 
-      return updated;
+      return {
+        ...updated,
+        /** Indicates to the frontend that this was a simulated (not real) submission. */
+        isSimulationMode: !realMode,
+      };
     }),
 
   /**
