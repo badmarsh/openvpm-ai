@@ -1,12 +1,13 @@
 # Risk register
 
-Status date: 2026-09-05. Owners are roles, not named individuals.
+Status date: 2026-09-12. Owners are roles, not named individuals.
 
 | ID | Severity | Likelihood | Module | Evidence | Mitigation | Automated test/control | Owner | Closure criterion | Residual |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R-P0-001 | P0 | Low (gated off) | e-Kasa | HMAC placeholder removed; outbound gated | `EKASA_FISCALIZATION_ENABLED` default false; RSA PEM required; SSRF allowlist | `lib/ekasa/__tests__/fiscal.test.ts` | Engineering + accounting | FR SR-approved signing + witnessed certification | High until legal go-live |
 | R-P0-002 | P0 | Med | Quality gates | pnpm missing in audit env | Install toolchain; run CI locally | `.github/workflows/ci.yml` | Engineering | Green CI on the release SHA | Unverified here |
 | R-P0-003 | P0 | Low–med | Public API | middleware public `/api` | Handler-level auth | Per-route tests (partial) | Engineering | Inventory of all `/api` routes with auth proof | Unknown routes |
+| P0-L05 | P0 | Med | Data governance | No prior row-level sensitivity metadata on owner/patient/encounter entities | Migration 0107, enum defaults, downgrade guard, RLS contract | `data-classification.test.ts`, `db:data-classification:test` | System owner + DPO/legal | Signed policy approval and production migration evidence | Technical control present; approval pending |
 | R-P1-001 | P1 | Med | Release | No tags, version 0.1.0, no CHANGELOG | SemVer + CHANGELOG (this package) | Human release checklist | Engineering | First tagged RC after owner approval | Process new |
 | R-P1-002 | P1 | Med | DR | Restore drill skipped in CI | Operator schedule; `e2e/restore-drill.spec.ts` | Manual with `RESTORE_DRILL_BACKUP` | Ops | Dated drill log on target SHA | Last logged 2026-07-10 in runbook |
 | R-P1-003 | P1 | Med | Observability | Combined `/api/health` | Add `/api/health/live` and `/api/health/ready` | Health route tests | SRE | Probes wired in deploy | Until deploy |

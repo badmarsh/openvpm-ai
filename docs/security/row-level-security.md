@@ -8,6 +8,12 @@ OpenVPM enforces multi-tenant isolation in two layers:
    whose `practice_id` doesn't match the active tenant context. Defense in depth:
    even a query that forgets its `practiceId` filter returns nothing.
 
+The `data_sensitivity_level` labels described in
+[`docs/production-readiness/DATA_CLASSIFICATION_POLICY.md`](../production-readiness/DATA_CLASSIFICATION_POLICY.md)
+are metadata only. They never widen access and never replace this tenant/RBAC
+boundary. Owners are stored in `clients`; encounter headers are stored in
+`appointments` in the current schema.
+
 ## How it works
 
 Policies key off a per-transaction GUC, `app.current_practice_id`, set by the

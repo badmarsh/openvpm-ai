@@ -124,6 +124,15 @@ GRANT SELECT, INSERT, UPDATE ON consent_receipt_capabilities TO openpims_app;
 REVOKE ALL ON FUNCTION public.protect_consent_receipt_capability()
   FROM PUBLIC, openpims_app;
 
+-- Data classification is metadata, not an authorization boundary. The
+-- tenant_isolation policy above continues to protect clients (owners),
+-- patients, appointments (encounter headers), and soap_notes (encounter
+-- clinical detail) by practice_id. The trigger installed by migration 0107
+-- prevents the hosted application role from weakening an existing label; it
+-- may only tighten classification during normal request handling.
+REVOKE ALL ON FUNCTION public.prevent_data_sensitivity_downgrade()
+  FROM PUBLIC, openpims_app;
+
 -- AI audit ledger (ext_ai_audit_log) is append-only application evidence for
 -- every clinician confirmation of AI-derived clinical content. The
 -- application role may insert new events and read them back for verification,

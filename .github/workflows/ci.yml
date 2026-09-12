@@ -137,6 +137,13 @@ jobs:
 
       - run: pnpm --filter @openpims/db db:rls
 
+      # Data classification labels are metadata only; prove the labels retain
+      # tenant RLS isolation and that the app role cannot downgrade them.
+      - name: Execute data classification policy contract
+        env:
+          OPENPIMS_APP_DATABASE_URL: postgresql://openpims_app:openpims_app@localhost:5432/openpims
+        run: pnpm --filter @openpims/db db:data-classification:test
+
       # Client treatment-plan decisions are legal record evidence. Prove the
       # sealed revision/response graph, signature hash binding, replay refusal,
       # immutable grants, and tenant/no-context isolation in real PostgreSQL.

@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
+import { dataSensitivityLevelEnum } from "./data-classification";
 import { practices } from "./practices";
 import { users } from "./users";
 import { patients } from "./patients";
@@ -82,6 +83,10 @@ export const soapNotes = pgTable(
     practiceId: uuid("practice_id")
       .notNull()
       .references(() => practices.id),
+    /** Encounter clinical detail remains strictly confidential, including drafts. */
+    dataSensitivityLevel: dataSensitivityLevelEnum("data_sensitivity_level")
+      .notNull()
+      .default("STRICTLY_CONFIDENTIAL"),
     patientId: uuid("patient_id")
       .notNull()
       .references(() => patients.id),

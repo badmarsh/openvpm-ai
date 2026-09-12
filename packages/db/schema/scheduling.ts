@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
+import { dataSensitivityLevelEnum } from "./data-classification";
 import { practices } from "./practices";
 import { locations } from "./practices";
 import { users } from "./users";
@@ -129,6 +130,14 @@ export const appointments = pgTable(
     practiceId: uuid("practice_id")
       .notNull()
       .references(() => practices.id),
+    /**
+     * OpenVPM currently models an encounter header as an appointment. The
+     * label is strict because notes, diagnostics, and treatment context may
+     * be attached to the encounter after scheduling.
+     */
+    dataSensitivityLevel: dataSensitivityLevelEnum("data_sensitivity_level")
+      .notNull()
+      .default("STRICTLY_CONFIDENTIAL"),
     locationId: uuid("location_id").references(() => locations.id),
     startTime: timestamp("start_time", { withTimezone: true }).notNull(),
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),

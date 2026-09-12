@@ -15,5 +15,6 @@ Index of evidence-oriented docs. None of these files certify legal compliance.
 11. [POST_LAUNCH_PLAN.md](POST_LAUNCH_PLAN.md)
 12. [VERSIONING.md](VERSIONING.md)
 13. [PRODUCTION_ENV.md](PRODUCTION_ENV.md)
+14. [DATA_CLASSIFICATION_POLICY.md](DATA_CLASSIFICATION_POLICY.md)
 
 Machine-readable snapshot: `artifacts/production-readiness-report.json`.

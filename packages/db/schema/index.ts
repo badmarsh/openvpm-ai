@@ -1,5 +1,6 @@
 export * from "./practices";
 export * from "./users";
+export * from "./data-classification";
 export * from "./clients";
 export * from "./portal-sessions";
 export * from "./patients";

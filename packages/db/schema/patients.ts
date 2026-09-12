@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
+import { dataSensitivityLevelEnum } from "./data-classification";
 import { practices } from "./practices";
 import { clients } from "./clients";
 import { users } from "./users";
@@ -62,6 +63,10 @@ export const patients = pgTable(
     clientId: uuid("client_id")
       .notNull()
       .references(() => clients.id),
+    /** Animal health and identity data is strictly confidential by default. */
+    dataSensitivityLevel: dataSensitivityLevelEnum("data_sensitivity_level")
+      .notNull()
+      .default("STRICTLY_CONFIDENTIAL"),
     externalSource: varchar("external_source", { length: 64 }),
     externalId: varchar("external_id", { length: 160 }),
     // Import-only identity. Ordinary clinic-created charts keep this null.

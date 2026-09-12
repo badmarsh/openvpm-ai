@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
+import { dataSensitivityLevelEnum } from "./data-classification";
 import { practices } from "./practices";
 
 export const contactMethodEnum = pgEnum("contact_method", [
@@ -28,6 +29,10 @@ export const clients = pgTable(
     practiceId: uuid("practice_id")
       .notNull()
       .references(() => practices.id),
+    /** Owner/client contact data requires confidential handling by default. */
+    dataSensitivityLevel: dataSensitivityLevelEnum("data_sensitivity_level")
+      .notNull()
+      .default("CONFIDENTIAL"),
     firstName: varchar("first_name", { length: 128 }).notNull(),
     lastName: varchar("last_name", { length: 128 }).notNull(),
     externalSource: varchar("external_source", { length: 64 }),

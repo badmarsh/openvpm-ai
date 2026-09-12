@@ -5,6 +5,7 @@
 | Requirement / expectation | Module | Technical control | Evidence | Automated test | Human review | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | Access control | tRPC / REST | Session + RBAC + tenant GUC | `server/trpc.ts` | CI RLS job, router tests | Operator: `openpims_app` in prod | implemented (app); unverified in this sandbox |
+| Data classification | PostgreSQL/Supabase | `data_sensitivity_level` enum, safe defaults, downgrade guard | `DATA_CLASSIFICATION_POLICY.md`, migration 0107 | unit contract + `db:data-classification:test` | **DPO/legal/system owner approval** | technical control implemented; policy approval pending |
 | Tenant isolation | Postgres RLS | `packages/db` RLS SQL | `docs/security/row-level-security.md` | `db:rls:test` | Ops | implemented in CI definition |
 | Auditability | Mutations | `recordAuditLog` | `lib/audit.ts` | Partial | DPO: retention | partial |
 | Minimization | APIs | Zod inputs; health omits secret names | health tests | `route.test.ts` | DPO | partial |
