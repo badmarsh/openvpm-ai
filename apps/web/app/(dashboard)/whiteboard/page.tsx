@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useWhiteboardStream } from "@/lib/whiteboard/use-whiteboard-stream";
 
 // --- Types ---
 
@@ -225,11 +226,13 @@ function SyncStatusIndicator({
   lastSyncedAt,
   onRefresh,
   timeZone,
+  isLive,
 }: {
   isFetching: boolean;
   lastSyncedAt?: number | null;
   onRefresh: () => void;
   timeZone?: string | null;
+  isLive?: boolean;
 }) {
   const { t } = useI18n();
 
@@ -254,7 +257,9 @@ function SyncStatusIndicator({
     }
   }, [lastSyncedAt, timeZone]);
 
-  const tooltipText = formattedTime
+  const tooltipText = isLive
+    ? t("whiteboard.sync.live", "Live")
+    : formattedTime
     ? t("whiteboard.sync.lastSynced", "Last synced: {time}", { time: formattedTime })
     : t("whiteboard.sync.interval", "Auto-refreshes every 30s");
 
@@ -263,9 +268,18 @@ function SyncStatusIndicator({
       className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground shadow-2xs transition-colors hover:bg-muted/50"
       title={tooltipText}
     >
-      <span className="flex h-2 w-2 rounded-full bg-emerald-500/80 shrink-0" />
+      {isLive ? (
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+      ) : (
+        <span className="flex h-2 w-2 rounded-full bg-emerald-500/80 shrink-0" />
+      )}
       <span className="font-medium text-[11px]">
-        {t("whiteboard.sync.interval", "Auto-refreshes every 30s")}
+        {isLive
+          ? t("whiteboard.sync.live", "Live")
+          : t("whiteboard.sync.interval", "Auto-refreshes every 30s")}
       </span>
       <button
         type="button"
@@ -703,6 +717,13 @@ export default function WhiteboardPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const utils = trpc.useUtils();
+  const { isConnected: isLive } = useWhiteboardStream({
+    onUpdate: () => {
+      void utils.whiteboard.getActive.invalidate();
+    },
+  });
+
   const {
     data: activeAppointments,
     isLoading,
@@ -710,7 +731,7 @@ export default function WhiteboardPage() {
     dataUpdatedAt,
     error,
   } = trpc.whiteboard.getActive.useQuery(undefined, {
-    refetchInterval: 30000,
+    refetchInterval: isLive ? false : 30000,
   });
   const settingsQuery = trpc.whiteboard.settings.useQuery();
   const practiceSettings = settingsQuery.data;
@@ -737,7 +758,6 @@ export default function WhiteboardPage() {
     currentTime && verifiedPracticeSettings && !pageError
   );
 
-  const utils = trpc.useUtils();
   const updateStatus = trpc.whiteboard.updateStatus.useMutation({
     onSuccess: () => {
       toast.success(t("whiteboard.toasts.statusUpdated", "Status updated"));
@@ -830,6 +850,7 @@ export default function WhiteboardPage() {
               lastSyncedAt={dataUpdatedAt}
               onRefresh={() => void utils.whiteboard.getActive.invalidate()}
               timeZone={verifiedPracticeSettings?.timezone}
+              isLive={isLive}
             />
           </div>
           <p className="text-sm text-muted-foreground">

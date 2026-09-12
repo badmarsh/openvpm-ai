@@ -3847,6 +3847,7 @@
   "whiteboard.actions.assignAndCheckIn": "Assign & Check In",
   "whiteboard.selectDoctorPrompt": "Select doctor",
   "whiteboard.sync.interval": "Auto-refreshes every 30s",
+  "whiteboard.sync.live": "Live",
   "whiteboard.sync.lastSynced": "Last synced: {time}",
   "whiteboard.sync.refreshNow": "Refresh now",
   "nav.sectionClinicalPatients": "Clinical & Patients",
