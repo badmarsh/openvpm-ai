@@ -1,4 +1,8 @@
 import { jsPDF } from "jspdf";
+import {
+  PDF_FONT_FAMILY,
+  registerUnicodeFonts,
+} from "@/lib/pdf/fonts";
 
 /**
  * Composes the signed consent PDF server-side at signing time (the durable
@@ -77,8 +81,13 @@ function renderConsentPdf(
   input: ConsentPdfV1Input,
   signerAttestation: string | undefined,
   creationDateMode: "legacy-local" | "canonical-utc",
+  options?: { unicodeFont?: boolean },
 ): Buffer {
-  const doc = new jsPDF();
+  // Legacy v1 rows are byte-frozen on the WinAnsi Helvetica path; never
+  // register the embedded family for them or their stored hashes change.
+  const useUnicode = options?.unicodeFont ?? false;
+  const doc = useUnicode ? registerUnicodeFonts(new jsPDF()) : new jsPDF();
+  const fontFamily = useUnicode ? PDF_FONT_FAMILY : "helvetica";
   // jsPDF otherwise embeds a fresh document ID and the wall-clock creation
   // time, making the same consent render to different bytes on every retry.
   doc.setFileId(input.documentId.replaceAll("-", "").toUpperCase());
@@ -89,13 +98,13 @@ function renderConsentPdf(
   );
   let y = PAGE_MARGIN;
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont(fontFamily, "bold");
   doc.setFontSize(16);
   doc.setTextColor(51, 51, 51);
   doc.text(input.title, PAGE_MARGIN, y);
   y += 8;
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(fontFamily, "normal");
   doc.setFontSize(10);
   doc.setTextColor(102, 102, 102);
   doc.text(`Clinic record: ${input.practiceId}`, PAGE_MARGIN, y);
@@ -176,9 +185,16 @@ export function buildConsentPdfV1(input: ConsentPdfV1Input): Buffer {
   return renderConsentPdf(input, undefined, "legacy-local");
 }
 
-/** Current renderer for signing claims created after the versioned rollout. */
+/**
+ * Current renderer for signing claims created after the versioned rollout.
+ * Uses the embedded Unicode Roboto family (I18N-COLLISION-5) so Slovak
+ * consent titles/bodies retain their diacritics; distinct from the frozen
+ * v1 Helvetica bytes by construction.
+ */
 export function buildConsentPdf(input: ConsentPdfInput): Buffer {
-  return renderConsentPdf(input, input.signerAttestation, "canonical-utc");
+  return renderConsentPdf(input, input.signerAttestation, "canonical-utc", {
+    unicodeFont: true,
+  });
 }
 
 export function buildConsentPdfForVersion(
