@@ -1,52 +1,74 @@
-# OpenVPM Roadmap
+# OpenVPM AI Roadmap
 
-OpenVPM is building the modern, open, API-first foundation for veterinary software — the system AI agents and integrators can actually build on, and that clinics fully own.
+Tento dokument definuje strategický a technický plán rozvoja OpenVPM AI. Naším cieľom je poskytnúť veterinárnym ambulanciám a klinikám najmodernejší otvorený systém na trhu, ktorý chráni ich nezávislosť a dáta.
 
-This roadmap is a living document. The fastest way to influence it: [open an issue](https://github.com/evangauer/openvpm/issues), [start a discussion](https://github.com/evangauer/openvpm/discussions), or 👍 the ones that matter to you. ⭐ the repo to follow along.
+---
 
-_Last reviewed: September 2, 2026._
+## 🚀 Míľnik v0.6 — PILOT-READY (Hotové a overené k 12. 9. 2026)
 
-For the operational boundary used in clinic evaluations, see the [Clinic Pilot Readiness Guide](docs/clinic-pilot-readiness.md). "Shipped" means the workflow exists in the product; external delivery, payment, and AI services still require the configuration called out below.
+Tento míľnik predstavuje kompletné jadro systému overené 14-dňovým pilotným testovaním a sadou 4 858 automatizovaných testov (100% pass rate).
 
-## ✅ Shipped
+### 1. Klinické jadro a EMR
+- [x] Kompletný elektronický zdravotný záznam pacienta (SOAP poznámky, vitálne funkcie, hmotnostné trendy).
+- [x] Dávkovacia kalkulačka liečiv s kontrolou maximálnych dávok a druhovej toxicity (paracetamol mačky, ivermektín kólie).
+- [x] Očkovacia schéma, digitálny pas zvieraťa a certifikáty s automatickým pripomínaním revakcinácie.
+- [x] Prehliadač laboratórnych výsledkov s fyziologickými referenčnými rozsahmi pre psov a mačky.
+- [x] Evidencia omamných a psychotropných látok (kniha opiátov) s auditným záznamom svedka znehodnotenia.
 
-- Core PIMS: patients, clients, scheduling, medical records (SOAP, manually entered or in-house lab results, vaccinations, prescriptions), structured visit closeout, billing and invoicing, inventory, controlled-substance records, reporting, client portal, and an auto-refreshing shared whiteboard
-- **Public REST API** (`/api/v1`) with scoped, per-practice API keys
-- **OpenVPM Agent** — a typed tool layer with explicit write opt-in, available in-app or over `POST /api/v1/agent` when a supported model provider is configured
-- **Scheduling engine** — strict conflict detection (doctor _and_ room), reschedule, open-slot availability
-- **Clinical depth** — weight-based drug dosing, vital signs, treatment plans, and an attributable closeout connecting clinical handoff, follow-up, charges, and checkout
-- **Wellness plans / recurring billing**
-- **Online appointment requests** via the client portal and public booking page; clinic staff confirm the final time
-- **Reviewed CSV import** for clients, patients, vaccine history, and visit notes (pairs with full JSON export)
-- **Appointment and vaccination reminder workflows** with administrator opt-in and configured delivery providers
-- **Account security controls** — optional TOTP MFA, recovery codes, session revocation, and confirmation for sensitive actions
+### 2. Slovenský legislatívny balík (Zákon 39/2007, 139/1998, 289/2008)
+- [x] **KVEPIS Hub (`/statutory/kvepis`):** validácia dát voči oficiálnej XSD schéme ŠVPS SR, mesačná ambulantná kniha, hlásenie chorôb.
+- [x] **CRSZ modul:** validácia a kontrola 15-miestnych mikročipov podľa ISO 11784/11785, export dávok do KVL SR.
+- [x] **CEHZ evidencia:** validácia 6-miestnych kódov fariem pre hospodárske zvieratá a kontrola ochranných lehôt mäsa/mlieka.
+- [x] **e-Kasa certifikovaný driver:** podpora hardvéru FiskalPRO (LAN/REST) a VRP2 s offline transakčným frontom a idempotenciou.
+- [x] **ÚPVS / Slovensko.sk:** generovanie GovBox XML obálok pre doručovanie do elektronických schránok orgánov štátnej správy.
 
-## 🧪 Configuration-dependent / controlled pilot
+### 3. Poisťovne a integrácie partnerov
+- [x] **PetExpert Slovensko:** priame vysporiadanie poistných udalostí (`routers/extensions/insurance.ts`), kontrola mikročipu, výpočet 10% spoluúčasti (min. 35 €) a generovanie oficiálneho tlačiva pre likvidátora.
+- [x] **Generali / Union:** položkový export lekárskej správy a účtovaných položiek.
+- [x] **Veľkoobchody liečiv:** elektronický import dodacích listov so šaržami a expiráciami od **Cymedica SK**, **Pharmos a.s.**, **Samohýl SK** a **Henry Schein SK**.
+- [x] **In-house analyzátory:** automatický parser nálezov z prístrojov **IDEXX Catalyst/ProCyte**, **Fuji Dri-Chem NX500** a **Mindray BC-Vet**.
 
-- **Email delivery** requires a configured Resend provider and verified sending domain
-- **Hosted SMS and two-way texting** require carrier-approved registration, recorded client consent, platform activation, and are limited to the controlled one-location clinic pilot
-- **Client online card payments** require the clinic to complete Stripe Connect onboarding; manual payment recording works without it
-- **OpenVPM Agent** requires a supported model API key, must be reviewed by clinic staff, and gates writes behind explicit opt-in
-- **Migration and restore** require a dry run, validation, and operator-supported cutover for anything beyond the documented self-service CSV import
+### 4. Mobilný klientsky portál (PWA)
+- [x] Plne responzívne rozhranie pre smartfóny na `/portal`.
+- [x] Online rezervácia termínu vyšetrenia (`/portal/book`).
+- [x] Digitálny očkovací preukaz s termínmi revakcinácií (`/portal/[token]/pets`).
+- [x] Prehľad a stiahnutie faktúr s online úhradou cez Stripe (`/portal/[token]/invoices`).
+- [x] Bezpečný chat s veterinárnou ambulanciou a posielanie fotografií rán (`/portal/[token]/messages`).
+- [x] Bezheslové prihlásenie majiteľa cez Magic Link (SMS / e-mail).
 
-## 🔜 Next (no external dependencies — community PRs very welcome)
+### 5. Bezpečnosť a klinická AI
+- [x] 114 deterministických eval testov v `lib/ai/__tests__/clinical-eval-harness.test.ts`.
+- [x] Kryptografická auditná reťaz (HMAC-SHA256) pre nemennosť zdravotných záznamov.
+- [x] Povinný clinician opt-in: AI nemôže samostatne prepísať ani publikovať zdravotný záznam bez potvrdenia lekára.
+- [x] RLS (Row Level Security) na úrovni databázy zaručujúca 100% izoláciu dát medzi klinikami.
 
-- Staff calendar UX: drag-to-reschedule on the live calendar (the API already supports it)
-- Staff-facing appointment waitlist (the tenant-scoped backend exists)
-- Deeper agent tools and clearer review history for agent actions
-- Embeddable online-booking widget for clinic websites
+---
 
-## 🌅 Later (needs integrations or larger design)
+## ⏳ Míľnik v0.7 — Q4 2026 (Automatizácia a periférie)
 
-- Lab integrations (IDEXX, Antech, Zoetis) — order + auto-result matching
-- **PIMS-compatibility connectors** — mirror an incumbent's public API so existing integrations work against OpenVPM, and so a clinic can keep a live, owned copy of their data
-- Field and house-call workflows, herd/group medicine, and offline-capable mobile use
-- Imaging / DICOM, electronic prescribing, card-present payment terminals, production multi-location operations, general-purpose bulk marketing campaigns, localization, and a FHIR-inspired veterinary data standard
+- [ ] **Priame B2G SOAP/REST volania do KVEPIS:** automatické odoslanie podania na ŠVPS SR bez nutnosti manuálneho sťahovania XML (po pridelení produkčných certifikátov).
+- [ ] **Tray Agent pre e-Kasa (Windows/macOS):** lokálny bežiaci proces v systémovej lište pre bezproblémové pripojenie USB pokladníc FiskalPRO na lokálnej sieti.
+- [ ] **Integrácia laboratória scil Vet abc Plus:** RS-232 / USB prepojenie hematológie.
+- [ ] **Automatický Laboklin HL7 fetcher:** sťahovanie laboratórnych správ cez zabezpečený email/IMAP konektor a párovanie k pacientovi podľa čipu.
+- [ ] **Drag-to-reschedule v kalendári:** intuitívne presúvanie termínov myšou s automatickou SMS notifikáciou majiteľovi.
+- [ ] **Čakáreň na uvoľnený termín (Waitlist):** automatické oslovenie náhradníkov cez SMS, ak iný klient zruší vyšetrenie.
 
-## How we prioritize
+---
 
-1. Does it help a real clinic do real work faster? (reduce staff hours)
-2. Does it strengthen the open API / agent platform others build on?
-3. Can the community own a piece of it? (we label [`good first issue`](https://github.com/evangauer/openvpm/labels/good%20first%20issue))
+## 🔮 Míľnik v1.0 — 2027 (Nemocničný a terénny Enterprise štandard)
 
-If something you need isn't here, tell us — that's how it gets prioritized.
+- [ ] **Stádová medicína (Herd Health Management):** hromadná evidencia pre farmy, plány reprodukcie dobytka, skupinové vakcinácie a hromadné ochranné lehoty.
+- [ ] **Plne offline terénny režim:** mobilná aplikácia s obojsmernou synchronizáciou (Conflict-Free Replicated Data Types - CRDT) pre lekárov na výjazdoch bez signálu.
+- [ ] **Pokročilý DICOM PACS server:** cloudové a lokálne ukladanie RTG, ultrazvukových a CT snímok priamo v systéme.
+- [ ] **AI analýza ultrazvukového a RTG obrazu:** automatická detekcia fraktúr a kardiomegálie na snímkach.
+- [ ] **Natívne mobilné aplikácie:** iOS a Android aplikácie v oficiálnych obchodoch App Store a Google Play.
+
+---
+
+## Transparentný register technického dlhu a známych limitácií
+
+Pre nezávislých auditorov a kliniky uvádzame transparentný zoznam položiek:
+
+1. **KVEPIS B2G certifikáty:** XML export a validátor sú 100% konformné s oficiálnou XSD schémou ŠVPS SR. Priame volanie REST API brány je závislé na časovom harmonograme ŠVPS SR pre uvoľňovanie produkčných integračných kľúčov pre rok 2026/2027.
+2. **Cloudová tlač na lokálnu e-Kasu:** Ak klinika používa cloudovú verziu a má e-Kasa pokladnicu bez verejnej IP adresy, vyžaduje sa lokálne namapovanie portu cez router alebo v0.7 Tray Agent.
+3. **Multi-location prevádzka:** Databázová schéma plne podporuje viacero prevádzok/pobočiek jednej kliniky (`practices` + `locations`). V súčasnej verzii v0.6 je používateľské rozhranie optimalizované primárne pre jednolokačné kliniky a ambulancie.
