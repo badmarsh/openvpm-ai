@@ -434,4 +434,67 @@ describe("POST /api/v1/agent", () => {
       error: { message: "OpenVPM Agent is not configured." },
     });
   });
+
+  it("resolves veterinarian_user_id into a human actor id and role", async () => {
+    const VET_ID = "00000000-0000-0000-0000-0000000000aa";
+    // First SELECT: active practice check; second: actor user lookup.
+    mocks.activePracticeRows.push(
+      [{ id: "active-practice" }],
+      [{ id: VET_ID, role: "veterinarian" }],
+    );
+
+    const response = await POST(
+      request({
+        instruction: "Prescribe meloxicam to Pup",
+        veterinarian_user_id: VET_ID,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.runAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          userId: VET_ID,
+          userRole: "veterinarian",
+        }),
+      }),
+    );
+  });
+
+  it("rejects an unknown veterinarian_user_id with 403", async () => {
+    const VET_ID = "00000000-0000-0000-0000-0000000000ab";
+    mocks.activePracticeRows.push([{ id: "active-practice" }], []);
+
+    const response = await POST(
+      request({
+        instruction: "Prescribe meloxicam to Pup",
+        veterinarian_user_id: VET_ID,
+      }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(json.error.message).toContain("does not match an active user");
+    expect(mocks.runAgent).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-clinician veterinarian_user_id with 403", async () => {
+    const FRONT_DESK_ID = "00000000-0000-0000-0000-0000000000ac";
+    mocks.activePracticeRows.push(
+      [{ id: "active-practice" }],
+      [{ id: FRONT_DESK_ID, role: "front_desk" }],
+    );
+
+    const response = await POST(
+      request({
+        instruction: "Prescribe meloxicam to Pup",
+        veterinarian_user_id: FRONT_DESK_ID,
+      }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(json.error.message).toContain("veterinarian or administrator");
+    expect(mocks.runAgent).not.toHaveBeenCalled();
+  });
 });

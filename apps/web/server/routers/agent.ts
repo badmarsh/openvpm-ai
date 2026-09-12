@@ -111,6 +111,10 @@ export const agentRouter = createRouter({
             db: ctx.db,
             practiceId: ctx.practiceId,
             userId: ctx.user.id,
+            // AgentToolContext.userRole drives the fail-closed tool-level
+            // assertAgentRole() checks; without it every role-gated tool
+            // denies with "an authenticated role is required".
+            userRole: ctx.session.user.role,
             postCommitEffect: ctx.postCommitEffect,
           },
         });
