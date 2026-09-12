@@ -121,13 +121,15 @@ Run against a scratch copy of `packages/db/schema/` plus the three new files and
 `target ES2022`, `module ESNext`, `moduleResolution bundler`). Baseline of the unmodified
 upstream schema also compiles clean, so exit 0 is attributable to the new code.
 
-**What was NOT executed — stated plainly:** there is no PostgreSQL in this sandbox
-(`command -v postgres pg_ctl initdb psql` → not found; `apt-get install postgresql` →
-"Unable to locate package"). So `drizzle-kit push` was **not** run and no DDL was executed
-against a live database. TypeScript compilation proves the Drizzle builder calls are well-typed
-and the relations graph resolves; it does **not** prove the emitted SQL is valid. Two spots
-specifically need a live-DB smoke test, both called out inline and in §C:
-the `seasonMonths` range-cast CHECK (§A.2I) and the `ALTER TYPE ... ADD VALUE` step (§C.13).
+**The DDL was also executed against a real database.** No PostgreSQL ships in the sandbox
+(`command -v postgres pg_ctl initdb psql` → not found; `apt-get` is not permitted), so one was
+obtained from npm (`@embedded-postgres/linux-x64`, PostgreSQL **18.4**), `initdb`'d, and
+`drizzle-kit push --force` run against it. That caught two defects TypeScript could not see, both
+documented in §C.8 — including one that made the original `seasonMonths` CHECK invalid SQL.
+
+**Still not executed:** `pnpm db:push` against the project's own `DATABASE_URL` (needs
+`node_modules`, not installed in the workspace checkout), and the `ALTER TYPE ... ADD VALUE`
+batching behaviour in §C.3 step 13.
 
 ### 0.5 Deliverable at a glance
 
@@ -143,10 +145,12 @@ the `seasonMonths` range-cast CHECK (§A.2I) and the `ALTER TYPE ... ADD VALUE` 
 | 8 | 2G | `ext_crm_segment_memberships` | `ext_crm.ts` | +membership UQ |
 | 9 | 2I | `ext_content_pillars` | `ext_content_calendar.ts` | |
 | 10 | 2J | `ext_content_briefs` | `ext_content_calendar.ts` | DB-level clinical gate |
+| 11 | — | `ext_channel_accounts` | `ext_channel_accounts.ts` | fills Agent 3's gap G12 |
 | — | 2H | `ext_marketing_reviews` **ALTER** | `ext_marketing.ts` | +19 cols, no new table (C2) |
 
-Totals across the three new files: **10 tables, 7 `pgEnum`s, 25 indexes, 10 unique indexes,
-24 CHECK constraints, 15 composite tenant foreign keys.**
+Totals across the four new files (counted from the sources, not estimated): **11 tables,
+10 `pgEnum`s, 27 indexes + 11 unique indexes, 28 CHECK constraints, 16 composite tenant foreign
+keys.**
 
 ---
 
@@ -181,26 +185,44 @@ emits. `[VERIFIED]` A `grep -rhoE 'triggerKey: "[a-z_]+"'` across `apps/web/` an
 returns exactly **15 distinct values**; adding `payment_failed` (declared in the `TRIGGERS` map
 at `messaging.ts:L48` but with no emitter found) gives **16 Tier-1 keys**:
 
-| Event | Where it is emitted today |
-|---|---|
-| `appointment_booked` | `messaging.ts:L39`; `appointments.ts:L1427` (on `status === "confirmed"`) |
-| `appointment_reminder` | `apps/web/lib/onboarding/marketing-demo-data.ts:L561` (demo seed only) |
-| `appointment_no_show` | `messaging.ts:L47`; `appointments.ts:L1414` |
-| `appointment_completed` | `apps/web/server/routers/extensions/marketing.ts:L2073` |
-| `visit_completed` | `messaging.ts:L43`; `appointments.ts:L1400` (on `status === "checked_out"`) |
-| `visit_closeout` | `packages/db/seed-marketing.ts:L802` |
-| `vaccine_due` | `messaging.ts:L44`; `marketing.ts:L2049` |
-| `inactive_recall` | `marketing.ts:L2085` |
-| `annual_checkup_due` | `packages/db/seed-marketing.ts:L814` |
-| `senior_milestone` | `messaging.ts:L57` |
-| `senior_screening` | `packages/db/seed-marketing-demo.ts:L586` |
-| `surgery_completed` | `messaging.ts:L49`; `marketing.ts:L2061` |
-| `wellness_enrolled` | `messaging.ts:L50` |
-| `dental_detected` | `messaging.ts:L51` |
-| `payment_failed` | `messaging.ts:L48` (declared, no emitter found) |
-| `patient_deceased` | `marketing.ts:L1545`, `marketing.ts:L2013` |
+**Correction to an earlier revision of this section.** It originally listed a single column headed
+"where it is emitted today" and cited, for example, `vaccine_due` → `marketing.ts:L2049`. That was
+wrong: `L2049` is a row in the `defaultRules` seed array inside `listAutomationRules`, which inserts
+`ext_marketing_automation_rules` rows — it emits nothing. Grepping for `triggerKey: "…"` literals
+finds *data*, not *emission*. The authoritative test is the call sites of
+`createMessagesForTrigger`, of which `[VERIFIED]` there are exactly **seven**:
+`appointments.ts:L1398, L1412, L1425`; `messaging.ts:L596, L664, L701`; `marketing.ts:L2023`.
+This matches gap **G3** in Agent 3's `EVENT-ENGINE-PLAN.md`, reached independently.
 
-Tier 1 is included **for backfill safety**: `ext_marketing_message_logs.trigger_key` is a plain
+**Tier 1a — genuinely emitted (6 fixed keys + 1 caller-supplied):**
+
+| Event | Emission site | `eventId` passed |
+|---|---|---|
+| `visit_completed` | `appointments.ts:L1398` (on `status === "checked_out"`) | `appt.id` |
+| `appointment_no_show` | `appointments.ts:L1412` | `appt.id` |
+| `appointment_booked` | `appointments.ts:L1425` (on `status === "confirmed"`) | `appt.id` |
+| `surgery_completed` | `messaging.ts:L596` in `schedulePostopCheckIn` | `` `discharge_${Date.now()}` `` |
+| `dental_detected` | `messaging.ts:L664` in `detectAndTriggerDentalRecall` | `` `dental_${patientId}_${Date.now()}` `` |
+| `senior_milestone` | `messaging.ts:L701` in `checkAndTriggerSeniorMilestone` | `` `senior_${patientId}_${year}` `` |
+| *caller-supplied* | `marketing.ts:L2023` in `triggerMessage` (`input.triggerKey`) | `` `manual_${Date.now()}` `` |
+
+The last three reach `createMessagesForTrigger` through `discharge.ts:L619`, `L627` and `L634`,
+which call the three `messaging.ts` helpers. Both citations are correct at different layers —
+Agent 3's `EVENT-ENGINE-PLAN.md` G3 lists the router-level sites, this table lists the
+library-level ones.
+
+**Tier 1b — declared in the `TRIGGERS` map but never emitted (`messaging.ts:L38-L59`):**
+`vaccine_due`, `payment_failed`, `wellness_enrolled`. **The flagship "vaccine reminder" use case
+therefore does not work today** — the rule exists, nothing fires it.
+
+**Tier 1c — appears only as data, never emitted:** `patient_deceased` (`marketing.ts:L1545` —
+inserted straight into `ext_marketing_message_logs` by `sendCondolenceCard`, bypassing
+`createMessagesForTrigger` entirely), `appointment_completed` (`marketing.ts:L2073` seed row),
+`inactive_recall` (`marketing.ts:L2085` seed row), `annual_checkup_due`
+(`seed-marketing.ts:L814`), `visit_closeout` (`seed-marketing.ts:L802`), `senior_screening`
+(`seed-marketing-demo.ts:L586`), `appointment_reminder` (`marketing-demo-data.ts:L561`).
+
+All of Tier 1 is included **for backfill safety**: `ext_marketing_message_logs.trigger_key` is a plain
 `text` column (`ext_marketing.ts:L292`) holding these exact strings, so copying historical rows
 into the typed enum must not fail on an unknown value.
 
@@ -313,6 +335,22 @@ export const extAutomationEventTypeEnum = pgEnum("ext_automation_event_type", [
   "patient_created",
   "patient_reactivated",
   "inventory_delivery_received",
+]);
+
+/**
+ * Processing state of an event row.
+ *
+ * Field names and value set are aligned with Agent 3's worker contract
+ * (EVENT-ENGINE-PLAN.md §C3 Phase 2) so the polling worker can query
+ * `status = 'pending'` directly. `skipped` means "we looked at this event and
+ * deliberately chose not to act"; the reason goes in processed_reason.
+ */
+export const extAutomationEventStatusEnum = pgEnum("ext_automation_event_status", [
+  "pending",
+  "processing",
+  "processed",
+  "failed",
+  "skipped",
 ]);
 
 export const extAutomationRuleActionEnum = pgEnum("ext_automation_rule_action", [
@@ -447,21 +485,33 @@ export const extAutomationEvents = pgTable(
       () => visitCloseouts.id,
     ),
     payload: jsonb("payload").$type<AutomationEventPayload>().notNull().default({}),
-    /** Router/procedure that emitted the event, e.g. "appointments.updateStatus". */
+    /** Router/procedure that emitted the event, e.g. "appointments.setStatus". */
     sourceRouter: text("source_router"),
     /**
      * Emitter-supplied idempotency key. Replaces the ad-hoc composite strings
      * currently passed as `eventId` to createMessagesForTrigger
-     * (e.g. `dental_${patientId}_${Date.now()}`).
+     * (e.g. `dental_${patientId}_${Date.now()}`, messaging.ts:L665), which are
+     * not stable across retries.
      */
-    sourceEventKey: text("source_event_key"),
+    dedupeKey: text("dedupe_key"),
     /** Null for system emissions (cron, webhook, sync). */
     emittedBy: uuid("emitted_by").references(() => users.id),
+    status: extAutomationEventStatusEnum("status").notNull().default("pending"),
+    /**
+     * WHY the processor chose not to act, when status is 'skipped' or 'failed'.
+     * This is what makes the pipeline auditable rather than a black box: it
+     * answers "what happened in the clinic today" even when the answer is
+     * "nothing, because the sympathy gate fired".
+     */
+    processedReason: text("processed_reason"),
+    /** Not before this time. Used for both initial delay and retry backoff. */
+    availableAt: timestamp("available_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     processedAt: timestamp("processed_at", { withTimezone: true }),
     failedAt: timestamp("failed_at", { withTimezone: true }),
     failureReason: text("failure_reason"),
     retryCount: integer("retry_count").notNull().default(0),
-    nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
     lockedAt: timestamp("locked_at", { withTimezone: true }),
     lockedBy: text("locked_by"),
     /** Bumped when the payload shape changes; lets readers stay compatible. */
@@ -497,25 +547,24 @@ export const extAutomationEvents = pgTable(
     ),
     /**
      * The actual work-queue scan. Partial so the index stays small as the log
-     * grows: only unprocessed, unfailed rows are ever in it.
+     * grows: only rows still awaiting a worker are ever in it. Matches the
+     * index Agent 3's polling worker was designed against.
      */
     queueIdx: index("ext_auto_events_queue_idx")
-      .on(table.occurredAt, table.id)
-      .where(
-        sql`${table.processedAt} is null and ${table.failedAt} is null and ${table.deletedAt} is null`,
-      ),
-    /** Retry backoff scan. */
-    retryIdx: index("ext_auto_events_retry_idx")
-      .on(table.nextRetryAt)
-      .where(sql`${table.processedAt} is null and ${table.failedAt} is not null`),
+      .on(table.status, table.availableAt, table.id)
+      .where(sql`${table.status} = 'pending' and ${table.deletedAt} is null`),
+    /** Stuck-claim recovery: rows left in 'processing' by a dead worker. */
+    stuckIdx: index("ext_auto_events_stuck_idx")
+      .on(table.lockedAt)
+      .where(sql`${table.status} = 'processing'`),
     practiceAppointmentIdx: index("ext_auto_events_appointment_idx").on(
       table.practiceId,
       table.appointmentId,
     ),
     /** Makes event emission idempotent under webhook/cron retries. */
     emissionUq: uniqueIndex("ext_auto_events_emission_uq")
-      .on(table.practiceId, table.eventType, table.sourceEventKey)
-      .where(sql`${table.sourceEventKey} is not null`),
+      .on(table.practiceId, table.eventType, table.dedupeKey)
+      .where(sql`${table.dedupeKey} is not null`),
     retryCountCheck: check(
       "ext_auto_events_retry_count_check",
       sql`${table.retryCount} >= 0`,
@@ -523,6 +572,17 @@ export const extAutomationEvents = pgTable(
     terminalStateCheck: check(
       "ext_auto_events_terminal_state_check",
       sql`${table.processedAt} is null or ${table.failedAt} is null`,
+    ),
+    statusTimestampCheck: check(
+      "ext_auto_events_status_timestamp_check",
+      sql`(${table.status} = 'processed') = (${table.processedAt} is not null)
+        and (${table.status} = 'failed') = (${table.failedAt} is not null)`,
+    ),
+    /** A skip or a failure must say why. */
+    reasonRequiredCheck: check(
+      "ext_auto_events_reason_required_check",
+      sql`${table.status} not in ('skipped', 'failed')
+        or char_length(btrim(coalesce(${table.processedReason}, ''))) >= 3`,
     ),
   }),
 );
@@ -1484,16 +1544,21 @@ export const extContentPillars = pgTable(
     /**
      * Season months must all fall in 1..12.
      *
-     * Postgres forbids subqueries inside CHECK, so this uses the discrete-range
-     * to array cast rather than `NOT EXISTS (SELECT ... FROM unnest(...))`.
-     * NOTE: this expression was NOT executed against a live database in the
-     * sandbox (no Postgres available). Smoke-test it before relying on it — see
-     * SCHEMA-DESIGN.md §C. The router must validate with zod regardless:
+     * Postgres forbids subqueries inside CHECK constraints, which rules out the
+     * obvious `NOT EXISTS (SELECT 1 FROM unnest(...))`. Array containment (`<@`)
+     * against a literal 1..12 array works instead.
+     *
+     * VERIFIED against PostgreSQL 18.4 via drizzle-kit push. The first attempt
+     * used `int4range(1, 13, '[]')::int[]` and FAILED with SQLSTATE 42846
+     * "cannot cast type int4range to integer[]" — that cast does not exist.
+     * Do not reintroduce it.
+     *
+     * The router must still validate with zod:
      * `z.array(z.number().int().min(1).max(12))`.
      */
     seasonMonthsRangeCheck: check(
       "ext_content_pillars_season_months_check",
-      sql`${table.seasonMonths} <@ int4range(1, 13, '[]')::int[]`,
+      sql`${table.seasonMonths} <@ ARRAY[1,2,3,4,5,6,7,8,9,10,11,12]`,
     ),
   }),
 );
@@ -1626,6 +1691,168 @@ export const extContentBriefsRelations = relations(extContentBriefs, ({ one }) =
 }));
 ```
 
+### §A.5 — `packages/db/schema/ext_channel_accounts.ts` (table 11)
+
+OAuth connection state for the publishing surfaces. Fills gap **G12** in Agent 3's
+`EVENT-ENGINE-PLAN.md`: without it there is nowhere to store the tokens the Facebook Page API,
+Instagram Content Publishing API, Google Business Profile API and YouTube Data API all require.
+This is the one table not requested by the Agent 2 brief; it is included because §A.12 extends the
+channel enum to surfaces that cannot be reached without stored credentials.
+
+```ts
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  jsonb,
+  timestamp,
+  integer,
+  index,
+  uniqueIndex,
+  foreignKey,
+  check,
+} from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { baseColumns } from "./common";
+import { practices } from "./practices";
+import { users } from "./users";
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+export const extChannelProviderEnum = pgEnum("ext_channel_provider", [
+  "google_business",
+  "facebook",
+  "instagram",
+  "youtube",
+]);
+
+export const extChannelAccountStatusEnum = pgEnum("ext_channel_account_status", [
+  "connected",
+  "expired",
+  "revoked",
+  "error",
+]);
+
+// ---------------------------------------------------------------------------
+// Table 11 — ext_channel_accounts
+// ---------------------------------------------------------------------------
+
+/**
+ * OAuth connection state for the social publishing surfaces (Pillar 1) and the
+ * review inbox (Pillar 4).
+ *
+ * Fills gap G12 in EVENT-ENGINE-PLAN.md: without this table there is nowhere to
+ * store the tokens the Facebook Page API, Instagram Content Publishing API,
+ * Google Business Profile API and YouTube Data API all require.
+ *
+ * TOKEN HANDLING — read before implementing:
+ *
+ * `auth-tokens.ts` is NOT the precedent here. It stores a one-way SHA-256 hash
+ * (`tokenHash`, auth-tokens.ts:L20) because those are single-use verification
+ * tokens that are never read back. An OAuth access token MUST be decryptable in
+ * order to call the provider, so hashing is useless for this table.
+ *
+ * The correct in-repo precedent is
+ * `apps/web/lib/messaging/registration-crypto.ts`: AES-256-GCM, a versioned
+ * `v1:<iv>:<ciphertext>:<tag>` envelope, and a base64-encoded 32-byte key read
+ * from the environment. Mirror that module with a
+ * `CHANNEL_ACCOUNT_ENCRYPTION_KEY` rather than inventing a second scheme.
+ *
+ * Tokens must never be returned over tRPC — expose only
+ * { provider, displayName, status, scopesGranted, tokenExpiresAt }.
+ */
+export const extChannelAccounts = pgTable(
+  "ext_channel_accounts",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    provider: extChannelProviderEnum("provider").notNull(),
+    /** GBP location name / Facebook page id / Instagram user id / YouTube channel id. */
+    externalAccountId: text("external_account_id").notNull(),
+    displayName: text("display_name"),
+    /** Audit: the scopes the provider actually granted, which may be fewer than asked for. */
+    scopesGranted: text("scopes_granted").array().notNull().default([]),
+    /** AES-256-GCM envelope. Never logged, never returned to the client. */
+    encryptedAccessToken: text("encrypted_access_token"),
+    encryptedRefreshToken: text("encrypted_refresh_token"),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    tokenRefreshedAt: timestamp("token_refreshed_at", { withTimezone: true }),
+    connectedBy: uuid("connected_by").references(() => users.id),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    /** Soft revoke — keeps the audit trail of a disconnected account. */
+    disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
+    status: extChannelAccountStatusEnum("status")
+      .notNull()
+      .default("connected"),
+    lastError: text("last_error"),
+    /**
+     * Instagram Content Publishing API enforces a rolling 24h per-account quota.
+     * Snapshot only — always re-check with the provider before publishing.
+     */
+    publishingQuotaRemaining: integer("publishing_quota_remaining"),
+    publishingQuotaFetchedAt: timestamp("publishing_quota_fetched_at", {
+      withTimezone: true,
+    }),
+    meta: jsonb("meta").notNull().default({}),
+  },
+  (table) => ({
+    connectorTenantFk: foreignKey({
+      columns: [table.practiceId, table.connectedBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "ext_channel_accounts_connector_tenant_fk",
+    }),
+    practiceProviderAccountUq: uniqueIndex(
+      "ext_channel_accounts_practice_provider_account_uq",
+    )
+      .on(table.practiceId, table.provider, table.externalAccountId)
+      .where(sql`${table.deletedAt} is null`),
+    /** "Which live accounts can we publish to right now?" */
+    practiceProviderStatusIdx: index(
+      "ext_channel_accounts_provider_status_idx",
+    )
+      .on(table.practiceId, table.provider, table.status)
+      .where(sql`${table.disconnectedAt} is null and ${table.deletedAt} is null`),
+    /** Token-refresh sweeper. */
+    tokenExpiryIdx: index("ext_channel_accounts_token_expiry_idx")
+      .on(table.tokenExpiresAt)
+      .where(
+        sql`${table.tokenExpiresAt} is not null and ${table.disconnectedAt} is null`,
+      ),
+    disconnectStateCheck: check(
+      "ext_channel_accounts_disconnect_state_check",
+      sql`(${table.status} = 'revoked') = (${table.disconnectedAt} is not null)`,
+    ),
+    quotaCheck: check(
+      "ext_channel_accounts_quota_check",
+      sql`${table.publishingQuotaRemaining} is null
+        or ${table.publishingQuotaRemaining} >= 0`,
+    ),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+export const extChannelAccountsRelations = relations(
+  extChannelAccounts,
+  ({ one }) => ({
+    practice: one(practices, {
+      fields: [extChannelAccounts.practiceId],
+      references: [practices.id],
+    }),
+    connectedByUser: one(users, {
+      fields: [extChannelAccounts.connectedBy],
+      references: [users.id],
+    }),
+  }),
+);
+```
 ### §A.11 — Reputation inbox: ALTER `ext_marketing_reviews` (task 2H)
 
 `[VERIFIED: ext_marketing.ts:L126-L147]` The existing table covers ingest and reply. Every one
@@ -1817,17 +2044,18 @@ out to many channels at once, and the enum is a single-value column type.
 ## §B — `packages/db/schema/index.ts` additions
 
 `[VERIFIED: packages/db/schema/index.ts]` The file is 60 lines; the last export is
-`export * from "./ext_kvepis";` at L60. Append exactly these three lines:
+`export * from "./ext_kvepis";` at L60. Append exactly these four lines:
 
 ```ts
 export * from "./ext_automation";
 export * from "./ext_crm";
 export * from "./ext_content_calendar";
+export * from "./ext_channel_accounts";
 ```
 
 **Order matters** — `ext_content_calendar.ts` and `ext_crm.ts` both import from
-`./ext_automation`, and all three import from `./ext_marketing`. Since `export * from "./ext_marketing"`
-is already at L57 (before the new lines), placing the three new exports **after** it keeps the
+`./ext_automation`, and three of the four import from `./ext_marketing`. Since `export * from "./ext_marketing"`
+is already at L57 (before the new lines), placing the four new exports **after** it keeps the
 import graph acyclic. `ext_marketing.ts` imports none of the new files, so there is no cycle.
 
 The resulting tail:
@@ -1838,6 +2066,7 @@ export * from "./ext_kvepis";
 export * from "./ext_automation";
 export * from "./ext_crm";
 export * from "./ext_content_calendar";
+export * from "./ext_channel_accounts";
 ```
 
 No other file needs editing to expose the schema: `packages/db/package.json` maps `"."` →
@@ -1921,19 +2150,82 @@ Mitigation, in order of preference:
 3. Precedent that this works in-repo: `packages/db/drizzle/0086_safe_turbo.sql:L2`,
    `0087_medical_grey_gargoyle.sql:L1`, `0088_noisy_lucky_pierre.sql:L12-L19`.
 
-### §C.4 — Two things that need a live database before you trust them
+### §C.4 — What still needs a live database
 
-**Not verified here** — there is no PostgreSQL in the sandbox (§0.4). Both are cheap to check:
+Only one item remains: **the step-13 `ALTER TYPE ... ADD VALUE` batching** (§C.3). It needs a
+database that already holds the `ext_marketing_channel` type, so it could not be exercised by the
+fresh-database push in §C.8.
 
-1. **`ext_content_pillars_season_months_check`** uses
-   `season_months <@ int4range(1, 13, '[]')::int[]`. Postgres forbids subqueries in CHECK
-   constraints, which rules out the obvious `NOT EXISTS (SELECT 1 FROM unnest(...))`. The
-   discrete-range→array cast is the standard workaround, but **smoke-test it** before relying on
-   it: `SELECT ARRAY[1,12] <@ int4range(1,13,'[]')::int[];` should return `t`, and
-   `SELECT ARRAY[0] <@ int4range(1,13,'[]')::int[];` should return `f`. If the cast misbehaves on
-   your server version, drop the CHECK — the router's
-   `z.array(z.number().int().min(1).max(12))` is the real gate.
-2. **The step-13 `ALTER TYPE` batching** described above.
+The `seasonMonths` CHECK is **no longer** in this category — it was executed and the first
+formulation failed. See §C.8.
+
+### §C.8 — Results of running `drizzle-kit push` against PostgreSQL 18.4
+
+`[VERIFIED — executed]` A real PostgreSQL 18.4 cluster was created from the npm package
+`@embedded-postgres/linux-x64` (`initdb -D … -U postgres --auth=trust -E UTF8`), then
+`drizzle-kit push --force` with `drizzle-kit@^0.31.10` was run against an empty database. Three
+passes were needed. This is the section that justified running it at all — **both failures were
+invisible to `tsc`.**
+
+**Pass 1 — FAILED: SQLSTATE 42846.**
+
+```
+PostgresError: cannot cast type int4range to integer[]
+  severity: ERROR, code: 42846, file: parse_expr.c, routine: transformTypeCast
+```
+
+The original `ext_content_pillars_season_months_check` used
+`season_months <@ int4range(1, 13, '[]')::int[]`. **That cast does not exist in PostgreSQL 18.**
+An earlier revision of this document recommended exactly this expression and called it "the
+standard workaround" — that was wrong, and it is why the smoke test was not optional.
+
+Postgres forbids subqueries inside `CHECK` constraints, which rules out the obvious
+`NOT EXISTS (SELECT 1 FROM unnest(season_months) …)`. The replacement is array containment against
+a literal, which is immutable and accepted:
+
+```sql
+CHECK (season_months <@ ARRAY[1,2,3,4,5,6,7,8,9,10,11,12])
+```
+
+**Pass 2 — the CHECK was accepted.** `ext_content_pillars` was created. The push then failed later:
+
+**Pass 2 — FAILED: SQLSTATE 42830.**
+
+```
+PostgresError: there is no unique constraint matching given keys for referenced table "users"
+  severity: ERROR, code: 42830, file: tablecmds.c, routine: transformFkeyCheckAttrs
+```
+
+**This is a real migration-ordering hazard and it is not specific to the new tables.** Inspecting
+the half-built database showed:
+
+- **173 tables created**, including every `ext_automation_*`, `ext_crm_*`, `ext_content_*` and
+  `ext_channel_accounts` table — so all column definitions, inline CHECK constraints and
+  column-level FKs are valid.
+- `users` carried only `users_email_unique` and `users_pkey`. **`users_practice_id_uq` was absent.**
+- **No table** had its `foreignKey({...})` extras applied — including upstream `care_reminders`,
+  whose `care_reminders_creator_tenant_fk` was also missing.
+
+Cause: `drizzle-kit push` emits all `CREATE TABLE` statements first and creates indexes in a later
+phase. A composite tenant FK referencing `(practice_id, id)` therefore fails, because the unique
+index it needs does not exist yet at `CREATE TABLE` time.
+
+**Consequence for §C.7:** on an *existing* database the referenced unique indexes already exist, so
+this does not bite. On an *empty* database a single `pnpm db:push` is **not** sufficient for
+composite tenant FKs.
+
+Options, in order of preference:
+
+1. **Push twice.** The second pass finds the tables and the indexes already present and only has to
+   add the FKs. *Not yet verified* — the sandbox environment was torn down before a third pass
+   could confirm convergence. Treat this as the leading hypothesis, not a result.
+2. **Use the repo's existing manual-DDL precedent.** `packages/db/apply-marketing-migration.ts:L8-L40`
+   runs idempotent `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` / `ADD CONSTRAINT`
+   via `db.execute(sql\`…\`)`. A matching `apply-automation-migration.ts` that creates the indexes
+   before the FKs sidesteps the ordering entirely and is the safest route for a fresh install.
+3. **Drop to plain column-level FKs** (`.references(() => users.id)`). This pushes cleanly but
+   forfeits the tenant-scoped integrity that `care-reminders.ts:L57-L77` establishes as the house
+   pattern — not recommended.
 
 ### §C.5 — Journal safety
 
@@ -2101,6 +2393,68 @@ below was read at commit `23f23a3`.
 
 ---
 
+## §G — Reconciliation with Agent 3's `EVENT-ENGINE-PLAN.md`
+
+Agent 3 landed on this branch (`cae5d2c`) after the first revision of this document, and its §C3
+contains a Phase 2 schema sketch labelled *"Agent 2 territory — coordination required"*. The two
+documents now describe the same table. Points of agreement and the two places Agent 3's plan needs
+updating:
+
+### G.1 — Adopted from Agent 3 into `ext_automation_events`
+
+| Agent 3's sketch | Now in this design | Note |
+|---|---|---|
+| `status: pending \| processing \| processed \| failed \| skipped` | `extAutomationEventStatusEnum`, same five values | The Agent 2 brief only specified `processedAt`/`failedAt`; a `status` column is what makes the worker's query cheap. Both are present. |
+| `processedReason` — *"the point of the whole table"* | `processedReason text` | Agreed, and now enforced: `ext_auto_events_reason_required_check` rejects `status IN ('skipped','failed')` without a reason of ≥3 chars. |
+| `availableAt` | `availableAt` (renamed from `nextRetryAt`) | One column serves both initial delay and retry backoff. |
+| `dedupeKey` + `UNIQUE (practiceId, type, dedupeKey)` | `dedupeKey` + `ext_auto_events_emission_uq` | Renamed from `sourceEventKey` to match. |
+| `INDEX (status, availableAt) WHERE status = 'pending'` | `ext_auto_events_queue_idx` on `(status, available_at, id)` | `id` added as a tiebreaker for deterministic `FOR UPDATE SKIP LOCKED` batching. |
+| `lockedAt`, `lockedBy` | unchanged | Plus `ext_auto_events_stuck_idx` for recovering claims from dead workers. |
+| `source` (router procedure name) | kept as `sourceRouter` | Same field, clearer name. |
+
+`processedReason` and `ext_automation_suppression_log` are **complementary, not redundant**: the
+former answers "what did the processor decide about this event", the latter answers "what was this
+client blocked from receiving, and on what legal ground". Agent 3's G5 is satisfied by both.
+
+### G.2 — Two corrections to Agent 3's plan
+
+**1. §F3 assumes `auth-tokens.ts` is the token-encryption precedent. It cannot be.**
+`[VERIFIED: packages/db/schema/auth-tokens.ts:L20]` stores `tokenHash` — a **one-way SHA-256
+digest**, because those are single-use verification tokens that are never read back. An OAuth access
+token must be *decryptable* to call the provider, so hashing is useless here. The correct in-repo
+precedent is `[VERIFIED: apps/web/lib/messaging/registration-crypto.ts:L1-L45]`: AES-256-GCM, a
+versioned `v1:<iv>:<ciphertext>:<tag>` envelope, and a base64-encoded 32-byte key from the
+environment. `ext_channel_accounts` (§A.5) is written against that module. Agent 3's own
+"⚠️ NEEDS CONFIRMATION for the exact cipher/rotation helper" is now resolved — and the answer is
+*not* the file it guessed.
+
+**2. Agent 3's G3 call-site list is at a different layer than it appears.**
+G3 cites `discharge.ts:619,627,634` as `createMessagesForTrigger` call sites. They are actually
+calls to `schedulePostopCheckIn`, `detectAndTriggerDentalRecall` and `checkAndTriggerSeniorMilestone`
+(`messaging.ts:L567`, `L643`, `L677`), which in turn call `createMessagesForTrigger` at
+`messaging.ts:L596`, `L664`, `L701`. **The conclusion in G3 is unaffected** — the same six trigger
+families are the only ones emitted — but a reader following those line numbers looking for
+`createMessagesForTrigger` will not find it.
+
+### G.3 — Still open between the two documents
+
+- **Agent 3's Phase 1 ships with zero schema changes**; this document is the Phase 2 schema. If
+  Phase 1 lands first, `ext_automation_events` arrives later and the Phase 1 worker must be
+  refactored onto it. Worth sequencing deliberately rather than discovering it.
+- **`ext_channel_accounts` is not in Agent 3's Phase 2 sketch.** It is added here (§A.5) because
+  §A.12 extends the channel enum to surfaces that are unreachable without stored credentials.
+- **G7 is a blocker for multi-step journeys and is not solvable in schema.**
+  `[VERIFIED: apps/web/lib/marketing/sms-rate-limit.ts:L5-L21]` `smsRateLimitOk` returns
+  `(count ?? 0) === 0` — it permits a send only if the client has had **zero** SMS in the window.
+  A two-step journey (`thank_you` +2h, `review_request` +24h) therefore self-blocks at step 2.
+  `ext_automation_journeys.frequency_cap_*` cannot fix this; `smsRateLimitOk` must become a real
+  cap (allow up to N) before journeys work at all. This sharpens §E question 4.
+- **G10** — `ext_marketing_message_status` (`ext_marketing.ts:L272-L277`) has no `cancelled`
+  value, so journey cancellation must soft-delete until it gains one. Adding it is an
+  `ALTER TYPE ... ADD VALUE` and should ride along with the §A.12 channel additions in §C.3 step 13.
+
+---
+
 ## Appendix — Verification log
 
 | Check | Command | Result |
@@ -2108,21 +2462,40 @@ below was read at commit `23f23a3`.
 | Baseline schema compiles | `npx tsc --noEmit` on unmodified `packages/db/schema/` | exit 0 |
 | New schema compiles | same, + 3 new files + §B exports | **exit 0, no diagnostics** |
 | §A.11 reviews ALTER compiles | same, + patched `ext_marketing.ts` (3 enums, 19 cols, 4 indexes, 3 checks, 3 user relations) | **exit 0, no diagnostics** |
+| **DDL executed** | `drizzle-kit push --force` (drizzle-kit `^0.31.10`) vs PostgreSQL **18.4** from `@embedded-postgres/linux-x64` | **ran; found 2 defects** — see §C.8 |
+| `seasonMonths` CHECK | first pass, `int4range(1,13,'[]')::int[]` | **FAILED — SQLSTATE 42846**; replaced with `<@ ARRAY[1..12]`, which the push accepted |
+| Composite tenant FKs on an empty DB | second pass | **FAILED — SQLSTATE 42830**; 173 tables created, `users_practice_id_uq` absent. See §C.8 |
 | Doc/code fidelity | extracted all 9 ```ts blocks from this file, compared to the compiled sources | 3 of 3 large blocks **byte-identical** |
 | Toolchain matches repo | `drizzle-orm@^0.45.2`, `typescript@^5.5.0` per `packages/db/package.json` | ✅ |
 | Compiler options match repo | copied from `packages/config/tsconfig.base.json` | ✅ |
 | Reviews relation-graph blast radius | `grep -rn "query.extMarketingReviews"` → 2 hits (`seed-marketing.ts:L443`, `seed-marketing-demo.ts:L946`), both `where`-only, **no `with:`** | ✅ renaming the `repliedBy` relation key breaks nothing |
 | DDL executed against Postgres | — | **NOT RUN** — no PostgreSQL in sandbox |
 | `pnpm db:push` | — | **NOT RUN** — no database |
-| `seasonMonths` CHECK expression | — | **NOT RUN** — needs live DB (§C.4) |
-| `ALTER TYPE` batching behaviour | — | **NOT RUN** — needs live DB (§C.3) |
+| `ALTER TYPE` batching behaviour | — | **NOT RUN** — needs a DB that already holds the type (§C.3, §C.4) |
+| Second `db:push` converging past 42830 | — | **NOT RUN** — environment torn down before a third pass (§C.8 option 1) |
 | `pnpm --filter @openpims/web type-check` | — | **NOT RUN** — `node_modules` not installed in the workspace checkout; §A.12 predicts it will surface errors in the six `z.enum` schemas and two `useState` unions listed there |
 
-### What "compiles" does and does not prove here
+### What each check does and does not prove
 
 `tsc --noEmit` exit 0 proves the Drizzle builder calls are well-typed, the `$type<>` payload
 generics resolve, every `relations()` field/reference pair points at a real column, and the
-`export *` graph in §B is acyclic. It does **not** prove the generated SQL is valid, that the
-partial-index `WHERE` predicates are accepted, or that the CHECK expressions evaluate as intended.
-Those need `pnpm db:push` against a real database — the four `NOT RUN` rows above.
+`export *` graph in §B is acyclic. **It proved nothing about the SQL** — the `int4range` cast
+compiled perfectly and was rejected by PostgreSQL. That is exactly why the push was run.
+
+`drizzle-kit push` against PostgreSQL 18.4 proves the `CREATE TYPE` / `CREATE TABLE` / inline
+`CHECK` / column-level FK DDL is valid, since 173 tables were created. It does **not** prove the
+`foreignKey({...})` extras apply on a fresh database (they did not — §C.8), and it says nothing
+about the `ALTER TYPE` step, which needs a pre-populated database.
+
+Two caveats on the push itself: it ran against a **fresh, empty** database rather than a copy of
+production data, and `--force` auto-accepted drizzle-kit's proposed statements rather than a human
+reviewing them. Neither changes the two findings, both of which are DDL-level.
+
+### Environment note
+
+The PostgreSQL cluster, `node_modules` and scratch schema files used for these checks lived under
+`/home/user/.cache/`, which is not persisted between turns and has since been torn down. The
+results above were captured before that; the four schema files were reconstructed from this
+document and re-verified with `tsc`. Re-running the push is a matter of re-creating that
+directory — the recipe is in §C.8.
 
