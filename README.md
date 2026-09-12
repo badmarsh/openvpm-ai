@@ -94,18 +94,20 @@ OpenVPM AI presadzuje férové a transparentné podmienky bez skrytých poplatko
 
 ## Pilot Validation & PoC Evidence
 
-> **Aktuálny stav: PILOT-READY (v0.6)**  
-> Systém úspešne absolvoval 14-dňové pilotné testovanie v režime paralelného tieňového zápisu (shadow-run) a je schválený na kontrolované ostré pilotné nasadenie.
+> **Aktuálny stav: PILOT-READY (v0.6)** — systém je schválený na kontrolované ostré pilotné nasadenie.  
+> Zatial ziadna produkcna klinika nie je aktivna. Vsledky nizsie pochádzajú zo **simulovaného tienoveho behu** (shadow-run), nie z realnej produkcnej prevadzky.
 
-### Pilot Persona: Veterinárna ambulancia MVDr. Martin Sýkora
-- **Lokalita:** Žilina / okolie (kombinovaná prax: malé spoločenské zvieratá v ambulancii + výjazdy k hospodárskym zvieratám)
-- **Tím:** 2 veterinárni lekári, 1 veterinárna asistentka
-- **Priebeh PoC (14 dní paralelného chodu):**
-  * **342 ošetrených pacientov** (218 psov, 89 mačiek, 35 hospodárskych zvierat)
-  * **100 % e-Kasa spoľahlivosť:** 412 vystavených pokladničných dokladov. Počas simulovaného 45-minútového výpadku internetového pripojenia offline front korektne zachoval transakcie s idempotenciou a po obnovení siete bezchybne odoslal všetky bločky do CHDÚ bez duplicity.
-  * **KVEPIS súlad:** Mesačné hlásenie ambulantnej knihy a zoznamu ošetrení bolo vygenerované vo formáte XML a úspešne overené voči oficiálnej XSD schéme ŠVPS SR bez jedinej syntaktickej či sémantickej chyby.
-  * **PetExpert poistné plnenia:** Úspešne spracovaných 14 poistných udalostí s automatickým výpočtom 10 % spoluúčasti klienta a vygenerovaním PDF podkladov pre poisťovňu.
-  * **Úspora času:** Skrátenie času administratívneho zápisu návštevy a uzavretia účtu z pôvodných **7.2 minút na 4.1 minúty na pacienta** (úspora **42 % času personálu**).
+> **Poznamka:** "Pilot-ready" nie je ekvivalent "battle-tested". Uplna GAP analyza: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md). Aktualny pre-pilot gate score: **0/10 zelenych podmienok**.
+
+### Simulovany PoC: Veterinarna ambulancia MVDr. Martin Sykora (tienovy beh)
+- **Lokalita:** Zilina / okolie (kombinovana prax: male spolocenske zvierata v ambulancii + vyjazdy k hospodarskym zvieratam)
+- **Tim:** 2 veterinarni lekari, 1 veterinarna asistentka
+- **Priebeh simulovaneho PoC (14 dni paralelneho tienoveho chodu — nie produkcne data):**
+  * **342 osetrenych pacientov** (218 psov, 89 maciek, 35 hospodarskych zvierat) — data generovane v testovacom prostredi
+  * **e-Kasa offline front:** Pocas simulovaneho 45-min. vypadku offline front korektne zachoval transakcie; realne podanie do CHDU v produkcii zatial neuskutocnene
+  * **KVEPIS sulad:** XML subory overene voci XSD scheme SVPS SR; **realne podanie na SVPS zatial neuskutocnene** (testovaci endpoint este nebol prideleny)
+  * **PetExpert:** 14 poistnch udalosti spracovanych v demo prostredi; **live API integracia s produkcnymi credentials neprebehla**
+  * **Uspora casu (simulovana):** Skratenie administrativneho zapisu z 7.2 na 4.1 min/pacienta (42%) — merane v simulovanom prostredi
 
 ---
 
@@ -141,7 +143,7 @@ Detailné technické špecifikácie nájdete v dokumente [docs/slovak-integratio
    - **KVEPIS** (ŠVPS SR) — Zákon 39/2007 Z.z., validačný XSD engine.
    - **CRSZ** — Centrálny register spoločenských zvierat (mikročipy a petpasy).
    - **CEHZ** — Centrálna evidencia hospodárskych zvierat (kódy chovov).
-   - **e-Kasa** — Zákon 289/2008 Z.z., certifikovaný hardvér **FiskalPRO** a VRP2.
+   - **e-Kasa** — Zakon 289/2008 Z.z., **podporovany hardver** FiskalPRO a VRP2 (hardverova podpora != certifikovana integracia s FR SR; certifikacia prebieha).
 
 ---
 
