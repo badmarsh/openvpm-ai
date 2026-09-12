@@ -23,6 +23,7 @@ import { TableScroll } from "@/components/common/table-scroll";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
+import { WholesalerImportDialog } from "@/components/inventory/wholesaler-import-dialog";
 import {
   INVENTORY_ADJUSTMENT_QUANTITY_MIN,
   INVENTORY_ADJUSTMENT_REASON_MAX_LENGTH,
@@ -1071,6 +1072,7 @@ export default function InventoryPage() {
   const [category, setCategory] = useState("");
   const [alertFilter, setAlertFilter] = useState<AlertFilter>("all");
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(
@@ -1203,16 +1205,31 @@ export default function InventoryPage() {
               </p>
             )}
             {canManageInventory && (
-              <Button
-                size="sm"
-                onClick={() => setShowAddProduct(true)}
-                className="ml-auto"
-              >
-                <Plus className="h-4 w-4 mr-1" />{" "}
-                {t("inventory.page.btnAddProduct", "Add Product")}
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowImportDialog(true)}
+                >
+                  <Truck className="h-4 w-4 mr-1" />
+                  {t("inventory.page.btnImportWholesaler", "Import dodacieho listu")}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddProduct(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />{" "}
+                  {t("inventory.page.btnAddProduct", "Add Product")}
+                </Button>
+              </div>
             )}
           </div>
+
+          <WholesalerImportDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            onSuccess={() => productsQuery.refetch()}
+          />
 
           {canManageInventory && showAddProduct && (
             <AddProductForm onClose={() => setShowAddProduct(false)} />

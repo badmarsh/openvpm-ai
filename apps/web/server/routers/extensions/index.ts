@@ -14,6 +14,7 @@ import { kvepisRouter } from "./kvepis";
 import { auditExportRouter } from "./audit-export";
 import { insuranceRouter } from "./insurance";
 import { dentalRouter } from "./dental";
+import { wholesalerImportRouter } from "./wholesaler-import";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -35,6 +36,7 @@ export const extensionsRouter = createRouter({
   auditExport: auditExportRouter,
   insurance: insuranceRouter,
   dental: dentalRouter,
+  wholesalerImport: wholesalerImportRouter,
 });
 
 export {
@@ -53,5 +55,6 @@ export {
   auditExportRouter,
   insuranceRouter,
   dentalRouter,
+  wholesalerImportRouter,
 };
 
