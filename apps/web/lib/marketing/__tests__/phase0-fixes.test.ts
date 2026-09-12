@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { eq, and, lte } from "drizzle-orm";
+import { envFlagEnabled } from "@/lib/env-bool";
 
 // Mock external dependencies
 vi.mock("@/lib/sms-dispatch", () => ({
@@ -12,6 +13,10 @@ vi.mock("@/lib/email", () => ({
 
 vi.mock("@/lib/messaging/reminders", () => ({
   isQuietHours: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock("@/lib/env-bool", () => ({
+  envFlagEnabled: vi.fn().mockReturnValue(false), // Default: demo mode OFF
 }));
 
 vi.mock("@/lib/marketing/planner", () => ({
@@ -466,6 +471,130 @@ describe("Phase 0 Fixes", () => {
         7
       );
       expect(result).toBe(false);
+    });
+  });
+
+  describe("Safety: Demo mode blocks all outbound delivery", () => {
+    it("processQueue returns early when NEXT_PUBLIC_DEMO_MODE=true", async () => {
+      vi.mocked(envFlagEnabled).mockReturnValue(true);
+
+      const mockDb = {
+        select: vi.fn(),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue(undefined),
+        }),
+      };
+
+      const result = await processQueue(mockDb as any, "practice-1");
+
+      // Should return immediately without any DB queries
+      expect(mockDb.select).not.toHaveBeenCalled();
+      expect(result.sent).toBe(0);
+      expect(result.suppressed).toBe(0);
+    });
+
+    it("processQueue proceeds normally when NEXT_PUBLIC_DEMO_MODE=false", async () => {
+      vi.mocked(envFlagEnabled).mockReturnValue(false);
+
+      // Mock db with all required queries
+      let selectCallCount = 0;
+      const mockDb = {
+        select: vi.fn(() => {
+          selectCallCount++;
+          const callNum = selectCallCount;
+
+          if (callNum === 1) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  orderBy: vi.fn().mockReturnValue({
+                    limit: vi.fn().mockResolvedValue([
+                      {
+                        id: "msg-1",
+                        clientId: "client-1",
+                        patientId: "patient-1",
+                        channel: "sms",
+                        bodyRendered: "Test message",
+                        status: "queued",
+                        legalBasis: "consent",
+                        scheduledFor: new Date(Date.now() - 1000),
+                      },
+                    ]),
+                  }),
+                }),
+              }),
+            };
+          } else if (callNum === 2) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([{ status: "alive" }]),
+                }),
+              }),
+            };
+          } else if (callNum === 3) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([{ smsConsent: true }]),
+                }),
+              }),
+            };
+          } else if (callNum === 4) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  orderBy: vi.fn().mockReturnValue({
+                    limit: vi.fn().mockResolvedValue([]),
+                  }),
+                }),
+              }),
+            };
+          } else if (callNum === 5) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ count: 0 }]),
+              }),
+            };
+          } else if (callNum === 6) {
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([
+                    { phone: "+421900123456", email: "test@example.com" },
+                  ]),
+                }),
+              }),
+            };
+          }
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue(undefined),
+        }),
+      };
+
+      const result = await processQueue(mockDb as any, "practice-1");
+
+      // Should proceed with normal processing
+      expect(mockDb.select).toHaveBeenCalled();
+      expect(result.sent).toBe(1);
     });
   });
 });

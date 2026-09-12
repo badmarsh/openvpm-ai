@@ -20,6 +20,7 @@ import { smsRateLimitOk } from "./sms-rate-limit";
 import { isQuietHours } from "@/lib/messaging/reminders";
 import { sendSms } from "@/lib/sms-dispatch";
 import { sendEmail } from "@/lib/email";
+import { envFlagEnabled } from "@/lib/env-bool";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -391,6 +392,15 @@ export async function processQueue(
   db: Database | any,
   practiceId: string
 ): Promise<{ sent: number; suppressed: number }> {
+  // Safety gate: when NEXT_PUBLIC_DEMO_MODE=true, suppress ALL marketing
+  // outbound delivery. Messages remain queued and are not marked delivered.
+  if (envFlagEnabled("NEXT_PUBLIC_DEMO_MODE")) {
+    console.log(
+      "[marketing] Demo mode active — suppressing all outbound delivery"
+    );
+    return { sent: 0, suppressed: 0 };
+  }
+
   const brand = await getBrand(db, practiceId);
   const now = new Date();
   const due = await db
