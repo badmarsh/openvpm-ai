@@ -61,6 +61,7 @@ import {
   assertVisitReconciliationMutable,
   syncVisitWorkItems,
 } from "../visit-billing-integrity";
+import { createMessagesForTrigger } from "@/lib/marketing/messaging";
 
 type EncounterDb = Pick<
   Database,
@@ -2341,8 +2342,9 @@ export const encountersRouter = createRouter({
   completeVisit: protectedProcedure
     .use(requireRole("admin", "veterinarian", "technician", "front_desk"))
     .input(completeVisitInput)
-    .mutation(async ({ ctx, input }) =>
-      ctx.db.transaction(async (tx) => {
+    .mutation(async ({ ctx, input }) => {
+      // ── Transaction: all checkout DB writes ──────────────────────────────
+      const result = await ctx.db.transaction(async (tx) => {
         const txCtx: EncounterContext = { db: tx, practiceId: ctx.practiceId };
         const appointment = await lockAppointment(txCtx, input.appointmentId);
         const closeout = await getCloseoutRow(txCtx, input.appointmentId);
@@ -2489,7 +2491,7 @@ export const encountersRouter = createRouter({
           }
           if (
             input.chargeDisposition === "accounts_receivable" &&
-            (!["draft", "sent", "overdue"].includes(invoice.status) ||
+            (![`draft`, `sent`, `overdue`].includes(invoice.status) ||
               invoice.balanceDueCents <= 0)
           ) {
             throw new TRPCError({
@@ -2589,7 +2591,37 @@ export const encountersRouter = createRouter({
             message: "Appointment changed; the closeout was not completed.",
           });
         }
-        return { closeout: completed, appointment: checkedOut };
-      })
-    ),
+        return {
+          closeout: completed,
+          appointment: checkedOut,
+          // Pass context needed for post-tx side effects
+          _trigger: {
+            clientId: appointment.clientId,
+            patientId: appointment.patientId ?? undefined,
+          },
+        };
+      });
+
+      // ── Post-transaction: fire marketing trigger (fire-and-forget) ───────
+      // Intentionally outside the DB transaction: a messaging failure must
+      // NOT roll back a completed checkout. Errors are logged only.
+      // Note: _trigger is absent on the idempotent re-checkout path (already checked_out).
+      const { _trigger, ...safeResult } = result as typeof result & {
+        _trigger?: { clientId: string; patientId?: string };
+      };
+      if (_trigger) {
+        void createMessagesForTrigger(ctx.db, ctx.practiceId, {
+          triggerKey: "visit_completed",
+          clientId: _trigger.clientId,
+          patientId: _trigger.patientId,
+          eventId: input.appointmentId,
+        }).catch((err: unknown) => {
+          console.error("[marketing] visit_completed trigger failed", err);
+        });
+      }
+
+      return safeResult;
+    }),
 });
+
+
