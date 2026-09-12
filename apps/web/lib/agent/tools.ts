@@ -1257,6 +1257,234 @@ const queryLabTrendsTool: AgentTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// check_drug_safety local knowledge base
+//
+// This is an explicit, auditable heuristic — NOT a pharmacology database.
+// Every class below lists generic, common trade and Slovak name fragments.
+// Anything the knowledge base cannot classify must fail safe with an
+// "unknown" severity warning instead of silently reporting safe: true
+// (silent false-negatives are the top clinical risk of this tool).
+// ---------------------------------------------------------------------------
+
+type DrugClass =
+  | "nsaid"
+  | "corticosteroid"
+  | "tramadol"
+  | "ssri"
+  | "maoi"
+  | "tca"
+  | "aminoglycoside"
+  | "loop_diuretic"
+  | "fluoroquinolone";
+
+const DRUG_CLASS_PATTERNS: ReadonlyArray<{ cls: DrugClass; re: RegExp }> = [
+  {
+    cls: "nsaid",
+    re: /melox|carprofen|karprof[eé]n|firocoxib|robenacoxib|rob[eé]nakoxib|onsior|metacam|melovem|meloxidyl|loxicam|rimadyl|noxivat|novox|grapiprant|galliprant|ketoprofen|ketoprof[eé]n|tolfenam|vedaprofen|eltenac|piroxicam|diklofenak|diclofenac|flurbiprofen|ketorolak|ketorolac|aspir[ií]n|acetylsalicyl|acetylsalicylic|ibuprofen|naproxen|nimesulid|indometacin/i,
+  },
+  {
+    cls: "corticosteroid",
+    re: /prednis|prednison|dexamethason|dexametaz[oó]n|triamcinolon|triamcinol[oó]n|methylprednis|metylpred|hydrocortison|hydrokortiz[oó]n|betamethason|betametaz[oó]n|budesonid|kortikoid|kortizon|cortisone|flutikazon|fluticasone|mometazon|mometasone|metylprednizol[oó]n/i,
+  },
+  { cls: "tramadol", re: /tramadol|tramal/i },
+  {
+    cls: "ssri",
+    re: /fluoxetin|sertralin|paroxetin|fluvoxamin|citalopram|escitalopram/i,
+  },
+  {
+    cls: "maoi",
+    re: /selegilin|selgian|anipryl|caselgyl|moklobemid|moclobemide|fenelzin|phenelzine|tranylcypromin/i,
+  },
+  {
+    cls: "tca",
+    re: /klomipramin|clomipramine|clomicalm|amitriptylin|amitriptyline|imipramin|doxepin|trazod[oó]n|trazodone/i,
+  },
+  {
+    cls: "aminoglycoside",
+    re: /gentamicin|gentamycin|amikacin|amikac[ií]n|neomycin|neomyc[ií]n|tobramycin|tobramyc[ií]n|streptomycin|streptomyc[ií]n|kanamycin|kanamyc[ií]n|framycetin|framycet[ií]n|paromomycin|polymyx/i,
+  },
+  {
+    cls: "loop_diuretic",
+    re: /furosemid|furosemide|torasemid|torsemide|torasemide|bumetanid|bumetanide/i,
+  },
+  {
+    cls: "fluoroquinolone",
+    re: /enrofloxacin|marbofloxacin|marbofloxac[ií]n|orbifloxacin|orbifloxac[ií]n|pradofloxacin|pradofloxac[ií]n|difloxacin|difloxac[ií]n|ciprofloxacin|ciprofloxac[ií]n|ibafloxacin|ibafloxac[ií]n|baytril|marbocyl/i,
+  },
+];
+
+/**
+ * Brand ↔ generic alias groups (common SK/CZ trade names included). Used to
+ * match allergies recorded under a trade name against a generic proposal
+ * (e.g. allergen "Metacam" vs candidate "meloxicam").
+ */
+const DRUG_ALIAS_GROUPS: ReadonlyArray<{ substance: string; re: RegExp }> = [
+  { substance: "meloxicam", re: /melox|metacam|melovem|meloxidyl|loxicam/ },
+  { substance: "carprofen", re: /carprofen|karprof[eé]n|rimadyl|noxivat|novox/ },
+  { substance: "firocoxib", re: /firocoxib|previcox/ },
+  { substance: "robenacoxib", re: /robenacoxib|rob[eé]nakoxib|onsior/ },
+  { substance: "grapiprant", re: /grapiprant|galliprant/ },
+  { substance: "enrofloxacin", re: /enrofloxac|baytril/ },
+  { substance: "marbofloxacin", re: /marbofloxac|marbocyl/ },
+  { substance: "amoxicillin_clavulanate", re: /amoxicil|klavulan|clavulan|synulox|kesium|noroclav/ },
+  { substance: "metronidazole", re: /metronidazol|entizol/ },
+  { substance: "doxycycline", re: /doxycykl|doxycyclin|vibramycin|ronaxan/ },
+  { substance: "cephalexin", re: /cefalexin|cefalex[ií]n|cephalexin|rilexin|cefadroxil/ },
+  { substance: "clindamycin", re: /klindamycin|clindamycin|antirobe/ },
+  { substance: "cefovecin", re: /cefovecin|convenia/ },
+  { substance: "maropitant", re: /maropitant|cerenia|prevomisol/ },
+  { substance: "tramadol", re: /tramadol|tramal/ },
+  { substance: "selegiline", re: /selegilin|selgian|anipryl|caselgyl/ },
+  { substance: "clomipramine", re: /klomipramin|clomipramine|clomicalm/ },
+  { substance: "fluoxetine", re: /fluoxetin|reconcile|prozac/ },
+  { substance: "prednisolone", re: /prednisolon|prednison/ },
+  { substance: "ketamine", re: /ketam[ií]n|ketalar|narkamon|calypsol/ },
+  { substance: "medetomidine", re: /medetomidin|domitor|dexmedetomidin|dexdomitor|sileo/ },
+  { substance: "atipamezole", re: /atipamezol|antisedan/ },
+  { substance: "buprenorphine", re: /buprenorfin|temgesic|vetergesic|bupredyne/ },
+  { substance: "butorphanol", re: /butorfanol|butorphanol|torbugesic|dolorex/ },
+  { substance: "methadone", re: /metadon|methadon|metisedive|comfortion/ },
+  { substance: "fentanyl", re: /fentanyl|fentanil/ },
+  { substance: "gabapentin", re: /gabapent[ií]n|gabapen/ },
+  { substance: "phenobarbital", re: /fenobarbital|phenobarbital|phenoleptil|libromide/ },
+  { substance: "levetiracetam", re: /levetiracetam|levetiracet[aá]m|keppra/ },
+  { substance: "imepitoin", re: /imepitoin|pexion/ },
+  { substance: "diazepam", re: /diazepam|apauvi|seduxen/ },
+  { substance: "propofol", re: /propofol/ },
+  { substance: "alfaxalone", re: /alfaxalon|alfaxalone|alfaxan/ },
+  { substance: "isoflurane", re: /izofluran|isoflurane/ },
+  { substance: "sevoflurane", re: /sevofluran|sevoflurane/ },
+  { substance: "acepromazine", re: /acepromaz[ií]n|acetylpromaz[ií]n|vetranquil|sedalin/ },
+  { substance: "fenbendazole", re: /fenbendazol|panacur/ },
+  { substance: "praziquantel", re: /prazikvantel|praziquantel|drontal|cestal|profender|profend|emodepsid/ },
+  { substance: "pyrantel", re: /pyrantel|pirantel/ },
+  { substance: "milbemycin", re: /milbemicin|milbemycin|milbemax|interceptor|milprazic|milprazon|broadline/ },
+  { substance: "moxidectin", re: /moxidektin|moxidectin|advocate/ },
+  { substance: "selamectin", re: /selamektin|selamectin|stronghold/ },
+  { substance: "ivermectin", re: /ivermektin|ivermectin/ },
+  { substance: "afoxolaner", re: /afoxolaner|nexgard/ },
+  { substance: "fluralaner", re: /fluralaner|fluralaner|bravecto/ },
+  { substance: "sarolaner", re: /sarolaner|simparica/ },
+  { substance: "lotilaner", re: /lotilaner|credelio/ },
+  { substance: "nitenpyram", re: /nitenpyram|capstar/ },
+  { substance: "amitraz", re: /amitraz|preventic/ },
+  { substance: "fipronil", re: /fipronil|frontline|effipro|fipron/ },
+  { substance: "imidacloprid", re: /imidacloprid|imidakloprid|advantage/ },
+  { substance: "permethrin", re: /permethrin|permetr[ií]n|kiltix|advantix/ },
+  { substance: "oclacitinib", re: /oklacitinib|oclacitinib|apoquel/ },
+  { substance: "lokivetmab", re: /lokivetmab|cytopoint/ },
+  { substance: "cyclosporine", re: /cyklosporin|cyclosporin|cyclosporine|atopica|optimune/ },
+  { substance: "pimobendan", re: /pimobendan|vetmedin|kardoret|cardisure/ },
+  { substance: "benazepril", re: /benazepril|benazepril|fortekor/ },
+  { substance: "enalapril", re: /enalapril|enap/ },
+  { substance: "telmisartan", re: /telmisartan|semintra/ },
+  { substance: "amlodipine", re: /amlodipin|amlodipine|norvasc/ },
+  { substance: "spironolactone", re: /spironolakt[oó]n|spironolactone|prilactone|aldactone/ },
+  { substance: "clopidogrel", re: /klopidogrel|clopidogrel|plavix/ },
+  { substance: "levothyroxine", re: /levotyroxin|levothyroxine|thyforon|forthyron|thyroxine/ },
+  { substance: "methimazole", re: /metimazol|methimazole|felimazole|vidalta|thiamazol/ },
+  { substance: "trilostane", re: /trilostan|trilostane|vetoryl/ },
+  { substance: "mitotane", re: /mitotan|mitotane|lysodren/ },
+  { substance: "deslorelin", re: /deslorelin|suprelorin/ },
+  { substance: "metoclopramide", re: /metoklopramid|metoclopramide|cerucal/ },
+  { substance: "ondansetron", re: /ondansetr[oó]n|ondansetron|zofran/ },
+  { substance: "famotidine", re: /famotidin|famotidine|kvamatel|pepcidin/ },
+  { substance: "omeprazole", re: /omeprazol|omeprazole|gastrozol|losec|ulzol/ },
+  { substance: "sucralfate", re: /sukralf[aá]t|sucralfate|venter/ },
+  { substance: "lactulose", re: /laktul[oó]za|lactulose|duphalac/ },
+  { substance: "loperamide", re: /loperamid|loperamide|imodium/ },
+  { substance: "insulin", re: /inzul[ií]n|insulin|vetsulin|caninsulin|prozinc|lantus|glargine|detemir|levemir/ },
+  { substance: "paracetamol", re: /paracetamol|acetaminophen|paralen|panadol|pamol/ },
+  { substance: "ibuprofen", re: /ibuprofen|brufen|nurofen/ },
+  { substance: "naproxen", re: /naproxen|nalgesin/ },
+  { substance: "cyproheptadine", re: /cyproheptadin|cyproheptadine|peritol/ },
+  { substance: "mirtazapine", re: /mirtazapin|mirtazapine/ },
+  { substance: "desmopressin", re: /desmopresin|desmopressin|minirin|adursin/ },
+  { substance: "cabergoline", re: /kabergolin|cabergoline|galastop/ },
+  { substance: "aglepristone", re: /aglepriston|aglepristone|alizin/ },
+  { substance: "oxytocin", re: /oxytocin|ocytocin|oxytoc[ií]n/ },
+  { substance: "misoprostol", re: /misoprostol|cytotec/ },
+  { substance: "dexamethasone", re: /dexamethason|dexametaz[oó]n|dexadreson|dexa/ },
+];
+
+/**
+ * Common veterinary drugs with no hard interaction rules here; listing them
+ * marks the candidate as "recognized" so routine, well-understood medicines
+ * return safe:true while genuinely unknown substances fail safe.
+ */
+const KNOWN_DRUG_PATTERN =
+  /maropitant|cerenia|metoklopramid|metoclopramide|ondansetr|ranitidin|ranitidine|famotidin|omeprazol|pantoprazol|sukralf|sucralfate|laktul|lactulose|loperamid|metronidazol|amoxicil|ampicilin|penicilin|benzylpenicillin|cefal|ceftiofur|cefpodox|cefovecin|convenia|doxycykl|tetracykl|oxytetracyklin|klindamycin|clindamycin|tylosin|tilosin|azithromycin|azitromycin|klaritromycin|erythromycin|spiramycin|lincomycin|vankomycin|meropenem|imipenem|rifaximin|nitrofurantoin|sulfonamid|sulfadimethoxin|sulfadiazin|trimethoprim|trimetoprim|toltrazuril|ponazuril|fenbendazol|pyrantel|prazikvantel|praziquantel|milbemicin|milbemycin|moxidektin|selamektin|ivermektin|afoxolaner|fluralaner|sarolaner|lotilaner|nitenpyram|amitraz|fipronil|imidakloprid|permethrin|spinosad|lufenuron|levamisol|albendazol|oxfendazol|febantel|closantel|niklosamid|niclosamide|ketokonazol|itrakonazol|flukonazol|terbinafin|griseofulvin|nystatin|klotrimazol|mikonazol|enilkonazol|chl[oó]rhexidin|chlorhexidine|oklacitinib|apoquel|lokivetmab|cytopoint|cyklosporin|pimobendan|benazepril|enalapril|ramipril|kaptopril|lisinopril|telmisartan|amlodipin|diltiazem|atenolol|sotalol|propranolol|spironolakt|klopidogrel|rivaroxaban|hepar[ií]n|digoxin|digox[in]|milrinon|amiodaron|furosemid|torasemid|hydrochlo[rt]tiazid|acetazolamid|manitol|mannitol|levotyroxin|metimazol|trilostan|mitotan|deslorelin|mibolerone|estriol|inkurin|fenylpropanolam[ií]n|propalin|fenoxybenzam[ií]n|terazosin|tamsulosin|betanechol|bethanechol|oxybutin|gabapent[ií]n|pregabal|amantadin|fenobarbital|levetiracetam|zonisamid|imepitoin|diazepam|midazolam|alprazolam|klonazepam|klorazep|propofol|alfaxalon|alfaxalone|etomidat|tiopental|ketam[ií]n|tiletamin|zoletil|izofluran|sevofluran|desfluran|oxid dusn[yý]|acepromaz[ií]n|medetomidin|xylazin|romifidin|detomidin|butorfanol|buprenorfin|morfin|morphine|metadon|fentanyl|hydromorfon|oxymorfon|petid[ií]n|meperidine|kode[ií]n|codeine|hydrokodon|oxykodon|naloxon|flumazenil|atipamezol|yohimbin|lidokain|lidocaine|bupivakain|mepivakain|ropivakain|prokain|tetrakain|atrakurium|rokuronium|vekuronium|sukcinylcholin|neostigmin|edrof[oó]nium|pyridostigmin|dantrol[eé]n|baklof|metokarbamol|atrop[ií]n|glykopyrol|glycopyrrolate|epinefrin|adrenal[ií]n|dobutam[ií]n|dopam[ií]n|noradrenal[ií]n|norepinefrin|fenylefrin|vazopresin|glukon[aá]t v[aá]penat|calcium gluconate|s[ií]ran horečnat|magn[eé]zium|hydrogenuhličit[aá]n|bicarbonate|chlorid draseln|mannitol|gluk[oó]za|dextrose|glukag|inzul[ií]n|insulin|metform[ií]n|glipizid|diazoxid|oktreotid|fludrokortiz|desoxycorticosterone|zycortal|percorten|salbutamol|albuterol|terbutal[ií]n|teofyl[ií]n|theophylline|aminofyl[ií]n|klenbuterol|flutikazon|montelukast|dextrometorf|acetylcyste[ií]n|sildenafil|difenhydramin|diphenhydramine|chl[oó]rfenam[ií]n|chlorpheniramine|cetiriz[ií]n|loratadin|fexofenadin|prometaz[ií]n|promethazine|hydroxyz[ií]n|mecliz[ií]n|mekliz[ií]n|dimenhydrin[aá]t|dramamine|ciklizin|maropitant|ondansetr|dolasetron|granisetron|prochl[oó]rperazin|chlopromazin|chlorpromazine|mirtazapin|cyproheptadin|kapromorelin|kaolin|pektin|bismut|psyllium|ps[yý]lium|bisakodyl|dokus[aá]t|sennosid|miner[aá]lny olej|akt[ií]vne uhlie|activated charcoal|uhlie|apomorf[ií]n|fomepizol|acetylcyste[ií]n|metyl[eé]nov[aá] modr[aá]|methylene blue|fytomenadion|vitam[ií]n k|protam[ií]n|lipidov[aá] emulzia|lipid emulsion|pralidox[ií]m|tiosulf[aá]t|hydroxokobalam[ií]n|glukozam[ií]n|glucosamine|chondroitin|omega-3|ryb[ií] olej|msm|silymarin|pestrec|ursodeoxychol|ursofalk|adenosylmetionin|denamarin|melaton[ií]n|tryptof[aá]n|kazozep[ií]n|zylkene|tean[ií]n|ferom|feliway|adaptil|thiamin|tiam[ií]n|pyridoxin|kyanokobalam[ií]n|kyselina listov[aá]|folic acid|tokoferol|askorb|eleutherococcus|zinc|zinok|sel[eé]n|železo|fero|probiotik|probiotic|saccharomyces|kaol[ií]n|diosmektit|smecta/i;
+
+/** Fold accented characters to ASCII for name matching. */
+function foldDrugName(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function drugClasses(value: string): Set<DrugClass> {
+  const folded = foldDrugName(value);
+  const matches = new Set<DrugClass>();
+  for (const { cls, re } of DRUG_CLASS_PATTERNS) {
+    if (re.test(folded)) matches.add(cls);
+  }
+  return matches;
+}
+
+function isKnownDrug(value: string): boolean {
+  const folded = foldDrugName(value);
+  return (
+    KNOWN_DRUG_PATTERN.test(folded) ||
+    DRUG_CLASS_PATTERNS.some(({ re }) => re.test(folded)) ||
+    DRUG_ALIAS_GROUPS.some(({ re }) => re.test(folded))
+  );
+}
+
+function aliasSubstances(value: string): Set<string> {
+  const folded = foldDrugName(value);
+  const matches = new Set<string>();
+  for (const { substance, re } of DRUG_ALIAS_GROUPS) {
+    if (re.test(folded)) matches.add(substance);
+  }
+  return matches;
+}
+
+/**
+ * Bidirectional, alias-aware allergy match. The old one-directional
+ * `candidate.includes(allergen)` test missed generic proposals for a
+ * trade-name allergy record (allergy "Metacam", drug "meloxicam").
+ */
+function drugMatchesAllergen(candidate: string, allergen: string): boolean {
+  const c = foldDrugName(candidate);
+  const a = foldDrugName(allergen).trim();
+  if (a.length < 3) return false;
+  if (c.includes(a) || a.includes(c)) return true;
+  const candidateAliases = aliasSubstances(candidate);
+  for (const substance of aliasSubstances(allergen)) {
+    if (candidateAliases.has(substance)) return true;
+  }
+  // Token-level recall for long, specific allergen names (e.g. "Penicillin G").
+  const tokens = a.split(/[^a-z0-9]+/).filter((token) => token.length >= 6);
+  return tokens.some((token) => c.includes(token));
+}
+
+function ageInMonths(dob: string | null | undefined): number | null {
+  if (!dob) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dob);
+  if (!match) return null;
+  const birth = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+  );
+  if (Number.isNaN(birth)) return null;
+  const now = Date.now();
+  if (birth > now) return null;
+  return Math.floor((now - birth) / (30.44 * 24 * 60 * 60 * 1000));
+}
+
 const checkDrugSafetyTool: AgentTool = {
   name: "check_drug_safety",
   description:
@@ -1293,6 +1521,7 @@ const checkDrugSafetyTool: AgentTool = {
         id: patients.id,
         name: patients.name,
         species: patients.species,
+        dob: patients.dob,
       })
       .from(patients)
       .where(
@@ -1315,31 +1544,40 @@ const checkDrugSafetyTool: AgentTool = {
 
     const contraindications: string[] = [];
     const warnings: string[] = [];
-    const candidateLower = input.candidateDrug.toLowerCase();
-    const speciesLower = (patient.species || "").toLowerCase();
+    let speciesRuleMatched = false;
+    const candidateFolded = foldDrugName(input.candidateDrug);
+    // The species column is an enum (canine|feline|avian|...), but accept
+    // free-text/Slovak labels ("Mačka") defensively.
+    const isFeline = /cat|feline|ma[cč]k/.test(foldDrugName(patient.species || ""));
+    const isCanine = /dog|canine|\bpes\b/.test(foldDrugName(patient.species || ""));
 
     // 1. Feline-specific fatal toxicities
-    if (speciesLower.includes("cat") || speciesLower.includes("feline")) {
+    if (isFeline) {
       if (
-        candidateLower.includes("paracetamol") ||
-        candidateLower.includes("acetaminophen")
+        /paracetamol|acetaminophen|paralen|panadol|pamol/.test(candidateFolded)
       ) {
+        speciesRuleMatched = true;
         contraindications.push(
-          "Acetaminophen (Paracetamol) is fatal in feline patients due to deficient glucuronidation enzymes causing methemoglobinemia and acute hepatic necrosis."
+          "Acetaminophen (Paracetamol/Paralen) is fatal in feline patients due to deficient glucuronidation enzymes causing methemoglobinemia and acute hepatic necrosis."
         );
       }
-      if (candidateLower.includes("permethrin")) {
+      if (/permethrin|permetr[ií]n/.test(candidateFolded)) {
+        speciesRuleMatched = true;
         contraindications.push(
-          "Permethrin is highly neurotoxic and potentially fatal to felines."
+          "Permethrin (e.g. canine Advantix/Kiltix spot-ons) is highly neurotoxic and potentially fatal to felines."
+        );
+      }
+      if (/aspir[ií]n|acetylsalicyl/.test(candidateFolded)) {
+        speciesRuleMatched = true;
+        contraindications.push(
+          "Aspirin (acetylsalicylic acid) has markedly prolonged half-life in cats and causes severe salicylate toxicity at standard doses; avoid without specialist dosing."
         );
       }
     }
 
     // 2. Human NSAID toxicities for dogs & cats
-    if (
-      candidateLower.includes("ibuprofen") ||
-      candidateLower.includes("naproxen")
-    ) {
+    if (/ibuprofen|brufen|nurofen|naproxen|nalgesin/.test(candidateFolded)) {
+      speciesRuleMatched = true;
       contraindications.push(
         "Human NSAIDs (Ibuprofen, Naproxen) cause acute renal failure and severe gastrointestinal ulceration in veterinary patients."
       );
@@ -1362,44 +1600,124 @@ const checkDrugSafetyTool: AgentTool = {
         )
       );
 
-    const isCandidateNsaid =
-      /melox|carprofen|firocoxib|robenacoxib|onsior|metacam|rimadyl|galliprant|ketoprofen/i.test(
-        candidateLower
-      );
-    const isCandidateSteroid =
-      /prednis|dexamethason|triamcinolon|methylprednis|hydrocortison/i.test(
-        candidateLower
-      );
+    const candidateClasses = drugClasses(input.candidateDrug);
+    const candidateAliases = aliasSubstances(input.candidateDrug);
+    const unrecognizedActiveMeds: string[] = [];
+
+    const has = (set: Set<DrugClass>, cls: DrugClass) => set.has(cls);
 
     for (const rx of activePrescriptions) {
       const rxName = (
-        (rx as any).drugName ||
-        (rx as any).medicationName ||
+        (rx as { drugName?: string; medicationName?: string }).drugName ||
+        (rx as { drugName?: string; medicationName?: string }).medicationName ||
         ""
-      ).toLowerCase();
-      const isRxNsaid =
-        /melox|carprofen|firocoxib|robenacoxib|onsior|metacam|rimadyl|galliprant|ketoprofen/i.test(
-          rxName
-        );
-      const isRxSteroid =
-        /prednis|dexamethason|triamcinolon|methylprednis|hydrocortison/i.test(
-          rxName
-        );
+      ).trim();
+      if (!rxName) continue;
+      const rxClasses = drugClasses(rxName);
+      const rxAliases = aliasSubstances(rxName);
 
-      if ((isCandidateNsaid && isRxSteroid) || (isCandidateSteroid && isRxNsaid)) {
+      // NSAID + Corticosteroid (either direction)
+      if (
+        (has(candidateClasses, "nsaid") && has(rxClasses, "corticosteroid")) ||
+        (has(candidateClasses, "corticosteroid") && has(rxClasses, "nsaid"))
+      ) {
         contraindications.push(
-          `Concurrent administration of NSAID and Corticosteroid (${rxName}) is contraindicated due to severe risk of GI ulceration and intestinal perforation.`
+          `Concurrent administration of an NSAID and a corticosteroid (${rxName}) is contraindicated due to severe risk of GI ulceration and intestinal perforation.`
         );
       }
 
-      if (isCandidateNsaid && isRxNsaid) {
+      // Dual NSAID therapy
+      if (has(candidateClasses, "nsaid") && has(rxClasses, "nsaid")) {
+        // Same active substance (e.g. generic + trade name) is not dual therapy.
+        const sameSubstance = [...candidateAliases].some((s) =>
+          rxAliases.has(s)
+        );
+        if (!sameSubstance) {
+          contraindications.push(
+            `Dual NSAID therapy with active prescription (${rxName}) is contraindicated. A washout period of 3-5 days is mandatory.`
+          );
+        }
+      }
+
+      // Serotonergic syndromes: tramadol/SSRI/TCA + MAOI; tramadol + SSRI.
+      const candidateSerotonergic =
+        has(candidateClasses, "tramadol") ||
+        has(candidateClasses, "ssri") ||
+        has(candidateClasses, "tca");
+      const rxSerotonergic =
+        has(rxClasses, "tramadol") ||
+        has(rxClasses, "ssri") ||
+        has(rxClasses, "tca");
+      if (
+        (candidateSerotonergic && has(rxClasses, "maoi")) ||
+        (has(candidateClasses, "maoi") && rxSerotonergic)
+      ) {
         contraindications.push(
-          `Dual NSAID therapy with active prescription (${rxName}) is contraindicated. A washout period of 3-5 days is mandatory.`
+          `Serotonergic drug combined with an MAOI (${rxName}) is contraindicated — risk of fatal serotonin syndrome / hypertensive crisis (e.g. tramadol or SSRIs with selegiline/Anipryl). A washout is mandatory.`
+        );
+      }
+      if (
+        (has(candidateClasses, "tramadol") && has(rxClasses, "ssri")) ||
+        (has(candidateClasses, "ssri") && has(rxClasses, "tramadol"))
+      ) {
+        contraindications.push(
+          `Tramadol combined with an SSRI (${rxName}) is contraindicated — high risk of serotonin syndrome (seizures, hyperthermia, collapse).`
+        );
+      }
+      if (
+        (has(candidateClasses, "tramadol") && has(rxClasses, "tca")) ||
+        (has(candidateClasses, "tca") && has(rxClasses, "tramadol"))
+      ) {
+        warnings.push(
+          `Tramadol combined with a tricyclic antidepressant (${rxName}) increases seizure and serotonin syndrome risk; verify with a veterinary pharmacology reference.`
+        );
+      }
+
+      // Aminoglycoside + loop diuretic → ototoxicity / nephrotoxicity
+      if (
+        (has(candidateClasses, "aminoglycoside") &&
+          has(rxClasses, "loop_diuretic")) ||
+        (has(candidateClasses, "loop_diuretic") &&
+          has(rxClasses, "aminoglycoside"))
+      ) {
+        contraindications.push(
+          `Aminoglycoside with a loop diuretic (${rxName}) is contraindicated — synergistic irreversible ototoxicity and acute kidney injury.`
+        );
+      }
+
+      // NSAID + aminoglycoside → additive nephrotoxicity
+      if (
+        (has(candidateClasses, "nsaid") &&
+          has(rxClasses, "aminoglycoside")) ||
+        (has(candidateClasses, "aminoglycoside") && has(rxClasses, "nsaid"))
+      ) {
+        warnings.push(
+          `NSAID combined with an aminoglycoside (${rxName}) increases nephrotoxicity risk; ensure hydration and monitor renal values.`
+        );
+      }
+
+      if (rxClasses.size === 0 && rxAliases.size === 0 && !isKnownDrug(rxName)) {
+        unrecognizedActiveMeds.push(rxName);
+      }
+    }
+
+    // Fluoroquinolones in growing animals — cartilage/joint damage.
+    if (has(candidateClasses, "fluoroquinolone")) {
+      const ageMonths = ageInMonths((patient as { dob?: string | null }).dob);
+      if (ageMonths === null) {
+        if (isCanine || isFeline) {
+          warnings.push(
+            "Fluoroquinolones can cause cartilage damage in growing animals; date of birth is unknown, so juvenile status could not be verified."
+          );
+        }
+      } else if (ageMonths < 12) {
+        contraindications.push(
+          `Fluoroquinolones are contraindicated in growing animals (patient ~${ageMonths} months old) due to permanent cartilage/joint damage; allow up to 18 months for large/giant breeds.`
         );
       }
     }
 
-    // 4. Known Patient Allergies
+    // 4. Known Patient Allergies (bidirectional, alias-aware)
     const allergies = await ctx.db
       .select({
         allergen: patientAllergies.allergen,
@@ -1417,7 +1735,7 @@ const checkDrugSafetyTool: AgentTool = {
     for (const allergy of allergies) {
       if (
         allergy.allergen &&
-        candidateLower.includes(allergy.allergen.toLowerCase())
+        drugMatchesAllergen(input.candidateDrug, allergy.allergen)
       ) {
         contraindications.push(
           `Patient has a recorded allergy to '${allergy.allergen}' (reaction: ${allergy.reaction || "unspecified"}, severity: ${allergy.severity}).`
@@ -1425,15 +1743,40 @@ const checkDrugSafetyTool: AgentTool = {
       }
     }
 
+    // 5. Fail-safe: the heuristic must never silently certify an unrecognized
+    // drug as safe. Report "unknown" with an explicit coverage disclaimer.
+    const recognized =
+      speciesRuleMatched ||
+      candidateClasses.size > 0 ||
+      candidateAliases.size > 0 ||
+      isKnownDrug(input.candidateDrug) ||
+      contraindications.length > 0;
+
+    if (!recognized) {
+      warnings.push(
+        `The local drug-safety knowledge base does not recognize '${input.candidateDrug.trim()}'. Interaction, toxicity and allergy coverage is limited to a built-in formulary, so this tool cannot certify the drug as safe. Verify the product SPC and a veterinary pharmacology reference (e.g. Plumb's) before administration.`
+      );
+    }
+
+    if (unrecognizedActiveMeds.length > 0) {
+      warnings.push(
+        `Active prescription(s) not covered by the local interaction knowledge base: ${unrecognizedActiveMeds.join(
+          ", "
+        )}. Interactions against these medicines were not fully evaluated.`
+      );
+    }
+
     const safe = contraindications.length === 0;
     const severity = !safe
       ? "contraindicated"
       : warnings.length > 0
-        ? "warning"
+        ? recognized
+          ? "warning"
+          : "unknown"
         : "safe";
 
     return {
-      safe,
+      safe: recognized ? safe : false,
       severity,
       contraindications,
       warnings,
