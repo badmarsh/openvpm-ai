@@ -1734,6 +1734,7 @@
       "searchPlaceholder": "Hľadať podľa názvu alebo kódu SKU...",
       "productCount": "{count} produkt{suffix}",
       "btnAddProduct": "Pridať produkt",
+      "btnImportWholesaler": "Import dodacieho listu",
       "alertAttention": "Vyžaduje pozornosť",
       "alertLowStock": "Nízky stav",
       "alertExpired": "Expirované",

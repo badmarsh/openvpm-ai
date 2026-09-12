@@ -1734,6 +1734,7 @@
       "searchPlaceholder": "Search by name or SKU...",
       "productCount": "{count} product{suffix}",
       "btnAddProduct": "Add Product",
+      "btnImportWholesaler": "Import Delivery Note",
       "alertAttention": "Needs attention",
       "alertLowStock": "Low stock",
       "alertExpired": "Expired",
