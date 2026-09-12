@@ -4,6 +4,9 @@ import {
   parseIdexx,
   parseFujiDriChem,
   parseMindray,
+  parseLabtechnik,
+  parseInlab,
+  parseQuickSeal,
   autoDetectAndParse,
 } from "../analyzer-parser";
 
@@ -85,6 +88,108 @@ PLT        25      10^9/L  175 - 500
       const plt = results.find((r) => r.code === "PLT");
       expect(plt?.value).toBe(25);
       expect(plt?.flag).toBe("CRITICAL"); // < 40
+    });
+  });
+
+  describe("parseLabtechnik", () => {
+    it("should parse Labtechnik / VetScan CSV output with flags", () => {
+      const sample = `
+TEST_NAME,VALUE,UNIT,REF_LOW,REF_HIGH,FLAG
+ALT,180,U/L,10,100,H
+CREA,90,µmol/L,44,159,N
+UREA,3.0,mmol/L,2.5,9.6,N
+`;
+      const results = parseLabtechnik(sample, "canine");
+      expect(results.length).toBe(3);
+
+      const alt = results.find((r) => r.code === "ALT");
+      expect(alt?.value).toBe(180);
+      expect(alt?.flag).toBe("HIGH");
+      expect(alt?.name).toBe("Alanínaminotransferáza");
+
+      const crea = results.find((r) => r.code === "CREA");
+      expect(crea?.flag).toBe("NORMAL");
+    });
+
+    it("should auto-detect Labtechnik via vetscan keyword", () => {
+      const sample = `
+Abaxis VetScan VS2
+TEST_NAME,VALUE,UNIT,REF_LOW,REF_HIGH,FLAG
+ALT,40,U/L,10,100,N
+CREA,250,µmol/L,44,159,H
+`;
+      const parsed = autoDetectAndParse({
+        content: sample,
+        filename: "vetscan_result.csv",
+        species: "canine",
+      });
+      expect(parsed.analyzerType).toBe("LABTECHNIK");
+      expect(parsed.results.length).toBe(2);
+      expect(parsed.abnormalCount).toBe(1);
+    });
+  });
+
+  describe("parseInlab", () => {
+    it("should parse INLAB / INBAL TXT output with reference ranges", () => {
+      const sample = `
+ALB: 35.0 g/L [23.0 - 40.0]
+ALT: 250 U/L [10 - 100]
+GLU: 2.0 mmol/L [3.3 - 6.5]
+`;
+      const results = parseInlab(sample, "canine");
+      expect(results.length).toBe(3);
+
+      const alt = results.find((r) => r.code === "ALT");
+      expect(alt?.value).toBe(250);
+      expect(alt?.flag).toBe("HIGH");
+
+      const glu = results.find((r) => r.code === "GLU");
+      expect(glu?.flag).toBe("CRITICAL");
+    });
+
+    it("should auto-detect INLAB via inbal filename", () => {
+      const sample = "CREA: 300 µmol/L [44 - 159]\nTP: 45 g/L [52 - 82]\n";
+      const parsed = autoDetectAndParse({
+        content: sample,
+        filename: "report_ibl.txt",
+        species: "canine",
+      });
+      expect(parsed.analyzerType).toBe("INLAB");
+      expect(parsed.results.length).toBe(2);
+      expect(parsed.results.some((r) => r.flag === "LOW")).toBe(true);
+    });
+  });
+
+  describe("parseQuickSeal", () => {
+    it("should parse QuickSeal tab-separated TXT with N/H/L/C status", () => {
+      const sample = [
+        "ANALYTE\tVALUE\tUNIT\tSTATUS",
+        "ALT\t180\tU/L\tH",
+        "CREA\t90\tµmol/L\tN",
+        "TP\t40\tg/L\tL",
+      ].join("\n");
+
+      const results = parseQuickSeal(sample, "canine");
+      expect(results.length).toBe(3);
+
+      const alt = results.find((r) => r.code === "ALT");
+      expect(alt?.value).toBe(180);
+      expect(alt?.flag).toBe("HIGH");
+
+      const tp = results.find((r) => r.code === "TP");
+      expect(tp?.flag).toBe("LOW");
+    });
+
+    it("should auto-detect QuickSeal via filename qs", () => {
+      const sample = "CREA\t300\tµmol/L\tC\nALT\t120\tU/L\tH\n";
+      const parsed = autoDetectAndParse({
+        content: sample,
+        filename: "qs_export.txt",
+        species: "canine",
+      });
+      expect(parsed.analyzerType).toBe("QUICKSEAL");
+      expect(parsed.results.length).toBe(2);
+      expect(parsed.criticalCount).toBe(1);
     });
   });
 

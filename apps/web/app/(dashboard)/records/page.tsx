@@ -27,6 +27,7 @@ import {
   Wind,
   Scale,
   Activity,
+  Stethoscope,
 } from "lucide-react";
 import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
 import { RecordsTimelineSkeleton, TableSkeleton } from "@/components/ui/content-skeletons";
@@ -44,6 +45,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { ClinicalCorrectionControl } from "@/components/records/clinical-correction-control";
+import { DentalChartTab } from "@/components/records/dental-chart-tab";
 import {
   PrescriptionInventoryProductPicker,
   type PrescriptionInventoryProduct,
@@ -107,7 +109,7 @@ import {
   isProcedureRequiredTextInputValid,
 } from "@/lib/records/procedure-policy";
 
-type Tab = "soap" | "vaccinations" | "prescriptions" | "problems" | "labResults" | "procedures";
+type Tab = "soap" | "vaccinations" | "prescriptions" | "problems" | "labResults" | "procedures" | "dental";
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "soap", label: "SOAP Notes", icon: FileText },
@@ -116,6 +118,7 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "problems", label: "Problems", icon: ClipboardList },
   { id: "labResults", label: "Lab Results", icon: FlaskConical },
   { id: "procedures", label: "Procedures", icon: Scissors },
+  { id: "dental", label: "Dental Chart", icon: Stethoscope },
 ];
 
 function isTab(value: string | null): value is Tab {
@@ -289,8 +292,8 @@ function getPrescriptionStatusBadge(status: string | null) {
   }
 }
 
-// Tabs restricted from front_desk: SOAP Notes, Prescriptions, Lab Results, Procedures
-const frontDeskRestrictedTabs: Tab[] = ["soap", "prescriptions", "labResults", "procedures"];
+// Tabs restricted from front_desk: SOAP Notes, Prescriptions, Lab Results, Procedures, Dental
+const frontDeskRestrictedTabs: Tab[] = ["soap", "prescriptions", "labResults", "procedures", "dental"];
 
 type LabResultFormState = {
   testName: string;
@@ -1267,6 +1270,7 @@ function RecordsPageContent() {
     problems: t("records.tabs.problems", "Problems"),
     labResults: t("records.tabs.labResults", "Lab Results"),
     procedures: t("records.tabs.procedures", "Procedures"),
+    dental: t("records.tabs.dental", "Dental Chart"),
   };
 
   return (
@@ -3828,6 +3832,9 @@ function RecordsPageContent() {
                 )}
               </div>
             )}
+
+            {/* Dental Chart Tab */}
+            {currentTab === "dental" && <DentalChartTab patientId={patientId} />}
               </>
             )}
           </div>

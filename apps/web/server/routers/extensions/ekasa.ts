@@ -617,6 +617,7 @@ export const ekasaRouter = createRouter({
               vatRate: z
                 .enum(["ZERO", "REDUCED_5", "REDUCED_19", "STANDARD_23"])
                 .default("STANDARD_23"),
+              discountPercent: z.number().min(0).max(100).optional().default(0),
             })
           )
           .min(1, "Košík musí obsahovať aspoň 1 položku"),
@@ -671,11 +672,27 @@ export const ekasaRouter = createRouter({
         }
       }
 
-      // 2. Vypočítaj celkovú sumu
+      // 2. Vypočítaj celkovú sumu (subtotal = list price, total = po zľave)
+      //    Zľava sa aplikuje na jednotkovú cenu (zaokrúhlenú na 2 desatinné
+      //    miesta), aby faktúra, e-Kasa doklad a skladové riadky súhlasili.
+      const discountedItems = input.items.map((it) => {
+        const discountPct = Math.min(100, Math.max(0, it.discountPercent || 0));
+        const discountedUnitPrice = (
+          Number(it.unitPrice) * (1 - discountPct / 100)
+        ).toFixed(2);
+        return {
+          ...it,
+          discountedUnitPrice,
+          lineTotal: (Number(discountedUnitPrice) * it.quantity).toFixed(2),
+        };
+      });
+      let subtotalNum = 0;
       let totalNum = 0;
-      for (const it of input.items) {
-        totalNum += Number(it.unitPrice) * it.quantity;
+      for (const it of discountedItems) {
+        subtotalNum += Number(it.unitPrice) * it.quantity;
+        totalNum += Number(it.lineTotal);
       }
+      const subtotalStr = subtotalNum.toFixed(2);
       const totalStr = totalNum.toFixed(2);
 
       // 3. Vytvor faktúru so statusom 'paid'
@@ -687,7 +704,7 @@ export const ekasaRouter = createRouter({
           patientId: input.patientId,
           status: "paid",
           isEstimate: false,
-          subtotal: totalStr,
+          subtotal: subtotalStr,
           total: totalStr,
           paidAmount: totalStr,
         })
@@ -701,13 +718,13 @@ export const ekasaRouter = createRouter({
       }
 
       // 4. Vlož položky a zníž skladové zásoby
-      for (const it of input.items) {
+      for (const it of discountedItems) {
         await ctx.db.insert(invoiceItems).values({
           invoiceId: invoice.id,
           description: it.description,
           quantity: it.quantity,
-          unitPrice: it.unitPrice,
-          total: (Number(it.unitPrice) * it.quantity).toFixed(2),
+          unitPrice: it.discountedUnitPrice,
+          total: it.lineTotal,
           itemType: it.productId ? "product" : "service",
           itemId: it.productId ?? null,
         });
@@ -727,11 +744,11 @@ export const ekasaRouter = createRouter({
         }
       }
 
-      // 5. Vypočítaj viacsadzbovú DPH
-      const mappedItems = input.items.map((it) => ({
+      // 5. Vypočítaj viacsadzbovú DPH (z cien po zľave)
+      const mappedItems = discountedItems.map((it) => ({
         name: it.description,
         qty: it.quantity,
-        unitPrice: it.unitPrice,
+        unitPrice: it.discountedUnitPrice,
         vatRate: it.vatRate,
       }));
       const multiVat = calculateMultiVatReceipt(mappedItems);
