@@ -1,163 +1,194 @@
-"use client";
-
-import { useState } from "react";
+import * as React from "react";
 import {
+  FilePenLine,
+  Fingerprint,
   ShieldCheck,
+  ShieldAlert,
   User,
   Clock,
-  FileEdit,
-  CheckCircle,
-  Hash,
-  ChevronDown,
-  ChevronUp,
-  Fingerprint,
+  Globe,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
-import { useI18n } from "@/lib/i18n";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  diffLines,
+  stringifyForDiff,
+  type AuditTimelineEvent,
+  type DiffLine,
+} from "@/lib/audit/timeline";
+
+/**
+ * Univerzálny komponent pre kompletnú forenznú históriu záznamu.
+ *
+ * Zobrazuje pre každú udalosť:
+ *   - KTO: meno lekára, rola, IP adresa
+ *   - KEDY: presný klinický čas
+ *   - ČO: typ akcie (úprava dávky, storno, pridanie diagnózy, potvrdenie AI návrhu)
+ *   - DÔVOD: textové odôvodnenie lekára (pri oprave po uzatvorení)
+ *   - DIFF: vizuálne zvýraznenie zmien (pôvodné vs. nové znenie)
+ *   - PEČAŤ: hash chain potvrdzujúci integritu (AI ledger)
+ *
+ * Komponent je čisto prezentačný — dáta dodáva volajúci (napr. detail pacienta,
+ * inšpekčný export). Takto ho možno použiť server-side (export) aj client-side.
+ */
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("sk-SK", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function kindMeta(kind: AuditTimelineEvent["kind"]) {
+  switch (kind) {
+    case "ai_confirmation":
+      return {
+        icon: ShieldCheck,
+        label: "Potvrdenie AI návrhu",
+        iconClass: "text-violet-600 dark:text-violet-300",
+      };
+    case "clinical_correction":
+      return {
+        icon: FilePenLine,
+        label: "Oprava záznamu",
+        iconClass: "text-amber-600 dark:text-amber-300",
+      };
+    default:
+      return {
+        icon: ShieldAlert,
+        label: "Zmena záznamu",
+        iconClass: "text-sky-600 dark:text-sky-300",
+      };
+  }
+}
+
+function DiffBlock({ before, after }: { before?: unknown; after?: unknown }) {
+  const beforeStr = stringifyForDiff(before);
+  const afterStr = stringifyForDiff(after);
+
+  // Bez pred/po hodnôt diff nezobrazujeme.
+  if (!beforeStr && !afterStr) return null;
+
+  const lines: DiffLine[] = diffLines(beforeStr, afterStr);
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-md border border-border font-mono text-[11px] leading-relaxed">
+      {lines.slice(0, 200).map((line, idx) => (
+        <div
+          key={idx}
+          className={`px-3 py-0.5 whitespace-pre-wrap break-words ${
+            line.type === "add"
+              ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+              : line.type === "remove"
+                ? "bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300 line-through"
+                : "text-muted-foreground"
+          }`}
+        >
+          <span className="mr-2 select-none">
+            {line.type === "add" ? "+" : line.type === "remove" ? "−" : " "}
+          </span>
+          {line.text || " "}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export interface AuditHistoryTimelineProps {
-  entityType: "soap_note" | "discharge_report" | "imaging_analysis" | "treatment_plan" | "prescription";
-  entityId: string;
-  title?: string;
+  events: AuditTimelineEvent[];
+  emptyMessage?: string;
+  showHashChain?: boolean;
 }
 
 export function AuditHistoryTimeline({
-  entityType,
-  entityId,
-  title,
+  events,
+  emptyMessage = "Pre tento záznam zatiaľ neexistuje žiadna história.",
+  showHashChain = true,
 }: AuditHistoryTimelineProps) {
-  const { t } = useI18n();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const { data: history, isLoading } = trpc.extensions.auditExport.getEntityHistory.useQuery({
-    entityType,
-    entityId,
-  });
-
-  if (isLoading) {
+  if (events.length === 0) {
     return (
-      <div className="py-4 text-center text-xs text-muted-foreground animate-pulse">
-        Načítavam forenzný audit trail...
-      </div>
-    );
-  }
-
-  if (!history || history.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-        Pre tento záznam zatiaľ nebol zaevidovaný žiadny auditný zápis.
+      <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-xl border bg-card p-5">
-      <div className="flex items-center justify-between border-b pb-3">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h4 className="font-heading font-semibold text-sm">
-            {title || t("audit.timeline.title", "Forenzný audit trail (Append-only Ledger)")}
-          </h4>
-        </div>
-        <Badge variant="outline" className="text-[10px] gap-1 border-primary/30 text-primary">
-          <Fingerprint className="h-3 w-3" />
-          SHA-256 Hash Chain
-        </Badge>
-      </div>
+    <ol className="relative space-y-4 border-l border-border pl-5">
+      {events.map((event) => {
+        const meta = kindMeta(event.kind);
+        const Icon = meta.icon;
+        const hasDiff = event.before !== undefined || event.after !== undefined;
+        return (
+          <li key={event.id} className="relative">
+            <span className="absolute -left-[26px] top-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background">
+              <Icon className={`h-3 w-3 ${meta.iconClass}`} />
+            </span>
 
-      <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
-        {history.map((item, idx) => {
-          const isExpanded = expandedId === item.id;
-          const dateStr = new Date(item.confirmedAt).toLocaleString("sk-SK", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          });
-
-          return (
-            <div key={item.id} className="relative">
-              {/* Ikona na osi */}
-              <div className="absolute -left-6 top-0.5 flex h-5 w-5 items-center justify-center rounded-full border bg-background text-primary shadow-sm">
-                <CheckCircle className="h-3 w-3 text-emerald-600" />
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-sm font-semibold">{meta.label}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                  {event.action}
+                </span>
+                {event.reason && (
+                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    Dôvod: {event.reason}
+                  </span>
+                )}
               </div>
 
-              <div className="rounded-lg border bg-muted/20 p-3.5 space-y-2 hover:border-border transition-colors">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-primary">
-                      #{item.sequenceNumber ?? idx + 1}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <User className="h-3.5 w-3.5" />
+                  {event.actorName ?? "Neznámy používateľ"}
+                  {event.actorRole ? (
+                    <span className="rounded bg-muted px-1 text-[10px] uppercase">
+                      {event.actorRole}
                     </span>
-                    <span className="font-medium text-xs text-foreground flex items-center gap-1">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                      {item.actorName}
-                    </span>
-                    <Badge variant="secondary" className="text-[10px] py-0">
-                      {item.actorRole || "veterinarian"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {dateStr}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                  <span className="text-muted-foreground">Akcia:</span>
-                  <span className="font-medium">{item.actionType || "Potvrdenie klinického záznamu"}</span>
-                  {item.wasEditedByClinician ? (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">
-                      <FileEdit className="h-2.5 w-2.5 mr-1" />
-                      Lekársky upravené
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px]">
-                      Prijaté bez zmeny
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Kryptografické detaily */}
-                <div className="pt-1">
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Hash className="h-3 w-3" />
-                    <span>Kryptografický odtlačok</span>
-                    {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </button>
-
-                  {isExpanded && (
-                    <div className="mt-2 rounded bg-background p-2.5 font-mono text-[10px] text-muted-foreground space-y-1.5 border">
-                      <div>
-                        <span className="text-foreground font-semibold">Event Hash:</span>{" "}
-                        <span className="break-all">{item.eventHash || "—"}</span>
-                      </div>
-                      {item.previousEventHash && (
-                        <div>
-                          <span className="text-foreground font-semibold">Previous Hash:</span>{" "}
-                          <span className="break-all">{item.previousEventHash}</span>
-                        </div>
-                      )}
-                      {item.ipAddress && (
-                        <div>
-                          <span className="text-foreground font-semibold">IP Adresa:</span>{" "}
-                          <span>{item.ipAddress}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  ) : null}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatTimestamp(event.occurredAt)}
+                </span>
+                {event.ipAddress && (
+                  <span className="inline-flex items-center gap-1">
+                    <Globe className="h-3.5 w-3.5" />
+                    {event.ipAddress}
+                  </span>
+                )}
               </div>
+
+              {hasDiff && <DiffBlock before={event.before} after={event.after} />}
+
+              {showHashChain && event.eventHash && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Fingerprint className="h-3.5 w-3.5" />
+                    Pečať:{" "}
+                    <span className="font-mono">{event.eventHash.slice(0, 16)}…</span>
+                  </span>
+                  {event.sequenceNumber != null && (
+                    <span className="font-mono">#seq {event.sequenceNumber}</span>
+                  )}
+                  {event.previousEventHash && (
+                    <span className="font-mono">
+                      ← {event.previousEventHash.slice(0, 12)}…
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
-    </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
+
+export default AuditHistoryTimeline;

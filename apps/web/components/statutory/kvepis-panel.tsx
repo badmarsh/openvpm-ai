@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Globe,
   FileCheck2,
@@ -35,9 +36,10 @@ export function KvepisPanel() {
 
   const utils = trpc.useUtils();
 
-  const { data: submissions, isLoading } = trpc.extensions.kvepis.listSubmissions.useQuery({
+  const { data: submissionsData, isLoading } = trpc.extensions.kvepis.listSubmissions.useQuery({
     status: statusFilter as any,
   });
+  const submissions = submissionsData?.items ?? [];
 
   const { data: credentials } = trpc.extensions.kvepis.getCredentials.useQuery();
 
@@ -48,7 +50,7 @@ export function KvepisPanel() {
       setShowReceiptModal(false);
       setReceiptInput("");
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(err.message);
     },
   });
@@ -60,7 +62,7 @@ export function KvepisPanel() {
       setShowSignatureModal(false);
       setSignatureInput("");
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(err.message);
     },
   });
@@ -155,6 +157,12 @@ export function KvepisPanel() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/statutory/kvepis">
+            <Button size="sm" className="gap-1.5">
+              <ExternalLink className="h-3.5 w-3.5" />
+              KVEPIS Hub
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"
@@ -174,18 +182,18 @@ export function KvepisPanel() {
           <p className="mt-1 font-mono text-sm font-semibold">{credentials?.ico || "Nenastavené"}</p>
         </div>
         <div className="rounded-lg border bg-card p-3.5">
-          <span className="text-xs text-muted-foreground">Príslušná RVPS</span>
-          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.rvpsCode || "SK-RVPS-BA"}</p>
+          <span className="text-xs text-muted-foreground">ÚPVS Schránka</span>
+          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.upvsSchranka || "SK-UPVS-DEFAULT"}</p>
         </div>
         <div className="rounded-lg border bg-card p-3.5">
           <span className="text-xs text-muted-foreground">Číslo KVL SR</span>
-          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.kvlRegistrationNumber || "Nenastavené"}</p>
+          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.kvlId || "Nenastavené"}</p>
         </div>
         <div className="rounded-lg border bg-card p-3.5">
-          <span className="text-xs text-muted-foreground">Režim brány</span>
+          <span className="text-xs text-muted-foreground">Režim integrácie</span>
           <div className="mt-1">
-            <Badge variant="outline" className={credentials?.isProduction ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}>
-              {credentials?.isProduction ? "Produkcia ŠVPS" : "Testovacia brána / Sandbox"}
+            <Badge variant="outline" className={credentials?.isActive ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}>
+              {credentials?.integrationMode === "B2G" ? "Priame B2G / ÚPVS" : "Asistované podanie (GUIDED)"}
             </Badge>
           </div>
         </div>
@@ -244,7 +252,7 @@ export function KvepisPanel() {
             <tbody className="divide-y">
               {submissions.map((sub) => (
                 <tr key={sub.id} className="hover:bg-muted/20">
-                  <td className="p-3 font-mono font-medium">{sub.submissionReference}</td>
+                  <td className="p-3 font-mono font-medium">{sub.referenceNumber}</td>
                   <td className="p-3">
                     <span className="text-xs">
                       {sub.submissionType === "rabies_notification"
@@ -256,15 +264,17 @@ export function KvepisPanel() {
                   </td>
                   <td className="p-3">
                     <div className="font-medium">{sub.patientName || "—"}</div>
-                    <div className="text-xs text-muted-foreground">{sub.clientName || ""}</div>
+                    <div className="text-xs text-muted-foreground">{sub.species || sub.farmIco || ""}</div>
                   </td>
                   <td className="p-3">{statusBadge(sub.status)}</td>
                   <td className="p-3">
-                    {sub.receiptReference ? (
-                      <span className="font-mono text-xs text-emerald-600">{sub.receiptReference}</span>
-                    ) : sub.signatureHash ? (
+                    {sub.receiptReceivedAt ? (
+                      <span className="font-mono text-xs text-emerald-600">
+                        Prijaté ({new Date(sub.receiptReceivedAt).toLocaleDateString("sk-SK")})
+                      </span>
+                    ) : sub.payloadHash ? (
                       <span className="font-mono text-xs text-purple-600">
-                        KEP: {sub.signatureHash.substring(0, 10)}...
+                        KEP: {sub.payloadHash.substring(0, 10)}...
                       </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -275,7 +285,7 @@ export function KvepisPanel() {
                       variant="outline"
                       size="sm"
                       className="h-8 gap-1"
-                      onClick={() => downloadXml(sub.submissionReference)}
+                      onClick={() => downloadXml(sub.referenceNumber)}
                     >
                       <Download className="h-3.5 w-3.5" />
                       XML

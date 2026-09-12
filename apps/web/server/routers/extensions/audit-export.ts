@@ -1,123 +1,99 @@
 import { z } from "zod";
-import { eq, and, isNull, desc, asc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { generateReportPdf } from "@/lib/pdf";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import {
-  extAiAuditLog,
-  practices,
-  users,
-} from "@openpims/db";
+  collectTimelineEvents,
+  buildAuditCsv,
+  buildAuditManifest,
+} from "@/lib/audit/export";
 
-const vetProcedure = protectedProcedure.use(
-  requireRole("admin", "veterinarian", "technician")
-);
-
+/**
+ * Inšpekčný protokol ŠVPS SR / KVL SR / Finančná správa SR.
+ *
+ * Exportuje forenznú históriu kontrolovaných látok, knihy ošetrení alebo knihy
+ * besnoty do:
+ *   - CSV (semicolon-delimited, UTF-8 BOM),
+ *   - JSON,
+ *   - PDF reportu (tlačiteľný inšpekčný protokol),
+ *   - SHA-256 podpisového sumára (manifest) potvrdzujúceho integritu exportu.
+ *
+ * Export je dostupný len pre roly admin / veterinarian.
+ */
 export const auditExportRouter = createRouter({
-  /**
-   * Získanie histórie auditných záznamov pre konkrétnu entitu (záznam, recept, snímok)
-   */
-  getEntityHistory: vetProcedure
+  exportInspectionProtocol: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
     .input(
       z.object({
-        entityType: z.enum([
-          "soap_note",
-          "discharge_report",
-          "imaging_analysis",
-          "treatment_plan",
-          "prescription",
-        ]),
-        entityId: z.string().uuid(),
+        entityType: z.string().optional(),
+        entityId: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(5000).default(1000),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const rows = await ctx.db
-        .select({
-          id: extAiAuditLog.id,
-          sequenceNumber: extAiAuditLog.sequenceNumber,
-          actorId: extAiAuditLog.actorId,
-          actorName: extAiAuditLog.actorName,
-          actorRole: extAiAuditLog.actorRole,
-          actionType: extAiAuditLog.actionType,
-          entityType: extAiAuditLog.entityType,
-          entityId: extAiAuditLog.entityId,
-          wasEditedByClinician: extAiAuditLog.wasEditedByClinician,
-          confirmedAt: extAiAuditLog.confirmedAt,
-          eventHash: extAiAuditLog.eventHash,
-          previousEventHash: extAiAuditLog.previousEventHash,
-          ipAddress: extAiAuditLog.ipAddress,
-        })
-        .from(extAiAuditLog)
-        .where(
-          and(
-            eq(extAiAuditLog.practiceId, ctx.practiceId),
-            eq(extAiAuditLog.entityType, input.entityType),
-            eq(extAiAuditLog.entityId, input.entityId),
-            isNull(extAiAuditLog.deletedAt)
-          )
-        )
-        .orderBy(asc(extAiAuditLog.confirmedAt));
-
-      return rows;
-    }),
-
-  /**
-   * Vygenerovanie certifikovaného inšpekčného protokolu pre ŠVPS SR / KVL SR
-   */
-  generateInspectionReport: vetProcedure
-    .input(
-      z.object({
-        from: z.date().optional(),
-        to: z.date().optional(),
-        limit: z.number().int().min(1).max(500).default(100),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const [practice] = await ctx.db
-        .select()
-        .from(practices)
-        .where(eq(practices.id, ctx.practiceId));
-
-      const logs = await ctx.db
-        .select()
-        .from(extAiAuditLog)
-        .where(
-          and(
-            eq(extAiAuditLog.practiceId, ctx.practiceId),
-            isNull(extAiAuditLog.deletedAt)
-          )
-        )
-        .orderBy(desc(extAiAuditLog.confirmedAt))
-        .limit(input.limit);
-
-      const generatedAt = new Date().toISOString();
-      let isChainIntact = true;
-
-      // Overenie kontinuity reťazca
-      for (let i = 0; i < logs.length - 1; i++) {
-        if (
-          logs[i].previousEventHash &&
-          logs[i + 1].eventHash &&
-          logs[i].previousEventHash !== logs[i + 1].eventHash
-        ) {
-          isChainIntact = false;
-          break;
-        }
+    .mutation(async ({ ctx, input }) => {
+      if (input.entityId && !input.entityType) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "entityId vyžaduje aj entityType",
+        });
       }
 
+      const events = await collectTimelineEvents(ctx.db, ctx.practiceId, {
+        entityType: input.entityType,
+        entityId: input.entityId,
+        limit: input.limit,
+      });
+
+      const csv = buildAuditCsv(events);
+      const json = JSON.stringify(events, null, 2);
+      const manifest = buildAuditManifest({ events, csv, json });
+
+      const pdf = generateReportPdf({
+        title: "Inšpekčný protokol — Audit Trail",
+        subtitle:
+          `ŠVPS SR / KVL SR · Počet udalostí: ${events.length} · ` +
+          `SHA-256 (CSV): ${manifest.sha256Csv.slice(0, 16)}… · ` +
+          `Vygenerované: ${new Date(manifest.generatedAt).toLocaleString("sk-SK")}`,
+        columns: [
+          "Kedy",
+          "Kto",
+          "Rola",
+          "Akcia",
+          "Typ",
+          "Dôvod",
+          "IP",
+          "Pečať",
+        ],
+        rows: events.map((e) => [
+          new Date(e.occurredAt).toLocaleString("sk-SK"),
+          e.actorName ?? "—",
+          e.actorRole ?? "—",
+          e.action,
+          e.entityType ?? "—",
+          e.reason ?? "—",
+          e.ipAddress ?? "—",
+          e.eventHash ? `${e.eventHash.slice(0, 16)}…` : "—",
+        ]),
+        emptyMessage: "Pre zvolený filter neexistujú žiadne audit udalosti.",
+        locale: "sk",
+      });
+
+      pdf.setProperties({
+        title: "Inšpekčný protokol — Audit Trail (OpenVPM)",
+        subject: "Forenzná história záznamu — ŠVPS SR / KVL SR",
+        author: "OpenVPM",
+        creator: "OpenVPM Audit Export",
+      });
+
+      const pdfBase64 = Buffer.from(pdf.output("arraybuffer")).toString(
+        "base64"
+      );
+
       return {
-        practiceName: practice?.name || "Veterinárna ambulancia",
-        generatedAt,
-        totalEvents: logs.length,
-        isChainIntact,
-        events: logs.map((log) => ({
-          seq: log.sequenceNumber,
-          date: log.confirmedAt,
-          actor: `${log.actorName} (${log.actorRole || "vet"})`,
-          type: log.entityType,
-          action: log.actionType || "confirmed",
-          edited: log.wasEditedByClinician ? "Áno" : "Nie (Prijatý draft)",
-          hash: log.eventHash ? log.eventHash.substring(0, 16) + "..." : "—",
-        })),
+        csv,
+        json,
+        pdfBase64,
+        manifest,
       };
     }),
 });

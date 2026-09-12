@@ -1,35 +1,109 @@
 import { z } from "zod";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import {
   extKvepisSubmissions,
   extKvepisCredentials,
-  extWithdrawalPeriods,
-  vaccinationRecords,
   patients,
-  clients,
-  users,
 } from "@openpims/db";
 import {
-  validateRabiesNotification,
-  validateTreatmentDiaryBatch,
-  validateAnimalMovement,
+  validateKvepisSubmission,
+  type KvepisSubmissionType,
 } from "@/lib/kvepis/validator";
 import {
-  buildRabiesNotificationXml,
-  buildTreatmentDiaryBatchXml,
-  buildAnimalMovementXml,
+  buildKvepisPayload,
+  buildReferenceNumber,
+  hashPayload,
 } from "@/lib/kvepis/builder";
 
 const vetProcedure = protectedProcedure.use(
-  requireRole("admin", "veterinarian", "technician", "front_desk")
+  requireRole("admin", "veterinarian", "technician")
 );
 
+/** Počet podaní v daný kalendárny deň pre kliniku + 1 → poradové číslo. */
+async function nextSequenceForToday(
+  db: typeof import("@openpims/db/client").db,
+  practiceId: string
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(extKvepisSubmissions)
+    .where(
+      and(
+        eq(extKvepisSubmissions.practiceId, practiceId),
+        isNull(extKvepisSubmissions.deletedAt)
+      )
+    );
+  return (row?.count ?? 0) + 1;
+}
+
 export const kvepisRouter = createRouter({
-  /**
-   * Zoznam všetkých KVEPIS podaní pre kliniku
-   */
+  /** Konfigurácia prístupu kliniky (IČO, KVL ID, ÚPVS schránka, podpis). */
+  getCredentials: vetProcedure.query(async ({ ctx }) => {
+    const row = await ctx.db.query.extKvepisCredentials.findFirst({
+      where: and(
+        eq(extKvepisCredentials.practiceId, ctx.practiceId),
+        isNull(extKvepisCredentials.deletedAt)
+      ),
+    });
+    return row ?? null;
+  }),
+
+  upsertCredentials: vetProcedure
+    .input(
+      z.object({
+        ico: z.string().min(8).max(8),
+        kvlId: z.string().optional(),
+        upvsSchranka: z.string().optional(),
+        integrationMode: z.enum(["GUIDED", "B2G"]).default("GUIDED"),
+        signingPreference: z
+          .enum(["NONE", "DSIGNER", "CLOUD_SEAL", "HSM"])
+          .default("DSIGNER"),
+        certificateBase64: z.string().optional(),
+        certificateSerial: z.string().optional(),
+        certificateValidUntil: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.extKvepisCredentials.findFirst({
+        where: and(
+          eq(extKvepisCredentials.practiceId, ctx.practiceId),
+          isNull(extKvepisCredentials.deletedAt)
+        ),
+      });
+
+      const values = {
+        ico: input.ico,
+        kvlId: input.kvlId ?? null,
+        upvsSchranka: input.upvsSchranka ?? null,
+        integrationMode: input.integrationMode,
+        signingPreference: input.signingPreference,
+        certificateBase64: input.certificateBase64 ?? null,
+        certificateSerial: input.certificateSerial ?? null,
+        certificateValidUntil: input.certificateValidUntil
+          ? new Date(input.certificateValidUntil)
+          : null,
+        isActive: true,
+      };
+
+      if (existing) {
+        const [updated] = await ctx.db
+          .update(extKvepisCredentials)
+          .set(values)
+          .where(eq(extKvepisCredentials.id, existing.id))
+          .returning();
+        return updated;
+      }
+
+      const [created] = await ctx.db
+        .insert(extKvepisCredentials)
+        .values({ practiceId: ctx.practiceId, ...values })
+        .returning();
+      return created;
+    }),
+
+  /** Prehľad pripravených podaní z ambulantnej knihy. */
   listSubmissions: vetProcedure
     .input(
       z
@@ -52,7 +126,7 @@ export const kvepisRouter = createRouter({
               "infectious_disease_alert",
             ])
             .optional(),
-          limit: z.number().int().min(1).max(100).default(50),
+          limit: z.number().int().min(1).max(200).default(50),
           offset: z.number().int().min(0).default(0),
         })
         .optional()
@@ -62,11 +136,9 @@ export const kvepisRouter = createRouter({
         eq(extKvepisSubmissions.practiceId, ctx.practiceId),
         isNull(extKvepisSubmissions.deletedAt),
       ];
-
       if (input?.status) {
         whereConds.push(eq(extKvepisSubmissions.status, input.status));
       }
-
       if (input?.submissionType) {
         whereConds.push(
           eq(extKvepisSubmissions.submissionType, input.submissionType)
@@ -76,174 +148,357 @@ export const kvepisRouter = createRouter({
       const rows = await ctx.db
         .select({
           id: extKvepisSubmissions.id,
-          submissionReference: extKvepisSubmissions.submissionReference,
+          referenceNumber: extKvepisSubmissions.referenceNumber,
           submissionType: extKvepisSubmissions.submissionType,
           status: extKvepisSubmissions.status,
-          receiptReference: extKvepisSubmissions.receiptReference,
-          signatureHash: extKvepisSubmissions.signatureHash,
+          farmIco: extKvepisSubmissions.farmIco,
+          cehzCode: extKvepisSubmissions.cehzCode,
+          earTagNumber: extKvepisSubmissions.earTagNumber,
+          transponderNumber: extKvepisSubmissions.transponderNumber,
+          kvlNumber: extKvepisSubmissions.kvlNumber,
+          payloadHash: extKvepisSubmissions.payloadHash,
           submittedAt: extKvepisSubmissions.submittedAt,
-          acknowledgedAt: extKvepisSubmissions.acknowledgedAt,
+          receiptReceivedAt: extKvepisSubmissions.receiptReceivedAt,
           errorCode: extKvepisSubmissions.errorCode,
           errorMessage: extKvepisSubmissions.errorMessage,
           createdAt: extKvepisSubmissions.createdAt,
+          patientId: patients.id,
           patientName: patients.name,
-          clientName: sqlConcatClientName(),
+          species: patients.species,
+          microchipNumber: patients.microchipNumber,
         })
         .from(extKvepisSubmissions)
-        .leftJoin(patients, eq(extKvepisSubmissions.patientId, patients.id))
-        .leftJoin(clients, eq(extKvepisSubmissions.clientId, clients.id))
+        .leftJoin(
+          patients,
+          and(
+            eq(extKvepisSubmissions.patientId, patients.id),
+            eq(patients.practiceId, ctx.practiceId)
+          )
+        )
         .where(and(...whereConds))
         .orderBy(desc(extKvepisSubmissions.createdAt))
         .limit(input?.limit ?? 50)
         .offset(input?.offset ?? 0);
 
-      return rows;
-    }),
-
-  /**
-   * Detail podania vrátane kánonického XML a chýb validácie
-   */
-  getSubmission: vetProcedure
-    .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const [submission] = await ctx.db
-        .select()
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
         .from(extKvepisSubmissions)
-        .where(
-          and(
-            eq(extKvepisSubmissions.id, input.id),
-            eq(extKvepisSubmissions.practiceId, ctx.practiceId),
-            isNull(extKvepisSubmissions.deletedAt)
-          )
-        );
+        .where(and(...whereConds));
 
-      if (!submission) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "KVEPIS podanie nebolo nájdené.",
-        });
-      }
-
-      return submission;
+      return { items: rows, totalCount: countResult?.count ?? 0 };
     }),
 
-  /**
-   * Vytvorí KVEPIS podanie pre očkovanie proti besnote z existujúceho záznamu
-   */
-  createRabiesSubmission: vetProcedure
+  /** Vytvorenie nového podania (DRAFT) s okamžitou validáciou. */
+  createSubmission: vetProcedure
     .input(
       z.object({
-        vaccinationRecordId: z.string().uuid(),
+        submissionType: z.enum([
+          "rabies_notification",
+          "treatment_diary_batch",
+          "animal_movement",
+          "infectious_disease_alert",
+        ]),
+        patientId: z.string().uuid().optional(),
+        sourceEntityType: z.string().optional(),
+        sourceEntityId: z.string().uuid().optional(),
+        farmIco: z.string().optional(),
+        cehzCode: z.string().optional(),
+        earTagNumber: z.string().optional(),
+        transponderNumber: z.string().optional(),
+        kvlNumber: z.string().optional(),
+        animalSpecies: z.string().optional(),
+        diagnosis: z.string().optional(),
+        medicationName: z.string().optional(),
+        meatWithdrawalDays: z.number().int().min(0).optional(),
+        milkWithdrawalDays: z.number().int().min(0).optional(),
+        administeredAt: z.string().optional(),
+        safeUntil: z.string().optional(),
+        incidentDate: z.string().optional(),
+        notes: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const [vacRecord] = await ctx.db
-        .select({
-          id: vaccinationRecords.id,
-          patientId: vaccinationRecords.patientId,
-          vaccineName: vaccinationRecords.vaccineName,
-          lotNumber: vaccinationRecords.lotNumber,
-          administeredAt: vaccinationRecords.administeredAt,
-          nextDueDate: vaccinationRecords.nextDueDate,
-          patientName: patients.name,
-          patientSpecies: patients.species,
-          patientMicrochip: patients.microchipNumber,
-          clientId: clients.id,
-          clientFirstName: clients.firstName,
-          clientLastName: clients.lastName,
-          clientAddress: clients.address,
-          clientCity: clients.city,
-          clientPhone: clients.phone,
-        })
-        .from(vaccinationRecords)
-        .innerJoin(patients, eq(vaccinationRecords.patientId, patients.id))
-        .innerJoin(clients, eq(patients.clientId, clients.id))
-        .where(
-          and(
-            eq(vaccinationRecords.id, input.vaccinationRecordId),
-            eq(vaccinationRecords.practiceId, ctx.practiceId)
-          )
-        );
+      const seq = await nextSequenceForToday(ctx.db, ctx.practiceId);
+      const referenceNumber = buildReferenceNumber(new Date(), seq);
 
-      if (!vacRecord) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Záznam o vakcinácii nebol nájdený.",
-        });
-      }
-
-      // Načítanie KVEPIS registračných údajov ambulancie
-      const [creds] = await ctx.db
-        .select()
-        .from(extKvepisCredentials)
-        .where(
-          and(
-            eq(extKvepisCredentials.practiceId, ctx.practiceId),
-            eq(extKvepisCredentials.isActive, true)
-          )
-        );
-
-      const rvpsCode = creds?.rvpsCode || "SK-RVPS-BA";
-      const kvlNumber = creds?.kvlRegistrationNumber || "KVL-SK-DEFAULT";
-
-      const rabiesData = {
-        patient: {
-          id: vacRecord.patientId,
-          name: vacRecord.patientName,
-          species: vacRecord.patientSpecies || "canine",
-          microchipNumber: vacRecord.patientMicrochip,
-        },
-        client: {
-          name: `${vacRecord.clientFirstName} ${vacRecord.clientLastName}`.trim(),
-          address: vacRecord.clientAddress,
-          city: vacRecord.clientCity,
-          phone: vacRecord.clientPhone,
-        },
-        vaccination: {
-          vaccineName: vacRecord.vaccineName,
-          batchNumber: vacRecord.lotNumber || "UNSPECIFIED",
-          administeredAt: new Date(vacRecord.administeredAt),
-          validUntil: vacRecord.nextDueDate
-            ? new Date(vacRecord.nextDueDate)
-            : new Date(Date.now() + 365 * 24 * 3600 * 1000),
-        },
-        veterinarian: {
-          name: ctx.session?.user?.name || "Veterinárny lekár",
-          kvlNumber,
-        },
-        rvpsCode,
+      // Klinické polia sa v DRAFT fáze ukladajú do payloadJson, z ktorého ich
+      // číta validačný engine (validateAndBuild). Pri validácii sa potom
+      // payloadJson prepíše úplným kanonizovaným payloadom.
+      const draftJson: Record<string, unknown> = {
+        animalSpecies: input.animalSpecies ?? null,
+        diagnosis: input.diagnosis ?? null,
+        medicationName: input.medicationName ?? null,
+        meatWithdrawalDays: input.meatWithdrawalDays ?? null,
+        milkWithdrawalDays: input.milkWithdrawalDays ?? null,
+        administeredAt: input.administeredAt ?? null,
+        safeUntil: input.safeUntil ?? null,
+        incidentDate: input.incidentDate ?? null,
       };
-
-      const validation = validateRabiesNotification(rabiesData);
-      const submissionRef = `KVEPIS-BES-${Date.now().toString(36).toUpperCase()}`;
-      const { xml, hash } = buildRabiesNotificationXml(submissionRef, rabiesData);
 
       const [created] = await ctx.db
         .insert(extKvepisSubmissions)
         .values({
           practiceId: ctx.practiceId,
-          submissionType: "rabies_notification",
-          status: validation.valid ? "VALIDATED" : "DRAFT",
-          patientId: vacRecord.patientId,
-          clientId: vacRecord.clientId,
-          vaccinationRecordId: vacRecord.id,
-          submissionReference: submissionRef,
-          xmlPayload: xml,
-          jsonPayload: JSON.stringify(rabiesData),
-          signatureHash: hash,
-          validationErrors: validation.errors.length > 0 ? JSON.stringify(validation.errors) : null,
-          notes: validation.warnings.length > 0 ? validation.warnings.join("; ") : null,
+          submissionType: input.submissionType as KvepisSubmissionType,
+          referenceNumber,
+          patientId: input.patientId ?? null,
+          sourceEntityType: input.sourceEntityType ?? null,
+          sourceEntityId: input.sourceEntityId ?? null,
+          farmIco: input.farmIco ?? null,
+          cehzCode: input.cehzCode ?? null,
+          earTagNumber: input.earTagNumber ?? null,
+          transponderNumber: input.transponderNumber ?? null,
+          kvlNumber: input.kvlNumber ?? null,
+          payloadJson: draftJson,
+          status: "DRAFT",
         })
         .returning();
 
-      return {
-        submission: created,
-        validation,
-      };
+      return created;
     }),
 
   /**
-   * Zaznamenanie elektronického podpisu (D.Signer / KEP)
+   * Validácia existujúceho podania. Vracia zoznam chýb a varovaní; ak je
+   * podanie validné, vygeneruje a uloží XML/JSON payload + hash a prejde do
+   * stavu VALIDATED.
+   */
+  validateAndBuild: vetProcedure
+    .input(z.object({ submissionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const submission = await ctx.db.query.extKvepisSubmissions.findFirst({
+        where: and(
+          eq(extKvepisSubmissions.id, input.submissionId),
+          eq(extKvepisSubmissions.practiceId, ctx.practiceId),
+          isNull(extKvepisSubmissions.deletedAt)
+        ),
+      });
+
+      if (!submission) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Podanie nebolo nájdené" });
+      }
+
+      const credentials = await ctx.db.query.extKvepisCredentials.findFirst({
+        where: and(
+          eq(extKvepisCredentials.practiceId, ctx.practiceId),
+          isNull(extKvepisCredentials.deletedAt)
+        ),
+      });
+
+      // Polia, ktoré nie sú na zázname (diagnóza, liečivo, lehoty), prichádzajú
+      // z payloadu JSON ak už existuje, inak ich validujeme na dostupných údajoch.
+      const previousJson = (submission.payloadJson ?? {}) as Record<string, unknown>;
+
+      const result = validateKvepisSubmission({
+        submissionType: submission.submissionType,
+        farmIco: submission.farmIco,
+        cehzCode: submission.cehzCode,
+        earTagNumber: submission.earTagNumber,
+        transponderNumber: submission.transponderNumber,
+        kvlNumber: submission.kvlNumber ?? credentials?.kvlId,
+        animalSpecies: (previousJson.animalSpecies as string) ?? undefined,
+        diagnosis: (previousJson.diagnosis as string) ?? undefined,
+        medicationName: (previousJson.medicationName as string) ?? undefined,
+        meatWithdrawalDays: (previousJson.meatWithdrawalDays as number) ?? undefined,
+        milkWithdrawalDays: (previousJson.milkWithdrawalDays as number) ?? undefined,
+        administeredAt: (previousJson.administeredAt as string) ?? undefined,
+        safeUntil: (previousJson.safeUntil as string) ?? undefined,
+        incidentDate: (previousJson.incidentDate as string) ?? undefined,
+      });
+
+      if (!result.valid) {
+        return { valid: false, issues: result.issues, payload: null };
+      }
+
+      const payload = buildKvepisPayload({
+        submissionType: submission.submissionType,
+        referenceNumber: submission.referenceNumber,
+        practiceIco: credentials?.ico ?? "",
+        practiceKvlId: credentials?.kvlId ?? null,
+        farmIco: submission.farmIco,
+        cehzCode: submission.cehzCode,
+        earTagNumber: submission.earTagNumber,
+        transponderNumber: submission.transponderNumber,
+        kvlNumber: submission.kvlNumber ?? credentials?.kvlId,
+        animalSpecies: (previousJson.animalSpecies as string) ?? undefined,
+        diagnosis: (previousJson.diagnosis as string) ?? undefined,
+        medicationName: (previousJson.medicationName as string) ?? undefined,
+        meatWithdrawalDays: (previousJson.meatWithdrawalDays as number) ?? undefined,
+        milkWithdrawalDays: (previousJson.milkWithdrawalDays as number) ?? undefined,
+        administeredAt: (previousJson.administeredAt as string) ?? undefined,
+        safeUntil: (previousJson.safeUntil as string) ?? undefined,
+        incidentDate: (previousJson.incidentDate as string) ?? undefined,
+      });
+
+      await ctx.db
+        .update(extKvepisSubmissions)
+        .set({
+          status: "VALIDATED",
+          payloadXml: payload.xml,
+          payloadJson: payload.json,
+          payloadHash: payload.hash,
+        })
+        .where(eq(extKvepisSubmissions.id, submission.id));
+
+      return { valid: true, issues: result.issues, payload };
+    }),
+
+  /** Označenie podania ako podpísaného (KEP) — D.Signer / cloudová pečať / HSM. */
+  signSubmission: vetProcedure
+    .input(
+      z.object({
+        submissionId: z.string().uuid(),
+        signatureMethod: z.enum(["DSIGNER", "CLOUD_SEAL", "HSM"]),
+        signaturePayload: z.record(z.unknown()).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const submission = await ctx.db.query.extKvepisSubmissions.findFirst({
+        where: and(
+          eq(extKvepisSubmissions.id, input.submissionId),
+          eq(extKvepisSubmissions.practiceId, ctx.practiceId),
+          isNull(extKvepisSubmissions.deletedAt)
+        ),
+      });
+
+      if (!submission) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Podanie nebolo nájdené" });
+      }
+      if (!submission.payloadHash) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Podanie musí byť najprv validované (VALIDATED)",
+        });
+      }
+
+      const [updated] = await ctx.db
+        .update(extKvepisSubmissions)
+        .set({
+          status: "SIGNED",
+          signatureMethod: input.signatureMethod,
+          signaturePayload: input.signaturePayload ?? {},
+          signedBy: ctx.session?.user?.id ?? null,
+          signedAt: new Date(),
+        })
+        .where(eq(extKvepisSubmissions.id, submission.id))
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Odoslanie podania. Vo fáze 1 (GUIDED) zaznamená odoslanie a vytvorí
+   * MessageID; skutočný transport cez B2G bránu nadviaže vo fáze 2.
+   */
+  submitSubmission: vetProcedure
+    .input(
+      z.object({
+        submissionId: z.string().uuid(),
+        upvsMessageId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const submission = await ctx.db.query.extKvepisSubmissions.findFirst({
+        where: and(
+          eq(extKvepisSubmissions.id, input.submissionId),
+          eq(extKvepisSubmissions.practiceId, ctx.practiceId),
+          isNull(extKvepisSubmissions.deletedAt)
+        ),
+      });
+
+      if (!submission) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Podanie nebolo nájdené" });
+      }
+      if (submission.status !== "SIGNED" && submission.status !== "VALIDATED") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Podanie musí byť podpísané (SIGNED) pred odoslaním",
+        });
+      }
+
+      const messageId =
+        input.upvsMessageId ?? `UPVS-${submission.referenceNumber}`;
+
+      const [updated] = await ctx.db
+        .update(extKvepisSubmissions)
+        .set({
+          status: "SUBMITTED",
+          submittedAt: new Date(),
+          upvsMessageId: messageId,
+        })
+        .where(eq(extKvepisSubmissions.id, submission.id))
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Nahratie doručenky / potvrdenia z ÚPVS a automatické spárovanie so
+   * záznamom pacienta (podanie → ACKNOWLEDGED).
+   */
+  uploadReceipt: vetProcedure
+    .input(
+      z.object({
+        submissionId: z.string().uuid(),
+        receiptPayload: z.record(z.unknown()),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const submission = await ctx.db.query.extKvepisSubmissions.findFirst({
+        where: and(
+          eq(extKvepisSubmissions.id, input.submissionId),
+          eq(extKvepisSubmissions.practiceId, ctx.practiceId),
+          isNull(extKvepisSubmissions.deletedAt)
+        ),
+      });
+
+      if (!submission) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Podanie nebolo nájdené" });
+      }
+
+      const [updated] = await ctx.db
+        .update(extKvepisSubmissions)
+        .set({
+          status: "ACKNOWLEDGED",
+          receiptReceivedAt: new Date(),
+          receiptPayload: input.receiptPayload,
+          receiptHash: hashPayload(input.receiptPayload),
+        })
+        .where(eq(extKvepisSubmissions.id, submission.id))
+        .returning();
+
+      return updated;
+    }),
+
+  /** Označenie zamietnutého podania s chybovým kódom ŠVPS SR. */
+  markRejected: vetProcedure
+    .input(
+      z.object({
+        submissionId: z.string().uuid(),
+        errorCode: z.string().min(1),
+        errorMessage: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extKvepisSubmissions)
+        .set({
+          status: "REJECTED",
+          errorCode: input.errorCode,
+          errorMessage: input.errorMessage ?? null,
+        })
+        .where(
+          and(
+            eq(extKvepisSubmissions.id, input.submissionId),
+            eq(extKvepisSubmissions.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Zaznamenanie elektronického podpisu (D.Signer / KEP) s odtlačkom (kompatibilita pre rýchle akcie).
    */
   recordSignature: vetProcedure
     .input(
@@ -257,15 +512,16 @@ export const kvepisRouter = createRouter({
         .update(extKvepisSubmissions)
         .set({
           status: "SIGNED",
-          signatureHash: input.signatureHash,
-          signedById: ctx.session?.user?.id,
+          payloadHash: input.signatureHash,
+          signatureMethod: "DSIGNER",
+          signedBy: ctx.session?.user?.id ?? null,
           signedAt: new Date(),
-          updatedAt: new Date(),
         })
         .where(
           and(
             eq(extKvepisSubmissions.id, input.submissionId),
-            eq(extKvepisSubmissions.practiceId, ctx.practiceId)
+            eq(extKvepisSubmissions.practiceId, ctx.practiceId),
+            isNull(extKvepisSubmissions.deletedAt)
           )
         )
         .returning();
@@ -281,7 +537,7 @@ export const kvepisRouter = createRouter({
     }),
 
   /**
-   * Zaznamenanie doručenky / potvrdenia o prevzatí z ÚPVS alebo KVEPIS
+   * Zaznamenanie doručenky / potvrdenia o prevzatí z ÚPVS (kompatibilita pre rýchle akcie).
    */
   recordReceipt: vetProcedure
     .input(
@@ -295,15 +551,14 @@ export const kvepisRouter = createRouter({
         .update(extKvepisSubmissions)
         .set({
           status: "ACKNOWLEDGED",
-          receiptReference: input.receiptReference,
-          acknowledgedAt: new Date(),
-          submittedAt: new Date(),
-          updatedAt: new Date(),
+          receiptReceivedAt: new Date(),
+          receiptPayload: { receiptReference: input.receiptReference },
         })
         .where(
           and(
             eq(extKvepisSubmissions.id, input.submissionId),
-            eq(extKvepisSubmissions.practiceId, ctx.practiceId)
+            eq(extKvepisSubmissions.practiceId, ctx.practiceId),
+            isNull(extKvepisSubmissions.deletedAt)
           )
         )
         .returning();
@@ -317,69 +572,4 @@ export const kvepisRouter = createRouter({
 
       return updated;
     }),
-
-  /**
-   * Získanie konfigurácie KVEPIS pre kliniku
-   */
-  getCredentials: vetProcedure.query(async ({ ctx }) => {
-    const [creds] = await ctx.db
-      .select()
-      .from(extKvepisCredentials)
-      .where(
-        and(
-          eq(extKvepisCredentials.practiceId, ctx.practiceId),
-          isNull(extKvepisCredentials.deletedAt)
-        )
-      );
-
-    return creds || null;
-  }),
-
-  /**
-   * Nastavenie alebo úprava KVEPIS poverení
-   */
-  saveCredentials: vetProcedure
-    .input(
-      z.object({
-        ico: z.string().length(8),
-        dic: z.string().optional(),
-        kvlRegistrationNumber: z.string().min(2),
-        rvpsCode: z.string().min(3),
-        upvsBoxId: z.string().optional(),
-        apiEndpoint: z.string().url().default("https://portal.svps.sk/kvepis-api/v1"),
-        isProduction: z.boolean().default(false),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const [existing] = await ctx.db
-        .select()
-        .from(extKvepisCredentials)
-        .where(eq(extKvepisCredentials.practiceId, ctx.practiceId));
-
-      if (existing) {
-        const [updated] = await ctx.db
-          .update(extKvepisCredentials)
-          .set({
-            ...input,
-            updatedAt: new Date(),
-          })
-          .where(eq(extKvepisCredentials.id, existing.id))
-          .returning();
-        return updated;
-      }
-
-      const [created] = await ctx.db
-        .insert(extKvepisCredentials)
-        .values({
-          practiceId: ctx.practiceId,
-          ...input,
-        })
-        .returning();
-
-      return created;
-    }),
 });
-
-function sqlConcatClientName() {
-  return clients.lastName;
-}
