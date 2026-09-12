@@ -6,6 +6,7 @@ import {
   Download,
   FileSpreadsheet,
   FileCode,
+  FileText,
   Calendar,
   X,
   Loader2,
@@ -35,7 +36,7 @@ export function AccountingExportDialog({
 
   const [dateFrom, setDateFrom] = useState(firstDay);
   const [dateTo, setDateTo] = useState(today);
-  const [format, setFormat] = useState<"pohoda_xml" | "kros_omega">("pohoda_xml");
+  const [format, setFormat] = useState<"pohoda_xml" | "kros_omega" | "isdoc">("pohoda_xml");
   const [includeInvoices, setIncludeInvoices] = useState(true);
   const [includeEkasa, setIncludeEkasa] = useState(true);
 
@@ -64,6 +65,31 @@ export function AccountingExportDialog({
     },
   });
 
+  const isdocMutation = trpc.extensions.accounting.exportIsdoc.useMutation({
+    onSuccess: (data) => {
+      const blob = new Blob([data.content], { type: data.mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = data.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(
+        t(
+          "accounting.isdocSuccess",
+          `ISDOC export stiahnutý: ${data.invoiceCount} faktúr`
+        )
+      );
+      onClose();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("accounting.isdocError", "Chyba pri generovaní ISDOC exportu"));
+    },
+  });
+
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
@@ -85,6 +111,10 @@ export function AccountingExportDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (format === "isdoc") {
+      isdocMutation.mutate({ dateFrom, dateTo });
+      return;
+    }
     if (!includeInvoices && !includeEkasa) {
       toast.error(t("accounting.selectAtLeastOne", "Vyberte aspoň jeden typ dokladov (faktúry alebo e-Kasa)"));
       return;
@@ -185,6 +215,28 @@ export function AccountingExportDialog({
                   <div className="text-xs text-muted-foreground">CSV import</div>
                 </div>
               </label>
+
+              <label
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all col-span-2 ${
+                  format === "isdoc"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="format"
+                  value="isdoc"
+                  checked={format === "isdoc"}
+                  onChange={() => setFormat("isdoc")}
+                  className="sr-only"
+                />
+                <FileText className="h-5 w-5 text-sky-600" />
+                <div>
+                  <div className="text-sm font-medium">ISDOC (elektronická faktúra)</div>
+                  <div className="text-xs text-muted-foreground">{t("accounting.isdocDesc", "ISDOC 6.0.2 XML pre Pohoda, Omega, Money, ABRA")}</div>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -220,40 +272,42 @@ export function AccountingExportDialog({
             </div>
           </div>
 
-          {/* Scope selection */}
-          <div className="space-y-2 border-t border-border pt-4">
-            <label className="text-sm font-medium text-foreground block">
-              {t("accounting.scopeLabel", "Zahrnúť do exportu")}
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={includeInvoices}
-                  onChange={(e) => setIncludeInvoices(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-primary h-4 w-4"
-                />
-                <span>{t("accounting.includeInvoices", "Vydané faktúry (VF)")}</span>
+          {/* Scope selection (not applicable to ISDOC) */}
+          {format !== "isdoc" && (
+            <div className="space-y-2 border-t border-border pt-4">
+              <label className="text-sm font-medium text-foreground block">
+                {t("accounting.scopeLabel", "Zahrnúť do exportu")}
               </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={includeEkasa}
-                  onChange={(e) => setIncludeEkasa(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-primary h-4 w-4"
-                />
-                <span>{t("accounting.includeEkasa", "e-Kasa pokladničné doklady (PD)")}</span>
-              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeInvoices}
+                    onChange={(e) => setIncludeInvoices(e.target.checked)}
+                    className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <span>{t("accounting.includeInvoices", "Vydané faktúry (VF)")}</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeEkasa}
+                    onChange={(e) => setIncludeEkasa(e.target.checked)}
+                    className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <span>{t("accounting.includeEkasa", "e-Kasa pokladničné doklady (PD)")}</span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={exportMutation.isPending}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={exportMutation.isPending || isdocMutation.isPending}>
               {t("common.cancel", "Zrušiť")}
             </Button>
-            <Button type="submit" disabled={exportMutation.isPending}>
-              {exportMutation.isPending ? (
+            <Button type="submit" disabled={exportMutation.isPending || isdocMutation.isPending}>
+              {exportMutation.isPending || isdocMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t("accounting.generating", "Generujem export...")}

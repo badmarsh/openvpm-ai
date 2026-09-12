@@ -85,7 +85,9 @@ BEGIN
       OR c.relname LIKE 'ekasa_%'
       OR c.relname IN (
         'ai_imaging_analyses',
+        'dental_charts',
         'discharge_reports',
+        'kvl_cr_passports',
         'lab_analyzer_reports',
         'microchip_registrations',
         'pet_passports',

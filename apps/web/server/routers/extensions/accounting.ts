@@ -15,6 +15,7 @@ import {
   type AccountingInvoiceItem,
   type AccountingEkasaItem,
 } from "@/lib/accounting/export";
+import { buildIsdocXml } from "@/lib/accounting/isdoc-export";
 
 const accountingProcedure = protectedProcedure.use(
   requireRole("admin", "veterinarian")
@@ -157,6 +158,106 @@ export const accountingRouter = createRouter({
         invoiceCount: formattedInvoices.length,
         ekasaCount: formattedReceipts.length,
         totalAmount,
+      };
+    }),
+
+  /** Exportuje faktúry vo formáte ISDOC 6.0.2 (CZ/SK elektronická faktúra) */
+  exportIsdoc: accountingProcedure
+    .input(
+      z.object({
+        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný formát dátumu (RRRR-MM-DD)"),
+        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný formát dátumu (RRRR-MM-DD)"),
+        invoiceId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const practice = await ctx.db.query.practices.findFirst({
+        where: eq(practices.id, ctx.practiceId),
+      });
+
+      const conditions = [
+        eq(invoices.practiceId, ctx.practiceId),
+        isNull(invoices.deletedAt),
+        eq(invoices.isEstimate, false),
+        and(
+          sql`date_trunc('day', ${invoices.createdAt} AT TIME ZONE 'Europe/Bratislava')::text >= ${input.dateFrom}`,
+          sql`date_trunc('day', ${invoices.createdAt} AT TIME ZONE 'Europe/Bratislava')::text <= ${input.dateTo}`,
+        ),
+      ];
+      if (input.invoiceId) {
+        conditions.push(eq(invoices.id, input.invoiceId));
+      }
+
+      const dbInvoices = await ctx.db.query.invoices.findMany({
+        where: and(...conditions),
+        with: { client: true, items: true },
+        orderBy: [desc(invoices.createdAt)],
+      });
+
+      if (dbInvoices.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No invoices found for the selected period",
+        });
+      }
+
+      const practiceIco =
+        ((practice as Record<string, unknown>)?.ico as string | undefined) ??
+        "00000000";
+      const clinicName = practice?.name ?? "Veterinárna ambulancia";
+      const clinicAddress = practice?.address ?? "";
+      const supplierVatId = practice?.vatNumber ?? undefined;
+
+      const xml = buildIsdocXml({
+        invoiceNumber: input.invoiceId
+          ? `VF-${dbInvoices[0].id.slice(0, 8)}`
+          : `${dbInvoices.length}-invoices`,
+        issueDate: new Date(dbInvoices[0].createdAt).toISOString().slice(0, 10),
+        dueDate: dbInvoices[0].dueDate
+          ? new Date(dbInvoices[0].dueDate).toISOString().slice(0, 10)
+          : new Date(dbInvoices[0].createdAt).toISOString().slice(0, 10),
+        supplierIco: practiceIco,
+        supplierName: clinicName,
+        supplierAddress: clinicAddress,
+        supplierVatId,
+        customerIco: undefined,
+        customerName: "Súhrn faktúr za obdobie",
+        customerAddress: "",
+        items: dbInvoices.flatMap((inv) =>
+          (inv.items ?? []).map((it) => {
+            const unitPrice = Number(it.unitPrice || 0);
+            const totalWithoutVat = Number(it.total || 0);
+            const totalWithVat = Math.round(totalWithoutVat * 1.23 * 100) / 100;
+            return {
+              description: it.description,
+              quantity: it.quantity,
+              unitPrice,
+              vatRate: 23,
+              totalWithoutVat,
+              totalWithVat,
+            };
+          })
+        ),
+        totalWithoutVat: Math.round(
+          dbInvoices.reduce((s, inv) => s + Number(inv.subtotal || 0) * 100, 0) / 100
+        ),
+        totalVat: Math.round(
+          dbInvoices.reduce((s, inv) => s + Number(inv.tax || 0) * 100, 0) / 100
+        ),
+        totalWithVat: Math.round(
+          dbInvoices.reduce((s, inv) => s + Number(inv.total || 0) * 100, 0) / 100
+        ),
+        currencyCode:
+          (practice?.currency ?? "").toUpperCase() === "CZK" ? "CZK" : "EUR",
+        note: `Súhrn faktúr ${input.dateFrom} – ${input.dateTo}`,
+      });
+
+      const dateSuffix = `${input.dateFrom}_do_${input.dateTo}`;
+      return {
+        filename: `isdoc_export_${dateSuffix}.xml`,
+        content: xml,
+        mimeType: "application/xml;charset=utf-8",
+        invoiceCount: dbInvoices.length,
       };
     }),
 });

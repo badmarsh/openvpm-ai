@@ -626,6 +626,13 @@
       "createEstimateButton": "Vytvoriť cenovú ponuku",
       "createInvoiceButton": "Vytvoriť faktúru",
       "cancelButton": "Zrušiť"
+    },
+    "pos": {
+      "discount": "Zľava",
+      "subtotal": "Medzisúčet",
+      "totalDue": "Spolu k úhrade",
+      "scannerAdded": "{name} pridaný do košíka",
+      "scannerNotFound": "Produkt pre kód {code} nenájdený"
     }
   },
   "canvas": {
@@ -2745,6 +2752,9 @@
       "loadingEditor": "Načítavam editor...",
       "legalTamperProof": "Zákonný klinický záznam",
       "draftNotice": "Tento záznam je v štádiu konceptu."
+    },
+    "tabs": {
+      "dental": "Zubný záznam"
     }
   },
   "records.backToVisit": "Späť na návštevu",
@@ -5661,5 +5671,56 @@
     "sectionsAria": "Sekcie importovanej histórie",
     "searchAria": "Hľadať: {section}",
     "detailsAria": "Detaily importovaného záznamu"
-  }
+  },
+  "accounting.isdocDesc": "ISDOC 6.0.2 XML pre Pohoda, Omega, Money, ABRA",
+  "accounting.isdocSuccess": "ISDOC export stiahnutý: {invoiceCount} faktúr",
+  "accounting.isdocError": "Chyba pri generovaní ISDOC exportu",
+  "crsz.subtabKvlCr": "Pasy KVL ČR",
+  "crsz.kvlCrBtnIssue": "Vystaviť pas KVL ČR",
+  "crsz.kvlCrTitle": "Vystaviť pas KVL ČR",
+  "crsz.kvlCrEmptyTitle": "Žiadne pasy KVL ČR",
+  "crsz.kvlCrEmptyDesc": "Evidujte české pasy spoločenských zvierat vystavené pre cestovanie.",
+  "crsz.kvlCrPassportColumn": "Číslo pasu",
+  "crsz.kvlCrOwnerColumn": "Zviera & majiteľ",
+  "crsz.kvlCrVetColumn": "Veterinár (KVL ČR)",
+  "crsz.kvlCrIssueDateColumn": "Dátum vystavenia",
+  "crsz.kvlCrRabiesColumn": "Besnota",
+  "crsz.kvlCrPassportNumberLabel": "Číslo pasu *",
+  "crsz.kvlCrIssuedAtLabel": "Dátum vystavenia *",
+  "crsz.kvlCrVetKvlNumberLabel": "Reg. číslo KVL ČR",
+  "crsz.kvlCrMicrochipLabel": "Mikročip (ISO)",
+  "crsz.kvlCrRabiesDateLabel": "Dátum očkovania proti besnote",
+  "crsz.kvlCrRabiesValidUntilLabel": "Besnota platná do",
+  "crsz.kvlCrRabiesVaccineLabel": "Názov vakcíny",
+  "crsz.kvlCrRabiesBatchLabel": "Šarža vakcíny",
+  "crsz.kvlCrIssuedSuccess": "Pas KVL ČR bol vystavený",
+  "crsz.kvlCrError": "Chyba pri vystavení pasu KVL ČR",
+  "dental.addEntry": "Pridať zubný záznam",
+  "dental.toothColumn": "Zub",
+  "dental.conditionColumn": "Stav",
+  "dental.treatmentColumn": "Ošetrenie",
+  "dental.dateColumn": "Dátum",
+  "dental.vetColumn": "Veterinár",
+  "dental.actionsColumn": "Akcie",
+  "dental.emptyTitle": "Žiadne zubné záznamy",
+  "dental.toothLabel": "Zub (FDI) *",
+  "dental.toothPlaceholder": "napr. 104",
+  "dental.dateLabel": "Dátum *",
+  "dental.conditionLabel": "Stav",
+  "dental.treatmentLabel": "Ošetrenie",
+  "dental.treatmentPlaceholder": "napr. Extrakcia",
+  "dental.notesLabel": "Poznámky",
+  "dental.notesPlaceholder": "Ďalšie poznámky",
+  "dental.toothRequired": "Zadajte kód zuba",
+  "dental.createdSuccess": "Zubný záznam uložený",
+  "dental.saveError": "Chyba pri ukladaní zubného záznamu",
+  "dental.removedSuccess": "Zubný záznam odstránený",
+  "dental.condition.healthy": "Zdravý",
+  "dental.condition.missing": "Chýbajúci",
+  "dental.condition.fractured": "Zlomený",
+  "dental.condition.decayed": "Kazivý",
+  "dental.condition.mobile": "Vratký",
+  "dental.condition.abraded": "Obrúsený",
+  "dental.condition.crowned": "Korunka",
+  "dental.condition.other": "Iné"
 }

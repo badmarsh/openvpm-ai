@@ -9,7 +9,17 @@
  * - Standard Slovak EDI / CSV
  */
 
-export type WholesalerType = "CYMEDICA" | "PHARMOS" | "SAMOHYL" | "HENRY_SCHEIN" | "GENERIC_CSV";
+export type WholesalerType =
+  | "CYMEDICA"
+  | "PHARMOS"
+  | "SAMOHYL"
+  | "HENRY_SCHEIN"
+  | "BIOPHARM"
+  | "KOMVET"
+  | "SG_VET"
+  | "SANVET"
+  | "PHRAMED"
+  | "GENERIC_CSV";
 
 export interface WholesalerDeliveryItem {
   sku?: string;
@@ -84,6 +94,16 @@ export function parseWholesalerDeliveryNote(options: ParseDeliveryNoteOptions): 
       return parseSamohyl(lines);
     case "HENRY_SCHEIN":
       return parseHenrySchein(lines);
+    case "BIOPHARM":
+      return parseBiopharm(lines);
+    case "KOMVET":
+      return parseKomvet(lines);
+    case "SG_VET":
+      return parseSgVet(options.content);
+    case "SANVET":
+      return parseSanvet(lines);
+    case "PHRAMED":
+      return parsePhramed(lines);
     case "GENERIC_CSV":
     default:
       return parseGenericCsv(lines);
@@ -105,6 +125,21 @@ function detectWholesaler(content: string, filename?: string): WholesalerType {
   }
   if (upper.includes("HENRY SCHEIN") || upper.includes("SCHEIN") || fnUpper.includes("SCHEIN")) {
     return "HENRY_SCHEIN";
+  }
+  if (upper.includes("BIOPHARM") || upper.includes("BFARM") || fnUpper.includes("BIOPHARM")) {
+    return "BIOPHARM";
+  }
+  if (upper.includes("KOMVET") || upper.includes("KOM VET") || fnUpper.includes("KOMVET")) {
+    return "KOMVET";
+  }
+  if (upper.includes("SG-VET") || upper.includes("SGVET") || upper.includes("SG VET") || fnUpper.includes("SGVET")) {
+    return "SG_VET";
+  }
+  if (upper.includes("SANVET") || upper.includes("SAN-VET") || fnUpper.includes("SANVET")) {
+    return "SANVET";
+  }
+  if (upper.includes("PHRAMED") || upper.includes("PHARMED") || fnUpper.includes("PHRAMED")) {
+    return "PHRAMED";
   }
   return "GENERIC_CSV";
 }
@@ -323,6 +358,174 @@ function parseHenrySchein(lines: string[]): WholesalerDeliveryNote {
     totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,
     totalWithVat: Math.round(sumWithVat * 100) / 100,
   };
+}
+
+/**
+ * Shared parser for the standard Slovak distributor delivery note CSV layout:
+ *   SKU | NÁZOV | ŠARŽA | EXPIRÁCIA | KS | J.CENA | DPH%
+ */
+function parseStandardDeliveryLines(
+  lines: string[],
+  wholesaler: WholesalerType,
+  supplierName: string,
+  docPrefix: string
+): WholesalerDeliveryNote {
+  const items: WholesalerDeliveryItem[] = [];
+  let docNumber = `${docPrefix}-${Date.now().toString().slice(-6)}`;
+  const issueDate = new Date().toISOString().slice(0, 10);
+
+  for (const line of lines) {
+    if (line.includes("Dodací list") || line.includes("Faktúra")) {
+      const match = line.match(/\d{7,12}/);
+      if (match) docNumber = match[0];
+    }
+    if (line.startsWith("#") || line.startsWith("//")) continue;
+
+    const cols = splitCsvLine(line);
+    if (cols.length < 5) continue;
+    if (cols[0].toLowerCase().includes("kod") || cols[0].toLowerCase().includes("sku") || cols[1]?.toLowerCase().includes("nazov")) continue;
+
+    const sku = cols[0];
+    const name = cols[1];
+    const batch = cols[2] || undefined;
+    const exp = parseDate(cols[3]);
+    const qty = parseSlovakNumber(cols[4]) || 1;
+    const price = parseSlovakNumber(cols[5]);
+    const vatRate = parseInt(cols[6], 10) || 10;
+    const totalWithoutVat = Math.round(qty * price * 100) / 100;
+    const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
+
+    items.push({
+      sku,
+      name,
+      batchNumber: batch,
+      expirationDate: exp,
+      quantity: qty,
+      unit: "ks",
+      unitPriceWithoutVat: price,
+      vatRate,
+      totalWithoutVat,
+      totalWithVat,
+    });
+  }
+
+  const sumWithoutVat = items.reduce((acc, it) => acc + it.totalWithoutVat, 0);
+  const sumWithVat = items.reduce((acc, it) => acc + it.totalWithVat, 0);
+
+  return {
+    wholesaler,
+    deliveryNoteNumber: docNumber,
+    issueDate,
+    supplierName,
+    supplierIco: "",
+    items,
+    totalWithoutVat: Math.round(sumWithoutVat * 100) / 100,
+    totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,
+    totalWithVat: Math.round(sumWithVat * 100) / 100,
+  };
+}
+
+function parseBiopharm(lines: string[]): WholesalerDeliveryNote {
+  return parseStandardDeliveryLines(lines, "BIOPHARM", "BIOPHARM a.s.", "BIO");
+}
+
+function parseKomvet(lines: string[]): WholesalerDeliveryNote {
+  // KOMVET exports tab-delimited .txt files WITHOUT a header row. The shared
+  // CSV splitter already prefers the tab delimiter when present, so the same
+  // column layout is reused verbatim.
+  return parseStandardDeliveryLines(lines, "KOMVET", "KOMVET s.r.o.", "KOM");
+}
+
+/** Extract a single XML tag's inner text (server-safe regex, no DOM). */
+function extractXmlTag(block: string, tag: string): string | undefined {
+  const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
+  const value = match?.[1]?.trim();
+  return value ? value : undefined;
+}
+
+function parseSgVet(rawContent: string): WholesalerDeliveryNote {
+  // SG-Vet exports XML (not CSV). Parse every <item> element with regex so the
+  // parser also works server-side where no DOM implementation is available.
+  const items: WholesalerDeliveryItem[] = [];
+  const issueDate = new Date().toISOString().slice(0, 10);
+
+  let docNumber = `SGV-${Date.now().toString().slice(-6)}`;
+  const noteMatch =
+    rawContent.match(/<(?:deliveryNoteNumber|number|cislo)[^>]*>([\s\S]*?)<\/(?:deliveryNoteNumber|number|cislo)>/i);
+  if (noteMatch?.[1]) {
+    const digits = noteMatch[1].match(/\d{7,12}/);
+    if (digits) docNumber = digits[0];
+    else docNumber = noteMatch[1].trim();
+  }
+
+  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+  let blockMatch: RegExpExecArray | null;
+  while ((blockMatch = itemRegex.exec(rawContent)) !== null) {
+    const block = blockMatch[1];
+
+    const sku = extractXmlTag(block, "sku") ?? extractXmlTag(block, "kod");
+    const name =
+      extractXmlTag(block, "name") ??
+      extractXmlTag(block, "nazov") ??
+      extractXmlTag(block, "description") ??
+      "";
+    if (!name) continue;
+
+    const batch = extractXmlTag(block, "batch") ?? extractXmlTag(block, "sarza");
+    const expRaw =
+      extractXmlTag(block, "expiration") ??
+      extractXmlTag(block, "expirace") ??
+      extractXmlTag(block, "expiry");
+    const exp = parseDate(expRaw);
+    const qty =
+      parseSlovakNumber(extractXmlTag(block, "qty") ?? extractXmlTag(block, "ks")) || 1;
+    const price = parseSlovakNumber(
+      extractXmlTag(block, "price") ?? extractXmlTag(block, "jcena")
+    );
+    const vatRate =
+      parseInt(
+        extractXmlTag(block, "vat") ?? extractXmlTag(block, "dph") ?? "10",
+        10
+      ) || 10;
+    const totalWithoutVat = Math.round(qty * price * 100) / 100;
+    const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
+
+    items.push({
+      sku,
+      name,
+      batchNumber: batch,
+      expirationDate: exp,
+      quantity: qty,
+      unit: "ks",
+      unitPriceWithoutVat: price,
+      vatRate,
+      totalWithoutVat,
+      totalWithVat,
+    });
+  }
+
+  const sumWithoutVat = items.reduce((acc, it) => acc + it.totalWithoutVat, 0);
+  const sumWithVat = items.reduce((acc, it) => acc + it.totalWithVat, 0);
+
+  return {
+    wholesaler: "SG_VET",
+    deliveryNoteNumber: docNumber,
+    issueDate,
+    supplierName: "SG-VET s.r.o.",
+    supplierIco: "",
+    items,
+    totalWithoutVat: Math.round(sumWithoutVat * 100) / 100,
+    totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,
+    totalWithVat: Math.round(sumWithVat * 100) / 100,
+  };
+}
+
+function parseSanvet(lines: string[]): WholesalerDeliveryNote {
+  return parseStandardDeliveryLines(lines, "SANVET", "SANVET s.r.o.", "SAN");
+}
+
+function parsePhramed(lines: string[]): WholesalerDeliveryNote {
+  return parseStandardDeliveryLines(lines, "PHRAMED", "PHRAMED s.r.o.", "PHM");
 }
 
 function parseGenericCsv(lines: string[]): WholesalerDeliveryNote {

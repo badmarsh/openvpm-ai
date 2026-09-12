@@ -14,6 +14,7 @@ import {
   X,
   Download,
   Globe,
+  Flag,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -28,12 +29,13 @@ export function CrszPanel() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
 
-  const [subTab, setSubTab] = useState<"chips" | "passports">("chips");
+  const [subTab, setSubTab] = useState<"chips" | "passports" | "kvlcr">("chips");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isPassportOpen, setIsPassportOpen] = useState(false);
+  const [isKvlCrOpen, setIsKvlCrOpen] = useState(false);
 
   const chipsQuery = trpc.extensions.crsz.listMicrochips.useQuery({
     search: search || undefined,
@@ -42,6 +44,10 @@ export function CrszPanel() {
   });
 
   const passportsQuery = trpc.extensions.crsz.listPassports.useQuery({
+    limit: 100,
+  });
+
+  const kvlCrQuery = trpc.extensions.crsz.listKvlCrPassports.useQuery({
     limit: 100,
   });
 
@@ -133,6 +139,15 @@ export function CrszPanel() {
             <Plane className="h-4 w-4" />
             <span>{t("crsz.subtabPassports", "PetPass & Cestovná spôsobilosť")}</span>
           </Button>
+          <Button
+            variant={subTab === "kvlcr" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSubTab("kvlcr")}
+            className="gap-2"
+          >
+            <Flag className="h-4 w-4" />
+            <span>{t("crsz.subtabKvlCr", "Pasy KVL ČR")}</span>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -167,10 +182,15 @@ export function CrszPanel() {
                 <span>{t("crsz.btnRegisterChip", "Zaevidovať mikročip")}</span>
               </Button>
             </>
-          ) : (
+          ) : subTab === "passports" ? (
             <Button size="sm" onClick={() => setIsPassportOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               <span>{t("crsz.btnIssuePassport", "Vystaviť PetPass")}</span>
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setIsKvlCrOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              <span>{t("crsz.kvlCrBtnIssue", "Vystaviť pas KVL ČR")}</span>
             </Button>
           )}
         </div>
@@ -478,6 +498,102 @@ export function CrszPanel() {
         </div>
       )}
 
+      {/* KVL ČR VIEW */}
+      {subTab === "kvlcr" && (
+        <div className="space-y-4">
+          {kvlCrQuery.isLoading ? (
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !kvlCrQuery.data || kvlCrQuery.data.length === 0 ? (
+            <EmptyState
+              icon={Flag}
+              title={t("crsz.kvlCrEmptyTitle", "Žiadne pasy KVL ČR")}
+              description={t(
+                "crsz.kvlCrEmptyDesc",
+                "Evidujte české pasy spoločenských zvierat vystavené pre cestovanie."
+              )}
+              action={{
+                label: t("crsz.kvlCrBtnIssue", "Vystaviť pas KVL ČR"),
+                onClick: () => setIsKvlCrOpen(true),
+                icon: Plus,
+              }}
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border bg-card">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+                    <th className="px-4 py-3">{t("crsz.kvlCrPassportColumn", "Číslo pasu")}</th>
+                    <th className="px-4 py-3">{t("crsz.kvlCrOwnerColumn", "Zviera & majiteľ")}</th>
+                    <th className="px-4 py-3">{t("crsz.kvlCrVetColumn", "Veterinár (KVL ČR)")}</th>
+                    <th className="px-4 py-3">{t("crsz.kvlCrIssueDateColumn", "Dátum vystavenia")}</th>
+                    <th className="px-4 py-3">{t("crsz.kvlCrRabiesColumn", "Besnota")}</th>
+                    <th className="px-4 py-3">{t("crsz.travelColumn", "Cestovanie")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {kvlCrQuery.data.map((p) => {
+                    const isEligible = p.travelEligibleFrom
+                      ? new Date() >= new Date(p.travelEligibleFrom)
+                      : false;
+                    return (
+                      <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono font-semibold text-xs text-primary">
+                          {p.passportNumber}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{p.patient?.name ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {p.client ? p.client.firstName + " " + p.client.lastName : "—"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <div>{p.issuingVetName ?? "—"}</div>
+                          {p.issuingVetKvlCr && (
+                            <div className="text-muted-foreground font-mono">{p.issuingVetKvlCr}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {new Date(p.issuedAt).toLocaleDateString("sk-SK")}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {p.rabiesValidUntil ? (
+                            <div>
+                              <div>{new Date(p.rabiesValidUntil).toLocaleDateString("sk-SK")}</div>
+                              <div className="text-muted-foreground">{p.rabiesVaccineName ?? ""}</div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">{t("crsz.noVaccine")}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {isEligible ? (
+                            <Badge variant="outline" className="border-emerald-500/40 bg-emerald-50 text-emerald-700 text-xs gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              <span>{t("crsz.travelReady")}</span>
+                            </Badge>
+                          ) : p.travelEligibleFrom ? (
+                            <Badge variant="outline" className="border-amber-500/40 bg-amber-50 text-amber-700 text-xs gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{t("crsz.travelDeadline", "Deadline {date}", { date: new Date(p.travelEligibleFrom).toLocaleDateString("sk-SK") })}</span>
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              {t("crsz.incompleteData")}
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* REGISTER MODAL */}
       {isRegisterOpen && (
         <RegisterMicrochipModal
@@ -496,6 +612,17 @@ export function CrszPanel() {
           onSuccess={() => {
             setIsPassportOpen(false);
             utils.extensions.crsz.listPassports.invalidate();
+          }}
+        />
+      )}
+
+      {/* KVL ČR MODAL */}
+      {isKvlCrOpen && (
+        <IssueKvlCrPassportModal
+          onClose={() => setIsKvlCrOpen(false)}
+          onSuccess={() => {
+            setIsKvlCrOpen(false);
+            utils.extensions.crsz.listKvlCrPassports.invalidate();
           }}
         />
       )}
@@ -799,6 +926,204 @@ function IssuePassportModal({
             <Button type="submit" size="sm" disabled={issueMutation.isPending}>
               {issueMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {t("crsz.issuePassport")}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+function IssueKvlCrPassportModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { t } = useI18n();
+  const [patientSearch, setPatientSearch] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [passportNumber, setPassportNumber] = useState("CZ ");
+  const [issuedAt, setIssuedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [vetKvlCr, setVetKvlCr] = useState("");
+  const [microchipNumber, setMicrochipNumber] = useState("");
+  const [rabiesDate, setRabiesDate] = useState("");
+  const [rabiesValidUntil, setRabiesValidUntil] = useState("");
+  const [rabiesVaccine, setRabiesVaccine] = useState("");
+  const [rabiesBatch, setRabiesBatch] = useState("");
+  const [isBooster, setIsBooster] = useState(false);
+
+  const patientsQuery = trpc.patients.list.useQuery(
+    { search: patientSearch, limit: 10 },
+    { enabled: patientSearch.length >= 2 }
+  );
+
+  const issueMutation = trpc.extensions.crsz.issueKvlCrPassport.useMutation({
+    onSuccess: () => {
+      toast.success(t("crsz.kvlCrIssuedSuccess", "Pas KVL ČR bol vystavený"));
+      onSuccess();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("crsz.kvlCrError"));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatientId) {
+      toast.error(t("crsz.selectPatient"));
+      return;
+    }
+    issueMutation.mutate({
+      patientId: selectedPatientId,
+      passportNumber,
+      issuedAt,
+      issuingVetKvlCr: vetKvlCr || undefined,
+      microchipNumber: microchipNumber || undefined,
+      rabiesVaccineName: rabiesVaccine || undefined,
+      rabiesBatchNumber: rabiesBatch || undefined,
+      rabiesAdministeredAt: rabiesDate || undefined,
+      rabiesValidUntil: rabiesValidUntil || undefined,
+      isRevaccination: isBooster,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2">
+            <Flag className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold text-base">{t("crsz.kvlCrTitle", "Vystaviť pas KVL ČR")}</h3>
+          </div>
+          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-medium block mb-1">{t("crsz.searchPatientLabel")}</label>
+            <Input
+              placeholder={t("crsz.searchPatientPlaceholder")}
+              value={patientSearch}
+              onChange={(e) => setPatientSearch(e.target.value)}
+              className="mb-2"
+            />
+            {patientsQuery.data?.items && patientsQuery.data.items.length > 0 && (
+              <div className="max-h-32 overflow-y-auto rounded-md border border-border bg-muted/20 p-1 space-y-1">
+                {patientsQuery.data.items.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedPatientId(p.id);
+                      setPatientSearch(p.name + " (" + p.species + ")");
+                    }}
+                    className={`cursor-pointer rounded px-2 py-1 text-xs hover:bg-primary/10 ${
+                      selectedPatientId === p.id ? "bg-primary/20 font-medium" : ""
+                    }`}
+                  >
+                    {p.name} — {p.species} {p.breed ? "(" + p.breed + ")" : ""}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrPassportNumberLabel", "Číslo pasu *")}</label>
+              <Input
+                placeholder="CZ 0123456"
+                value={passportNumber}
+                onChange={(e) => setPassportNumber(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrIssuedAtLabel", "Dátum vystavenia *")}</label>
+              <Input
+                type="date"
+                value={issuedAt}
+                onChange={(e) => setIssuedAt(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrVetKvlNumberLabel", "Reg. číslo KVL ČR")}</label>
+              <Input
+                placeholder="KVL 12345"
+                value={vetKvlCr}
+                onChange={(e) => setVetKvlCr(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrMicrochipLabel", "Mikročip (ISO)")}</label>
+              <Input
+                placeholder="15-miestny kód"
+                value={microchipNumber}
+                onChange={(e) => setMicrochipNumber(e.target.value)}
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border p-3 space-y-3 bg-muted/20">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrRabiesDateLabel", "Očkovanie proti besnote")}</label>
+                <Input
+                  type="date"
+                  value={rabiesDate}
+                  onChange={(e) => setRabiesDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrRabiesValidUntilLabel", "Besnota platná do")}</label>
+                <Input
+                  type="date"
+                  value={rabiesValidUntil}
+                  onChange={(e) => setRabiesValidUntil(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrRabiesVaccineLabel", "Názov vakcíny")}</label>
+                <Input
+                  value={rabiesVaccine}
+                  onChange={(e) => setRabiesVaccine(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1">{t("crsz.kvlCrRabiesBatchLabel", "Šarža vakcíny")}</label>
+                <Input
+                  value={rabiesBatch}
+                  onChange={(e) => setRabiesBatch(e.target.value)}
+                />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isBooster}
+                onChange={(e) => setIsBooster(e.target.checked)}
+                className="rounded border-input text-primary h-4 w-4"
+              />
+              <span>{t("crsz.isBooster")}</span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" size="sm" disabled={issueMutation.isPending}>
+              {issueMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t("crsz.kvlCrBtnIssue", "Vystaviť pas KVL ČR")}
             </Button>
           </div>
         </form>

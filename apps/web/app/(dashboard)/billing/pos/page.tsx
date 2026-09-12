@@ -19,9 +19,12 @@ import {
   User,
   Barcode,
   Printer,
+  Percent,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { computePosTotals } from "@/lib/billing/pos-calculations";
+import { useBarcodeScanner } from "@/lib/billing/use-barcode-scanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +41,8 @@ interface CartItem {
   quantity: number;
   unitPrice: string;
   vatRate: "STANDARD_23" | "REDUCED_19" | "REDUCED_5" | "ZERO";
+  /** Line discount in percent (0–100). */
+  discountPercent: number;
 }
 
 const VAT_RATE_OPTIONS = [
@@ -153,6 +158,7 @@ export default function PosCheckoutPage() {
           quantity: 1,
           unitPrice: Number(product.unitPrice).toFixed(2),
           vatRate: defaultVat,
+          discountPercent: 0,
         },
       ];
     });
@@ -185,6 +191,15 @@ export default function PosCheckoutPage() {
     );
   };
 
+  const updateDiscount = (id: string, discountPercent: number) => {
+    const clamped = Math.min(100, Math.max(0, discountPercent || 0));
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, discountPercent: clamped } : item
+      )
+    );
+  };
+
   // Add custom manual item
   const addCustomItem = () => {
     setCart((prev) => [
@@ -195,17 +210,56 @@ export default function PosCheckoutPage() {
         quantity: 1,
         unitPrice: "5.00",
         vatRate: "STANDARD_23",
+        discountPercent: 0,
       },
     ]);
   };
 
   // Calculations
-  const cartTotal = useMemo(() => {
-    return cart.reduce(
-      (sum, item) => sum + Number(item.unitPrice) * item.quantity,
-      0
-    );
-  }, [cart]);
+  const { subtotal, discount, total: cartTotal } = useMemo(
+    () =>
+      computePosTotals(
+        cart.map((item) => ({
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice) || 0,
+          discountPercent: item.discountPercent,
+        }))
+      ),
+    [cart]
+  );
+
+  // USB barcode scanner: scan a code -> resolve SKU -> add to cart.
+  useBarcodeScanner({
+    enabled: true,
+    minLength: 3,
+    onScan: (code) => {
+      const exact = productsData?.items?.find(
+        (p) =>
+          p.sku !== null &&
+          p.sku !== undefined &&
+          p.sku.trim().toLowerCase() === code.toLowerCase()
+      );
+      if (exact) {
+        addToCart({
+          id: exact.id,
+          name: exact.name,
+          unitPrice: exact.unitPrice,
+          category: exact.category,
+        });
+        toast.success(
+          t("billing.pos.scannerAdded", "{name} pridaný do košíka", {
+            name: exact.name,
+          })
+        );
+        return;
+      }
+      toast.error(
+        t("billing.pos.scannerNotFound", "Produkt pre kód {code} nenájdený", {
+          code,
+        })
+      );
+    },
+  });
 
   const handleCheckout = (paymentMethod: "CASH" | "CARD") => {
     if (cart.length === 0) {
@@ -220,6 +274,7 @@ export default function PosCheckoutPage() {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         vatRate: item.vatRate,
+        discountPercent: item.discountPercent,
       })),
       paymentMethod,
       clientId: selectedClient?.id,
@@ -544,6 +599,32 @@ export default function PosCheckoutPage() {
                         <span>€</span>
                       </div>
                     </div>
+
+                    {/* Line discount */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Percent className="h-3 w-3" />
+                        {t("billing.pos.discount", "Zľava")}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={item.discountPercent}
+                          onChange={(e) =>
+                            updateDiscount(
+                              item.id,
+                              Number(e.target.value)
+                            )
+                          }
+                          className="w-14 text-right rounded border border-border bg-card px-1.5 py-0.5 text-[11px]"
+                          aria-label={t("billing.pos.discount", "Zľava")}
+                        />
+                        <span className="text-[11px] text-muted-foreground">%</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -551,8 +632,20 @@ export default function PosCheckoutPage() {
 
             {/* Totals Breakdown */}
             <div className="border-t border-border pt-3 space-y-1.5 text-xs">
+              <div className="flex justify-between text-muted-foreground">
+                <span>{t("billing.pos.subtotal", "Medzisúčet")}</span>
+                <span>{subtotal.toFixed(2)} €</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t("billing.pos.discount", "Zľava")}</span>
+                  <span className="text-rose-600 dark:text-rose-400">
+                    -{discount.toFixed(2)} €
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-base text-foreground pt-1 border-t border-dashed border-border">
-                <span>Spolu k úhrade:</span>
+                <span>{t("billing.pos.totalDue", "Spolu k úhrade")}:</span>
                 <span className="text-emerald-600 dark:text-emerald-400">
                   {cartTotal.toFixed(2)} €
                 </span>
