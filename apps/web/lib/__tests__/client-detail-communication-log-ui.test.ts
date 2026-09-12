@@ -10,8 +10,12 @@ describe("client detail communication log UI", () => {
     expect(source).toContain("function ClientDetailLoadingPanel");
     expect(source).toContain("return <ClientDetailLoadingPanel />");
     expect(source).toContain("if (error || !client)");
-    expect(source).toContain('title="Unable to load client"');
-    expect(source).toContain('label: "Back to Clients"');
+    expect(source).toMatch(
+      /title=(?:"Unable to load client"|\{t\([^)]*(?:unableToLoadClient|Unable to load client)[^)]*\)\})/,
+    );
+    expect(source).toMatch(
+      /label:\s*(?:"Back to Clients"|t\([^)]*Back to Clients[^)]*\))/,
+    );
     expect(source).toContain("router.push(\"/clients\")");
     expect(source).not.toContain(
       'className="text-center text-muted-foreground py-12"'
@@ -31,7 +35,9 @@ describe("client detail communication log UI", () => {
     expect(source).toContain("const statusLabel = communicationStatusLabel(message)");
     expect(source).not.toContain("const communicationStatusLabels =");
     expect(source).toContain("{ clientId }");
-    expect(source).toContain('title="No communication log yet"');
+    expect(source).toMatch(
+      /title=(?:"No communication log yet"|\{t\([^)]*(?:noCommLog|No communication log yet)[^)]*\)\})/,
+    );
     expect(source).toContain(
       "Messages, calls, and portal requests linked to this client will appear here."
     );
@@ -50,9 +56,12 @@ describe("client detail communication log UI", () => {
     expect(source).toContain("{communicationLogError || communicationLogMissing ? (");
     expect(source).toContain("Unable to load communication log. Please retry.");
     expect(source).toContain(") : isCommunicationLogLoading ? (");
+    const emptyLogIdx = source.search(
+      /title=(?:"No communication log yet"|\{t\([^)]*(?:noCommLog|No communication log yet)[^)]*\)\})/,
+    );
     expect(
       source.indexOf("communicationLogError || communicationLogMissing")
-    ).toBeLessThan(source.indexOf('title="No communication log yet"'));
+    ).toBeLessThan(emptyLogIdx);
     expect(source).not.toContain("{error &&");
   });
 

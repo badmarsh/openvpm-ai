@@ -189,8 +189,12 @@ describe("client and patient form UI states", () => {
     expect(patientEdit).toContain("return <EditPatientLoadingPanel />");
     expect(patientEdit).toContain("error: loadError");
     expect(patientEdit).toContain("if (loadError || !patient)");
-    expect(patientEdit).toContain('title="Unable to load patient"');
-    expect(patientEdit).toContain('label: "Back to Patients"');
+    expect(patientEdit).toMatch(
+      /title=(?:"Unable to load patient"|\{t\([^)]*(?:loadError|Unable to load patient)[^)]*\)\})/,
+    );
+    expect(patientEdit).toMatch(
+      /label:\s*(?:"Back to Patients"|t\([^)]*Back to Patients[^)]*\))/,
+    );
     expect(patientEdit).toContain("router.push(\"/patients\")");
     expect(patientEdit).toContain("Load the patient before saving changes.");
     expect(patientEdit).not.toContain(
@@ -204,8 +208,12 @@ describe("client and patient form UI states", () => {
     expect(clientEdit).toContain("return <EditClientLoadingPanel />");
     expect(clientEdit).toContain("error: loadError");
     expect(clientEdit).toContain("if (loadError || !client)");
-    expect(clientEdit).toContain('title="Unable to load client"');
-    expect(clientEdit).toContain('label: "Back to Clients"');
+    expect(clientEdit).toMatch(
+      /title=(?:"Unable to load client"|\{t\([^)]*(?:unableToLoadClient|Unable to load client)[^)]*\)\})/,
+    );
+    expect(clientEdit).toMatch(
+      /label:\s*(?:"Back to Clients"|t\([^)]*Back to Clients[^)]*\))/,
+    );
     expect(clientEdit).toContain("router.push(\"/clients\")");
     expect(clientEdit).toContain("Load the client before saving changes.");
     expect(clientEdit).not.toContain(

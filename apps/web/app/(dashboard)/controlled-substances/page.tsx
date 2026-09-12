@@ -338,7 +338,6 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             ].join(" ")}
           >
             <option value="">
-              {/* : "No patient" */}
               {patientsQuery.error || patientsMissing
                 ? t("controlledSubstances.errors.unableToLoadPatients", "Unable to load patients")
                 : patientsQuery.isLoading
@@ -387,7 +386,6 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             ].join(" ")}
           >
             <option value="">
-              {/* : "No witness" */}
               {witnessesQuery.error || witnessesMissing
                 ? t("controlledSubstances.errors.unableToLoadWitnesses", "Unable to load witnesses")
                 : witnessesQuery.isLoading

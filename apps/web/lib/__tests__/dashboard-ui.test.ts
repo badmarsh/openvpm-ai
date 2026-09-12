@@ -46,8 +46,11 @@ describe("dashboard analytics UI", () => {
     expect(source.indexOf("upcomingError || isUpcomingMissing")).toBeLessThan(
       source.indexOf("No visits booked yet"),
     );
+    const chartsEmptyIdx = source.search(
+      /Your charts show up once you start|dashboard\.charts\.empty\.title/,
+    );
     expect(source.indexOf("chartsError || chartsDisplayMissing")).toBeLessThan(
-      source.indexOf("Your charts show up once you start"),
+      chartsEmptyIdx,
     );
     expect(source).toContain("const value = dashboardStats[kpi.key] ?? 0");
     expect(source).not.toContain("charts.data?.appointmentsByDay ?? []");
