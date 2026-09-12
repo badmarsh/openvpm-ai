@@ -4,9 +4,11 @@ Tento dokument definuje strategický a technický plán rozvoja OpenVPM AI. Naš
 
 ---
 
-## 🚀 Míľnik v0.6 — PILOT-READY (Hotové a overené k 12. 9. 2026)
+## Milnik v0.6 — PILOT-READY (Hotove a overene k 12. 9. 2026)
 
-Tento míľnik predstavuje kompletné jadro systému overené 14-dňovým pilotným testovaním a sadou 4 858 automatizovaných testov (100% pass rate).
+> **UPOZORNENIE: "Pilot-ready" != "battle-tested".** Ziadna produkcna klinika nie je aktualne aktivna. Vsetky integracie su overene testami a simulovanymi scenarmi. Realne produkcne nasadenie prebehne v Q4 2026. Aktualne pre-pilot gate score: **0/10**. Podrobnosti: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md)
+
+Tento milnik predstavuje kompletne jadro systemu overene 14-dnovym simulovanym testovanim a sadou 4 858 automatizovanych testov (100% pass rate).
 
 ### 1. Klinické jadro a EMR
 - [x] Kompletný elektronický zdravotný záznam pacienta (SOAP poznámky, vitálne funkcie, hmotnostné trendy).
@@ -16,14 +18,14 @@ Tento míľnik predstavuje kompletné jadro systému overené 14-dňovým pilotn
 - [x] Evidencia omamných a psychotropných látok (kniha opiátov) s auditným záznamom svedka znehodnotenia.
 
 ### 2. Slovenský legislatívny balík (Zákon 39/2007, 139/1998, 289/2008)
-- [x] **KVEPIS Hub (`/statutory/kvepis`):** validácia dát voči oficiálnej XSD schéme ŠVPS SR, mesačná ambulantná kniha, hlásenie chorôb.
+- [x] **KVEPIS Hub (`/statutory/kvepis`):** validacia dat voci oficialnej XSD scheme SVPS SR, mesacna ambulantna kniha, hlasenie chorob. *(XML-only export; priame podanie na SVPS SR v produkcii zatial neuskutocnene — testovaci endpoint nebol prideleny)*
 - [x] **CRSZ modul:** validácia a kontrola 15-miestnych mikročipov podľa ISO 11784/11785, export dávok do KVL SR.
 - [x] **CEHZ evidencia:** validácia 6-miestnych kódov fariem pre hospodárske zvieratá a kontrola ochranných lehôt mäsa/mlieka.
-- [x] **e-Kasa certifikovaný driver:** podpora hardvéru FiskalPRO (LAN/REST) a VRP2 s offline transakčným frontom a idempotenciou.
+- [x] **e-Kasa driver:** podpora hardveru FiskalPRO (LAN/REST) a VRP2 s offline transaknym frontom a idempotenciou. *(Certifikacia integracie s FR SR prebieha; hardver je podporovany, integracia nie je formalne certifikovana)*
 - [x] **ÚPVS / Slovensko.sk:** generovanie GovBox XML obálok pre doručovanie do elektronických schránok orgánov štátnej správy.
 
 ### 3. Poisťovne a integrácie partnerov
-- [x] **PetExpert Slovensko:** priame vysporiadanie poistných udalostí (`routers/extensions/insurance.ts`), kontrola mikročipu, výpočet 10% spoluúčasti (min. 35 €) a generovanie oficiálneho tlačiva pre likvidátora.
+- [x] **PetExpert Slovensko:** payload builder pre poistne udalosti (`routers/extensions/insurance.ts`), kontrola micocipu, vypocet 10% spoluucasti. *(Live API integracia s produkcnymi credentials neprebehla)*
 - [x] **Generali / Union:** položkový export lekárskej správy a účtovaných položiek.
 - [x] **Veľkoobchody liečiv:** elektronický import dodacích listov so šaržami a expiráciami od **Cymedica SK**, **Pharmos a.s.**, **Samohýl SK** a **Henry Schein SK**.
 - [x] **In-house analyzátory:** automatický parser nálezov z prístrojov **IDEXX Catalyst/ProCyte**, **Fuji Dri-Chem NX500** a **Mindray BC-Vet**.
@@ -65,10 +67,17 @@ Tento míľnik predstavuje kompletné jadro systému overené 14-dňovým pilotn
 
 ---
 
-## Transparentný register technického dlhu a známych limitácií
+## Transparentny register technickeho dlhu a znamych limitacii
 
-Pre nezávislých auditorov a kliniky uvádzame transparentný zoznam položiek:
+Pre nezavislych auditorov a kliniky uvaedzame transparentny zoznam poloziek:
 
-1. **KVEPIS B2G certifikáty:** XML export a validátor sú 100% konformné s oficiálnou XSD schémou ŠVPS SR. Priame volanie REST API brány je závislé na časovom harmonograme ŠVPS SR pre uvoľňovanie produkčných integračných kľúčov pre rok 2026/2027.
-2. **Cloudová tlač na lokálnu e-Kasu:** Ak klinika používa cloudovú verziu a má e-Kasa pokladnicu bez verejnej IP adresy, vyžaduje sa lokálne namapovanie portu cez router alebo v0.7 Tray Agent.
-3. **Multi-location prevádzka:** Databázová schéma plne podporuje viacero prevádzok/pobočiek jednej kliniky (`practices` + `locations`). V súčasnej verzii v0.6 je používateľské rozhranie optimalizované primárne pre jednolokačné kliniky a ambulancie.
+1. **KVEPIS B2G certifikaty (XML-only):** XML export a validator su konformne s XSD schemou SVPS SR. Priame volanie REST API brany je zavisle od pridelenia produkcnych integracnych klucov SVPS SR. Realny produkcny KVEPIS token zatial neprideleny.
+2. **e-Kasa certifikacia integracie:** Driver je implementovany a otestovany; formalna certifikacia integracie s FR SR este neprebehla. "Podporovany hardver" != "certifikovana integracia".
+3. **Ziadna realna produkcna klinika:** VetSykora PoC bol simulovany shadow-run. 0 realnych produkcnych klinik, 0 realnych transakcii v CHDU, 0 realnych KVEPIS podani.
+4. **DPA a AI sub-procesory:** Vertex AI a Anthropic su identifikovane ako sub-procesori; DPA zatial nepodpisana, region nepotvrdeny.
+5. **Cloudova tlac na lokalnu e-Kasu:** Ak klinika pouziva cloudovu verziu, vyzaduje sa lokálne mapovanie portu alebo v0.7 Tray Agent.
+6. **Multi-location prevadzka:** Schema podporuje viacero pobocok; UI v0.6 je optimalizovane pre jednolokacne kliniky.
+7. **Live lab konektory (IDEXX, Zoetis):** Parser vzorov existuje; ziadna ziva integr. s externym API laboratoria v produkcii.
+8. **Externy bezpecnostny audit:** Ziadny nezavisly penetracny test (RLS/IDOR/SSRF) zatial nevykonal. Planovany Q4 2026.
+
+> Kompletna trackovatelna issue list: [`docs/production-readiness/ISSUE_TRACKER_GAP.md`](docs/production-readiness/ISSUE_TRACKER_GAP.md)
