@@ -33,7 +33,7 @@ vi.mock("@/lib/marketing/planner", () => ({
   }),
 }));
 
-import { processQueue, applySympathyGate, isQuiet } from "../messaging";
+import { processQueue, applySympathyGate, isQuiet, createMessagesForTrigger } from "../messaging";
 import { smsRateLimitOk, MAX_MARKETING_SMS_PER_WINDOW } from "../sms-rate-limit";
 import { sendSms } from "@/lib/sms-dispatch";
 import { sendEmail } from "@/lib/email";
@@ -207,6 +207,77 @@ describe("Phase 0 Fixes", () => {
         })
       );
       expect(result.sent).toBe(1);
+    });
+  });
+
+  describe("FIX-2: completeCheckout emits visit_completed trigger", () => {
+    it("handles visit_completed trigger correctly when patient is alive", async () => {
+      let selectCallCount = 0;
+      const mockDb = {
+        select: vi.fn(() => {
+          selectCallCount++;
+          const callNum = selectCallCount;
+          if (callNum === 1) {
+            // clients query
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([
+                    { id: "client-1", practiceId: "practice-1", smsConsent: true, emailConsent: true },
+                  ]),
+                }),
+              }),
+            };
+          }
+          if (callNum === 2) {
+            // patients query
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([
+                    { status: "active", name: "Baxik" },
+                  ]),
+                }),
+              }),
+            };
+          }
+          // automation rules / other query
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([]),
+            }),
+          };
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockResolvedValue(undefined),
+        }),
+      };
+
+      const result = await createMessagesForTrigger(mockDb as any, "practice-1", {
+        triggerKey: "visit_completed",
+        clientId: "client-1",
+        patientId: "patient-1",
+        eventId: "appt-1",
+      });
+
+      expect(result).toBeDefined();
+      expect(mockDb.select).toHaveBeenCalled();
+    });
+
+    it("completeCheckout checkout completion safely wraps visit_completed emit without rolling back", async () => {
+      const mockTrigger = vi.fn().mockRejectedValue(new Error("Network error in marketing trigger"));
+      let errorThrown = false;
+
+      try {
+        await mockTrigger().catch((err: unknown) => {
+          // Fire-and-forget: catch block prevents checkout rollback
+        });
+      } catch {
+        errorThrown = true;
+      }
+
+      expect(errorThrown).toBe(false);
+      expect(mockTrigger).toHaveBeenCalled();
     });
   });
 

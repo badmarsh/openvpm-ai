@@ -16,6 +16,7 @@ import {
   extMarketingReviews,
   extMarketingCompetitorSnapshots,
   extMarketingAutomationRules,
+  extAutomationRules,
   extMarketingOperativeScripts,
   extMarketingMessageTemplates,
   extMarketingMessageLogs,
@@ -820,6 +821,72 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       },
     ]);
     console.log("✓ Created 4 automation rules");
+  }
+
+  // -------------------------------------------------------------------------
+  // 11b. Autopilot Automation Rules (ext_automation_rules)
+  // -------------------------------------------------------------------------
+  const existingExtAutoRules = await db.query.extAutomationRules.findMany({
+    where: eq(extAutomationRules.practiceId, practiceId),
+  });
+
+  if (existingExtAutoRules.length === 0) {
+    console.log("Seeding ext_automation_rules...");
+    await db.insert(extAutomationRules).values([
+      {
+        practiceId,
+        ruleKey: "vaccination_recall",
+        name: "Pripomienka exspirácie očkovania",
+        description: "Automatické naplánovanie pripomienky po návšteve s očkovaním.",
+        triggerEventType: "visit_completed",
+        actionType: "send_communication",
+        actionConfig: {
+          channel: "sms",
+          templateKey: "vaccination_reminder",
+          careReminderDueDays: 330,
+        },
+        delayHours: 0,
+        priority: 10,
+        legalBasis: "contract",
+        isActive: true,
+        migratedFromKey: "vaccination_recall",
+      },
+      {
+        practiceId,
+        ruleKey: "postop_checkin_24h",
+        name: "Pooperačná kontrola stavu (24 hodín)",
+        description: "Dotaz na stav pacienta a hojenie rany nasledujúci deň po chirurgickom zákroku.",
+        triggerEventType: "surgery_completed",
+        actionType: "send_communication",
+        actionConfig: {
+          channel: "sms",
+          templateKey: "postop_checkin",
+        },
+        delayHours: 24,
+        priority: 20,
+        legalBasis: "vital_interests",
+        isActive: true,
+        migratedFromKey: "postop_checkin_24h",
+      },
+      {
+        practiceId,
+        ruleKey: "google_review_ask",
+        name: "Žiadosť o Google recenziu po vyšetrení",
+        description: "Zaslanie odkazu na Google Business profil po ukončení návštevy.",
+        triggerEventType: "visit_completed",
+        actionType: "send_communication",
+        actionConfig: {
+          channel: "sms",
+          templateKey: "review_request",
+        },
+        delayHours: 48,
+        priority: 30,
+        legalBasis: "legitimate_interest",
+        isActive: true,
+        migratedFromKey: "google_review_ask",
+      },
+    ]);
+    console.log("✓ Created ext_automation_rules");
   }
 
   // -------------------------------------------------------------------------

@@ -6,9 +6,9 @@ import {
   jsonb,
   timestamp,
   integer,
-  boolean,
   index,
   uniqueIndex,
+  foreignKey,
   check,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
@@ -20,63 +20,47 @@ import { users } from "./users";
 // Enums
 // ---------------------------------------------------------------------------
 
-/**
- * Social media platform types for channel accounts.
- */
-export const extChannelPlatformEnum = pgEnum("ext_channel_platform", [
+export const extChannelProviderEnum = pgEnum("ext_channel_provider", [
+  "google_business",
   "facebook",
   "instagram",
-  "google_business",
   "youtube",
-  "tiktok",
-  "linkedin",
 ]);
 
-/**
- * Account connection status.
- */
 export const extChannelAccountStatusEnum = pgEnum("ext_channel_account_status", [
   "connected",
-  "token_expired",
+  "expired",
   "revoked",
   "error",
 ]);
 
 // ---------------------------------------------------------------------------
-// Encrypted OAuth token storage
+// Table 11 — ext_channel_accounts
 // ---------------------------------------------------------------------------
 
 /**
- * OAuth access tokens and refresh tokens are encrypted at rest using
- * AES-256-GCM via lib/messaging/registration-crypto.ts.
+ * OAuth connection state for the social publishing surfaces (Pillar 1) and the
+ * review inbox (Pillar 4).
  *
- * The encryption key is derived from a practice-specific key material
- * stored in environment variables, ensuring tenant isolation.
- */
-export type EncryptedToken = {
-  /** AES-256-GCM encrypted token value (base64-encoded ciphertext). */
-  ciphertext: string;
-  /** Initialization vector (base64-encoded). */
-  iv: string;
-  /** Authentication tag (base64-encoded). */
-  authTag: string;
-  /** Key derivation salt (base64-encoded). */
-  salt: string;
-};
-
-// ---------------------------------------------------------------------------
-// ext_channel_accounts — OAuth account connections
-// ---------------------------------------------------------------------------
-
-/**
- * Connected social media accounts for automated publishing.
+ * Fills gap G12 in EVENT-ENGINE-PLAN.md: without this table there is nowhere to
+ * store the tokens the Facebook Page API, Instagram Content Publishing API,
+ * Google Business Profile API and YouTube Data API all require.
  *
- * This table stores OAuth tokens for platforms like Facebook, Instagram,
- * Google Business, YouTube, etc. Tokens are encrypted at rest using
- * AES-256-GCM (see lib/messaging/registration-crypto.ts).
+ * TOKEN HANDLING — read before implementing:
  *
- * This fills gap G12 from ARCHITECTURE-RESEARCH.md: "No ext_channel_accounts.
- * Social publishing (Phase 2) has nowhere to store OAuth tokens."
+ * `auth-tokens.ts` is NOT the precedent here. It stores a one-way SHA-256 hash
+ * (`tokenHash`, auth-tokens.ts:L20) because those are single-use verification
+ * tokens that are never read back. An OAuth access token MUST be decryptable in
+ * order to call the provider, so hashing is useless for this table.
+ *
+ * The correct in-repo precedent is
+ * `apps/web/lib/messaging/registration-crypto.ts`: AES-256-GCM, a versioned
+ * `v1:<iv>:<ciphertext>:<tag>` envelope, and a base64-encoded 32-byte key read
+ * from the environment. Mirror that module with a
+ * `CHANNEL_ACCOUNT_ENCRYPTION_KEY` rather than inventing a second scheme.
+ *
+ * Tokens must never be returned over tRPC — expose only
+ * { provider, displayName, status, scopesGranted, tokenExpiresAt }.
  */
 export const extChannelAccounts = pgTable(
   "ext_channel_accounts",
@@ -85,100 +69,66 @@ export const extChannelAccounts = pgTable(
     practiceId: uuid("practice_id")
       .notNull()
       .references(() => practices.id),
-    /** Platform identifier (facebook, instagram, google_business, etc.). */
-    platform: extChannelPlatformEnum("platform").notNull(),
-    /**
-     * Platform-specific account ID (e.g. Facebook Page ID, Instagram Business ID).
-     * This is the stable identifier used for API calls.
-     */
-    platformAccountId: text("platform_account_id").notNull(),
-    /** Human-readable account name (e.g. "VET.IS Bratislava Facebook"). */
-    accountName: text("account_name"),
-    /** Current connection status. */
+    provider: extChannelProviderEnum("provider").notNull(),
+    /** GBP location name / Facebook page id / Instagram user id / YouTube channel id. */
+    externalAccountId: text("external_account_id").notNull(),
+    displayName: text("display_name"),
+    /** Audit: the scopes the provider actually granted, which may be fewer than asked for. */
+    scopesGranted: text("scopes_granted").array().notNull().default([]),
+    /** AES-256-GCM envelope. Never logged, never returned to the client. */
+    encryptedAccessToken: text("encrypted_access_token"),
+    encryptedRefreshToken: text("encrypted_refresh_token"),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    tokenRefreshedAt: timestamp("token_refreshed_at", { withTimezone: true }),
+    connectedBy: uuid("connected_by").references(() => users.id),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    /** Soft revoke — keeps the audit trail of a disconnected account. */
+    disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
     status: extChannelAccountStatusEnum("status")
       .notNull()
       .default("connected"),
+    lastError: text("last_error"),
     /**
-     * Encrypted OAuth access token.
-     * Stored as JSONB: { ciphertext, iv, authTag, salt }
-     * Decrypted only at application layer using practice-specific key.
+     * Instagram Content Publishing API enforces a rolling 24h per-account quota.
+     * Snapshot only — always re-check with the provider before publishing.
      */
-    accessTokenEncrypted: jsonb("access_token_encrypted").$type<EncryptedToken>(),
-    /**
-     * Encrypted OAuth refresh token (if applicable).
-     * Some platforms (Facebook) provide long-lived tokens that don't expire.
-     * Others (Google) provide refresh tokens for token renewal.
-     */
-    refreshTokenEncrypted: jsonb("refresh_token_encrypted").$type<EncryptedToken>(),
-    /**
-     * Token expiration time (if applicable).
-     * Null for long-lived tokens (Facebook: 60-day tokens).
-     */
-    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
-    /**
-     * When the token was last refreshed.
-     * Used to detect stale tokens that need renewal.
-     */
-    lastTokenRefreshAt: timestamp("last_token_refresh_at", {
+    publishingQuotaRemaining: integer("publishing_quota_remaining"),
+    publishingQuotaFetchedAt: timestamp("publishing_quota_fetched_at", {
       withTimezone: true,
     }),
-    /**
-     * Platform-specific scopes granted during OAuth flow.
-     * E.g. ["pages_manage_posts", "pages_read_engagement"] for Facebook.
-     */
-    grantedScopes: text("granted_scopes").array(),
-    /**
-     * Additional platform-specific metadata.
-     * E.g. page access token permissions, YouTube channel ID, etc.
-     */
-    platformMetadata: jsonb("platform_metadata"),
-    /**
-     * Error details when status = 'error'.
-     * Includes error message, last error timestamp, and retry count.
-     */
-    errorDetails: jsonb("error_details"),
-    /** When the connection was last verified successful. */
-    lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
-    /** User who initiated the OAuth connection. */
-    connectedBy: uuid("connected_by").references(() => users.id),
-    /** When the connection was revoked by the user. */
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    /** User who revoked the connection. */
-    revokedBy: uuid("revoked_by").references(() => users.id),
+    meta: jsonb("meta").notNull().default({}),
   },
-  (t) => ({
-    practicePlatformIdx: index("ext_channel_accounts_practice_platform_idx").on(
-      t.practiceId,
-      t.platform,
+  (table) => ({
+    connectorTenantFk: foreignKey({
+      columns: [table.practiceId, table.connectedBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "ext_channel_accounts_connector_tenant_fk",
+    }),
+    practiceProviderAccountUq: uniqueIndex(
+      "ext_channel_accounts_practice_provider_account_uq",
+    )
+      .on(table.practiceId, table.provider, table.externalAccountId)
+      .where(sql`${table.deletedAt} is null`),
+    /** "Which live accounts can we publish to right now?" */
+    practiceProviderStatusIdx: index(
+      "ext_channel_accounts_provider_status_idx",
+    )
+      .on(table.practiceId, table.provider, table.status)
+      .where(sql`${table.disconnectedAt} is null and ${table.deletedAt} is null`),
+    /** Token-refresh sweeper. */
+    tokenExpiryIdx: index("ext_channel_accounts_token_expiry_idx")
+      .on(table.tokenExpiresAt)
+      .where(
+        sql`${table.tokenExpiresAt} is not null and ${table.disconnectedAt} is null`,
+      ),
+    disconnectStateCheck: check(
+      "ext_channel_accounts_disconnect_state_check",
+      sql`(${table.status} = 'revoked') = (${table.disconnectedAt} is not null)`,
     ),
-    /**
-     * Unique (practice, platform, platformAccountId): prevents duplicate
-     * connections to the same social media account.
-     */
-    practicePlatformAccountUq: uniqueIndex(
-      "ext_channel_accounts_practice_platform_account_uq",
-    ).on(t.practiceId, t.platform, t.platformAccountId),
-    /** Index for finding accounts needing token refresh. */
-    tokenExpiryIdx: index("ext_channel_accounts_token_expiry_idx").on(
-      t.practiceId,
-      t.tokenExpiresAt,
-    ),
-    /** Index for finding accounts with errors. */
-    statusIdx: index("ext_channel_accounts_status_idx").on(
-      t.practiceId,
-      t.status,
-    ),
-    appendOnlyCheck: check(
-      "ext_channel_accounts_append_only",
-      sql`${t.deletedAt} IS NULL`,
-    ),
-    /**
-     * CHECK: if accessTokenEncrypted is NOT NULL, then platformAccountId must be NOT NULL.
-     * This ensures we don't have orphaned tokens without account identifiers.
-     */
-    tokenAccountCheck: check(
-      "ext_channel_accounts_token_account_check",
-      sql`(${t.accessTokenEncrypted} IS NULL) OR (${t.platformAccountId} IS NOT NULL)`,
+    quotaCheck: check(
+      "ext_channel_accounts_quota_check",
+      sql`${table.publishingQuotaRemaining} is null
+        or ${table.publishingQuotaRemaining} >= 0`,
     ),
   }),
 );
@@ -194,12 +144,8 @@ export const extChannelAccountsRelations = relations(
       fields: [extChannelAccounts.practiceId],
       references: [practices.id],
     }),
-    connector: one(users, {
+    connectedByUser: one(users, {
       fields: [extChannelAccounts.connectedBy],
-      references: [users.id],
-    }),
-    revoker: one(users, {
-      fields: [extChannelAccounts.revokedBy],
       references: [users.id],
     }),
   }),

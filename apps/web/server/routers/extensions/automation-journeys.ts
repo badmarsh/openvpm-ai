@@ -21,7 +21,10 @@ export const automationJourneysRouter = createRouter({
       .where(eq(extAutomationJourneys.practiceId, ctx.practiceId))
       .orderBy(desc(extAutomationJourneys.createdAt));
 
-    return journeys;
+    return journeys.map((j) => ({
+      ...j,
+      enabled: j.isActive,
+    }));
   }),
 
   /**
@@ -33,29 +36,41 @@ export const automationJourneysRouter = createRouter({
         journeyKey: z.string().max(100),
         name: z.string().min(1).max(255),
         description: z.string().max(1000).optional(),
-        steps: z.array(z.any()), // AutomationJourneyStep[]
-        enabled: z.boolean().default(true),
-        maxEnrollmentsPerClient: z.number().int().min(1).optional(),
-        enrollmentCapWindowDays: z.number().int().min(1).optional(),
+        triggerEventType: z.string().default("visit_completed"),
+        steps: z.array(z.any()).default([]), // AutomationJourneyStep[]
+        isActive: z.boolean().default(true),
+        enabled: z.boolean().optional(),
+        frequencyCapWindowDays: z.number().int().min(1).default(30),
+        frequencyCapMaxSteps: z.number().int().min(0).default(4),
+        allowReentry: z.boolean().default(false),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const active =
+        input.enabled !== undefined ? input.enabled : input.isActive;
+
       const [journey] = await ctx.db
         .insert(extAutomationJourneys)
         .values({
           practiceId: ctx.practiceId,
           journeyKey: input.journeyKey,
           name: input.name,
-          description: input.description,
+          description: input.description ?? "",
+          triggerEventType: input.triggerEventType as any,
           steps: input.steps as AutomationJourneyStep[],
           version: 1,
-          enabled: input.enabled,
-          maxEnrollmentsPerClient: input.maxEnrollmentsPerClient,
-          enrollmentCapWindowDays: input.enrollmentCapWindowDays,
+          isActive: active,
+          frequencyCapWindowDays: input.frequencyCapWindowDays,
+          frequencyCapMaxSteps: input.frequencyCapMaxSteps,
+          allowReentry: input.allowReentry,
+          createdBy: ctx.user?.id ?? null,
         })
         .returning();
 
-      return journey;
+      return {
+        ...journey,
+        enabled: journey.isActive,
+      };
     }),
 
   /**
@@ -68,13 +83,23 @@ export const automationJourneysRouter = createRouter({
         name: z.string().min(1).max(255).optional(),
         description: z.string().max(1000).optional(),
         steps: z.array(z.any()).optional(), // AutomationJourneyStep[]
+        isActive: z.boolean().optional(),
         enabled: z.boolean().optional(),
-        maxEnrollmentsPerClient: z.number().int().min(1).optional(),
-        enrollmentCapWindowDays: z.number().int().min(1).optional(),
+        frequencyCapWindowDays: z.number().int().min(1).optional(),
+        frequencyCapMaxSteps: z.number().int().min(0).optional(),
+        allowReentry: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...updates } = input;
+      const { id, enabled, isActive, ...updates } = input;
+      const active = enabled !== undefined ? enabled : isActive;
+
+      const updateData: Record<string, any> = {
+        ...updates,
+      };
+      if (active !== undefined) {
+        updateData.isActive = active;
+      }
 
       // If steps are being updated, increment version
       if (updates.steps) {
@@ -85,13 +110,13 @@ export const automationJourneysRouter = createRouter({
           .limit(1);
 
         if (existing) {
-          (updates as any).version = existing.version + 1;
+          updateData.version = existing.version + 1;
         }
       }
 
       const [updatedJourney] = await ctx.db
         .update(extAutomationJourneys)
-        .set(updates)
+        .set(updateData)
         .where(
           and(
             eq(extAutomationJourneys.id, id),
@@ -100,6 +125,13 @@ export const automationJourneysRouter = createRouter({
         )
         .returning();
 
-      return updatedJourney;
+      if (!updatedJourney) {
+        throw new Error("Journey not found");
+      }
+
+      return {
+        ...updatedJourney,
+        enabled: updatedJourney.isActive,
+      };
     }),
 });

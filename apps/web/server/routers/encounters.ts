@@ -39,6 +39,7 @@ import {
   visitCloseouts,
   visitWorkItems,
   users,
+  extAutomationEvents,
 } from "@openpims/db";
 import {
   CLOSEOUT_DIAGNOSIS_MAX_LENGTH,
@@ -2618,6 +2619,34 @@ export const encountersRouter = createRouter({
         }).catch((err: unknown) => {
           console.error("[marketing] visit_completed trigger failed", err);
         });
+
+        void (ctx.db as any)
+          .insert(extAutomationEvents)
+          .values({
+            practiceId: ctx.practiceId,
+            eventType: "visit_completed",
+            clientId: _trigger.clientId,
+            patientId: _trigger.patientId,
+            appointmentId: input.appointmentId,
+            visitCloseoutId: safeResult.closeout?.id ?? null,
+            sourceRouter: "encounters.completeCheckout",
+            dedupeKey: `visit_completed_${input.appointmentId}`,
+            emittedBy: ctx.user?.id ?? null,
+            status: "pending",
+            availableAt: new Date(),
+            payload: {
+              appointmentId: input.appointmentId,
+              clientId: _trigger.clientId,
+              patientId: _trigger.patientId,
+            },
+          })
+          .onConflictDoNothing()
+          .catch((err: unknown) => {
+            console.error(
+              "[automation] visit_completed event insertion failed",
+              err
+            );
+          });
       }
 
       return safeResult;

@@ -58,7 +58,7 @@ export async function enrollInJourney(
       and(
         eq(extAutomationJourneys.practiceId, practiceId),
         eq(extAutomationJourneys.journeyKey, journeyKey),
-        eq(extAutomationJourneys.enabled, true)
+        eq(extAutomationJourneys.isActive, true)
       )
     )
     .limit(1);
@@ -69,8 +69,8 @@ export async function enrollInJourney(
   }
 
   // Check enrollment cap
-  if (journey.maxEnrollmentsPerClient) {
-    const windowDays = journey.enrollmentCapWindowDays ?? 365; // Default: lifetime cap
+  if (journey.frequencyCapMaxSteps) {
+    const windowDays = journey.frequencyCapWindowDays ?? 30;
     const windowStart = new Date();
     windowStart.setDate(windowStart.getDate() - windowDays);
 
@@ -87,7 +87,7 @@ export async function enrollInJourney(
       )
       .limit(1);
 
-    if (enrollmentCount && enrollmentCount.count >= journey.maxEnrollmentsPerClient) {
+    if (enrollmentCount && enrollmentCount.count >= journey.frequencyCapMaxSteps) {
       console.log(
         `[journey-engine] Client ${clientId} already at enrollment cap for journey ${journeyKey}`
       );
@@ -95,14 +95,11 @@ export async function enrollInJourney(
     }
   }
 
-  // Create enrollment with dedupe key
-  const dedupeKey = `journey_${journey.id}_client_${clientId}${triggeringEventId ? `_event_${triggeringEventId}` : ""}`;
-
-  const steps = journey.steps as JourneyStep[];
-  const firstStep = steps[0];
-  const firstStepAvailableAt = new Date();
-  if (firstStep?.delayHours) {
-    firstStepAvailableAt.setHours(firstStepAvailableAt.getHours() + firstStep.delayHours);
+  if (!triggeringEventId) {
+    console.warn(
+      `[journey-engine] Cannot enroll in journey ${journeyKey} without triggerEventId`
+    );
+    return;
   }
 
   await db
@@ -112,19 +109,12 @@ export async function enrollInJourney(
       clientId,
       patientId,
       journeyId: journey.id,
-      enrolledJourneyVersion: journey.version,
-      triggeringEventId,
+      journeyVersion: journey.version,
+      triggerEventId: triggeringEventId,
       status: "active",
       currentStepIndex: 0,
-      currentStepAvailableAt: firstStepAvailableAt,
-      dedupeKey,
     })
-    .onConflictDoNothing({
-      target: [
-        (extAutomationEnrollments as any).practiceId,
-        (extAutomationEnrollments as any).dedupeKey,
-      ],
-    });
+    .onConflictDoNothing();
 }
 
 // ---------------------------------------------------------------------------
@@ -150,7 +140,6 @@ export async function advanceJourney(
   // Find enrollments ready for advancement
   const whereClauses = [
     eq(extAutomationEnrollments.status, "active" as const),
-    lte(extAutomationEnrollments.currentStepAvailableAt, now),
     isNull(extAutomationEnrollments.deletedAt),
   ];
 
@@ -228,7 +217,7 @@ async function advanceSingleEnrollment(
       .update(extAutomationEnrollments)
       .set({
         currentStepIndex: currentStepIndex + 1,
-        currentStepAvailableAt: nextAvailableAt,
+        lastStepExecutedAt: now,
       })
       .where(eq(extAutomationEnrollments.id, enrollment.id));
   } else {
@@ -246,15 +235,12 @@ async function executeJourneyStep(
   step: JourneyStep,
   now: Date
 ): Promise<void> {
-  // Create step execution record
   const [stepExecution] = await db
     .insert(extAutomationStepExecutions)
     .values({
       practiceId: enrollment.practiceId,
       enrollmentId: enrollment.id,
       stepIndex: step.index,
-      stepKind: step.kind,
-      stepLabel: step.label,
       scheduledAt: now,
       status: "executing",
     })
@@ -391,13 +377,21 @@ async function markStepComplete(
   status: "done" | "skipped" | "failed",
   outcomeReason?: string
 ): Promise<void> {
+  const updateData: Record<string, any> = {
+    status: status as any,
+  };
+  if (status === "done") {
+    updateData.executedAt = new Date();
+  } else if (status === "skipped") {
+    updateData.skippedAt = new Date();
+    updateData.skipReason = outcomeReason;
+  } else if (status === "failed") {
+    updateData.failureReason = outcomeReason;
+  }
+
   await db
     .update(extAutomationStepExecutions)
-    .set({
-      status: status as any,
-      executedAt: new Date(),
-      outcomeReason,
-    })
+    .set(updateData)
     .where(eq(extAutomationStepExecutions.id, stepExecutionId));
 }
 

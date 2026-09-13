@@ -127,11 +127,10 @@ async function recoverStuckClaims(
   await db
     .update(extAutomationEvents)
     .set({
-      status: "pending" as const,
+      status: "pending",
       lockedAt: null,
       lockedBy: null,
-      attemptCount: sql`${extAutomationEvents.attemptCount} + 1`,
-      lastAttemptAt: new Date(),
+      retryCount: sql`${extAutomationEvents.retryCount} + 1`,
       processedReason: "Worker crash recovery - claim reset",
     })
     .where(inArray(extAutomationEvents.id, eventIds));
@@ -233,12 +232,13 @@ async function processEventBatch(
       await db
         .update(extAutomationEvents)
         .set({
-          status: "failed" as const,
+          status: "failed",
+          failedAt: now,
+          failureReason: error instanceof Error ? error.message : "Unknown error",
           processedReason: error instanceof Error ? error.message : "Unknown error",
           lockedAt: null,
           lockedBy: null,
-          attemptCount: sql`${extAutomationEvents.attemptCount} + 1`,
-          lastAttemptAt: now,
+          retryCount: sql`${extAutomationEvents.retryCount} + 1`,
         })
         .where(eq(extAutomationEvents.id, event.id));
     }
@@ -284,11 +284,10 @@ async function processSingleEvent(
   await db
     .update(extAutomationEvents)
     .set({
-      status: "processed" as const,
+      status: "processed",
+      processedAt: now,
       lockedAt: null,
       lockedBy: null,
-      attemptCount: sql`${extAutomationEvents.attemptCount} + 1`,
-      lastAttemptAt: now,
     })
     .where(eq(extAutomationEvents.id, event.id));
 }

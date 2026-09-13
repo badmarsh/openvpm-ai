@@ -100,7 +100,7 @@ export default function MarketingAutomationsPage() {
                   <div className="pt-2 border-t border-border/60 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-primary" />
-                      <span>{t("marketing.automations.timing", "Časovanie")}: <strong>{rule.triggerEvent}</strong></span>
+                      <span>{t("marketing.automations.timing", "Časovanie")}: <strong>{rule.triggerEventType}</strong></span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Smartphone className="w-3.5 h-3.5 text-primary" />

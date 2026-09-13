@@ -8,7 +8,10 @@ import { extSmsDeliveryLog } from "@openpims/db";
  * journeys to self-block after the first message. Set to 3 to allow typical
  * 2-step (thank_you + review_request) journeys with headroom.
  */
-export const MAX_MARKETING_SMS_PER_WINDOW = 3;
+export const MAX_MARKETING_SMS_PER_WINDOW = parseInt(
+  process.env.SMS_RATE_LIMIT_PER_WEEK ?? "3",
+  10
+);
 
 export async function smsRateLimitOk(
   db: Database | any,

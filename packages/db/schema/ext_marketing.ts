@@ -28,6 +28,26 @@ export const extMarketingConsentScopeEnum = pgEnum("ext_marketing_consent_scope"
 export const extMarketingConsentEvidenceEnum = pgEnum("ext_marketing_consent_evidence", ["signature", "sms_confirm", "pdf"]);
 export const extMarketingMediaKindEnum = pgEnum("ext_marketing_media_kind", ["photo", "brand_graphic", "video", "illustration"]);
 export const extMarketingTaskStatusEnum = pgEnum("ext_marketing_task_status", ["open", "done"]);
+export const extReputationSentimentEnum = pgEnum("ext_reputation_sentiment", [
+  "positive",
+  "neutral",
+  "negative",
+  "mixed",
+]);
+export const extReputationSeverityEnum = pgEnum("ext_reputation_severity", [
+  "critical",
+  "high",
+  "medium",
+  "low",
+  "none",
+]);
+export const extReputationEscalationEnum = pgEnum("ext_reputation_escalation", [
+  "none",
+  "pending",
+  "escalated",
+  "resolved",
+  "wont_fix",
+]);
 
 export const extMarketingMediaConsents = pgTable("ext_marketing_media_consents", {
   ...baseColumns(),
@@ -140,10 +160,46 @@ export const extMarketingReviews = pgTable("ext_marketing_reviews", {
   repliedBy: uuid("replied_by").references(() => users.id),
   requestSentAt: timestamp("request_sent_at", { withTimezone: true }),
   requestBlockedReason: text("request_blocked_reason"),
+
+  // ── Autopilot Pillar 4: reputation management (all nullable / safe defaults) ──
+  sentimentScore: integer("sentiment_score"),
+  sentimentLabel: extReputationSentimentEnum("sentiment_label"),
+  sentimentModel: text("sentiment_model"),
+  topic: text("topic"),
+  severity: extReputationSeverityEnum("severity").notNull().default("none"),
+  classifierConfidence: integer("classifier_confidence"),
+
+  escalationStatus: extReputationEscalationEnum("escalation_status")
+    .notNull()
+    .default("none"),
+  escalatedTo: uuid("escalated_to").references(() => users.id),
+  escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+  escalationReason: text("escalation_reason"),
+  internalTicketId: uuid("internal_ticket_id"),
+
+  aiReplyDraft: text("ai_reply_draft"),
+  responseApprovedBy: uuid("response_approved_by").references(() => users.id),
+  responseApprovedAt: timestamp("response_approved_at", { withTimezone: true }),
+  responsePublishedAt: timestamp("response_published_at", { withTimezone: true }),
+  responseChannel: extMarketingChannelEnum("response_channel"),
+  responseExternalId: text("response_external_id"),
+
+  isAutoPilotEligible: boolean("is_auto_pilot_eligible"),
+
+  platformAccountId: text("platform_account_id"),
+  reviewUrl: text("review_url"),
+  reviewerLanguage: text("reviewer_language").notNull().default("sk"),
+  externalUpdatedAt: timestamp("external_updated_at", { withTimezone: true }),
+  ingestSource: text("ingest_source"),
 }, (table) => ({
   practiceIdx: index("ext_mkt_reviews_practice_idx").on(table.practiceId, table.deletedAt),
   receivedIdx: index("ext_mkt_reviews_received_idx").on(table.practiceId, table.receivedAt),
   platformIdx: index("ext_mkt_reviews_platform_idx").on(table.practiceId, table.platform),
+  inboxIdx: index("ext_mkt_reviews_inbox_idx")
+    .on(table.practiceId, table.escalationStatus, table.receivedAt)
+    .where(sql`${table.deletedAt} is null`),
+  sentimentIdx: index("ext_mkt_reviews_sentiment_idx")
+    .on(table.practiceId, table.sentimentLabel, table.severity),
 }));
 
 export const extMarketingRecallSchedules = pgTable("ext_marketing_recall_schedules", {
@@ -216,6 +272,16 @@ export const extMarketingReviewsRelations = relations(extMarketingReviews, ({ on
   client: one(clients, { fields: [extMarketingReviews.clientId], references: [clients.id] }),
   appointment: one(appointments, { fields: [extMarketingReviews.appointmentId], references: [appointments.id] }),
   repliedBy: one(users, { fields: [extMarketingReviews.repliedBy], references: [users.id] }),
+  escalatedToUser: one(users, {
+    relationName: "reviewEscalatedTo",
+    fields: [extMarketingReviews.escalatedTo],
+    references: [users.id],
+  }),
+  responseApprover: one(users, {
+    relationName: "reviewResponseApprover",
+    fields: [extMarketingReviews.responseApprovedBy],
+    references: [users.id],
+  }),
 }));
 
 export const extMarketingRecallSchedulesRelations = relations(extMarketingRecallSchedules, ({ one }) => ({

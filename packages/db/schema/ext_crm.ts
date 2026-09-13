@@ -9,27 +9,31 @@ import {
   boolean,
   index,
   uniqueIndex,
+  foreignKey,
   check,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
 import { practices } from "./practices";
 import { clients } from "./clients";
-import { patients } from "./patients";
+import { users } from "./users";
+import { extAutomationEvents } from "./ext_automation";
 
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
 
 /**
- * Segment type: static (manually curated) vs dynamic (rule-based).
+ * How a segment's membership is recomputed.
  *
- * Static segments: explicit client memberships, e.g. "VIP clients".
- * Dynamic segments: rule-based, e.g. "clients with dogs > 7 years".
+ * `event_driven`  — membership changes when a matching event is processed.
+ * `scheduled`     — a nightly/weekly sweep re-evaluates conditionJson.
+ * `manual`        — staff add/remove clients by hand.
  */
-export const extCrmSegmentTypeEnum = pgEnum("ext_crm_segment_type", [
-  "static",
-  "dynamic",
+export const extCrmRefreshStrategyEnum = pgEnum("ext_crm_refresh_strategy", [
+  "event_driven",
+  "scheduled",
+  "manual",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -37,40 +41,45 @@ export const extCrmSegmentTypeEnum = pgEnum("ext_crm_segment_type", [
 // ---------------------------------------------------------------------------
 
 /**
- * Condition object for dynamic segments.
+ * The ONLY machine-evaluated segment definition. Compiled by a whitelisted
+ * query builder into a parameterised, practice-scoped WHERE fragment.
  *
- * This is a whitelist-compiled JSON object, NOT executable SQL.
- * The rules engine evaluates this against client/patient data.
+ * Never execute this SQL directly — it's for human readability only.
+ * The engine uses conditionJson for evaluation.
  */
 export type CrmSegmentCondition = {
-  /** Filter by patient species: ["dog", "cat", ...] */
+  /** patients.species values, e.g. ["canine", "feline"]. */
   species?: string[];
-  /** Filter by patient age: min/max in years. */
-  minPatientAgeYears?: number;
-  maxPatientAgeYears?: number;
-  /** Filter by client attributes. */
-  clientTags?: string[];
-  /** Filter by wellness enrollment status. */
-  hasWellnessEnrollment?: boolean;
-  /** Filter by last visit recency (days ago). */
-  lastVisitWithinDays?: number;
-  lastVisitBeyondDays?: number;
+  /** Patients with no visit in the last N days. */
+  inactiveDays?: number;
+  /** Patients with a visit in the last N days. */
+  activeWithinDays?: number;
+  /** Appointment types that qualify, e.g. ["surgery", "dental"]. */
+  visitTypes?: string[];
+  /** Days since the last visit of one of those types. */
+  visitTypeWithinDays?: number;
+  /** Require at least one patient with this status. */
+  patientStatus?: "active" | "inactive";
+  /** Minimum age in years of any active patient. */
+  minAgeYears?: number;
+  maxAgeYears?: number;
+  /** Require a live consent for this ext_marketing_consent_scope value. */
+  requireConsentScope?: string;
+  /** Clients with no consent record at all are excluded by default. */
+  excludeUncontactable?: boolean;
+  /** Other segment keys that must also match (AND). */
+  allOfSegmentKeys?: string[];
+  /** Other segment keys that must NOT match (AND NOT). */
+  noneOfSegmentKeys?: string[];
 };
 
 // ---------------------------------------------------------------------------
-// 2F. ext_crm_segments — CRM segment definitions
+// 2F. ext_crm_segments — named client segments
 // ---------------------------------------------------------------------------
 
 /**
- * Client/patient segments for targeted automation.
- *
- * Segments can be:
- * - Static: manually curated list of clients (ext_crm_segment_memberships)
- * - Dynamic: rule-based, evaluated by the rules engine
- *
- * conditionJson is the source of truth (jsonb, whitelist-compiled);
- * conditionSql is retained as an inert, human-readable rendering that the
- * engine never executes (tenant-isolation hazard — see GUARDRAILS-COMPLIANCE.md §B).
+ * The 12 canonical segments from the vision are seeded with
+ * `is_system = true` so they cannot be deleted, only deactivated.
  */
 export const extCrmSegments = pgTable(
   "ext_crm_segments",
@@ -79,55 +88,83 @@ export const extCrmSegments = pgTable(
     practiceId: uuid("practice_id")
       .notNull()
       .references(() => practices.id),
-    /** Human-readable segment name, e.g. "Senior Dogs", "VIP Clients". */
     name: text("name").notNull(),
-    description: text("description"),
-    /** Static (manual) vs dynamic (rule-based). */
-    segmentType: extCrmSegmentTypeEnum("segment_type").notNull(),
     /**
-     * JSON condition object for dynamic segments (see CrmSegmentCondition).
-     * This is the source of truth; conditionSql is derived documentation.
+     * Stable machine key, e.g. "inactive_6mo", "post_surgery",
+     * "vaccine_overdue". Referenced by ext_automation_rules.condition_json
+     * (segmentKeys / excludeSegmentKeys), so it must never be renamed in place.
      */
-    conditionJson: jsonb("condition_json").$type<CrmSegmentCondition>(),
+    segmentKey: text("segment_key").notNull(),
+    description: text("description").notNull().default(""),
+    /** System segments ship with the product and cannot be deleted. */
+    isSystem: boolean("is_system").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(true),
     /**
-     * Human-readable SQL-like rendering of conditionJson for documentation.
-     * NEVER executed by the engine (tenant-isolation hazard).
+     * SOURCE OF TRUTH. Whitelist-compiled by the segment engine.
+     */
+    conditionJson: jsonb("condition_json")
+      .$type<CrmSegmentCondition>()
+      .notNull()
+      .default({}),
+    /**
+     * SECURITY NOTE — see SCHEMA-DESIGN.md §A.2F.
+     *
+     * This column is a rendered, human-readable rendering of conditionJson for
+     * staff review and for the audit trail. It MUST NOT be executed. The
+     * segment engine reads conditionJson only. Enforced by convention here and
+     * by a code-level lint rule; there is no DB-level way to stop a query from
+     * interpolating it, which is exactly why it must stay inert.
      */
     conditionSql: text("condition_sql"),
-    /** Number of clients currently in this segment (cached for UI). */
-    clientCount: integer("client_count").notNull().default(0),
-    /** When clientCount was last recalculated. */
-    clientCountComputedAt: timestamp("client_count_computed_at", {
-      withTimezone: true,
-    }),
+    refreshStrategy: extCrmRefreshStrategyEnum("refresh_strategy")
+      .notNull()
+      .default("event_driven"),
+    lastRefreshedAt: timestamp("last_refreshed_at", { withTimezone: true }),
+    /** Denormalised for list rendering; refreshed by the segment engine. */
+    memberCountCache: integer("member_count_cache").notNull().default(0),
+    /** Bumped when conditionJson changes so stale memberships can be detected. */
+    version: integer("version").notNull().default(1),
+    createdBy: uuid("created_by").references(() => users.id),
   },
-  (t) => ({
-    practiceTypeIdx: index("ext_crm_segments_practice_type_idx").on(
-      t.practiceId,
-      t.segmentType,
+  (table) => ({
+    creatorTenantFk: foreignKey({
+      columns: [table.practiceId, table.createdBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "ext_crm_segments_creator_tenant_fk",
+    }),
+    practiceKeyUq: uniqueIndex("ext_crm_segments_practice_key_uq")
+      .on(table.practiceId, table.segmentKey)
+      .where(sql`${table.deletedAt} is null`),
+    practiceIdx: index("ext_crm_segments_practice_idx").on(
+      table.practiceId,
+      table.deletedAt,
+      table.isActive,
     ),
-    /** Unique segment name per practice. */
-    practiceNameUq: uniqueIndex("ext_crm_segments_practice_name_uq").on(
-      t.practiceId,
-      t.name,
+    refreshDueIdx: index("ext_crm_segments_refresh_due_idx")
+      .on(table.practiceId, table.lastRefreshedAt)
+      .where(
+        sql`${table.refreshStrategy} = 'scheduled' and ${table.deletedAt} is null`,
+      ),
+    /** segment_key is a machine identifier: no whitespace, no uppercase. */
+    segmentKeyFormatCheck: check(
+      "ext_crm_segments_key_format_check",
+      sql`${table.segmentKey} ~ '^[a-z][a-z0-9_]{1,62}$'`,
     ),
-    appendOnlyCheck: check(
-      "ext_crm_segments_append_only",
-      sql`${t.deletedAt} IS NULL`,
+    versionCheck: check(
+      "ext_crm_segments_version_check",
+      sql`${table.version} >= 1`,
+    ),
+    memberCountCheck: check(
+      "ext_crm_segments_member_count_check",
+      sql`${table.memberCountCache} >= 0`,
     ),
   }),
 );
 
 // ---------------------------------------------------------------------------
-// 2G. ext_crm_segment_memberships — static segment memberships
+// 2G. ext_crm_segment_memberships — which clients are in which segment
 // ---------------------------------------------------------------------------
 
-/**
- * Explicit client memberships in static segments.
- *
- * For dynamic segments, memberships are computed on-the-fly by the rules
- * engine and NOT stored here. This table is ONLY for static segments.
- */
 export const extCrmSegmentMemberships = pgTable(
   "ext_crm_segment_memberships",
   {
@@ -138,32 +175,73 @@ export const extCrmSegmentMemberships = pgTable(
     segmentId: uuid("segment_id")
       .notNull()
       .references(() => extCrmSegments.id),
-    clientId: uuid("client_id")
+    clientId: uuid("client_id").notNull(),
+    enrolledAt: timestamp("enrolled_at", { withTimezone: true })
       .notNull()
-      .references(() => clients.id),
-    /** Optional: specific patient that qualified the client for this segment. */
-    patientId: uuid("patient_id").references(() => patients.id),
-    /** Why this client was added (manual note or rule evaluation result). */
-    reason: text("reason"),
-  },
-  (t) => ({
-    segmentIdx: index("ext_crm_memberships_segment_idx").on(
-      t.practiceId,
-      t.segmentId,
-    ),
-    clientIdx: index("ext_crm_memberships_client_idx").on(
-      t.practiceId,
-      t.clientId,
+      .defaultNow(),
+    /**
+     * When membership lapses on its own (e.g. "post_surgery" expires 30 days
+     * after discharge). Null = open-ended.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** Human-readable why, e.g. "visit_closeout 2026-09-10 (surgery)". */
+    enrollmentReason: text("enrollment_reason"),
+    triggerEventId: uuid("trigger_event_id").references(
+      () => extAutomationEvents.id,
     ),
     /**
-     * Unique (segment, client) per practice: prevents duplicate memberships.
+     * Staff opt-out of a specific segment for a specific client. Distinct from
+     * a global marketing opt-out: the client still receives everything else.
+     * Supersedes any automated re-enrollment.
      */
-    segmentClientUq: uniqueIndex(
-      "ext_crm_memberships_practice_segment_client_uq",
-    ).on(t.practiceId, t.segmentId, t.clientId),
-    appendOnlyCheck: check(
-      "ext_crm_memberships_append_only",
-      sql`${t.deletedAt} IS NULL`,
+    isManuallyExcluded: boolean("is_manually_excluded")
+      .notNull()
+      .default(false),
+    excludedBy: uuid("excluded_by").references(() => users.id),
+    excludedAt: timestamp("excluded_at", { withTimezone: true }),
+    /** Segment definition version at enrollment time. */
+    segmentVersion: integer("segment_version").notNull().default(1),
+  },
+  (table) => ({
+    clientTenantFk: foreignKey({
+      columns: [table.practiceId, table.clientId],
+      foreignColumns: [clients.practiceId, clients.id],
+      name: "ext_crm_memberships_client_tenant_fk",
+    }),
+    excluderTenantFk: foreignKey({
+      columns: [table.practiceId, table.excludedBy],
+      foreignColumns: [users.practiceId, users.id],
+      name: "ext_crm_memberships_excluder_tenant_fk",
+    }),
+    /** A client is in a segment at most once. Non-negotiable. */
+    membershipUq: uniqueIndex("ext_crm_membership_uq")
+      .on(table.practiceId, table.segmentId, table.clientId)
+      .where(sql`${table.deletedAt} is null`),
+    /** "Which segments is this client in right now?" — the hot read path. */
+    practiceClientIdx: index("ext_crm_membership_client_idx").on(
+      table.practiceId,
+      table.clientId,
+      table.isManuallyExcluded,
+    ),
+    /** "Who is in this segment, unexpired?" — campaign targeting. */
+    practiceSegmentIdx: index("ext_crm_membership_segment_idx").on(
+      table.practiceId,
+      table.segmentId,
+      table.isManuallyExcluded,
+      table.expiresAt,
+    ),
+    /** Expiry sweeper. */
+    expiryIdx: index("ext_crm_membership_expiry_idx")
+      .on(table.expiresAt)
+      .where(sql`${table.expiresAt} is not null and ${table.deletedAt} is null`),
+    exclusionCheck: check(
+      "ext_crm_membership_exclusion_check",
+      sql`(${table.isManuallyExcluded} = false)
+        or (${table.excludedBy} is not null and ${table.excludedAt} is not null)`,
+    ),
+    expiryCheck: check(
+      "ext_crm_membership_expiry_window_check",
+      sql`${table.expiresAt} is null or ${table.expiresAt} > ${table.enrolledAt}`,
     ),
   }),
 );
@@ -172,16 +250,17 @@ export const extCrmSegmentMemberships = pgTable(
 // Relations
 // ---------------------------------------------------------------------------
 
-export const extCrmSegmentsRelations = relations(
-  extCrmSegments,
-  ({ one, many }) => ({
-    practice: one(practices, {
-      fields: [extCrmSegments.practiceId],
-      references: [practices.id],
-    }),
-    memberships: many(extCrmSegmentMemberships),
+export const extCrmSegmentsRelations = relations(extCrmSegments, ({ one, many }) => ({
+  practice: one(practices, {
+    fields: [extCrmSegments.practiceId],
+    references: [practices.id],
   }),
-);
+  createdByUser: one(users, {
+    fields: [extCrmSegments.createdBy],
+    references: [users.id],
+  }),
+  memberships: many(extCrmSegmentMemberships),
+}));
 
 export const extCrmSegmentMembershipsRelations = relations(
   extCrmSegmentMemberships,
@@ -198,9 +277,13 @@ export const extCrmSegmentMembershipsRelations = relations(
       fields: [extCrmSegmentMemberships.clientId],
       references: [clients.id],
     }),
-    patient: one(patients, {
-      fields: [extCrmSegmentMemberships.patientId],
-      references: [patients.id],
+    triggerEvent: one(extAutomationEvents, {
+      fields: [extCrmSegmentMemberships.triggerEventId],
+      references: [extAutomationEvents.id],
+    }),
+    excludedByUser: one(users, {
+      fields: [extCrmSegmentMemberships.excludedBy],
+      references: [users.id],
     }),
   }),
 );

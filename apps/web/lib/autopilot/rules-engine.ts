@@ -55,8 +55,8 @@ export async function evaluateRules(
     .where(
       and(
         eq(extAutomationRules.practiceId, event.practiceId),
-        eq(extAutomationRules.triggerEvent, event.eventType as any),
-        eq(extAutomationRules.enabled, true)
+        eq(extAutomationRules.triggerEventType, event.eventType as any),
+        eq(extAutomationRules.isActive, true)
       )
     )
     .orderBy(extAutomationRules.priority);
@@ -188,7 +188,7 @@ export async function executeRuleAction(
   rule: typeof extAutomationRules.$inferSelect,
   availableAt: Date
 ): Promise<void> {
-  const action = rule.actionJson as AutomationActionConfig;
+  const action = rule.actionConfig as AutomationActionConfig;
 
   switch (rule.actionType) {
     case "create_journey":
@@ -233,7 +233,7 @@ async function scheduleJourneyEnrollment(
       and(
         eq(extAutomationJourneys.practiceId, event.practiceId),
         eq(extAutomationJourneys.journeyKey, action.journeyKey),
-        eq(extAutomationJourneys.enabled, true)
+        eq(extAutomationJourneys.isActive, true)
       )
     )
     .limit(1);
@@ -245,9 +245,6 @@ async function scheduleJourneyEnrollment(
     return;
   }
 
-  // Create enrollment with dedupe key
-  const dedupeKey = `journey_${journey.id}_client_${event.clientId}_event_${event.id}`;
-
   await db
     .insert(extAutomationEnrollments)
     .values({
@@ -255,19 +252,12 @@ async function scheduleJourneyEnrollment(
       clientId: event.clientId,
       patientId: event.patientId,
       journeyId: journey.id,
-      enrolledJourneyVersion: journey.version,
-      triggeringEventId: event.id,
+      journeyVersion: journey.version,
+      triggerEventId: event.id,
       status: "active",
       currentStepIndex: 0,
-      currentStepAvailableAt: availableAt,
-      dedupeKey,
     })
-    .onConflictDoNothing({
-      target: [
-        (extAutomationEnrollments as any).practiceId,
-        (extAutomationEnrollments as any).dedupeKey,
-      ],
-    });
+    .onConflictDoNothing();
 }
 
 /**

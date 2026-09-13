@@ -21,7 +21,10 @@ export const automationRulesRouter = createRouter({
       .where(eq(extAutomationRules.practiceId, ctx.practiceId))
       .orderBy(extAutomationRules.priority);
 
-    return rules;
+    return rules.map((r) => ({
+      ...r,
+      enabled: r.isActive,
+    }));
   }),
 
   /**
@@ -30,37 +33,54 @@ export const automationRulesRouter = createRouter({
   create: protectedProcedure
     .input(
       z.object({
+        ruleKey: z.string().max(100).optional(),
         name: z.string().min(1).max(255),
         description: z.string().max(1000).optional(),
-        triggerEvent: z.string(),
-        conditionJson: z.any().optional(), // AutomationRuleCondition
-        conditionSql: z.string().max(2000).optional(),
-        actionType: z.enum(["create_journey", "send_communication", "create_task", "create_content_brief"]),
-        actionJson: z.any(), // AutomationActionConfig
+        triggerEventType: z.string(),
+        conditionJson: z.any().optional(),
+        delayHours: z.number().int().min(0).default(0),
+        actionType: z.enum([
+          "create_journey",
+          "send_communication",
+          "create_task",
+          "create_content_brief",
+        ]),
+        actionConfig: z.any().optional(),
         priority: z.number().int().min(1).max(1000).default(100),
-        enabled: z.boolean().default(true),
-        ruleKey: z.string().max(100).optional(),
+        isActive: z.boolean().default(true),
+        enabled: z.boolean().optional(),
+        legalBasis: z.string().default("contract"),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const active = input.enabled !== undefined ? input.enabled : input.isActive;
+      const key =
+        input.ruleKey ??
+        `rule_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
       const [rule] = await ctx.db
         .insert(extAutomationRules)
         .values({
           practiceId: ctx.practiceId,
+          ruleKey: key,
           name: input.name,
-          description: input.description,
-          triggerEvent: input.triggerEvent as any,
-          conditionJson: input.conditionJson as AutomationRuleCondition,
-          conditionSql: input.conditionSql,
+          description: input.description ?? "",
+          triggerEventType: input.triggerEventType as any,
+          conditionJson: (input.conditionJson ?? {}) as AutomationRuleCondition,
+          delayHours: input.delayHours,
           actionType: input.actionType as any,
-          actionJson: input.actionJson as AutomationActionConfig,
+          actionConfig: (input.actionConfig ?? {}) as AutomationActionConfig,
           priority: input.priority,
-          enabled: input.enabled,
-          ruleKey: input.ruleKey,
+          isActive: active,
+          legalBasis: input.legalBasis,
+          createdBy: ctx.user?.id ?? null,
         })
         .returning();
 
-      return rule;
+      return {
+        ...rule,
+        enabled: rule.isActive,
+      };
     }),
 
   /**
@@ -73,38 +93,47 @@ export const automationRulesRouter = createRouter({
         name: z.string().min(1).max(255).optional(),
         description: z.string().max(1000).optional(),
         conditionJson: z.any().optional(),
-        conditionSql: z.string().max(2000).optional(),
-        actionType: z.enum(["create_journey", "send_communication", "create_task", "create_content_brief"]).optional(),
-        actionJson: z.any().optional(),
+        delayHours: z.number().int().min(0).optional(),
+        actionType: z
+          .enum([
+            "create_journey",
+            "send_communication",
+            "create_task",
+            "create_content_brief",
+          ])
+          .optional(),
+        actionConfig: z.any().optional(),
         priority: z.number().int().min(1).max(1000).optional(),
+        isActive: z.boolean().optional(),
         enabled: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...updates } = input;
+      const { id, enabled, isActive, ...updates } = input;
+      const active = enabled !== undefined ? enabled : isActive;
 
-      const [rule] = await ctx.db
-        .select()
-        .from(extAutomationRules)
+      const [updatedRule] = await ctx.db
+        .update(extAutomationRules)
+        .set({
+          ...updates,
+          ...(active !== undefined ? { isActive: active } : {}),
+        })
         .where(
           and(
             eq(extAutomationRules.id, id),
             eq(extAutomationRules.practiceId, ctx.practiceId)
           )
         )
-        .limit(1);
+        .returning();
 
-      if (!rule) {
+      if (!updatedRule) {
         throw new Error("Rule not found");
       }
 
-      const [updatedRule] = await ctx.db
-        .update(extAutomationRules)
-        .set(updates)
-        .where(eq(extAutomationRules.id, id))
-        .returning();
-
-      return updatedRule;
+      return {
+        ...updatedRule,
+        enabled: updatedRule.isActive,
+      };
     }),
 
   /**
@@ -114,32 +143,35 @@ export const automationRulesRouter = createRouter({
     .input(
       z.object({
         id: z.string().uuid(),
-        enabled: z.boolean(),
+        enabled: z.boolean().optional(),
+        isActive: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const [rule] = await ctx.db
-        .select()
-        .from(extAutomationRules)
+      const active =
+        input.enabled !== undefined
+          ? input.enabled
+          : (input.isActive ?? true);
+
+      const [updatedRule] = await ctx.db
+        .update(extAutomationRules)
+        .set({ isActive: active })
         .where(
           and(
             eq(extAutomationRules.id, input.id),
             eq(extAutomationRules.practiceId, ctx.practiceId)
           )
         )
-        .limit(1);
+        .returning();
 
-      if (!rule) {
+      if (!updatedRule) {
         throw new Error("Rule not found");
       }
 
-      const [updatedRule] = await ctx.db
-        .update(extAutomationRules)
-        .set({ enabled: input.enabled })
-        .where(eq(extAutomationRules.id, input.id))
-        .returning();
-
-      return updatedRule;
+      return {
+        ...updatedRule,
+        enabled: updatedRule.isActive,
+      };
     }),
 
   /**
