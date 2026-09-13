@@ -909,6 +909,8 @@ listReviews: protectedProcedure
       limit: z.number().min(1).max(100).default(50),
       unansweredOnly: z.boolean().default(false),
       platform: z.enum(['all', 'google', 'facebook']).default('all'),
+      sentiment: z.enum(['all', 'positive', 'neutral', 'negative', 'mixed']).default('all'),
+      escalation: z.enum(['all', 'none', 'pending', 'escalated', 'resolved', 'wont_fix']).default('all'),
     })
   )
   .query(async ({ ctx, input }) => {
@@ -919,6 +921,12 @@ listReviews: protectedProcedure
     if (input.unansweredOnly) conditions.push(isNull(extMarketingReviews.replyText));
     if (input.platform && input.platform !== 'all') {
       conditions.push(eq(extMarketingReviews.platform, input.platform));
+    }
+    if (input.sentiment && input.sentiment !== 'all') {
+      conditions.push(eq(extMarketingReviews.sentimentLabel, input.sentiment));
+    }
+    if (input.escalation && input.escalation !== 'all') {
+      conditions.push(eq(extMarketingReviews.escalationStatus, input.escalation));
     }
     return ctx.db
       .select()
@@ -1003,6 +1011,128 @@ replyToReview: protectedProcedure
       .returning();
     return updated;
   }),
+
+  escalateReview: protectedProcedure
+    .use(requireRole('admin', 'veterinarian', 'front_desk'))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        reason: z.string().min(3).max(500),
+        detail: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [review] = await ctx.db
+        .select()
+        .from(extMarketingReviews)
+        .where(
+          and(
+            eq(extMarketingReviews.id, input.id),
+            eq(extMarketingReviews.practiceId, ctx.practiceId)
+          )
+        )
+        .limit(1);
+
+      if (!review) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Review not found" });
+      }
+
+      // Create a staff task for urgent follow-up
+      const [staffTask] = await ctx.db
+        .insert(extMarketingStaffTasks)
+        .values({
+          practiceId: ctx.practiceId,
+          kind: "postop_escalation",
+          title: `Eskalovaná recenzia: ${review.reviewerName ?? "Anonym"} (${review.rating ?? 1}★)`,
+          detail: `Dôvod: ${input.reason}\n${input.detail ?? ""}\n\nText recenzie: "${review.reviewText ?? ""}"`,
+          clientId: review.clientId ?? null,
+        })
+        .returning();
+
+      const [updated] = await ctx.db
+        .update(extMarketingReviews)
+        .set({
+          escalationStatus: "escalated",
+          escalatedTo: ctx.user.id,
+          escalatedAt: new Date(),
+          escalationReason: input.reason,
+          internalTicketId: staffTask?.id ?? null,
+        })
+        .where(
+          and(
+            eq(extMarketingReviews.id, input.id),
+            eq(extMarketingReviews.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      return { success: true, updated, staffTaskId: staffTask?.id };
+    }),
+
+  approveReviewReply: protectedProcedure
+    .use(requireRole('admin', 'veterinarian', 'front_desk'))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        approvedReplyText: z.string().min(1).max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const report = validateMarketingText({ text: input.approvedReplyText, context: 'review_reply' });
+      if (report.verdict === 'block') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Odpoveď obsahuje neprijateľný obsah: ' + report.findings.map((f: any) => f.message).join(' / '),
+        });
+      }
+
+      const now = new Date();
+      const [updated] = await ctx.db
+        .update(extMarketingReviews)
+        .set({
+          replyText: input.approvedReplyText,
+          repliedAt: now,
+          repliedBy: ctx.user.id,
+          responseApprovedBy: ctx.user.id,
+          responseApprovedAt: now,
+          responsePublishedAt: now,
+          aiReplyDraft: null,
+        })
+        .where(
+          and(
+            eq(extMarketingReviews.id, input.id),
+            eq(extMarketingReviews.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      return updated;
+    }),
+
+  saveAiReviewDraft: protectedProcedure
+    .use(requireRole('admin', 'veterinarian', 'front_desk'))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        draftText: z.string().max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingReviews)
+        .set({
+          aiReplyDraft: input.draftText,
+        })
+        .where(
+          and(
+            eq(extMarketingReviews.id, input.id),
+            eq(extMarketingReviews.practiceId, ctx.practiceId)
+          )
+        )
+        .returning();
+
+      return updated;
+    }),
 
 generateReviewReply: protectedProcedure
   .use(requireRole('admin', 'veterinarian', 'front_desk'))

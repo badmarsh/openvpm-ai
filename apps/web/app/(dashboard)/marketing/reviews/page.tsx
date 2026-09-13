@@ -14,6 +14,10 @@ import {
   RefreshCw,
   X,
   Filter,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  ShieldAlert,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
@@ -96,11 +100,58 @@ const CANNED_RESPONSES = [
   },
 ];
 
+function getSlaStatus(review: {
+  receivedAt: string | Date | null;
+  repliedAt: string | Date | null;
+  replyText: string | null;
+}) {
+  if (review.replyText || review.repliedAt) {
+    if (review.receivedAt && review.repliedAt) {
+      const hours = Math.max(
+        0,
+        Math.round(
+          (new Date(review.repliedAt).getTime() -
+            new Date(review.receivedAt).getTime()) /
+            (1000 * 60 * 60)
+        )
+      );
+      return {
+        status: "replied",
+        label: `Zodpovedané za ${hours}h`,
+        className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
+      };
+    }
+    return {
+      status: "replied",
+      label: "Zodpovedané",
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
+    };
+  }
+  if (!review.receivedAt) return null;
+  const hoursPassed =
+    (Date.now() - new Date(review.receivedAt).getTime()) / (1000 * 60 * 60);
+  if (hoursPassed > 24) {
+    return {
+      status: "overdue",
+      label: `SLA po termíne (${Math.round(hoursPassed)}h > 24h)`,
+      className: "bg-destructive/15 text-destructive border-destructive/30",
+    };
+  }
+  const remainingHours = Math.max(1, Math.round(24 - hoursPassed));
+  return {
+    status: "pending",
+    label: `SLA: ${remainingHours}h do termínu`,
+    className: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300",
+  };
+}
+
 export default function ReviewsPage() {
   const { t } = useI18n();
 
   // Filters state
   const [platformFilter, setPlatformFilter] = useState<"all" | "google" | "facebook">("all");
+  const [sentimentFilter, setSentimentFilter] = useState<"all" | "positive" | "neutral" | "negative" | "mixed">("all");
+  const [escalationFilter, setEscalationFilter] = useState<"all" | "none" | "pending" | "escalated" | "resolved" | "wont_fix">("all");
   const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -109,6 +160,11 @@ export default function ReviewsPage() {
   const [replyText, setReplyText] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Escalation modal state
+  const [escalatingReview, setEscalatingReview] = useState<any | null>(null);
+  const [escalateReason, setEscalateReason] = useState("");
+  const [isEscalateModalOpen, setIsEscalateModalOpen] = useState(false);
 
   // New review form state
   const [newPlatform, setNewPlatform] = useState<"google" | "facebook">("google");
@@ -123,6 +179,8 @@ export default function ReviewsPage() {
   const listQuery = trpc.extensions.marketing.listReviews.useQuery({
     limit: 100,
     platform: platformFilter,
+    sentiment: sentimentFilter,
+    escalation: escalationFilter,
     unansweredOnly,
   });
 
@@ -135,6 +193,31 @@ export default function ReviewsPage() {
     },
     onError: (err) => {
       toast.error(err.message || "Nepodarilo sa uložiť odpoveď.");
+    },
+  });
+
+  const approveReviewReplyMutation = trpc.extensions.marketing.approveReviewReply.useMutation({
+    onSuccess: () => {
+      setReplyingTo(null);
+      setReplyText("");
+      utils.extensions.marketing.listReviews.invalidate();
+      toast.success(t("marketing.reviews.approveSuccess", "Odpoveď bola oficiálne schválená a publikovaná."));
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa schváliť odpoveď.");
+    },
+  });
+
+  const escalateReviewMutation = trpc.extensions.marketing.escalateReview.useMutation({
+    onSuccess: () => {
+      setIsEscalateModalOpen(false);
+      setEscalateReason("");
+      setEscalatingReview(null);
+      utils.extensions.marketing.listReviews.invalidate();
+      toast.success(t("marketing.reviews.escalateSuccess", "Recenzia bola úspešne eskalovaná na personál."));
+    },
+    onError: (err) => {
+      toast.error(err.message || "Nepodarilo sa eskalovať recenziu.");
     },
   });
 
@@ -442,6 +525,55 @@ export default function ReviewsPage() {
           </button>
         </div>
 
+        {/* Sentiment & Escalation Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/40 rounded-lg border border-border/40">
+          <button
+            type="button"
+            onClick={() => setSentimentFilter("all")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+              sentimentFilter === "all"
+                ? "bg-background text-foreground shadow-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("marketing.reviews.allSentiments", "Všetky sentimenty")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSentimentFilter("positive")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+              sentimentFilter === "positive"
+                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold"
+                : "text-muted-foreground hover:text-emerald-600"
+            }`}
+          >
+            Pozitívne
+          </button>
+          <button
+            type="button"
+            onClick={() => setSentimentFilter("negative")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+              sentimentFilter === "negative"
+                ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-semibold"
+                : "text-muted-foreground hover:text-rose-600"
+            }`}
+          >
+            Negatívne
+          </button>
+          <button
+            type="button"
+            onClick={() => setEscalationFilter(escalationFilter === "escalated" ? "all" : "escalated")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+              escalationFilter === "escalated"
+                ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-semibold"
+                : "text-muted-foreground hover:text-purple-600"
+            }`}
+          >
+            <ShieldAlert className="w-3 h-3" />
+            {t("marketing.reviews.onlyEscalated", "Eskalované")}
+          </button>
+        </div>
+
         {/* Search & Answered Filter */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 md:w-64">
@@ -585,6 +717,87 @@ export default function ReviewsPage() {
                               : ""}
                           </span>
                         </div>
+
+                        {/* Sentiment, Severity, Escalation & SLA Badges */}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                          {review.sentimentLabel && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 gap-1 ${
+                                review.sentimentLabel === "positive"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40"
+                                  : review.sentimentLabel === "negative"
+                                  ? "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40"
+                                  : review.sentimentLabel === "mixed"
+                                  ? "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40"
+                                  : "bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-900"
+                              }`}
+                            >
+                              {review.sentimentLabel === "positive"
+                                ? "Pozitívna"
+                                : review.sentimentLabel === "negative"
+                                ? "Negatívna"
+                                : review.sentimentLabel === "mixed"
+                                ? "Zmiešaná"
+                                : "Neutrálna"}
+                              {review.sentimentScore != null &&
+                                ` (${review.sentimentScore > 0 ? "+" : ""}${review.sentimentScore}%)`}
+                            </Badge>
+                          )}
+
+                          {review.severity && review.severity !== "none" && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 gap-1 ${
+                                review.severity === "critical"
+                                  ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/50 font-bold"
+                                  : review.severity === "high"
+                                  ? "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/50 font-semibold"
+                                  : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50"
+                              }`}
+                            >
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              {review.severity === "critical"
+                                ? "Kritická závažnosť"
+                                : review.severity === "high"
+                                ? "Vysoká závažnosť"
+                                : "Stredná závažnosť"}
+                            </Badge>
+                          )}
+
+                          {review.escalationStatus === "escalated" && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0 gap-1 bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 font-semibold"
+                              title={
+                                review.escalationReason
+                                  ? `Dôvod: ${review.escalationReason}`
+                                  : undefined
+                              }
+                            >
+                              <ShieldAlert className="w-2.5 h-2.5 text-purple-600" />
+                              Eskalované personálu
+                            </Badge>
+                          )}
+
+                          {(() => {
+                            const sla = getSlaStatus(review);
+                            if (!sla) return null;
+                            return (
+                              <Badge
+                                variant={
+                                  sla.status === "overdue"
+                                    ? "destructive"
+                                    : "outline"
+                                }
+                                className={`text-[10px] px-1.5 py-0 gap-1 ${sla.className}`}
+                              >
+                                <Clock className="w-2.5 h-2.5" />
+                                {sla.label}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
                       </div>
                     </div>
 
@@ -727,7 +940,7 @@ export default function ReviewsPage() {
                         className="text-xs"
                       />
 
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex flex-wrap gap-2 justify-end">
                         <Button
                           size="sm"
                           variant="outline"
@@ -741,29 +954,69 @@ export default function ReviewsPage() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="secondary"
                           disabled={!replyText.trim() || replyMutation.isPending}
                           onClick={() => replyMutation.mutate({ id: review.id, replyText })}
                           className="text-xs h-8 gap-1"
                         >
                           {replyMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                          {t("marketing.reviews.send", "Odoslať odpoveď")}
+                          {t("marketing.reviews.send", "Uložiť odpoveď")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={!replyText.trim() || approveReviewReplyMutation.isPending}
+                          onClick={() =>
+                            approveReviewReplyMutation.mutate({
+                              id: review.id,
+                              approvedReplyText: replyText.trim(),
+                            })
+                          }
+                          className="text-xs h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          {approveReviewReplyMutation.isPending && (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          )}
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Schváliť & Publikovať
                         </Button>
                       </div>
                     </div>
-                  ) : !review.replyText ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setReplyingTo(review.id);
-                        setReplyText("");
-                      }}
-                      className="text-xs w-full h-8"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                      {t("marketing.reviews.reply", "Odpovedať na recenziu")}
-                    </Button>
-                  ) : null}
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {!review.replyText ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setReplyingTo(review.id);
+                            setReplyText("");
+                          }}
+                          className="text-xs flex-1 h-8"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                          {t("marketing.reviews.reply", "Odpovedať na recenziu")}
+                        </Button>
+                      ) : null}
+
+                      {review.escalationStatus !== "escalated" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEscalatingReview(review);
+                            setEscalateReason("");
+                            setIsEscalateModalOpen(true);
+                          }}
+                          className="h-8 text-xs text-muted-foreground hover:text-purple-700 gap-1 px-2.5 border border-dashed border-border"
+                          title="Eskalovať recenziu na personál (vytvoriť úlohu)"
+                        >
+                          <ShieldAlert className="w-3.5 h-3.5 text-purple-600" />
+                          Eskalovať
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -921,6 +1174,83 @@ export default function ReviewsPage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 )}
                 {t("marketing.reviews.addReview", "Uložiť recenziu")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Escalation Modal */}
+      {isEscalateModalOpen && escalatingReview && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border rounded-xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-purple-600" />
+                <h2 className="font-bold text-base text-foreground">
+                  Eskalovať recenziu na personál
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEscalateModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Eskaláciou sa vytvorí interná úloha pre personál (ext_marketing_staff_tasks) na bezodkladné kontaktovanie klienta a vyriešenie situácie.
+            </p>
+
+            <div className="bg-muted/40 p-3 rounded-lg border text-xs space-y-1">
+              <div className="font-semibold text-foreground">
+                {escalatingReview.reviewerName ?? "Anonym"} ({escalatingReview.rating ?? 1}★)
+              </div>
+              <div className="text-muted-foreground line-clamp-2 italic">
+                "{escalatingReview.reviewText}"
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Dôvod eskalácie (povinné):
+              </label>
+              <Textarea
+                rows={3}
+                value={escalateReason}
+                onChange={(e) => setEscalateReason(e.target.value)}
+                placeholder="Napr.: Klient vyjadruje nespokojnosť s čakacou dobou a žiada spätné volanie..."
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEscalateModalOpen(false)}
+                className="text-xs"
+              >
+                Zrušiť
+              </Button>
+              <Button
+                size="sm"
+                disabled={!escalateReason.trim() || escalateReviewMutation.isPending}
+                onClick={() =>
+                  escalateReviewMutation.mutate({
+                    id: escalatingReview.id,
+                    reason: escalateReason.trim(),
+                  })
+                }
+                className="text-xs gap-1 bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {escalateReviewMutation.isPending && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                )}
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Potvrdiť eskaláciu
               </Button>
             </div>
           </div>
