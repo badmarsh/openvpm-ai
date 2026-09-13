@@ -47,6 +47,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // react-markdown + remark-gfm are heavy; the preview only exists after the
@@ -861,11 +862,18 @@ export default function DischargePage() {
           <div className="lg:col-span-6 flex flex-col gap-4">
             <Card className="flex flex-col h-full min-h-[550px] shadow-sm">
               <CardHeader className="pb-3 border-b border-border flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Bot className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base font-semibold">
                     {t("discharge.resultTitle", "Final Discharge Report")}
                   </CardTitle>
+                  {result && (
+                    <ClinicalStatusBadge
+                      status={clinicianConfirmed ? "authorized" : "ai_draft"}
+                      confidenceScore={94}
+                      size="sm"
+                    />
+                  )}
                 </div>
 
                 {result && (

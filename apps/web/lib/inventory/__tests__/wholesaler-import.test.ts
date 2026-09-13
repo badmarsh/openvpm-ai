@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseWholesalerDeliveryNote } from "../wholesaler-import";
+import { parseWholesalerDeliveryNote, parseDate } from "../wholesaler-import";
 
 describe("Slovak Wholesaler Import Parser", () => {
   it("should parse Cymedica SK veterinary delivery note with batch and expiry", () => {
@@ -188,5 +188,34 @@ PHM-402;CLAVASEPTIN 250mg;B665;2026-12-31;16;7,40;10
     expect(note.items).toHaveLength(2);
     expect(note.items[0].batchNumber).toBe("A554");
     expect(note.items[1].quantity).toBe(16);
+  });
+
+  it("should assign BEZ-SARZE fallback when batch is missing or blank", () => {
+    const csv = `
+Kod;Nazov;Sarza;Expiracia;Mnozstvo;MJ;CenaBezDPH;DPH;SpoluBezDPH
+CYM-999;Parafínový olej 1000ml;;31.12.2028;2;ks;5,00;20;10,00
+    `.trim();
+
+    const note = parseWholesalerDeliveryNote({
+      content: csv,
+      filename: "CYMEDICA_DL_TEST.csv",
+    });
+
+    expect(note.items[0].batchNumber).toBe("BEZ-SARZE");
+  });
+
+  it("should flexibly parse Slovak wholesaler date formats", () => {
+    expect(parseDate("2026-12-31")).toBe("2026-12-31");
+    expect(parseDate("15.06.2027")).toBe("2027-06-15");
+    expect(parseDate("15/06/2027")).toBe("2027-06-15");
+    expect(parseDate("15-06-2027")).toBe("2027-06-15");
+    expect(parseDate("15.06.27")).toBe("2027-06-15");
+    expect(parseDate("12/2026")).toBe("2026-12-31");
+    expect(parseDate("02/2024")).toBe("2024-02-29"); // leap year
+    expect(parseDate("12/26")).toBe("2026-12-31");
+    expect(parseDate("2026-10")).toBe("2026-10-31");
+    expect(parseDate("2026-12-31T14:30:00Z")).toBe("2026-12-31");
+    expect(parseDate("")).toBeUndefined();
+    expect(parseDate(undefined)).toBeUndefined();
   });
 });

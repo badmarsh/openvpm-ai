@@ -101,6 +101,27 @@
     "funnel": {
       "loadError": "Nepodarilo sa načítať lievik.",
       "loading": "Načítavam lievik..."
+    },
+    "pilot": {
+      "title": "Denná kontrola & Reconciliácia s VetSoftware v2",
+      "subtitle": "Nástroj pre kontrolu dátovej parity, audit AI konceptov a evidenciu prevádzkových nezrovnalostí počas pilotnej prevádzky.",
+      "reportDiscrepancyBtn": "Nahlásiť nezrovnalosť",
+      "paritySummaryTitle": "Sumár dátovej parity za vybraný deň",
+      "clientsCreated": "Noví klienti",
+      "patientsCreated": "Noví pacienti",
+      "completedVisits": "Ukončené návštevy",
+      "financialTurnover": "Finančný obrat",
+      "inventoryMovements": "Skladové pohyby",
+      "clinicalAuditTitle": "Audit klinických AI draftov (Zákon č. 39/2007 Z. z. §3)",
+      "clinicalAuditDesc": "Žiaden klinický návrh vygenerovaný AI nie je platný bez autorizácie a podpisu ošetrujúceho veterinárneho lekára.",
+      "suppressionTitle": "Prehľad potlačenej komunikácie (GDPR Čl. 22 / Sympathy Gate)",
+      "suppressionDesc": "Marketingové správy a pripomienky zablokované bezpečnostnou bránou pre ochranu klientov (eutanázia, úmrtie, nesúhlas).",
+      "discrepanciesTitle": "Evidencia nezrovnalostí s VetSoftware v2",
+      "discrepanciesDesc": "Zaznamenané rozdiely medzi paralelným behom VetSoftware v2 a OpenVPM AI pre tím vývoja a stabilizáciu.",
+      "newReport": "Zaznamenať rozdiel",
+      "modalTitle": "Nahlásiť nezrovnalosť s VetSoftware v2",
+      "modalDesc": "Zadajte detail nezrovnalosti v číslach, cenách alebo dátach pacientov.",
+      "discrepancySaved": "Nezrovnalosť bola úspešne zaznamenaná."
     }
   },
   "agent": {
@@ -795,6 +816,8 @@
     "plural_one": "{count} klient",
     "plural_few": "{count} klienti",
     "plural_other": "{count} klientov",
+    "duplicateWarning": "Pozor: Klient s týmto telefónnym číslom alebo emailom už existuje v systéme.",
+    "openExisting": "Otvoriť kartu klienta",
     "actions": {
       "backToClients": "Späť na zoznam klientov",
       "backToClient": "Späť na kartu klienta",
@@ -2177,7 +2200,8 @@
     "sectionManagementAdmin": "Správa & Manažment",
     "marketingContentQueue": "Schvaľovanie obsahu",
     "marketingSuppression": "Centrum potlačení",
-    "wellnessRedemptions": "Čerpanie benefitov"
+    "wellnessRedemptions": "Čerpanie benefitov",
+    "pilotReconciliation": "Denná kontrola (Pilot)"
   },
   "newSoap": {
     "loadingEditor": "Načítavam editor...",
@@ -2217,6 +2241,8 @@
     "subtitle": "Správa pacientov a ich majiteľov.",
     "new_patient": "Nový pacient",
     "search_placeholder": "Hľadať pacientov...",
+    "duplicateWarning": "Pozor: Pacient s týmto číslom mikročipu už existuje v systéme.",
+    "openExisting": "Otvoriť kartu pacienta",
     "species_all": "Všetky druhy",
     "species_canine": "Psie",
     "species_feline": "Mačka",
@@ -5815,5 +5841,14 @@
   "dental.condition.mobile": "Vratký",
   "dental.condition.abraded": "Obrúsený",
   "dental.condition.crowned": "Korunka",
-  "dental.condition.other": "Iné"
+  "dental.condition.other": "Iné",
+  "clinicalStatus": {
+    "aiDraft": "AI Koncept (Čaká na autorizáciu)",
+    "administrativeDraft": "Administratívny koncept",
+    "authorized": "Autorizované lekárom (Podpísané)"
+  },
+  "integrationMode": {
+    "simulation": "SIMULAČNÝ REŽIM (Bez odosielania externým autoritám)",
+    "production": "OSTRÁ PREVÁDZKA (Aktívne odosielanie externým autoritám)"
+  }
 }

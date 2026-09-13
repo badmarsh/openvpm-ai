@@ -22,7 +22,15 @@ import {
   PackagePlus,
   RefreshCw,
   Loader2,
+  XCircle,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +52,16 @@ export function WholesalerImportDialog({
   const [fileName, setFileName] = useState<string>("");
   const [fileContent, setFileContent] = useState<string>("");
   const [parsedData, setParsedData] = useState<any | null>(null);
+  const [itemActions, setItemActions] = useState<Record<number, "update_stock" | "create_product" | "skip">>({});
 
   const parseMutation = trpc.extensions.wholesalerImport.parse.useMutation({
     onSuccess: (data) => {
       setParsedData(data);
+      const initialActions: Record<number, "update_stock" | "create_product" | "skip"> = {};
+      data.items.forEach((item: any, idx: number) => {
+        initialActions[idx] = item.suggestedAction;
+      });
+      setItemActions(initialActions);
       toast.success(
         `Dodací list bol úspešne načítaný (${data.items.length} položiek)`
       );
@@ -75,6 +89,7 @@ export function WholesalerImportDialog({
     setFileName("");
     setFileContent("");
     setParsedData(null);
+    setItemActions({});
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -100,15 +115,15 @@ export function WholesalerImportDialog({
   const handleApply = () => {
     if (!parsedData) return;
 
-    const payloadItems = parsedData.items.map((it: any) => ({
-      action: it.suggestedAction,
+    const payloadItems = parsedData.items.map((it: any, idx: number) => ({
+      action: itemActions[idx] || it.suggestedAction,
       productId: it.matchedProduct?.id,
       name: it.name,
       sku: it.sku || it.ean || it.suklOrAdcCode,
       category: "Lieky a materiály",
       unitPrice: it.unitPriceWithoutVat ? (it.unitPriceWithoutVat * 1.3).toFixed(2) : undefined,
       costPrice: it.unitPriceWithoutVat ? it.unitPriceWithoutVat.toFixed(2) : undefined,
-      lotNumber: it.batchNumber,
+      lotNumber: it.batchNumber || "BEZ-SARZE",
       expirationDate: it.expirationDate,
       quantity: Math.max(1, Math.round(it.quantity)),
     }));
@@ -221,6 +236,14 @@ export function WholesalerImportDialog({
                 </Button>
               </div>
 
+              {/* Warning for BEZ-SARZE if present */}
+              {parsedData.items.some((it: any) => it.batchNumber === "BEZ-SARZE") && (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 rounded-md">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>Položky bez uvedenej šarže boli automaticky označené predvolenou hodnotou <strong>BEZ-SARZE</strong>.</span>
+                </div>
+              )}
+
               {/* Items preview table */}
               <div className="border border-border rounded-lg overflow-hidden">
                 <TableScroll className="max-h-[340px]">
@@ -231,47 +254,87 @@ export function WholesalerImportDialog({
                         <th className="py-2 px-3 text-left font-medium">Šarža & Expirácia</th>
                         <th className="py-2 px-3 text-right font-medium">Množstvo</th>
                         <th className="py-2 px-3 text-right font-medium">Cena bez DPH</th>
-                        <th className="py-2 px-3 text-left font-medium">Stav v sklade</th>
+                        <th className="py-2 px-3 text-left font-medium">Akcia v sklade</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {parsedData.items.map((item: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-2 px-3">
-                            <div className="font-medium text-foreground">{item.name}</div>
-                            {item.sku && (
-                              <div className="text-[10px] text-muted-foreground font-mono">
-                                Kód: {item.sku}
+                      {parsedData.items.map((item: any, idx: number) => {
+                        const currentAction = itemActions[idx] || item.suggestedAction;
+                        return (
+                          <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-2 px-3">
+                              <div className="font-medium text-foreground">{item.name}</div>
+                              {item.sku && (
+                                <div className="text-[10px] text-muted-foreground font-mono">
+                                  Kód: {item.sku}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2 px-3">
+                              <div>
+                                {item.batchNumber === "BEZ-SARZE" ? (
+                                  <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-[10px] font-semibold">
+                                    BEZ-SARZE
+                                  </span>
+                                ) : item.batchNumber ? (
+                                  <span className="font-mono text-[11px] font-medium">
+                                    Šarža: {item.batchNumber}
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-[10px] font-semibold">
+                                    BEZ-SARZE
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </td>
-                          <td className="py-2 px-3">
-                            <div>{item.batchNumber ? `Šarža: ${item.batchNumber}` : "—"}</div>
-                            <div className="text-muted-foreground">
-                              {item.expirationDate ? `Exp: ${item.expirationDate}` : ""}
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-medium">
-                            {item.quantity} {item.unit || "ks"}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono">
-                            {formatCurrency(item.unitPriceWithoutVat)}
-                          </td>
-                          <td className="py-2 px-3">
-                            {item.matchedProduct ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Naskladniť (+{item.quantity})
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                                <PackagePlus className="h-3.5 w-3.5" />
-                                Nový produkt
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {item.expirationDate ? `Exp: ${item.expirationDate}` : "Bez expirácie"}
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono font-medium">
+                              {item.quantity} {item.unit || "ks"}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono">
+                              {formatCurrency(item.unitPriceWithoutVat)}
+                            </td>
+                            <td className="py-2 px-3">
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={currentAction}
+                                  onValueChange={(val: "update_stock" | "create_product" | "skip") =>
+                                    setItemActions((prev) => ({ ...prev, [idx]: val }))
+                                  }
+                                >
+                                  <SelectTrigger className="h-7 text-[11px] w-[140px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {item.matchedProduct && (
+                                      <SelectItem value="update_stock">
+                                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                          Naskladniť (+{item.quantity})
+                                        </span>
+                                      </SelectItem>
+                                    )}
+                                    <SelectItem value="create_product">
+                                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                        Vytvoriť nový produkt
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="skip">
+                                      <span className="text-muted-foreground">Preskočiť</span>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {item.matchedProduct && (
+                                  <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={item.matchedProduct.name}>
+                                    Sklad: {item.matchedProduct.currentStock ?? 0} {item.unit || "ks"}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </TableScroll>
@@ -301,7 +364,7 @@ export function WholesalerImportDialog({
                   Naskladňujem...
                 </>
               ) : (
-                `Naskladniť ${parsedData.items.length} položiek`
+                `Naskladniť ${parsedData.items.filter((_: any, idx: number) => (itemActions[idx] || parsedData.items[idx].suggestedAction) !== "skip").length} položiek`
               )}
             </Button>
           )}

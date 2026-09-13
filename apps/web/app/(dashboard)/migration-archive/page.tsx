@@ -14,7 +14,7 @@ import {
   FlaskConical,
   Loader2,
   Pill,
-  Receipt,
+  ReceiptEuro,
   Search,
   Users,
 } from "lucide-react";
@@ -37,7 +37,7 @@ const sections = [
   { id: "appointments", label: "Appointments", labelKey: "migrationArchive.sections.appointments", icon: CalendarClock },
   { id: "medications", label: "Medications", labelKey: "migrationArchive.sections.medications", icon: Pill },
   { id: "labs", label: "Labs", labelKey: "migrationArchive.sections.labs", icon: FlaskConical },
-  { id: "financial", label: "Financial", labelKey: "migrationArchive.sections.financial", icon: Receipt },
+  { id: "financial", label: "Financial", labelKey: "migrationArchive.sections.financial", icon: ReceiptEuro },
   { id: "documents", label: "Documents", labelKey: "migrationArchive.sections.documents", icon: FileText },
 ] as const;
 

@@ -14,7 +14,7 @@ import {
   Syringe,
   FileText,
   Camera,
-  Receipt,
+  ReceiptEuro,
   ArrowRight,
   RefreshCw,
   Sparkles,
@@ -235,7 +235,7 @@ export default function V2ImportPage() {
           <div className="border rounded-xl p-4 bg-card shadow-sm space-y-2 col-span-2">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-medium uppercase tracking-wider">Faktúry a pokladničné účty</span>
-              <Receipt className="w-4 h-4 text-indigo-500" />
+              <ReceiptEuro className="w-4 h-4 text-indigo-500" />
             </div>
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.financialDocsCount.toLocaleString() ?? "–"}

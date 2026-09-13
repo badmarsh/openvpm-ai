@@ -29,7 +29,7 @@ import {
   Package,
   Pill,
   Plus,
-  Receipt,
+  ReceiptEuro,
   Stethoscope,
   Save,
   Scissors,
@@ -4034,7 +4034,7 @@ function EncounterInvoices({
           </div>
         ) : visitInvoices.length === 0 ? (
           <EmptyState
-            icon={Receipt}
+            icon={ReceiptEuro}
             title={t(
               "encounters.invoices.emptyTitle",
               "No active invoice for this visit",
@@ -5344,7 +5344,7 @@ function ChargeCapture({
               {isSaving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Receipt className="mr-2 h-4 w-4" />
+                <ReceiptEuro className="mr-2 h-4 w-4" />
               )}
               {activeInvoiceIsDraft
                 ? t(

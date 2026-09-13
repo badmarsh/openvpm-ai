@@ -12,6 +12,7 @@ import { baseColumns } from "./common";
 import { practices } from "./practices";
 import { patients } from "./patients";
 import { clients } from "./clients";
+import { users } from "./users";
 
 /**
  * Slovak Statutory Compliance: Kniha ošetrení hospodárskych zvierat
@@ -176,3 +177,42 @@ export const extCarcassDisposals = pgTable(
     ),
   })
 );
+
+/**
+ * Pilot Incident & Discrepancy Logger (VetSoftware v2 Shadow-Run Reconciliation)
+ * Slúži na evidenciu rozdielov a nezrovnalostí medzi OpenVPM-AI a pôvodným systémom.
+ */
+export const extPilotFeedback = pgTable(
+  "ext_pilot_feedback",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    reportedById: uuid("reported_by_id").references(() => users.id),
+    reportedByName: text("reported_by_name"),
+    incidentDate: timestamp("incident_date", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    moduleWorkflow: text("module_workflow").notNull(),
+    vetSoftwareReference: text("vet_software_reference"),
+    description: text("description").notNull(),
+    severity: text("severity").notNull().default("medium"), // low | medium | critical
+    status: text("status").notNull().default("open"), // open | investigating | resolved
+    resolutionNotes: text("resolution_notes"),
+  },
+  (table) => ({
+    practiceIdx: index("ext_pilot_feedback_practice_idx").on(
+      table.practiceId,
+      table.deletedAt
+    ),
+    incidentDateIdx: index("ext_pilot_feedback_incident_date_idx").on(
+      table.practiceId,
+      table.incidentDate
+    ),
+  })
+);
+
+export type ExtPilotFeedback = typeof extPilotFeedback.$inferSelect;
+export type NewExtPilotFeedback = typeof extPilotFeedback.$inferInsert;
+

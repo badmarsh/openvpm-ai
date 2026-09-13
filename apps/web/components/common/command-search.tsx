@@ -12,7 +12,6 @@ import {
   X,
   Search,
   Package,
-  Euro,
   BarChart3,
   Settings,
   Clipboard,
@@ -23,7 +22,7 @@ import {
   FlaskConical,
   BellRing,
   Archive,
-  Receipt,
+  ReceiptEuro,
   Shield,
   Sun,
   Moon,
@@ -74,7 +73,7 @@ const navigationItems: CommandItemConfig[] = [
     Icon: FlaskConical,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
   },
-  { label: "Billing", href: "/billing", Icon: Euro, roles: allRoles },
+  { label: "Billing", href: "/billing", Icon: ReceiptEuro, roles: allRoles },
   { label: "Inventory", href: "/inventory", Icon: Package, roles: allRoles },
   { label: "Inbox", href: "/inbox", Icon: Mail, roles: allRoles },
   {
@@ -98,7 +97,7 @@ const navigationItems: CommandItemConfig[] = [
   {
     label: "e-Kasa Terminal",
     href: "/billing/ekasa",
-    Icon: Receipt,
+    Icon: ReceiptEuro,
     roles: allRoles,
   },
   {
@@ -138,19 +137,19 @@ const quickActionItems: CommandItemConfig[] = [
   {
     label: "New Invoice",
     href: "/billing/new",
-    Icon: Euro,
+    Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
   },
   {
     label: "Issue Receipt",
     href: "/billing/new",
-    Icon: Receipt,
+    Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
   },
   {
     label: "Open e-Kasa",
     href: "/billing/ekasa",
-    Icon: Receipt,
+    Icon: ReceiptEuro,
     roles: ["admin", "veterinarian", "front_desk"],
   },
 ];

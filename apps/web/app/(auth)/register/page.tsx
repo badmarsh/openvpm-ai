@@ -16,7 +16,7 @@ import {
   Loader2,
   Package,
   PawPrint,
-  Receipt,
+  ReceiptEuro,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -834,14 +834,14 @@ const NAV = [
   { label: "Patients", icon: PawPrint },
   { label: "Schedule", icon: Calendar },
   { label: "Records", icon: FileText },
-  { label: "Billing", icon: Receipt },
+  { label: "Billing", icon: ReceiptEuro },
   { label: "Inventory", icon: Package },
 ];
 
 const KPIS = [
   { label: "Today's visits", value: "8", icon: Calendar },
   { label: "New patients", value: "3", icon: PawPrint },
-  { label: "Revenue", value: "€1,240", icon: Receipt },
+  { label: "Revenue", value: "€1,240", icon: ReceiptEuro },
 ];
 
 // Appointment colors mirror the real schedule.

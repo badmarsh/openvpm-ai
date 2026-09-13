@@ -30,6 +30,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
+import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
 import { RecordsTimelineSkeleton, TableSkeleton } from "@/components/ui/content-skeletons";
 import { trpc } from "@/lib/trpc";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
@@ -1581,13 +1582,18 @@ function RecordsPageContent() {
                                           {t("records.soap.importedBadge", "Imported")}
                                         </span>
                                       ) : null}
-                                      <StatusPulseBadge
-                                        variant={note.status === "draft" ? "pending" : "confirmed"}
-                                        label={
-                                          note.status === "draft"
-                                            ? t("records.soap.draftBadge", "Draft")
-                                            : t("records.soap.finalizedBadge", "Finalized")
+                                      <ClinicalStatusBadge
+                                        status={
+                                          note.status === "finalized"
+                                            ? "authorized"
+                                            : note.imported ||
+                                              (note.assessment?.toLowerCase().includes("ai") ?? false) ||
+                                              (note.plan?.toLowerCase().includes("ai") ?? false)
+                                            ? "ai_draft"
+                                            : "administrative_draft"
                                         }
+                                        doctorName={note.finalizerName || (note.status === "finalized" ? note.authorName : undefined)}
+                                        signedAt={note.finalizedAt || (note.status === "finalized" ? note.createdAt : undefined)}
                                         size="sm"
                                       />
                                       {note.correctionId ? (

@@ -10,7 +10,7 @@ import {
   Users,
   PawPrint,
   Calendar,
-  Receipt,
+  ReceiptEuro,
   Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -98,7 +98,7 @@ const NEW_ACTIONS: NewAction[] = [
     label: "New Invoice",
     i18nKey: "chrome.newInvoice",
     href: "/billing/new",
-    Icon: Receipt,
+    Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
   },
 ];

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import {
-  Receipt,
+  ReceiptEuro,
   CheckCircle2,
   XCircle,
   Clock,
@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
 import { EkasaReceiptsSkeleton } from "@/components/ui/content-skeletons";
 import { ThermalReceiptDrawer } from "@/components/ekasa/thermal-receipt-drawer";
+import { IntegrationModeBanner } from "@/components/common/integration-mode-banner";
 
 type ReceiptStatus = "PENDING" | "SENT" | "CONFIRMED" | "FAILED" | "OFFLINE_STORED";
 type ActiveTab = "receipts" | "closures" | "accountant";
@@ -228,10 +229,13 @@ function EkasaReceiptsContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
-            <Receipt className="h-5 w-5" />
+            <ReceiptEuro className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">e-Kasa Pokladňa</h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight">e-Kasa Pokladňa</h1>
+              <IntegrationModeBanner module="ekasa" size="sm" />
+            </div>
             <p className="text-sm text-muted-foreground">
               Elektronická evidencia tržieb Finančnej správy SR (Zákon č. 289/2008 Z. z.)
             </p>
@@ -248,7 +252,7 @@ function EkasaReceiptsContent() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Receipt className="h-3.5 w-3.5" />
+            <ReceiptEuro className="h-3.5 w-3.5" />
             Doklady
           </button>
           <button
@@ -352,7 +356,7 @@ function EkasaReceiptsContent() {
               </div>
             ) : !receipts || receipts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Receipt className="mb-3 h-10 w-10 text-muted-foreground/30" />
+                <ReceiptEuro className="mb-3 h-10 w-10 text-muted-foreground/30" />
                 <p className="font-medium text-muted-foreground">Žiadne doklady</p>
                 <p className="mt-1 text-xs text-muted-foreground/60">
                   {statusFilter
@@ -473,7 +477,7 @@ function EkasaReceiptsContent() {
                                 title="Náhľad termálneho dokladu"
                                 className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors"
                               >
-                                <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+                                <ReceiptEuro className="h-3.5 w-3.5 text-muted-foreground" />
                                 Náhľad
                               </button>
 

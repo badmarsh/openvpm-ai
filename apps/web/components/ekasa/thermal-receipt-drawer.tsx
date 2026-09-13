@@ -8,7 +8,7 @@ import {
   Copy,
   Check,
   RefreshCw,
-  Receipt as ReceiptIcon,
+  ReceiptEuro as ReceiptIcon,
   ShieldCheck,
   AlertTriangle,
   Building2,

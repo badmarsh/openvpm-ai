@@ -21,6 +21,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { IntegrationModeBanner } from "@/components/common/integration-mode-banner";
 import {
   Card,
   CardContent,
@@ -213,7 +214,10 @@ export default function KvepisPage() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">KVEPIS Submission Hub</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold tracking-tight">KVEPIS Submission Hub</h1>
+          <IntegrationModeBanner module="kvepis" size="sm" />
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Riadená príprava zákonných hlásení pre ŠVPS SR cez ÚPVS. Validácia schém,
           generovanie podpisového XML/JSON balíčka a párovanie doručenky so záznamom

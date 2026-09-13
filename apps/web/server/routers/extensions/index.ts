@@ -23,6 +23,8 @@ import { automationSuppressionRouter } from "./automation-suppression";
 import { automationContentRouter } from "./automation-content";
 import { automationChannelsRouter } from "./automation-channels";
 import { crmSegmentsRouter } from "./crm-segments";
+import { reconciliationRouter } from "./reconciliation";
+import { duplicateShieldRouter } from "./duplicate-shield";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -53,6 +55,8 @@ export const extensionsRouter = createRouter({
   automationContent: automationContentRouter,
   automationChannels: automationChannelsRouter,
   crmSegments: crmSegmentsRouter,
+  reconciliation: reconciliationRouter,
+  duplicateShield: duplicateShieldRouter,
 });
 
 export {
@@ -78,5 +82,8 @@ export {
   automationEnrollmentsRouter,
   automationChannelsRouter,
   crmSegmentsRouter,
+  reconciliationRouter,
+  duplicateShieldRouter,
 };
+
 

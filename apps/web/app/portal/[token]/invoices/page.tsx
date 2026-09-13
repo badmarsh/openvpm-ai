@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle, CreditCard, Receipt } from "lucide-react";
+import { AlertCircle, CreditCard, ReceiptEuro } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/common/empty-state";
 import { formatCurrency as formatCurrencyBase } from "@/lib/locale/format";
@@ -162,7 +162,7 @@ export default function InvoicesPage() {
       {data.length === 0 ? (
         <EmptyState
           className="py-12"
-          icon={Receipt}
+          icon={ReceiptEuro}
           title="No invoices yet"
           description="Invoices and estimates from your clinic will appear here."
         />

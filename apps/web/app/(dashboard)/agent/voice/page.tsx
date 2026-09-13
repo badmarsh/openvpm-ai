@@ -20,7 +20,7 @@ import {
   Check,
   AlertTriangle,
   Volume2,
-  Receipt,
+  ReceiptEuro,
   CreditCard,
   Trash2,
 } from "lucide-react";
@@ -1057,7 +1057,7 @@ function VoiceDictationContent() {
                           </>
                         ) : (
                           <>
-                            <Receipt className="h-4 w-4" />
+                            <ReceiptEuro className="h-4 w-4" />
                             {t("voice.billing.extractButton", "Extrahovať lieky a úkony do účtu / pokladne")}
                           </>
                         )}
@@ -1124,7 +1124,7 @@ function VoiceDictationContent() {
           <div className="relative w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-emerald-600" />
+                <ReceiptEuro className="h-5 w-5 text-emerald-600" />
                 <h3 className="font-semibold text-base">{t("voice.billing.modalTitle", "Položky na vyúčtovanie z hlasového záznamu")}</h3>
               </div>
               <Button
@@ -1281,7 +1281,7 @@ function VoiceDictationContent() {
                 {createInvoiceMutation.isPending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Receipt className="h-3.5 w-3.5" />
+                  <ReceiptEuro className="h-3.5 w-3.5" />
                 )}
                 <span>{t("voice.billing.createInvoice", "Vytvoriť koncept faktúry")}</span>
               </Button>

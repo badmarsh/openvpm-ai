@@ -117,6 +117,26 @@ function NewPatientForm() {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [selectedClientName, setSelectedClientName] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Realtime debounce anti-duplicate check for microchip
+  const [debouncedMicrochip, setDebouncedMicrochip] = useState(form.microchipNumber);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMicrochip(form.microchipNumber);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [form.microchipNumber]);
+
+  const { data: duplicatePatientCheck } =
+    trpc.extensions.duplicateShield.checkPatient.useQuery(
+      { microchipNumber: debouncedMicrochip.trim() },
+      {
+        enabled: debouncedMicrochip.trim().length >= 5,
+        refetchOnWindowFocus: false,
+      }
+    );
+
   const preselectedClientId = searchParams.get("clientId") ?? "";
   const preselectedClientName = (searchParams.get("clientName") ?? "").trim();
   const firstClinicDay = searchParams.get("setup") === "first-visit";
@@ -255,6 +275,40 @@ function NewPatientForm() {
       {error && (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {duplicatePatientCheck?.found && duplicatePatientCheck.patient && (
+        <div className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50 p-4 shadow-2xs dark:border-amber-700/50 dark:bg-amber-950/30">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                  {t("patients.duplicateWarningTitle", "Pozor: Našiel sa existujúci záznam")}
+                </p>
+                <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                  {t(
+                    "patients.duplicateWarningDesc",
+                    "V ambulancii už existuje pacient s týmto mikročipom: {name} (Majiteľ: {owner}). Želáte si prepojiť existujúcu kartu?",
+                    {
+                      name: duplicatePatientCheck.patient.name,
+                      owner: duplicatePatientCheck.patient.ownerName || "Neznámy majiteľ",
+                    }
+                  )}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/patients/${duplicatePatientCheck.patient!.id}`)}
+              className="shrink-0 border-amber-400 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/40 text-xs font-semibold"
+            >
+              {t("patients.openExistingCard", "Otvoriť existujúcu kartu")}
+            </Button>
+          </div>
         </div>
       )}
 

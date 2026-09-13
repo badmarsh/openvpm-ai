@@ -19,6 +19,7 @@ import {
 } from "@/lib/records/soap-content";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useUnsavedChangesGuard } from "@/lib/use-unsaved-changes-guard";
+import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
 
 type SoapSections = {
   subjective: string;
@@ -218,20 +219,42 @@ export function AmbulatorySoapCard({
   return (
     <Card id="ambulatory-soap" className="scroll-mt-4">
       <CardHeader>
-        <div className="flex items-start gap-3">
-          <FileText className="mt-0.5 h-5 w-5 text-primary" />
-          <div>
-            <CardTitle>SOAP note</CardTitle>
-            <CardDescription>
-              Document the visit here without leaving the field workspace.
-            </CardDescription>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-3">
+            <FileText className="mt-0.5 h-5 w-5 text-primary" />
+            <div>
+              <CardTitle>SOAP note</CardTitle>
+              <CardDescription>
+                Document the visit here without leaving the field workspace.
+              </CardDescription>
+            </div>
           </div>
+          {linkedSoapCount > 0 ? (
+            <ClinicalStatusBadge
+              status="authorized"
+              doctorName={finalizedVisitNote?.finalizerName || finalizedVisitNote?.authorName}
+              signedAt={finalizedVisitNote?.finalizedAt || finalizedVisitNote?.createdAt}
+              size="sm"
+            />
+          ) : (
+            <ClinicalStatusBadge
+              status={
+                draft?.assessment?.includes("AI") || draft?.subjective?.includes("AI")
+                  ? "ai_draft"
+                  : "administrative_draft"
+              }
+              size="sm"
+            />
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {linkedSoapCount > 0 ? (
-          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm">
-            Finalized SOAP documentation is linked to this visit.
+          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm flex items-center justify-between flex-wrap gap-2">
+            <span>Finalized SOAP documentation is linked to this visit.</span>
+            <span className="text-xs font-mono text-emerald-800 dark:text-emerald-300">
+              Podpísané podľa Zákona č. 39/2007 Z. z. (§3)
+            </span>
           </div>
         ) : !canWrite ? (
           <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">

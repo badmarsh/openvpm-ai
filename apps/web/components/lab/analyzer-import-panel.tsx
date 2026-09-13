@@ -26,6 +26,7 @@ import type {
   AnalyzerType,
 } from "@/lib/lab/analyzer-parser";
 import { ConfidenceScoreBadge } from "@/components/copilot/confidence-score-badge";
+import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
 import { ClinicalDiffConfirmModal } from "@/components/copilot/clinical-diff-confirm-modal";
 
 export function AnalyzerImportPanel() {
@@ -584,9 +585,11 @@ function AnalyzerUploadModal({
                   <span className="text-xs text-muted-foreground">
                     ({parsedPreview.results.length} nájdených parametrov)
                   </span>
-                  {confidenceScore !== null && (
-                    <ConfidenceScoreBadge score={confidenceScore} size="sm" />
-                  )}
+                  <ClinicalStatusBadge
+                    status="ai_draft"
+                    confidenceScore={confidenceScore ?? 92}
+                    size="sm"
+                  />
                 </div>
                 <div className="flex items-center gap-1.5">
                   {parsedPreview.criticalCount > 0 && (

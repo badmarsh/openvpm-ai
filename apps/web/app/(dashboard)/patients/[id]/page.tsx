@@ -27,7 +27,7 @@ import {
   Paperclip,
   Phone,
   Plus,
-  Receipt,
+  ReceiptEuro,
   Stethoscope,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -4009,7 +4009,7 @@ function InvoicesTab({ patientId }: { patientId: string }) {
   if (!data || data.items.length === 0) {
     return (
       <EmptyState
-        icon={Receipt}
+        icon={ReceiptEuro}
         title={t("patients.invoicesTab.empty", "No invoices yet")}
         description={t(
           "patients.invoicesTab.emptyDesc",

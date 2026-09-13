@@ -5,6 +5,7 @@ import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import { products, practices } from "@openpims/db";
 import {
   parseWholesalerDeliveryNote,
+  parseDate,
   type WholesalerType,
 } from "@/lib/inventory/wholesaler-import";
 
@@ -142,9 +143,24 @@ export const wholesalerImportRouter = createRouter({
             category: z.string().optional(),
             unitPrice: z.string().optional(),
             costPrice: z.string().optional(),
-            lotNumber: z.string().optional(),
-            expirationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Dátum musí byť YYYY-MM-DD").optional(),
-            quantity: z.number().int().positive("Množstvo musí byť aspoň 1"),
+            lotNumber: z
+              .string()
+              .optional()
+              .nullable()
+              .transform((v) => (v && v.trim() ? v.trim() : "BEZ-SARZE")),
+            expirationDate: z
+              .string()
+              .optional()
+              .nullable()
+              .transform((v) => {
+                if (!v || !v.trim()) return undefined;
+                return parseDate(v) || (v.match(/^\d{4}-\d{2}-\d{2}$/) ? v : undefined);
+              }),
+            quantity: z
+              .coerce
+              .number()
+              .positive("Množstvo musí byť aspoň 1")
+              .transform((v) => Math.max(1, Math.round(v))),
           })
         ),
       })

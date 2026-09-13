@@ -22,7 +22,7 @@ import {
   Pill,
   Undo2,
   ReceiptText,
-  Receipt,
+  ReceiptEuro,
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -375,7 +375,7 @@ export default function BillingPage() {
             </Button>
             <Button variant="outline" asChild>
               <Link href="/billing/pos">
-                <Receipt className="mr-1 h-4 w-4" />
+                <ReceiptEuro className="mr-1 h-4 w-4" />
                 {t("billing.page.fastPos", "Fast Checkout (POS)")}
               </Link>
             </Button>

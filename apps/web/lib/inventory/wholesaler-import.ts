@@ -171,7 +171,8 @@ function parseCymedica(lines: string[]): WholesalerDeliveryNote {
 
     const sku = cols[0];
     const name = cols[1];
-    const batch = cols[2] || undefined;
+    const rawBatch = cols[2]?.trim();
+    const batch = rawBatch && rawBatch.length > 0 ? rawBatch : "BEZ-SARZE";
     const exp = parseDate(cols[3]);
     const qty = parseSlovakNumber(cols[4]) || 1;
     const unit = cols[5] || "ks";
@@ -228,7 +229,8 @@ function parsePharmos(lines: string[]): WholesalerDeliveryNote {
 
     const sku = cols[0];
     const name = cols[1];
-    const batch = cols[2];
+    const rawBatch = cols[2]?.trim();
+    const batch = rawBatch && rawBatch.length > 0 ? rawBatch : "BEZ-SARZE";
     const exp = parseDate(cols[3]);
     const qty = parseSlovakNumber(cols[4]) || 1;
     const price = parseSlovakNumber(cols[5]);
@@ -288,6 +290,7 @@ function parseSamohyl(lines: string[]): WholesalerDeliveryNote {
     items.push({
       ean,
       name,
+      batchNumber: "BEZ-SARZE",
       quantity: qty,
       unit: "ks",
       unitPriceWithoutVat: price,
@@ -335,6 +338,7 @@ function parseHenrySchein(lines: string[]): WholesalerDeliveryNote {
     items.push({
       sku,
       name,
+      batchNumber: "BEZ-SARZE",
       quantity: qty,
       unit: "ks",
       unitPriceWithoutVat: price,
@@ -387,7 +391,8 @@ function parseStandardDeliveryLines(
 
     const sku = cols[0];
     const name = cols[1];
-    const batch = cols[2] || undefined;
+    const rawBatch = cols[2]?.trim();
+    const batch = rawBatch && rawBatch.length > 0 ? rawBatch : "BEZ-SARZE";
     const exp = parseDate(cols[3]);
     const qty = parseSlovakNumber(cols[4]) || 1;
     const price = parseSlovakNumber(cols[5]);
@@ -471,7 +476,8 @@ function parseSgVet(rawContent: string): WholesalerDeliveryNote {
       "";
     if (!name) continue;
 
-    const batch = extractXmlTag(block, "batch") ?? extractXmlTag(block, "sarza");
+    const rawBatch = (extractXmlTag(block, "batch") ?? extractXmlTag(block, "sarza"))?.trim();
+    const batch = rawBatch && rawBatch.length > 0 ? rawBatch : "BEZ-SARZE";
     const expRaw =
       extractXmlTag(block, "expiration") ??
       extractXmlTag(block, "expirace") ??
@@ -548,6 +554,7 @@ function parseGenericCsv(lines: string[]): WholesalerDeliveryNote {
 
     items.push({
       name,
+      batchNumber: "BEZ-SARZE",
       quantity: qty,
       unit: "ks",
       unitPriceWithoutVat: price,
@@ -573,15 +580,79 @@ function parseGenericCsv(lines: string[]): WholesalerDeliveryNote {
   };
 }
 
-function parseDate(val?: string): string | undefined {
+/**
+ * Flexible date parser for Slovak wholesale delivery notes.
+ * Supports:
+ * - YYYY-MM-DD
+ * - DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY
+ * - DD.MM.YY, DD/MM/YY, DD-MM-YY (e.g. 15.06.27 -> 2027-06-15)
+ * - MM.YYYY, MM/YYYY, MM-YYYY (e.g. 12/2026 -> 2026-12-31, end of month)
+ * - MM.YY, MM/YY, MM-YY (e.g. 12/26 -> 2026-12-31, end of month)
+ * - YYYY.MM, YYYY/MM, YYYY-MM (e.g. 2026-12 -> 2026-12-31)
+ * - ISO string: 2026-12-31T...
+ */
+export function parseDate(val?: string): string | undefined {
   if (!val) return undefined;
-  const dmyMatch = val.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-  if (dmyMatch) {
-    const [, d, m, y] = dmyMatch;
+  const trimmed = val.trim();
+  if (!trimmed) return undefined;
+
+  // ISO string (e.g. 2026-12-31T...)
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 10);
+  }
+
+  // DD.MM.YYYY or DD/MM/YYYY or DD-MM-YYYY
+  const dmy4Match = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (dmy4Match) {
+    const [, d, m, y] = dmy4Match;
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    return val;
+
+  // DD.MM.YY or DD/MM/YY or DD-MM-YY (2-digit year)
+  const dmy2Match = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
+  if (dmy2Match) {
+    const [, d, m, yy] = dmy2Match;
+    const yearNum = parseInt(yy, 10);
+    const fullYear = yearNum >= 70 ? 1900 + yearNum : 2000 + yearNum;
+    return `${fullYear}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
+
+  // MM.YYYY or MM/YYYY or MM-YYYY (Month/Year -> last day of month)
+  const my4Match = trimmed.match(/^(\d{1,2})[./-](\d{4})$/);
+  if (my4Match) {
+    const [, m, y] = my4Match;
+    const monthNum = parseInt(m, 10);
+    const yearNum = parseInt(y, 10);
+    if (monthNum >= 1 && monthNum <= 12) {
+      const lastDay = new Date(Date.UTC(yearNum, monthNum, 0)).getUTCDate();
+      return `${yearNum}-${m.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    }
+  }
+
+  // YYYY.MM or YYYY/MM or YYYY-MM
+  const ym4Match = trimmed.match(/^(\d{4})[./-](\d{1,2})$/);
+  if (ym4Match) {
+    const [, y, m] = ym4Match;
+    const monthNum = parseInt(m, 10);
+    const yearNum = parseInt(y, 10);
+    if (monthNum >= 1 && monthNum <= 12) {
+      const lastDay = new Date(Date.UTC(yearNum, monthNum, 0)).getUTCDate();
+      return `${yearNum}-${m.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    }
+  }
+
+  // MM.YY or MM/YY or MM-YY (2-digit year)
+  const my2Match = trimmed.match(/^(\d{1,2})[./-](\d{2})$/);
+  if (my2Match) {
+    const [, m, yy] = my2Match;
+    const monthNum = parseInt(m, 10);
+    const yearNum = parseInt(yy, 10);
+    if (monthNum >= 1 && monthNum <= 12) {
+      const fullYear = yearNum >= 70 ? 1900 + yearNum : 2000 + yearNum;
+      const lastDay = new Date(Date.UTC(fullYear, monthNum, 0)).getUTCDate();
+      return `${fullYear}-${m.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    }
+  }
+
   return undefined;
 }

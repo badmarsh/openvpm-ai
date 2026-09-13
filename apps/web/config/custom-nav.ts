@@ -231,4 +231,13 @@ export const customNavItems: CustomNavItem[] = [
     section: "admin",
     badge: "Support",
   },
+  {
+    href: "/admin/pilot",
+    label: "Pilotná Reconciliácia",
+    i18nKey: "nav.pilotReconciliation",
+    icon: ClipboardList,
+    roles: ["admin", "veterinarian", "technician", "front_desk"],
+    section: "admin",
+    badge: "Pilot",
+  },
 ];

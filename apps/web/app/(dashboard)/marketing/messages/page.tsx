@@ -20,6 +20,7 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IntegrationModeBanner } from "@/components/common/integration-mode-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { InboxView } from "@/components/communications/inbox-view";
@@ -72,10 +73,13 @@ export default function MarketingMessagesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <MessageSquare className="w-7 h-7 text-primary" />
-            {t("marketing.messages.title", "Správy & Komunikácia")}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <MessageSquare className="w-7 h-7 text-primary" />
+              {t("marketing.messages.title", "Správy & Komunikácia")}
+            </h1>
+            <IntegrationModeBanner module="sms" size="sm" />
+          </div>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             {t(
               "marketing.messages.subtitle",
