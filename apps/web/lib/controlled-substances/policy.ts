@@ -76,3 +76,17 @@ export function computeControlledSubstanceBalance(
   }
   return Math.round(balance * 1000) / 1000;
 }
+
+/**
+ * Slovak Statutory Compliance: Zákon č. 139/1998 Z. z. o omamných a psychotropných látkach.
+ * Controlled veterinary substances requiring strict zero AI prefill and
+ * veterinarian verification before administration or prescription.
+ */
+export const CONTROLLED_SUBSTANCES_REGEX =
+  /ketam[ií]n|ketalar|narkamon|calypsol|fentan[yí]l|buprenorf[ií]n|temgesic|vetergesic|bupredyne|butorfanol|butorphanol|torbugesic|dolorex|metad[oó]n|methadon|metisedive|comfortion|diazepam|apauvi|seduxen|fenobarbital|phenobarbital|phenoleptil|propofol|morfin|morphin/i;
+
+export function isControlledSubstanceName(drugName: string): boolean {
+  if (!drugName) return false;
+  return CONTROLLED_SUBSTANCES_REGEX.test(drugName.trim());
+}
+

@@ -15,6 +15,7 @@ import {
   extMarketingRecallSchedules,
   extSmsDeliveryLog,
   extAutomationEvents,
+  extAutomationSuppressionLog,
 } from "@openpims/db";
 import { getBrand, type ClinicBrand } from "./planner";
 import { smsRateLimitOk } from "./sms-rate-limit";
@@ -443,6 +444,22 @@ export async function processQueue(
           .set({ status: "blocked_sympathy" })
           .where(eq(extMarketingMessageLogs.id, m.id));
         suppressed++;
+        try {
+          if (db?.insert && extAutomationSuppressionLog) {
+            await db.insert(extAutomationSuppressionLog).values({
+              practiceId,
+              clientId: m.clientId,
+              patientId: m.patientId,
+              suppressionReason: "deceased_patient",
+              blockedAction: `queue_dispatch:${m.templateKey ?? "marketing_message"}`,
+              channelAttempted: (m.channel as any) ?? "sms",
+              dedupeKey: `${m.clientId}:deceased_patient:${m.id}`,
+              detail: `Unconditional sympathy gate: deceased patient ${m.patientId} outreach blocked`,
+            });
+          }
+        } catch {
+          // Defensive for unit mock environments
+        }
         continue;
       }
     }
@@ -455,6 +472,22 @@ export async function processQueue(
           .set({ status: "suppressed_no_consent" })
           .where(eq(extMarketingMessageLogs.id, m.id));
         suppressed++;
+        try {
+          if (db?.insert && extAutomationSuppressionLog) {
+            await db.insert(extAutomationSuppressionLog).values({
+              practiceId,
+              clientId: m.clientId,
+              patientId: m.patientId ?? null,
+              suppressionReason: "no_consent",
+              blockedAction: `queue_dispatch:${m.templateKey ?? "marketing_message"}`,
+              channelAttempted: (m.channel as any) ?? "sms",
+              dedupeKey: `${m.clientId}:no_consent:${m.id}`,
+              detail: "GDPR Consent missing for marketing channel",
+            });
+          }
+        } catch {
+          // Defensive for unit mock environments
+        }
         continue;
       }
 
@@ -465,6 +498,22 @@ export async function processQueue(
           .set({ status: "suppressed_rate" })
           .where(eq(extMarketingMessageLogs.id, m.id));
         suppressed++;
+        try {
+          if (db?.insert && extAutomationSuppressionLog) {
+            await db.insert(extAutomationSuppressionLog).values({
+              practiceId,
+              clientId: m.clientId,
+              patientId: m.patientId ?? null,
+              suppressionReason: "frequency_cap",
+              blockedAction: `queue_dispatch:${m.templateKey ?? "marketing_message"}`,
+              channelAttempted: (m.channel as any) ?? "sms",
+              dedupeKey: `${m.clientId}:frequency_cap:${m.id}`,
+              detail: `SMS rate limit exceeded (${brand.marketingRateLimitDays}d cooldown)`,
+            });
+          }
+        } catch {
+          // Defensive for unit mock environments
+        }
         continue;
       }
     }
@@ -589,7 +638,7 @@ export async function applySympathyGate(
   // SKILL.md §3: Unconditional block — ALL queued messages for deceased patient
   // must be blocked regardless of legalBasis or templateKey.
   let blocked = 0;
-  for (const m of queued) {
+  for (const m of (queued || [])) {
     await db
       .update(extMarketingMessageLogs)
       .set({ status: "blocked_sympathy" })
@@ -638,6 +687,24 @@ export async function applySympathyGate(
     sourceRecordId: `sympathy_blocked_${patientId ?? clientId}`,
     sentAt: new Date(),
   });
+
+  // 4. Record to unified suppression log (SKILL.md §3 & §7, GDPR Art. 22 audit)
+  try {
+    if (db?.insert && extAutomationSuppressionLog) {
+      await db.insert(extAutomationSuppressionLog).values({
+        practiceId,
+        clientId,
+        patientId: patientId ?? null,
+        suppressionReason: "deceased_patient",
+        blockedAction: `sympathy_gate:${service ?? "automated_outreach"}`,
+        channelAttempted: "sms",
+        dedupeKey: `${clientId}:deceased_patient:${patientId ?? "all"}:${new Date().toISOString().slice(0, 10)}`,
+        detail: `Sympathy Gate: blocked outreach due to deceased patient (${petName}). Created staff condolence task & dismissed care reminders.`,
+      });
+    }
+  } catch {
+    // Best-effort in unit/mock environments
+  }
 
   return { blocked };
 }

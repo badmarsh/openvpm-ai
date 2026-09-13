@@ -148,5 +148,27 @@ GLU,5.2,mmol/L,3.8,7.9`;
       // Verification: must flag that veterinarian approval is required
       expect(res.requiresVetApproval).toBe(true);
     });
+
+    it("enforces Act 139/1998 Z. z. Zero AI Prefill for Controlled Substances", async () => {
+      const { isControlledSubstanceName } = await import(
+        "@/lib/controlled-substances/policy"
+      );
+
+      // Controlled substances per Act 139/1998 Z. z.
+      expect(isControlledSubstanceName("Ketamine 100mg/ml")).toBe(true);
+      expect(isControlledSubstanceName("Narkamon inj.")).toBe(true);
+      expect(isControlledSubstanceName("Fentanyl náplasť")).toBe(true);
+      expect(isControlledSubstanceName("Butorphanol 10mg/ml")).toBe(true);
+      expect(isControlledSubstanceName("Torbugesic")).toBe(true);
+      expect(isControlledSubstanceName("Propofol 1% MCT/LCT")).toBe(true);
+      expect(isControlledSubstanceName("Diazepam tbl.")).toBe(true);
+      expect(isControlledSubstanceName("Buprenorfín inj.")).toBe(true);
+
+      // Non-controlled substances
+      expect(isControlledSubstanceName("Amoxicillin / Clavulanate")).toBe(false);
+      expect(isControlledSubstanceName("Meloxicam 1.5mg/ml")).toBe(false);
+      expect(isControlledSubstanceName("Cerenia 10mg/ml")).toBe(false);
+      expect(isControlledSubstanceName("Convenia")).toBe(false);
+    });
   });
 });

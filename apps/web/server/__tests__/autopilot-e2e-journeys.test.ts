@@ -153,5 +153,63 @@ describe("Autopilot Customer Journeys & Event Bus E2E", () => {
 
       expect(check.allowed).toBe(true);
     });
+
+    it("applySympathyGate logs deceased patient suppression to extAutomationSuppressionLog", async () => {
+      const { applySympathyGate } = await import("@/lib/marketing/messaging");
+      const insertedRows: any[] = [];
+      let selectCall = 0;
+      const mockDb: any = {
+        select: vi.fn().mockImplementation(() => {
+          selectCall++;
+          const call = selectCall;
+          return {
+            from: vi.fn().mockImplementation(() => ({
+              where: vi.fn().mockImplementation(() => {
+                const rows =
+                  call === 1
+                    ? [{ name: "Luna", status: "deceased" }]
+                    : call === 2
+                    ? [{ firstName: "Peter", lastName: "Varga" }]
+                    : [];
+                const p: any = Promise.resolve(rows);
+                p.limit = vi.fn().mockResolvedValue(rows);
+                return p;
+              }),
+            })),
+          };
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        insert: vi.fn().mockImplementation((table) => ({
+          values: vi.fn().mockImplementation((val) => {
+            insertedRows.push({ table, val });
+            return Promise.resolve(undefined);
+          }),
+        })),
+      };
+
+      await applySympathyGate(
+        mockDb,
+        PRACTICE_ID,
+        CLIENT_ID,
+        PATIENT_ID,
+        "automated_vaccine_reminder"
+      );
+
+      expect(mockDb.insert).toHaveBeenCalled();
+      const suppressionEntry = insertedRows.find(
+        (r) => r.val?.suppressionReason === "deceased_patient"
+      );
+      expect(suppressionEntry).toBeDefined();
+      expect(suppressionEntry.val).toMatchObject({
+        practiceId: PRACTICE_ID,
+        clientId: CLIENT_ID,
+        patientId: PATIENT_ID,
+        suppressionReason: "deceased_patient",
+      });
+    });
   });
 });

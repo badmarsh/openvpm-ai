@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfidenceScoreBadge } from "./confidence-score-badge";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 
 export interface ClinicalDiffField {
   label: string;
@@ -58,10 +59,14 @@ export function ClinicalDiffConfirmModal({
   const [editedValues, setEditedValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const f of fields) {
-      if (!f.isControlledSubstance) {
+      const isControlled =
+        Boolean(f.isControlledSubstance) ||
+        isControlledSubstanceName(f.proposedValue) ||
+        isControlledSubstanceName(f.label);
+      if (!isControlled) {
         initial[f.label] = f.proposedValue;
       } else {
-        initial[f.label] = ""; // Zero AI prefill for controlled substances
+        initial[f.label] = ""; // Zero AI prefill for controlled substances (Act 139/1998 Z. z.)
       }
     }
     return initial;
@@ -69,7 +74,12 @@ export function ClinicalDiffConfirmModal({
 
   if (!isOpen) return null;
 
-  const hasControlledSubstance = fields.some((f) => f.isControlledSubstance);
+  const hasControlledSubstance = fields.some(
+    (f) =>
+      Boolean(f.isControlledSubstance) ||
+      isControlledSubstanceName(f.proposedValue) ||
+      isControlledSubstanceName(f.label)
+  );
 
   const handleConfirm = () => {
     if (!confirmedCheck) return;
@@ -142,7 +152,10 @@ export function ClinicalDiffConfirmModal({
                 </thead>
                 <tbody className="divide-y divide-border">
                   {fields.map((field) => {
-                    const isControlled = field.isControlledSubstance;
+                    const isControlled =
+                      Boolean(field.isControlledSubstance) ||
+                      isControlledSubstanceName(field.proposedValue) ||
+                      isControlledSubstanceName(field.label);
                     return (
                       <tr key={field.label} className="hover:bg-muted/10">
                         <td className="py-2.5 px-3 font-medium text-foreground align-top">
