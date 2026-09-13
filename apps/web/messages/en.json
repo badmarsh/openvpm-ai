@@ -2003,7 +2003,11 @@
         "waiting": "We waited a very long time, but the treatment was fine.",
         "death": "Despite the vet's efforts, we lost our beloved pet. The staff was very empathetic.",
         "praise": "Excellent care! The vet was patient and our dog was calm throughout the entire examination."
-      }
+      },
+      "approveSuccess": "Response was officially approved and published.",
+      "escalateSuccess": "Review was successfully escalated to staff.",
+      "allSentiments": "All Sentiments",
+      "onlyEscalated": "Escalated"
     },
     "media": {
       "editPrefix": "edit",
@@ -2034,6 +2038,61 @@
       "subtitle": "A public showcase page generated directly from clinic data, opening hours and reviews.",
       "statusPublished": "Online / Published",
       "statusDraft": "In preparation (Draft)"
+    },
+    "suppression": {
+      "title": "Suppression Center & GDPR Audit",
+      "description": "Overview and audit trail of automated suppression for marketing and transactional communications under GDPR Art. 22 (Sympathy Gate, quiet hours, SMS rate limits, opt-outs).",
+      "gdprTitle": "Automated Decision-Making Transparency (GDPR Art. 22)",
+      "gdprBody": "Every withheld message is durably recorded with an explicit reasonCode, timestamp, and context. Deceased patients are unconditionally protected by the sympathy protocol."
+    },
+    "contentQueue": {
+      "title": "Content Approval Queue",
+      "description": "Queue of AI-drafted and scheduled social media posts. Every clinical assertion requires veterinarian approval before publishing (Act 39/2007 Z. z.).",
+      "addBrief": "New Content Brief",
+      "statutoryTitle": "Veterinary Clinical Supervision (Act 39/2007 Z. z.)",
+      "statutoryBody": "Any recommendations regarding prevention, dosage, or medical protocols in social posts must be explicitly authorized by a licensed veterinarian with approver attribution."
+    },
+    "automations": {
+      "tabRules": "Rules",
+      "tabJourneys": "Journeys",
+      "tabSegments": "Segments",
+      "tabChannels": "Channels",
+      "tabEvents": "Event Bus",
+      "loadingJourneys": "Loading customer journeys...",
+      "noJourneys": "No customer journeys configured",
+      "frequencyCap": "Cap: {max} msgs / {days}d",
+      "stepPipeline": "Sequence steps ({count})",
+      "stepNumber": "Step {num}",
+      "immediate": "Immediate",
+      "hoursDelay": "+{hours} hrs",
+      "segmentsDesc": "12 deterministic patient and client segments. Full compliance with GDPR Art. 9 and Art. 22.",
+      "loadingSegments": "Loading CRM segments...",
+      "noSegments": "No segments available",
+      "clientsCount": "clients",
+      "recompute": "Recompute",
+      "channelsDesc": "Connect social networks and Google Business Profile for automated publishing and review collection.",
+      "loadingChannels": "Loading connected channels...",
+      "noChannels": "No connected channels",
+      "quotaRemaining": "Remaining 24h quota: {quota} posts",
+      "testConnection": "Test Connection",
+      "eventsDesc": "Durable append-only event bus. Records every clinic event (visits, vaccines, surgeries) before rule processing.",
+      "loadingEvents": "Loading events...",
+      "noEvents": "No recorded events",
+      "eventType": "Event Type",
+      "occurredAt": "Time",
+      "status": "Status",
+      "source": "Source",
+      "dedupeKey": "Dedupe Key",
+      "ruleEnabled": "Rule \"{name}\" was enabled.",
+      "rulePaused": "Rule \"{name}\" was paused.",
+      "ruleToggleError": "Failed to change rule status.",
+      "journeyEnabled": "Journey \"{name}\" was activated.",
+      "journeyPaused": "Journey \"{name}\" was paused.",
+      "journeyUpdateError": "Failed to change customer journey status.",
+      "segmentRecomputed": "Segment was recomputed ({count} clients).",
+      "segmentRecomputeError": "Failed to recompute segment.",
+      "channelHealthy": "Channel {provider} is active and healthy.",
+      "channelTestError": "Channel connection test failed."
     }
   },
   "nav": {
@@ -2098,7 +2157,10 @@
     "sectionFrontDeskFlow": "Front Desk & Flow",
     "sectionPharmacyInventory": "Pharmacy & Inventory",
     "sectionStatutoryBilling": "Statutory & Billing",
-    "sectionManagementAdmin": "Management & Admin"
+    "sectionManagementAdmin": "Management & Admin",
+    "marketingContentQueue": "Content Approval Queue",
+    "marketingSuppression": "Suppression Center",
+    "wellnessRedemptions": "Wellness Redemptions"
   },
   "newSoap": {
     "loadingEditor": "Loading editor...",
@@ -3893,7 +3955,6 @@
   "nav.marketingMedia": "Media Library",
   "nav.marketingCompetitors": "Competitor Intel",
   "nav.marketingWellness": "Wellness Packages",
-  "nav.wellnessRedemptions": "Benefit Redemptions",
   "nav.ekasa": "e-Kasa Receipts",
   "nav.v2Import": "V2 Migration",
   "nav.vetIntel": "Vet Intelligence",

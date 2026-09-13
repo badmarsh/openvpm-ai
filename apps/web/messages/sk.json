@@ -2003,7 +2003,11 @@
         "waiting": "Čakali sme veľmi dlho, ale ošetrenie bolo v poriadku.",
         "death": "Aj napriek snahám veterinára sme stratili nášho miláčika. Personál bol veľmi empatický.",
         "praise": "Skvelá starostlivosť! Veterinár bol trpezlivý a náš pes bol pokojný počas celého vyšetrenia."
-      }
+      },
+      "approveSuccess": "Odpoveď bola oficiálne schválená a publikovaná.",
+      "escalateSuccess": "Recenzia bola úspešne eskalovaná na personál.",
+      "allSentiments": "Všetky sentimenty",
+      "onlyEscalated": "Eskalované"
     },
     "media": {
       "editPrefix": "úprava",
@@ -2034,6 +2038,61 @@
       "subtitle": "Verejná reprezentatívna stránka generovaná priamo z údajov kliniky, ordinačných hodín a recenzií.",
       "statusPublished": "Online / Publikovaná",
       "statusDraft": "Príprava (Koncept)"
+    },
+    "suppression": {
+      "title": "Centrum potlačení & GDPR Audit",
+      "description": "Prehľad a auditné záznamy o automatizovanom potlačení marketingových a transakčných správ v zmysle GDPR Čl. 22 (Sympathy Gate, nočný kľud, SMS limity, odhlásenia).",
+      "gdprTitle": "Transparentnosť automatizovaného rozhodovania (GDPR Čl. 22)",
+      "gdprBody": "Každá neodoslaná správa je trvalo zaznamenaná s presným dôvodovým kódom (reasonCode), časovou pečiatkou a kontextom. Pacienti so štatútom deceased sú bezpodmienečne chránení protokolom súcitu."
+    },
+    "contentQueue": {
+      "title": "Schvaľovanie obsahu & Content Queue",
+      "description": "Fronta AI-generovaných a plánovaných príspevkov na sociálne siete kliniky. Každé klinické tvrdenie vyžaduje pred zverejnením veterinárne schválenie (Zákon 39/2007 Z. z.).",
+      "addBrief": "Nový návrh príspevku",
+      "statutoryTitle": "Veterinárny dozor nad obsahom (Zákon 39/2007 Z. z.)",
+      "statutoryBody": "Akékoľvek odporúčania týkajúce sa prevencie, dávkovania liečiv alebo liečebných postupov v sociálnych príspevkoch musia byť explicitne autorizované veterinárnym lekárom s uvedením mena schvaľovateľa."
+    },
+    "automations": {
+      "tabRules": "Pravidlá",
+      "tabJourneys": "Cesty",
+      "tabSegments": "Segmenty",
+      "tabChannels": "Kanály",
+      "tabEvents": "Event Bus",
+      "loadingJourneys": "Načítavam zákaznícke cesty...",
+      "noJourneys": "Žiadne zákaznícke cesty nie sú nakonfigurované",
+      "frequencyCap": "Cap: {max} správy / {days}d",
+      "stepPipeline": "Kroky sekvencie ({count})",
+      "stepNumber": "Krok {num}",
+      "immediate": "Ihneď",
+      "hoursDelay": "+{hours} hod.",
+      "segmentsDesc": "12 deterministických segmentov pacientov a klientov. Plný súlad s GDPR Art. 9 a Art. 22.",
+      "loadingSegments": "Načítavam CRM segmenty...",
+      "noSegments": "Žiadne segmenty nie sú k dispozícii",
+      "clientsCount": "klientov",
+      "recompute": "Prepočítať",
+      "channelsDesc": "Prepojenie sociálnych sietí a Google profilu pre automatické publikovanie a zber recenzií.",
+      "loadingChannels": "Načítavam prepojené kanály...",
+      "noChannels": "Žiadne prepojené kanály",
+      "quotaRemaining": "Zostávajúca 24h kvóta: {quota} príspevkov",
+      "testConnection": "Test spojenia",
+      "eventsDesc": "Durable append-only event bus. Zaznamenáva každú udalosť kliniky (návštevy, vakcíny, operácie) pred spracovaním pravidlami.",
+      "loadingEvents": "Načítavam udalosti...",
+      "noEvents": "Žiadne zaznamenané udalosti",
+      "eventType": "Typ udalosti",
+      "occurredAt": "Čas",
+      "status": "Stav",
+      "source": "Zdroj",
+      "dedupeKey": "Dedupe Key",
+      "ruleEnabled": "Pravidlo \"{name}\" bolo zapnuté.",
+      "rulePaused": "Pravidlo \"{name}\" bolo pozastavené.",
+      "ruleToggleError": "Nepodarilo sa zmeniť stav pravidla.",
+      "journeyEnabled": "Cesta \"{name}\" bola aktivovaná.",
+      "journeyPaused": "Cesta \"{name}\" bola pozastavená.",
+      "journeyUpdateError": "Nepodarilo sa zmeniť stav zákazníckej cesty.",
+      "segmentRecomputed": "Segment bol prepočítaný ({count} klientov).",
+      "segmentRecomputeError": "Nepodarilo sa prepočítať segment.",
+      "channelHealthy": "Kanál {provider} je aktívny a odpovedá.",
+      "channelTestError": "Chyba testovania kanála."
     }
   },
   "nav": {
@@ -2098,7 +2157,10 @@
     "sectionFrontDeskFlow": "Recepcia & Tok",
     "sectionPharmacyInventory": "Lekáreň & Sklad",
     "sectionStatutoryBilling": "Účtovníctvo & Predpisy",
-    "sectionManagementAdmin": "Správa & Manažment"
+    "sectionManagementAdmin": "Správa & Manažment",
+    "marketingContentQueue": "Schvaľovanie obsahu",
+    "marketingSuppression": "Centrum potlačení",
+    "wellnessRedemptions": "Čerpanie benefitov"
   },
   "newSoap": {
     "loadingEditor": "Načítavam editor...",
@@ -3893,7 +3955,6 @@
   "nav.marketingMedia": "Knižnica médií",
   "nav.marketingCompetitors": "Konkurencia & Trh",
   "nav.marketingWellness": "Wellness balíčky",
-  "nav.wellnessRedemptions": "Čerpanie benefitov",
   "nav.ekasa": "e-Kasa Doklady",
   "nav.v2Import": "V2 Migrácia",
   "nav.vetIntel": "Vet Intelligence",

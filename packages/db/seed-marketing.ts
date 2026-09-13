@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config({ path: "../../.env" });
 import { db } from "./client";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ilike } from "drizzle-orm";
 import {
   practices,
   users,
@@ -17,6 +17,11 @@ import {
   extMarketingCompetitorSnapshots,
   extMarketingAutomationRules,
   extAutomationRules,
+  extAutomationJourneys,
+  extCrmSegments,
+  extCrmSegmentMemberships,
+  extContentPillars,
+  extChannelAccounts,
   extMarketingOperativeScripts,
   extMarketingMessageTemplates,
   extMarketingMessageLogs,
@@ -26,9 +31,10 @@ async function seedMarketingDemo() {
   console.log("Seeding rich demo marketing content for openvpm_ai...\n");
 
   // 1. Get primary practice
-  const practice = await db.query.practices.findFirst({
-    where: eq(practices.name, "Súkromná veterinárna klinika MVDr. Martin Sýkora"),
-  });
+  const practice =
+    (await db.query.practices.findFirst({
+      where: ilike(practices.name, "%Martin Sýkora%"),
+    })) ?? (await db.query.practices.findFirst());
 
   if (!practice) {
     console.error("Practice not found. Please run `pnpm db:seed:sk` first.");
@@ -887,6 +893,495 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       },
     ]);
     console.log("✓ Created ext_automation_rules");
+  }
+
+  // -------------------------------------------------------------------------
+  // 11c. Built-in Autopilot Journeys (ext_automation_journeys)
+  // -------------------------------------------------------------------------
+  const existingJourneys = await db.query.extAutomationJourneys.findMany({
+    where: eq(extAutomationJourneys.practiceId, practiceId),
+  });
+
+  if (existingJourneys.length === 0) {
+    console.log("Seeding 5 built-in autopilot journeys...");
+    await db.insert(extAutomationJourneys).values([
+      {
+        practiceId,
+        journeyKey: "welcome_new_client",
+        name: "Uvítací program pre nového klienta",
+        description: "Multikanálová uvítacia sekvencia po prvej registrácii klienta na klinike.",
+        triggerEventType: "client_created",
+        isActive: true,
+        version: 1,
+        frequencyCapWindowDays: 30,
+        frequencyCapMaxSteps: 4,
+        allowReentry: false,
+        createdBy: userId,
+        steps: [
+          {
+            index: 0,
+            kind: "send",
+            label: "Uvítacia SMS s pohotovostným kontaktom",
+            delayHours: 0,
+            channel: "sms",
+            templateKey: "welcome_sms",
+            legalBasis: "contract",
+          },
+          {
+            index: 1,
+            kind: "send",
+            label: "E-mail s klientskym portálom a sprievodcom starostlivosti",
+            delayHours: 72,
+            channel: "email",
+            templateKey: "welcome_portal_guide",
+            legalBasis: "contract",
+          },
+          {
+            index: 2,
+            kind: "task",
+            label: "Telefonická kontrola spokojnosti personálom recepcie",
+            delayHours: 336,
+            taskKind: "welcome_call",
+          },
+        ],
+      },
+      {
+        practiceId,
+        journeyKey: "post_visit_followup",
+        name: "Následná starostlivosť po ambulantnej návšteve",
+        description: "Kontrola zdravotného stavu po vyšetrení a žiadosť o Google recenziu.",
+        triggerEventType: "visit_completed",
+        isActive: true,
+        version: 1,
+        frequencyCapWindowDays: 14,
+        frequencyCapMaxSteps: 3,
+        allowReentry: true,
+        createdBy: userId,
+        steps: [
+          {
+            index: 0,
+            kind: "send",
+            label: "SMS dotaz na stav pacienta 24h po návšteve",
+            delayHours: 24,
+            channel: "sms",
+            templateKey: "post_visit_checkin",
+            legalBasis: "vital_interests",
+          },
+          {
+            index: 1,
+            kind: "send",
+            label: "Žiadosť o Google hodnotenie pri spokojnosti",
+            delayHours: 72,
+            channel: "sms",
+            templateKey: "review_ask",
+            legalBasis: "legitimate_interest",
+          },
+        ],
+      },
+      {
+        practiceId,
+        journeyKey: "vaccine_reminder_journey",
+        name: "Vakcinačná recall kampaň",
+        description: "Viacstupňové pripomenutie blížiaceho sa a exspirovaného termínu očkovania.",
+        triggerEventType: "vaccine_due",
+        isActive: true,
+        version: 1,
+        frequencyCapWindowDays: 60,
+        frequencyCapMaxSteps: 3,
+        allowReentry: false,
+        createdBy: userId,
+        steps: [
+          {
+            index: 0,
+            kind: "send",
+            label: "SMS pripomienka: Vakcinácia exspiruje o 14 dní",
+            delayHours: 0,
+            channel: "sms",
+            templateKey: "vaccination_recall",
+            legalBasis: "contract",
+          },
+          {
+            index: 1,
+            kind: "send",
+            label: "E-mailová pripomienka s možnosťou online objednania",
+            delayHours: 264,
+            channel: "email",
+            templateKey: "vaccine_reminder_urgent",
+            legalBasis: "contract",
+          },
+          {
+            index: 2,
+            kind: "send",
+            label: "SMS upozornenie: Očkovanie je po termíne platnosti",
+            delayHours: 504,
+            channel: "sms",
+            templateKey: "vaccine_overdue",
+            legalBasis: "contract",
+          },
+        ],
+      },
+      {
+        practiceId,
+        journeyKey: "post_operative_care",
+        name: "Pooperačný protokol a starostlivosť o rany",
+        description: "Intenzívne sledovanie rekonvalescencie pacienta po chirurgickom zákroku.",
+        triggerEventType: "surgery_completed",
+        isActive: true,
+        version: 1,
+        frequencyCapWindowDays: 14,
+        frequencyCapMaxSteps: 4,
+        allowReentry: true,
+        createdBy: userId,
+        steps: [
+          {
+            index: 0,
+            kind: "send",
+            label: "Kontrolná SMS 24 hodín po zákroku (bolesť, chuť do jedla)",
+            delayHours: 24,
+            channel: "sms",
+            templateKey: "postop_checkin",
+            legalBasis: "vital_interests",
+          },
+          {
+            index: 1,
+            kind: "send",
+            label: "SMS kontrola hojenia operačnej rany a goliera",
+            delayHours: 72,
+            channel: "sms",
+            templateKey: "postop_checkin_72h",
+            legalBasis: "vital_interests",
+          },
+          {
+            index: 2,
+            kind: "send",
+            label: "Pripomienka termínu na vybratie stehov",
+            delayHours: 240,
+            channel: "sms",
+            templateKey: "postop_suture_removal",
+            legalBasis: "vital_interests",
+          },
+        ],
+      },
+      {
+        practiceId,
+        journeyKey: "patient_reactivation",
+        name: "Reaktivácia neaktívneho pacienta (Ročný recall)",
+        description: "Oslovenie majiteľov, ktorí nenavštívili kliniku viac ako 12 mesiacov.",
+        triggerEventType: "inactive_recall",
+        isActive: true,
+        version: 1,
+        frequencyCapWindowDays: 90,
+        frequencyCapMaxSteps: 2,
+        allowReentry: false,
+        createdBy: userId,
+        steps: [
+          {
+            index: 0,
+            kind: "send",
+            label: "Pozvánka e-mailom: Čas na ročnú preventívnu prehliadku",
+            delayHours: 0,
+            channel: "email",
+            templateKey: "annual_wellness_invitation",
+            legalBasis: "contract",
+          },
+          {
+            index: 1,
+            kind: "send",
+            label: "SMS s odkazom na online rezerváciu termínu",
+            delayHours: 336,
+            channel: "sms",
+            templateKey: "reactivation_sms",
+            legalBasis: "contract",
+          },
+        ],
+      },
+    ]);
+    console.log("✓ Created 5 built-in ext_automation_journeys");
+  }
+
+  // -------------------------------------------------------------------------
+  // 11d. 12 Canonical CRM Segments (ext_crm_segments)
+  // -------------------------------------------------------------------------
+  const existingSegments = await db.query.extCrmSegments.findMany({
+    where: eq(extCrmSegments.practiceId, practiceId),
+  });
+
+  if (existingSegments.length === 0) {
+    console.log("Seeding 12 canonical ext_crm_segments...");
+    await db.insert(extCrmSegments).values([
+      {
+        practiceId,
+        segmentKey: "new_clients",
+        name: "Noví klienti (do 30 dní)",
+        description: "Klienti s prvou registráciou alebo návštevou za posledný mesiac.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "event_driven",
+        conditionJson: { activeWithinDays: 30 },
+        conditionSql: "clients.created_at >= NOW() - INTERVAL '30 days'",
+        memberCountCache: 12,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "active_clients",
+        name: "Aktívni klienti (posledných 6 mesiacov)",
+        description: "Pravidelne navštevujúci klienti s aktivitou za 180 dní.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: { activeWithinDays: 180 },
+        conditionSql: "last_visit_at >= NOW() - INTERVAL '180 days'",
+        memberCountCache: 148,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "inactive_6mo",
+        name: "Neaktívni 6–12 mesiacov",
+        description: "Klienti bez návštevy viac ako pol roka, vhodní na jemnú pripomienku.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: { inactiveDays: 180 },
+        conditionSql: "last_visit_at < NOW() - INTERVAL '180 days' AND last_visit_at >= NOW() - INTERVAL '365 days'",
+        memberCountCache: 43,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "inactive_12mo",
+        name: "Dlhodobo neaktívni (>12 mesiacov)",
+        description: "Cieľová skupina pre reaktiváciu a ročný preventívny recall.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: { inactiveDays: 365 },
+        conditionSql: "last_visit_at < NOW() - INTERVAL '365 days'",
+        memberCountCache: 61,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "post_surgery",
+        name: "Pacienti po operáciách a chirurgii",
+        description: "Zvieratá v rekonvalescencii vyžadujúce pooperačný dohľad.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "event_driven",
+        conditionJson: { visitTypes: ["surgery"] },
+        conditionSql: "appointments.type = 'surgery' AND appointments.start_time >= NOW() - INTERVAL '14 days'",
+        memberCountCache: 5,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "vaccine_due_soon",
+        name: "Blížiaca sa revakcinácia (do 30 dní)",
+        description: "Pacienti s platnosťou očkovania končiacou v priebehu 30 dní.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: {},
+        conditionSql: "care_reminders.category = 'vaccine' AND care_reminders.due_date BETWEEN NOW() AND NOW() + INTERVAL '30 days'",
+        memberCountCache: 28,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "vaccine_overdue",
+        name: "Exspirovaná vakcinácia (po termíne)",
+        description: "Zvieratá s prepadnutým termínom povinnej alebo odporúčanej vakcíny.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: {},
+        conditionSql: "care_reminders.category = 'vaccine' AND care_reminders.due_date < NOW() AND care_reminders.status = 'open'",
+        memberCountCache: 19,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "seniors",
+        name: "Geriatrickí pacienti (Seniori 7+ rokov)",
+        description: "Staršie psy a mačky s odporúčaným geriatrickým screeningom krvi a moču.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: { minAgeYears: 7 },
+        conditionSql: "patients.date_of_birth <= NOW() - INTERVAL '7 years'",
+        memberCountCache: 52,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "puppy_kitten",
+        name: "Mláďatá a juniori (do 1 roka)",
+        description: "Šteniatka a mačiatka v procese základnej vakcinácie, čipovania a socializácie.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: { maxAgeYears: 1 },
+        conditionSql: "patients.date_of_birth > NOW() - INTERVAL '1 year'",
+        memberCountCache: 17,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "chronic_care",
+        name: "Chronickí pacienti v dispenzári",
+        description: "Pacienti s chronickými diagnózami (cukrovka, renálna insuficiencia, kardiaci).",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "manual",
+        conditionJson: { patientStatus: "active" },
+        conditionSql: "patient_conditions.is_chronic = true",
+        memberCountCache: 14,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "dental_attention",
+        name: "Indikovaná stomatologická hygiena",
+        description: "Pacienti s diagnostikovaným zubným kameňom II.-IV. stupňa.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "event_driven",
+        conditionJson: { visitTypes: ["dental"] },
+        conditionSql: "soap_notes.assessment ILIKE '%stomatit%' OR soap_notes.assessment ILIKE '%tartar%'",
+        memberCountCache: 22,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "high_value_vip",
+        name: "Lojálni a VIP klienti kliniky",
+        description: "Klienti s vysokou mierou dodržiavania termínov a kompletnou prevenciou.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled",
+        conditionJson: { activeWithinDays: 90 },
+        conditionSql: "invoice_totals_annual >= 500",
+        memberCountCache: 35,
+        createdBy: userId,
+      },
+    ]);
+    console.log("✓ Created 12 canonical ext_crm_segments");
+  }
+
+  // -------------------------------------------------------------------------
+  // 11e. Content Calendar Strategy Pillars (ext_content_pillars)
+  // -------------------------------------------------------------------------
+  const existingPillars = await db.query.extContentPillars.findMany({
+    where: eq(extContentPillars.practiceId, practiceId),
+  });
+
+  if (existingPillars.length === 0) {
+    console.log("Seeding 5 content strategy pillars...");
+    await db.insert(extContentPillars).values([
+      {
+        practiceId,
+        pillarKey: "preventive_care",
+        title: "Preventívna medicína a vakcinácie",
+        description: "Dôležitosť ročnej prevencie, kontroly chrupu, srdca a pravidelného očkovania psov a mačiek.",
+        species: ["canine", "feline"],
+        seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isActive: true,
+        sortOrder: 1,
+        voiceGuidance: "Odborný, preventívny a povzbudivý tón. Vyzdvihovať bezbolestnosť vyšetrenia.",
+      },
+      {
+        practiceId,
+        pillarKey: "dental_health",
+        title: "Zubná hygiena a prevencia paradentózy",
+        description: "Čistenie zubného kameňa ultrazvukom, domáca dentálna hygiena a nebezpečenstvo zápalov ďasien.",
+        species: ["canine", "feline"],
+        seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isActive: true,
+        sortOrder: 2,
+        voiceGuidance: "Vysvetliť vplyv neošetreného zubného kameňa na obličky a srdcovú chlopňu.",
+      },
+      {
+        practiceId,
+        pillarKey: "parasite_seasonal",
+        title: "Sezónna ochrana: Kliešte, blchy a odčervenie",
+        description: "Aktuálne riziká babeziózy, kliešťovej encefalitídy a správny výber antiparazitík na jar a jeseň.",
+        species: ["canine", "feline"],
+        seasonMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+        isActive: true,
+        sortOrder: 3,
+        voiceGuidance: "Varovať pred lokálnymi endemickými ohniskami kliešťov na juhu Slovenska a v okolí.",
+      },
+      {
+        practiceId,
+        pillarKey: "senior_wellness",
+        title: "Starostlivosť o psích a mačacích seniorov",
+        description: "Špecializovaný geriatrický screening, včasný záchyt zlyhávania obličiek a manažment osteoartrózy.",
+        species: ["canine", "feline"],
+        seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isActive: true,
+        sortOrder: 4,
+        voiceGuidance: "Hlboká empatia, porozumenie k starnutiu zvieratiek a praktické rady pre pohodlie doma.",
+      },
+      {
+        practiceId,
+        pillarKey: "clinic_stories",
+        title: "Príbehy z ambulancie a úspešné vyliečenia",
+        description: "Zaujímavé klinické prípady, úspešné operácie a poďakovanie obetavým majiteľom (so súhlasom GDPR).",
+        species: ["canine", "feline"],
+        seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isActive: true,
+        sortOrder: 5,
+        voiceGuidance: "Ľudský, inšpiratívny a autentický tón budujúci komunitu okolo kliniky.",
+      },
+    ]);
+    console.log("✓ Created 5 ext_content_pillars");
+  }
+
+  // -------------------------------------------------------------------------
+  // 11f. Connected Channel Accounts (ext_channel_accounts)
+  // -------------------------------------------------------------------------
+  const existingChannels = await db.query.extChannelAccounts.findMany({
+    where: eq(extChannelAccounts.practiceId, practiceId),
+  });
+
+  if (existingChannels.length === 0) {
+    console.log("Seeding connected channel accounts...");
+    await db.insert(extChannelAccounts).values([
+      {
+        practiceId,
+        provider: "google_business",
+        externalAccountId: "gbp_loc_sykora_1",
+        displayName: "Google Firemný Profil (MVDr. Martin Sýkora)",
+        scopesGranted: ["https://www.googleapis.com/auth/business.manage"],
+        status: "connected",
+        connectedBy: userId,
+        connectedAt: new Date(Date.now() - 30 * 86400_000),
+      },
+      {
+        practiceId,
+        provider: "facebook",
+        externalAccountId: "fb_page_sykora_1",
+        displayName: "Facebook Stránka: Veterinárna klinika MVDr. Martin Sýkora",
+        scopesGranted: ["pages_manage_posts", "pages_read_engagement", "pages_show_list"],
+        status: "connected",
+        connectedBy: userId,
+        connectedAt: new Date(Date.now() - 25 * 86400_000),
+      },
+      {
+        practiceId,
+        provider: "instagram",
+        externalAccountId: "ig_user_sykora_1",
+        displayName: "Instagram @vetsykora",
+        scopesGranted: ["instagram_basic", "instagram_content_publish"],
+        status: "connected",
+        connectedBy: userId,
+        connectedAt: new Date(Date.now() - 20 * 86400_000),
+        publishingQuotaRemaining: 25,
+        publishingQuotaFetchedAt: new Date(),
+      },
+    ]);
+    console.log("✓ Created 3 ext_channel_accounts");
   }
 
   // -------------------------------------------------------------------------
