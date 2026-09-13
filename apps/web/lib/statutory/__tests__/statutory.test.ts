@@ -56,3 +56,55 @@ describe("Slovak Statutory Compliance Logic (§ 19 and § 29 Law 39/2007 Z. z.)"
     expect(getRabiesComplianceStatus(undefined).status).toBe("unknown");
   });
 });
+
+describe("Slovak & EU Statutory Withdrawal Calculations (Zákon č. 39/2007 Z. z. & Nariadenie EÚ 2019/6)", () => {
+  it("calculates independent end-of-day timestamps for meat, milk, and eggs", async () => {
+    const { calculateStatutoryWithdrawal } = await import("../withdrawal");
+    const treatmentDate = new Date("2026-06-01T10:30:00Z");
+    const result = calculateStatutoryWithdrawal(
+      treatmentDate,
+      { meat: 10, milk: 3, eggs: 5 },
+      false,
+      new Date("2026-06-02T00:00:00Z")
+    );
+
+    expect(result.effectiveMeatDays).toBe(10);
+    expect(result.effectiveMilkDays).toBe(3);
+    expect(result.effectiveEggsDays).toBe(5);
+    expect(result.maxDays).toBe(10);
+
+    // End-of-day check: hours 23, minutes 59, seconds 59, ms 999
+    expect(result.meatSafeUntil?.getHours()).toBe(23);
+    expect(result.meatSafeUntil?.getMinutes()).toBe(59);
+    expect(result.meatSafeUntil?.getSeconds()).toBe(59);
+    expect(result.meatSafeUntil?.getMilliseconds()).toBe(999);
+
+    expect(result.milkSafeUntil?.getHours()).toBe(23);
+    expect(result.milkSafeUntil?.getMinutes()).toBe(59);
+
+    expect(result.eggsSafeUntil?.getHours()).toBe(23);
+    expect(result.eggsSafeUntil?.getMinutes()).toBe(59);
+
+    // Milk safe date should precede meat safe date
+    expect(result.milkSafeUntil!.getTime()).toBeLessThan(result.meatSafeUntil!.getTime());
+  });
+
+  it("applies statutory cascade minimums under EU 2019/6 (meat 28d, milk 7d, eggs 7d)", async () => {
+    const { calculateStatutoryWithdrawal } = await import("../withdrawal");
+    const treatmentDate = new Date("2026-06-01T12:00:00Z");
+    // Drug has registered withdrawal of only 5 days meat and 2 days milk, but used off-label / cascade
+    const cascadeResult = calculateStatutoryWithdrawal(
+      treatmentDate,
+      { meat: 5, milk: 2, eggs: 0 },
+      true, // isCascade = true
+      new Date("2026-06-01T12:00:00Z")
+    );
+
+    expect(cascadeResult.isCascadeApplied).toBe(true);
+    expect(cascadeResult.effectiveMeatDays).toBe(28); // minimum 28 days
+    expect(cascadeResult.effectiveMilkDays).toBe(7);  // minimum 7 days
+    expect(cascadeResult.effectiveEggsDays).toBe(7);  // minimum 7 days
+    expect(cascadeResult.maxDays).toBe(28);
+  });
+});
+

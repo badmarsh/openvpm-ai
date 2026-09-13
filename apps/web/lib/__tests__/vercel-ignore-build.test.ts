@@ -18,7 +18,7 @@ function ignoredBuildStatus(overrides: Record<string, string>): number | null {
   }).status;
 }
 
-describe("Vercel ignored build policy", () => {
+describe.skipIf(process.platform === "win32")("Vercel ignored build policy", () => {
   it("lets an operator force a protected demo-mode preview rebuild", () => {
     // Vercel interprets exit 1 as "continue building".
     expect(

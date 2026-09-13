@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { Database } from "@openpims/db/client";
-import { patients } from "@openpims/db";
+import { patients, clients, extMarketingMediaConsents } from "@openpims/db";
 
 /**
  * Communication types for consent checks.
@@ -39,7 +39,8 @@ export async function assertPatientNotDeceased(
     .where(
       and(
         eq(patients.id, patientId),
-        eq(patients.practiceId, practiceId)
+        eq(patients.practiceId, practiceId),
+        isNull(patients.deletedAt)
       )
     )
     .limit(1);
@@ -51,7 +52,7 @@ export async function assertPatientNotDeceased(
  * Checks if a communication is allowed based on consent rules, suppression lists, and sympathy gate.
  *
  * Implements SKILL.md §3: Sympathy Gate and medical decisions must be human-in-the-loop.
- * Implements GUARDRAILS-COMPLIANCE.md §B: Compliance checks for GDPR/TCPA.
+ * Implements GUARDRAILS-COMPLIANCE.md §B & Slovak statutory electronic marketing rules (Zákon č. 452/2021 Z. z. & GDPR).
  *
  * @param db - Database connection
  * @param practiceId - The practice ID
@@ -67,21 +68,65 @@ export async function consentGateCheck(
   patientId: string | undefined,
   communicationType: CommunicationType
 ): Promise<GateResult> {
-  // Always check if patient is deceased (Sympathy Gate - SKILL.md §3)
+  // 1. Always check if patient is deceased (Sympathy Gate - SKILL.md §3)
   if (patientId) {
     const isAlive = await assertPatientNotDeceased(db, practiceId, patientId);
     if (!isAlive) {
       return {
         allowed: false,
         reason: "Patient is deceased",
-        suppressionType: "deceased_patient"
+        suppressionType: "deceased_patient",
       };
     }
   }
 
-  // For this implementation, we're only implementing the sympathy gate
-  // as required by the brief. The other checks (consent, suppression lists)
-  // will be handled by the event worker and rules engine.
-  
+  // 2. Marketing consent gate (GDPR & Zákon č. 452/2021 Z. z. § 116)
+  // Direct marketing outreach requires opt-in consent before dispatch.
+  if (communicationType === "marketing_sms") {
+    const [client] = await db
+      .select({ smsConsent: clients.smsConsent })
+      .from(clients)
+      .where(
+        and(
+          eq(clients.id, clientId),
+          eq(clients.practiceId, practiceId),
+          isNull(clients.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!client || !client.smsConsent) {
+      return {
+        allowed: false,
+        reason: "Klient neudelil marketingový súhlas na SMS komunikáciu.",
+        suppressionType: "opt_out",
+      };
+    }
+  }
+
+  if (communicationType === "marketing_email") {
+    const [consent] = await db
+      .select({ id: extMarketingMediaConsents.id })
+      .from(extMarketingMediaConsents)
+      .where(
+        and(
+          eq(extMarketingMediaConsents.practiceId, practiceId),
+          eq(extMarketingMediaConsents.clientId, clientId),
+          eq(extMarketingMediaConsents.scope, "marketing_messages"),
+          isNull(extMarketingMediaConsents.revokedAt),
+          isNull(extMarketingMediaConsents.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!consent) {
+      return {
+        allowed: false,
+        reason: "Klient neudelil marketingový súhlas na e-mailovú komunikáciu.",
+        suppressionType: "opt_out",
+      };
+    }
+  }
+
   return { allowed: true };
 }

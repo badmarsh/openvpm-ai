@@ -34,26 +34,31 @@ describe("hosted deployment ordering", () => {
     expect(buildScript.trimEnd()).toMatch(/pnpm build$/);
   });
 
-  it("fails before any build when the production approval does not match", () => {
-    const result = spawnSync("bash", ["scripts/vercel-build.sh"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        VERCEL_ENV: "production",
-        PRODUCTION_RELEASE_SHA: "0".repeat(40),
-        VERCEL_GIT_COMMIT_SHA: "1".repeat(40),
-      },
-    });
+  it.skipIf(process.platform === "win32")(
+    "fails before any build when the production approval does not match",
+    () => {
+      const result = spawnSync("bash", ["scripts/vercel-build.sh"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          VERCEL_ENV: "production",
+          PRODUCTION_RELEASE_SHA: "0".repeat(40),
+          VERCEL_GIT_COMMIT_SHA: "1".repeat(40),
+        },
+      });
 
-    expect(result.status).toBe(1);
-    expect(result.stdout).toContain(
-      "Production release approval is absent or does not match this exact commit",
-    );
-    expect(result.stdout).not.toContain("Database migration is still in progress");
-  });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(
+        "Production release approval is absent or does not match this exact commit",
+      );
+      expect(result.stdout).not.toContain("Database migration is still in progress");
+    },
+  );
 
-  it("checks schema drift before building an exactly approved commit", () => {
+  it.skipIf(process.platform === "win32")(
+    "checks schema drift before building an exactly approved commit",
+    () => {
     const fixture = mkdtempSync(join(tmpdir(), "openvpm-deploy-order-"));
     const fakePnpm = join(fixture, "pnpm");
     const calls = join(fixture, "calls.txt");

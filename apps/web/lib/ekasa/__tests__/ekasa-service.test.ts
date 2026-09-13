@@ -179,4 +179,31 @@ describe("e-Kasa Service & Calculations", () => {
       expect(html).toContain("Platobná karta");
     });
   });
+
+  describe("e-Kasa Driver Architecture", () => {
+    it("returns MockEkasaDriver in test mode and generates simulated UID", async () => {
+      const { getEkasaDriver, MockEkasaDriver } = await import("../service");
+      const driver = getEkasaDriver("MOCK");
+      expect(driver).toBeInstanceOf(MockEkasaDriver);
+
+      const result = await driver.sendReceipt({
+        apiUrl: "https://ekasa.financnasprava.sk/oto/api",
+        receiptNumber: "20260913-0001",
+        dic: "2020293057",
+        pokladnicaId: "88812345678900001",
+        amountTotal: "25.00",
+        amountVat: "4.67",
+        paymentMethod: "CARD",
+        okp: "A".repeat(40),
+        pkp: "B".repeat(60),
+        issuedAt: new Date(),
+        items: [{ name: "Konzultácia", qty: 1, unitPrice: "25.00", vatRate: "23" }],
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.uid).toContain("O-MOCK-202609130001-");
+      expect(result.message).toContain("Mock driver");
+    });
+  });
 });
+

@@ -88,13 +88,13 @@ describe("Autopilot Consent Gate", () => {
     ];
 
     it.each(commTypes)(
-      "allows outreach for %s when patient is not deceased",
+      "allows outreach for %s when patient is not deceased and consent is active",
       async (commType) => {
         const mockDb = {
           select: vi.fn().mockReturnValue({
             from: vi.fn().mockReturnValue({
               where: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue([{ status: "active" }]),
+                limit: vi.fn().mockResolvedValue([{ id: "consent-1", status: "active", smsConsent: true }]),
               }),
             }),
           }),
@@ -141,14 +141,82 @@ describe("Autopilot Consent Gate", () => {
       }
     );
 
-    it("allows communication when no patientId is provided", async () => {
+    it("blocks marketing_sms when client has not given SMS consent (GDPR)", async () => {
+      let callCount = 0;
+      const mockDb = {
+        select: vi.fn().mockImplementation(() => {
+          callCount++;
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(
+                  callCount === 1
+                    ? [{ status: "active" }] // patient alive
+                    : [{ smsConsent: false }] // client without SMS consent
+                ),
+              }),
+            }),
+          };
+        }),
+      };
+
+      const result = await consentGateCheck(
+        mockDb as any,
+        "practice-1",
+        "client-1",
+        "patient-1",
+        "marketing_sms"
+      );
+
+      expect(result).toEqual({
+        allowed: false,
+        reason: "Klient neudelil marketingový súhlas na SMS komunikáciu.",
+        suppressionType: "opt_out",
+      });
+    });
+
+    it("blocks marketing_email when client has no marketing media consent (GDPR)", async () => {
+      let callCount = 0;
+      const mockDb = {
+        select: vi.fn().mockImplementation(() => {
+          callCount++;
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(
+                  callCount === 1
+                    ? [{ status: "active" }] // patient alive
+                    : [] // no marketing consent record
+                ),
+              }),
+            }),
+          };
+        }),
+      };
+
+      const result = await consentGateCheck(
+        mockDb as any,
+        "practice-1",
+        "client-1",
+        "patient-1",
+        "marketing_email"
+      );
+
+      expect(result).toEqual({
+        allowed: false,
+        reason: "Klient neudelil marketingový súhlas na e-mailovú komunikáciu.",
+        suppressionType: "opt_out",
+      });
+    });
+
+    it("allows non-marketing communication when no patientId is provided", async () => {
       const mockDb = { select: vi.fn() };
       const result = await consentGateCheck(
         mockDb as any,
         "practice-1",
         "client-1",
         undefined,
-        "marketing_sms"
+        "vaccination_reminder"
       );
 
       expect(result).toEqual({ allowed: true });

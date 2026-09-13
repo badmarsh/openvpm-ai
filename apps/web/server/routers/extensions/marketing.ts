@@ -473,7 +473,7 @@ createContentItem: protectedProcedure
   )
   .mutation(async ({ ctx, input }) => {
     if (input.patientId) {
-      await assertPatientNotDeceased(ctx.db, input.patientId);
+      await assertPatientNotDeceased(ctx.db, ctx.practiceId, input.patientId);
     }
     if (input.mediaAssetId) {
       const [asset] = await ctx.db
@@ -486,7 +486,7 @@ createContentItem: protectedProcedure
         .where(eq(extMarketingMediaAssets.id, input.mediaAssetId))
         .limit(1);
       if (asset?.patientId) {
-        await assertPatientNotDeceased(ctx.db, asset.patientId);
+        await assertPatientNotDeceased(ctx.db, ctx.practiceId, asset.patientId);
       }
     }
     const report = validateMarketingText({
@@ -546,7 +546,7 @@ approveContentItem: protectedProcedure
         .where(eq(extMarketingMediaAssets.id, existing.mediaAssetId))
         .limit(1);
       if (asset?.patientId) {
-        await assertPatientNotDeceased(ctx.db, asset.patientId);
+        await assertPatientNotDeceased(ctx.db, ctx.practiceId, asset.patientId);
       }
     }
     const [updated] = await ctx.db
@@ -1679,7 +1679,7 @@ redeemWellnessBenefit: protectedProcedure
       .where(eq(wellnessEnrollments.id, input.enrollmentId))
       .limit(1);
     if (enrollment?.patientId) {
-      await assertPatientNotDeceased(ctx.db, enrollment.patientId);
+      await assertPatientNotDeceased(ctx.db, ctx.practiceId, enrollment.patientId);
     }
     const [redemption] = await ctx.db
       .insert(extMarketingWellnessRedemptions)

@@ -22,6 +22,7 @@ import {
   Truck,
   UserRoundPlus,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   CLINIC_MODEL_OPTIONS,
@@ -71,10 +72,10 @@ export function ClinicIntentBuilder({
   firstGoal,
   onClinicModelChange,
   onFirstGoalChange,
-  intro = "Start with one useful workflow. We’ll shape OpenVPM around the way your team works—and you stay in control.",
+  intro,
   showClinicModel = true,
   showFirstGoal = true,
-  goalLegend = "What would feel useful first?",
+  goalLegend,
   beforeChoices,
   afterChoices,
 }: {
@@ -89,12 +90,25 @@ export function ClinicIntentBuilder({
   beforeChoices?: ReactNode;
   afterChoices?: ReactNode;
 }) {
+  const { t } = useI18n();
   const selectedModel = clinicModelOption(clinicModel);
   const tasks = firstDayTasks(clinicModel, firstGoal);
   const goalOptions =
     clinicModel === "exploring"
       ? [...FIRST_GOAL_OPTIONS, SELF_HOST_GOAL]
       : FIRST_GOAL_OPTIONS;
+
+  const resolvedIntro =
+    intro === undefined
+      ? t(
+          "onboarding.intent.intro",
+          "Start with one useful workflow. We’ll shape OpenVPM around the way your team works—and you stay in control.",
+        )
+      : intro;
+
+  const resolvedGoalLegend =
+    goalLegend ??
+    t("onboarding.intent.goalLegend", "What would feel useful first?");
 
   return (
     <div
@@ -107,16 +121,19 @@ export function ClinicIntentBuilder({
       <div className="min-w-0">
         {beforeChoices}
 
-        {intro ? (
+        {resolvedIntro ? (
           <p className="max-w-2xl text-[15px] leading-7 text-slate-600 sm:text-base">
-            {intro}
+            {resolvedIntro}
           </p>
         ) : null}
 
         {showClinicModel ? (
-          <fieldset className={intro ? "mt-7" : undefined}>
+          <fieldset className={resolvedIntro ? "mt-7" : undefined}>
             <legend className="text-sm font-semibold text-slate-950 sm:text-base">
-              What kind of care do you provide?
+              {t(
+                "onboarding.intent.careLegend",
+                "What kind of care do you provide?",
+              )}
             </legend>
             <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
               {CLINIC_MODEL_OPTIONS.map((option) => {
@@ -161,11 +178,13 @@ export function ClinicIntentBuilder({
         {showFirstGoal ? (
           <fieldset
             className={
-              showClinicModel || intro || beforeChoices ? "mt-6" : undefined
+              showClinicModel || resolvedIntro || beforeChoices
+                ? "mt-6"
+                : undefined
             }
           >
             <legend className="text-sm font-semibold text-slate-950 sm:text-base">
-              {goalLegend}
+              {resolvedGoalLegend}
             </legend>
             <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
               {goalOptions.map((option) => {
@@ -237,10 +256,14 @@ export function ClinicIntentBuilder({
               </span>
               <div>
                 <h3 className="font-heading text-lg font-semibold text-slate-950 sm:text-xl">
-                  Your first OpenVPM day
+                  {t("onboarding.intent.dayHeading", "Your first OpenVPM day")}
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Shaped for {selectedModel.shortLabel.toLowerCase()} care
+                  {t(
+                    "onboarding.intent.shapedFor",
+                    `Shaped for ${selectedModel.shortLabel.toLowerCase()} care`,
+                    { model: selectedModel.shortLabel.toLowerCase() },
+                  )}
                 </p>
               </div>
             </div>
@@ -270,7 +293,12 @@ export function ClinicIntentBuilder({
 
             <div className="mt-4 flex items-center gap-2 text-xs text-primary">
               <ShieldCheck className="h-4 w-4" strokeWidth={1.8} />
-              <span>Nothing moves until you review it.</span>
+              <span>
+                {t(
+                  "onboarding.intent.reviewNotice",
+                  "Nothing moves until you review it.",
+                )}
+              </span>
             </div>
           </div>
           <style>{`

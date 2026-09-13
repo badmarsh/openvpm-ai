@@ -147,6 +147,7 @@ export const ekasaReceipts = pgTable(
       table.practiceId,
       table.deletedAt
     ),
+    invoiceIdx: index("ekasa_receipts_invoice_idx").on(table.invoiceId),
     paymentIdx: index("ekasa_receipts_payment_idx").on(table.paymentId),
     receiptNumberIdx: uniqueIndex("ekasa_receipts_number_practice_uq").on(
       table.practiceId,
@@ -199,6 +200,7 @@ export const ekasaDailyClosures = pgTable(
       table.practiceId,
       table.deletedAt
     ),
+    closedByIdx: index("ekasa_daily_closures_closed_by_idx").on(table.closedBy),
     closureDatePracticeUq: uniqueIndex("ekasa_daily_closures_date_practice_uq").on(
       table.practiceId,
       table.date

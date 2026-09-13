@@ -92,6 +92,6 @@ describe("resolvePortalSession", () => {
     await expect(
       resolvePortalSession(unresolvedDb as never, "b".repeat(64), now),
     ).resolves.toBeNull();
-    expect(PORTAL_SESSION_IDLE_TTL_MS).toBe(30 * 60 * 1000);
+    expect(PORTAL_SESSION_IDLE_TTL_MS).toBe(60 * 60 * 1000);
   });
 });

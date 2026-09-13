@@ -22,7 +22,7 @@ import {
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { AgentNotConfiguredError } from "@/lib/agent";
-import { requireTrustedActorRole } from "@/lib/authorization";
+import { requireClinicalActorRole } from "@/lib/authorization";
 import {
   SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
   SoapDraftUnavailableError,
@@ -297,9 +297,9 @@ export const aiRouter = createRouter({
           });
           const originalDraftHash = generateContentHash(input.source);
           const confirmedContentHash = generateContentHash(normalizedNote);
-          const actorRole = requireTrustedActorRole(
+          const actorRole = requireClinicalActorRole(
             ctx.user.role,
-            "AI SOAP finalization requires an authenticated staff role.",
+            "AI SOAP finalization requires an authenticated clinical role (admin or veterinarian).",
           );
           // Transitional direct confirmation (Option 2): this create-only
           // external-scribe hook has no pre-existing draft entity to bind a

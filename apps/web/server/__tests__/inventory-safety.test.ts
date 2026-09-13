@@ -815,4 +815,59 @@ describe("inventory mutation safety", () => {
       })
     );
   });
+
+  it("enforces SEC-03: forbids front_desk from adjustStock and price changes, logs audit trail", async () => {
+    const { db, insertValues, updateSet } = createDb({
+      selectResults: [
+        [{ id: PRODUCT_ID, name: "Amoxicillin", stockQuantity: 20, inventoryTracked: true }],
+      ],
+      updatedRows: [{ id: PRODUCT_ID, stockQuantity: 15 }],
+    });
+
+    const frontDesk = callerWithDb(db, "front_desk");
+    const vet = callerWithDb(db, "veterinarian");
+
+    // front_desk cannot adjustStock
+    await expect(
+      frontDesk.adjustStock({
+        id: PRODUCT_ID,
+        adjustment: -5,
+        reason: "Unauthorized writeoff",
+      })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    // front_desk cannot change prices
+    await expect(
+      frontDesk.update({
+        id: PRODUCT_ID,
+        unitPrice: "99.99",
+      })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    // veterinarian can adjustStock and audit log is recorded
+    await expect(
+      vet.adjustStock({
+        id: PRODUCT_ID,
+        adjustment: -5,
+        reason: "Clinical use in surgery",
+      })
+    ).resolves.toMatchObject({ id: PRODUCT_ID, stockQuantity: 15 });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        practiceId: PRACTICE_ID,
+        userId: USER_ID,
+        action: "inventory_adjustment",
+        entityType: "product",
+        entityId: PRODUCT_ID,
+        changes: expect.objectContaining({
+          reason: "Clinical use in surgery",
+          adjustment: -5,
+          previousStock: 20,
+          newStock: 15,
+        }),
+      })
+    );
+  });
 });
+

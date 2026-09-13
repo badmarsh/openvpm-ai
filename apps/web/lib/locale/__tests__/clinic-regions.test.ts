@@ -47,10 +47,8 @@ describe("clinic jurisdiction evidence", () => {
       "app/(dashboard)/settings/page.tsx",
       "utf8",
     );
-    expect(source).toContain('label="Clinic country"');
-    expect(source).toContain(
-      '<option value="">Choose your clinic country</option>',
-    );
+    expect(source).toContain('label={t("auth.register.country", "Clinic country")}');
+    expect(source).toContain('auth.register.selectCountry');
     expect(source).toContain('country !== ""');
     expect(source).toContain('country !== "OTHER"');
     expect(source).toContain("supported design-partner rollout");

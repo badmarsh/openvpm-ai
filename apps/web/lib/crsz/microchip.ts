@@ -238,7 +238,7 @@ export interface CrszLookupResult {
   registered: boolean;
   countryOrManufacturer: string;
   isSlovakNationalCode: boolean;
-  status: "REGISTERED" | "NOT_FOUND" | "INVALID_FORMAT";
+  status: "REGISTERED" | "NOT_FOUND" | "INVALID_FORMAT" | "UNVERIFIED_NO_API_CONNECTION" | "SIMULATED_MOCK_ONLY";
   registrationDate?: string;
   species?: string;
   breed?: string;
@@ -364,21 +364,20 @@ export async function lookupCrszOnline(chipNumber: string): Promise<CrszLookupRe
   }
 
   const isSlovak = validation.isSlovakNationalCode;
-  const isRegisteredSimulated = isSlovak ? true : Boolean(validation.countryOrManufacturer);
 
   return {
     valid: true,
     microchipNumber: validation.code,
-    registered: isRegisteredSimulated,
+    registered: false,
     countryOrManufacturer: validation.countryOrManufacturer || "Európsky štandard",
     isSlovakNationalCode: isSlovak,
-    status: isRegisteredSimulated ? "REGISTERED" : "NOT_FOUND",
+    status: "UNVERIFIED_NO_API_CONNECTION",
     registryName: isSlovak
       ? "Centrálny register spoločenských zvierat (CRSZ SR)"
       : "Medzinárodný register PetMaxx / Europetnet",
     notes: isSlovak
-      ? "Mikročip obsahuje oficiálny slovenský kód 703 v zmysle zákona č. 39/2007 Z. z."
-      : `Mikročip výrobcu: ${validation.countryOrManufacturer}`,
+      ? "Mikročip obsahuje oficiálny slovenský kód 703 v zmysle zákona č. 39/2007 Z. z. CRSZ SR neposkytuje verejné API na online overenie registrácie zvierat; skutočný stav registrácie je potrebné overiť manuálne na portáli crsz.sk."
+      : `Mikročip výrobcu: ${validation.countryOrManufacturer}. Online integrácia s registrom nie je dostupná.`,
   };
 }
 

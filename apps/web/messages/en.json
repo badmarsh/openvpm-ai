@@ -5426,6 +5426,14 @@
       "buttonPrompt": "Request private review",
       "toastRequested": "Migration review requested",
       "submitting": "Saving request..."
+    },
+    "intent": {
+      "careLegend": "What kind of care do you provide?",
+      "goalLegend": "What would feel useful first?",
+      "intro": "Start with one useful workflow. We’ll shape OpenVPM around the way your team works—and you stay in control.",
+      "dayHeading": "Your first OpenVPM day",
+      "shapedFor": "Shaped for {model} care",
+      "reviewNotice": "Nothing moves until you review it."
     }
   },
   "species": {
@@ -6074,6 +6082,59 @@
       "title": "Protected data review mode is active",
       "description": "You can inspect imported history safely. Operational changes, automated activity, and external delivery remain paused.",
       "continue": "Continue the data review"
+    }
+  },
+  "soap": {
+    "subjective": "Subjective",
+    "objective": "Objective",
+    "assessment": "Assessment",
+    "plan": "Plan",
+    "placeholder": {
+      "subjective": "History, presenting concern, owner observations",
+      "objective": "Exam findings and field observations",
+      "assessment": "Problems, differentials, diagnosis",
+      "plan": "Treatment, prescriptions, monitoring, follow-up"
+    },
+    "card": {
+      "title": "SOAP note",
+      "description": "Document the visit here without leaving the field workspace."
+    },
+    "finalizedLinked": "Finalized SOAP documentation is linked to this visit.",
+    "statutorySigned": "Signed according to Act no. 39/2007 Coll. (§3)",
+    "unauthorized": "Only an administrator or veterinarian can author the SOAP note.",
+    "errorLock": "SOAP draft state could not be verified. Entry is locked to avoid overwriting another clinician’s work.",
+    "loading": "Loading SOAP draft...",
+    "offline": "Offline — keep this page open. These values are not saved until the server confirms them.",
+    "unsavedGuard": "SOAP changes have not been saved on the server. Leave and lose these values?",
+    "actions": {
+      "saveDraft": "Save draft",
+      "finalize": "Finalize SOAP note"
+    },
+    "toasts": {
+      "saved": "SOAP draft saved",
+      "conflict": "SOAP changed in another session. Refresh before saving again.",
+      "alreadyFinalized": "SOAP was already finalized in another session.",
+      "finalized": "SOAP note finalized"
+    }
+  },
+  "copilot": {
+    "diffModal": {
+      "title": "Clinical Record Authorization (Diff Verification)",
+      "patient": "Patient:",
+      "source": "Source:",
+      "reliability": "Extraction confidence:",
+      "statutoryBadge": "Act 39/2007 Coll. authorization",
+      "controlledWarningTitle": "WARNING: Controlled Substance (Act 139/1998 Coll.)",
+      "controlledWarningText": "Automatic AI prefilling is strictly prohibited for controlled narcotics and psychotropic substances (opioids, sedatives). The attending veterinarian must manually enter dosage, administration route, and quantity.",
+      "colField": "Record field",
+      "colOriginal": "Original value",
+      "colProposed": "Proposed value (AI)",
+      "controlledBadge": "Controlled substance",
+      "confidenceSuffix": "% confidence",
+      "emptyValue": "— empty —",
+      "controlledInputPlaceholder": "Enter dose and administration manually...",
+      "statutoryConfirmation": "I confirm the medical accuracy and validity of this clinical record as the attending veterinarian in accordance with Act No. 39/2007 Coll. on veterinary care.",
+      "signAndRecord": "Sign & Save to Patient Chart"
     }
   }
 }

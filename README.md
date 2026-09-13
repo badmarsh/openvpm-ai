@@ -220,8 +220,8 @@ pnpm install --frozen-lockfile
 # 5. Overenie čistoty open-source vydania
 pnpm verify:oss-release
 
-# 6. Aplikovanie migrácií a RLS politík
-pnpm db:migrate
+# 6. Aplikovanie schémy (Zero-Conflict Upstream Sync) a RLS politík
+pnpm db:push
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls:test
 # Pre produkčné nasadenie nastavte vlastné silné heslo:
@@ -231,13 +231,26 @@ OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls:test
 # 7. Naplnenie ukážkovými slovenskými dátami
 pnpm db:seed
 
-# 8. Spustenie vývojového servera
+# 8. Spustenie vývojového servera (štandardne port 3001)
 pnpm dev
 ```
 
-Otvorte [http://localhost:3000](http://localhost:3000) a prihláste sa pomocou demo účtu:
+Otvorte [http://localhost:3001](http://localhost:3001) a prihláste sa pomocou demo účtu:
 - **Admin:** `admin@neighborhoodvet.example.com` / `password123`
 - **Veterinárny lekár:** `sarah.chen@neighborhoodvet.example.com` / `password123`
+
+### Spustenie testov a validácia
+
+```bash
+# Spustenie integračných a jednotkových testov
+pnpm --filter @openpims/web test
+
+# Statická kontrola typov (TypeScript)
+pnpm --filter @openpims/web type-check
+
+# Kontrola 100% symetrie slovenských a anglických prekladov
+node apps/web/scripts/check-i18n-symmetry.js
+```
 
 ---
 

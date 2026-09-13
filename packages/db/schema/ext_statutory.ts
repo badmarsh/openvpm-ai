@@ -35,6 +35,11 @@ export const extWithdrawalPeriods = pgTable(
     targetAnimalType: text("target_animal_type").notNull().default("companion"), // bovine, porcine, ovine, equine, poultry, companion
     meatWithdrawalDays: integer("meat_withdrawal_days").default(0),
     milkWithdrawalDays: integer("milk_withdrawal_days").default(0),
+    eggWithdrawalDays: integer("egg_withdrawal_days").default(0),
+    meatSafeUntil: timestamp("meat_safe_until"),
+    milkSafeUntil: timestamp("milk_safe_until"),
+    eggsSafeUntil: timestamp("eggs_safe_until"),
+    isCascadeApplied: boolean("is_cascade_applied").default(false),
     administeredAt: timestamp("administered_at").notNull().defaultNow(),
     safeUntil: timestamp("safe_until").notNull(),
     notes: text("notes"),

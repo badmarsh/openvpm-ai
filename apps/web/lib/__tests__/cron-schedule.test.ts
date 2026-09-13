@@ -26,6 +26,7 @@ describe("Vercel cron schedule", () => {
         "/api/cron/sms-provider-events",
         "/api/cron/conversion-reconcile",
         "/api/cron/prescription-expiry",
+        "/api/cron/automation-worker",
       ]),
     );
 

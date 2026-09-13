@@ -42,7 +42,7 @@ import {
   clinicianConfirmationInput,
   generateContentHash,
 } from "@/lib/ai/draft-safety";
-import { requireTrustedActorRole } from "@/lib/authorization";
+import { requireClinicalActorRole } from "@/lib/authorization";
 import {
   requireConfirmationEnvelopeId,
   requireExpectedRevision,
@@ -675,9 +675,9 @@ export const imagingRouter = createRouter({
       const originalAiDraft = analysis.result ?? "";
       const originalDraftHash = generateContentHash(originalAiDraft);
       const confirmedContentHash = generateContentHash(input.finalReport);
-      const actorRole = requireTrustedActorRole(
+      const actorRole = requireClinicalActorRole(
         ctx.user.role,
-        "Imaging confirmation requires an authenticated staff role.",
+        "Imaging confirmation requires an authenticated clinical role (admin or veterinarian).",
       );
 
       const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
@@ -724,9 +724,9 @@ export const imagingRouter = createRouter({
       const confirmationId = requireConfirmationEnvelopeId(
         input.clinicianConfirmed,
       );
-      const actorRole = requireTrustedActorRole(
+      const actorRole = requireClinicalActorRole(
         ctx.user.role,
-        "Imaging finalization requires an authenticated staff role.",
+        "Imaging finalization requires an authenticated clinical role (admin or veterinarian).",
       );
 
       const { updatedAnalysis, auditResult } = await ctx.db.transaction(async (tx) => {

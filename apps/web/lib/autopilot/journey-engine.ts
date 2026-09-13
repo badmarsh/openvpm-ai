@@ -19,8 +19,12 @@ import {
   extAutomationStepExecutions,
   extAutomationEnrollmentStatusEnum,
   extAutomationStepStatusEnum,
+  extMarketingMessageLogs,
+  extMarketingStaffTasks,
+  extContentBriefs,
   type AutomationJourneyStep,
 } from "@openpims/db";
+import { consentGateCheck } from "./consent-gate";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -305,11 +309,41 @@ async function executeSendStep(
   stepExecutionId: string,
   now: Date
 ): Promise<void> {
-  // This would integrate with ext_marketing_message_logs
-  // For now, placeholder - actual implementation in TASK-6
-  console.log(
-    `[journey-engine] Send step for enrollment ${enrollment.id}, template: ${step.templateKey}`
+  const commType = step.channel === "email" ? "marketing_email" : "marketing_sms";
+
+  const gate = await consentGateCheck(
+    db,
+    enrollment.practiceId,
+    enrollment.clientId,
+    enrollment.patientId ?? undefined,
+    commType
   );
+
+  if (!gate.allowed) {
+    console.log(
+      `[journey-engine] Suppressed send step for enrollment ${enrollment.id}: ${gate.reason}`
+    );
+    await markStepComplete(db, stepExecutionId, "skipped", gate.reason);
+    return;
+  }
+
+  const idempotencyKey = `journey-${enrollment.id}-step-${step.index}-${now.toISOString().slice(0, 10)}`;
+
+  await db.insert(extMarketingMessageLogs).values({
+    practiceId: enrollment.practiceId,
+    clientId: enrollment.clientId,
+    patientId: enrollment.patientId ?? null,
+    templateKey: step.templateKey ?? "custom",
+    templateVersion: 1,
+    legalBasis: step.legalBasis ?? "consent",
+    channel: step.channel ?? "sms",
+    language: "sk",
+    bodyRendered: step.label || `Správa pre klienta: ${step.templateKey}`,
+    triggerKey: `journey_${enrollment.journeyId}_step_${step.index}`,
+    status: "queued",
+    idempotencyKey,
+    scheduledFor: now,
+  });
 
   await markStepComplete(db, stepExecutionId, "done");
 }
@@ -324,10 +358,14 @@ async function executeTaskStep(
   stepExecutionId: string,
   now: Date
 ): Promise<void> {
-  // This would integrate with ext_marketing_staff_tasks
-  console.log(
-    `[journey-engine] Task step for enrollment ${enrollment.id}, kind: ${step.taskKind}`
-  );
+  await db.insert(extMarketingStaffTasks).values({
+    practiceId: enrollment.practiceId,
+    clientId: enrollment.clientId,
+    kind: step.taskKind ?? "info",
+    title: step.label || `Úloha pre personál: krok ${step.index}`,
+    detail: `Automatická úloha vytvorená v rámci cesty pre klienta ${enrollment.clientId}`,
+    status: "open",
+  });
 
   await markStepComplete(db, stepExecutionId, "done");
 }
@@ -342,10 +380,16 @@ async function executeContentBriefStep(
   stepExecutionId: string,
   now: Date
 ): Promise<void> {
-  // This would integrate with ext_content_briefs
-  console.log(
-    `[journey-engine] Content brief step for enrollment ${enrollment.id}, pillar: ${step.pillarKey}`
-  );
+  await db.insert(extContentBriefs).values({
+    practiceId: enrollment.practiceId,
+    briefText: step.label || `AI content brief pre tému: ${step.pillarKey ?? "všeobecné"}`,
+    targetChannels: ["instagram", "facebook"],
+    targetAudience: "majitelia spoločenských zvierat",
+    clinicalClaims: [],
+    status: "pending",
+    generatedBy: "autopilot_journey_engine",
+    generatedAt: now,
+  });
 
   await markStepComplete(db, stepExecutionId, "done");
 }

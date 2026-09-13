@@ -13,7 +13,36 @@ export interface ExtractedBillItem {
   vatRate: number;
   dosageOrRoute?: string;
   isAppliedOnSite: boolean;
+  requiresManualNarcoticProtocol?: boolean;
 }
+
+/**
+ * Zákon č. 139/1998 Z. z. o omamných látkach, psychotropných látkach a prípravkoch.
+ * Prísne pravidlo ZERO AI PREFILL pre omamné a psychotropné látky (SKILL.md §3).
+ * Tieto látky sa NESMÚ automaticky predvypĺňať do účtu ani aplikovaných liekov cez AI.
+ */
+export const CONTROLLED_SUBSTANCES_PATTERNS: ReadonlyArray<{
+  pattern: RegExp;
+  name: string;
+  category: "OMAMNA_LATKA" | "PSYCHOTROPNA_LATKA" | "EUTANASTIKUM";
+}> = [
+  { pattern: /t61|t-61/i, name: "T61", category: "EUTANASTIKUM" },
+  { pattern: /pentobarbital|exagon|euthasol|release/i, name: "Pentobarbital", category: "EUTANASTIKUM" },
+  { pattern: /ketam[ií]n|calypsol|narketan|ketaset/i, name: "Ketamín", category: "PSYCHOTROPNA_LATKA" },
+  { pattern: /butorfanol|butomidor|torbugesic|dolorex/i, name: "Butorfanol", category: "OMAMNA_LATKA" },
+  { pattern: /fentanyl|fentanil/i, name: "Fentanyl", category: "OMAMNA_LATKA" },
+  { pattern: /morf[ií]n/i, name: "Morfín", category: "OMAMNA_LATKA" },
+  { pattern: /metad[oó]n|comfortan/i, name: "Metadón", category: "OMAMNA_LATKA" },
+  { pattern: /buprenorf[ií]n|bupaq|vetergesic/i, name: "Buprenorfín", category: "OMAMNA_LATKA" },
+  { pattern: /diazepam|apaurin|valium/i, name: "Diazepam", category: "PSYCHOTROPNA_LATKA" },
+  { pattern: /midazolam/i, name: "Midazolam", category: "PSYCHOTROPNA_LATKA" },
+  { pattern: /propofol/i, name: "Propofol", category: "PSYCHOTROPNA_LATKA" },
+];
+
+export function isControlledSubstance(text: string): boolean {
+  return CONTROLLED_SUBSTANCES_PATTERNS.some((cs) => cs.pattern.test(text));
+}
+
 
 const billItemSchema = z.object({
   name: z.string(),
@@ -83,7 +112,6 @@ const KNOWN_MEDICATIONS_CATALOG: Array<{
   { pattern: /milprazon|dehinel/i, name: "Milprazon odčervenie", unit: "tbl", defaultPricePerUnit: 4.5, vat: 19 },
   { pattern: /duphalyte/i, name: "Duphalyte infúzny roztok", unit: "ml", defaultPricePerUnit: 0.15, vat: 19 },
   { pattern: /ringer|fyziologick[yý]/i, name: "Ringerov / Fyz. roztok 500ml", unit: "fľaša", defaultPricePerUnit: 6.0, vat: 19 },
-  { pattern: /t61|pentobarbital/i, name: "T61 / Eutanázne liečivo", unit: "ml", defaultPricePerUnit: 2.5, vat: 19 },
 ];
 
 function fallbackExtraction(text: string): ExtractedBillItem[] {
@@ -107,8 +135,9 @@ function fallbackExtraction(text: string): ExtractedBillItem[] {
     }
   }
 
-  // 2. Vyhľadávanie liekov
+  // 2. Vyhľadávanie liekov (s vylúčením OPL podľa Zákona č. 139/1998 Z. z.)
   for (const m of KNOWN_MEDICATIONS_CATALOG) {
+    if (isControlledSubstance(m.name)) continue;
     const match = text.match(m.pattern);
     if (match) {
       // Skús nájsť množstvo napr. "1 ml", "0.5 ml", "10 tbl", "2 bal"
@@ -186,6 +215,7 @@ Pravidlá:
 - "vatRate": Štandardná sadzba DPH na Slovensku (23% pre služby, 19% pre lieky)
 - "dosageOrRoute": napr. "1 ml s.c.", "2x denne 1 tbl"
 - "isAppliedOnSite": true ak bolo podané na klinike, false ak vydané na domáce použitie
+- "OPL pravidlo (Zákon č. 139/1998 Z. z.)": NIKDY NEZAHŔŇAJ omamné, psychotropné látky ani eutanastiká (napr. ketamín, butorfanol, fentanyl, morfín, metadón, buprenorfín, T61, pentobarbital, diazepam, midazolam, propofol) do položiek. Tieto látky vyžadujú manuálny protokol a zápis lekárom do Knihy OPL.
 
 Odpovedz VÝHRADNE JSON objektom v tvare:
 {
@@ -225,7 +255,10 @@ Odpovedz VÝHRADNE JSON objektom v tvare:
 
     const parsed = billExtractionSchema.safeParse(JSON.parse(cleaned));
     if (parsed.success && parsed.data.items.length > 0) {
-      return parsed.data.items.map((item, idx) => {
+      const allowedItems = parsed.data.items.filter(
+        (item) => !isControlledSubstance(item.name)
+      );
+      return allowedItems.map((item, idx) => {
         const qty = item.quantity > 0 ? item.quantity : 1;
         const uPrice = item.unitPrice >= 0 ? item.unitPrice : 10;
         return {

@@ -63,6 +63,7 @@ export const extMarketingMediaConsents = pgTable("ext_marketing_media_consents",
 }, (table) => ({
   practiceClientIdx: index("ext_mkt_consents_practice_client_idx").on(table.practiceId, table.clientId),
   practicePatientIdx: index("ext_mkt_consents_practice_patient_idx").on(table.practiceId, table.patientId),
+  consentRequestIdx: index("ext_mkt_consents_req_idx").on(table.consentRequestId),
 }));
 
 export const extMarketingMediaAssets = pgTable("ext_marketing_media_assets", {
@@ -81,6 +82,9 @@ export const extMarketingMediaAssets = pgTable("ext_marketing_media_assets", {
   consentId: uuid("consent_id").references(() => extMarketingMediaConsents.id),
 }, (table) => ({
   practiceIdx: index("ext_mkt_media_practice_idx").on(table.practiceId, table.deletedAt),
+  uploadedByIdx: index("ext_mkt_media_uploaded_idx").on(table.uploadedBy),
+  fileIdx: index("ext_mkt_media_file_idx").on(table.fileId),
+  consentIdx: index("ext_mkt_media_consent_idx").on(table.consentId),
   consentRequiredCheck: check("ext_mkt_media_consent_required", sql`(${table.subjectsPresent} = false) OR (${table.consentId} IS NOT NULL)`),
 }));
 
@@ -90,6 +94,7 @@ export const extMarketingContentBatches = pgTable("ext_marketing_content_batches
   weekStart: text("week_start").notNull(), // ISO date YYYY-MM-DD
   status: text("status").notNull().default("in_review"), // draft | in_review | approved
 }, (t) => ({
+  practiceIdx: index("ext_mkt_batches_practice_idx").on(t.practiceId, t.deletedAt),
   practiceWeekUq: uniqueIndex("ext_mkt_batches_practice_week_uq").on(t.practiceId, t.weekStart),
 }));
 
@@ -111,6 +116,10 @@ export const extMarketingContentItems = pgTable("ext_marketing_content_items", {
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 }, (table) => ({
   practiceIdx: index("ext_mkt_content_practice_idx").on(table.practiceId, table.deletedAt),
+  batchIdx: index("ext_mkt_content_batch_idx").on(table.batchId),
+  createdByIdx: index("ext_mkt_content_created_by_idx").on(table.createdBy),
+  mediaAssetIdx: index("ext_mkt_content_media_idx").on(table.mediaAssetId),
+  approvedByIdx: index("ext_mkt_content_approved_by_idx").on(table.approvedBy),
   scheduleIdx: index("ext_mkt_content_schedule_idx").on(table.practiceId, table.status, table.scheduledFor),
 }));
 
@@ -126,6 +135,8 @@ export const extMarketingTvSlides = pgTable("ext_marketing_tv_slides", {
   isActive: boolean("is_active").notNull().default(true),
 }, (table) => ({
   activeIdx: index("ext_mkt_tv_active_idx").on(table.practiceId, table.isActive, table.sortOrder),
+  createdByIdx: index("ext_mkt_tv_created_by_idx").on(table.createdBy),
+  mediaAssetIdx: index("ext_mkt_tv_media_idx").on(table.mediaAssetId),
 }));
 
 export const extMarketingHandouts = pgTable("ext_marketing_handouts", {
@@ -140,6 +151,7 @@ export const extMarketingHandouts = pgTable("ext_marketing_handouts", {
   isPublic: boolean("is_public").notNull().default(true),
 }, (table) => ({
   practiceIdx: index("ext_mkt_handouts_practice_idx").on(table.practiceId, table.deletedAt),
+  createdByIdx: index("ext_mkt_handouts_created_by_idx").on(table.createdBy),
   slugUq: uniqueIndex("ext_mkt_handouts_slug_uq").on(table.practiceId, table.slug),
 }));
 
@@ -193,6 +205,12 @@ export const extMarketingReviews = pgTable("ext_marketing_reviews", {
   ingestSource: text("ingest_source"),
 }, (table) => ({
   practiceIdx: index("ext_mkt_reviews_practice_idx").on(table.practiceId, table.deletedAt),
+  patientIdx: index("ext_mkt_reviews_patient_idx").on(table.patientId),
+  clientIdx: index("ext_mkt_reviews_client_idx").on(table.clientId),
+  appointmentIdx: index("ext_mkt_reviews_appt_idx").on(table.appointmentId),
+  repliedByIdx: index("ext_mkt_reviews_replied_by_idx").on(table.repliedBy),
+  escalatedToIdx: index("ext_mkt_reviews_escalated_to_idx").on(table.escalatedTo),
+  responseApprovedByIdx: index("ext_mkt_reviews_resp_approved_by_idx").on(table.responseApprovedBy),
   receivedIdx: index("ext_mkt_reviews_received_idx").on(table.practiceId, table.receivedAt),
   platformIdx: index("ext_mkt_reviews_platform_idx").on(table.practiceId, table.platform),
   inboxIdx: index("ext_mkt_reviews_inbox_idx")
@@ -226,6 +244,7 @@ export const extMarketingWellnessRedemptions = pgTable("ext_marketing_wellness_r
   notes: text("notes"),
 }, (table) => ({
   enrollmentIdx: index("ext_mkt_redemptions_enrollment_idx").on(table.practiceId, table.enrollmentId),
+  appointmentIdx: index("ext_mkt_redemptions_appt_idx").on(table.appointmentId),
 }));
 
 export const extMarketingMediaConsentsRelations = relations(extMarketingMediaConsents, ({ one }) => ({
@@ -304,6 +323,7 @@ export const extMarketingStaffTasks = pgTable("ext_marketing_staff_tasks", {
   clientId: uuid("client_id").references(() => clients.id),
 }, (t) => ({
   practiceIdx: index("ext_mkt_staff_tasks_practice_idx").on(t.practiceId, t.deletedAt),
+  clientIdx: index("ext_mkt_staff_tasks_client_idx").on(t.clientId),
 }));
 
 export const extMarketingStaffTasksRelations = relations(extMarketingStaffTasks, ({ one }) => ({
@@ -325,6 +345,7 @@ export const extMarketingMessageTemplates = pgTable("ext_marketing_message_templ
   version: integer("version").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
 }, (t) => ({
+  practiceIdx: index("ext_mkt_tpl_practice_idx").on(t.practiceId, t.deletedAt),
   practiceKeyLangUq: uniqueIndex("ext_mkt_tpl_practice_key_lang_uq").on(t.practiceId, t.key, t.language),
 }));
 
@@ -361,6 +382,8 @@ export const extMarketingMessageLogs = pgTable("ext_marketing_message_logs", {
 }, (t) => ({
   clientIdx: index("ext_mkt_msg_log_client_idx").on(t.clientId, t.createdAt),
   practiceIdx: index("ext_mkt_msg_log_practice_idx").on(t.practiceId),
+  patientIdx: index("ext_mkt_msg_log_patient_idx").on(t.patientId),
+  templateIdx: index("ext_mkt_msg_log_template_idx").on(t.templateId),
 }));
 
 export const extMarketingMessageLogsRelations = relations(extMarketingMessageLogs, ({ one }) => ({
@@ -382,6 +405,7 @@ export const extSmsDeliveryLog = pgTable("ext_sms_delivery_log", {
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   clientRecentIdx: index("ext_sms_delivery_client_idx").on(t.clientId, t.sentAt),
+  practiceIdx: index("ext_sms_delivery_practice_idx").on(t.practiceId),
 }));
 
 export const extSmsDeliveryLogRelations = relations(extSmsDeliveryLog, ({ one }) => ({
@@ -405,6 +429,7 @@ export const extMarketingAutomationRules = pgTable("ext_marketing_automation_rul
   enabled: boolean("enabled").notNull().default(true),
   sort: integer("sort").notNull().default(0),
 }, (t) => ({
+  practiceIdx: index("ext_mkt_auto_rule_practice_idx").on(t.practiceId, t.deletedAt),
   practiceKeyUq: uniqueIndex("ext_mkt_auto_rule_practice_key_uq").on(t.practiceId, t.key),
 }));
 
@@ -425,6 +450,9 @@ export const extMarketingPostopResponses = pgTable("ext_marketing_postop_respons
   note: text("note").notNull().default(""),
 }, (t) => ({
   practiceIdx: index("ext_mkt_postop_practice_idx").on(t.practiceId),
+  messageLogIdx: index("ext_mkt_postop_msg_log_idx").on(t.messageLogId),
+  clientIdx: index("ext_mkt_postop_client_idx").on(t.clientId),
+  patientIdx: index("ext_mkt_postop_patient_idx").on(t.patientId),
 }));
 
 export const extMarketingPostopResponsesRelations = relations(extMarketingPostopResponses, ({ one }) => ({

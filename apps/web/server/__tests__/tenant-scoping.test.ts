@@ -15,19 +15,43 @@ const ROUTERS_DIR = fileURLToPath(new URL("../routers", import.meta.url));
 const ALLOWLIST: Record<string, string> = {
   "auth.ts": "operates on users by email/id before a session exists",
   "_app.ts": "router aggregation only",
+  "extensions/index.ts": "router aggregation only",
 };
 
-describe("tenant scoping", () => {
-  const files = readdirSync(ROUTERS_DIR).filter((f) => f.endsWith(".ts"));
+function getRouterFiles(dir: string, baseDir = dir): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      files.push(...getRouterFiles(fullPath, baseDir));
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith(".ts") &&
+      !entry.name.endsWith(".test.ts")
+    ) {
+      const relPath = fullPath.slice(baseDir.length + 1).replace(/\\/g, "/");
+      files.push(relPath);
+    }
+  }
+  return files;
+}
 
-  it("covers every router file", () => {
-    expect(files.length).toBeGreaterThan(10);
+describe("tenant scoping", () => {
+  const files = getRouterFiles(ROUTERS_DIR);
+
+  it("covers every router file across root and extensions", () => {
+    expect(files.length).toBeGreaterThan(40);
   });
 
   for (const file of files) {
     it(`${file}: DB queries are scoped by practiceId`, () => {
       const src = readFileSync(`${ROUTERS_DIR}/${file}`, "utf8");
-      const touchesDb = src.includes(".from(") || src.includes(".insert(");
+      const touchesDb =
+        src.includes(".from(") ||
+        src.includes(".insert(") ||
+        src.includes(".update(") ||
+        src.includes(".delete(");
       if (!touchesDb) return; // no DB access, nothing to scope
       if (ALLOWLIST[file]) return;
       expect(

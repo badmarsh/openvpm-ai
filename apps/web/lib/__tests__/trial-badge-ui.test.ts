@@ -33,8 +33,7 @@ describe("trial badge UI", () => {
 
   it("routes the trial badge to the native billing choice before Checkout", () => {
     expect(source).toContain('href="/settings?tab=billing"');
-    expect(source).toContain('aria-label="Activate account"');
-    expect(source).toContain("· Activate account");
+    expect(source).toContain("layout.trialBadge.activateAccount");
     expect(source).not.toContain("createCheckout.useMutation");
     expect(source).not.toContain("window.location.href");
   });

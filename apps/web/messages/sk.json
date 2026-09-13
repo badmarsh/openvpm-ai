@@ -5426,6 +5426,14 @@
       "buttonPrompt": "Požiadať o privátnu kontrolu",
       "toastRequested": "Kontrola migrácie bola vyžiadaná",
       "submitting": "Ukladám žiadosť..."
+    },
+    "intent": {
+      "careLegend": "Aký typ veterinárnej starostlivosti poskytujete?",
+      "goalLegend": "Čo by pre vás bolo najužitočnejšie ako prvé?",
+      "intro": "Začnite jedným praktickým postupom. Prispôsobíme OpenVPM štýlu práce vášho tímu — a vy máte všetko plne pod kontrolou.",
+      "dayHeading": "Váš prvý deň v OpenVPM",
+      "shapedFor": "Pripravené pre starostlivosť: {model}",
+      "reviewNotice": "Nič sa neodošle ani nezapíše bez vašej kontroly."
     }
   },
   "species": {
@@ -6074,6 +6082,59 @@
       "title": "Chránený režim kontroly údajov je aktívny",
       "description": "Importovanú históriu môžete bezpečne skontrolovať. Prevádzkové zmeny, automatizácie a externé odosielanie zostávajú pozastavené.",
       "continue": "Pokračovať v kontrole údajov"
+    }
+  },
+  "soap": {
+    "subjective": "Subjektívne",
+    "objective": "Objektívne",
+    "assessment": "Posúdenie (diagnóza)",
+    "plan": "Terapeutický plán",
+    "placeholder": {
+      "subjective": "Anamnéza, ťažkosti, pozorovanie majiteľa",
+      "objective": "Klinické vyšetrenie, nálezy v teréne",
+      "assessment": "Problémy, diferenciálna diagnóza, záver",
+      "plan": "Liečba, preskripcia, monitorovanie, kontrola"
+    },
+    "card": {
+      "title": "SOAP záznam",
+      "description": "Zaznamenajte priebeh vyšetrenia priamo z terénneho pracoviska."
+    },
+    "finalizedLinked": "K tejto návšteve je pripojená autorizovaná SOAP dokumentácia.",
+    "statutorySigned": "Podpísané podľa Zákona č. 39/2007 Z. z. (§3)",
+    "unauthorized": "SOAP záznam môže vytvárať a upravovať iba administrátor alebo veterinárny lekár.",
+    "errorLock": "Stav konceptu SOAP nebolo možné overiť. Záznam je uzamknutý, aby sa predišlo prepísaniu práce iného lekára.",
+    "loading": "Načítava sa koncept SOAP...",
+    "offline": "Offline režim — nechajte stránku otvorenú. Zmeny sa uložia po obnovení spojenia so serverom.",
+    "unsavedGuard": "Zmeny v SOAP zázname neboli uložené na serveri. Chcete odísť a zahodiť zmeny?",
+    "actions": {
+      "saveDraft": "Uložiť koncept",
+      "finalize": "Autorizovať SOAP záznam"
+    },
+    "toasts": {
+      "saved": "Koncept SOAP bol uložený",
+      "conflict": "SOAP bol zmenený v inej relácii. Pred opätovným uložením obnovte stránku.",
+      "alreadyFinalized": "SOAP bol už autorizovaný v inej relácii.",
+      "finalized": "SOAP záznam bol úspešne autorizovaný"
+    }
+  },
+  "copilot": {
+    "diffModal": {
+      "title": "Autorizácia klinického záznamu (Diff Overenie)",
+      "patient": "Pacient:",
+      "source": "Zdroj:",
+      "reliability": "Spoľahlivosť extrakcie:",
+      "statutoryBadge": "Zákon 39/2007 Z. z. autorizácia",
+      "controlledWarningTitle": "UPOZORNENIE: Kontrolovaná látka (Zákon 139/1998 Z. z.)",
+      "controlledWarningText": "Pre kontrolované omamné a psychotropné látky (opiáty, sedatíva) je automatické dopĺňanie AI prísne zakázané. Dávku, spôsob podania a spotrebu musí ošetrujúci veterinárny lekár zadať manuálne.",
+      "colField": "Pole záznamu",
+      "colOriginal": "Pôvodná hodnota",
+      "colProposed": "Navrhovaná hodnota (AI)",
+      "controlledBadge": "Kontrolovaná látka",
+      "confidenceSuffix": "% istota",
+      "emptyValue": "— prázdne —",
+      "controlledInputPlaceholder": "Zadajte dávku a aplikáciu manuálne...",
+      "statutoryConfirmation": "Potvrdzujem správnosť a odbornosť tohto klinického záznamu ako ošetrujúci veterinárny lekár v súlade so Zákonom 39/2007 Z. z. o veterinárnej starostlivosti.",
+      "signAndRecord": "Podpísať & Zapísať do karty pacienta"
     }
   }
 }

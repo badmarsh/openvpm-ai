@@ -691,7 +691,7 @@ export const dischargeRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Sympathy gate: never draft an owner SMS for a deceased patient.
-      await assertPatientNotDeceased(ctx.db, input.patientId);
+      await assertPatientNotDeceased(ctx.db, ctx.practiceId, input.patientId);
 
       const [practice] = await ctx.db
         .select({ name: practices.name, phone: practices.phone })
@@ -798,7 +798,7 @@ Odpovedz VÝHRADNE čistým JSON objektom.`;
     )
     .mutation(async ({ ctx, input }) => {
       // Sympathy gate: never draft a marketing post for a deceased patient.
-      await assertPatientNotDeceased(ctx.db, input.patientId);
+      await assertPatientNotDeceased(ctx.db, ctx.practiceId, input.patientId);
 
       const [practice] = await ctx.db
         .select({ name: practices.name })

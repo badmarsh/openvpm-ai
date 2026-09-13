@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfidenceScoreBadge } from "./confidence-score-badge";
 import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+import { useI18n } from "@/lib/i18n";
 
 export interface ClinicalDiffField {
   label: string;
@@ -55,6 +56,7 @@ export function ClinicalDiffConfirmModal({
   modelName = "OpenVPM Copilot AI",
   overallConfidence = 0.88,
 }: ClinicalDiffConfirmModalProps) {
+  const { t } = useI18n();
   const [confirmedCheck, setConfirmedCheck] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -95,11 +97,17 @@ export function ClinicalDiffConfirmModal({
             <div className="flex items-center gap-2">
               <FileCheck className="w-5 h-5 text-primary" />
               <h2 className="font-bold text-base text-foreground">
-                Autorizácia klinického záznamu (Diff Overenie)
+                {t(
+                  "copilot.diffModal.title",
+                  "Autorizácia klinického záznamu (Diff Overenie)"
+                )}
               </h2>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Pacient: <span className="font-semibold text-foreground">{patientName}</span> {species ? `(${species})` : ""} | Zdroj: {sourceTitle}
+              {t("copilot.diffModal.patient", "Pacient:")}{" "}
+              <span className="font-semibold text-foreground">{patientName}</span>{" "}
+              {species ? `(${species})` : ""} |{" "}
+              {t("copilot.diffModal.source", "Zdroj:")} {sourceTitle}
             </p>
           </div>
 
@@ -115,11 +123,13 @@ export function ClinicalDiffConfirmModal({
         {/* Confidence & Statutory Status */}
         <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Spoľahlivosť extrakcie:</span>
+            <span className="text-muted-foreground">
+              {t("copilot.diffModal.reliability", "Spoľahlivosť extrakcie:")}
+            </span>
             <ConfidenceScoreBadge score={overallConfidence} model={modelName} size="sm" />
           </div>
           <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-[10px]">
-            Zákon 39/2007 Z. z. autorizácia
+            {t("copilot.diffModal.statutoryBadge", "Zákon 39/2007 Z. z. autorizácia")}
           </Badge>
         </div>
 
@@ -129,10 +139,16 @@ export function ClinicalDiffConfirmModal({
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <div className="font-bold text-red-900 dark:text-red-300">
-                UPOZORNENIE: Kontrolovaná látka (Zákon 139/1998 Z. z.)
+                {t(
+                  "copilot.diffModal.controlledWarningTitle",
+                  "UPOZORNENIE: Kontrolovaná látka (Zákon 139/1998 Z. z.)"
+                )}
               </div>
               <p className="text-red-800 dark:text-red-400 leading-relaxed text-[11px]">
-                Pre kontrolované omamné a psychotropné látky (opiáty, sedatíva) je automatické dopĺňanie AI prísne zakázané. Dávku, spôsob podania a spotrebu musí ošetrujúci veterinárny lekár zadať manuálne.
+                {t(
+                  "copilot.diffModal.controlledWarningText",
+                  "Pre kontrolované omamné a psychotropné látky (opiáty, sedatíva) je automatické dopĺňanie AI prísne zakázané. Dávku, spôsob podania a spotrebu musí ošetrujúci veterinárny lekár zadať manuálne."
+                )}
               </p>
             </div>
           </div>
@@ -145,9 +161,15 @@ export function ClinicalDiffConfirmModal({
               <table className="w-full text-left border-collapse">
                 <thead className="bg-muted/50 border-b font-semibold text-muted-foreground text-[11px]">
                   <tr>
-                    <th className="py-2.5 px-3 w-1/4">Pole záznamu</th>
-                    <th className="py-2.5 px-3 w-1/3">Pôvodná hodnota</th>
-                    <th className="py-2.5 px-3">Navrhovaná hodnota (AI)</th>
+                    <th className="py-2.5 px-3 w-1/4">
+                      {t("copilot.diffModal.colField", "Pole záznamu")}
+                    </th>
+                    <th className="py-2.5 px-3 w-1/3">
+                      {t("copilot.diffModal.colOriginal", "Pôvodná hodnota")}
+                    </th>
+                    <th className="py-2.5 px-3">
+                      {t("copilot.diffModal.colProposed", "Navrhovaná hodnota (AI)")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -162,18 +184,25 @@ export function ClinicalDiffConfirmModal({
                           <div>{field.label}</div>
                           {isControlled && (
                             <Badge variant="destructive" className="text-[9px] px-1 py-0 mt-1">
-                              Kontrolovaná látka
+                              {t("copilot.diffModal.controlledBadge", "Kontrolovaná látka")}
                             </Badge>
                           )}
                           {field.confidence != null && (
                             <div className="text-[10px] text-muted-foreground mt-0.5">
-                              {Math.round(field.confidence * 100)}% istota
+                              {Math.round(field.confidence * 100)}
+                              {t("copilot.diffModal.confidenceSuffix", "% istota")}
                             </div>
                           )}
                         </td>
 
                         <td className="py-2.5 px-3 text-muted-foreground align-top text-[11px]">
-                          {field.originalValue ? field.originalValue : <span className="italic text-muted-foreground/60">— prázdne —</span>}
+                          {field.originalValue ? (
+                            field.originalValue
+                          ) : (
+                            <span className="italic text-muted-foreground/60">
+                              {t("copilot.diffModal.emptyValue", "— prázdne —")}
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-2.5 px-3 align-top">
@@ -184,7 +213,10 @@ export function ClinicalDiffConfirmModal({
                               onChange={(e) =>
                                 setEditedValues({ ...editedValues, [field.label]: e.target.value })
                               }
-                              placeholder="Zadajte dávku a aplikáciu manuálne..."
+                              placeholder={t(
+                                "copilot.diffModal.controlledInputPlaceholder",
+                                "Zadajte dávku a aplikáciu manuálne..."
+                              )}
                               className="w-full rounded-md border border-red-300 bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-red-500"
                             />
                           ) : (
@@ -217,13 +249,16 @@ export function ClinicalDiffConfirmModal({
               className="mt-0.5 rounded border-muted-foreground/40 text-primary focus:ring-primary h-4 w-4"
             />
             <span className="leading-snug">
-              Potvrdzujem správnosť a odbornosť tohto klinického záznamu ako ošetrujúci veterinárny lekár v súlade so Zákonom 39/2007 Z. z. o veterinárnej starostlivosti.
+              {t(
+                "copilot.diffModal.statutoryConfirmation",
+                "Potvrdzujem správnosť a odbornosť tohto klinického záznamu ako ošetrujúci veterinárny lekár v súlade so Zákonom 39/2007 Z. z. o veterinárnej starostlivosti."
+              )}
             </span>
           </label>
 
           <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={onClose} className="text-xs">
-              Zrušiť
+              {t("common.cancel", "Zrušiť")}
             </Button>
             <Button
               size="sm"
@@ -232,7 +267,7 @@ export function ClinicalDiffConfirmModal({
               className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Podpísať & Zapísať do karty pacienta
+              {t("copilot.diffModal.signAndRecord", "Podpísať & Zapísať do karty pacienta")}
             </Button>
           </div>
         </div>

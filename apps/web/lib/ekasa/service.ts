@@ -243,7 +243,8 @@ export interface EkasaApiResponse {
 // ---------------------------------------------------------------------------
 // Receipt Number Generator
 // Formát: YYYYMMDD-NNNN (napr. 20260904-0042)
-// Atomické — číta MAX(seq) z DB pre daný deň a kliniku
+// Atomické — číta MAX(seq) z DB pre daný deň a kliniku bez ohľadu na soft-delete
+// (Zákon č. 289/2008 Z. z. zakazuje opakované alebo vynechané čísla dokladov)
 // ---------------------------------------------------------------------------
 export async function generateReceiptNumber(db: Database, practiceId: string): Promise<string> {
   const today = new Date();
@@ -251,23 +252,24 @@ export async function generateReceiptNumber(db: Database, practiceId: string): P
   const datePrefix = localDate.replace(/-/g, ""); // "20260904"
 
   // Advisory lock prevents concurrent receipt number races within this
-  // practice-day.  pg_advisory_xact_lock is released at transaction end.
+  // practice-day. pg_advisory_xact_lock is released at transaction end.
   await db.execute(
     sql`SELECT pg_advisory_xact_lock(hashtext(${practiceId} || '-ekasa-receipt-' || ${localDate}))`,
   );
 
   const result = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({
+      maxSeq: sql<number>`COALESCE(MAX(NULLIF(split_part(${ekasaReceipts.receiptNumber}, '-', 2), '')::int), 0)::int`,
+    })
     .from(ekasaReceipts)
     .where(
       and(
         eq(ekasaReceipts.practiceId, practiceId),
-        isNull(ekasaReceipts.deletedAt),
-        sql`date_trunc('day', ${ekasaReceipts.issuedAt} AT TIME ZONE 'Europe/Bratislava')::text = ${localDate}`,
+        sql`${ekasaReceipts.receiptNumber} LIKE ${datePrefix + '-%'}`,
       ),
     );
 
-  const seq = ((result[0]?.count ?? 0) + 1).toString().padStart(4, "0");
+  const seq = ((result[0]?.maxSeq ?? 0) + 1).toString().padStart(4, "0");
   return `${datePrefix}-${seq}`;
 }
 
@@ -328,10 +330,12 @@ export function generatePkp(params: {
 }
 
 // ---------------------------------------------------------------------------
-// Send to e-Kasa FR SR API
-// Zákon č. 384/2025 Z. z. (aktuálna legislatíva)
+// e-Kasa Driver Architektúra (Zákon č. 289/2008 Z. z. & Zákon č. 384/2025 Z. z.)
+// Slovenská finančná správa NEPOSKYTUJE verejný REST API endpoint pre priamy zápis.
+// Komunikácia prebieha buď cez lokálne PPEP/CHÚ zariadenie (LAN proxy), alebo
+// v simulovanom/testovacom režime (Mock driver).
 // ---------------------------------------------------------------------------
-export async function sendToEkasaApi(params: {
+export interface SendToEkasaApiParams {
   apiUrl: string;
   receiptNumber: string;
   dic: string;
@@ -343,77 +347,109 @@ export async function sendToEkasaApi(params: {
   pkp: string;
   issuedAt: Date;
   items: EkasaReceiptInput["items"];
-}): Promise<EkasaApiResponse> {
-  const payload = {
-    pokladnicaId: params.pokladnicaId,
-    dic: params.dic,
-    cisloDokladu: params.receiptNumber,
-    datumCas: toSlovakTimestamp(params.issuedAt),
-    celkovaSuma: params.amountTotal,
-    dph: params.amountVat,
-    platba: params.paymentMethod,
-    okp: params.okp,
-    pkp: params.pkp,
-    polozky: params.items.map((i) => ({
-      nazov: i.name,
-      mnozstvo: i.qty,
-      jednotkovaCena: i.unitPrice,
-      sadzba: i.vatRate,
-    })),
-  };
+  driverType?: "MOCK" | "LAN_PROXY" | "CLOUD";
+}
 
-  const blocked = assertEkasaOutboundAllowed(params.apiUrl);
-  if (blocked) {
-    return { success: false, message: blocked };
-  }
-  if (!params.pkp) {
-    return {
-      success: false,
-      message: "e-Kasa PKP is missing; RSA private key from FR SR is required",
-    };
-  }
+export interface EkasaDriver {
+  sendReceipt(params: SendToEkasaApiParams): Promise<EkasaApiResponse>;
+}
 
-  try {
-    const res = await fetch(`${params.apiUrl}/v2/receipts`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(8000), // 8s timeout
-    });
-
-    if (!res.ok) {
-      return {
-        success: false,
-        message: `FR SR API returned ${res.status}`,
-        rawResponse: { status: res.status },
-      };
-    }
-
-    const data = (await res.json()) as { uid?: string; message?: string };
-    if (!data.uid?.trim()) {
-      return {
-        success: false,
-        message: "FR SR response did not include a receipt UID",
-        rawResponse: { status: res.status },
-      };
-    }
+export class MockEkasaDriver implements EkasaDriver {
+  async sendReceipt(params: SendToEkasaApiParams): Promise<EkasaApiResponse> {
+    const mockUid = `O-MOCK-${params.receiptNumber.replace("-", "")}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
     return {
       success: true,
-      uid: data.uid.trim(),
-      rawResponse: { uidPresent: true },
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Neznáma chyba siete";
-    return {
-      success: false,
-      message: `Spojenie s FR SR zlyhalo: ${message}`,
-      rawResponse: { error: message },
+      uid: mockUid,
+      message: "Simulované zaevidovanie v e-Kasa (Mock driver - offline/staging)",
+      rawResponse: { mode: "MOCK", simulatedAt: new Date().toISOString() },
     };
   }
 }
 
+export class HttpProxyEkasaDriver implements EkasaDriver {
+  async sendReceipt(params: SendToEkasaApiParams): Promise<EkasaApiResponse> {
+    const payload = {
+      pokladnicaId: params.pokladnicaId,
+      dic: params.dic,
+      cisloDokladu: params.receiptNumber,
+      datumCas: toSlovakTimestamp(params.issuedAt),
+      celkovaSuma: params.amountTotal,
+      dph: params.amountVat,
+      platba: params.paymentMethod,
+      okp: params.okp,
+      pkp: params.pkp,
+      polozky: (params.items || []).map((i) => ({
+        nazov: i.name,
+        mnozstvo: i.qty,
+        jednotkovaCena: i.unitPrice,
+        sadzba: i.vatRate,
+      })),
+    };
+
+    const blocked = assertEkasaOutboundAllowed(params.apiUrl);
+    if (blocked) {
+      return { success: false, message: blocked };
+    }
+    if (!params.pkp) {
+      return {
+        success: false,
+        message: "e-Kasa PKP is missing; RSA private key from FR SR is required",
+      };
+    }
+
+    try {
+      const res = await fetch(`${params.apiUrl}/v2/receipts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000), // 8s timeout
+      });
+
+      if (!res.ok) {
+        return {
+          success: false,
+          message: `Hardware e-Kasa driver / proxy vrátil HTTP ${res.status}`,
+          rawResponse: { status: res.status },
+        };
+      }
+
+      const data = (await res.json()) as { uid?: string; message?: string };
+      if (!data.uid?.trim()) {
+        return {
+          success: false,
+          message: "Odpoveď e-Kasa proxy neobsahuje platné UID dokladu",
+          rawResponse: { status: res.status },
+        };
+      }
+      return {
+        success: true,
+        uid: data.uid.trim(),
+        rawResponse: { uidPresent: true },
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Neznáma chyba siete";
+      return {
+        success: false,
+        message: `Spojenie s lokálnym hardvérovým CHÚ driverom zlyhalo: ${message}`,
+        rawResponse: { error: message },
+      };
+    }
+  }
+}
+
+export function getEkasaDriver(driverType?: string): EkasaDriver {
+  if (driverType === "MOCK" || process.env.EKASA_DRIVER === "mock") {
+    return new MockEkasaDriver();
+  }
+  return new HttpProxyEkasaDriver();
+}
+
+export async function sendToEkasaApi(params: SendToEkasaApiParams): Promise<EkasaApiResponse> {
+  const driver = getEkasaDriver(params.driverType);
+  return driver.sendReceipt(params);
+}
 // ---------------------------------------------------------------------------
 // QR Code Generator
 // Formát: SK pokladnica QR (URL enkódovaný link pre overenie dokladu)
@@ -754,17 +790,18 @@ export async function generateClosureNumber(
 ): Promise<string> {
   const cleanDate = dateStr.replace(/-/g, "");
   const result = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({
+      maxSeq: sql<number>`COALESCE(MAX(NULLIF(split_part(${ekasaDailyClosures.closureNumber}, '-Z', 2), '')::int), 0)::int`,
+    })
     .from(ekasaDailyClosures)
     .where(
       and(
         eq(ekasaDailyClosures.practiceId, practiceId),
-        isNull(ekasaDailyClosures.deletedAt),
-        eq(ekasaDailyClosures.date, dateStr)
+        sql`${ekasaDailyClosures.closureNumber} LIKE ${cleanDate + '-Z%'}`,
       )
     );
 
-  const seq = ((result[0]?.count ?? 0) + 1).toString().padStart(2, "0");
+  const seq = ((result[0]?.maxSeq ?? 0) + 1).toString().padStart(2, "0");
   return `${cleanDate}-Z${seq}`;
 }
 

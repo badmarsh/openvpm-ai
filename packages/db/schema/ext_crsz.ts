@@ -83,6 +83,8 @@ export const microchipRegistrations = pgTable(
       table.patientId,
       table.deletedAt
     ),
+    clientIdx: index("microchip_registrations_client_idx").on(table.clientId),
+    veterinarianIdx: index("microchip_registrations_vet_idx").on(table.veterinarianId),
     microchipIdx: index("microchip_registrations_chip_idx").on(
       table.microchipNumber
     ),
@@ -137,6 +139,11 @@ export const petPassports = pgTable(
       table.practiceId,
       table.patientId,
       table.deletedAt
+    ),
+    clientIdx: index("pet_passports_client_idx").on(table.clientId),
+    issuedByIdx: index("pet_passports_issued_by_idx").on(table.issuedBy),
+    vaccinationRecordIdx: index("pet_passports_vaccination_record_idx").on(
+      table.vaccinationRecordId
     ),
     passportNumberIdx: uniqueIndex("pet_passports_number_uq").on(
       table.passportNumber
@@ -217,6 +224,8 @@ export const kvlCrPassports = pgTable(
       table.patientId,
       table.deletedAt
     ),
+    clientIdx: index("kvl_cr_passports_client_idx").on(table.clientId),
+    issuedByIdx: index("kvl_cr_passports_issued_by_idx").on(table.issuedBy),
     passportNumberIdx: uniqueIndex("kvl_cr_passports_number_uq").on(
       table.passportNumber
     ),

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { patients } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 
@@ -91,14 +91,27 @@ export function requireExpectedRevision(
  */
 export async function assertPatientNotDeceased(
   db: Database,
+  practiceId: string,
   patientId: string | undefined,
 ): Promise<void> {
   if (!patientId) return;
   const [p] = await db
     .select({ status: patients.status })
     .from(patients)
-    .where(eq(patients.id, patientId))
+    .where(
+      and(
+        eq(patients.id, patientId),
+        eq(patients.practiceId, practiceId),
+        isNull(patients.deletedAt),
+      ),
+    )
     .limit(1);
+  if (!p) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Patient not found",
+    });
+  }
   if (p?.status === "deceased") {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",

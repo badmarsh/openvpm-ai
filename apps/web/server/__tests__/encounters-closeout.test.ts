@@ -74,6 +74,7 @@ function createDb(opts: {
   const insertResults = [...(opts.insertResults ?? [])];
   const insertValues = vi.fn((values: unknown) => ({
     returning: vi.fn(async () => insertResults.shift() ?? []),
+    onConflictDoNothing: vi.fn(async () => undefined),
     values,
   }));
   const insert = vi.fn(() => ({ values: insertValues }));

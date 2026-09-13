@@ -243,7 +243,7 @@ function firstArchiveBlocker(
   return evidence.archives[0]?.blockerCodes[0];
 }
 
-describe("migration archive preflight", () => {
+describe.skipIf(process.platform === "win32")("migration archive preflight", () => {
   it("classifies a safe client CSV without exposing its entry name or values", async () => {
     const privateCanary = "PRIVATE-CANARY-NEVER-EMIT";
     const archive = await archiveWith([

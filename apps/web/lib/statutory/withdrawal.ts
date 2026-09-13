@@ -11,6 +11,7 @@ export interface VeterinaryDrugCatalogItem {
   defaultAnimalType: "bovine" | "porcine" | "ovine" | "equine" | "poultry" | "companion";
   meatWithdrawalDays: number;
   milkWithdrawalDays: number;
+  eggWithdrawalDays?: number;
   description?: string;
 }
 
@@ -22,6 +23,7 @@ export const COMMON_VETERINARY_DRUGS: VeterinaryDrugCatalogItem[] = [
     defaultAnimalType: "bovine",
     meatWithdrawalDays: 22,
     milkWithdrawalDays: 0,
+    eggWithdrawalDays: 0,
     description: "Zákaz podávania dojniciam produkujúcim mlieko na ľudský konzum.",
   },
   {
@@ -98,6 +100,21 @@ export const COMMON_VETERINARY_DRUGS: VeterinaryDrugCatalogItem[] = [
   },
 ];
 
+export interface StatutoryWithdrawalResult {
+  meatSafeUntil: Date | null;
+  milkSafeUntil: Date | null;
+  eggsSafeUntil: Date | null;
+  overallSafeUntil: Date;
+  isCascadeApplied: boolean;
+  effectiveMeatDays: number;
+  effectiveMilkDays: number;
+  effectiveEggsDays: number;
+  maxDays: number;
+  isActive: boolean;
+  daysRemaining: number;
+  safeUntilFormatted: string;
+}
+
 export interface WithdrawalCalculationResult {
   safeUntil: Date;
   maxDays: number;
@@ -107,36 +124,94 @@ export interface WithdrawalCalculationResult {
 }
 
 /**
- * Vypočíta dátum ukončenia ochrannej lehoty na základe dňa podania
- * a maximálnej ochrannej lehoty (mäso vs. mlieko).
+ * Zákonný výpočet ochrannej lehoty (Zákon č. 39/2007 Z. z. a Nariadenie EÚ 2019/6).
+ * - Nezávislý výpočet pre mäso, mlieko a vajcia.
+ * - Lehota končí vždy o 23:59:59.999 príslušného kalendárneho dňa.
+ * - Zákonná kaskáda: minimá mäso: 28 dní, mlieko: 7 dní, vajcia: 7 dní.
  */
-export function calculateWithdrawalSafeUntil(
+export function calculateStatutoryWithdrawal(
   administeredAt: Date | string,
-  meatWithdrawalDays: number = 0,
-  milkWithdrawalDays: number = 0,
+  days: { meat?: number; milk?: number; eggs?: number } = {},
+  isCascade = false,
   currentDate: Date = new Date()
-): WithdrawalCalculationResult {
+): StatutoryWithdrawalResult {
   const adminDate = new Date(administeredAt);
-  const maxDays = Math.max(Math.max(0, meatWithdrawalDays), Math.max(0, milkWithdrawalDays));
-  const safeUntilTime = adminDate.getTime() + maxDays * 24 * 60 * 60 * 1000;
-  const safeUntil = new Date(safeUntilTime);
 
-  const diffMs = safeUntilTime - currentDate.getTime();
-  const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-  const isActive = diffMs > 0 && maxDays > 0;
+  // Zákonné minimá pri kaskáde (Nariadenie EÚ 2019/6)
+  const effectiveMeatDays = isCascade ? Math.max(days.meat ?? 0, 28) : (days.meat ?? 0);
+  const effectiveMilkDays = isCascade ? Math.max(days.milk ?? 0, 7) : (days.milk ?? 0);
+  const effectiveEggsDays = isCascade ? Math.max(days.eggs ?? 0, 7) : (days.eggs ?? 0);
 
-  const safeUntilFormatted = safeUntil.toLocaleDateString("sk-SK", {
+  const getEndOfDay = (baseDate: Date, numDays: number): Date => {
+    const d = new Date(baseDate.getTime());
+    d.setDate(d.getDate() + numDays);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  };
+
+  const meatSafeUntil = effectiveMeatDays > 0 ? getEndOfDay(adminDate, effectiveMeatDays) : null;
+  const milkSafeUntil = effectiveMilkDays > 0 ? getEndOfDay(adminDate, effectiveMilkDays) : null;
+  const eggsSafeUntil = effectiveEggsDays > 0 ? getEndOfDay(adminDate, effectiveEggsDays) : null;
+
+  const timestamps = [
+    meatSafeUntil?.getTime() ?? 0,
+    milkSafeUntil?.getTime() ?? 0,
+    eggsSafeUntil?.getTime() ?? 0,
+  ];
+
+  const overallSafeUntil = new Date(Math.max(...timestamps, adminDate.getTime()));
+  const maxDays = Math.max(effectiveMeatDays, effectiveMilkDays, effectiveEggsDays);
+
+  const daysPassed = Math.floor((currentDate.getTime() - adminDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysRemaining = maxDays > 0 ? Math.max(0, maxDays - daysPassed) : 0;
+  const isActive = overallSafeUntil.getTime() > currentDate.getTime() && maxDays > 0 && daysRemaining > 0;
+
+  const safeUntilFormatted = overallSafeUntil.toLocaleDateString("sk-SK", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
 
   return {
-    safeUntil,
+    meatSafeUntil,
+    milkSafeUntil,
+    eggsSafeUntil,
+    overallSafeUntil,
+    isCascadeApplied: isCascade,
+    effectiveMeatDays,
+    effectiveMilkDays,
+    effectiveEggsDays,
     maxDays,
     isActive,
     daysRemaining,
     safeUntilFormatted,
+  };
+}
+
+/**
+ * Vypočíta dátum ukončenia ochrannej lehoty na základe dňa podania
+ * a ochrannej lehoty s ukončením o 23:59:59.
+ */
+export function calculateWithdrawalSafeUntil(
+  administeredAt: Date | string,
+  meatWithdrawalDays: number = 0,
+  milkWithdrawalDays: number = 0,
+  currentDate: Date = new Date(),
+  eggWithdrawalDays: number = 0,
+  isCascade: boolean = false
+): WithdrawalCalculationResult {
+  const result = calculateStatutoryWithdrawal(
+    administeredAt,
+    { meat: meatWithdrawalDays, milk: milkWithdrawalDays, eggs: eggWithdrawalDays },
+    isCascade,
+    currentDate
+  );
+  return {
+    safeUntil: result.overallSafeUntil,
+    maxDays: result.maxDays,
+    isActive: result.isActive,
+    daysRemaining: result.daysRemaining,
+    safeUntilFormatted: result.safeUntilFormatted,
   };
 }
 
@@ -158,6 +233,8 @@ export interface WithdrawalCertificateParams {
   batchNumber?: string | null;
   meatWithdrawalDays: number;
   milkWithdrawalDays: number;
+  eggWithdrawalDays?: number;
+  isCascadeApplied?: boolean;
   administeredAt: Date | string;
   safeUntil: Date | string;
   notes?: string | null;
@@ -365,6 +442,8 @@ export function formatWithdrawalCertificateHtml(params: WithdrawalCertificatePar
       <div>
         <div class="row"><span class="label">Ochranná lehota na MÄSO:</span> <span class="val">${params.meatWithdrawalDays} dní</span></div>
         <div class="row"><span class="label">Ochranná lehota na MLIEKO:</span> <span class="val">${params.milkWithdrawalDays} dní</span></div>
+        ${params.eggWithdrawalDays !== undefined ? `<div class="row"><span class="label">Ochranná lehota na VAJCIA:</span> <span class="val">${params.eggWithdrawalDays} dní</span></div>` : ""}
+        ${params.isCascadeApplied ? `<div class="row" style="color: #b71c1c; font-weight: bold;"><span class="label">Režim použitia:</span> Zákonná kaskáda (Nariadenie EÚ 2019/6)</div>` : ""}
       </div>
       <div>
         <div class="row"><span class="label">Koniec ochrannej lehoty (bezpečné od):</span></div>

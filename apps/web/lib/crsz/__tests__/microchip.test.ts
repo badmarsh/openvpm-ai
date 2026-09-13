@@ -142,15 +142,16 @@ describe("KVL SR batch export and CRSZ lookup", () => {
     expect(xml).toContain("<CisloKVL>KVL-5432</CisloKVL>");
   });
 
-  it("performs online lookup and detects Slovak 703 national code", async () => {
+  it("performs online lookup and detects Slovak 703 national code with unverified status", async () => {
     const { lookupCrszOnline } = await import("../microchip");
     const result = await lookupCrszOnline("703098100000001");
 
     expect(result.valid).toBe(true);
     expect(result.isSlovakNationalCode).toBe(true);
-    expect(result.registered).toBe(true);
-    expect(result.status).toBe("REGISTERED");
+    expect(result.registered).toBe(false);
+    expect(result.status).toBe("UNVERIFIED_NO_API_CONNECTION");
     expect(result.registryName).toContain("CRSZ");
+    expect(result.notes).toContain("crsz.sk");
   });
 
   it("handles invalid chip length in online lookup", async () => {

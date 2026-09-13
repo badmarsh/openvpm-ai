@@ -25,7 +25,7 @@ import {
   resolveAiRecordStatus,
   generateContentHash,
 } from "@/lib/ai/draft-safety";
-import { requireTrustedActorRole } from "@/lib/authorization";
+import { requireClinicalActorRole } from "@/lib/authorization";
 import {
   requireConfirmationEnvelopeId,
   requireExpectedRevision,
@@ -571,9 +571,9 @@ export const voiceRouter = createRouter({
       };
       const originalDraftHash = generateContentHash(originalAiDraft);
       const confirmedContentHash = generateContentHash(finalClinicianContent);
-      const actorRole = requireTrustedActorRole(
+      const actorRole = requireClinicalActorRole(
         ctx.user.role,
-        "Voice SOAP confirmation requires an authenticated staff role.",
+        "Voice SOAP confirmation requires an authenticated clinical role (admin or veterinarian).",
       );
 
       const envelope = await issueClinicianConfirmation(ctx.db as unknown as Database, {
@@ -681,9 +681,9 @@ export const voiceRouter = createRouter({
           const confirmationId = requireConfirmationEnvelopeId(
             input.clinicianConfirmed,
           );
-          const actorRole = requireTrustedActorRole(
+          const actorRole = requireClinicalActorRole(
             ctx.user.role,
-            "Voice SOAP finalization requires an authenticated staff role.",
+            "Voice SOAP finalization requires an authenticated clinical role (admin or veterinarian).",
           );
 
           const originalAiDraft = {

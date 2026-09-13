@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq, and, isNull, ilike, sql, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
-import { practices, products, suppliers } from "@openpims/db";
+import { auditLog, practices, products, suppliers } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import {
@@ -141,6 +141,10 @@ type InventoryContext = {
 
 const inventoryManagerProcedure = protectedProcedure.use(
   requireRole("admin", "veterinarian", "technician", "front_desk")
+);
+
+const inventoryPrivilegedProcedure = protectedProcedure.use(
+  requireRole("admin", "veterinarian")
 );
 
 function activePracticePredicate(practiceId: string) {
@@ -315,6 +319,18 @@ export const inventoryRouter = createRouter({
     .input(productUpdateInput)
     .mutation(async ({ ctx, input }) => {
       const { id, ...updates } = input;
+
+      // Modifying unitPrice or costPrice requires privileged role (admin or veterinarian)
+      if (
+        (updates.unitPrice !== undefined || updates.costPrice !== undefined) &&
+        !["admin", "veterinarian"].includes(ctx.user.role)
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Modifying product pricing requires an admin or veterinarian role.",
+        });
+      }
+
       // Filter out undefined values
       const setValues: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(updates)) {
@@ -407,9 +423,17 @@ export const inventoryRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "veterinarian") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only admin or veterinarian can adjust stock quantities directly.",
+        });
+      }
       const [current] = await ctx.db
         .select({
           id: products.id,
+          name: products.name,
           inventoryTracked: products.inventoryTracked,
           stockQuantity: products.stockQuantity,
         })
@@ -477,6 +501,23 @@ export const inventoryRouter = createRouter({
             "Stock adjustment would move quantity outside the allowed stock range.",
         });
       }
+
+      await ctx.db.insert(auditLog).values({
+        practiceId: ctx.practiceId,
+        userId: ctx.user.id,
+        action: "inventory_adjustment",
+        entityType: "product",
+        entityId: product.id,
+        changes: {
+          productId: product.id,
+          productName: current.name,
+          adjustment: input.adjustment,
+          previousStock: current.stockQuantity,
+          newStock: product.stockQuantity,
+          reason: input.reason,
+        },
+      });
+
       return product;
     }),
 
