@@ -80,6 +80,14 @@ export const customNavItems: CustomNavItem[] = [
     section: 'admin',
   },
   {
+    href: '/marketing/content-queue',
+    label: 'Schvaľovanie obsahu',
+    i18nKey: 'nav.marketingContentQueue',
+    icon: CalendarDays,
+    roles: ['admin', 'veterinarian', 'front_desk'],
+    section: 'admin',
+  },
+  {
     href: '/marketing/reviews',
     label: 'Recenzie',
     i18nKey: 'nav.marketingReviews',
