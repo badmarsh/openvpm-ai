@@ -27,6 +27,7 @@ import {
   recurringSeries,
   visitCloseouts,
   communications,
+  extAutomationEvents,
 } from "@openpims/db";
 import {
   detectConflicts,
@@ -1391,7 +1392,7 @@ export const appointmentsRouter = createRouter({
         );
       }
 
-      // Marketing automation triggers
+      // Marketing automation triggers & event bus
       if (appt.status === "checked_out") {
         if (appt.clientId) {
           try {
@@ -1402,6 +1403,26 @@ export const appointmentsRouter = createRouter({
               patientId: appt.patientId ?? undefined,
               appointmentAt: appt.startTime,
             });
+            await (ctx.db as any)
+              .insert(extAutomationEvents)
+              .values({
+                practiceId: ctx.practiceId,
+                eventType: "visit_completed",
+                clientId: appt.clientId,
+                patientId: appt.patientId ?? null,
+                appointmentId: appt.id,
+                sourceRouter: "appointments.setStatus",
+                dedupeKey: `visit_completed_${appt.id}`,
+                emittedBy: ctx.user?.id ?? null,
+                status: "pending",
+                availableAt: new Date(),
+                payload: {
+                  appointmentId: appt.id,
+                  clientId: appt.clientId,
+                  patientId: appt.patientId,
+                },
+              })
+              .onConflictDoNothing();
           } catch (err) {
             console.error("Marketing visit_completed trigger error:", err);
           }
@@ -1415,6 +1436,26 @@ export const appointmentsRouter = createRouter({
               clientId: appt.clientId,
               patientId: appt.patientId ?? undefined,
             });
+            await (ctx.db as any)
+              .insert(extAutomationEvents)
+              .values({
+                practiceId: ctx.practiceId,
+                eventType: "appointment_no_show",
+                clientId: appt.clientId,
+                patientId: appt.patientId ?? null,
+                appointmentId: appt.id,
+                sourceRouter: "appointments.setStatus",
+                dedupeKey: `appointment_no_show_${appt.id}`,
+                emittedBy: ctx.user?.id ?? null,
+                status: "pending",
+                availableAt: new Date(),
+                payload: {
+                  appointmentId: appt.id,
+                  clientId: appt.clientId,
+                  patientId: appt.patientId,
+                },
+              })
+              .onConflictDoNothing();
           } catch (err) {
             console.error("Marketing appointment_no_show trigger error:", err);
           }
@@ -1429,6 +1470,27 @@ export const appointmentsRouter = createRouter({
               patientId: appt.patientId ?? undefined,
               appointmentAt: appt.startTime,
             });
+            await (ctx.db as any)
+              .insert(extAutomationEvents)
+              .values({
+                practiceId: ctx.practiceId,
+                eventType: "appointment_booked",
+                clientId: appt.clientId,
+                patientId: appt.patientId ?? null,
+                appointmentId: appt.id,
+                sourceRouter: "appointments.setStatus",
+                dedupeKey: `appointment_booked_${appt.id}`,
+                emittedBy: ctx.user?.id ?? null,
+                status: "pending",
+                availableAt: new Date(),
+                payload: {
+                  appointmentId: appt.id,
+                  clientId: appt.clientId,
+                  patientId: appt.patientId,
+                  startTime: appt.startTime,
+                },
+              })
+              .onConflictDoNothing();
           } catch (err) {
             console.error("Marketing appointment_booked trigger error:", err);
           }

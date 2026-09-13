@@ -47,7 +47,9 @@ import {
   clinicalRecordCorrections,
   soapNoteAddenda,
   soapNoteReplacements,
+  extAutomationEvents,
 } from "@openpims/db";
+import { createMessagesForTrigger } from "@/lib/marketing/messaging";
 import type { Database } from "@openpims/db/client";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import {
@@ -2510,6 +2512,55 @@ export const recordsRouter = createRouter({
         administeredBy: record.administeredBy,
         source: "dashboard",
       });
+
+      // ── Post-transaction: fire vaccine_due trigger (BUG-6 fix) ───────────
+      if (record.nextDueDate) {
+        void (async () => {
+          try {
+            const [patient] = await ctx.db
+              .select({ clientId: patients.clientId })
+              .from(patients)
+              .where(eq(patients.id, record.patientId))
+              .limit(1);
+
+            if (patient?.clientId) {
+              await createMessagesForTrigger(ctx.db, ctx.practiceId, {
+                triggerKey: "vaccine_due",
+                clientId: patient.clientId,
+                patientId: record.patientId,
+                eventId: `vaccine_${record.id}`,
+                service: record.vaccineName,
+              });
+
+              await (ctx.db as any)
+                .insert(extAutomationEvents)
+                .values({
+                  practiceId: ctx.practiceId,
+                  eventType: "vaccine_due",
+                  clientId: patient.clientId,
+                  patientId: record.patientId,
+                  appointmentId: record.appointmentId ?? null,
+                  sourceRouter: "records.createVaccination",
+                  dedupeKey: `vaccine_due_${record.id}`,
+                  emittedBy: ctx.user?.id ?? null,
+                  status: "pending",
+                  availableAt: new Date(),
+                  payload: {
+                    vaccinationRecordId: record.id,
+                    vaccineName: record.vaccineName,
+                    nextDueDate: record.nextDueDate,
+                    clientId: patient.clientId,
+                    patientId: record.patientId,
+                  },
+                })
+                .onConflictDoNothing();
+            }
+          } catch (err) {
+            console.error("[marketing/automation] vaccine_due trigger failed", err);
+          }
+        })();
+      }
+
       return record;
     }),
 

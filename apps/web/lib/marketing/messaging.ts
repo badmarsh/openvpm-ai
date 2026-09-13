@@ -14,6 +14,7 @@ import {
   extMarketingHandouts,
   extMarketingRecallSchedules,
   extSmsDeliveryLog,
+  extAutomationEvents,
 } from "@openpims/db";
 import { getBrand, type ClinicBrand } from "./planner";
 import { smsRateLimitOk } from "./sms-rate-limit";
@@ -670,12 +671,36 @@ export async function schedulePostopCheckIn(
     return;
   }
 
+  const eventId = `discharge_${Date.now()}`;
   await createMessagesForTrigger(db, practiceId, {
     triggerKey: "surgery_completed",
     clientId,
     patientId,
-    eventId: `discharge_${Date.now()}`,
+    eventId,
   });
+
+  try {
+    await (db as any)
+      .insert(extAutomationEvents)
+      .values({
+        practiceId,
+        eventType: "surgery_completed",
+        clientId,
+        patientId,
+        sourceRouter: "discharge.schedulePostopCheckIn",
+        dedupeKey: `surgery_completed_${patientId}_${eventId}`,
+        status: "pending",
+        availableAt: new Date(),
+        payload: {
+          clientId,
+          patientId,
+          eventId,
+        },
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    console.error("[automation] surgery_completed event insertion failed", err);
+  }
 }
 
 async function marketingConsentOk(
