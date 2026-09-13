@@ -77,18 +77,34 @@ This skill enforces core architectural rules, zero-conflict upstream synchroniza
 - **No Route Rewriting:**
   Do NOT add `app/[locale]/...` URL path prefixes. URLs must remain clean and canonical (`/schedule`, `/billing`, `/patients`, `/records`, `/marketing/automations`).
 - **English as Safe Fallback & 100% Symmetry:**
-  Maintain 100% dictionary key symmetry between `apps/web/messages/en.json` and `apps/web/messages/sk.json` (currently 5,265 keys each with 0 missing).
+  Maintain 100% dictionary key symmetry between `apps/web/messages/en.json` and `apps/web/messages/sk.json` (currently 5,265+ keys each with 0 missing).
   Verify symmetry with:
   ```bash
   node -e "const en=require('./apps/web/messages/en.json'); const sk=require('./apps/web/messages/sk.json'); /* compare keys */"
   ```
 - **Nested JSON Structure:**
   Always nest keys as JSON objects (e.g. `nav: { wellnessRedemptions: "..." }`). Never add root-level dotted strings (`"nav.wellnessRedemptions": "..."`) as dictionary resolvers will fail.
-- **`useI18n()` Hook Usage:**
-  Always use `const { t } = useI18n();` with dot notation, inline fallback, and optional parameters:
-  ```ts
-  t("marketing.automations.channelConnected", `Kanál "${name}" bol pripojený.`, { name })
-  ```
+- **`useI18n()` Hook Usage & Zero Hardcoded JSX Text (Anti-Bypass Rule):**
+  - All user-facing natural language text in JSX/TSX components (headers, banners, role switchers, buttons, labels, placeholders, aria-labels, tooltips, dialogs) MUST be routed through `useI18n()`.
+  - Never leave raw English text directly in JSX elements (`<p>Like this workflow? ...</p>`).
+  - Always use `const { t } = useI18n();` with dot notation, inline fallback, and optional parameters:
+    ```ts
+    t("marketing.automations.channelConnected", `Kanál "${name}" bol pripojený.`, { name })
+    ```
+- **"Demo & Marketing Infrastructure" Blind Spot Warning:**
+  - Automated dictionary symmetry tests verify that `sk.json` and `en.json` match, but they DO NOT detect hardcoded JSX strings in components that bypass `useI18n()` altogether.
+  - Components imported from upstream marketing/demo infrastructure (`apps/web/components/demo/demo-conversion-bar.tsx`, `apps/web/components/demo/demo-role-switcher.tsx`, `apps/web/lib/demo-role-switcher.ts`, `apps/web/components/onboarding/*`, `apps/web/app/(auth)/login/*`, `apps/web/app/(auth)/register/*`) are common culprits that bypassed localization.
+  - All demo bar strings, role names, and conversion prompts must be fully localized with keys in `messages/sk.json` and `messages/en.json`.
+- **Standard Slovak Role Nomenclature:**
+  When translating system and demo roles in UI and switchers, use standardized Slovak terminology:
+  - `admin` → **Správca praxe** (or Správca kliniky)
+  - `veterinarian` → **Veterinárny lekár**
+  - `technician` → **Veterinárny asistent / technik**
+  - `front_desk` → **Recepcia**
+  - `viewer` → **Prehliadajúci**
+- **Brittle Regression Test Precautions:**
+  - Beware of legacy upstream unit tests that assert raw English string literals in `.tsx` file content (e.g. `expect(bar).toContain("Start my clinic")` in `apps/web/lib/__tests__/demo-conversion-ui.test.ts`).
+  - When localizing these components, always refactor the corresponding tests to check for i18n keys or localized translations so that translation does not break the test suite.
 - **Standardized Server Error Messages:**
   tRPC server routers must throw standard English error messages (e.g. `"Patient not found"`, `"Channel account not found"`). All user-facing localization happens on the client via `useI18n()`.
 
