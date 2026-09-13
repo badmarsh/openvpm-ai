@@ -436,6 +436,91 @@
       "noAccount": "Nemáte účet?",
       "startClinic": "Založiť moju kliniku",
       "register": "Zaregistrujte svoju ambulanciu"
+    },
+    "register": {
+      "steps": {
+        "step1Of4": "Krok 1 zo 4",
+        "step2Of4": "Krok 2 zo 4",
+        "step3Of4": "Krok 3 zo 4",
+        "step4Of4": "Krok 4 zo 4"
+      },
+      "title": "Platforma skutočne vytvorená pre vašu kliniku.",
+      "subtitle": "Povedzte nám, čo váš tím potrebuje ako prvé. Pripravíme užitočný prvý deň ešte pred vytvorením pracovného priestoru.",
+      "showWorkflows": "Zobraziť moje pracovné postupy",
+      "workflowTitle": "Čo by ste chceli vidieť?",
+      "workflowSubtitle": "Vyberte si jeden užitočný pracovný postup a my podľa neho prispôsobíme systém.",
+      "seeFirstDay": "Zobraziť môj prvý deň",
+      "firstDayReady": "Váš prvý deň je pripravený.",
+      "secureWorkspace": "Zabezpečiť pracovný priestor",
+      "accountTitle": "Zabezpečte svoj pracovný priestor.",
+      "accountSubtitle": "Vytvorte si účet správcu praxe na dokončenie registrácie.",
+      "practiceName": "Názov praxe",
+      "practiceNamePlaceholder": "napr. Veterinárna klinika Tatry",
+      "workEmail": "Pracovný e-mail",
+      "workEmailPlaceholder": "vas@klinika.sk",
+      "password": "Heslo",
+      "passwordPlaceholder": "Vytvorte si bezpečné heslo",
+      "country": "Krajina kliniky",
+      "selectCountry": "Vyberte krajinu",
+      "submit": "Dokončiť registráciu",
+      "submitting": "Vytváram pracovný priestor...",
+      "alreadyAccount": "Už máte účet?",
+      "signIn": "Prihlásiť sa",
+      "errors": {
+        "practiceNameRequired": "Pre pokračovanie zadajte názov praxe.",
+        "practiceNameTooLong": "Názov praxe môže mať maximálne {max} znakov.",
+        "emailTooLong": "E-mail môže mať maximálne {max} znakov.",
+        "emailInvalid": "Zadajte platný pracovný e-mail.",
+        "countryRequired": "Vyberte krajinu vašej kliniky.",
+        "countryUnavailable": "Cloudové prostredia zatiaľ nie sú vo vašej krajine dostupné.",
+        "passwordMinLength": "Použite aspoň {min} znakov pre heslo.",
+        "hostedCheckoutUnavailable": "Platobná brána je nedostupná. Skúste to znova.",
+        "accountCreatedSignIn": "Účet bol vytvorený. Prihláste sa, prosím."
+      }
+    },
+    "forgotPassword": {
+      "title": "Obnovenie hesla",
+      "sentNotice": "Ak existuje účet pre {email}, odoslali sme odkaz na obnovenie. Skontrolujte svoju e-mailovú schránku.",
+      "email": "E-mail",
+      "emailPlaceholder": "vas@klinika.sk",
+      "sending": "Odosiela sa…",
+      "sendLink": "Odoslať odkaz na obnovenie",
+      "backToSignIn": "Späť na prihlásenie"
+    },
+    "resetPassword": {
+      "title": "Zvoľte si nové heslo",
+      "success": "Vaše heslo bolo obnovené.",
+      "signIn": "Prihlásiť sa",
+      "invalidLink": "Tento odkaz na obnovenie je neplatný. Požiadajte o nový na prihlasovacej stránke.",
+      "lengthError": "Použite {min}-{max} znakov.",
+      "newPassword": "Nové heslo",
+      "placeholder": "Minimálne {min} znakov",
+      "resetting": "Obnovuje sa…",
+      "resetButton": "Obnoviť heslo"
+    },
+    "verifyEmail": {
+      "verifying": "Overuje sa váš e-mail…",
+      "confirmed": "E-mail bol potvrdený. Vaša skúšobná verzia už bola aktívna, takže môžete pokračovať tam, kde ste prestali.",
+      "openApp": "Otvoriť OpenVPM",
+      "invalidLink": "Tento overovací odkaz je neplatný alebo vypršal.",
+      "resendLink": "Otvoriť OpenVPM a odoslať znova",
+      "recoveryTitle": "Potvrďte svoj e-mail",
+      "recoveryDesc": "Vaša skúšobná verzia je už aktívna. Otvorte OpenVPM a použite overovací pruh na bezpečné odoslanie nového odkazu. Bude fungovať akýkoľvek platný overovací odkaz.",
+      "signedOutNote": "Ak ste odhlásení, OpenVPM vás najprv požiada o prihlásenie."
+    },
+    "acceptInvite": {
+      "title": "Prijatie pozvánky",
+      "success": "Váš účet je pripravený. Teraz sa môžete prihlásiť.",
+      "signIn": "Prihlásiť sa",
+      "invalidLink": "Tento odkaz na pozvánku je neplatný. Požiadajte správcu o odoslanie novej pozvánky.",
+      "lengthError": "Použite {min}-{max} znakov.",
+      "mismatchError": "Heslá sa nezhodujú",
+      "createPassword": "Vytvorte heslo",
+      "placeholder": "Minimálne {min} znakov",
+      "confirmPassword": "Potvrďte heslo",
+      "confirmPlaceholder": "Znova zadajte heslo",
+      "activating": "Aktivuje sa…",
+      "activateButton": "Aktivovať účet"
     }
   },
   "billing": {
@@ -5249,6 +5334,98 @@
           "title": "Váš prvý deň je pripravený."
         }
       }
+    },
+    "models": {
+      "companion": {
+        "label": "Klinika spoločenských zvierat",
+        "shortLabel": "Spoločenské zvieratá"
+      },
+      "mobile": {
+        "label": "Mobilná prax alebo návštevy doma",
+        "shortLabel": "Mobilná prax"
+      },
+      "equine": {
+        "label": "Konská alebo hospodárska prax",
+        "shortLabel": "Kone a hospodárske"
+      },
+      "specialty": {
+        "label": "Špecializovaná alebo preventívna starostlivosť",
+        "shortLabel": "Špecializovaná starostlivosť"
+      },
+      "shelter": {
+        "label": "Útulok alebo nezisková organizácia",
+        "shortLabel": "Útulok"
+      },
+      "exploring": {
+        "label": "Zatiaľ iba skúmam",
+        "shortLabel": "Iba skúmam"
+      }
+    },
+    "firstGoals": {
+      "run_visit": {
+        "title": "Vykonať jedno reálne vyšetrenie",
+        "body": "Pridajte jedného majiteľa a zviera, potom prejdite celým procesom od príjmu až po odovzdanie pacienta.",
+        "pictureLabel": "Váš bežný deň na klinike",
+        "rowLabel": "Nový pacient"
+      },
+      "import_records": {
+        "title": "Naplánovať bezpečný prvý import",
+        "body": "Zmapujte export a skontrolujte jednu reprezentatívnu kartu predtým, než čokoľvek spustíte naživo.",
+        "pictureLabel": "Náhľad migrácie",
+        "rowLabel": "Skontrolovať jednu kartu"
+      },
+      "start_fresh": {
+        "title": "Vytvoriť vaše prvé vyšetrenie",
+        "body": "Nastavte základné údaje kliniky, pridajte jedného majiteľa a zviera a objednajte prvého pacienta.",
+        "pictureLabel": "Váš deň na klinike",
+        "rowLabel": "Prvé objednanie"
+      },
+      "explore_sample": {
+        "title": "Preskúmať pripravenú kliniku",
+        "body": "Otvorte si ukážkový rozvrh a časovú os pacienta bez nutnosti použiť reálne dáta vašej kliniky.",
+        "pictureLabel": "Ukážková klinika",
+        "rowLabel": "Sprievodca vyšetrením"
+      },
+      "self_host": {
+        "title": "Preskúmať možnosť vlastného hostingu",
+        "body": "Overte nasadenie a kontrolu nad vlastníctvom dát pred presunom akejkoľvek živej práce.",
+        "pictureLabel": "Vlastné nasadenie",
+        "rowLabel": "Plán nasadenia"
+      },
+      "ariaLabel": "Odporúčania na prvý deň",
+      "tagBestNextStep": "Najlepší ďalší krok",
+      "importedData": {
+        "title": "Objednajte jedno reálne vyšetrenie",
+        "body": "Vyberte pacienta z importovaných záznamov a naplánujte jedno vyšetrenie do rozvrhu.",
+        "pictureLabel": "Váš bežný deň na klinike",
+        "rowLabel": "Prvá návšteva"
+      },
+      "cardBilling": {
+        "title": "Zjednodušte si prijímanie platieb",
+        "body": "Odošlite online faktúru a nechajte klientov zaplatiť kartou cez zabezpečený odkaz.",
+        "tag": "Rýchlejšie platby",
+        "pictureLabel": "Fakturácia klientom",
+        "invoiceTotal": "Spolu k úhrade",
+        "paySecurely": "Zaplatiť bezpečne online"
+      },
+      "cardPortal": {
+        "title": "Doprajte klientom jedno prehľadné miesto",
+        "body": "Zdieľajte vyšetrenia, očkovacie preukazy a účty prostredníctvom privátneho portálu.",
+        "tag": "Menej telefonátov",
+        "pictureLabel": "Klientsky portál",
+        "allInOne": "Všetko v jednom odkaze",
+        "summary": "Návštevy · Vakcinácie · Účty"
+      }
+    },
+    "migrationHelp": {
+      "titleRequested": "Kontrola migrácie bola vyžiadaná",
+      "titlePrompt": "Chcete, aby sme najprv skontrolovali váš export?",
+      "bodyRequested": "Budeme kontaktovať správcu vašej kliniky so zabezpečeným plánom prenosu a kontroly. Súbory do tej doby ponechajte na pôvodnom mieste.",
+      "bodyPrompt": "Požiadajte o odbornú kontrolu pred importom. Neposielajte pacientske súbory e-mailom ani nezdieľajte verejné odkazy. Budeme kontaktovať správcu kliniky s plánom privátneho prenosu.",
+      "buttonRequested": "Žiadosť uložená",
+      "buttonPrompt": "Požiadať o privátnu kontrolu",
+      "toastRequested": "Kontrola migrácie bola vyžiadaná",
+      "submitting": "Ukladám žiadosť..."
     }
   },
   "species": {
@@ -5850,5 +6027,53 @@
   "integrationMode": {
     "simulation": "SIMULAČNÝ REŽIM (Bez odosielania externým autoritám)",
     "production": "OSTRÁ PREVÁDZKA (Aktívne odosielanie externým autoritám)"
+  },
+  "demo": {
+    "banner": {
+      "title": "Páči sa vám tento workflow?",
+      "subtitle": "Spustite si bezplatnú skúšobnú verziu s vlastnými údajmi kliniky.",
+      "startClinic": "Spustiť moju kliniku"
+    },
+    "roleSwitcher": {
+      "label": "Preskúmať ako",
+      "ariaLabel": "Rola v demo verzii. Aktuálna rola: {role}",
+      "viewingAs": "Prezeranie demo ako {role}",
+      "switchingTo": "Prepínanie na {role}...",
+      "switchError": "Rolu sa nepodarilo prepnúť. Vaša aktuálna rola sa nezmenila. Skúste to znova.",
+      "refreshNotice": "Rola bola zmenená. Obnovte túto stránku na dokončenie prepnutia."
+    },
+    "roles": {
+      "admin": "Správca praxe",
+      "veterinarian": "Veterinárny lekár",
+      "technician": "Veterinárny asistent / technik",
+      "front_desk": "Recepcia"
+    }
+  },
+  "layout": {
+    "trialBadge": {
+      "statusUnavailable": "Stav fakturácie je nedostupný",
+      "paymentRetrying": "Opakovaný pokus o platbu · Skontrolovať fakturáciu",
+      "paymentUnpaid": "Nezaplatené · Iba na čítanie",
+      "billingConnected": "Fakturácia pripojená · Spravovať fakturáciu",
+      "activateAccount": "Aktivovať účet",
+      "trialEndsToday": "Skúšobná verzia končí dnes",
+      "daysLeftInTrial": "Zostáva {days} dní v skúšobnej verzii",
+      "daysLeftInTrialSingular": "Zostáva {days} deň v skúšobnej verzii",
+      "daysLeftInTrialFew": "Zostávajú {days} dni v skúšobnej verzii",
+      "trialEnded": "Skúšobná verzia skončila, iba na čítanie · Znova aktivovať"
+    },
+    "verifyEmail": {
+      "errorCheck": "Nepodarilo sa overiť stav e-mailu.",
+      "retry": "Skúsiť znova",
+      "dismiss": "Zatvoriť",
+      "bannerText": "Overte svoj e-mail{email} na zabezpečenie účtu a doručovanie pripomienok.",
+      "resend": "Znova odoslať e-mail"
+    },
+    "recoveryReview": {
+      "ariaLabel": "Chránený režim kontroly údajov",
+      "title": "Chránený režim kontroly údajov je aktívny",
+      "description": "Importovanú históriu môžete bezpečne skontrolovať. Prevádzkové zmeny, automatizácie a externé odosielanie zostávajú pozastavené.",
+      "continue": "Pokračovať v kontrole údajov"
+    }
   }
 }

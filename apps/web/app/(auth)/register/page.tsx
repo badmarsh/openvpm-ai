@@ -25,6 +25,7 @@ import { PawMark } from "@/components/brand/paw-mark";
 import { cn, initials, isValidEmail } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import {
   AUTH_PASSWORD_MAX_LENGTH,
   AUTH_PASSWORD_MIN_LENGTH,
@@ -97,6 +98,7 @@ function RegisterPageInner() {
   const cloudIntent = searchParams.get("intent") === "cloud";
   const nextPath = safeAuthNextPath(searchParams.get("next"), "/");
   const acquisition = acquisitionFromSearchParams(searchParams);
+  const { t } = useI18n();
   const [stage, setStage] = useState<RegistrationStage>("profile");
   const [profileRestored, setProfileRestored] = useState(false);
   const [clinicModel, setClinicModel] =
@@ -201,7 +203,12 @@ function RegisterPageInner() {
       }
       if (data.checkoutUrl) {
         if (!isSafeCheckoutRedirectUrl(data.checkoutUrl)) {
-          toast.error("Hosted checkout is unavailable. Please try again.");
+          toast.error(
+            t(
+              "auth.register.errors.hostedCheckoutUnavailable",
+              "Hosted checkout is unavailable. Please try again.",
+            ),
+          );
           setLoading(false);
           return;
         }
@@ -224,7 +231,12 @@ function RegisterPageInner() {
         // accounts to the login page right after signup.
         window.location.assign(nextPath);
       } else {
-        toast.success("Account created. Please sign in.");
+        toast.success(
+          t(
+            "auth.register.errors.accountCreatedSignIn",
+            "Account created. Please sign in.",
+          ),
+        );
         router.push(`/login?next=${encodeURIComponent(nextPath)}`);
       }
     },
@@ -237,19 +249,49 @@ function RegisterPageInner() {
 
   function validate(): string | null {
     if (practiceName.trim().length < 2)
-      return "Add your practice name to continue.";
+      return t(
+        "auth.register.errors.practiceNameRequired",
+        "Add your practice name to continue.",
+      );
     if (practiceName.trim().length > AUTH_PRACTICE_NAME_MAX_LENGTH)
-      return `Practice name must be at most ${AUTH_PRACTICE_NAME_MAX_LENGTH} characters.`;
+      return t(
+        "auth.register.errors.practiceNameTooLong",
+        `Practice name must be at most ${AUTH_PRACTICE_NAME_MAX_LENGTH} characters.`,
+        { max: AUTH_PRACTICE_NAME_MAX_LENGTH },
+      );
     if (!isAuthEmailLengthValid(email))
-      return `Email must be at most ${AUTH_EMAIL_MAX_LENGTH} characters.`;
-    if (!isValidEmail(email)) return "Add a valid work email.";
-    if (!country) return "Choose your clinic country.";
+      return t(
+        "auth.register.errors.emailTooLong",
+        `Email must be at most ${AUTH_EMAIL_MAX_LENGTH} characters.`,
+        { max: AUTH_EMAIL_MAX_LENGTH },
+      );
+    if (!isValidEmail(email))
+      return t(
+        "auth.register.errors.emailInvalid",
+        "Add a valid work email.",
+      );
+    if (!country)
+      return t(
+        "auth.register.errors.countryRequired",
+        "Choose your clinic country.",
+      );
     if (country === "OTHER")
-      return "Hosted workspaces are not available in your country yet.";
+      return t(
+        "auth.register.errors.countryUnavailable",
+        "Hosted workspaces are not available in your country yet.",
+      );
     if (password.length < AUTH_PASSWORD_MIN_LENGTH)
-      return `Use at least ${AUTH_PASSWORD_MIN_LENGTH} characters for the password.`;
+      return t(
+        "auth.register.errors.passwordMinLength",
+        `Use at least ${AUTH_PASSWORD_MIN_LENGTH} characters for the password.`,
+        { min: AUTH_PASSWORD_MIN_LENGTH },
+      );
     if (password.length > AUTH_PASSWORD_MAX_LENGTH)
-      return `Use at most ${AUTH_PASSWORD_MAX_LENGTH} characters for the password.`;
+      return t(
+        "auth.register.errors.passwordMaxLength",
+        `Use at most ${AUTH_PASSWORD_MAX_LENGTH} characters for the password.`,
+        { max: AUTH_PASSWORD_MAX_LENGTH },
+      );
     return null;
   }
 
@@ -370,7 +412,9 @@ function RegisterPageInner() {
               OpenVPM
             </Link>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 sm:gap-3 sm:text-sm">
-              <span className="whitespace-nowrap">Step 1 of 4</span>
+              <span className="whitespace-nowrap">
+                {t("auth.register.steps.step1Of4", "Step 1 of 4")}
+              </span>
               <span className="flex gap-1" aria-hidden="true">
                 <span className="h-1.5 w-6 rounded-full bg-primary sm:w-10" />
                 <span className="h-1.5 w-6 rounded-full bg-slate-200 sm:w-10" />
@@ -383,11 +427,16 @@ function RegisterPageInner() {
           <section className="flex-1 px-5 py-7 sm:px-9 sm:py-10 lg:px-12">
             <div className="mb-8 max-w-3xl">
               <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-                A platform truly built for your clinic.
+                {t(
+                  "auth.register.title",
+                  "A platform truly built for your clinic.",
+                )}
               </h1>
               <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
-                Tell us what your team needs first. We’ll shape a useful first
-                day before asking you to create the workspace.
+                {t(
+                  "auth.register.subtitle",
+                  "Tell us what your team needs first. We’ll shape a useful first day before asking you to create the workspace.",
+                )}
               </p>
             </div>
 
@@ -407,7 +456,7 @@ function RegisterPageInner() {
               onClick={continueToWorkflow}
               className="h-11 rounded-xl px-6 text-sm font-semibold shadow-[0_12px_28px_-16px_rgba(5,150,105,0.8)]"
             >
-              Show my workflows
+              {t("auth.register.showWorkflows", "Show my workflows")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </footer>
@@ -431,7 +480,9 @@ function RegisterPageInner() {
               OpenVPM
             </Link>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 sm:gap-3 sm:text-sm">
-              <span className="whitespace-nowrap">Step 2 of 4</span>
+              <span className="whitespace-nowrap">
+                {t("auth.register.steps.step2Of4", "Step 2 of 4")}
+              </span>
               <span className="flex gap-1" aria-hidden="true">
                 <span className="h-1.5 w-6 rounded-full bg-primary sm:w-10" />
                 <span className="h-1.5 w-6 rounded-full bg-primary sm:w-10" />
@@ -453,18 +504,23 @@ function RegisterPageInner() {
               beforeChoices={
                 <div className="max-w-3xl">
                   <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-                    What would you like to see?
+                    {t(
+                      "auth.register.workflowTitle",
+                      "What would you like to see?",
+                    )}
                   </h1>
                   <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
-                    Pick one useful workflow and we’ll shape your first day
-                    around it.
+                    {t(
+                      "auth.register.workflowSubtitle",
+                      "Pick one useful workflow and we’ll shape around it.",
+                    )}
                   </p>
                 </div>
               }
               afterChoices={
                 <div className="mt-5 border-t border-slate-100 pt-5">
                   <p className="text-sm font-semibold text-slate-950 sm:text-base">
-                    Start your workspace
+                    {t("auth.register.accountTitle", "Start your workspace")}
                   </p>
 
                   {error ? (
@@ -474,7 +530,10 @@ function RegisterPageInner() {
                   ) : null}
 
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <FormField label="Practice name" htmlFor="practiceName">
+                    <FormField
+                      label={t("auth.register.practiceName", "Practice name")}
+                      htmlFor="practiceName"
+                    >
                       <Input
                         id="practiceName"
                         name="practiceName"
@@ -483,14 +542,20 @@ function RegisterPageInner() {
                           setPracticeName(event.target.value);
                           setError("");
                         }}
-                        placeholder="Neighborhood Veterinary"
+                        placeholder={t(
+                          "auth.register.practiceNamePlaceholder",
+                          "Neighborhood Veterinary",
+                        )}
                         autoComplete="organization"
                         autoFocus
                         maxLength={AUTH_PRACTICE_NAME_MAX_LENGTH}
                         required
                       />
                     </FormField>
-                    <FormField label="Work email" htmlFor="email">
+                    <FormField
+                      label={t("auth.register.workEmail", "Work email")}
+                      htmlFor="email"
+                    >
                       <Input
                         id="email"
                         name="email"
@@ -500,7 +565,10 @@ function RegisterPageInner() {
                           setEmail(event.target.value);
                           setError("");
                         }}
-                        placeholder="you@clinic.com"
+                        placeholder={t(
+                          "auth.register.workEmailPlaceholder",
+                          "you@clinic.com",
+                        )}
                         autoComplete="email"
                         maxLength={AUTH_EMAIL_MAX_LENGTH}
                         required
@@ -522,14 +590,14 @@ function RegisterPageInner() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-primary"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
+              {t("common.back", "Back")}
             </button>
             <Button
               type="button"
               onClick={continueToPreview}
               className="h-11 rounded-xl px-6 text-sm font-semibold shadow-[0_12px_28px_-16px_rgba(5,150,105,0.8)]"
             >
-              See my first day
+              {t("auth.register.seeFirstDay", "See my first day")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </footer>
@@ -553,7 +621,9 @@ function RegisterPageInner() {
               OpenVPM
             </Link>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 sm:gap-3 sm:text-sm">
-              <span className="whitespace-nowrap">Step 3 of 4</span>
+              <span className="whitespace-nowrap">
+                {t("auth.register.steps.step3Of4", "Step 3 of 4")}
+              </span>
               <span className="flex gap-1" aria-hidden="true">
                 <span className="h-1.5 w-6 rounded-full bg-primary sm:w-10" />
                 <span className="h-1.5 w-6 rounded-full bg-primary sm:w-10" />
@@ -566,7 +636,7 @@ function RegisterPageInner() {
           <section className="flex-1 px-5 py-6 sm:px-9 sm:py-7 lg:px-10">
             <div className="mb-6 max-w-3xl">
               <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-                Your first day is ready.
+                {t("auth.register.firstDayReady", "Your first day is ready.")}
               </h1>
               <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
                 Here’s a useful starting point for {practiceName.trim()}. You
@@ -584,7 +654,7 @@ function RegisterPageInner() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-primary"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
+              {t("common.back", "Back")}
             </button>
             <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-4">
               <p className="text-center text-xs text-slate-500">
@@ -595,7 +665,7 @@ function RegisterPageInner() {
                 onClick={continueToAccount}
                 className="h-11 rounded-xl px-6 text-sm font-semibold shadow-[0_12px_28px_-16px_rgba(5,150,105,0.8)]"
               >
-                Secure my workspace
+                {t("auth.register.secureWorkspace", "Secure my workspace")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -621,16 +691,18 @@ function RegisterPageInner() {
               OpenVPM {cloudIntent ? "Cloud" : ""}
             </Link>
             <span className="text-xs font-medium text-slate-500">
-              Step 4 of 4
+              {t("auth.register.steps.step4Of4", "Step 4 of 4")}
             </span>
           </div>
 
           <h1 className="mt-8 font-heading text-3xl font-bold tracking-tight text-slate-950">
-            Secure your workspace.
+            {t("auth.register.accountTitle", "Secure your workspace.")}
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            One final step. Choose your clinic country and create a password. No
-            card required.
+            {t(
+              "auth.register.accountSubtitle",
+              "One final step. Choose your clinic country and create a password. No card required.",
+            )}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 grid min-w-0 gap-4">
@@ -664,7 +736,7 @@ function RegisterPageInner() {
             />
 
             <FormField
-              label="Clinic country"
+              label={t("auth.register.country", "Clinic country")}
               htmlFor="country"
               className="min-w-0"
               description="This sets your currency, tax defaults, time zone, and rollout eligibility."
@@ -681,7 +753,12 @@ function RegisterPageInner() {
                 }}
                 required
               >
-                <option value="">Choose your clinic country</option>
+                <option value="">
+                  {t(
+                    "auth.register.selectCountry",
+                    "Choose your clinic country",
+                  )}
+                </option>
                 {CLINIC_REGION_OPTIONS.map((option) => (
                   <option key={option.code} value={option.code}>
                     {option.label}
@@ -725,7 +802,7 @@ function RegisterPageInner() {
             ) : null}
 
             <FormField
-              label="Password"
+              label={t("auth.register.password", "Password")}
               htmlFor="password"
               className="min-w-0"
               description={`At least ${AUTH_PASSWORD_MIN_LENGTH} characters.`}
@@ -736,7 +813,10 @@ function RegisterPageInner() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password"
+                placeholder={t(
+                  "auth.register.passwordPlaceholder",
+                  "Create a password",
+                )}
                 autoComplete="new-password"
                 minLength={AUTH_PASSWORD_MIN_LENGTH}
                 maxLength={AUTH_PASSWORD_MAX_LENGTH}
@@ -752,11 +832,14 @@ function RegisterPageInner() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating your workspace
+                  {t(
+                    "auth.register.submitting",
+                    "Creating your workspace",
+                  )}
                 </>
               ) : (
                 <>
-                  Start my free trial
+                  {t("auth.register.submit", "Start my free trial")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
@@ -796,12 +879,12 @@ function RegisterPageInner() {
           </form>
 
           <p className="mt-8 text-center text-sm text-slate-500">
-            Already have an account?{" "}
+            {t("auth.register.alreadyAccount", "Already have an account?")}{" "}
             <Link
               href={`/login?next=${encodeURIComponent(nextPath)}`}
               className="font-medium text-primary hover:underline"
             >
-              Sign in
+              {t("auth.register.signIn", "Sign in")}
             </Link>
           </p>
         </div>

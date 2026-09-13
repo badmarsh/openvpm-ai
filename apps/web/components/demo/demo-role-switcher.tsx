@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { Loader2, UserRoundCog } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import {
   DEMO_ROLE_OPTIONS,
   addDemoRoleSwitchMarker,
@@ -30,8 +31,10 @@ export function DemoRoleSwitcherView({
   error,
   onRoleChange,
 }: DemoRoleSwitcherViewProps) {
+  const { t } = useI18n();
   const isSwitching = pendingRole !== null;
-  const currentLabel = demoRoleLabel(currentRole);
+  const currentLabel = demoRoleLabel(currentRole, t);
+  const pendingLabel = pendingRole ? demoRoleLabel(pendingRole, t) : "";
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
@@ -40,7 +43,7 @@ export function DemoRoleSwitcherView({
           htmlFor="demo-role-switcher"
           className="shrink-0 text-xs font-medium text-muted-foreground"
         >
-          Explore as
+          {t("demo.roleSwitcher.label", "Preskúmať ako")}
         </label>
         <div className="relative">
           <UserRoundCog
@@ -51,7 +54,11 @@ export function DemoRoleSwitcherView({
             id="demo-role-switcher"
             value={currentRole}
             disabled={isSwitching}
-            aria-label={`Demo role. Current role: ${currentLabel}`}
+            aria-label={t(
+              "demo.roleSwitcher.ariaLabel",
+              `Rola v demo verzii. Aktuálna rola: ${currentLabel}`,
+              { role: currentLabel },
+            )}
             onChange={(event) => {
               const nextRole = event.currentTarget.value;
               if (isDemoSwitcherRole(nextRole)) onRoleChange(nextRole);
@@ -60,7 +67,7 @@ export function DemoRoleSwitcherView({
           >
             {DEMO_ROLE_OPTIONS.map((role) => (
               <option key={role.value} value={role.value}>
-                {role.label}
+                {demoRoleLabel(role.value, t)}
               </option>
             ))}
           </select>
@@ -81,8 +88,16 @@ export function DemoRoleSwitcherView({
       </div>
       <span className="sr-only" aria-live="polite">
         {pendingRole
-          ? `Switching to ${demoRoleLabel(pendingRole)}`
-          : `Viewing demo as ${currentLabel}`}
+          ? t(
+              "demo.roleSwitcher.switchingTo",
+              `Prepínanie na ${pendingLabel}...`,
+              { role: pendingLabel },
+            )
+          : t(
+              "demo.roleSwitcher.viewingAs",
+              `Prezeranie demo ako ${currentLabel}`,
+              { role: currentLabel },
+            )}
       </span>
       {error ? (
         <p role="alert" className="max-w-64 text-xs text-destructive">
@@ -96,6 +111,7 @@ export function DemoRoleSwitcherView({
 export function DemoRoleSwitcher() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const { t } = useI18n();
   const [pendingRole, setPendingRole] =
     React.useState<DemoSwitcherRole | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -117,7 +133,10 @@ export function DemoRoleSwitcher() {
     if (!switched) {
       setPendingRole(null);
       setError(
-        "We couldn't switch roles. Your current role is unchanged. Try again.",
+        t(
+          "demo.roleSwitcher.switchError",
+          "Rolu sa nepodarilo prepnúť. Vaša aktuálna rola sa nezmenila. Skúste to znova.",
+        ),
       );
       return;
     }
@@ -134,7 +153,12 @@ export function DemoRoleSwitcher() {
       window.location.assign(addDemoRoleSwitchMarker(destination));
     } catch {
       setPendingRole(null);
-      setError("Role changed. Refresh this page to finish switching views.");
+      setError(
+        t(
+          "demo.roleSwitcher.refreshNotice",
+          "Rola bola zmenená. Obnovte túto stránku na dokončenie prepnutia.",
+        ),
+      );
     }
   }
 

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CalendarCheck2,
   Check,
@@ -8,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FirstGoal } from "@/lib/onboarding/clinic-profile";
+import { useI18n } from "@/lib/i18n";
 
 type RecommendationTone = "primary" | "violet" | "coral";
 
@@ -121,7 +124,8 @@ export function FirstDayRecommendations({
   hasImportedData?: boolean;
   primaryGoal?: FirstGoal;
 }) {
-  const primaryRecommendation = hasImportedData
+  const { t } = useI18n();
+  const rawRec = hasImportedData
     ? {
         title: "Book one real appointment",
         body: "Choose a patient from your reviewed records and put one visit on the schedule.",
@@ -130,13 +134,33 @@ export function FirstDayRecommendations({
       }
     : FIRST_GOAL_RECOMMENDATIONS[primaryGoal];
 
+  const primaryRecommendation = {
+    title: hasImportedData
+      ? t("onboarding.firstGoals.importedData.title", rawRec.title)
+      : t(`onboarding.firstGoals.${primaryGoal}.title`, rawRec.title),
+    body: hasImportedData
+      ? t("onboarding.firstGoals.importedData.body", rawRec.body)
+      : t(`onboarding.firstGoals.${primaryGoal}.body`, rawRec.body),
+    pictureLabel: hasImportedData
+      ? t("onboarding.firstGoals.importedData.pictureLabel", rawRec.pictureLabel)
+      : t(`onboarding.firstGoals.${primaryGoal}.pictureLabel`, rawRec.pictureLabel),
+    rowLabel: hasImportedData
+      ? t("onboarding.firstGoals.importedData.rowLabel", rawRec.rowLabel)
+      : t(`onboarding.firstGoals.${primaryGoal}.rowLabel`, rawRec.rowLabel),
+  };
+
   return (
-    <section aria-label="Your first-day recommendations">
+    <section
+      aria-label={t(
+        "onboarding.firstGoals.ariaLabel",
+        "Your first-day recommendations",
+      )}
+    >
       <ul className="grid gap-6 sm:grid-cols-3 sm:gap-5">
         <RecommendationCard
           title={primaryRecommendation.title}
           body={primaryRecommendation.body}
-          tag="Best next step"
+          tag={t("onboarding.firstGoals.tagBestNextStep", "Best next step")}
           tone="primary"
           tilt="sm:-rotate-1"
         >
@@ -156,35 +180,61 @@ export function FirstDayRecommendations({
         </RecommendationCard>
 
         <RecommendationCard
-          title="Make getting paid easy"
-          body="Send an online invoice and let clients pay by card from their private link."
-          tag="Get paid faster"
+          title={t(
+            "onboarding.firstGoals.cardBilling.title",
+            "Make getting paid easy",
+          )}
+          body={t(
+            "onboarding.firstGoals.cardBilling.body",
+            "Send an online invoice and let clients pay by card from their private link.",
+          )}
+          tag={t("onboarding.firstGoals.cardBilling.tag", "Get paid faster")}
           tone="violet"
           tilt="sm:rotate-1"
         >
           <span className="flex items-center gap-2 text-xs font-semibold text-violet-700">
-            <ReceiptText className="h-4 w-4" /> Client billing
+            <ReceiptText className="h-4 w-4" />{" "}
+            {t(
+              "onboarding.firstGoals.cardBilling.pictureLabel",
+              "Client billing",
+            )}
           </span>
           <div className="rounded-lg bg-white/90 px-3 py-2.5 shadow-sm">
             <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Invoice total</span>
+              <span>
+                {t(
+                  "onboarding.firstGoals.cardBilling.invoiceTotal",
+                  "Invoice total",
+                )}
+              </span>
               <span className="font-semibold text-slate-900">€68.00</span>
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
-              <CreditCard className="h-3.5 w-3.5" /> Pay securely online
+              <CreditCard className="h-3.5 w-3.5" />{" "}
+              {t(
+                "onboarding.firstGoals.cardBilling.paySecurely",
+                "Pay securely online",
+              )}
             </div>
           </div>
         </RecommendationCard>
 
         <RecommendationCard
-          title="Give clients one simple place"
-          body="Share visits, vaccine history, and bills through a private client portal."
-          tag="Fewer status calls"
+          title={t(
+            "onboarding.firstGoals.cardPortal.title",
+            "Give clients one simple place",
+          )}
+          body={t(
+            "onboarding.firstGoals.cardPortal.body",
+            "Share visits, vaccine history, and bills through a private client portal.",
+          )}
+          tag={t("onboarding.firstGoals.cardPortal.tag", "Fewer status calls")}
           tone="coral"
           tilt="sm:-rotate-1"
         >
           <span className="flex items-center gap-2 text-xs font-semibold text-orange-700">
-            <Globe2 className="h-4 w-4" /> Client portal
+            <Globe2 className="h-4 w-4" />{" "}
+            {t("onboarding.firstGoals.cardPortal.pictureLabel", "Client portal")}
           </span>
           <div className="flex items-center gap-2 rounded-lg bg-white/90 px-3 py-2.5 shadow-sm">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-700">
@@ -192,10 +242,16 @@ export function FirstDayRecommendations({
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-900">
-                Everything in one link
+                {t(
+                  "onboarding.firstGoals.cardPortal.allInOne",
+                  "Everything in one link",
+                )}
               </p>
               <p className="text-[10px] text-slate-500">
-                Visits · Vaccines · Bills
+                {t(
+                  "onboarding.firstGoals.cardPortal.summary",
+                  "Visits · Vaccines · Bills",
+                )}
               </p>
             </div>
           </div>

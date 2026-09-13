@@ -9,8 +9,10 @@ import {
   isAuthEmailLengthValid,
 } from "@/lib/auth-input-policy";
 import { isValidEmail } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 
@@ -25,13 +27,18 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8">
         <div className="mb-6 text-center">
           <h1 className="font-heading text-2xl font-bold text-foreground">OpenVPM</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Reset your password</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("auth.forgotPassword.title", "Reset your password")}
+          </p>
         </div>
 
         {sent ? (
           <p className="text-center text-sm text-muted-foreground">
-            If an account exists for <strong>{email}</strong>, we&apos;ve sent a reset link.
-            Check your inbox.
+            {t(
+              "auth.forgotPassword.sentNotice",
+              `If an account exists for ${email}, we've sent a reset link. Check your inbox.`,
+              { email },
+            )}
           </p>
         ) : (
           <form
@@ -44,7 +51,7 @@ export default function ForgotPasswordPage() {
           >
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
-                Email
+                {t("auth.forgotPassword.email", "Email")}
               </label>
               <input
                 id="email"
@@ -54,7 +61,10 @@ export default function ForgotPasswordPage() {
                 required
                 maxLength={AUTH_EMAIL_MAX_LENGTH}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="you@clinic.com"
+                placeholder={t(
+                  "auth.forgotPassword.emailPlaceholder",
+                  "you@clinic.com",
+                )}
               />
             </div>
             <button
@@ -62,14 +72,16 @@ export default function ForgotPasswordPage() {
               disabled={!canSubmit || request.isPending}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {request.isPending ? "Sending…" : "Send reset link"}
+              {request.isPending
+                ? t("auth.forgotPassword.sending", "Sending…")
+                : t("auth.forgotPassword.sendLink", "Send reset link")}
             </button>
           </form>
         )}
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           <Link href="/login" className="text-primary hover:underline">
-            Back to sign in
+            {t("auth.forgotPassword.backToSignIn", "Back to sign in")}
           </Link>
         </p>
       </div>

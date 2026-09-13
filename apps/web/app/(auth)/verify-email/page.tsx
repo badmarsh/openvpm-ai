@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MailCheck, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 function VerifyEmailInner() {
   const params = useSearchParams();
@@ -18,6 +19,7 @@ function VerifyEmailInner() {
 }
 
 function ConfirmToken({ token }: { token: string }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<"verifying" | "ok" | "error">("verifying");
   const ran = useRef(false);
 
@@ -38,33 +40,38 @@ function ConfirmToken({ token }: { token: string }) {
       {status === "verifying" && (
         <p className="mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Verifying your email…
+          {t("auth.verifyEmail.verifying", "Verifying your email…")}
         </p>
       )}
       {status === "ok" && (
         <>
           <p className="mt-3 text-sm text-foreground">
-            Email confirmed. Your trial was already active, so you can continue
-            where you left off.
+            {t(
+              "auth.verifyEmail.confirmed",
+              "Email confirmed. Your trial was already active, so you can continue where you left off.",
+            )}
           </p>
           <Link
             href="/"
             className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Open OpenVPM
+            {t("auth.verifyEmail.openApp", "Open OpenVPM")}
           </Link>
         </>
       )}
       {status === "error" && (
         <>
           <p className="mt-3 text-sm text-destructive">
-            This verification link is invalid or has expired.
+            {t(
+              "auth.verifyEmail.invalidLink",
+              "This verification link is invalid or has expired.",
+            )}
           </p>
           <Link
             href="/"
             className="mt-6 inline-block text-sm text-primary hover:underline"
           >
-            Open OpenVPM to resend
+            {t("auth.verifyEmail.resendLink", "Open OpenVPM to resend")}
           </Link>
         </>
       )}
@@ -73,6 +80,7 @@ function ConfirmToken({ token }: { token: string }) {
 }
 
 function VerificationRecovery() {
+  const { t } = useI18n();
   return (
     <Shell>
       <div className="mt-4 flex justify-center">
@@ -81,21 +89,25 @@ function VerificationRecovery() {
         </span>
       </div>
       <h2 className="mt-4 font-heading text-lg font-semibold text-foreground">
-        Confirm your email
+        {t("auth.verifyEmail.recoveryTitle", "Confirm your email")}
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Your trial is already active. Open OpenVPM and use the verification
-        banner to send a new link securely. Any unexpired verification link will
-        work.
+        {t(
+          "auth.verifyEmail.recoveryDesc",
+          "Your trial is already active. Open OpenVPM and use the verification banner to send a new link securely. Any unexpired verification link will work.",
+        )}
       </p>
       <Link
         href="/"
         className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
       >
-        Open OpenVPM
+        {t("auth.verifyEmail.openApp", "Open OpenVPM")}
       </Link>
       <p className="mt-4 text-xs text-muted-foreground">
-        If you&apos;re signed out, OpenVPM will ask you to sign in first.
+        {t(
+          "auth.verifyEmail.signedOutNote",
+          "If you're signed out, OpenVPM will ask you to sign in first.",
+        )}
       </p>
     </Shell>
   );

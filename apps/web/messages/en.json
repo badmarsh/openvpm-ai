@@ -436,6 +436,91 @@
       "noAccount": "Don't have an account?",
       "startClinic": "Start my clinic",
       "register": "Register your practice"
+    },
+    "register": {
+      "steps": {
+        "step1Of4": "Step 1 of 4",
+        "step2Of4": "Step 2 of 4",
+        "step3Of4": "Step 3 of 4",
+        "step4Of4": "Step 4 of 4"
+      },
+      "title": "A platform truly built for your clinic.",
+      "subtitle": "Tell us what your team needs first. We’ll shape a useful first day before asking you to create the workspace.",
+      "showWorkflows": "Show my workflows",
+      "workflowTitle": "What would you like to see?",
+      "workflowSubtitle": "Pick one useful workflow and we’ll shape around it.",
+      "seeFirstDay": "See my first day",
+      "firstDayReady": "Your first day is ready.",
+      "secureWorkspace": "Secure my workspace",
+      "accountTitle": "Secure your workspace.",
+      "accountSubtitle": "Create your practice admin account to finalize setup.",
+      "practiceName": "Practice name",
+      "practiceNamePlaceholder": "e.g. Riverbend Animal Hospital",
+      "workEmail": "Work email",
+      "workEmailPlaceholder": "you@clinic.com",
+      "password": "Password",
+      "passwordPlaceholder": "Create a strong password",
+      "country": "Clinic country",
+      "selectCountry": "Choose a country",
+      "submit": "Complete registration",
+      "submitting": "Creating workspace...",
+      "alreadyAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "errors": {
+        "practiceNameRequired": "Add your practice name to continue.",
+        "practiceNameTooLong": "Practice name must be at most {max} characters.",
+        "emailTooLong": "Email must be at most {max} characters.",
+        "emailInvalid": "Add a valid work email.",
+        "countryRequired": "Choose your clinic country.",
+        "countryUnavailable": "Hosted workspaces are not available in your country yet.",
+        "passwordMinLength": "Use at least {min} characters for the password.",
+        "hostedCheckoutUnavailable": "Hosted checkout is unavailable. Please try again.",
+        "accountCreatedSignIn": "Account created. Please sign in."
+      }
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "sentNotice": "If an account exists for {email}, we've sent a reset link. Check your inbox.",
+      "email": "Email",
+      "emailPlaceholder": "you@clinic.com",
+      "sending": "Sending…",
+      "sendLink": "Send reset link",
+      "backToSignIn": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "success": "Your password has been reset.",
+      "signIn": "Sign in",
+      "invalidLink": "This reset link is invalid. Request a new one from the sign-in page.",
+      "lengthError": "Use {min}-{max} characters.",
+      "newPassword": "New password",
+      "placeholder": "At least {min} characters",
+      "resetting": "Resetting…",
+      "resetButton": "Reset password"
+    },
+    "verifyEmail": {
+      "verifying": "Verifying your email…",
+      "confirmed": "Email confirmed. Your trial was already active, so you can continue where you left off.",
+      "openApp": "Open OpenVPM",
+      "invalidLink": "This verification link is invalid or has expired.",
+      "resendLink": "Open OpenVPM to resend",
+      "recoveryTitle": "Confirm your email",
+      "recoveryDesc": "Your trial is already active. Open OpenVPM and use the verification banner to send a new link securely. Any unexpired verification link will work.",
+      "signedOutNote": "If you're signed out, OpenVPM will ask you to sign in first."
+    },
+    "acceptInvite": {
+      "title": "Accept your invite",
+      "success": "Your account is ready. You can now sign in.",
+      "signIn": "Sign in",
+      "invalidLink": "This invite link is invalid. Ask your administrator to send a new one.",
+      "lengthError": "Use {min}-{max} characters.",
+      "mismatchError": "Passwords don't match",
+      "createPassword": "Create a password",
+      "placeholder": "At least {min} characters",
+      "confirmPassword": "Confirm password",
+      "confirmPlaceholder": "Re-enter your password",
+      "activating": "Activating…",
+      "activateButton": "Activate account"
     }
   },
   "billing": {
@@ -5249,6 +5334,98 @@
           "title": "Your first day is ready."
         }
       }
+    },
+    "models": {
+      "companion": {
+        "label": "Companion animal clinic",
+        "shortLabel": "Companion animal"
+      },
+      "mobile": {
+        "label": "Mobile or house-call practice",
+        "shortLabel": "Mobile or house-call"
+      },
+      "equine": {
+        "label": "Equine or farm practice",
+        "shortLabel": "Equine or farm"
+      },
+      "specialty": {
+        "label": "Specialty or wellness",
+        "shortLabel": "Specialty or wellness"
+      },
+      "shelter": {
+        "label": "Shelter or nonprofit",
+        "shortLabel": "Shelter or nonprofit"
+      },
+      "exploring": {
+        "label": "I’m exploring",
+        "shortLabel": "Exploring"
+      }
+    },
+    "firstGoals": {
+      "run_visit": {
+        "title": "Run one real visit",
+        "body": "Add one owner and pet, then work from check-in through the client handoff.",
+        "pictureLabel": "Your clinic day",
+        "rowLabel": "New patient"
+      },
+      "import_records": {
+        "title": "Plan a safe first import",
+        "body": "Inventory an export and review one representative chart before anything goes live.",
+        "pictureLabel": "Migration preview",
+        "rowLabel": "Review one chart"
+      },
+      "start_fresh": {
+        "title": "Build your first real visit",
+        "body": "Set your clinic basics, add one owner and pet, then book the first appointment.",
+        "pictureLabel": "Your clinic day",
+        "rowLabel": "First appointment"
+      },
+      "explore_sample": {
+        "title": "Explore a ready-made clinic",
+        "body": "Open a sample schedule and patient timeline without using real clinic data.",
+        "pictureLabel": "Sample clinic",
+        "rowLabel": "Guided visit"
+      },
+      "self_host": {
+        "title": "Review the self-hosted path",
+        "body": "Confirm deployment and data-ownership controls before moving any live work.",
+        "pictureLabel": "Self-hosted setup",
+        "rowLabel": "Deployment plan"
+      },
+      "ariaLabel": "Your first-day recommendations",
+      "tagBestNextStep": "Best next step",
+      "importedData": {
+        "title": "Book one real appointment",
+        "body": "Choose a patient from your reviewed records and put one visit on the schedule.",
+        "pictureLabel": "Your clinic day",
+        "rowLabel": "First visit"
+      },
+      "cardBilling": {
+        "title": "Make getting paid easy",
+        "body": "Send an online invoice and let clients pay by card from their private link.",
+        "tag": "Get paid faster",
+        "pictureLabel": "Client billing",
+        "invoiceTotal": "Invoice total",
+        "paySecurely": "Pay securely online"
+      },
+      "cardPortal": {
+        "title": "Give clients one simple place",
+        "body": "Share visits, vaccine history, and bills through a private client portal.",
+        "tag": "Fewer status calls",
+        "pictureLabel": "Client portal",
+        "allInOne": "Everything in one link",
+        "summary": "Visits · Vaccines · Bills"
+      }
+    },
+    "migrationHelp": {
+      "titleRequested": "Migration review requested",
+      "titlePrompt": "Want us to review the export first?",
+      "bodyRequested": "We will contact your clinic admin with a private transfer and review plan. Keep the files where they are until then.",
+      "bodyPrompt": "Request a hands-on review before importing. Do not email patient files or use an Anyone-with-the-link folder. We will contact your clinic admin with a private transfer plan.",
+      "buttonRequested": "Request saved",
+      "buttonPrompt": "Request private review",
+      "toastRequested": "Migration review requested",
+      "submitting": "Saving request..."
     }
   },
   "species": {
@@ -5850,5 +6027,53 @@
   "integrationMode": {
     "simulation": "SIMULATION MODE (No external authority dispatch)",
     "production": "PRODUCTION MODE (Active external authority dispatch)"
+  },
+  "demo": {
+    "banner": {
+      "title": "Like this workflow?",
+      "subtitle": "Start a free Cloud trial with your own clinic data.",
+      "startClinic": "Start my clinic"
+    },
+    "roleSwitcher": {
+      "label": "Explore as",
+      "ariaLabel": "Demo role. Current role: {role}",
+      "viewingAs": "Viewing demo as {role}",
+      "switchingTo": "Switching to {role}...",
+      "switchError": "We couldn't switch roles. Your current role is unchanged. Try again.",
+      "refreshNotice": "Role changed. Refresh this page to finish switching views."
+    },
+    "roles": {
+      "admin": "Practice Admin",
+      "veterinarian": "Veterinarian",
+      "technician": "Technician",
+      "front_desk": "Front Desk"
+    }
+  },
+  "layout": {
+    "trialBadge": {
+      "statusUnavailable": "Billing status unavailable",
+      "paymentRetrying": "Payment retrying · Review billing",
+      "paymentUnpaid": "Payment unpaid · Read only",
+      "billingConnected": "Billing connected · Manage billing",
+      "activateAccount": "Activate account",
+      "trialEndsToday": "Trial ends today",
+      "daysLeftInTrial": "{days} days left in trial",
+      "daysLeftInTrialSingular": "{days} day left in trial",
+      "daysLeftInTrialFew": "{days} days left in trial",
+      "trialEnded": "Trial ended, read only · Turn it back on"
+    },
+    "verifyEmail": {
+      "errorCheck": "Unable to check email verification status.",
+      "retry": "Retry",
+      "dismiss": "Dismiss",
+      "bannerText": "Verify your email{email} to secure your account and keep reminders deliverable.",
+      "resend": "Resend email"
+    },
+    "recoveryReview": {
+      "ariaLabel": "Protected data review mode",
+      "title": "Protected data review mode is active",
+      "description": "You can inspect imported history safely. Operational changes, automated activity, and external delivery remain paused.",
+      "continue": "Continue the data review"
+    }
   }
 }

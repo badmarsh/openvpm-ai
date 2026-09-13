@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Mail, X, Loader2, Check } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 const DISMISS_KEY = "ovpm_verify_email_dismissed";
 
@@ -13,6 +14,7 @@ const DISMISS_KEY = "ovpm_verify_email_dismissed";
  * for the session, with a one-click resend.
  */
 export function VerifyEmailBanner() {
+  const { t } = useI18n();
   const [dismissed, setDismissed] = useState(true); // assume dismissed until we read storage
   const { data, isLoading, error, refetch } = trpc.auth.me.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
@@ -38,18 +40,23 @@ export function VerifyEmailBanner() {
     return (
       <div className="flex items-center gap-3 border-b border-destructive/30 bg-destructive/5 px-6 py-2.5 text-sm text-destructive">
         <AlertTriangle className="h-4 w-4 shrink-0" />
-        <p className="flex-1">Unable to check email verification status.</p>
+        <p className="flex-1">
+          {t(
+            "layout.verifyEmail.errorCheck",
+            "Unable to check email verification status.",
+          )}
+        </p>
         <button
           type="button"
           onClick={() => void refetch()}
           className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-background px-2.5 py-1 text-xs font-medium hover:bg-destructive/10"
         >
-          Retry
+          {t("layout.verifyEmail.retry", "Retry")}
         </button>
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Dismiss"
+          aria-label={t("layout.verifyEmail.dismiss", "Dismiss")}
           className="rounded p-1 hover:bg-destructive/10"
         >
           <X className="h-4 w-4" />
@@ -87,8 +94,11 @@ export function VerifyEmailBanner() {
           </span>
         ) : (
           <>
-            Verify your email{data.email ? ` (${data.email})` : ""} to secure
-            your account and keep reminders deliverable.
+            {t(
+              "layout.verifyEmail.bannerText",
+              `Verify your email${data.email ? ` (${data.email})` : ""} to secure your account and keep reminders deliverable.`,
+              { email: data.email ? ` (${data.email})` : "" },
+            )}
           </>
         )}
         {resend.error ? (
@@ -107,13 +117,13 @@ export function VerifyEmailBanner() {
           {resend.isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : null}
-          Resend email
+          {t("layout.verifyEmail.resend", "Resend email")}
         </button>
       )}
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Dismiss"
+        aria-label={t("layout.verifyEmail.dismiss", "Dismiss")}
         className="shrink-0 rounded p-1 text-amber-700 hover:bg-amber-100"
       >
         <X className="h-4 w-4" />

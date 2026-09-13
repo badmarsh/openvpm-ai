@@ -1,8 +1,8 @@
 export const DEMO_ROLE_OPTIONS = [
-  { value: "admin", label: "Practice Admin" },
-  { value: "veterinarian", label: "Veterinarian" },
-  { value: "technician", label: "Technician" },
-  { value: "front_desk", label: "Front Desk" },
+  { value: "admin", label: "Správca praxe" },
+  { value: "veterinarian", label: "Veterinárny lekár" },
+  { value: "technician", label: "Veterinárny asistent / technik" },
+  { value: "front_desk", label: "Recepcia" },
 ] as const;
 
 export type DemoSwitcherRole = (typeof DEMO_ROLE_OPTIONS)[number]["value"];
@@ -69,10 +69,20 @@ export function isDemoSwitcherRole(
   return DEMO_ROLE_OPTIONS.some((role) => role.value === value);
 }
 
-export function demoRoleLabel(role: DemoSwitcherRole): string {
-  return (
-    DEMO_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role
-  );
+export function demoRoleLabel(
+  role: DemoSwitcherRole,
+  t?: (
+    key: string,
+    fallback?: string,
+    params?: Record<string, string | number>,
+  ) => string,
+): string {
+  const defaultLabel =
+    DEMO_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
+  if (t) {
+    return t(`demo.roles.${role}`, defaultLabel);
+  }
+  return defaultLabel;
 }
 
 export function shouldShowDemoRoleSwitcher(

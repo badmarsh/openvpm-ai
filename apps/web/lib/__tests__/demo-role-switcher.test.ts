@@ -16,10 +16,10 @@ import {
 describe("post-gate demo role switcher", () => {
   it("offers every seeded clinic role with a human-readable label", () => {
     expect(DEMO_ROLE_OPTIONS).toEqual([
-      { value: "admin", label: "Practice Admin" },
-      { value: "veterinarian", label: "Veterinarian" },
-      { value: "technician", label: "Technician" },
-      { value: "front_desk", label: "Front Desk" },
+      { value: "admin", label: "Správca praxe" },
+      { value: "veterinarian", label: "Veterinárny lekár" },
+      { value: "technician", label: "Veterinárny asistent / technik" },
+      { value: "front_desk", label: "Recepcia" },
     ]);
   });
 
@@ -118,9 +118,9 @@ describe("post-gate demo role switcher", () => {
         onRoleChange: vi.fn(),
       }),
     );
-    expect(currentMarkup).toContain("Explore as");
-    expect(currentMarkup).toContain("Current role: Front Desk");
-    expect(currentMarkup).toContain("Viewing demo as Front Desk");
+    expect(currentMarkup).toContain("Preskúmať ako");
+    expect(currentMarkup).toContain("Aktuálna rola: Recepcia");
+    expect(currentMarkup).toContain("Prezeranie demo ako Recepcia");
     expect(currentMarkup).toContain('value="front_desk" selected=""');
     expect(currentMarkup).not.toContain(' disabled=""');
 
@@ -133,7 +133,7 @@ describe("post-gate demo role switcher", () => {
       }),
     );
     expect(pendingMarkup).toContain(' disabled=""');
-    expect(pendingMarkup).toContain("Switching to Technician");
+    expect(pendingMarkup).toContain("Prepínanie na Veterinárny asistent / technik");
     expect(pendingMarkup).toContain("animate-spin");
   });
 

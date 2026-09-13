@@ -58,8 +58,8 @@ describe("demo conversion bridge UI", () => {
     expect(register).not.toContain(
       "Just your practice name and work email for now.",
     );
-    expect(register).toContain('label="Practice name"');
-    expect(register).toContain('label="Work email"');
+    expect(register).toContain('auth.register.practiceName');
+    expect(register).toContain('auth.register.workEmail');
     expect(register).toContain("See my first day");
     expect(register).toContain("Your first day is ready.");
     expect(register).toContain(
@@ -74,7 +74,7 @@ describe("demo conversion bridge UI", () => {
     expect(firstDayRecommendations).toContain("Plan a safe first import");
     expect(firstDayRecommendations).toContain("Explore a ready-made clinic");
     expect(firstDayRecommendations).toContain("Review the self-hosted path");
-    expect(register).toContain('label="Password"');
+    expect(register).toContain('auth.register.password');
     expect(register).not.toContain(
       "Two quick choices make the rest of setup feel like your clinic—not a generic software tour.",
     );
@@ -97,7 +97,7 @@ describe("demo conversion bridge UI", () => {
   it("mounts the demo bar and path tracker in the dashboard shell", () => {
     expect(layout).toContain("DemoConversionBar");
     expect(layout).toContain("DemoFunnelTracker");
-    expect(bar).toContain("Start my clinic");
+    expect(bar).toContain("demo.banner.startClinic");
     expect(bar).toContain("buildCloudSignupUrl");
     expect(tracker).toContain("FUNNEL_EVENTS.demoToolOpened");
   });
