@@ -19,6 +19,7 @@ import { automationEventsRouter } from "./automation-events";
 import { automationRulesRouter } from "./automation-rules";
 import { automationJourneysRouter } from "./automation-journeys";
 import { automationEnrollmentsRouter } from "./automation-enrollments";
+import { automationSuppressionRouter } from "./automation-suppression";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -45,6 +46,7 @@ export const extensionsRouter = createRouter({
   automationRules: automationRulesRouter,
   automationJourneys: automationJourneysRouter,
   automationEnrollments: automationEnrollmentsRouter,
+  automationSuppression: automationSuppressionRouter,
 });
 
 export {
