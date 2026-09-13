@@ -2092,7 +2092,24 @@
       "segmentRecomputed": "Segment bol prepočítaný ({count} klientov).",
       "segmentRecomputeError": "Nepodarilo sa prepočítať segment.",
       "channelHealthy": "Kanál {provider} je aktívny a odpovedá.",
-      "channelTestError": "Chyba testovania kanála."
+      "channelTestError": "Chyba testovania kanála.",
+      "connectChannelBtn": "Pripojiť nový kanál",
+      "connectedSince": "Pripojené",
+      "syncReviews": "Synchronizovať recenzie",
+      "syncReviewsShort": "Sync",
+      "disconnectChannel": "Odpojiť",
+      "modalConnectTitle": "Pripojiť nový kanál",
+      "modalConnectDesc": "Vyberte platformu a zadajte identifikátor účtu pre automatizáciu sociálnych médií a zber recenzií.",
+      "modalPlatform": "Platforma",
+      "modalDisplayName": "Názov účtu / zobrazenie",
+      "modalAccountId": "Externé ID účtu / lokality",
+      "modalBtnSubmit": "Pripojiť kanál",
+      "channelConnected": "Kanál \"{name}\" bol úspešne pripojený.",
+      "channelConnectError": "Chyba pri pripájaní kanála.",
+      "channelDisconnected": "Kanál bol odpojený.",
+      "channelDisconnectError": "Chyba pri odpájaní kanála.",
+      "reviewsSynced": "Synchronizácia dokončená: načítaných {count} nových recenzií, eskalovaných {escalated}.",
+      "reviewsSyncError": "Chyba pri synchronizácii recenzií."
     }
   },
   "nav": {

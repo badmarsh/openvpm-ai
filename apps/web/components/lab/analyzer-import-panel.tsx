@@ -25,6 +25,8 @@ import type {
   LabAnalyteResult,
   AnalyzerType,
 } from "@/lib/lab/analyzer-parser";
+import { ConfidenceScoreBadge } from "@/components/copilot/confidence-score-badge";
+import { ClinicalDiffConfirmModal } from "@/components/copilot/clinical-diff-confirm-modal";
 
 export function AnalyzerImportPanel() {
   const { t } = useI18n();
@@ -307,6 +309,10 @@ function AnalyzerUploadModal({
   const [species, setSpecies] = useState<"canine" | "feline" | "other">("canine");
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedPatientName, setSelectedPatientName] = useState("");
+  const [confidenceScore, setConfidenceScore] = useState<number | null>(null);
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const [parsedPreview, setParsedPreview] = useState<{
     analyzerType: AnalyzerType;
@@ -324,12 +330,34 @@ function AnalyzerUploadModal({
   const parseMutation = trpc.extensions.labImport.parseFile.useMutation({
     onSuccess: (data) => {
       setParsedPreview(data);
+      setConfidenceScore(null);
       toast.success(
         "Analyzované: " + data.results.length + " parametrov (" + data.analyzerType + (data.deviceModel ? " - " + data.deviceModel : "") + ")"
       );
     },
     onError: (err: any) => {
       toast.error(err.message || "Chyba pri analýze súboru");
+    },
+  });
+
+  const parsePdfMutation = trpc.extensions.labImport.parsePdfOrImageReport.useMutation({
+    onSuccess: (data) => {
+      setIsPdfLoading(false);
+      setParsedPreview({
+        analyzerType: data.analyzerType,
+        deviceModel: data.deviceModel,
+        results: data.results,
+        abnormalCount: data.abnormalCount,
+        criticalCount: data.criticalCount,
+      });
+      setConfidenceScore(data.confidenceScore);
+      toast.success(
+        `AI analýza protokolu: ${data.results.length} parametrov (spoľahlivosť ${Math.round(data.confidenceScore * 100)}%)`
+      );
+    },
+    onError: (err: any) => {
+      setIsPdfLoading(false);
+      toast.error(err.message || "Chyba pri AI analýze PDF protokolu");
     },
   });
 
@@ -348,19 +376,41 @@ function AnalyzerUploadModal({
     if (!file) return;
 
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (content) {
-        setRawText(content);
-        parseMutation.mutate({
-          content,
-          fileName: file.name,
-          species,
-        });
-      }
-    };
-    reader.readAsText(file);
+    const isPdfOrImg = file.name.toLowerCase().endsWith(".pdf") || file.type.includes("pdf") || file.type.includes("image");
+
+    if (isPdfOrImg) {
+      setIsPdfLoading(true);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64Content = event.target?.result as string;
+        if (base64Content) {
+          parsePdfMutation.mutate({
+            fileName: file.name,
+            fileContentBase64: base64Content,
+            mimeType: file.type || "application/pdf",
+            species,
+            patientId: selectedPatientId || undefined,
+            createDraft: false,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        if (content) {
+          setRawText(content);
+          setConfidenceScore(null);
+          parseMutation.mutate({
+            content,
+            fileName: file.name,
+            species,
+          });
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const handleParseManual = () => {
@@ -368,6 +418,7 @@ function AnalyzerUploadModal({
       toast.error("Vložte text alebo vyberte súbor");
       return;
     }
+    setConfidenceScore(null);
     parseMutation.mutate({
       content: rawText,
       fileName: fileName || "manual_export.csv",
@@ -378,6 +429,12 @@ function AnalyzerUploadModal({
   const handleSave = () => {
     if (!parsedPreview || parsedPreview.results.length === 0) {
       toast.error("Žiadne načítané parametre na uloženie");
+      return;
+    }
+
+    if (confidenceScore !== null) {
+      // Human-in-the-loop clinical verification (Act 39/2007 & Act 139/1998)
+      setIsDiffModalOpen(true);
       return;
     }
 
@@ -450,6 +507,7 @@ function AnalyzerUploadModal({
                       key={p.id}
                       onClick={() => {
                         setSelectedPatientId(p.id);
+                        setSelectedPatientName(p.name);
                         setPatientSearch(p.name + " (" + p.species + ")");
                         if (p.species?.toLowerCase().includes("mač") || p.species?.toLowerCase().includes("cat")) {
                           setSpecies("feline");
@@ -475,16 +533,25 @@ function AnalyzerUploadModal({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.txt,.dat"
+              accept=".csv,.txt,.dat,.pdf,.png,.jpg,.jpeg"
               onChange={handleFileUpload}
               className="hidden"
             />
             <FileSpreadsheet className="mx-auto h-8 w-8 text-primary mb-2" />
             <div className="text-sm font-medium">
-              {fileName ? fileName : "Kliknite pre výber CSV/TXT súboru z analyzátora"}
+              {isPdfLoading ? (
+                <span className="flex items-center justify-center gap-2 text-primary font-semibold">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  AI Copilot analyzuje PDF protokol...
+                </span>
+              ) : fileName ? (
+                fileName
+              ) : (
+                "Kliknite pre výber súboru (CSV, TXT, PDF protokol z laboratória)"
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Podporuje súbory z USB alebo sieťového priečinka analyzátora
+              Podporuje IDEXX Catalyst/ProCyte, Mindray, Fuji Dri-Chem a PDF protokoly (Laboklin, Synlab, Alpha)
             </p>
           </div>
 
@@ -509,7 +576,7 @@ function AnalyzerUploadModal({
           {/* PARSED PREVIEW TABLE */}
           {parsedPreview && (
             <div className="space-y-2 border-t border-border pt-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs font-semibold">
                     {parsedPreview.analyzerType} {parsedPreview.deviceModel ? "• " + parsedPreview.deviceModel : ""}
@@ -517,6 +584,9 @@ function AnalyzerUploadModal({
                   <span className="text-xs text-muted-foreground">
                     ({parsedPreview.results.length} nájdených parametrov)
                   </span>
+                  {confidenceScore !== null && (
+                    <ConfidenceScoreBadge score={confidenceScore} size="sm" />
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   {parsedPreview.criticalCount > 0 && (
@@ -533,42 +603,44 @@ function AnalyzerUploadModal({
               </div>
 
               <div className="max-h-48 overflow-y-auto rounded-md border border-border">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-muted/40 sticky top-0">
-                    <tr className="border-b border-border text-muted-foreground">
-                      <th className="px-3 py-1.5">Kód</th>
-                      <th className="px-3 py-1.5">Názov</th>
-                      <th className="px-3 py-1.5 text-right">Hodnota</th>
-                      <th className="px-3 py-1.5">Jednotka</th>
-                      <th className="px-3 py-1.5">Referenčný rozsah</th>
-                      <th className="px-3 py-1.5 text-center">Nález</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {parsedPreview.results.map((r, i) => (
-                      <tr key={i} className="hover:bg-muted/30">
-                        <td className="px-3 py-1 font-mono font-medium">{r.code}</td>
-                        <td className="px-3 py-1 text-muted-foreground">{r.name}</td>
-                        <td className="px-3 py-1 text-right font-mono font-semibold">{r.value}</td>
-                        <td className="px-3 py-1 text-muted-foreground">{r.unit}</td>
-                        <td className="px-3 py-1 text-muted-foreground">
-                          {r.refLow != null && r.refHigh != null ? r.refLow + " - " + r.refHigh : "—"}
-                        </td>
-                        <td className="px-3 py-1 text-center">
-                          {r.flag === "CRITICAL" ? (
-                            <Badge variant="destructive" className="text-[9px] px-1 py-0">Kritické</Badge>
-                          ) : r.flag === "HIGH" ? (
-                            <Badge variant="outline" className="border-amber-500 text-amber-700 text-[9px] px-1 py-0">Zvýšené</Badge>
-                          ) : r.flag === "LOW" ? (
-                            <Badge variant="outline" className="border-blue-500 text-blue-700 text-[9px] px-1 py-0">Znížené</Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[9px] px-1 py-0">Norma</Badge>
-                          )}
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/40 sticky top-0">
+                      <tr className="border-b border-border text-muted-foreground">
+                        <th className="px-3 py-1.5">Kód</th>
+                        <th className="px-3 py-1.5">Názov</th>
+                        <th className="px-3 py-1.5 text-right">Hodnota</th>
+                        <th className="px-3 py-1.5">Jednotka</th>
+                        <th className="px-3 py-1.5">Referenčný rozsah</th>
+                        <th className="px-3 py-1.5 text-center">Nález</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {parsedPreview.results.map((r, i) => (
+                        <tr key={i} className="hover:bg-muted/30">
+                          <td className="px-3 py-1 font-mono font-medium">{r.code}</td>
+                          <td className="px-3 py-1 text-muted-foreground">{r.name}</td>
+                          <td className="px-3 py-1 text-right font-mono font-semibold">{r.value}</td>
+                          <td className="px-3 py-1 text-muted-foreground">{r.unit}</td>
+                          <td className="px-3 py-1 text-muted-foreground">
+                            {r.refLow != null && r.refHigh != null ? r.refLow + " - " + r.refHigh : "—"}
+                          </td>
+                          <td className="px-3 py-1 text-center">
+                            {r.flag === "CRITICAL" ? (
+                              <Badge variant="destructive" className="text-[9px] px-1 py-0">Kritické</Badge>
+                            ) : r.flag === "HIGH" ? (
+                              <Badge variant="outline" className="border-amber-500 text-amber-700 text-[9px] px-1 py-0">Zvýšené</Badge>
+                            ) : r.flag === "LOW" ? (
+                              <Badge variant="outline" className="border-blue-500 text-blue-700 text-[9px] px-1 py-0">Znížené</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[9px] px-1 py-0">Norma</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -576,19 +648,48 @@ function AnalyzerUploadModal({
 
         {/* Modal Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3 bg-muted/20">
-          <Button variant="outline" size="sm" onClick={onClose} disabled={saveMutation.isPending}>
+          <Button variant="outline" size="sm" onClick={onClose} disabled={saveMutation.isPending || isPdfLoading}>
             Zrušiť
           </Button>
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={saveMutation.isPending || !parsedPreview || parsedPreview.results.length === 0}
+            disabled={saveMutation.isPending || isPdfLoading || !parsedPreview || parsedPreview.results.length === 0}
           >
             {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Uložiť nález
+            {confidenceScore !== null ? "Overiť a schváliť (KVL)" : "Uložiť nález"}
           </Button>
         </div>
       </div>
+
+      {/* Clinical Diff Confirmation Modal (Act 39/2007 & Act 139/1998) */}
+      {isDiffModalOpen && parsedPreview && (
+        <ClinicalDiffConfirmModal
+          isOpen={isDiffModalOpen}
+          onClose={() => setIsDiffModalOpen(false)}
+          onConfirm={() => {
+            setIsDiffModalOpen(false);
+            saveMutation.mutate({
+              patientId: selectedPatientId || undefined,
+              analyzerType: parsedPreview.analyzerType,
+              deviceModel: parsedPreview.deviceModel,
+              species,
+              fileName: fileName || "lab_report.pdf",
+              rawContent: rawText || fileName || "PDF Import",
+              parsedResults: parsedPreview.results,
+            });
+          }}
+          patientName={selectedPatientName || "Nepriradený pacient"}
+          species={species}
+          sourceTitle={`PDF Laboratórny protokol (${fileName || "Protokol"})`}
+          overallConfidence={confidenceScore ?? 0.92}
+          fields={parsedPreview.results.map((r) => ({
+            label: `${r.name} (${r.code})`,
+            proposedValue: `${r.value} ${r.unit || ""}`.trim(),
+            confidence: confidenceScore ?? 0.9,
+          }))}
+        />
+      )}
     </div>
   );
 }

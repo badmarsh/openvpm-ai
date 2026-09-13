@@ -2092,7 +2092,24 @@
       "segmentRecomputed": "Segment was recomputed ({count} clients).",
       "segmentRecomputeError": "Failed to recompute segment.",
       "channelHealthy": "Channel {provider} is active and healthy.",
-      "channelTestError": "Channel connection test failed."
+      "channelTestError": "Channel connection test failed.",
+      "connectChannelBtn": "Connect New Channel",
+      "connectedSince": "Connected",
+      "syncReviews": "Synchronize reviews",
+      "syncReviewsShort": "Sync",
+      "disconnectChannel": "Disconnect",
+      "modalConnectTitle": "Connect New Channel",
+      "modalConnectDesc": "Select a platform and enter the account identifier for social media automation and review collection.",
+      "modalPlatform": "Platform",
+      "modalDisplayName": "Account Display Name",
+      "modalAccountId": "External Account / Location ID",
+      "modalBtnSubmit": "Connect Channel",
+      "channelConnected": "Channel \"{name}\" was successfully connected.",
+      "channelConnectError": "Failed to connect channel.",
+      "channelDisconnected": "Channel disconnected.",
+      "channelDisconnectError": "Failed to disconnect channel.",
+      "reviewsSynced": "Sync complete: {count} new reviews loaded, {escalated} escalated.",
+      "reviewsSyncError": "Failed to sync reviews."
     }
   },
   "nav": {

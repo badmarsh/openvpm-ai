@@ -17,12 +17,24 @@ import {
   ExternalLink,
   MessageSquare,
   Sparkles,
+  Plus,
+  Unlink,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export default function MarketingAutomationsPage() {
@@ -89,6 +101,52 @@ export default function MarketingAutomationsPage() {
       toast.error(err.message || t("marketing.automations.channelTestError", "Chyba testovania kanála."));
     },
   });
+
+  const connectChannelMutation = trpc.extensions.automationChannels.connect.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        t("marketing.automations.channelConnected", `Kanál "${data.displayName}" bol úspešne pripojený.`, { name: data.displayName ?? "" })
+      );
+      setIsConnectModalOpen(false);
+      setConnectDisplayName("");
+      setConnectAccountId("");
+      utils.extensions.automationChannels.list.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.automations.channelConnectError", "Chyba pri pripájaní kanála."));
+    },
+  });
+
+  const disconnectChannelMutation = trpc.extensions.automationChannels.disconnect.useMutation({
+    onSuccess: () => {
+      toast.success(t("marketing.automations.channelDisconnected", "Kanál bol odpojený."));
+      utils.extensions.automationChannels.list.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.automations.channelDisconnectError", "Chyba pri odpájaní kanála."));
+    },
+  });
+
+  const syncReviewsMutation = trpc.extensions.marketing.syncExternalReviews.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        t("marketing.automations.reviewsSynced", `Synchronizácia dokončená: načítaných ${data.insertedCount} nových recenzií, eskalovaných ${data.escalatedCount}.`, {
+          count: data.insertedCount,
+          escalated: data.escalatedCount,
+        })
+      );
+      utils.extensions.marketing.listReviews.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.automations.reviewsSyncError", "Chyba pri synchronizácii recenzií."));
+    },
+  });
+
+  // Modal State for Channel Connection
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [connectProvider, setConnectProvider] = useState<"google_business" | "facebook" | "instagram" | "youtube">("google_business");
+  const [connectDisplayName, setConnectDisplayName] = useState("");
+  const [connectAccountId, setConnectAccountId] = useState("");
 
   // 5. Live Events Query
   const eventsQuery = trpc.extensions.automationEvents.list.useQuery({ limit: 30 });
@@ -427,13 +485,25 @@ export default function MarketingAutomationsPage() {
 
         {/* 4. CHANNELS TAB */}
         <TabsContent value="channels" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {t(
                 "marketing.automations.channelsDesc",
                 "Prepojenie sociálnych sietí a Google profilu pre automatické publikovanie a zber recenzií."
               )}
             </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                setConnectDisplayName("");
+                setConnectAccountId("");
+                setIsConnectModalOpen(true);
+              }}
+              className="gap-1.5 text-xs shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {t("marketing.automations.connectChannelBtn", "Pripojiť nový kanál")}
+            </Button>
           </div>
 
           {channelsQuery.isLoading ? (
@@ -449,10 +519,15 @@ export default function MarketingAutomationsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {channelsQuery.data.map((ch) => {
                 const isTesting =
                   testChannelMutation.isPending && testChannelMutation.variables?.id === ch.id;
+                const isDisconnecting =
+                  disconnectChannelMutation.isPending && disconnectChannelMutation.variables?.id === ch.id;
+                const isReviewSyncing =
+                  syncReviewsMutation.isPending &&
+                  (ch.provider === "google_business" || ch.provider === "facebook");
 
                 return (
                   <div
@@ -489,20 +564,56 @@ export default function MarketingAutomationsPage() {
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-border/60 flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground">
-                        {ch.connectedAt ? new Date(ch.connectedAt).toLocaleDateString("sk-SK") : "—"}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs px-2.5"
-                        disabled={isTesting}
-                        onClick={() => testChannelMutation.mutate({ id: ch.id })}
-                      >
-                        <Activity className={`w-3 h-3 mr-1 text-primary ${isTesting ? "animate-pulse" : ""}`} />
-                        {t("marketing.automations.testConnection", "Test spojenia")}
-                      </Button>
+                    <div className="pt-3 border-t border-border/60 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>{t("marketing.automations.connectedSince", "Pripojené")}:</span>
+                        <span>{ch.connectedAt ? new Date(ch.connectedAt).toLocaleDateString("sk-SK") : "—"}</span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2.5 flex-1"
+                          disabled={isTesting}
+                          onClick={() => testChannelMutation.mutate({ id: ch.id })}
+                        >
+                          <Activity className={`w-3 h-3 mr-1 text-primary ${isTesting ? "animate-pulse" : ""}`} />
+                          {t("marketing.automations.testConnection", "Test")}
+                        </Button>
+
+                        {(ch.provider === "google_business" || ch.provider === "facebook") && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs px-2.5"
+                            disabled={isReviewSyncing}
+                            onClick={() =>
+                              syncReviewsMutation.mutate({
+                                platform: ch.provider === "google_business" ? "google" : "facebook",
+                                simulateNewReviews: true,
+                              })
+                            }
+                            title={t("marketing.automations.syncReviews", "Synchronizovať recenzie")}
+                          >
+                            <RefreshCw className={`w-3 h-3 mr-1 ${isReviewSyncing ? "animate-spin" : ""}`} />
+                            {t("marketing.automations.syncReviewsShort", "Sync")}
+                          </Button>
+                        )}
+
+                        {ch.status === "connected" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs px-2 text-destructive hover:text-destructive"
+                            disabled={isDisconnecting}
+                            onClick={() => disconnectChannelMutation.mutate({ id: ch.id })}
+                            title={t("marketing.automations.disconnectChannel", "Odpojiť")}
+                          >
+                            <Unlink className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -640,6 +751,88 @@ export default function MarketingAutomationsPage() {
           </li>
         </ul>
       </div>
+
+      {/* Connect Channel Modal */}
+      <Dialog open={isConnectModalOpen} onOpenChange={setIsConnectModalOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-primary" />
+              {t("marketing.automations.modalConnectTitle", "Pripojiť nový kanál")}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "marketing.automations.modalConnectDesc",
+                "Vyberte platformu a zadajte identifikátor účtu pre automatizáciu sociálnych médií a zber recenzií."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="provider-select">{t("marketing.automations.modalPlatform", "Platforma")}</Label>
+              <select
+                id="provider-select"
+                value={connectProvider}
+                onChange={(e) => setConnectProvider(e.target.value as any)}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="google_business">Google Business Profile</option>
+                <option value="facebook">Facebook Page</option>
+                <option value="instagram">Instagram Professional</option>
+                <option value="youtube">YouTube Channel</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="channel-name">{t("marketing.automations.modalDisplayName", "Názov účtu / zobrazenie")}</Label>
+              <Input
+                id="channel-name"
+                placeholder="napr. Klinika Sýkora (FB Page)"
+                value={connectDisplayName}
+                onChange={(e) => setConnectDisplayName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="channel-account-id">{t("marketing.automations.modalAccountId", "Externé ID účtu / lokality")}</Label>
+              <Input
+                id="channel-account-id"
+                placeholder="napr. act_987654321 alebo gmb_location_01"
+                value={connectAccountId}
+                onChange={(e) => setConnectAccountId(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsConnectModalOpen(false)}>
+              {t("common.cancel", "Zrušiť")}
+            </Button>
+            <Button
+              disabled={!connectDisplayName.trim() || !connectAccountId.trim() || connectChannelMutation.isPending}
+              onClick={() => {
+                connectChannelMutation.mutate({
+                  provider: connectProvider,
+                  displayName: connectDisplayName.trim(),
+                  externalAccountId: connectAccountId.trim(),
+                  scopes:
+                    connectProvider === "google_business"
+                      ? ["business.manage", "reviews.read"]
+                      : connectProvider === "facebook"
+                      ? ["pages_manage_posts", "pages_read_engagement"]
+                      : connectProvider === "instagram"
+                      ? ["instagram_content_publish"]
+                      : ["youtube.upload"],
+                });
+              }}
+            >
+              {connectChannelMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {t("marketing.automations.modalBtnSubmit", "Pripojiť kanál")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

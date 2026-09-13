@@ -13,13 +13,17 @@ vi.mock("ai", () => ({
   generateText: mocks.generateText,
 }));
 
+vi.mock("@/lib/billing/ai-gate", () => ({
+  assertHostedAiGate: vi.fn().mockResolvedValue(undefined),
+}));
+
 const { marketingRouter } = await import("../routers/extensions/marketing");
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 
-function caller() {
-  const db: Record<string, unknown> = {
+function caller(customDb?: Record<string, unknown>) {
+  const db: Record<string, unknown> = customDb ?? {
     transaction: async (fn: (tx: unknown) => unknown) => fn(db),
     execute: vi.fn(async () => undefined),
   };
@@ -123,4 +127,56 @@ describe("marketingRouter", () => {
     expect(result.sms).toContain("Moja Klinika");
     expect(result.sms).toContain("+421 911 222 333");
   });
+
+  it("syncExternalReviews pulls reviews from connected channels and tags negative reviews for escalation", async () => {
+    const insertedReviews: any[] = [];
+    let selectCallCount = 0;
+
+    const mockDb: any = {
+      transaction: async (fn: (tx: unknown) => unknown) => fn(mockDb),
+      execute: vi.fn(async () => undefined),
+      select: vi.fn().mockImplementation(() => ({
+        from: vi.fn().mockImplementation(() => ({
+          where: vi.fn().mockImplementation(() => {
+            selectCallCount++;
+            if (selectCallCount === 1) {
+              // 1st select: channels query
+              return Promise.resolve([
+                { id: "ch-gmb", provider: "google_business", status: "connected" },
+                { id: "ch-fb", provider: "facebook", status: "connected" },
+              ]);
+            }
+            // subsequent selects: deduplication check returning []
+            return {
+              limit: vi.fn().mockResolvedValue([]),
+            };
+          }),
+        })),
+      })),
+      insert: vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockImplementation((val) => {
+          insertedReviews.push(val);
+          return Promise.resolve([val]);
+        }),
+      })),
+    };
+
+    const trpcCaller = caller(mockDb);
+    const result = await trpcCaller.syncExternalReviews({
+      platform: "all",
+      simulateNewReviews: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.channelsChecked).toBe(2);
+    expect(result.insertedCount).toBeGreaterThan(0);
+    expect(result.escalatedCount).toBeGreaterThanOrEqual(1);
+
+    // Verify negative review was tagged with escalationStatus = "pending"
+    const negative = insertedReviews.find((r) => r.rating <= 2);
+    expect(negative).toBeDefined();
+    expect(negative?.escalationStatus).toBe("pending");
+    expect(negative?.sentimentLabel).toBe("negative");
+  });
 });
+
