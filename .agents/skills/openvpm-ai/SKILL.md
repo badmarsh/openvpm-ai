@@ -5,83 +5,122 @@ description: Architectural guidelines, zero-conflict upstream sync, strict i18n 
 
 # OpenVPM AI Development Guidelines & Skill
 
-This skill enforces core architectural rules, zero-conflict upstream synchronization, multilingual stability, and veterinary clinical safety gates for OpenVPM AI.
+This skill enforces core architectural rules, zero-conflict upstream synchronization, multilingual stability, veterinary clinical safety gates, and statutory compliance for OpenVPM AI.
 
 ## Development Environment & Reference Instance
 
 - **Primary Project (Active Development):**
   - Path: `./openvpm-ai` (`C:\Users\marek\Documents\Vet\openvpm-ai`)
   - Dev Server Port: **3001** (`http://localhost:3001`)
+  - Database: Docker PostgreSQL `openvpm-postgres-1` (port **5434**, DB `openvpm_ai`)
   - All new features, Slovak localization, statutory compliance, e-Kasa, and AI extensions are built and committed here.
 - **Reference Project (Vanilla / Upstream Inspiration):**
   - Path: `../OpenVPM` (`C:\Users\marek\Documents\Vet\OpenVPM`)
   - Dev Server Port: **3005** (`http://localhost:3005`)
   - Use this vanilla instance as a live baseline to inspect original workflows, component patterns, and upstream behavior before introducing custom extensions.
 
+---
+
 ## 1. Architectural Guardrails (Zero-Conflict Upstream Sync)
 
 - **Do NOT modify vanilla tables directly:**
   Never alter existing upstream table definitions in `packages/db/schema/*.ts`.
 - **Isolated `ext_*` Schemas:**
-  All new tables and enums MUST live in `packages/db/schema/ext_{name}.ts` (e.g., `ext_ekasa.ts`, `ext_imaging.ts`, `ext_statutory.ts`, `ext_discharge.ts`, `ext_marketing.ts`, `ext_support.ts`, `ext_voice.ts`). Export them via wildcard in `packages/db/schema/index.ts`:
+  All new tables and enums MUST live in `packages/db/schema/ext_{name}.ts`:
+  - `ext_ekasa.ts` (fiscalization receipts and offline queues)
+  - `ext_imaging.ts` (DICOM and veterinary medical imaging)
+  - `ext_statutory.ts` (KVL and ŠVPS statutory registries)
+  - `ext_discharge.ts` (discharge summaries and condolence letters)
+  - `ext_marketing.ts` (campaigns, reviews, handouts, staff tasks)
+  - `ext_automation.ts` (durable event bus, rules engine, customer journeys, suppression audit)
+  - `ext_crm.ts` (12 CRM segments and client memberships)
+  - `ext_content_calendar.ts` (5 content pillars and approval queue briefs)
+  - `ext_channel_accounts.ts` (encrypted OAuth account store for GBP, FB, IG, YouTube)
+  - `ext_support.ts`, `ext_voice.ts`
+  Export them via wildcard in `packages/db/schema/index.ts`:
   ```ts
-  export * from "./ext_ekasa";
-  export * from "./ext_imaging";
+  export * from "./ext_automation";
+  export * from "./ext_crm";
+  export * from "./ext_content_calendar";
+  export * from "./ext_channel_accounts";
   ```
 - **Database Migrations via `pnpm db:push`:**
   Always use `pnpm db:push` for development schema updates to keep the upstream migration journal `_journal.json` pristine. Never accept upstream merges or edits that touch or corrupt `_journal.json`.
 - **Single tRPC Mount Point:**
   Mount all custom extension routers inside `apps/web/server/routers/extensions/` and attach under `extensions: extensionsRouter` in `apps/web/server/routers/_app.ts`:
   ```ts
-  trpc.extensions.ekasa.*
-  trpc.extensions.imaging.*
-  trpc.extensions.statutory.*
+  trpc.extensions.automationRules.*
+  trpc.extensions.automationJourneys.*
+  trpc.extensions.automationChannels.*
+  trpc.extensions.crmSegments.*
+  trpc.extensions.automationSuppression.*
+  trpc.extensions.automationContent.*
+  trpc.extensions.labImport.*
   ```
 - **Modular Navigation via `custom-nav.ts`:**
-  Do NOT modify `sidebar.tsx` directly to hardcode links. Instead, add items to `apps/web/config/custom-nav.ts`. They are merged into the sidebar sections dynamically at runtime.
-- **Upstream Merge & Backport Protocol:**
+  Do NOT modify `sidebar.tsx` directly to hardcode links. Instead, add items to `apps/web/config/custom-nav.ts`. They are merged into sidebar sections dynamically at runtime.
+- **Upstream Merge & Verification Protocol:**
   When pulling or backporting changes from `upstream/main` (`https://github.com/evangauer/openvpm.git`):
   1. Inspect incoming changes: `git log upstream/main..main` and `git log main..upstream/main`.
   2. Ensure vanilla schemas in `packages/db/schema/*.ts` remain untouched.
   3. Re-verify 100% dictionary symmetry between `messages/en.json` and `messages/sk.json`.
-  4. Run targeted safety suites (`ai-draft-safety.test.ts`, `care-reminders-safety.test.ts`, `responsive-tables.test.ts`) and `pnpm --filter @openpims/web type-check` immediately after merge.
+  4. Run the full verification suite:
+     ```bash
+     pnpm --filter @openpims/web test lib/autopilot lib/marketing server/__tests__/marketing server/__tests__/autopilot-e2e-journeys server/__tests__/copilot-lab-flow config/__tests__/custom-nav-i18n.test.ts responsive-tables
+     pnpm --filter @openpims/web type-check
+     ```
+
+---
 
 ## 2. Strict Multilingual Compatibility (i18n)
 
 - **No Route Rewriting:**
-  Do NOT add `app/[locale]/...` URL path prefixes. URLs must remain clean and canonical (`/schedule`, `/billing`, `/patients`, `/records`, `/agent/imaging`).
+  Do NOT add `app/[locale]/...` URL path prefixes. URLs must remain clean and canonical (`/schedule`, `/billing`, `/patients`, `/records`, `/marketing/automations`).
 - **English as Safe Fallback & 100% Symmetry:**
-  Maintain 100% dictionary key symmetry between `apps/web/messages/en.json` and `apps/web/messages/sk.json` (verified via key comparison scripts). Missing keys in Slovak must fall back cleanly to English or inline defaults.
-- **Modular i18n Architecture:**
-  All i18n logic lives in `apps/web/lib/i18n/`, `apps/web/components/i18n/`, and `apps/web/messages/`.
+  Maintain 100% dictionary key symmetry between `apps/web/messages/en.json` and `apps/web/messages/sk.json` (currently 5,265 keys each with 0 missing).
+  Verify symmetry with:
+  ```bash
+  node -e "const en=require('./apps/web/messages/en.json'); const sk=require('./apps/web/messages/sk.json'); /* compare keys */"
+  ```
+- **Nested JSON Structure:**
+  Always nest keys as JSON objects (e.g. `nav: { wellnessRedemptions: "..." }`). Never add root-level dotted strings (`"nav.wellnessRedemptions": "..."`) as dictionary resolvers will fail.
 - **`useI18n()` Hook Usage:**
-  Always use `const { t } = useI18n();` with dot notation and parameters:
+  Always use `const { t } = useI18n();` with dot notation, inline fallback, and optional parameters:
   ```ts
-  t("nav.agentImaging", "Image Analysis")
-  t("patients.count", "{count} patients", { count: 5 })
+  t("marketing.automations.channelConnected", `Kanál "${name}" bol pripojený.`, { name })
   ```
 - **Standardized Server Error Messages:**
-  TRPC server routers must throw standard English error messages (e.g. `"Patient not found"`, `"Vaccination record not found"`). All user-facing localization happens on the client via `useI18n()`.
+  tRPC server routers must throw standard English error messages (e.g. `"Patient not found"`, `"Channel account not found"`). All user-facing localization happens on the client via `useI18n()`.
 
-## 3. Clinical & Safety Gates (Veterinary Ethics)
+---
 
-- **Sympathy Flow Safety Gate (Euthanasia / Deceased Patient Protection):**
-  When a patient's status is `deceased` or after a recorded euthanasia, the system MUST strictly enforce:
-  - **Automated Outreach Blocking:** Unconditionally block automated vaccination and care reminder SMS/emails, post-discharge review requests ("Google Review Ask"), and promotional marketing triggers.
-  - **Auto-Dismissal of Care Reminders:** Calling `applySympathyGate` automatically updates any open `careReminders` for the deceased patient to `status: "dismissed"` with `dismissalReason: "Sympathy Gate: Pacient uhynul / bol eutanazovaný."`.
-  - **Multi-Pet Client Protection:** Marketing triggers without a specific `patientId` must check if all active patients for that client are deceased. If so, marketing outreach is blocked and `applySympathyGate` is invoked.
-  - **Defensive Queue Filtering:** `careReminders.list` queries for `status === "open"` must filter out deceased patients (`sql`${patients.status} is distinct from 'deceased'``) so open reminders for deceased pets never appear in the active queue.
-  - **AI Discharge Sympathy Mode:** Confirmed discharge for deceased/euthanized patients must enforce the condolence letter template and strip routine recall or follow-up calls-to-action.
-  - **Staff Condolence Task:** Automatically creates an internal staff condolence task for staff to reach out compassionately.
+## 3. Clinical & Safety Gates (Veterinary Ethics & Slovak Legislation)
+
+- **Unconditional Sympathy Flow Safety Gate (SKILL.md §3):**
+  When a patient's status is `deceased` or after recorded euthanasia, the system MUST strictly enforce:
+  - **Automated Outreach Blocking:** Immediately suppress all automated vaccination reminders, care reminders, post-visit review asks ("Google Review Ask"), and promotional marketing.
+  - **Auto-Dismissal of Care Reminders:** `applySympathyGate` automatically updates open `careReminders` for the deceased pet to `status: "dismissed"` with reason `"Sympathy Gate: Pacient uhynul / bol eutanazovaný."`.
+  - **Defensive Queue Filtering:** `careReminders.list` queries for `status === "open"` must filter out deceased pets (`sql`${patients.status} is distinct from 'deceased'``).
+  - **Audit Logging:** Every blocked outreach is logged to `ext_automation_suppression_log` with `suppressionType: "deceased_patient"`.
+  - **Staff Condolence Task:** Automatically creates an internal staff condolence task in `extMarketingStaffTasks` for compassionate outreach.
+- **Zákon 39/2007 Z. z. (§3) — Human-in-the-Loop & KVL Signature:**
+  - AI is strictly an assistant and CANNOT directly commit clinical assertions into the Treatment Diary (Kniha ošetrení) or medical records.
+  - All AI drafts (Voice→SOAP, PDF→Lab, content briefs) must remain in `draft` status until explicitly reviewed, verified, and signed by a licensed KVL veterinarian via **`ClinicalDiffConfirmModal`**.
+- **Zákon 139/1998 Z. z. — STRICT ZERO AI Prefill for Controlled Substances:**
+  - Controlled substances (omamné a psychotropné látky — Schedule I/II opiates, ketamine, propofol, butorphanol, fentanyl) MUST HAVE ZERO AI PREFILL.
+  - The system must actively detect controlled substance codes/names, blank out AI proposals, and require manual, authenticated entry and signature by the attending veterinarian.
+- **Veterinary Supervision over Social Media & Marketing Claims:**
+  - Any clinical claim (treatment advice, dosage, disease prevention) in social media content briefs must satisfy the database check constraint `clinicalApprovalCheck` and record the approving veterinarian's UUID.
 - **Medical Imaging File Ownership:**
   Medical imaging uploads (`xray`, `ct`, `mri`, `ultrasound`, `photo`) must use category `"imaging"` and attach to the patient record WITHOUT overwriting `patient.photoUrl`.
 - **Legal Statutory Registers (ŠVPS SR & KVL SR):**
-  Compliance with Slovak veterinary legislation (Law 39/2007 Z. z. and Law 139/1998 Z. z.):
   - Rabies Register (Kniha besnoty) with 3-day notification window to RVPS.
   - Treatment Diary (Kniha ošetrení) with withdrawal period (ochranná lehota) tracking.
   - Euthanasia Register with exact dosing and rendering plant disposal records.
-  - Controlled Substances Register (Opiates & psychotropic substances) with immutable audit ledger.
+  - Controlled Substances Register with immutable audit ledger.
   - Informed consent protocols (Anesthesia, Surgery, Hospitalization, Euthanasia).
+
+---
 
 ## 4. Next.js 15 & React 19 Runtime Stability & Hydration Guardrails
 
@@ -95,6 +134,8 @@ This skill enforces core architectural rules, zero-conflict upstream synchroniza
   All rendered JSX tables in `app/(dashboard)` and `app/portal` MUST be wrapped in `<div className="overflow-x-auto">` or `<TableScroll>`.
   - Governance tests (`responsive-tables.test.ts`) MUST use TypeScript AST parsing (`ts.createSourceFile`) to inspect genuine JSX `<table>` opening elements, avoiding false-positive failures on printable A4 report string templates.
 
+---
+
 ## 5. Slovak Fiscal Compliance (e-Kasa — Zákon 289/2008 Z. z.)
 
 - **Isolated Fiscal Driver:**
@@ -104,12 +145,49 @@ This skill enforces core architectural rules, zero-conflict upstream synchroniza
 - **Slovak VAT Slabs:**
   Ensure support for standard and reduced Slovak VAT rates (20%, 10%, 5% / 23%, 19%, 5% per tax consolidation rules) and correct item categorization (goods vs veterinary medical services).
 
-## 6. AI Agent & Inference Standards
+---
+
+## 6. AI Agent, Copilot & Inference Standards
 
 - **Multimodal Inference:**
   Use `configuredModel()` or inference proxy with Vercel AI SDK (`generateText`).
 - **Storage Direct Reads:**
   Always load medical files directly from object storage via `readPrimaryObject(file.fileKey)` from `@/lib/s3`. Never perform HTTP self-fetch loops against `/api/files/...`.
+- **Confidence Score Calibration:**
+  All AI extraction modules (Voice SOAP, PDF Lab parser, OCR) must expose calibrated confidence scores categorized into 3 standardized tiers:
+  - **High (`>= 0.92`):** Green badge — high reliability, safe for rapid verification.
+  - **Medium (`0.75 – 0.91`):** Amber badge — manual review recommended.
+  - **Low (`< 0.75`):** Red badge — low reliability, mandatory line-by-line validation.
+  Rendered using the standard component **`ConfidenceScoreBadge`**.
+- **Human-in-the-Loop Confirmation:**
+  All Copilot entries must pass through **`ClinicalDiffConfirmModal`** showing side-by-side original vs proposed values before committing to the patient ledger.
 - **GDPR 24-Hour Voice Purge:**
   Raw audio files used for voice transcription and SOAP drafting must be scheduled for deletion within 24 hours.
 
+---
+
+## 7. Autopilot, CRM & Reputation Governance
+
+- **Durable Event Bus (`ext_automation_events`):**
+  - 5 core trigger points must emit durable events:
+    1. `visit_completed` (encounters/appointments)
+    2. `appointment_no_show` (appointments)
+    3. `appointment_booked` (appointments)
+    4. `vaccine_due` (records vaccination entries)
+    5. `surgery_completed` (post-op scheduling)
+  - Events must specify a unique `dedupeKey` and start in `status: "pending"` before processing by the background worker.
+- **5 Canonical Customer Journeys:**
+  1. `welcome_new_client` (onboarding + welcome message + 7-day feedback)
+  2. `post_visit_followup` (thank you + 24h review ask)
+  3. `vaccine_reminder_journey` (14d reminder + 3d countdown + overdue notice)
+  4. `post_operative_care` (24h condition check + day 3 recovery + day 10 suture check)
+  5. `patient_reactivation` (12-month recall for inactive pets)
+- **12 Canonical CRM Segments (`ext_crm_segments`):**
+  Deterministic segmentation (`new_clients`, `active_clients`, `inactive_6mo`, `inactive_12mo`, `post_surgery`, `vaccine_due_soon`, `vaccine_overdue`, `seniors`, `puppy_kitten`, `chronic_care`, `dental_attention`, `high_value_vip`).
+- **OAuth Token Security (`ext_channel_accounts`):**
+  Tokens for Google Business Profile, Facebook, Instagram, and YouTube MUST be encrypted at rest and NEVER exposed over tRPC APIs.
+- **Reputation SLA & Reception Escalation:**
+  Incoming reviews in `extMarketingReviews` must track a 24h response SLA. Negative reviews (`rating <= 2`) must automatically set `escalationStatus: "pending"` and route to `extMarketingStaffTasks`.
+- **Unified Suppression Center (GDPR Art. 22):**
+  All suppressed messages must be logged to `ext_automation_suppression_log` with explicit reason codes (`sympathy_gate`, `quiet_hours`, `sms_rate_limit`, `opt_out`, `frequency_cap`).
+  - Legal basis: `contract` for transactional reminders; `consent` / `legitimate_interest` for promotional campaigns.
