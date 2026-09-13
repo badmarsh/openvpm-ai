@@ -33,6 +33,7 @@ dist/
 Thumbs.db
 
 # Debug
+*.log
 npm-debug.log*
 pnpm-debug.log*
 
@@ -57,4 +58,62 @@ package-lock.json
 .gstack/
 .qwen/
 _wip/
+
+# One-time ops / migration scripts — contain production UUIDs and PII (GDPR)
+# These run locally against the DB and must never be committed to a public repo.
+apps/web/scripts/audit-all-tables.cjs
+apps/web/scripts/check-all-indexes.cjs
+apps/web/scripts/check-attachments.cjs
+apps/web/scripts/check-ciselniki.ts
+apps/web/scripts/check-ciselniki2.ts
+apps/web/scripts/check-ciselníky.ts
+apps/web/scripts/check-fb-tables.ts
+apps/web/scripts/check-fb-tables2.ts
+apps/web/scripts/check-indexes.cjs
+apps/web/scripts/check-lab-lookups.ts
+apps/web/scripts/check-line-items.ts
+apps/web/scripts/check-minio-direct.ts
+apps/web/scripts/check-minio.ts
+apps/web/scripts/check-missing-tables.ts
+apps/web/scripts/check-only-binary.ts
+apps/web/scripts/check-practice.cjs
+apps/web/scripts/check-statutory-data.ts
+apps/web/scripts/check-tab009.ts
+apps/web/scripts/check-tab029.ts
+apps/web/scripts/check-tab064.ts
+apps/web/scripts/check-tab065.ts
+apps/web/scripts/check-tab068-stats.ts
+apps/web/scripts/check-tab068.ts
+apps/web/scripts/check-tab076.ts
+apps/web/scripts/check-tab14-tab20.ts
+apps/web/scripts/dump-tab076.ts
+apps/web/scripts/finish-migration.ts
+apps/web/scripts/full-audit.ts
+apps/web/scripts/import-final-entities.ts
+apps/web/scripts/import-inventory-and-fix-labs.ts
+apps/web/scripts/inspect-clients.cjs
+apps/web/scripts/inspect-db-consents.ts
+apps/web/scripts/inspect-details.cjs
+apps/web/scripts/inspect-reports-and-tables.ts
+apps/web/scripts/inspect-tab083.ts
+apps/web/scripts/inspect-tab1-35.cjs
+apps/web/scripts/inspect-tab1-5.cjs
+apps/web/scripts/inspect-v2.cjs
+apps/web/scripts/inventory-all-tables.ts
+apps/web/scripts/prepare_outline_doc.js
+apps/web/scripts/scan-all-tables.ts
+apps/web/scripts/scan-blobs.ts
+apps/web/scripts/screenshot_*.png
+apps/web/scripts/search-fb-report-metadata.ts
+apps/web/scripts/seed-v2-consent-forms.ts
+apps/web/scripts/tab076_dump.json
+apps/web/scripts/take_screenshots.js
+apps/web/scripts/test-batch-clients.cjs
+apps/web/scripts/test-extraction.cjs
+apps/web/scripts/test-minio-upload.ts
+apps/web/scripts/test-run-migration.cjs
+apps/web/scripts/test-single-insert.cjs
+apps/web/scripts/test-statutory-endpoints.ts
+apps/web/scripts/upload-all-blobs-to-minio.ts
+apps/web/scripts/verify-migration.ts
 
