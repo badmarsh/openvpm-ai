@@ -1,4 +1,4 @@
-# Legislatívny súlad
+﻿# Legislatívny súlad
 
 OpenVPM pomáha vašej praxi plniť zákonné povinnosti veterinárneho práva SR.
 Prejdite do sekcie **Legislatíva** (`/statutory`) v bočnom paneli pre
@@ -145,4 +145,4 @@ Nasledovné známe obmedzenia platia od verzie v0.6:
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

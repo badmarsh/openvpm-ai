@@ -1,4 +1,4 @@
-# OpenVPM Help
+﻿# OpenVPM Help
 
 Short guides for running your clinic on OpenVPM. Each one takes a minute or
 two. The same walkthroughs live inside the app: open **Settings** and click
@@ -103,4 +103,4 @@ All pages above have Slovak counterparts in the `sk/` directory:
 ---
 
 Need help with something these pages do not cover? Email
-[hello@openvpm.com](mailto:hello@openvpm.com) and a real person will answer.
+[jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real person will answer.

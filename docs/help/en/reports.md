@@ -1,4 +1,4 @@
-# Reports
+﻿# Reports
 
 The Reports section (`/reports`) gives you financial, operational, and
 statutory compliance insights across your practice. Reports are available
@@ -94,9 +94,9 @@ data. Use the CSV for further analysis in Excel or your accounting software.
 
 **Advanced Reporting is locked:**
 - Advanced Reporting requires a Cloud subscription. Contact
-  [hello@openvpm.com](mailto:hello@openvpm.com) to upgrade.
+  [jurkemik@significa.sk](mailto:jurkemik@significa.sk) to upgrade.
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

@@ -1,4 +1,4 @@
-# Marketing & Communications
+﻿# Marketing & Communications
 
 OpenVPM's marketing module sends automated messages to clients, manages
 your online reputation, and helps you reach the right clients at the right
@@ -101,5 +101,5 @@ URL on any browser connected to a screen.
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

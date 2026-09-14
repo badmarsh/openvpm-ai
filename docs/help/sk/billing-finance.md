@@ -1,4 +1,4 @@
-# Fakturácia a financie
+﻿# Fakturácia a financie
 
 Táto stránka vysvetľuje správu faktúr, evidenciu platieb, prevádzku
 pokladnice e-Kasa, nastavenie predplatného a export účtovných dát v OpenVPM AI.
@@ -118,4 +118,4 @@ dátumového rozsahu), platobné záznamy a jednotlivé riadkové položky.
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

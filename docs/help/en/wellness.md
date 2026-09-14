@@ -1,4 +1,4 @@
-# Wellness Plans
+﻿# Wellness Plans
 
 Wellness plans let you offer clients a bundled monthly or annual
 preventive care subscription. Plans reduce the cost of routine care
@@ -93,5 +93,5 @@ credit or partial refund manually via an invoice adjustment or credit note.
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

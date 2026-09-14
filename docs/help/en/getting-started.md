@@ -1,4 +1,4 @@
-# Getting Started with OpenVPM
+﻿# Getting Started with OpenVPM
 
 Welcome to OpenVPM — your open veterinary practice management system. This
 guide walks you through your first login, setting up your practice, and
@@ -52,7 +52,7 @@ time-limited.
 On OpenVPM Cloud, every new account must verify its email address before
 logging in. The verification email is sent immediately after registration. If
 you do not receive it, check your spam folder or contact
-[hello@openvpm.com](mailto:hello@openvpm.com).
+[jurkemik@significa.sk](mailto:jurkemik@significa.sk).
 
 Self-hosted instances can disable the email verification requirement in their
 environment configuration.
@@ -103,5 +103,5 @@ security boundary.
 - [Ask the AI](../ask-the-ai.md) — query your data in plain words
 - [Your data: export, backup, and import](../your-data.md)
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

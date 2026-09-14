@@ -1,4 +1,4 @@
-# Lab Results & Medical Imaging
+﻿# Lab Results & Medical Imaging
 
 OpenVPM connects your in-house analysers, manages your lab inbox, and
 provides AI-assisted interpretation of medical images.
@@ -97,5 +97,5 @@ a confidence score:
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

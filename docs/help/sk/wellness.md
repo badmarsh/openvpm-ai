@@ -1,4 +1,4 @@
-# Wellness plány
+﻿# Wellness plány
 
 Wellness plány vám umožňujú ponúkať klientom mesačné alebo ročné
 preventívne balíky. Plány znižujú náklady na rutinnú starostlivosť
@@ -93,4 +93,4 @@ vrátenie riešte manuálne prostredníctvom úpravy faktúry alebo dobropisom.
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

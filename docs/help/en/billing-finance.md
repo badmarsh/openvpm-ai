@@ -1,4 +1,4 @@
-# Billing & Finance
+﻿# Billing & Finance
 
 This page explains how to manage invoices, record payments, operate the e-Kasa fiscal cash register, configure your subscription, and export accounting data in OpenVPM AI.
 
@@ -91,4 +91,4 @@ Export a full ledger of invoices and payments as **CSV** from **Settings → Dat
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com)
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk)

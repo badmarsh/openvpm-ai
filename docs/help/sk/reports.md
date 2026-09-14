@@ -1,4 +1,4 @@
-# Reporty
+﻿# Reporty
 
 Sekcia Reporty (`/reports`) poskytuje finančné, prevádzkové a legislatívne
 prehľady vašej praxe. Reporty sú dostupné len pre roly **Správca praxe**
@@ -96,8 +96,8 @@ vo vašom účtovnom softvéri.
 
 **Pokročilé reporty sú zamknuté:**
 - Pokročilé reporty vyžadujú predplatné Cloud. Kontaktujte
-  [hello@openvpm.com](mailto:hello@openvpm.com) pre upgrade.
+  [jurkemik@significa.sk](mailto:jurkemik@significa.sk) pre upgrade.
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

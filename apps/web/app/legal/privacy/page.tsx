@@ -117,7 +117,7 @@ export default function PrivacyPage() {
       <p>
         If we change this policy in a way that matters, we will tell you by
         email or in the product first. Questions or requests:
-        hello@openvpm.com.
+        jurkemik@significa.sk.
       </p>
     </>
   );

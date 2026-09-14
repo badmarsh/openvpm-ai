@@ -1,4 +1,4 @@
-# Inventory & Pharmacy
+﻿# Inventory & Pharmacy
 
 Manage your product stock, controlled substances, and drug dosing at
 **Inventory** (`/inventory`). All stock movements are logged with a
@@ -116,5 +116,5 @@ When released in v0.7, you will find the import under **Settings → Import**.
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

@@ -1,4 +1,4 @@
-# Marketingové Štúdio a komunikácia
+﻿# Marketingové Štúdio a komunikácia
 
 Marketingový modul OpenVPM odosiela automatické správy klientom, spravuje
 reputáciu vašej praxe a pomáha vám osloviť správnych klientov v správnom
@@ -102,4 +102,4 @@ prehliadači pripojenom k obrazovke.
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

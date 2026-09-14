@@ -1,4 +1,4 @@
-# Laboratórne výsledky a zobrazovacie metódy
+﻿# Laboratórne výsledky a zobrazovacie metódy
 
 OpenVPM prepája vaše interné analyzátory, spravuje príchodzí front
 laboratórnych výsledkov a poskytuje AI-asistovanú interpretáciu
@@ -101,4 +101,4 @@ s hodnotením spoľahlivosti:
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

@@ -1,4 +1,4 @@
-# Statutory Compliance
+﻿# Statutory Compliance
 
 OpenVPM helps your practice meet Slovak veterinary law obligations. Navigate
 to **Statutory** (`/statutory`) in the sidebar to access all compliance
@@ -148,5 +148,5 @@ Be aware of the following known limitations as of v0.6:
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

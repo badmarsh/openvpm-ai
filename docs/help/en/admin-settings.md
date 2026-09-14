@@ -1,4 +1,4 @@
-# Admin Settings
+﻿# Admin Settings
 
 **Settings** (`/settings`) is your practice control panel. Everything from
 user roles and service templates to e-Kasa configuration and data exports
@@ -90,9 +90,9 @@ Settings → Data. This removes all demo records. The action is irreversible.
 ### Practice deletion
 
 Practice deletion is permanent and irreversible. Contact
-[hello@openvpm.com](mailto:hello@openvpm.com) for assistance.
+[jurkemik@significa.sk](mailto:jurkemik@significa.sk) for assistance.
 
 ---
 
-Need help? Email [hello@openvpm.com](mailto:hello@openvpm.com) and a real
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

@@ -1,4 +1,4 @@
-# Začíname s OpenVPM
+﻿# Začíname s OpenVPM
 
 Vitajte v OpenVPM — otvorenom systéme pre správu veterinárnej praxe. Tento
 sprievodca vás prevedie prvým prihlásením, nastavením praxe a prehľadom
@@ -51,7 +51,7 @@ hesla má obmedzenú platnosť.
 Na OpenVPM Cloud musí každý nový účet overiť e-mailovú adresu pred
 prihlásením. Overovací e-mail sa odošle ihneď po registrácii. Ak ho
 nedostanete, skontrolujte priečinok spam alebo kontaktujte
-[hello@openvpm.com](mailto:hello@openvpm.com).
+[jurkemik@significa.sk](mailto:jurkemik@significa.sk).
 
 Samohosťovaná inštalácia môže požiadavku na overenie e-mailu vypnúť
 v konfigurácii prostredia.
@@ -103,5 +103,5 @@ nie bezpečnostná hranica.
 - [Opýtajte sa AI](../ask-the-ai.md) — pýtajte sa na vaše dáta bežnými slovami
 - [Vaše dáta: export, záloha a import](../your-data.md)
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com)
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk)
 a odpovie vám skutočný človek.

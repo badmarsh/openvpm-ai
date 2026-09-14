@@ -1,4 +1,4 @@
-# Nastavenia
+﻿# Nastavenia
 
 **Nastavenia** (`/settings`) sú riadiacim panelom vašej praxe. Nájdete tu
 všetko od rolí používateľov a šablón až po konfiguráciu e-Kasa a exporty
@@ -91,8 +91,8 @@ dáta** v Nastavenia → Dáta. Táto akcia je nevratná.
 ### Odstránenie praxe
 
 Trvalé odstránenie praxe je nevratné. Kontaktujte
-[hello@openvpm.com](mailto:hello@openvpm.com).
+[jurkemik@significa.sk](mailto:jurkemik@significa.sk).
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

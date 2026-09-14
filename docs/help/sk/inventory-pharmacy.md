@@ -1,4 +1,4 @@
-# Sklad a lekáreň
+﻿# Sklad a lekáreň
 
 Spravujte zásoby produktov, omamné a psychotropné látky a dávkovanie liekov
 v sekcii **Sklad** (`/inventory`). Všetky pohyby zásob sú zaznamenávané
@@ -117,4 +117,4 @@ Po vydaní vo verzii v0.7 nájdete import v **Nastavenia → Import**.
 
 ---
 
-Potrebujete pomoc? Napíšte na [hello@openvpm.com](mailto:hello@openvpm.com).
+Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).
