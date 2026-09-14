@@ -130,9 +130,10 @@ async function main() {
     }
     const outlineId = idMatch[1];
 
-    // Hľadať názov kapitoly (H1)
+    // Hľadať názov kapitoly (H1) a očistiť od emoji (ikona je nastavená cez Outline icon atribút)
     const titleMatch = content.match(/^#\s+(.+)$/m);
-    const title = titleMatch ? titleMatch[1].trim() : wf.replace(/\.md$/, '');
+    const rawTitle = titleMatch ? titleMatch[1].trim() : wf.replace(/\.md$/, '');
+    const title = rawTitle.replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u, '').trim();
 
     // Skontrolovať, či dokument obsahuje referencie na screenshoty
     const hasScreenshots = content.includes('../../screenshots/wiki/');
