@@ -373,5 +373,20 @@ export function createDefaultSection(type: SectionType, order: number): WebsiteS
           maxWidth: "normal",
         },
       };
+
+    case "wellness":
+      return {
+        id,
+        type: "wellness",
+        order,
+        visible: true,
+        content: {
+          title: "Wellness & Preventívne programy",
+          subtitle: "Doprajte svojmu miláčikovi pravidelnú veterinárnu starostlivosť a ušetrite s našimi členskými plánmi.",
+          showPrice: true,
+          ctaText: "Mám záujem o program",
+          plans: [],
+        },
+      };
   }
 }

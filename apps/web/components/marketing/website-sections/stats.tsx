@@ -10,7 +10,29 @@ interface StatsSectionProps {
   isEditor?: boolean;
 }
 
-export function StatsSection({ content }: StatsSectionProps) {
+export function StatsSection({ content, contextData }: StatsSectionProps) {
+  const formatStatValue = (stat: (typeof content.items)[number]) => {
+    if (!contextData?.liveStats) return stat.value;
+
+    switch (stat.source) {
+      case "patients": {
+        const count = contextData.liveStats.patientCount;
+        return count > 0 ? `${count.toLocaleString("sk-SK")}+` : stat.value;
+      }
+      case "reviews": {
+        const count = contextData.liveStats.fiveStarReviewCount;
+        return count > 0 ? `${count.toLocaleString("sk-SK")}+` : stat.value;
+      }
+      case "years": {
+        const years = contextData.liveStats.yearsInPractice;
+        return years > 0 ? `${years}+` : stat.value;
+      }
+      case "custom":
+      default:
+        return stat.value;
+    }
+  };
+
   return (
     <section className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
       <div
@@ -34,7 +56,7 @@ export function StatsSection({ content }: StatsSectionProps) {
                 className="text-3xl sm:text-4xl font-black tracking-tight"
                 style={{ color: "var(--wb-primary, #0d9488)" }}
               >
-                {stat.value}
+                {formatStatValue(stat)}
               </div>
               <div className="text-sm font-bold text-foreground">
                 {stat.label}

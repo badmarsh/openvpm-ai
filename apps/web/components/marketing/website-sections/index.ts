@@ -15,6 +15,7 @@ import { ContactFormSection } from "./contact-form";
 import { VideoEmbedSection } from "./video-embed";
 import { SocialProofSection } from "./social-proof";
 import { CustomRichTextSection } from "./custom-rich-text";
+import { WellnessSection } from "./wellness";
 import type { SectionType } from "@/lib/marketing/website-builder-types";
 
 export const SECTION_COMPONENTS: Record<
@@ -43,6 +44,7 @@ export const SECTION_COMPONENTS: Record<
   video_embed: VideoEmbedSection,
   social_proof: SocialProofSection,
   custom_rich_text: CustomRichTextSection,
+  wellness: WellnessSection,
 };
 
 export {
@@ -63,4 +65,5 @@ export {
   VideoEmbedSection,
   SocialProofSection,
   CustomRichTextSection,
+  WellnessSection,
 };

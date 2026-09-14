@@ -19,6 +19,7 @@ export const sectionTypeSchema = z.enum([
   "video_embed",
   "social_proof",
   "custom_rich_text",
+  "wellness",
 ]);
 
 export type SectionType = z.infer<typeof sectionTypeSchema>;
@@ -232,18 +233,21 @@ export const trustBadgesContentSchema = z.object({
 });
 
 // 12. Stats Strip
+export const statItemSchema = z.object({
+  id: z.string(),
+  value: z.string(),
+  label: z.string(),
+  subtext: z.string().optional(),
+  source: z.enum(["custom", "patients", "reviews", "years"]).optional(),
+});
+
 export const statsContentSchema = z.object({
   title: z.string().default("Naša klinika v číslach"),
-  items: z.array(z.object({
-    id: z.string(),
-    value: z.string(),
-    label: z.string(),
-    subtext: z.string().optional(),
-  })).default([
-    { id: "st-1", value: "10+", label: "Rokov praxe", subtext: "V regióne" },
-    { id: "st-2", value: "14 000+", label: "Vyliečených pacientov", subtext: "Psov, mačiek a drobných zvierat" },
-    { id: "st-3", value: "99.4%", label: "Spokojných klientov", subtext: "Podľa Google recenzií" },
-    { id: "st-4", value: "24/7", label: "Pohotovostný kontakt", subtext: "Pre akútne stavy" },
+  items: z.array(statItemSchema).default([
+    { id: "st-1", value: "10+", label: "Rokov praxe", subtext: "V regióne", source: "years" },
+    { id: "st-2", value: "14 000+", label: "Vyliečených pacientov", subtext: "Psov, mačiek a drobných zvierat", source: "patients" },
+    { id: "st-3", value: "99.4%", label: "Spokojných klientov", subtext: "Podľa Google recenzií", source: "reviews" },
+    { id: "st-4", value: "24/7", label: "Pohotovostný kontakt", subtext: "Pre akútne stavy", source: "custom" },
   ]),
 });
 
@@ -291,6 +295,25 @@ export const customRichTextContentSchema = z.object({
   maxWidth: z.enum(["narrow", "normal", "full"]).default("normal"),
 });
 
+// 18. Wellness / Preventive Loyalty Plans
+export const wellnessPlanItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  price: z.string(),
+  billingInterval: z.enum(["monthly", "annual"]).default("monthly"),
+  badge: z.string().optional(),
+  features: z.array(z.string()).default([]),
+});
+
+export const wellnessContentSchema = z.object({
+  title: z.string().default("Wellness & Preventívne programy"),
+  subtitle: z.string().default("Doprajte svojmu miláčikovi pravidelnú veterinárnu starostlivosť a ušetrite s našimi členskými plánmi."),
+  showPrice: z.boolean().default(true),
+  ctaText: z.string().default("Mám záujem o program"),
+  plans: z.array(wellnessPlanItemSchema).default([]),
+});
+
 // Section Discriminated Union Schema
 export const websiteSectionSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string(), type: z.literal("hero"), order: z.number(), visible: z.boolean(), content: heroContentSchema }),
@@ -310,6 +333,7 @@ export const websiteSectionSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string(), type: z.literal("video_embed"), order: z.number(), visible: z.boolean(), content: videoEmbedContentSchema }),
   z.object({ id: z.string(), type: z.literal("social_proof"), order: z.number(), visible: z.boolean(), content: socialProofContentSchema }),
   z.object({ id: z.string(), type: z.literal("custom_rich_text"), order: z.number(), visible: z.boolean(), content: customRichTextContentSchema }),
+  z.object({ id: z.string(), type: z.literal("wellness"), order: z.number(), visible: z.boolean(), content: wellnessContentSchema }),
 ]);
 
 export type WebsiteSection = z.infer<typeof websiteSectionSchema>;
@@ -345,6 +369,7 @@ export interface WebsitePublicData {
     id: string;
     name: string;
     role: string;
+    avatarUrl?: string | null;
   }>;
   handouts?: Array<{
     id: string;
@@ -363,4 +388,22 @@ export interface WebsitePublicData {
     receivedAt?: string | Date | null;
   }>;
   brandKit?: BrandKitData;
+  liveStats?: {
+    patientCount: number;
+    fiveStarReviewCount: number;
+    yearsInPractice: number;
+  };
+  liveServices?: Array<{
+    id: string;
+    name: string;
+    category?: string | null;
+    defaultPrice?: string | null;
+  }>;
+  wellnessPlans?: Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    price: string;
+    billingInterval: "monthly" | "annual";
+  }>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { teamContentSchema, BrandKitData, WebsitePublicData } from "@/lib/marketing/website-builder-types";
 import type { z } from "zod";
@@ -57,6 +57,9 @@ export function TeamSection({ content, contextData }: TeamSectionProps) {
               className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-xs hover:border-primary/40 transition-colors"
             >
               <Avatar className="w-20 h-20 mx-auto ring-4 ring-primary/10">
+                {member.avatarUrl && (
+                  <AvatarImage src={member.avatarUrl} alt={member.name} />
+                )}
                 <AvatarFallback
                   className="text-2xl font-bold"
                   style={{

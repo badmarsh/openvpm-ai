@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarCheck2, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
 import type { bookingCtaContentSchema, BrandKitData, WebsitePublicData } from "@/lib/marketing/website-builder-types";
 import type { z } from "zod";
 
@@ -22,6 +23,20 @@ export function BookingCtaSection({ content, contextData, isEditor }: BookingCta
     ? `/book/${practice.id}?utm_source=klinika_web&utm_medium=site`
     : "#book";
   const phone = practice?.phone;
+
+  const trackAction = trpc.extensions.marketing.trackWebsiteAction.useMutation();
+
+  const handleBookingClick = () => {
+    if (practice?.id && !isEditor) {
+      trackAction.mutate({ clinicId: practice.id, action: "booking_cta_click" });
+    }
+  };
+
+  const handlePhoneClick = () => {
+    if (practice?.id && !isEditor) {
+      trackAction.mutate({ clinicId: practice.id, action: "phone_call_click" });
+    }
+  };
 
   return (
     <section className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
@@ -64,7 +79,7 @@ export function BookingCtaSection({ content, contextData, isEditor }: BookingCta
               {content.buttonText}
             </Button>
           ) : (
-            <Link href={bookingUrl}>
+            <Link href={bookingUrl} onClick={handleBookingClick}>
               <Button
                 size="lg"
                 className="gap-2 font-bold shadow-md hover:scale-105 transition-transform text-white"
@@ -85,7 +100,7 @@ export function BookingCtaSection({ content, contextData, isEditor }: BookingCta
                 {content.phoneButtonText}
               </Button>
             ) : (
-              <a href={`tel:${phone}`}>
+              <a href={`tel:${phone}`} onClick={handlePhoneClick}>
                 <Button size="lg" variant="outline" className="gap-2 font-semibold hover:bg-background/80">
                   <Phone className="h-4 w-4" />
                   {content.phoneButtonText}

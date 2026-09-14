@@ -26,13 +26,18 @@ import {
   extSmsDeliveryLog,
   extChannelAccounts,
   extMarketingWebsiteConfig,
+  extMarketingWebsiteInquiries,
+  extAutomationEvents,
   patients,
   clients,
   practices,
   users,
+  wellnessPlans,
   wellnessEnrollments,
+  services,
   bookingPages,
 } from '@openpims/db';
+import { enrollInJourney } from "@/lib/autopilot/journey-engine";
 import { websiteSectionSchema } from '@/lib/marketing/website-builder-types';
 import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
@@ -3505,6 +3510,7 @@ listStaffTasks: protectedProcedure
         id: practices.id,
         name: practices.name,
         logoUrl: practices.logoUrl,
+        createdAt: practices.createdAt,
         settings: practices.settings,
       })
       .from(practices)
@@ -3527,15 +3533,15 @@ listStaffTasks: protectedProcedure
 
     const published = existingConfig ? existingConfig.published : Boolean(settings.websitePublished);
 
-    // Count team members with photo_web consent
-    const teamConsents = await ctx.db
-      .select({ id: extMarketingMediaConsents.id })
-      .from(extMarketingMediaConsents)
+    // Staff members from clinic
+    const staffMembers = await ctx.db
+      .select({ id: users.id })
+      .from(users)
       .where(
         and(
-          eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
-          eq(extMarketingMediaConsents.scope, "photo_web"),
-          isNull(extMarketingMediaConsents.revokedAt)
+          eq(users.practiceId, ctx.practiceId),
+          inArray(users.role, ["admin", "veterinarian", "technician"]),
+          isNull(users.deletedAt)
         )
       );
 
@@ -3563,6 +3569,36 @@ listStaffTasks: protectedProcedure
         )
       );
 
+    // Count active patients
+    const [patientCountRes] = await ctx.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.practiceId, ctx.practiceId),
+          isNull(patients.deletedAt)
+        )
+      );
+    const patientCount = Number(patientCountRes?.count ?? 0);
+
+    // Years in practice calculation
+    const practiceCreatedYear = practice?.createdAt
+      ? new Date(practice.createdAt).getFullYear()
+      : new Date().getFullYear();
+    const yearsInPractice = Math.max(1, new Date().getFullYear() - practiceCreatedYear);
+
+    // Count website inquiries
+    const [inquiriesCountRes] = await ctx.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(extMarketingWebsiteInquiries)
+      .where(
+        and(
+          eq(extMarketingWebsiteInquiries.practiceId, ctx.practiceId),
+          isNull(extMarketingWebsiteInquiries.deletedAt)
+        )
+      );
+    const inquiriesCount = Number(inquiriesCountRes?.count ?? 0);
+
     const brandKit = {
       brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
       secondaryColor: (bk.secondaryColor as string | undefined) ?? "#f5f5f4",
@@ -3580,9 +3616,15 @@ listStaffTasks: protectedProcedure
       clinicName: practice?.name ?? "",
       sectionsDraft,
       brandKit,
-      teamCount: teamConsents.length,
+      teamCount: staffMembers.length,
       handoutsCount: publicHandouts.length,
       reviewsCount: fiveStarReviews.length,
+      inquiriesCount,
+      liveStats: {
+        patientCount,
+        fiveStarReviewCount: fiveStarReviews.length,
+        yearsInPractice,
+      },
     };
   }),
 
@@ -3697,16 +3739,17 @@ listStaffTasks: protectedProcedure
           address: practices.address,
           website: practices.website,
           logoUrl: practices.logoUrl,
+          createdAt: practices.createdAt,
           settings: practices.settings,
         })
         .from(practices)
-        .where(eq(practices.id, input.clinicId))
+        .where(and(eq(practices.id, input.clinicId), isNull(practices.deletedAt)))
         .limit(1);
 
       if (!practice) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Klinika nebola nájdená.",
+          message: "Clinic not found",
         });
       }
 
@@ -3734,12 +3777,13 @@ listStaffTasks: protectedProcedure
         logoUrl: practice.logoUrl ?? null,
       };
 
-      // Staff members from clinic
+      // Staff members from clinic with avatarUrl
       const staffMembers = await ctx.db
         .select({
           id: users.id,
           name: users.name,
           role: users.role,
+          avatarUrl: users.avatarUrl,
         })
         .from(users)
         .where(
@@ -3805,6 +3849,61 @@ listStaffTasks: protectedProcedure
         )
         .limit(1);
 
+      // Active patient count
+      const [patientCountRes] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(patients)
+        .where(
+          and(
+            eq(patients.practiceId, input.clinicId),
+            isNull(patients.deletedAt)
+          )
+        );
+      const patientCount = Number(patientCountRes?.count ?? 0);
+
+      // Years in practice calculation
+      const practiceCreatedYear = practice?.createdAt
+        ? new Date(practice.createdAt).getFullYear()
+        : new Date().getFullYear();
+      const yearsInPractice = Math.max(1, new Date().getFullYear() - practiceCreatedYear);
+
+      // Active wellness plans
+      const activeWellnessPlans = await ctx.db
+        .select({
+          id: wellnessPlans.id,
+          name: wellnessPlans.name,
+          description: wellnessPlans.description,
+          price: wellnessPlans.price,
+          billingInterval: wellnessPlans.billingInterval,
+        })
+        .from(wellnessPlans)
+        .where(
+          and(
+            eq(wellnessPlans.practiceId, input.clinicId),
+            eq(wellnessPlans.active, true),
+            isNull(wellnessPlans.deletedAt)
+          )
+        )
+        .orderBy(wellnessPlans.name);
+
+      // Active services preview from clinic price list
+      const liveServices = await ctx.db
+        .select({
+          id: services.id,
+          name: services.name,
+          category: services.category,
+          defaultPrice: services.defaultPrice,
+        })
+        .from(services)
+        .where(
+          and(
+            eq(services.practiceId, input.clinicId),
+            isNull(services.deletedAt)
+          )
+        )
+        .orderBy(services.name)
+        .limit(20);
+
       return {
         practice,
         isPublished,
@@ -3814,6 +3913,13 @@ listStaffTasks: protectedProcedure
         team: staffMembers,
         handouts: publicHandouts,
         reviews: topReviews,
+        liveStats: {
+          patientCount,
+          fiveStarReviewCount: topReviews.length,
+          yearsInPractice,
+        },
+        liveServices,
+        wellnessPlans: activeWellnessPlans,
       };
     }),
 
@@ -3829,21 +3935,236 @@ listStaffTasks: protectedProcedure
     )
     .mutation(async ({ ctx, input }) => {
       const [practice] = await ctx.db
-        .select({ id: practices.id })
+        .select({ id: practices.id, name: practices.name })
         .from(practices)
-        .where(eq(practices.id, input.clinicId))
+        .where(and(eq(practices.id, input.clinicId), isNull(practices.deletedAt)))
         .limit(1);
 
       if (!practice) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Klinika nebola nájdená.",
+          message: "Clinic not found",
         });
       }
 
-      // Log contact inquiry safely
-      console.log(`[Website Contact Form] Clinic ${input.clinicId} received inquiry from ${input.name} <${input.email}>`);
+      // 1. Look up or create client record for lead attribution
+      const trimmedEmail = input.email.trim().toLowerCase();
+      const trimmedPhone = input.phone?.trim();
+
+      const [existingClient] = await ctx.db
+        .select({ id: clients.id })
+        .from(clients)
+        .where(
+          and(
+            eq(clients.practiceId, input.clinicId),
+            or(
+              eq(clients.email, trimmedEmail),
+              trimmedPhone ? eq(clients.phone, trimmedPhone) : undefined
+            ),
+            isNull(clients.deletedAt)
+          )
+        )
+        .limit(1);
+
+      let clientId = existingClient?.id;
+
+      if (!clientId) {
+        const parts = input.name.trim().split(/\s+/);
+        const firstName = parts[0] || input.name.trim();
+        const lastName = parts.slice(1).join(" ") || firstName;
+
+        const [createdClient] = await ctx.db
+          .insert(clients)
+          .values({
+            practiceId: input.clinicId,
+            firstName,
+            lastName,
+            email: trimmedEmail,
+            phone: trimmedPhone ?? null,
+            externalSource: "website_contact",
+            notes: "Lead captured from public website contact form",
+          })
+          .returning({ id: clients.id });
+
+        clientId = createdClient?.id;
+      }
+
+      // 2. Persist visitor inquiry
+      const [inquiry] = await ctx.db
+        .insert(extMarketingWebsiteInquiries)
+        .values({
+          practiceId: input.clinicId,
+          clientId: clientId ?? null,
+          name: input.name.trim(),
+          email: trimmedEmail,
+          phone: trimmedPhone ?? null,
+          message: input.message.trim(),
+          status: "new",
+          source: "website_contact",
+        })
+        .returning();
+
+      // 3. Create staff task in extMarketingStaffTasks
+      await ctx.db.insert(extMarketingStaffTasks).values({
+        practiceId: input.clinicId,
+        kind: "website_inquiry",
+        title: `Dopyt z webstránky: ${input.name.trim()}`,
+        detail: `${input.message.trim()}\n\nEmail: ${trimmedEmail}${trimmedPhone ? `\nTelefón: ${trimmedPhone}` : ""}`,
+        status: "open",
+        clientId: clientId ?? null,
+      });
+
+      // 4. Emit durable automation event
+      try {
+        await (ctx.db as any).insert(extAutomationEvents).values({
+          practiceId: input.clinicId,
+          eventType: "client_created",
+          sourceRouter: "marketing.submitWebsiteContactForm",
+          clientId: clientId ?? null,
+          dedupeKey: `website_inquiry_${inquiry.id}`,
+          status: "pending",
+          availableAt: new Date(),
+          payload: {
+            inquiryId: inquiry.id,
+            name: input.name.trim(),
+            email: trimmedEmail,
+            phone: trimmedPhone ?? null,
+            source: "website_contact",
+          },
+        });
+      } catch (evtErr) {
+        console.warn("[Website Contact Form] Durable event emission error:", evtErr);
+      }
+
+      // 5. Enroll in welcome_new_client customer journey
+      if (clientId) {
+        try {
+          await enrollInJourney(ctx.db as any, clientId, "welcome_new_client", input.clinicId);
+        } catch (jErr) {
+          console.warn("[Website Contact Form] Journey enrollment note:", jErr);
+        }
+      }
+
+      return { ok: true, inquiryId: inquiry.id };
+    }),
+
+  listWebsiteInquiries: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        status: z.enum(["new", "in_progress", "resolved", "archived"]).optional(),
+        limit: z.number().min(1).max(100).default(50),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const whereClauses = [
+        eq(extMarketingWebsiteInquiries.practiceId, ctx.practiceId),
+        isNull(extMarketingWebsiteInquiries.deletedAt),
+      ];
+
+      if (input?.status) {
+        whereClauses.push(eq(extMarketingWebsiteInquiries.status, input.status));
+      }
+
+      const inquiries = await ctx.db
+        .select()
+        .from(extMarketingWebsiteInquiries)
+        .where(and(...whereClauses))
+        .orderBy(desc(extMarketingWebsiteInquiries.createdAt))
+        .limit(input?.limit ?? 50);
+
+      return inquiries;
+    }),
+
+  updateWebsiteInquiryStatus: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        status: z.enum(["new", "in_progress", "resolved", "archived"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingWebsiteInquiries)
+        .set({
+          status: input.status,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(extMarketingWebsiteInquiries.id, input.id),
+            eq(extMarketingWebsiteInquiries.practiceId, ctx.practiceId),
+            isNull(extMarketingWebsiteInquiries.deletedAt)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Inquiry not found",
+        });
+      }
+
+      return { ok: true, inquiry: updated };
+    }),
+
+  trackWebsiteAction: publicProcedure
+    .input(
+      z.object({
+        clinicId: z.string(),
+        action: z.enum(["booking_cta_click", "phone_call_click", "review_click", "handout_view"]),
+        metadata: z.record(z.any()).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Safely record visitor action for analytics and attribution
+      console.log(`[Website Analytics] Clinic ${input.clinicId} action ${input.action}`);
       return { ok: true };
+    }),
+
+  suggestWebsiteFaq: protectedProcedure
+    .input(z.object({ specialty: z.string().optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      try {
+        const model = configuredModel();
+        const prompt = `Si marketingový špecialista veterinárnej kliniky "${practice?.name ?? "Veterinárna ambulancia"}".
+Vytvor 4 často kladené otázky (FAQ) s odpoveďami pre majiteľov psov a mačiek pred návštevou kliniky.
+${input?.specialty ? `Zameraj sa na oblasť: ${input.specialty}` : ""}
+Formát JSON: pole objektov s kľúčmi "question" a "answer".`;
+
+        const result = await generateText({ model, prompt });
+        const text = result.text.trim();
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          return {
+            items: parsed.map((item: any, idx: number) => ({
+              id: `faq-ai-${Date.now()}-${idx}`,
+              question: String(item.question),
+              answer: String(item.answer),
+            })),
+          };
+        }
+      } catch (err) {
+        console.warn("[Website AI Suggest] Fallback FAQ generated:", err);
+      }
+
+      return {
+        items: [
+          { id: `faq-1`, question: "Musím sa na vyšetrenie vopred objednať?", answer: "Odporúčame online rezerváciu termínu, aby ste sa vyhli čakaniu. Akútne stavy ošetrujeme prednostne." },
+          { id: `faq-2`, question: "Ako pripraviť zviera pred plánovaným zákrokom?", answer: "Dospelý pes alebo mačka by mali byť nalačno 8-12 hodín pred anestéziou. Voda je povolená do 2 hodín pred príchodom." },
+          { id: `faq-3`, question: "Aké spôsoby platby prijímate?", answer: "Prijímame platby v hotovosti, platobnými kartami aj okamžitým bankovým prevodom." },
+          { id: `faq-4`, question: "Poskytujete pohotovostnú službu?", answer: "Mimo ordinačných hodín sme dostupní na pohotovostnom telefónnom čísle pre neodkladné prípady." },
+        ],
+      };
     }),
 
 

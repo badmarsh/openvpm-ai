@@ -15,7 +15,11 @@ interface EmergencyBannerSectionProps {
 
 export function EmergencyBannerSection({ content, contextData, isEditor }: EmergencyBannerSectionProps) {
   const [dismissed, setDismissed] = useState(false);
-  const phone = content.phone || contextData?.practice?.phone || "+421 900 123 456";
+  const phone =
+    (content.phone && content.phone !== "+421 900 123 456" ? content.phone : null) ||
+    contextData?.practice?.phone ||
+    content.phone ||
+    "+421 900 123 456";
 
   if (dismissed && !isEditor) {
     return null;
