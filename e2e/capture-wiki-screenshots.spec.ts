@@ -144,10 +144,20 @@ test("Zachytenie screenshotov v Light Mode (1920x1080)", async ({ page }) => {
       await weekButton.click();
       await page.waitForTimeout(1000);
     }
-    await page.keyboard.press("Control+K");
+    const searchBtn = page.locator('button[aria-label="Open search"]').first();
+    if (await searchBtn.isVisible()) {
+      await searchBtn.click();
+    } else {
+      await page.keyboard.press("Control+k");
+    }
     await page.waitForTimeout(600);
-    await page.keyboard.type("Pupinka");
-    await page.waitForTimeout(1000);
+    const cmdkInput = page.locator('input[placeholder*="Search patients"]').first();
+    if (await cmdkInput.isVisible()) {
+      await cmdkInput.fill("Pupinka");
+    } else {
+      await page.keyboard.type("Pupinka");
+    }
+    await page.waitForTimeout(1500);
   });
   await page.keyboard.press("Escape").catch(() => {});
 
