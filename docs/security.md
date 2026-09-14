@@ -54,4 +54,4 @@ Passwords are hashed with bcrypt. All dashboard routes require an authenticated 
 
 ## Responsible disclosure
 
-Please do not report security issues through public GitHub issues. Email **security@openvpm.com** with `[SECURITY]` in the subject line. We acknowledge reports within 48 hours and follow the 90-day coordinated disclosure process described in [SECURITY.md](../SECURITY.md).
+Please do not report security issues through public GitHub issues. Email **bezpecnost@vasa-klinika.sk** with `[SECURITY]` in the subject line. We acknowledge reports within 48 hours and follow the 90-day coordinated disclosure process described in [SECURITY.md](../SECURITY.md).

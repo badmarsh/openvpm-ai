@@ -40,7 +40,7 @@ On-call uses `/api/health` (readiness) and `/api/health/live` (process up). Do n
 1. Rotate `NEXTAUTH_SECRET`, DB passwords, API keys, storage keys.
 2. Preserve logs (without expanding PHI in copies).
 3. Notify DPO / legal — **requires legal review**, not automated.
-4. Email `security@openvpm.com` process in `SECURITY.md`.
+4. Email `bezpecnost@vasa-klinika.sk` process in `SECURITY.md`.
 
 ## Compromised secret
 
