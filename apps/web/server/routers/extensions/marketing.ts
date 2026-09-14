@@ -25,6 +25,7 @@ import {
   extMarketingCompetitorSnapshots,
   extSmsDeliveryLog,
   extChannelAccounts,
+  extMarketingWebsiteConfig,
   patients,
   clients,
   practices,
@@ -32,6 +33,8 @@ import {
   wellnessEnrollments,
   bookingPages,
 } from '@openpims/db';
+import { websiteSectionSchema } from '@/lib/marketing/website-builder-types';
+import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
 import { autoFix, validateMarketingText, withDisclaimer, type ValidatorReport } from '@/lib/marketing/validator';
 import { generateWeeklyBatch, getBrand, mondayOf, nameGuards } from '@/lib/marketing/planner';
@@ -3501,6 +3504,7 @@ listStaffTasks: protectedProcedure
       .select({
         id: practices.id,
         name: practices.name,
+        logoUrl: practices.logoUrl,
         settings: practices.settings,
       })
       .from(practices)
@@ -3508,7 +3512,20 @@ listStaffTasks: protectedProcedure
       .limit(1);
 
     const settings = (practice?.settings ?? {}) as Record<string, any>;
-    const published = Boolean(settings.websitePublished);
+    const bk = (settings.brandKit ?? {}) as Record<string, any>;
+
+    const [existingConfig] = await ctx.db
+      .select()
+      .from(extMarketingWebsiteConfig)
+      .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+      .limit(1);
+
+    const seedSections = getSeedWebsiteSections(practice?.name || "");
+    const sectionsDraft = existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
+      ? (existingConfig.sectionsDraft as any)
+      : seedSections;
+
+    const published = existingConfig ? existingConfig.published : Boolean(settings.websitePublished);
 
     // Count team members with photo_web consent
     const teamConsents = await ctx.db
@@ -3546,30 +3563,115 @@ listStaffTasks: protectedProcedure
         )
       );
 
+    const brandKit = {
+      brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
+      secondaryColor: (bk.secondaryColor as string | undefined) ?? "#f5f5f4",
+      toneOfVoice: (bk.toneOfVoice as string | undefined) ?? "",
+      brandVoiceInstructions: (bk.brandVoiceInstructions as string | undefined) ?? "",
+      disclaimer: (bk.disclaimer as string | undefined) ?? "",
+      socialHandles: (bk.socialHandles as any) ?? {},
+      clinicName: practice?.name ?? "",
+      logoUrl: practice?.logoUrl ?? null,
+    };
+
     return {
       published,
       clinicId: practice?.id ?? ctx.practiceId,
       clinicName: practice?.name ?? "",
+      sectionsDraft,
+      brandKit,
       teamCount: teamConsents.length,
       handoutsCount: publicHandouts.length,
       reviewsCount: fiveStarReviews.length,
     };
   }),
 
+  updateWebsiteSections: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(z.object({ sections: z.array(websiteSectionSchema) }))
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db
+        .select({ id: extMarketingWebsiteConfig.id })
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+        .limit(1);
+
+      if (existing) {
+        await ctx.db
+          .update(extMarketingWebsiteConfig)
+          .set({
+            sectionsDraft: input.sections,
+            updatedAt: new Date(),
+          })
+          .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId));
+      } else {
+        await ctx.db
+          .insert(extMarketingWebsiteConfig)
+          .values({
+            practiceId: ctx.practiceId,
+            sectionsDraft: input.sections,
+            sectionsPublished: null,
+            published: false,
+          });
+      }
+
+      return { ok: true, count: input.sections.length };
+    }),
+
   toggleWebsite: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
-    .mutation(async ({ ctx }) => {
+    .input(z.object({ published: z.boolean().optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
       const [practice] = await ctx.db
         .select({
+          name: practices.name,
           settings: practices.settings,
         })
         .from(practices)
         .where(eq(practices.id, ctx.practiceId))
         .limit(1);
 
-      const settings = (practice?.settings ?? {}) as Record<string, any>;
-      const nextPublished = !settings.websitePublished;
+      const [existingConfig] = await ctx.db
+        .select()
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+        .limit(1);
 
+      const settings = (practice?.settings ?? {}) as Record<string, any>;
+      const currentPublished = existingConfig ? existingConfig.published : Boolean(settings.websitePublished);
+      const nextPublished = input?.published !== undefined ? input.published : !currentPublished;
+
+      const seedSections = getSeedWebsiteSections(practice?.name || "");
+      const draftToPublish = existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
+        ? existingConfig.sectionsDraft
+        : seedSections;
+
+      if (existingConfig) {
+        const updateData: any = {
+          published: nextPublished,
+          updatedAt: new Date(),
+        };
+        if (nextPublished) {
+          updateData.sectionsPublished = draftToPublish;
+          updateData.publishedAt = new Date();
+        }
+        await ctx.db
+          .update(extMarketingWebsiteConfig)
+          .set(updateData)
+          .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId));
+      } else {
+        await ctx.db
+          .insert(extMarketingWebsiteConfig)
+          .values({
+            practiceId: ctx.practiceId,
+            sectionsDraft: seedSections,
+            sectionsPublished: nextPublished ? seedSections : null,
+            published: nextPublished,
+            publishedAt: nextPublished ? new Date() : null,
+          });
+      }
+
+      // Keep settings.websitePublished synced for legacy readers
       await ctx.db
         .update(practices)
         .set({
@@ -3594,6 +3696,7 @@ listStaffTasks: protectedProcedure
           email: practices.email,
           address: practices.address,
           website: practices.website,
+          logoUrl: practices.logoUrl,
           settings: practices.settings,
         })
         .from(practices)
@@ -3608,7 +3711,28 @@ listStaffTasks: protectedProcedure
       }
 
       const settings = (practice.settings ?? {}) as Record<string, any>;
-      const isPublished = Boolean(settings.websitePublished);
+      const bk = (settings.brandKit ?? {}) as Record<string, any>;
+
+      const [config] = await ctx.db
+        .select()
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, input.clinicId))
+        .limit(1);
+
+      const isPublished = config ? config.published : Boolean(settings.websitePublished);
+      const seedSections = getSeedWebsiteSections(practice.name);
+      const sections = config?.sectionsPublished && Array.isArray(config.sectionsPublished) && config.sectionsPublished.length > 0
+        ? (config.sectionsPublished as any)
+        : seedSections;
+
+      const brandKit = {
+        brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
+        secondaryColor: (bk.secondaryColor as string | undefined) ?? "#f5f5f4",
+        toneOfVoice: (bk.toneOfVoice as string | undefined) ?? "",
+        socialHandles: (bk.socialHandles as any) ?? {},
+        clinicName: practice.name,
+        logoUrl: practice.logoUrl ?? null,
+      };
 
       // Staff members from clinic
       const staffMembers = await ctx.db
@@ -3684,12 +3808,44 @@ listStaffTasks: protectedProcedure
       return {
         practice,
         isPublished,
+        sections,
+        brandKit,
         bookingSlug: bookingPage?.slug ?? null,
         team: staffMembers,
         handouts: publicHandouts,
         reviews: topReviews,
       };
     }),
+
+  submitWebsiteContactForm: publicProcedure
+    .input(
+      z.object({
+        clinicId: z.string(),
+        name: z.string().min(1).max(100),
+        email: z.string().email(),
+        phone: z.string().max(40).optional(),
+        message: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ id: practices.id })
+        .from(practices)
+        .where(eq(practices.id, input.clinicId))
+        .limit(1);
+
+      if (!practice) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Klinika nebola nájdená.",
+        });
+      }
+
+      // Log contact inquiry safely
+      console.log(`[Website Contact Form] Clinic ${input.clinicId} received inquiry from ${input.name} <${input.email}>`);
+      return { ok: true };
+    }),
+
 
   getPracticeId: protectedProcedure.query(async ({ ctx }) => {
     return {

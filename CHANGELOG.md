@@ -8,6 +8,16 @@ as described in `docs/production-readiness/VERSIONING.md`.
 
 ## [Unreleased]
 
+### Added
+
+- **Brand-Kit-Aware Drag-and-Drop Clinic Website Builder:**
+  - Full-width visual editor canvas with accessible `@dnd-kit` drag handles, inline property editing sheets, and live responsive desktop/mobile viewport toggle.
+  - Comprehensive library of 17 shadcn/ui section templates: Hero Banner, About & Story, Services Grid, GDPR-Consent-Gated Team, Reviews & Ratings (Grid/Carousel), FAQ Accordion, Hours & Location with map embed, Online Booking CTA, Media Library Gallery, Educational Care Handouts, Trust & Certification Badges, Statistics Strip, Urgent Care Emergency Banner, Client Contact Form, Responsive Video Player, Social Proof Bar, and Sanitized Custom Rich Text.
+  - Automatic Brand Kit styling injecting `--wb-primary`, `--wb-secondary`, and calculated contrast text colors (`--wb-on-primary`) across all section components.
+  - Dedicated Drizzle schema table `ext_marketing_website_config` with draft vs. published state isolation.
+  - Backward compatibility seed fallback guaranteeing zero disruption for existing published clinic sites.
+  - Playwright E2E and Vitest unit test suites covering section schemas, drag reordering, and public rendering.
+
 ## [0.5.0] - 2026-09-12
 
 ### Added

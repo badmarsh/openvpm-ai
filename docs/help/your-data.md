@@ -42,6 +42,39 @@ cross-practice restore fails before writing instead of creating broken links.
 If you ever need this, we run it with you. The technical runbook is
 [here](../backup-restore-runbook.md).
 
+## e-Kasa export & fiscal audit log
+
+Your fiscal receipt records (e-Kasa) are stored separately from standard
+invoices and can be exported for accounting and tax submissions.
+
+- **Receipt export**: Go to **Settings → e-Kasa** and use the date-range
+  export to download a CSV of all fiscal receipts (including VAT breakdown,
+  UID, payment method, and daily closure records) for the selected period.
+- **Audit log export**: The full e-Kasa audit trail — including voided
+  receipts, offline queue events, and storno records — is available as a
+  CSV export from the same screen.
+
+> ⚠️ **PDF export note**: PDF exports of fiscal receipts strip Slovak
+> diacritics (č→c, š→s, ä→a). Use CSV for submissions to Finančná správa SR
+> or your accountant to preserve all characters.
+
+## Lab analyzer import
+
+Results from in-house analysers (IDEXX Catalyst, IDEXX ProCyte, Fuji
+Dri-Chem NX500, Mindray BC-Vet) are imported automatically — no manual
+file upload required. The system receives result files from the analyser,
+parses them, checks reference ranges, and adds them to the Lab Inbox for
+review.
+
+Manual CSV upload of lab results is available for analysers not yet
+connected automatically. Go to **Lab Results → Upload results** and select
+your CSV file.
+
+**Full live API connectors** (direct integration with external reference
+laboratory APIs such as IDEXX Reference Labs or Laboklin) are coming in
+v0.7. The parsers are implemented; the live API connections are not yet
+active.
+
 ## Sample data
 
 New practices start with a few sample pets so the app feels real on day one.
