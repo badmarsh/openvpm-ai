@@ -102,9 +102,19 @@ async function main() {
   }
 
   for (const file of files) {
+    const filePath = path.join(SCREENSHOTS_DIR, file);
+    const stats = fs.statSync(filePath);
+
+    if (map[file] && map[file].size === stats.size && !process.env.FORCE_UPLOAD) {
+      console.log(`- Preskakujem ${file} (už nahrané a veľkosť sa zhoduje)`);
+      continue;
+    }
+
     try {
       const res = await uploadSingleScreenshot(file);
       map[file] = res;
+      // Krátka pauza proti rate-limitu
+      await new Promise(r => setTimeout(r, 1200));
     } catch (err) {
       console.error(`✗ Chyba pri nahrávaní ${file}:`, err.message);
     }

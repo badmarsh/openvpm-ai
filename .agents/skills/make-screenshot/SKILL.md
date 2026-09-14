@@ -38,9 +38,9 @@ Každý screenshot MUSÍ spĺňať nasledujúce striktné parametre:
 
 ---
 
-## 3. Katalóg 19 dokumentačných screenshotov
+## 3. Katalóg 29 dokumentačných screenshotov
 
-Výstupné súbory sa ukladajú do priečinka `docs/screenshots/wiki/`:
+Výstupné súbory sa ukladajú do priečinka `docs/screenshots/wiki/` (pokrývajú všetkých 15 kapitol príručky):
 
 ```
 docs/screenshots/wiki/
@@ -48,21 +48,31 @@ docs/screenshots/wiki/
 ├── 01-02-denny-harmonogram.png           # /schedule (Pohľad na deň)
 ├── 01-03-rychle-vyhladavanie-cmd-k.png   # /schedule (Pohľad Týždeň + Ctrl+K dialóg "Pupinka")
 ├── 01-04-whiteboard-ambulancie.png       # /whiteboard (Ordinančná tabuľa s aktívnymi pacientmi)
+├── 01-05-cakaren-ambulancie.png          # /waiting-room (Čakáreň ambulancie a príchody)
+├── 01-06-inbox-notifikacie.png           # /inbox (Interná pošta, správy a notifikácie tímu)
 ├── 02-01-zoznam-pacientov.png            # /patients (Kartotéka zvierat)
 ├── 02-02-profil-pacienta.png             # /patients/5821edf5-e13d-4085-85c4-be6b95b29c34 (Pupinka)
 ├── 02-03-soap-klinicky-zaznam.png        # /records (Vyhľadaná a vybratá Pupinka + klinický záznam)
 ├── 02-04-ockovania-preukaz.png           # /care-reminders (Preventívna starostlivosť)
+├── 02-05-profil-klienta.png              # /clients/[id] (Profil majiteľa a zoznam zvierat)
 ├── 03-01-vystavenie-uctu.png             # /billing (Položková faktúra a účet)
 ├── 03-02-ekasa-prehlad.png               # /billing/ekasa (Fiškálne doklady a stav pokladnice)
 ├── 04-01-skladove-zasoby.png             # /inventory (Skladové karty liekov, šarže, exspirácie)
 ├── 04-02-kniha-opl-narkotika.png         # /controlled-substances (Kniha omamných a psychotropných látok)
 ├── 05-01-statne-registre-prehlad.png     # /statutory (Hlásenia KVEPIS, CRSZ a CEHZ)
+├── 05-02-kniha-besnoty.png               # /statutory (Kniha besnoty a 3-dňová lehota RVPS)
 ├── 06-01-laboratorne-vysledky.png        # /lab-results (Hematológia, biochémia, RTG)
 ├── 07-01-website-editor.png              # /marketing/website (Vizuálny editor webu kliniky)
 ├── 08-01-marketingove-kampane.png        # /marketing (Marketingové štúdio a kampane)
+├── 09-01-klientsky-portal-prehlad.png    # /portal (Klientsky portál majiteľa PWA)
+├── 09-02-klientsky-portal-profil.png     # /portal/pets/[id] (Zdravotná karta a očkovací preukaz)
+├── 09-03-klientsky-portal-objednavanie.png # /portal/book (Online objednávanie návštevy)
 ├── 10-01-sprava-personalu-roly.png       # /settings (Správa používateľov a rolí)
 ├── 11-01-financny-dashboard.png          # /reports (Finančný a prevádzkový dashboard)
-└── 14-01-ai-sidebar-konzultacia.png      # /agent (Klinická konzultácia s AI asistentom)
+├── 12-01-wellness-plany-prehlad.png      # /marketing/wellness (Wellness plány & programy)
+├── 13-01-sprava-dat-exporty.png          # /settings?tab=data (Správa dát, exporty a zálohy)
+├── 14-01-ai-sidebar-konzultacia.png      # /agent (Klinická konzultácia s AI asistentom)
+└── 15-01-ical-subscribe-dialog.png       # /schedule (Odoberanie rozvrhu iCal / Webcal do mobilu)
 ```
 
 ---
