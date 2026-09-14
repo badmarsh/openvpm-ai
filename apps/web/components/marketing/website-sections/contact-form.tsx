@@ -36,6 +36,25 @@ export function ContactFormSection({ content, contextData, isEditor }: ContactFo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedMessage = message.trim();
+
+    if (trimmedName.length < 2) {
+      toast.error("Zadajte prosím celé meno (aspoň 2 znaky).");
+      return;
+    }
+
+    if (!trimmedEmail || !trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+      toast.error("Zadajte platnú e-mailovú adresu.");
+      return;
+    }
+
+    if (trimmedMessage.length < 5) {
+      toast.error("Správa musí obsahovať aspoň 5 znakov.");
+      return;
+    }
+
     if (isEditor) {
       toast.info("V režime editora je odosielanie správ simulované.");
       setSubmitted(true);
@@ -49,10 +68,10 @@ export function ContactFormSection({ content, contextData, isEditor }: ContactFo
 
     submitMutation.mutate({
       clinicId: contextData.practice.id,
-      name,
-      email,
-      phone: content.showPhoneField ? phone : undefined,
-      message,
+      name: trimmedName,
+      email: trimmedEmail,
+      phone: content.showPhoneField && phone.trim() ? phone.trim() : undefined,
+      message: trimmedMessage,
     });
   };
 
@@ -141,11 +160,19 @@ export function ContactFormSection({ content, contextData, isEditor }: ContactFo
               <label className="text-xs font-semibold text-foreground">Vaša správa alebo otázka *</label>
               <Textarea
                 required
+                minLength={5}
+                maxLength={2000}
                 rows={4}
                 placeholder="Napíšte nám, ako vám môžeme pomôcť..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
+              <div className="flex justify-between items-center text-[11px] text-muted-foreground pt-0.5">
+                <span>Min. 5 znakov</span>
+                <span className={message.length > 1900 ? "text-amber-500 font-medium" : ""}>
+                  {message.length} / 2000
+                </span>
+              </div>
             </div>
 
             <Button

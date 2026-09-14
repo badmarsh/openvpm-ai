@@ -38,10 +38,11 @@ import {
   bookingPages,
 } from '@openpims/db';
 import { enrollInJourney } from "@/lib/autopilot/journey-engine";
-import { websiteSectionSchema } from '@/lib/marketing/website-builder-types';
+import { websiteSectionSchema, type WebsiteSection } from '@/lib/marketing/website-builder-types';
 import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
 import { autoFix, validateMarketingText, withDisclaimer, type ValidatorReport } from '@/lib/marketing/validator';
+import { rateLimit } from "@/lib/rate-limit";
 import { generateWeeklyBatch, getBrand, mondayOf, nameGuards } from '@/lib/marketing/planner';
 import { composePost } from '@/lib/marketing/composer';
 import { RECIPES } from '@/lib/marketing/recipes';
@@ -190,6 +191,115 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     sampleEmailBody: `Vážení klienti,\n\nkoniec roka býva pre zvieracích členov rodiny najstresujúcejším obdobím. Zvukové vlny z pyrotechniky vnímajú zvieratá niekoľkonásobne intenzívnejšie ako ľudia.\n\nRadi vám pomôžeme vybrať účinné a bezpečné riešenie – od prírodných doplnkov až po moderné veterinárne liečivá, ktoré tlmia strach bez straty motoriky.\n\nPríďte sa k nám poradiť ešte pred vianočným zhonom.`,
   },
 ];
+
+/**
+ * Validates all free-text fields across website sections against Slovak veterinary
+ * advertising regulations (Zákon o reklame, Etický kódex KVL SR, Zákon o liekoch).
+ * Throws TRPCError BAD_REQUEST if any BLOCK rule is triggered.
+ */
+export function validateWebsiteSections(sections: WebsiteSection[]): void {
+  for (const section of sections) {
+    const textSnippets: { label: string; text: string }[] = [];
+    const content = (section.content ?? {}) as Record<string, any>;
+
+    switch (section.type) {
+      case "hero":
+        if (content.title) textSnippets.push({ label: "Hero titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Hero podtitulok", text: String(content.subtitle) });
+        if (content.badge) textSnippets.push({ label: "Hero odznak", text: String(content.badge) });
+        break;
+      case "about":
+        if (content.title) textSnippets.push({ label: "O nás titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "O nás podtitulok", text: String(content.subtitle) });
+        if (content.story) textSnippets.push({ label: "O nás príbeh", text: String(content.story) });
+        break;
+      case "services":
+        if (content.title) textSnippets.push({ label: "Služby titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Služby podtitulok", text: String(content.subtitle) });
+        if (Array.isArray(content.services)) {
+          for (const s of content.services) {
+            if (s?.title) textSnippets.push({ label: `Služba "${s.title}"`, text: String(s.title) });
+            if (s?.description) textSnippets.push({ label: `Popis služby "${s.title}"`, text: String(s.description) });
+          }
+        }
+        break;
+      case "faq":
+        if (content.title) textSnippets.push({ label: "FAQ titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "FAQ podtitulok", text: String(content.subtitle) });
+        if (Array.isArray(content.items)) {
+          for (const f of content.items) {
+            if (f?.question) textSnippets.push({ label: `FAQ otázka`, text: String(f.question) });
+            if (f?.answer) textSnippets.push({ label: `FAQ odpoveď`, text: String(f.answer) });
+          }
+        }
+        break;
+      case "emergency_banner":
+        if (content.alertText) textSnippets.push({ label: "Núdzový banner text", text: String(content.alertText) });
+        if (content.subtext) textSnippets.push({ label: "Núdzový banner podtext", text: String(content.subtext) });
+        break;
+      case "custom_rich_text":
+        if (content.title) textSnippets.push({ label: "Vlastný blok titulok", text: String(content.title) });
+        if (content.content) textSnippets.push({ label: "Vlastný blok obsah", text: String(content.content) });
+        break;
+      case "booking_cta":
+        if (content.title) textSnippets.push({ label: "Rezervácia titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Rezervácia podtitulok", text: String(content.subtitle) });
+        break;
+      case "hours_location":
+        if (content.title) textSnippets.push({ label: "Ordinačné hodiny titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Ordinačné hodiny podtitulok", text: String(content.subtitle) });
+        if (content.emergencyNote) textSnippets.push({ label: "Pohotovostná poznámka", text: String(content.emergencyNote) });
+        break;
+      case "trust_badges":
+        if (content.title) textSnippets.push({ label: "Certifikácie titulok", text: String(content.title) });
+        if (Array.isArray(content.items)) {
+          for (const tb of content.items) {
+            if (tb?.label) textSnippets.push({ label: `Certifikát "${tb.label}"`, text: String(tb.label) });
+            if (tb?.description) textSnippets.push({ label: `Popis certifikátu "${tb.label}"`, text: String(tb.description) });
+          }
+        }
+        break;
+      case "wellness":
+        if (content.title) textSnippets.push({ label: "Wellness titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Wellness podtitulok", text: String(content.subtitle) });
+        if (Array.isArray(content.plans)) {
+          for (const p of content.plans) {
+            if (p?.name) textSnippets.push({ label: `Wellness plán "${p.name}"`, text: String(p.name) });
+            if (p?.description) textSnippets.push({ label: `Popis plánu "${p.name}"`, text: String(p.description) });
+            if (Array.isArray(p?.features)) {
+              for (const feat of p.features) {
+                if (feat) textSnippets.push({ label: `Vlastnosť plánu "${p.name}"`, text: String(feat) });
+              }
+            }
+          }
+        }
+        break;
+      default:
+        if (content.title && typeof content.title === "string") {
+          textSnippets.push({ label: `${section.type} titulok`, text: content.title });
+        }
+        if (content.subtitle && typeof content.subtitle === "string") {
+          textSnippets.push({ label: `${section.type} podtitulok`, text: content.subtitle });
+        }
+        break;
+    }
+
+    for (const snippet of textSnippets) {
+      if (!snippet.text.trim()) continue;
+      const report = validateMarketingText({
+        text: snippet.text,
+        context: "marketing",
+      });
+      const blocking = report.findings.find((f) => f.severity === "block");
+      if (blocking) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Súlad s predpismi [${blocking.rule}] (${snippet.label}): ${blocking.message}${blocking.excerpt ? ` [${blocking.excerpt}]` : ""}`,
+        });
+      }
+    }
+  }
+}
 
 export const marketingRouter = createRouter({
   /**
@@ -3632,6 +3742,9 @@ listStaffTasks: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
     .input(z.object({ sections: z.array(websiteSectionSchema) }))
     .mutation(async ({ ctx, input }) => {
+      // Validate all free-text fields against marketing compliance regulations
+      validateWebsiteSections(input.sections);
+
       const [existing] = await ctx.db
         .select({ id: extMarketingWebsiteConfig.id })
         .from(extMarketingWebsiteConfig)
@@ -3687,6 +3800,11 @@ listStaffTasks: protectedProcedure
       const draftToPublish = existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
         ? existingConfig.sectionsDraft
         : seedSections;
+
+      if (nextPublished) {
+        // Enforce compliance validation before publishing live
+        validateWebsiteSections(draftToPublish as WebsiteSection[]);
+      }
 
       if (existingConfig) {
         const updateData: any = {
@@ -3763,10 +3881,24 @@ listStaffTasks: protectedProcedure
         .limit(1);
 
       const isPublished = config ? config.published : Boolean(settings.websitePublished);
+      const isClinicStaff = ctx.session?.user?.practiceId === input.clinicId;
+      if (!isPublished && !isClinicStaff) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Clinic website not found or not published",
+        });
+      }
+
       const seedSections = getSeedWebsiteSections(practice.name);
-      const sections = config?.sectionsPublished && Array.isArray(config.sectionsPublished) && config.sectionsPublished.length > 0
-        ? (config.sectionsPublished as any)
-        : seedSections;
+      const sections = isPublished
+        ? (config?.sectionsPublished && Array.isArray(config.sectionsPublished) && config.sectionsPublished.length > 0
+            ? (config.sectionsPublished as any)
+            : seedSections)
+        : (config?.sectionsDraft && Array.isArray(config.sectionsDraft) && config.sectionsDraft.length > 0
+            ? (config.sectionsDraft as any)
+            : (config?.sectionsPublished && Array.isArray(config.sectionsPublished) && config.sectionsPublished.length > 0
+                ? (config.sectionsPublished as any)
+                : seedSections));
 
       const brandKit = {
         brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
@@ -3836,6 +3968,19 @@ listStaffTasks: protectedProcedure
         .orderBy(desc(extMarketingReviews.receivedAt))
         .limit(8);
 
+      // Accurate 5-star review count (matching getWebsiteConfig)
+      const [fiveStarRes] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(extMarketingReviews)
+        .where(
+          and(
+            eq(extMarketingReviews.practiceId, input.clinicId),
+            eq(extMarketingReviews.rating, 5),
+            isNull(extMarketingReviews.deletedAt)
+          )
+        );
+      const fiveStarReviewCount = Number(fiveStarRes?.count ?? 0);
+
       // Active booking page slug
       const [bookingPage] = await ctx.db
         .select({ slug: bookingPages.slug })
@@ -3846,10 +3991,7 @@ listStaffTasks: protectedProcedure
             eq(bookingPages.published, true),
             isNull(bookingPages.deletedAt)
           )
-        )
-        .limit(1);
-
-      // Active patient count
+        );
       const [patientCountRes] = await ctx.db
         .select({ count: sql<number>`count(*)::int` })
         .from(patients)
@@ -3915,7 +4057,7 @@ listStaffTasks: protectedProcedure
         reviews: topReviews,
         liveStats: {
           patientCount,
-          fiveStarReviewCount: topReviews.length,
+          fiveStarReviewCount,
           yearsInPractice,
         },
         liveServices,
@@ -3934,6 +4076,38 @@ listStaffTasks: protectedProcedure
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Rate limiting: 10 requests per 15m per IP, 5 requests per 15m per email+clinic
+      const trimmedEmail = input.email.trim().toLowerCase();
+      const trimmedPhone = input.phone?.trim();
+
+      try {
+        const ipLimit = await rateLimit({
+          key: `contact_form:ip:${ctx.ip || "unknown"}`,
+          limit: 10,
+          windowMs: 15 * 60 * 1000,
+        });
+        if (!ipLimit.success) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Príliš veľa požiadaviek. Skúste to prosím znova o 15 minút.",
+          });
+        }
+        const emailLimit = await rateLimit({
+          key: `contact_form:clinic:${input.clinicId}:email:${trimmedEmail}`,
+          limit: 5,
+          windowMs: 15 * 60 * 1000,
+        });
+        if (!emailLimit.success) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Pre túto e-mailovú adresu bolo odoslaných príliš veľa správ. Skúste to znova neskôr.",
+          });
+        }
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        console.error("[website contact form] rate limit check failed:", err);
+      }
+
       const [practice] = await ctx.db
         .select({ id: practices.id, name: practices.name })
         .from(practices)
@@ -3946,10 +4120,6 @@ listStaffTasks: protectedProcedure
           message: "Clinic not found",
         });
       }
-
-      // 1. Look up or create client record for lead attribution
-      const trimmedEmail = input.email.trim().toLowerCase();
-      const trimmedPhone = input.phone?.trim();
 
       const [existingClient] = await ctx.db
         .select({ id: clients.id })

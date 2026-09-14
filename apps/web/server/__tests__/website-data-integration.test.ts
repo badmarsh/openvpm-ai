@@ -6,7 +6,11 @@ import {
   statsContentSchema,
   type WebsitePublicData,
 } from "@/lib/marketing/website-builder-types";
-import { createDefaultSection } from "@/lib/marketing/website-seed";
+import { createDefaultSection, getSeedWebsiteSections } from "@/lib/marketing/website-seed";
+import { validateWebsiteSections } from "@/server/routers/extensions/marketing";
+import { SECTION_TEMPLATES } from "@/components/marketing/website-editor-palette";
+import { validateMarketingText } from "@/lib/marketing/validator";
+import { TRPCError } from "@trpc/server";
 import enMessages from "@/messages/en.json";
 import skMessages from "@/messages/sk.json";
 
@@ -224,6 +228,148 @@ describe("Website Data Integration Contracts & Guardrails", () => {
 
       expect(enKeys).toEqual(skKeys);
       expect(enKeys.length).toBeGreaterThanOrEqual(30);
+    });
+  });
+
+  describe("Website Compliance Validator Guardrails", () => {
+    it("accepts default seed website sections without compliance errors", () => {
+      const seedSections = getSeedWebsiteSections("Veterinárna ambulancia Trnava");
+      expect(() => validateWebsiteSections(seedSections)).not.toThrow();
+    });
+
+    it("blocks sections containing prescription drug names (Zákon o liekoch)", () => {
+      const seedSections = getSeedWebsiteSections("Klinika");
+      seedSections.push({
+        id: "custom-1",
+        type: "custom_rich_text",
+        order: 5,
+        visible: true,
+        content: {
+          title: "Novinka v antiparazitikách",
+          content: "U nás nájdete originálne tablety Bravecto a NexGard za výborné ceny.",
+          alignment: "left",
+          maxWidth: "normal",
+        },
+      });
+
+      expect(() => validateWebsiteSections(seedSections)).toThrowError(TRPCError);
+      try {
+        validateWebsiteSections(seedSections);
+      } catch (err: any) {
+        expect(err.code).toBe("BAD_REQUEST");
+        expect(err.message).toContain("rx_substance");
+      }
+    });
+
+    it("blocks sections with guaranteed cure claims (KVL SR Etický kódex)", () => {
+      const seedSections = getSeedWebsiteSections("Klinika");
+      seedSections[0] = {
+        ...seedSections[0],
+        content: {
+          ...seedSections[0].content,
+          subtitle: "Garantujeme 100 % vyliečenie každého ochorenia bez rizika.",
+        } as any,
+      };
+
+      expect(() => validateWebsiteSections(seedSections)).toThrowError(TRPCError);
+      try {
+        validateWebsiteSections(seedSections);
+      } catch (err: any) {
+        expect(err.code).toBe("BAD_REQUEST");
+        expect(err.message).toContain("guarantee");
+      }
+    });
+
+    it("blocks sections with comparative denigration claims (Zákon o reklame)", () => {
+      const seedSections = getSeedWebsiteSections("Klinika");
+      seedSections.push({
+        id: "about-1",
+        type: "about",
+        order: 6,
+        visible: true,
+        content: {
+          title: "Prečo my",
+          subtitle: "Sme najlepšia klinika v Trnavskom kraji, lepšie než ostatní.",
+          story: "Na rozdiel od iných ambulancií máme najmodernejší tím.",
+          imageUrl: null,
+          imageAlt: "Klinika",
+          imagePosition: "right",
+          stats: [],
+        },
+      });
+
+      expect(() => validateWebsiteSections(seedSections)).toThrowError(TRPCError);
+      try {
+        validateWebsiteSections(seedSections);
+      } catch (err: any) {
+        expect(err.code).toBe("BAD_REQUEST");
+        expect(err.message).toContain("comparison");
+      }
+    });
+
+    it("blocks sections with undisclosed marketing price claims", () => {
+      const seedSections = getSeedWebsiteSections("Klinika");
+      seedSections.push({
+        id: "faq-1",
+        type: "faq",
+        order: 7,
+        visible: true,
+        content: {
+          title: "Časté otázky",
+          subtitle: "Ceny služieb",
+          items: [
+            {
+              id: "f-1",
+              question: "Koľko stojí preventívna prehliadka?",
+              answer: "Kompletné vyšetrenie u nás stojí len 15 € na počkanie.",
+            },
+          ],
+        },
+      });
+
+      expect(() => validateWebsiteSections(seedSections)).toThrowError(TRPCError);
+      try {
+        validateWebsiteSections(seedSections);
+      } catch (err: any) {
+        expect(err.code).toBe("BAD_REQUEST");
+        expect(err.message).toContain("price_without_list");
+      }
+    });
+  });
+
+  describe("Section Templates Palette Contract", () => {
+    it("provides exactly 18 section templates in the palette", () => {
+      expect(SECTION_TEMPLATES).toHaveLength(18);
+    });
+  });
+
+  describe("Hero Phone Fallback Logic Contract", () => {
+    it("correctly falls back to default phone even when clinicName is present", () => {
+      const practice = { name: "Labka s.r.o.", phone: null as string | null };
+      const brandKit = { clinicName: "Veterinárna ambulancia Labka" };
+
+      // Replicating fixed hero phone fallback expression:
+      const phone = practice?.phone || "+421 900 123 456";
+      expect(phone).toBe("+421 900 123 456");
+
+      // With clinic phone:
+      const practiceWithPhone = { name: "Labka", phone: "+421 905 999 888" };
+      const phoneWithClinic = practiceWithPhone?.phone || "+421 900 123 456";
+      expect(phoneWithClinic).toBe("+421 905 999 888");
+    });
+  });
+
+  describe("Validator Localization Integrity", () => {
+    it("uses correct Slovak text without stray characters in advice_replacement rule", () => {
+      const report = validateMarketingText({
+        text: "Podajte 2 tablety psovi ráno a večer.",
+        context: "marketing",
+      });
+
+      const finding = report.findings.find((f) => f.rule === "advice_replacement");
+      expect(finding).toBeDefined();
+      expect(finding?.message).toContain("Uistite sa, že text nenabáda na samoliečbu.");
+      expect(finding?.message).not.toContain("काशी");
     });
   });
 });

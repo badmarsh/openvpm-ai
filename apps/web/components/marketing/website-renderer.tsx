@@ -13,13 +13,28 @@ import type {
  * given any arbitrary background hex color.
  */
 export function getContrastTextColor(hexColor: string): string {
-  if (!hexColor || !hexColor.startsWith("#") || hexColor.length < 7) {
+  if (!hexColor || typeof hexColor !== "string" || !hexColor.startsWith("#")) {
     return "#ffffff";
   }
 
-  const r = parseInt(hexColor.slice(1, 3), 16);
-  const g = parseInt(hexColor.slice(3, 5), 16);
-  const b = parseInt(hexColor.slice(5, 7), 16);
+  let hex = hexColor.slice(1).trim();
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (hex.length !== 6) {
+    return "#ffffff";
+  }
+
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+
+  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    return "#ffffff";
+  }
 
   // Perceptive luminance formula (ITU-R BT.709 / sRGB)
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;

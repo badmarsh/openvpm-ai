@@ -118,9 +118,18 @@ describe("Website Builder Unit & Contract Tests", () => {
       expect(getContrastTextColor("#f5f5f4")).toBe("#0f172a"); // Sand
     });
 
+    it("handles 3-character hex shorthand correctly", () => {
+      expect(getContrastTextColor("#fff")).toBe("#0f172a"); // White background -> dark text
+      expect(getContrastTextColor("#000")).toBe("#ffffff"); // Black background -> white text
+      expect(getContrastTextColor("#eee")).toBe("#0f172a"); // Light grey -> dark text
+      expect(getContrastTextColor("#111")).toBe("#ffffff"); // Dark grey -> white text
+    });
+
     it("handles fallback gracefully on malformed hex strings", () => {
       expect(getContrastTextColor("")).toBe("#ffffff");
       expect(getContrastTextColor("invalid")).toBe("#ffffff");
+      expect(getContrastTextColor("#12")).toBe("#ffffff");
+      expect(getContrastTextColor("#12345")).toBe("#ffffff");
     });
   });
 });

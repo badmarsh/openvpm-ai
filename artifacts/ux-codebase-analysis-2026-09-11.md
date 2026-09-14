@@ -145,7 +145,7 @@
 - **Documentation & Drift Risk:** Interactive Next.js documentation exists at `/api-docs` and `/api-docs/ai`. However, **no machine-readable OpenAPI/Swagger JSON specification is published**, forcing third-party agent integrators to parse UI docs or hand-craft API bindings. [VERIFIED: apps/web/app/api-docs/page.tsx; empty search for openapi.json]
 
 ### (c) AI-Assisted Build Process
-- Confirmed by `CLAUDE.md`, `docs/ai-audit-ledger.md`, and agent handoff files (`HANDOFF-voice-dictation.md`). [VERIFIED: file tree]
+- Confirmed by `CLAUDE.md`, `docs/ai-audit-ledger.md`, and agent handoff files (`docs/handoffs/voice-dictation-migration.md`). [VERIFIED: file tree]
 
 ---
 

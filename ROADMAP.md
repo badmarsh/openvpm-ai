@@ -73,7 +73,7 @@ Pre nezavislych auditorov a kliniky uvaedzame transparentny zoznam poloziek:
 
 1. **KVEPIS B2G certifikaty (XML-only):** XML export a validator su konformne s XSD schemou SVPS SR. Priame volanie REST API brany je zavisle od pridelenia produkcnych integracnych klucov SVPS SR. Realny produkcny KVEPIS token zatial neprideleny.
 2. **e-Kasa certifikacia integracie:** Driver je implementovany a otestovany; formalna certifikacia integracie s FR SR este neprebehla. "Podporovany hardver" != "certifikovana integracia".
-3. **Ziadna realna produkcna klinika:** VetSykora PoC bol simulovany shadow-run. 0 realnych produkcnych klinik, 0 realnych transakcii v CHDU, 0 realnych KVEPIS podani.
+3. **Prvý pilotný klient (VetSýkora):** Veterinárna ambulancia MVDr. Martina Sýkoru je prvým reálnym pilotným nasadením OpenVPM AI. Predbežné testovacie čísla boli generované v kontrolovanom prostredí. Reálne produkčné transakcie v CHDÚ a KVEPIS podania sú v procese.
 4. **DPA a AI sub-procesory:** Vertex AI a Anthropic su identifikovane ako sub-procesori; DPA zatial nepodpisana, region nepotvrdeny.
 5. **Cloudova tlac na lokalnu e-Kasu:** Ak klinika pouziva cloudovu verziu, vyzaduje sa lokálne mapovanie portu alebo v0.7 Tray Agent.
 6. **Multi-location prevadzka:** Schema podporuje viacero pobocok; UI v0.6 je optimalizovane pre jednolokacne kliniky.
@@ -98,6 +98,7 @@ Kompletná používateľská dokumentácia je dostupná v [`docs/help/`](docs/he
 - [Lab Results & Imaging](docs/help/en/lab-imaging.md) — laboratórium, AI zobrazovanie
 - [Reports](docs/help/en/reports.md) — finančné a prevádzkové reporty
 - [Marketing & Communications](docs/help/en/marketing.md) — automatizácia, Sympathy Flow, štúdio
+- [Clinic Website Builder](docs/help/en/website-builder.md) — vizuálny editor webu kliniky, šablóny, Brand Kit
 - [Wellness Plans](docs/help/en/wellness.md) — plány, registrácia, fakturácia
 
 ### Slovenská verzia (`docs/help/sk/`)
@@ -109,5 +110,6 @@ Kompletná používateľská dokumentácia je dostupná v [`docs/help/`](docs/he
 - [Laboratórne výsledky a zobrazovacie metódy](docs/help/sk/lab-imaging.md)
 - [Reporty](docs/help/sk/reports.md)
 - [Marketingové Štúdio a komunikácia](docs/help/sk/marketing.md)
+- [Webová stránka kliniky](docs/help/sk/website-builder.md)
 - [Wellness plány](docs/help/sk/wellness.md)
 

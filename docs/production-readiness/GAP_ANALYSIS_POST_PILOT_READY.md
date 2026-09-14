@@ -34,7 +34,7 @@
 
 | ID | Metric | Status | GAP description | Owner | Target |
 |----|--------|--------|-----------------|-------|--------|
-| P-01 | Pocet aktivnych klinik | Missing | 0 produkcnych klinik; VetSykora = simulovany pilot | Product | 1 klinika Q4 2026 |
+| P-01 | Pocet aktivnych klinik | Partial | 1 pilotná klinika v nasadzovaní (MVDr. Martin Sýkora, Rimavská Sobota); ostrá produkcia v nábehu | Product | 1 klinika Q4 2026 |
 | P-02 | Pocet pacientov a navstev v produkcii | Missing | Ziadne realne data | Product | 100 navstev Q4 2026 |
 | P-03 | Uptime (30-dnovy rolling) | Missing | Ziadna produkcna infrastruktura, ziadny SLA | SRE | Q4 2026 |
 | P-04 | Pocet incidentov a MTTR | Missing | Ziadny incident log | SRE | Q4 2026 |

@@ -184,7 +184,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-foreground">Knižnica sekcií</h2>
           <Badge variant="secondary" className="text-[10px]">
-            17 šablón
+            {SECTION_TEMPLATES.length} šablón
           </Badge>
         </div>
 

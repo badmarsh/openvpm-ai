@@ -58,6 +58,8 @@ two. The same walkthroughs live inside the app: open **Settings** and click
   withdrawal periods, carcass disposal
 - [Marketing & Communications](en/marketing.md) — automated journeys,
   care reminders, Marketing Studio
+- [Clinic Website Builder](en/website-builder.md) — drag-and-drop
+  website editor, brand kit, publishing
 - [Reports](en/reports.md) — revenue, appointments, service performance,
   statutory compliance reports
 - [Your data: export, backup, and import](your-data.md) — full data
@@ -95,6 +97,7 @@ All pages above have Slovak counterparts in the `sk/` directory:
 - [Laboratórne výsledky a zobrazovacie metódy](sk/lab-imaging.md)
 - [Reporty](sk/reports.md)
 - [Marketingové Štúdio a komunikácia](sk/marketing.md)
+- [Webová stránka kliniky](sk/website-builder.md)
 - [Wellness plány](sk/wellness.md)
 
 ---

@@ -17,7 +17,7 @@ export function HeroSection({ content, brandKit, contextData, isEditor }: HeroSe
   const practice = contextData?.practice;
   const bookingSlug = contextData?.bookingSlug;
   const clinicName = content.title || practice?.name || brandKit?.clinicName || "Veterinárna klinika";
-  const phone = practice?.phone || brandKit?.clinicName ? practice?.phone : "+421 900 123 456";
+  const phone = practice?.phone || "+421 900 123 456";
   const address = practice?.address;
   const email = practice?.email;
 
