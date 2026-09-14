@@ -52,7 +52,7 @@ Tento adresár obsahuje kompletnú, zosynchronizovanú znalostnú bázu systému
 ## rocket Prevádzka, Pilot a Podpora
 
 - [🏥 1. Pilotné nasadenie v0.6 (MVDr. Martin Sýkora)](04-prevadzka-pilot-a-podpora/1.%20Pilotné%20nasadenie%20v0.6%20(MVDr.%20Martin%20Sýkora).md)
-- [🔍 2. Charakteristika a nezávislé hodnotenie systému (Perplexity AI)](04-prevadzka-pilot-a-podpora/2.%20Charakteristika%20a%20nezávislé%20hodnotenie%20systému%20(Perplexity%20AI).md)
+- [🔍 2. Charakteristika a nezávislé hodnotenie systému (GLM5.2 AI)](04-prevadzka-pilot-a-podpora/2.%20Charakteristika%20a%20nezávislé%20hodnotenie%20systému%20(GLM5.2%20AI).md)
 - [🎯 3. Strategická roadmapa a GAP matica (v0.6 → v0.7 → v1.0)](04-prevadzka-pilot-a-podpora/3.%20Strategická%20roadmapa%20a%20GAP%20matica%20(v0.6%20→%20v0.7%20→%20v1.0).md)
 - [✅ 4. Go-Live Checklist pre spustenie novej kliniky](04-prevadzka-pilot-a-podpora/4.%20Go-Live%20Checklist%20pre%20spustenie%20novej%20kliniky.md)
 - [🔑 5. Prístupové údaje & Demo účty kliniky (OpenVPM AI)](04-prevadzka-pilot-a-podpora/5.%20Prístupové%20údaje%20&%20Demo%20účty%20kliniky%20(OpenVPM%20AI).md)

@@ -229,6 +229,12 @@ const vanillaSections: NavSection[] = [
     ],
   },
   {
+    id: "marketing",
+    titleKey: "nav.sectionMarketing",
+    titleFallback: "Marketing & Komunikácia",
+    items: [],
+  },
+  {
     id: "admin",
     titleKey: "nav.sectionManagementAdmin",
     titleFallback: "Správa & Manažment",

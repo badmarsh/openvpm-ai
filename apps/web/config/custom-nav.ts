@@ -33,6 +33,7 @@ export type NavSectionId =
   | "frontDesk"
   | "pharmacy"
   | "billing"
+  | "marketing"
   | "admin";
 
 export interface CustomNavItem {
@@ -60,7 +61,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: "nav.marketing",
     icon: Megaphone,
     roles: ["admin", "veterinarian", "front_desk"],
-    section: "admin",
+    section: "marketing",
     exact: true,
   },
   {
@@ -69,7 +70,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: "nav.marketingBrandKit",
     icon: Palette,
     roles: ["admin", "veterinarian"],
-    section: "admin",
+    section: "marketing",
   },
   {
     href: '/marketing/plan',
@@ -77,7 +78,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingPlan',
     icon: CalendarDays,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/content-queue',
@@ -85,7 +86,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingContentQueue',
     icon: CalendarDays,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/reviews',
@@ -93,7 +94,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingReviews',
     icon: Star,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/handouts',
@@ -101,7 +102,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingHandouts',
     icon: FileText,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/messages',
@@ -109,7 +110,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingMessages',
     icon: MessageSquare,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/website',
@@ -117,7 +118,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingWebsite',
     icon: Globe,
     roles: ['admin', 'veterinarian'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/tv',
@@ -125,7 +126,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.waitingRoomTv',
     icon: Tv,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/automations',
@@ -133,7 +134,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingAutomations',
     icon: Zap,
     roles: ['admin', 'veterinarian'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/suppression',
@@ -141,7 +142,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingSuppression',
     icon: ShieldAlert,
     roles: ['admin', 'veterinarian'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/consents',
@@ -149,7 +150,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingConsents',
     icon: ShieldCheck,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/media',
@@ -157,7 +158,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingMedia',
     icon: ImageIcon,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'marketing',
   },
   {
     href: '/marketing/wellness',
@@ -165,7 +166,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.wellnessRedemptions',
     icon: Heart,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'admin',
+    section: 'frontDesk',
   },
   // AI
   {
@@ -183,7 +184,7 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: "nav.agentVoice",
     icon: Mic,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
-    section: "admin",
+    section: "clinical",
     badge: "AI",
   },
   {
@@ -221,15 +222,6 @@ export const customNavItems: CustomNavItem[] = [
     icon: Headphones,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
     section: "admin",
-  },
-  {
-    href: "/admin/support",
-    label: "Admin Podpora",
-    i18nKey: "nav.adminSupport",
-    icon: ShieldCheck,
-    roles: ["admin"],
-    section: "admin",
-    badge: "Support",
   },
   {
     href: "/admin/pilot",
