@@ -29,148 +29,172 @@ Každý screenshot MUSÍ spĺňať nasledujúce striktné parametre:
 | **Identita používateľa** | **MVDr. Martin Sýkora** | `martin.sykora@vetsykora.sk` (Heslo: `password123`) |
 | **Rola v systéme** | **Administrátor (`admin`)** | Zobrazuje kompletné menu vrátane OPL, e-Kasy a Nastavení |
 | **Prax (Practice ID)** | `5c4ebbbc-90e1-457a-87a7-7895f560317d` | Súkromná veterinárna klinika MVDr. Martin Sýkora |
-| **Kľúčový pacient** | **Pupinka** (`5821edf5-e13d-4085-85c4-be6b95b29c34`) | Pacient s reálnymi SOAP záznamami a anamnézou |
+| **Kľúčový pacient** | **Pupinka** (`5821edf5-e13d-4085-85c4-be6b95b29c34`) | Pacient s reálnymi SOAP záznamami, očkovaniami a anamnézou |
+| **Kľúčový klient** | **Margaréta Keľová** (`31b42847-ed4b-4fd5-970b-fbc4b489fe3f`) | Majiteľka mačky Pupinka |
 | **Čistota rozhrania** | **Bez demo bannerov a popupov** | Vypnutý konverzný banner, prijaté cookies |
 
-> [!IMPORTANT]
-> **Zákaz Demo módu na prihlasovacej obrazovke:** V `.env` musí byť `NEXT_PUBLIC_DEMO_MODE=false`. Prihlásenie musí obsahovať polia pre Email, Heslo a tlačidlo *„Prihlásiť sa“* (nie demo tlačidlo *„Otvoriť živé demo“*).
-> **Potlačenie skúšobného pruhu:** Komponent `apps/web/components/demo/demo-conversion-bar.tsx` musí vracať `return null;` (žiadna výzva *„Páči sa vám tento workflow? Spustite si bezplatnú skúšobnú verziu...“*).
+> ⚠️ **Dôležité — Zákaz Demo módu a nastavenie témy:**
+> 1. **Demo mód:** V `apps/web/.env` MUSÍ byť `NEXT_PUBLIC_DEMO_MODE=false`. Prihlasovacia obrazovka musí zobrazovať štandardný formulár s poliami Email, Heslo a tlačidlom *„Prihlásiť sa“* (nie demo box *„Otvoriť živé demo“*).
+> 2. **Predvolený Light Mode v kóde:** V `apps/web/lib/theme/theme-context.tsx` MUSÍ byť `useState<ThemeMode>("light")` (nie `"dark"`), inak sa pri prvom načítaní aplikujú do `root.style` tmavé CSS premenné (`--background: 0 0% 7.1%`).
+> 3. **Skúšobný pruh:** Komponent `apps/web/components/demo/demo-conversion-bar.tsx` musí vracať `return null;`.
 
 ---
 
-## 3. Katalóg 29 dokumentačných screenshotov
+## 3. Katalóg všetkých 29 screenshotov a presný recept pre každý z nich
 
-Výstupné súbory sa ukladajú do priečinka `docs/screenshots/wiki/` (pokrývajú všetkých 15 kapitol príručky):
+Všetky výstupné súbory sa ukladajú do `docs/screenshots/wiki/`:
 
-```
-docs/screenshots/wiki/
-├── 01-01-prihlasenie.png                 # /login (Štandardný formulár)
-├── 01-02-denny-harmonogram.png           # /schedule (Pohľad na deň)
-├── 01-03-rychle-vyhladavanie-cmd-k.png   # /schedule (Pohľad Týždeň + Ctrl+K dialóg "Pupinka")
-├── 01-04-whiteboard-ambulancie.png       # /whiteboard (Ordinančná tabuľa s aktívnymi pacientmi)
-├── 01-05-cakaren-ambulancie.png          # /waiting-room (Čakáreň ambulancie a príchody)
-├── 01-06-inbox-notifikacie.png           # /inbox (Interná pošta, správy a notifikácie tímu)
-├── 02-01-zoznam-pacientov.png            # /patients (Kartotéka zvierat)
-├── 02-02-profil-pacienta.png             # /patients/5821edf5-e13d-4085-85c4-be6b95b29c34 (Pupinka)
-├── 02-03-soap-klinicky-zaznam.png        # /records (Vyhľadaná a vybratá Pupinka + klinický záznam)
-├── 02-04-ockovania-preukaz.png           # /care-reminders (Preventívna starostlivosť)
-├── 02-05-profil-klienta.png              # /clients/[id] (Profil majiteľa a zoznam zvierat)
-├── 03-01-vystavenie-uctu.png             # /billing (Položková faktúra a účet)
-├── 03-02-ekasa-prehlad.png               # /billing/ekasa (Fiškálne doklady a stav pokladnice)
-├── 04-01-skladove-zasoby.png             # /inventory (Skladové karty liekov, šarže, exspirácie)
-├── 04-02-kniha-opl-narkotika.png         # /controlled-substances (Kniha omamných a psychotropných látok)
-├── 05-01-statne-registre-prehlad.png     # /statutory (Hlásenia KVEPIS, CRSZ a CEHZ)
-├── 05-02-kniha-besnoty.png               # /statutory (Kniha besnoty a 3-dňová lehota RVPS)
-├── 06-01-laboratorne-vysledky.png        # /lab-results (Hematológia, biochémia, RTG)
-├── 07-01-website-editor.png              # /marketing/website (Vizuálny editor webu kliniky)
-├── 08-01-marketingove-kampane.png        # /marketing (Marketingové štúdio a kampane)
-├── 09-01-klientsky-portal-prehlad.png    # /portal (Klientsky portál majiteľa PWA)
-├── 09-02-klientsky-portal-profil.png     # /portal/pets/[id] (Zdravotná karta a očkovací preukaz)
-├── 09-03-klientsky-portal-objednavanie.png # /portal/book (Online objednávanie návštevy)
-├── 10-01-sprava-personalu-roly.png       # /settings (Správa používateľov a rolí)
-├── 11-01-financny-dashboard.png          # /reports (Finančný a prevádzkový dashboard)
-├── 12-01-wellness-plany-prehlad.png      # /marketing/wellness (Wellness plány & programy)
-├── 13-01-sprava-dat-exporty.png          # /settings?tab=data (Správa dát, exporty a zálohy)
-├── 14-01-ai-sidebar-konzultacia.png      # /agent (Klinická konzultácia s AI asistentom)
-└── 15-01-ical-subscribe-dialog.png       # /schedule (Odoberanie rozvrhu iCal / Webcal do mobilu)
-```
+### Kapitola 1: Začíname s OpenVPM AI
+1. **`01-01-prihlasenie.png`**
+   - **Trasa:** `/login` (odhlásený stav)
+   - **Recept:** Nastaviť Light Mode v localStorage pred navigáciou. Podať `GET /login`. Odkliknúť cookie banner. Zobraziť čistý biely formulár *„Prihláste sa do svojej ambulancie“* s poľami Email, Heslo a tlačidlom *„Prihlásiť sa“*.
+2. **`01-02-denny-harmonogram.png`**
+   - **Trasa:** `/schedule` (prihlásený Dr. Sýkora)
+   - **Recept:** Pohľad na aktuálny deň, kde sú zobrazení pacienti priradení Dr. Sýkorovi (nasadení cez `seed-today-whiteboard.js`).
+3. **`01-03-rychle-vyhladavanie-cmd-k.png`**
+   - **Trasa:** `/schedule`
+   - **Recept:** Prepnúť rozvrh na pohľad **Týždeň** (klik na tlačidlo *„Týždeň“*). Otvoriť vyhľadávací dialóg kliknutím na lupu v TopBare (`button[aria-label="Open search"]`) alebo stlačením `Control+k` (**pozor: malé 'k', nie veľké 'K'!**). Do vyhľadávacieho poľa napísať `Pupinka`. Počkať 1.5s na načítanie výsledku `🐱 Pupinka, európska domáca, Owner: Margaréta Keľová`.
+4. **`01-04-whiteboard-ambulancie.png`**
+   - **Trasa:** `/whiteboard`
+   - **Recept:** Zobrazuje hospitalizačnú a ordinačnú tabuľu s pacientmi v stavoch Čakáreň, Vyšetrenie a Hospitalizácia.
+5. **`01-05-cakaren-ambulancie.png`**
+   - **Trasa:** `/waiting-room`
+   - **Recept:** Obrazovka čakárne s príchodmi pacientov.
+6. **`01-06-inbox-notifikacie.png`**
+   - **Trasa:** `/inbox`
+   - **Recept:** Prehľad internej komunikácie, systémových upozornení a správ od klientov.
+
+### Kapitola 2: Kartotéka a zdravotné záznamy
+7. **`02-01-zoznam-pacientov.png`**
+   - **Trasa:** `/patients`
+   - **Recept:** Kartotéka zvierat s filtrami druhov, stavom a vyhľadávaním.
+8. **`02-02-profil-pacienta.png`**
+   - **Trasa:** `/patients/5821edf5-e13d-4085-85c4-be6b95b29c34`
+   - **Recept:** Karta mačky Pupinka (identifikácia, čip, anamnéza, majiteľka Margaréta Keľová).
+9. **`02-03-soap-klinicky-zaznam.png`**
+   - **Trasa:** `/records`
+   - **Recept:** Do vyhľadávača pacientov zadať `Pupinka`, kliknúť na nájdeného pacienta v dropdown zozname, čím sa načíta a otvorí štruktúrovaný SOAP záznam (Subjektívne, Objektívne, Posúdenie, Plán).
+10. **`02-04-ockovania-preukaz.png`**
+    - **Trasa:** `/care-reminders`
+    - **Recept:** Prehľad plánovaných očkovaní a preventívnych úkonov.
+11. **`02-05-profil-klienta.png`**
+    - **Trasa:** `/clients/31b42847-ed4b-4fd5-970b-fbc4b489fe3f`
+    - **Recept:** Profil majiteľky Margaréty Keľovej so zoznamom zvierat a kontaktnými údajmi.
+
+### Kapitola 3: Fakturácia a e-Kasa
+12. **`03-01-vystavenie-uctu.png`**
+    - **Trasa:** `/billing`
+    - **Recept:** Prehľad vystavených faktúr, účtov a tržieb ambulancie.
+13. **`03-02-ekasa-prehlad.png`**
+    - **Trasa:** `/billing/ekasa`
+    - **Recept:** Stav fiškálnej tlačiarne e-Kasa, zoznam bločkov a denná uzávierka.
+
+### Kapitola 4: Sklad a lekáreň
+14. **`04-01-skladove-zasoby.png`**
+    - **Trasa:** `/inventory`
+    - **Recept:** Prehľad liečiv, šarží, expirácií a nákupných/predajných cien.
+15. **`04-02-kniha-opl-narkotika.png`**
+    - **Trasa:** `/controlled-substances`
+    - **Recept:** Zákonná evidencia omamných a psychotropných látok (ketamín, butorfanol atď.).
+
+### Kapitola 5: Legislatíva a štátne hlásenia
+16. **`05-01-statne-registre-prehlad.png`**
+    - **Trasa:** `/statutory`
+    - **Recept:** Modul hlásení do štátnych registrov (KVEPIS, CRSZ, CEHZ).
+17. **`05-02-kniha-besnoty.png`**
+    - **Trasa:** `/statutory`
+    - **Recept:** Kniha vyšetrení na besnotu (3-dňová a 14-dňová zákonná lehota).
+
+### Kapitola 6: Laboratórium a diagnostika
+18. **`06-01-laboratorne-vysledky.png`**
+    - **Trasa:** `/lab-results`
+    - **Recept:** Prehľad laboratórnych vyšetrení (hematológia, biochémia, sono nálezy).
+
+### Kapitola 7: Tvorba webu kliniky
+19. **`07-01-website-editor.png`**
+    - **Trasa:** `/marketing/website`
+    - **Recept:** Vizuálny editor webovej stránky ambulancie.
+
+### Kapitola 8: Marketingové Štúdio
+20. **`08-01-marketingove-kampane.png`**
+    - **Trasa:** `/marketing`
+    - **Recept:** Marketingové kampane, automatické SMS pripomienky a recenzie.
+
+### Kapitola 9: Klientsky portál (PWA)
+21. **`09-01-klientsky-portal-prehlad.png`**
+    - **Trasa:** `/portal`
+    - **Recept:** Cez zabezpečený odkaz `/portal/access/test-portal-token-sykora` (pripravený cez `setup-portal-token.js`). Prehľad zvierat prihláseného majiteľa.
+22. **`09-02-klientsky-portal-profil.png`**
+    - **Trasa:** `/portal/pets/5821edf5-e13d-4085-85c4-be6b95b29c34`
+    - **Recept:** Profil mačky Pupinka v klientskom portáli. Záložka **Vaccinations (3)** obsahuje reálne demo očkovania (Nobivac Tricat Trio, Nobivac Rabies, Purevax FeLV) so stavom *„Up to date“* a tlačidlami na stiahnutie certifikátu (nasadené cez `seed-pupinka-vaccinations.js`).
+23. **`09-03-klientsky-portal-objednavanie.png`**
+    - **Trasa:** `/portal/book`
+    - **Recept:** Obrazovka online rezervácie termínu s výberom zvieratka, lekára a času.
+
+### Kapitola 10: Administrátorské nastavenia
+24. **`10-01-sprava-personalu-roly.png`**
+    - **Trasa:** `/settings`
+    - **Recept:** Konfigurácia ambulancie, správa používateľov, oprávnenia a personál.
+
+### Kapitola 11: Finančné reporty
+25. **`11-01-financny-dashboard.png`**
+    - **Trasa:** `/reports`
+    - **Recept:** Grafy tržieb, priemerný účet, analýza návštevnosti a výkon lekárov.
+
+### Kapitola 12: Wellness plány
+26. **`12-01-wellness-plany-prehlad.png`**
+    - **Trasa:** `/marketing/wellness`
+    - **Recept:** Balíčky preventívnej starostlivosti a predplatné plány pre pacientov.
+
+### Kapitola 13: Správa dát a zálohy
+27. **`13-01-sprava-dat-exporty.png`**
+    - **Trasa:** `/settings?tab=data`
+    - **Recept:** Exporty do Excel/CSV, zálohovanie a GDPR výmazy.
+
+### Kapitola 14: AI Asistent
+28. **`14-01-ai-sidebar-konzultacia.png`**
+    - **Trasa:** `/agent`
+    - **Recept:** Interaktívny čet s klinickým AI asistentom.
+
+### Kapitola 15: iCal / Webcal integrácia
+29. **`15-01-ical-subscribe-dialog.png`**
+    - **Trasa:** `/schedule`
+    - **Recept:** Klik na tlačidlo kalendára s popiskom *„Odoberať kalendár“* / *„Subscribe“*, čím sa otvorí modálne okno s webcal URL odkazom a QR kódom pre Apple Calendar / Google Calendar.
 
 ---
 
-## 4. Štandardný postup krok za krokom (Runbook)
-
-### Krok 1: Spustenie produkčného webového servera (Vysoký výkon)
-> [!CAUTION]
-> **NIKDY nespúšťaj Playwright proti `pnpm dev`!** V Next.js App Routeri na Windows dev server dynamicky kompiluje každú trasu pri prvej požiadavke, čo spôsobuje 45-sekundové timeouty a neúplne vyrenderované stránky. Vždy použi **produkčný build**.
-
-1. Skontroluj, či beží PostgreSQL kontajner (port `5434`, DB `openvpm_ai`).
-2. Buildni projekt:
-   ```bash
-   pnpm --filter @openpims/web build
-   ```
-3. Spusti server na porte `3001`:
-   ```bash
-   pnpm --filter @openpims/web start -p 3001
-   ```
-
-### Krok 2: Príprava a reset dát v databáze
-Pred spustením screenshotov vždy vyčisti rate-limity a naplň dnešný rozvrh čerstvými dátami:
+## 4. Runbook: Spustenie od nuly na prvú šupu
 
 ```bash
-# 1. Vyčistiť prihlasovacie rate limity v Postgres
+# 1. Kontrola Postgres (port 5434)
+# 2. Build produkčného webu
+pnpm --filter @openpims/web build
+
+# 3. Spustenie produkčného servera (daemon)
+pnpm --filter @openpims/web start -p 3001
+
+# 4. Príprava a seeding dát
 node scripts/clear-rate-limits.js
-
-# 2. Naplniť ordinačnú tabuľu dnešnými aktívnymi pacientmi (pre MVDr. Sýkoru)
 node scripts/seed-today-whiteboard.js
-```
+node scripts/setup-portal-token.js
+node scripts/seed-pupinka-vaccinations.js
 
-### Krok 3: Zhotovenie screenshotov cez Playwright
-- **Všetky screenshoty (Master suite):**
-  ```bash
-  npx playwright test e2e/capture-wiki-screenshots.spec.ts --project=chromium
-  ```
-- **Iba vybrané / cielené screenshoty (Targeted suite):**
-  ```bash
-  npx playwright test e2e/redo-four-screenshots.spec.ts --project=chromium
-  ```
+# 5. Zachytenie screenshotov
+npx playwright test e2e/capture-wiki-screenshots.spec.ts --project=chromium
+npx playwright test e2e/capture-additional-screenshots.spec.ts --project=chromium
 
-#### Kľúčové špecifiká v Playwright kóde:
-- **Light Mode vynútenie:**
-  ```typescript
-  await page.addInitScript(() => {
-    window.localStorage.setItem("openvpm_gui_mode", "light");
-    window.localStorage.setItem("theme", "light");
-    window.localStorage.setItem("openvpm.cookie-consent.v1", "essential");
-    window.sessionStorage.setItem("ovpm_verify_email_dismissed", "1");
-  });
-  ```
-- **Zobrazenie Týždňa v rozvrhu (01-03):** Kliknúť na tlačidlo `Týždeň`, následne stlačiť `Control+K` a napísať `Pupinka`.
-- **Výber pacienta v Záznamoch (02-03):** Vyhľadať `Pupinka` a kliknúť na nájdeného pacienta v dropdown zozname pre zobrazenie SOAP formulára.
-
----
-
-## 5. Synchronizácia s Outline Wiki
-
-Na nahratie vytvorených PNG súborov do Outline a prepojenie s dokumentáciou slúži automatizačný skript:
-
-```bash
+# 6. Upload a synchronizácia s Outline Wiki
 node scripts/upload_and_sync_all_screenshots.js
 ```
 
-### Ako synchronizácia funguje:
-1. **Upload prílohy (`attachments.create`):** Skript požiada Outline o presigned token a odošle binárne dáta cez multipart POST na `https://outline.dev.significa.sk/api/files.create`.
-2. **Generovanie redirect URL:** Každá príloha získa stabilnú adresu tvaru `https://outline.dev.significa.sk/api/attachments.redirect?id=<attachment-id>`.
-3. **Uloženie mapy:** Vytvorí alebo aktualizuje `docs/screenshots/wiki/attachments_map.json`.
-4. **Aktualizácia kapitol:** Prejde všetkých 15 kapitol v `docs/wiki/01-pouzivatelska-prirucka/*.md`, nahradí lokálne cesty `../../screenshots/wiki/<nazov>.png` skutočnými URL z Outline a aktualizuje dokument cez `documents.update`.
-
 ---
 
-## 6. Pravidlo zamedzenia duplicity emoji (Strict Rule)
+## 5. Pravidlá Outline Wiki (Odsúhlasené štandardy)
 
-> [!WARNING]
-> **Outline Wiki Icon vs. Document Title:**
-> Outline priraďuje každému dokumentu samostatný atribút **`icon`** (napr. `icon: "🚀"`).
-> V bočnom paneli Outline automaticky vykresľuje:
-> `[icon] [title]`
-> 
-> **Pravidlo:** Názov dokumentu (`title`) **NESMIE** obsahovať počiatočné emoji!
-> - ❌ NESPRÁVNE: `title: "🚀 1. Začíname s OpenVPM AI"` -> Outline zobrazí: `🚀 🚀 1. Začíname...` (dvojité emoji)
-> - ✅ SPRÁVNE: `title: "1. Začíname s OpenVPM AI"`, `icon: "🚀"` -> Outline zobrazí: `🚀 1. Začíname...` (jediné čisté emoji)
-
-Ak by sa kedykoľvek v budúcnosti objavili zdvojené emoji, spusť automatickú nápravu:
-```bash
-node scripts/fix_duplicate_emojis.js
-```
-
----
-
-## 7. Git Commit & Push kontrola
-
-Po úspešnom zhotovení a synchronizácii over čistotu pracovného stromu a odošli zmeny do gitu:
-
-```bash
-git status
-git add docs/screenshots/wiki/ e2e/ scripts/ docs/wiki/
-git commit -m "feat(docs): update user guide screenshots in light mode and sync to outline wiki"
-git push origin feat/webstranka-data-integration
-```
+1. **Žiadne GitHub alerty:** Outline nepodporuje `> [!NOTE]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!TIP]`, `> [!CAUTION]`. Vždy používať emoji blockquotes:
+   - `> 📝 **Poznámka:**`
+   - `> ⚠️ **Dôležité:**`
+   - `> 💡 **Tip:**`
+   - `> 🚨 **Pozor:**`
+2. **Žiadne dvojité emoji v názvoch:** V `documents.update` odstraňovať úvodné emoji z `title`, pretože Outline ich dopĺňa z atribútu `icon`.
+3. **Rate limiting pri uploade:** Outline API má limit ~25 requestov/minútu. Medzi jednotlivými uploadmi držať pauzu minimálne 1.5–2 sekundy a neuploadovať zbytočne súbory s rovnakou veľkosťou.

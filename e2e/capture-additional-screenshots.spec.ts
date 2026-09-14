@@ -16,6 +16,8 @@ import fs from "fs";
  * - 09-03-klientsky-portal-objednavanie.png (/portal/book)
  */
 
+import { execSync } from "child_process";
+
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3001";
 const OUT_DIR = path.resolve(__dirname, "../docs/screenshots/wiki");
 const CLIENT_ID = "31b42847-ed4b-4fd5-970b-fbc4b489fe3f";
@@ -29,6 +31,16 @@ test.use({
 });
 
 test.describe.configure({ mode: "serial" });
+
+test.beforeAll(async () => {
+  try {
+    execSync("node scripts/clear-rate-limits.js", { stdio: "inherit" });
+    execSync("node scripts/setup-portal-token.js", { stdio: "inherit" });
+    execSync("node scripts/seed-pupinka-vaccinations.js", { stdio: "inherit" });
+  } catch (e) {
+    console.warn("Could not setup DB state before tests:", e);
+  }
+});
 
 async function setupLightModeAndConsent(page: Page) {
   await page.addInitScript(() => {
