@@ -48,11 +48,12 @@ describe("Website Builder Unit & Contract Tests", () => {
     });
   });
 
-  describe("Section Library & Template Factory (17 Templates)", () => {
+  describe("Section Library & Template Factory (18 Templates)", () => {
     const allTypes: SectionType[] = [
       "hero",
       "about",
       "services",
+      "wellness",
       "team",
       "reviews",
       "faq",
@@ -69,12 +70,12 @@ describe("Website Builder Unit & Contract Tests", () => {
       "custom_rich_text",
     ];
 
-    it("has at least 15+ section templates (exactly 17 supported)", () => {
+    it("has at least 15+ section templates (exactly 18 supported)", () => {
       expect(allTypes.length).toBeGreaterThanOrEqual(15);
-      expect(allTypes).toHaveLength(17);
+      expect(allTypes).toHaveLength(18);
     });
 
-    it("creates valid default instances for all 17 templates", () => {
+    it("creates valid default instances for all 18 templates", () => {
       allTypes.forEach((type, idx) => {
         const section = createDefaultSection(type, idx);
         expect(section.type).toBe(type);

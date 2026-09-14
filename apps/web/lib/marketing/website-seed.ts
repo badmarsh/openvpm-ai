@@ -385,7 +385,35 @@ export function createDefaultSection(type: SectionType, order: number): WebsiteS
           subtitle: "Doprajte svojmu miláčikovi pravidelnú veterinárnu starostlivosť a ušetrite s našimi členskými plánmi.",
           showPrice: true,
           ctaText: "Mám záujem o program",
-          plans: [],
+          plans: [
+            {
+              id: "wp-basic",
+              name: "Základná prevencia",
+              description: "Pravidelná ochrana a prehliadka pre mladé a zdravé zvieratá.",
+              price: "19 €",
+              billingInterval: "monthly",
+              badge: "Štartér",
+              features: [
+                "Ročná preventívna prehliadka",
+                "Základné očkovanie a odčervenie",
+                "Zľava 10% na krmivá",
+              ],
+            },
+            {
+              id: "wp-complete",
+              name: "Kompletný wellness",
+              description: "Najpopulárnejší balík pre dospelých psov a mačky so zľavou na zákroky.",
+              price: "29 €",
+              billingInterval: "monthly",
+              badge: "Odporúčané",
+              features: [
+                "Kompletné preventívne vyšetrenie",
+                "Vakcinačná schéma a čipovanie",
+                "Dentálna hygiena s 20% zľavou",
+                "Neobmedzené konzultácie po telefóne",
+              ],
+            },
+          ],
         },
       };
   }

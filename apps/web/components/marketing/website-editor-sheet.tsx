@@ -15,7 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Image as ImageIcon, Plus, Trash2, Check, Sparkles } from "lucide-react";
+import { Image as ImageIcon, Plus, Trash2, Check, Sparkles, Download, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
+import { toast } from "sonner";
 import { WebsiteMediaPickerDialog } from "./website-media-picker-dialog";
 import type { WebsiteSection } from "@/lib/marketing/website-builder-types";
 
@@ -41,6 +44,68 @@ export function WebsiteEditorSheet({
       setDraftContent(JSON.parse(JSON.stringify(section.content)));
     }
   }, [section]);
+
+  const { t } = useI18n();
+
+  const servicesQuery = trpc.billing.listServices.useQuery(undefined, {
+    enabled: open && section?.type === "services",
+  });
+
+  const wellnessQuery = trpc.wellness.listPlans.useQuery(undefined, {
+    enabled: open && section?.type === "wellness",
+  });
+
+  const suggestFaqMutation = trpc.extensions.marketing.suggestWebsiteFaq.useMutation({
+    onSuccess: (data) => {
+      if (data?.items && data.items.length > 0) {
+        updateField("items", data.items);
+        toast.success(t("marketing.website.faqGenerated", "AI úspešne navrhla otázky a odpovede pre kliniku."));
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.website.faqGenError", "Nepodarilo sa vygenerovať otázky."));
+    },
+  });
+
+  const handleImportServices = () => {
+    const list = servicesQuery.data || [];
+    if (list.length === 0) {
+      toast.info(t("marketing.website.noServicesToImport", "V cenníku kliniky sa nenašli žiadne služby."));
+      return;
+    }
+    const imported = list.slice(0, 12).map((srv) => ({
+      id: `srv-${srv.id}`,
+      icon: "Stethoscope",
+      title: srv.name,
+      description: srv.category ? `Kategória: ${srv.category}` : "Odborná veterinárna služba",
+      price: srv.defaultPrice ? `${srv.defaultPrice} €` : undefined,
+    }));
+    updateField("services", imported);
+    toast.success(t("marketing.website.servicesImported", `Importovaných ${imported.length} služieb z cenníka kliniky.`));
+  };
+
+  const handleImportWellnessPlans = () => {
+    const list = wellnessQuery.data || [];
+    if (list.length === 0) {
+      toast.info(t("marketing.website.noWellnessToImport", "V praxi nie sú evidované žiadne aktívne wellness programy."));
+      return;
+    }
+    const imported = list.map((plan) => ({
+      id: `wp-${plan.id}`,
+      name: plan.name,
+      description: plan.description ?? undefined,
+      price: `${plan.price} €`,
+      billingInterval: plan.billingInterval,
+      badge: undefined,
+      features: [
+        "Pravidelné preventívne prehliadky",
+        "Vakcinačný plán v cene",
+        "Zľava na dentálnu hygienu",
+      ],
+    }));
+    updateField("plans", imported);
+    toast.success(t("marketing.website.wellnessImported", `Importovaných ${imported.length} wellness programov.`));
+  };
 
   if (!section) return null;
 
@@ -264,29 +329,46 @@ export function WebsiteEditorSheet({
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-border">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <Label className="font-bold">Zoznam služieb ({draftContent.services?.length || 0})</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const current = draftContent.services || [];
-                        updateField("services", [
-                          ...current,
-                          {
-                            id: `srv-${Date.now()}`,
-                            icon: "Stethoscope",
-                            title: "Nová veterinárna služba",
-                            description: "Popis poskytovaného vyšetrenia alebo zákroku.",
-                          },
-                        ]);
-                      }}
-                      className="gap-1 text-xs"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Pridať službu
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleImportServices}
+                        disabled={servicesQuery.isLoading}
+                        className="gap-1 text-xs"
+                      >
+                        {servicesQuery.isLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Download className="h-3 w-3" />
+                        )}
+                        Importovať z cenníka
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const current = draftContent.services || [];
+                          updateField("services", [
+                            ...current,
+                            {
+                              id: `srv-${Date.now()}`,
+                              icon: "Stethoscope",
+                              title: "Nová veterinárna služba",
+                              description: "Popis poskytovaného vyšetrenia alebo zákroku.",
+                            },
+                          ]);
+                        }}
+                        className="gap-1 text-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Pridať službu
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
@@ -353,28 +435,45 @@ export function WebsiteEditorSheet({
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-border">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <Label className="font-bold">Otázky & Odpovede ({draftContent.items?.length || 0})</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const current = draftContent.items || [];
-                        updateField("items", [
-                          ...current,
-                          {
-                            id: `faq-${Date.now()}`,
-                            question: "Nová otázka?",
-                            answer: "Odpoveď na často kladenú otázku klienta.",
-                          },
-                        ]);
-                      }}
-                      className="gap-1 text-xs"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Pridať otázku
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => suggestFaqMutation.mutate({})}
+                        disabled={suggestFaqMutation.isPending}
+                        className="gap-1 text-xs"
+                      >
+                        {suggestFaqMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3 text-primary" />
+                        )}
+                        Navrhnúť s AI
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const current = draftContent.items || [];
+                          updateField("items", [
+                            ...current,
+                            {
+                              id: `faq-${Date.now()}`,
+                              question: "Nová otázka?",
+                              answer: "Odpoveď na často kladenú otázku klienta.",
+                            },
+                          ]);
+                        }}
+                        className="gap-1 text-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Pridať otázku
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
@@ -657,29 +756,61 @@ export function WebsiteEditorSheet({
                   />
                 </div>
                 <div className="space-y-3 pt-2">
-                  <Label className="font-bold">Hodnoty & Popisky</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-bold">Štatistické ukazovatele & Dáta</Label>
+                    <span className="text-[11px] text-muted-foreground">Prepojené s live databázou</span>
+                  </div>
                   {(draftContent.items || []).map((item: any, idx: number) => (
-                    <div key={item.id} className="grid grid-cols-2 gap-2 p-2 border border-border rounded-lg bg-muted/20">
-                      <Input
-                        placeholder="Hodnota (napr. 15+)"
-                        value={item.value}
-                        onChange={(e) => {
-                          const updated = [...draftContent.items];
-                          updated[idx].value = e.target.value;
-                          updateField("items", updated);
-                        }}
-                        className="text-xs h-8"
-                      />
-                      <Input
-                        placeholder="Popis (napr. Rokov praxe)"
-                        value={item.label}
-                        onChange={(e) => {
-                          const updated = [...draftContent.items];
-                          updated[idx].label = e.target.value;
-                          updateField("items", updated);
-                        }}
-                        className="text-xs h-8"
-                      />
+                    <div key={item.id} className="p-3 border border-border rounded-xl bg-muted/20 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-[10px]">Zdroj dát</Label>
+                          <Select
+                            value={item.source || "custom"}
+                            onValueChange={(val) => {
+                              const updated = [...draftContent.items];
+                              updated[idx].source = val;
+                              updateField("items", updated);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="custom">Vlastný text</SelectItem>
+                              <SelectItem value="patients">Počet pacientov (Live)</SelectItem>
+                              <SelectItem value="reviews">5★ Recenzie (Live)</SelectItem>
+                              <SelectItem value="years">Roky praxe (Live)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px]">Záložná hodnota</Label>
+                          <Input
+                            placeholder="napr. 15+"
+                            value={item.value}
+                            onChange={(e) => {
+                              const updated = [...draftContent.items];
+                              updated[idx].value = e.target.value;
+                              updateField("items", updated);
+                            }}
+                            className="text-xs h-8"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Popis ukazovateľa</Label>
+                        <Input
+                          placeholder="napr. Rokov praxe"
+                          value={item.label}
+                          onChange={(e) => {
+                            const updated = [...draftContent.items];
+                            updated[idx].label = e.target.value;
+                            updateField("items", updated);
+                          }}
+                          className="text-xs h-8"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -781,6 +912,160 @@ export function WebsiteEditorSheet({
                     checked={draftContent.showPhoneButton !== false}
                     onCheckedChange={(c) => updateField("showPhoneButton", c)}
                   />
+                </div>
+              </div>
+            )}
+
+            {/* WELLNESS SECTION */}
+            {section.type === "wellness" && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Nadpis sekcie</Label>
+                  <Input
+                    value={draftContent.title || ""}
+                    onChange={(e) => updateField("title", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Podtitul</Label>
+                  <Textarea
+                    rows={2}
+                    value={draftContent.subtitle || ""}
+                    onChange={(e) => updateField("subtitle", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Text výzvy k akcii (CTA)</Label>
+                  <Input
+                    value={draftContent.ctaText || ""}
+                    onChange={(e) => updateField("ctaText", e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <Label htmlFor="wellness-price-toggle">Zobraziť ceny programov</Label>
+                  <Switch
+                    id="wellness-price-toggle"
+                    checked={draftContent.showPrice !== false}
+                    onCheckedChange={(c) => updateField("showPrice", c)}
+                  />
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="font-bold">Balíky starostlivosti ({draftContent.plans?.length || 0})</Label>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleImportWellnessPlans}
+                        disabled={wellnessQuery.isLoading}
+                        className="gap-1 text-xs"
+                      >
+                        {wellnessQuery.isLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Download className="h-3 w-3" />
+                        )}
+                        Import z praxe
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const current = draftContent.plans || [];
+                          updateField("plans", [
+                            ...current,
+                            {
+                              id: `wp-${Date.now()}`,
+                              name: "Nový wellness plán",
+                              description: "Komplexný preventívny program",
+                              price: "25 €",
+                              billingInterval: "monthly",
+                              features: [
+                                "Pravidelná prehliadka",
+                                "Očkovanie v cene",
+                              ],
+                            },
+                          ]);
+                        }}
+                        className="gap-1 text-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Pridať plán
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                    {(draftContent.plans || []).map((plan: any, idx: number) => (
+                      <div key={plan.id} className="rounded-xl border border-border p-3 bg-muted/20 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Input
+                            placeholder="Názov plánu"
+                            value={plan.name}
+                            onChange={(e) => {
+                              const updated = [...draftContent.plans];
+                              updated[idx].name = e.target.value;
+                              updateField("plans", updated);
+                            }}
+                            className="font-semibold text-xs h-8"
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              const updated = draftContent.plans.filter((_: any, i: number) => i !== idx);
+                              updateField("plans", updated);
+                            }}
+                            className="h-8 w-8 text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Cena (napr. 25 €)"
+                            value={plan.price}
+                            onChange={(e) => {
+                              const updated = [...draftContent.plans];
+                              updated[idx].price = e.target.value;
+                              updateField("plans", updated);
+                            }}
+                            className="text-xs h-8"
+                          />
+                          <Select
+                            value={plan.billingInterval || "monthly"}
+                            onValueChange={(val) => {
+                              const updated = [...draftContent.plans];
+                              updated[idx].billingInterval = val;
+                              updateField("plans", updated);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monthly">Mesačne</SelectItem>
+                              <SelectItem value="annual">Ročne</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Input
+                          placeholder="Popis programu"
+                          value={plan.description || ""}
+                          onChange={(e) => {
+                            const updated = [...draftContent.plans];
+                            updated[idx].description = e.target.value;
+                            updateField("plans", updated);
+                          }}
+                          className="text-xs h-8"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

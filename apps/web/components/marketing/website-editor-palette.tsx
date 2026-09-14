@@ -77,6 +77,13 @@ export const SECTION_TEMPLATES: TemplateDefinition[] = [
     icon: ShieldCheck,
   },
   {
+    type: "wellness",
+    name: "Wellness & Plány",
+    description: "Členské preventívne balíky starostlivosti pre stálych klientov.",
+    category: "services_team",
+    icon: Sparkles,
+  },
+  {
     type: "reviews",
     name: "Recenzie klientov",
     description: "Overené hodnotenia Google/Facebook v mriežke alebo karuseli.",
