@@ -17,7 +17,7 @@ describe("AppErrorView", () => {
     expect(markup).toContain('id="main-content"');
     expect(markup).toContain('role="alert"');
     expect(markup).toContain('aria-labelledby="app-error-title"');
-    expect(markup).toContain("Something went wrong");
-    expect(markup).toContain("Try Again");
+    expect(markup).toContain("Niečo sa pokazilo");
+    expect(markup).toContain("Skúsiť znova");
   });
 });

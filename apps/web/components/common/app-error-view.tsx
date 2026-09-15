@@ -4,6 +4,7 @@ import * as React from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { reportClientError } from "@/components/common/report-client-error";
+import { useI18n } from "@/lib/i18n";
 import type { ClientErrorSource } from "@/lib/client-error-report";
 
 export function AppErrorView({
@@ -15,6 +16,7 @@ export function AppErrorView({
   reset: () => void;
   source: ClientErrorSource;
 }) {
+  const { t } = useI18n();
   React.useEffect(() => {
     reportClientError(source, error);
   }, [error, source]);
@@ -34,16 +36,18 @@ export function AppErrorView({
           id="app-error-title"
           className="font-heading text-2xl font-semibold"
         >
-          Something went wrong
+          {t("common.error.title", "Something went wrong")}
         </h1>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          We logged the error. Try again, or return to the dashboard if it
-          keeps happening.
+          {t(
+            "common.error.description",
+            "We logged the error. Try again, or return to the dashboard if it keeps happening."
+          )}
         </p>
       </div>
       <Button onClick={reset} className="mt-6 gap-2">
         <RotateCcw className="h-4 w-4" />
-        Try Again
+        {t("common.error.retry", "Try Again")}
       </Button>
     </main>
   );
