@@ -39,10 +39,10 @@ function canOperateRecalls(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "front_desk";
 }
 
-function formatDate(val: string | null | undefined): string {
+function formatDate(val: string | Date | null | undefined): string {
   if (!val) return "—";
-  const d = new Date(val);
-  if (Number.isNaN(d.getTime())) return val;
+  const d = val instanceof Date ? val : new Date(val);
+  if (Number.isNaN(d.getTime())) return String(val);
   return d.toLocaleDateString("sk-SK", {
     day: "2-digit",
     month: "2-digit",
@@ -273,7 +273,7 @@ export default function VaccinationsPage() {
                     <label className="flex items-center gap-2 cursor-pointer font-medium">
                       <Checkbox
                         checked={allEligibleSelected}
-                        onCheckedChange={handleToggleAll}
+                        onChange={handleToggleAll}
                       />
                       <span>
                         {t("vaccinations.selectAllEligible", "Vybrať všetkých oprávnených ({count})", {
@@ -305,6 +305,7 @@ export default function VaccinationsPage() {
                         {preview.data.recipients.map((r) => {
                           const isEligible = r.status === "eligible";
                           const isChecked = selected.has(r.patientId);
+                          const firstVaccine = r.vaccines[0];
 
                           return (
                             <tr
@@ -315,7 +316,7 @@ export default function VaccinationsPage() {
                                 <Checkbox
                                   checked={isChecked}
                                   disabled={!isEligible}
-                                  onCheckedChange={() => handleToggleOne(r.patientId)}
+                                  onChange={() => handleToggleOne(r.patientId)}
                                 />
                               </td>
                               <td className="p-2.5 font-medium text-foreground">
@@ -332,10 +333,10 @@ export default function VaccinationsPage() {
                               </td>
                               <td className="p-2.5">
                                 <span className="font-medium text-foreground">
-                                  {r.vaccineName || "Vakcína"}
+                                  {firstVaccine?.vaccineName ?? "Vakcína"}
                                 </span>
                                 <span className="block text-[10px] text-muted-foreground">
-                                  Expirácia: {formatDate(r.dueDate)}
+                                  Expirácia: {firstVaccine?.nextDueDate ? formatDate(firstVaccine.nextDueDate) : "—"}
                                 </span>
                               </td>
                               <td className="p-2.5">
@@ -346,7 +347,7 @@ export default function VaccinationsPage() {
                                     <Mail className="h-3 w-3 text-blue-600" />
                                   )}
                                   <span className="uppercase text-[10px] font-semibold">
-                                    {r.channel}
+                                    {r.channel ?? "—"}
                                   </span>
                                 </span>
                               </td>
@@ -355,7 +356,7 @@ export default function VaccinationsPage() {
                                   variant={
                                     r.status === "eligible"
                                       ? "default"
-                                      : r.status === "deduped"
+                                      : r.status === "already_sent"
                                         ? "secondary"
                                         : "destructive"
                                   }
@@ -363,7 +364,7 @@ export default function VaccinationsPage() {
                                 >
                                   {r.status === "eligible"
                                     ? "Pripravené"
-                                    : r.status === "deduped"
+                                    : r.status === "already_sent"
                                       ? "Už odoslané"
                                       : "Blokované"}
                                 </Badge>
