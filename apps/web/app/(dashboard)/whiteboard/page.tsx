@@ -383,6 +383,16 @@ function WhiteboardCard({
           {getTimeAgo(appointment.startTime, t)}
         </span>
       </div>
+
+      {/* Invoice pending badge for checked_out appointments */}
+      {appointment.status === "checked_out" && (
+        <div className="mt-2 flex items-center gap-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-1">
+          <ClipboardList className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+          <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
+            {t("whiteboard.invoicePending", "Čaká na faktúru")}
+          </span>
+        </div>
+      )}
     </button>
   );
 }

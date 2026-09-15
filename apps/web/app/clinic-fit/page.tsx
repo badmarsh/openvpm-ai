@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -218,7 +218,7 @@ export default async function ClinicFitPage({
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild>
-              <a href="mailto:support@openvpm.com?subject=OpenVPM%20clinic%20fit%20review">
+              <a href="mailto:jurkemik@significa.sk?subject=OpenVPM%20pilot%20-%20zaciname">
                 Plan a clinic pilot
               </a>
             </Button>

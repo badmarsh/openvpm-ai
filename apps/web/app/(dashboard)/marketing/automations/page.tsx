@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Zap,
   Clock,
   ShieldCheck,
+  ShieldAlert,
   Smartphone,
   AlertCircle,
   Loader2,
@@ -19,6 +21,10 @@ import {
   Sparkles,
   Plus,
   Unlink,
+  Heart,
+  Moon,
+  Gauge,
+  UserX,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -37,10 +43,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-export default function MarketingAutomationsPage() {
+function MarketingAutomationsContent() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
-  const [activeTab, setActiveTab] = useState("rules");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "rules";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // 1. Rules Query & Mutation
   const rulesQuery = trpc.extensions.automationRules.list.useQuery();
@@ -151,6 +159,10 @@ export default function MarketingAutomationsPage() {
   // 5. Live Events Query
   const eventsQuery = trpc.extensions.automationEvents.list.useQuery({ limit: 30 });
 
+  // 6. Suppression Metrics Query
+  const suppressionMetricsQuery = trpc.extensions.automationSuppression.getMetrics.useQuery();
+  const suppressionLogsQuery = trpc.extensions.automationSuppression.listLogs.useQuery({ limit: 20 });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -171,7 +183,7 @@ export default function MarketingAutomationsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 h-auto p-1 gap-1">
+        <TabsList className="grid grid-cols-3 md:grid-cols-6 h-auto p-1 gap-1">
           <TabsTrigger value="rules" className="flex items-center gap-1.5 py-2">
             <Zap className="w-4 h-4" />
             <span>{t("marketing.automations.tabRules", "Pravidlá")}</span>
@@ -214,6 +226,15 @@ export default function MarketingAutomationsPage() {
             {eventsQuery.data && (
               <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
                 {eventsQuery.data.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="suppression" className="flex items-center gap-1.5 py-2">
+            <ShieldAlert className="w-4 h-4" />
+            <span>{t("marketing.automations.tabSuppression", "Potlačenia")}</span>
+            {suppressionMetricsQuery.data && (
+              <Badge variant="outline" className="ml-1 text-xs px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
+                {suppressionMetricsQuery.data.total}
               </Badge>
             )}
           </TabsTrigger>
@@ -712,6 +733,121 @@ export default function MarketingAutomationsPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* 6. SUPPRESSION TAB */}
+        <TabsContent value="suppression" className="space-y-4">
+          {/* Metrics Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Heart className="w-4 h-4 text-purple-600 fill-purple-600" />
+                  Sympathy Gate
+                </span>
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[10px]">Kritické</Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.sympathyBlocks ?? 0}</div>
+              <p className="text-[11px] text-muted-foreground">Zablokovaných pre zosnulých pacientov</p>
+            </div>
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Moon className="w-4 h-4 text-blue-600" />
+                  Nočný kľud
+                </span>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">20:00 - 08:00</Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.quietHours ?? 0}</div>
+              <p className="text-[11px] text-muted-foreground">Odložených na povolený čas</p>
+            </div>
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Gauge className="w-4 h-4 text-amber-600" />
+                  SMS Limit
+                </span>
+                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[10px]">&lt; 3 / 24h</Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.rateLimits ?? 0}</div>
+              <p className="text-[11px] text-muted-foreground">Potlačených pre prekročenie limitu</p>
+            </div>
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <UserX className="w-4 h-4 text-rose-600" />
+                  Chýba súhlas
+                </span>
+                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">GDPR Čl. 9</Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.noConsent ?? 0}</div>
+              <p className="text-[11px] text-muted-foreground">Potlačených z dôvodu chýbajúceho súhlasu</p>
+            </div>
+          </div>
+
+          {/* Suppression Logs Table */}
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-muted/40 border-b text-muted-foreground font-semibold">
+                  <tr>
+                    <th className="py-3 px-4">Čas</th>
+                    <th className="py-3 px-4">Dôvod</th>
+                    <th className="py-3 px-4">Akcia / Kanál</th>
+                    <th className="py-3 px-4">Klient / Pacient</th>
+                    <th className="py-3 px-4">Stav</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {suppressionLogsQuery.isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                        Načítavam auditné záznamy...
+                      </td>
+                    </tr>
+                  ) : suppressionLogsQuery.data?.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                        Žiadne potlačené správy.
+                      </td>
+                    </tr>
+                  ) : (
+                    suppressionLogsQuery.data?.map((log: any) => (
+                      <tr key={log.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono">
+                          {new Date(log.blockedAt).toLocaleString("sk-SK")}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <Badge variant="secondary" className="text-xs">{log.suppressionReason}</Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-foreground">{log.blockedAction}</div>
+                          {log.channelAttempted && (
+                            <span className="text-[10px] text-muted-foreground uppercase">Kanál: {log.channelAttempted}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-foreground">{log.clientFirstName} {log.clientLastName}</div>
+                          {log.patientName && (
+                            <div className="text-[10px] text-muted-foreground">Pacient: {log.patientName}</div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {log.clearedAt ? (
+                            <span className="text-emerald-600 font-medium">Odblokované</span>
+                          ) : (
+                            <span className="text-muted-foreground">Aktívne potlačené</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Compliance Information Card */}
@@ -834,5 +970,19 @@ export default function MarketingAutomationsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function MarketingAutomationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MarketingAutomationsContent />
+    </Suspense>
   );
 }

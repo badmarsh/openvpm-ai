@@ -169,7 +169,7 @@ export function validateMarketingText(input: ValidateInput): ValidatorReport {
       findings.push({
         rule: 'advice_replacement',
         severity: 'warn',
-        message: 'Obsah môže nahrádzať veterinárnu konzultáciu. Uistite কাশী, že text nenabáda na samoliečbu.',
+        message: 'Obsah môže nahrádzať veterinárnu konzultáciu. Uistite sa, že text nenabáda na samoliečbu.',
         excerpt: match[0],
       });
       break;

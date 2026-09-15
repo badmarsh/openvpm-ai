@@ -295,6 +295,28 @@ function EkasaReceiptsContent() {
         </div>
       </div>
 
+      {/* Quick Action: Denná uzávierka */}
+      {activeTab === "receipts" && (
+        <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Lock className="h-4 w-4 text-primary" />
+            <div>
+              <p className="text-sm font-medium">Denná uzávierka</p>
+              <p className="text-xs text-muted-foreground">
+                Zatvorte pokladňu a vygenerujte Z-report pre dnešný deň
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setActiveTab("closures")}
+            className="shrink-0"
+          >
+            Prejsť na uzávierky
+          </Button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* TAB 1: DOKLADY                                                            */}
       {/* ========================================================================= */}

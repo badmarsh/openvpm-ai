@@ -25,15 +25,24 @@ import {
   extMarketingCompetitorSnapshots,
   extSmsDeliveryLog,
   extChannelAccounts,
+  extMarketingWebsiteConfig,
+  extMarketingWebsiteInquiries,
+  extAutomationEvents,
   patients,
   clients,
   practices,
   users,
+  wellnessPlans,
   wellnessEnrollments,
+  services,
   bookingPages,
 } from '@openpims/db';
+import { enrollInJourney } from "@/lib/autopilot/journey-engine";
+import { websiteSectionSchema, type WebsiteSection } from '@/lib/marketing/website-builder-types';
+import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
 import { autoFix, validateMarketingText, withDisclaimer, type ValidatorReport } from '@/lib/marketing/validator';
+import { rateLimit } from "@/lib/rate-limit";
 import { generateWeeklyBatch, getBrand, mondayOf, nameGuards } from '@/lib/marketing/planner';
 import { composePost } from '@/lib/marketing/composer';
 import { RECIPES } from '@/lib/marketing/recipes';
@@ -182,6 +191,115 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     sampleEmailBody: `Vážení klienti,\n\nkoniec roka býva pre zvieracích členov rodiny najstresujúcejším obdobím. Zvukové vlny z pyrotechniky vnímajú zvieratá niekoľkonásobne intenzívnejšie ako ľudia.\n\nRadi vám pomôžeme vybrať účinné a bezpečné riešenie – od prírodných doplnkov až po moderné veterinárne liečivá, ktoré tlmia strach bez straty motoriky.\n\nPríďte sa k nám poradiť ešte pred vianočným zhonom.`,
   },
 ];
+
+/**
+ * Validates all free-text fields across website sections against Slovak veterinary
+ * advertising regulations (Zákon o reklame, Etický kódex KVL SR, Zákon o liekoch).
+ * Throws TRPCError BAD_REQUEST if any BLOCK rule is triggered.
+ */
+export function validateWebsiteSections(sections: WebsiteSection[]): void {
+  for (const section of sections) {
+    const textSnippets: { label: string; text: string }[] = [];
+    const content = (section.content ?? {}) as Record<string, any>;
+
+    switch (section.type) {
+      case "hero":
+        if (content.title) textSnippets.push({ label: "Hero titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Hero podtitulok", text: String(content.subtitle) });
+        if (content.badge) textSnippets.push({ label: "Hero odznak", text: String(content.badge) });
+        break;
+      case "about":
+        if (content.title) textSnippets.push({ label: "O nás titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "O nás podtitulok", text: String(content.subtitle) });
+        if (content.story) textSnippets.push({ label: "O nás príbeh", text: String(content.story) });
+        break;
+      case "services":
+        if (content.title) textSnippets.push({ label: "Služby titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Služby podtitulok", text: String(content.subtitle) });
+        if (Array.isArray(content.services)) {
+          for (const s of content.services) {
+            if (s?.title) textSnippets.push({ label: `Služba "${s.title}"`, text: String(s.title) });
+            if (s?.description) textSnippets.push({ label: `Popis služby "${s.title}"`, text: String(s.description) });
+          }
+        }
+        break;
+      case "faq":
+        if (content.title) textSnippets.push({ label: "FAQ titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "FAQ podtitulok", text: String(content.subtitle) });
+        if (Array.isArray(content.items)) {
+          for (const f of content.items) {
+            if (f?.question) textSnippets.push({ label: `FAQ otázka`, text: String(f.question) });
+            if (f?.answer) textSnippets.push({ label: `FAQ odpoveď`, text: String(f.answer) });
+          }
+        }
+        break;
+      case "emergency_banner":
+        if (content.alertText) textSnippets.push({ label: "Núdzový banner text", text: String(content.alertText) });
+        if (content.subtext) textSnippets.push({ label: "Núdzový banner podtext", text: String(content.subtext) });
+        break;
+      case "custom_rich_text":
+        if (content.title) textSnippets.push({ label: "Vlastný blok titulok", text: String(content.title) });
+        if (content.content) textSnippets.push({ label: "Vlastný blok obsah", text: String(content.content) });
+        break;
+      case "booking_cta":
+        if (content.title) textSnippets.push({ label: "Rezervácia titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Rezervácia podtitulok", text: String(content.subtitle) });
+        break;
+      case "hours_location":
+        if (content.title) textSnippets.push({ label: "Ordinačné hodiny titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Ordinačné hodiny podtitulok", text: String(content.subtitle) });
+        if (content.emergencyNote) textSnippets.push({ label: "Pohotovostná poznámka", text: String(content.emergencyNote) });
+        break;
+      case "trust_badges":
+        if (content.title) textSnippets.push({ label: "Certifikácie titulok", text: String(content.title) });
+        if (Array.isArray(content.items)) {
+          for (const tb of content.items) {
+            if (tb?.label) textSnippets.push({ label: `Certifikát "${tb.label}"`, text: String(tb.label) });
+            if (tb?.description) textSnippets.push({ label: `Popis certifikátu "${tb.label}"`, text: String(tb.description) });
+          }
+        }
+        break;
+      case "wellness":
+        if (content.title) textSnippets.push({ label: "Wellness titulok", text: String(content.title) });
+        if (content.subtitle) textSnippets.push({ label: "Wellness podtitulok", text: String(content.subtitle) });
+        if (Array.isArray(content.plans)) {
+          for (const p of content.plans) {
+            if (p?.name) textSnippets.push({ label: `Wellness plán "${p.name}"`, text: String(p.name) });
+            if (p?.description) textSnippets.push({ label: `Popis plánu "${p.name}"`, text: String(p.description) });
+            if (Array.isArray(p?.features)) {
+              for (const feat of p.features) {
+                if (feat) textSnippets.push({ label: `Vlastnosť plánu "${p.name}"`, text: String(feat) });
+              }
+            }
+          }
+        }
+        break;
+      default:
+        if (content.title && typeof content.title === "string") {
+          textSnippets.push({ label: `${section.type} titulok`, text: content.title });
+        }
+        if (content.subtitle && typeof content.subtitle === "string") {
+          textSnippets.push({ label: `${section.type} podtitulok`, text: content.subtitle });
+        }
+        break;
+    }
+
+    for (const snippet of textSnippets) {
+      if (!snippet.text.trim()) continue;
+      const report = validateMarketingText({
+        text: snippet.text,
+        context: "marketing",
+      });
+      const blocking = report.findings.find((f) => f.severity === "block");
+      if (blocking) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Súlad s predpismi [${blocking.rule}] (${snippet.label}): ${blocking.message}${blocking.excerpt ? ` [${blocking.excerpt}]` : ""}`,
+        });
+      }
+    }
+  }
+}
 
 export const marketingRouter = createRouter({
   /**
@@ -3501,6 +3619,8 @@ listStaffTasks: protectedProcedure
       .select({
         id: practices.id,
         name: practices.name,
+        logoUrl: practices.logoUrl,
+        createdAt: practices.createdAt,
         settings: practices.settings,
       })
       .from(practices)
@@ -3508,17 +3628,30 @@ listStaffTasks: protectedProcedure
       .limit(1);
 
     const settings = (practice?.settings ?? {}) as Record<string, any>;
-    const published = Boolean(settings.websitePublished);
+    const bk = (settings.brandKit ?? {}) as Record<string, any>;
 
-    // Count team members with photo_web consent
-    const teamConsents = await ctx.db
-      .select({ id: extMarketingMediaConsents.id })
-      .from(extMarketingMediaConsents)
+    const [existingConfig] = await ctx.db
+      .select()
+      .from(extMarketingWebsiteConfig)
+      .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+      .limit(1);
+
+    const seedSections = getSeedWebsiteSections(practice?.name || "");
+    const sectionsDraft = existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
+      ? (existingConfig.sectionsDraft as any)
+      : seedSections;
+
+    const published = existingConfig ? existingConfig.published : Boolean(settings.websitePublished);
+
+    // Staff members from clinic
+    const staffMembers = await ctx.db
+      .select({ id: users.id })
+      .from(users)
       .where(
         and(
-          eq(extMarketingMediaConsents.practiceId, ctx.practiceId),
-          eq(extMarketingMediaConsents.scope, "photo_web"),
-          isNull(extMarketingMediaConsents.revokedAt)
+          eq(users.practiceId, ctx.practiceId),
+          inArray(users.role, ["admin", "veterinarian", "technician"]),
+          isNull(users.deletedAt)
         )
       );
 
@@ -3546,30 +3679,159 @@ listStaffTasks: protectedProcedure
         )
       );
 
+    // Count active patients
+    const [patientCountRes] = await ctx.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(patients)
+      .where(
+        and(
+          eq(patients.practiceId, ctx.practiceId),
+          isNull(patients.deletedAt)
+        )
+      );
+    const patientCount = Number(patientCountRes?.count ?? 0);
+
+    // Years in practice calculation
+    const practiceCreatedYear = practice?.createdAt
+      ? new Date(practice.createdAt).getFullYear()
+      : new Date().getFullYear();
+    const yearsInPractice = Math.max(1, new Date().getFullYear() - practiceCreatedYear);
+
+    // Count website inquiries
+    const [inquiriesCountRes] = await ctx.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(extMarketingWebsiteInquiries)
+      .where(
+        and(
+          eq(extMarketingWebsiteInquiries.practiceId, ctx.practiceId),
+          isNull(extMarketingWebsiteInquiries.deletedAt)
+        )
+      );
+    const inquiriesCount = Number(inquiriesCountRes?.count ?? 0);
+
+    const brandKit = {
+      brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
+      secondaryColor: (bk.secondaryColor as string | undefined) ?? "#f5f5f4",
+      toneOfVoice: (bk.toneOfVoice as string | undefined) ?? "",
+      brandVoiceInstructions: (bk.brandVoiceInstructions as string | undefined) ?? "",
+      disclaimer: (bk.disclaimer as string | undefined) ?? "",
+      socialHandles: (bk.socialHandles as any) ?? {},
+      clinicName: practice?.name ?? "",
+      logoUrl: practice?.logoUrl ?? null,
+    };
+
     return {
       published,
       clinicId: practice?.id ?? ctx.practiceId,
       clinicName: practice?.name ?? "",
-      teamCount: teamConsents.length,
+      sectionsDraft,
+      brandKit,
+      teamCount: staffMembers.length,
       handoutsCount: publicHandouts.length,
       reviewsCount: fiveStarReviews.length,
+      inquiriesCount,
+      liveStats: {
+        patientCount,
+        fiveStarReviewCount: fiveStarReviews.length,
+        yearsInPractice,
+      },
     };
   }),
 
+  updateWebsiteSections: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(z.object({ sections: z.array(websiteSectionSchema) }))
+    .mutation(async ({ ctx, input }) => {
+      // Validate all free-text fields against marketing compliance regulations
+      validateWebsiteSections(input.sections);
+
+      const [existing] = await ctx.db
+        .select({ id: extMarketingWebsiteConfig.id })
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+        .limit(1);
+
+      if (existing) {
+        await ctx.db
+          .update(extMarketingWebsiteConfig)
+          .set({
+            sectionsDraft: input.sections,
+            updatedAt: new Date(),
+          })
+          .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId));
+      } else {
+        await ctx.db
+          .insert(extMarketingWebsiteConfig)
+          .values({
+            practiceId: ctx.practiceId,
+            sectionsDraft: input.sections,
+            sectionsPublished: null,
+            published: false,
+          });
+      }
+
+      return { ok: true, count: input.sections.length };
+    }),
+
   toggleWebsite: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
-    .mutation(async ({ ctx }) => {
+    .input(z.object({ published: z.boolean().optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
       const [practice] = await ctx.db
         .select({
+          name: practices.name,
           settings: practices.settings,
         })
         .from(practices)
         .where(eq(practices.id, ctx.practiceId))
         .limit(1);
 
-      const settings = (practice?.settings ?? {}) as Record<string, any>;
-      const nextPublished = !settings.websitePublished;
+      const [existingConfig] = await ctx.db
+        .select()
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+        .limit(1);
 
+      const settings = (practice?.settings ?? {}) as Record<string, any>;
+      const currentPublished = existingConfig ? existingConfig.published : Boolean(settings.websitePublished);
+      const nextPublished = input?.published !== undefined ? input.published : !currentPublished;
+
+      const seedSections = getSeedWebsiteSections(practice?.name || "");
+      const draftToPublish = existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
+        ? existingConfig.sectionsDraft
+        : seedSections;
+
+      if (nextPublished) {
+        // Enforce compliance validation before publishing live
+        validateWebsiteSections(draftToPublish as WebsiteSection[]);
+      }
+
+      if (existingConfig) {
+        const updateData: any = {
+          published: nextPublished,
+          updatedAt: new Date(),
+        };
+        if (nextPublished) {
+          updateData.sectionsPublished = draftToPublish;
+          updateData.publishedAt = new Date();
+        }
+        await ctx.db
+          .update(extMarketingWebsiteConfig)
+          .set(updateData)
+          .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId));
+      } else {
+        await ctx.db
+          .insert(extMarketingWebsiteConfig)
+          .values({
+            practiceId: ctx.practiceId,
+            sectionsDraft: seedSections,
+            sectionsPublished: nextPublished ? seedSections : null,
+            published: nextPublished,
+            publishedAt: nextPublished ? new Date() : null,
+          });
+      }
+
+      // Keep settings.websitePublished synced for legacy readers
       await ctx.db
         .update(practices)
         .set({
@@ -3594,28 +3856,66 @@ listStaffTasks: protectedProcedure
           email: practices.email,
           address: practices.address,
           website: practices.website,
+          logoUrl: practices.logoUrl,
+          createdAt: practices.createdAt,
           settings: practices.settings,
         })
         .from(practices)
-        .where(eq(practices.id, input.clinicId))
+        .where(and(eq(practices.id, input.clinicId), isNull(practices.deletedAt)))
         .limit(1);
 
       if (!practice) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Klinika nebola nájdená.",
+          message: "Clinic not found",
         });
       }
 
       const settings = (practice.settings ?? {}) as Record<string, any>;
-      const isPublished = Boolean(settings.websitePublished);
+      const bk = (settings.brandKit ?? {}) as Record<string, any>;
 
-      // Staff members from clinic
+      const [config] = await ctx.db
+        .select()
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, input.clinicId))
+        .limit(1);
+
+      const isPublished = config ? config.published : Boolean(settings.websitePublished);
+      const isClinicStaff = ctx.session?.user?.practiceId === input.clinicId;
+      if (!isPublished && !isClinicStaff) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Clinic website not found or not published",
+        });
+      }
+
+      const seedSections = getSeedWebsiteSections(practice.name);
+      const sections = isPublished
+        ? (config?.sectionsPublished && Array.isArray(config.sectionsPublished) && config.sectionsPublished.length > 0
+            ? (config.sectionsPublished as any)
+            : seedSections)
+        : (config?.sectionsDraft && Array.isArray(config.sectionsDraft) && config.sectionsDraft.length > 0
+            ? (config.sectionsDraft as any)
+            : (config?.sectionsPublished && Array.isArray(config.sectionsPublished) && config.sectionsPublished.length > 0
+                ? (config.sectionsPublished as any)
+                : seedSections));
+
+      const brandKit = {
+        brandColor: (settings.brandColor as string | undefined) ?? "#0d9488",
+        secondaryColor: (bk.secondaryColor as string | undefined) ?? "#f5f5f4",
+        toneOfVoice: (bk.toneOfVoice as string | undefined) ?? "",
+        socialHandles: (bk.socialHandles as any) ?? {},
+        clinicName: practice.name,
+        logoUrl: practice.logoUrl ?? null,
+      };
+
+      // Staff members from clinic with avatarUrl
       const staffMembers = await ctx.db
         .select({
           id: users.id,
           name: users.name,
           role: users.role,
+          avatarUrl: users.avatarUrl,
         })
         .from(users)
         .where(
@@ -3668,6 +3968,19 @@ listStaffTasks: protectedProcedure
         .orderBy(desc(extMarketingReviews.receivedAt))
         .limit(8);
 
+      // Accurate 5-star review count (matching getWebsiteConfig)
+      const [fiveStarRes] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(extMarketingReviews)
+        .where(
+          and(
+            eq(extMarketingReviews.practiceId, input.clinicId),
+            eq(extMarketingReviews.rating, 5),
+            isNull(extMarketingReviews.deletedAt)
+          )
+        );
+      const fiveStarReviewCount = Number(fiveStarRes?.count ?? 0);
+
       // Active booking page slug
       const [bookingPage] = await ctx.db
         .select({ slug: bookingPages.slug })
@@ -3678,18 +3991,352 @@ listStaffTasks: protectedProcedure
             eq(bookingPages.published, true),
             isNull(bookingPages.deletedAt)
           )
+        );
+      const [patientCountRes] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(patients)
+        .where(
+          and(
+            eq(patients.practiceId, input.clinicId),
+            isNull(patients.deletedAt)
+          )
+        );
+      const patientCount = Number(patientCountRes?.count ?? 0);
+
+      // Years in practice calculation
+      const practiceCreatedYear = practice?.createdAt
+        ? new Date(practice.createdAt).getFullYear()
+        : new Date().getFullYear();
+      const yearsInPractice = Math.max(1, new Date().getFullYear() - practiceCreatedYear);
+
+      // Active wellness plans
+      const activeWellnessPlans = await ctx.db
+        .select({
+          id: wellnessPlans.id,
+          name: wellnessPlans.name,
+          description: wellnessPlans.description,
+          price: wellnessPlans.price,
+          billingInterval: wellnessPlans.billingInterval,
+        })
+        .from(wellnessPlans)
+        .where(
+          and(
+            eq(wellnessPlans.practiceId, input.clinicId),
+            eq(wellnessPlans.active, true),
+            isNull(wellnessPlans.deletedAt)
+          )
         )
-        .limit(1);
+        .orderBy(wellnessPlans.name);
+
+      // Active services preview from clinic price list
+      const liveServices = await ctx.db
+        .select({
+          id: services.id,
+          name: services.name,
+          category: services.category,
+          defaultPrice: services.defaultPrice,
+        })
+        .from(services)
+        .where(
+          and(
+            eq(services.practiceId, input.clinicId),
+            isNull(services.deletedAt)
+          )
+        )
+        .orderBy(services.name)
+        .limit(20);
 
       return {
         practice,
         isPublished,
+        sections,
+        brandKit,
         bookingSlug: bookingPage?.slug ?? null,
         team: staffMembers,
         handouts: publicHandouts,
         reviews: topReviews,
+        liveStats: {
+          patientCount,
+          fiveStarReviewCount,
+          yearsInPractice,
+        },
+        liveServices,
+        wellnessPlans: activeWellnessPlans,
       };
     }),
+
+  submitWebsiteContactForm: publicProcedure
+    .input(
+      z.object({
+        clinicId: z.string(),
+        name: z.string().min(1).max(100),
+        email: z.string().email(),
+        phone: z.string().max(40).optional(),
+        message: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Rate limiting: 10 requests per 15m per IP, 5 requests per 15m per email+clinic
+      const trimmedEmail = input.email.trim().toLowerCase();
+      const trimmedPhone = input.phone?.trim();
+
+      try {
+        const ipLimit = await rateLimit({
+          key: `contact_form:ip:${ctx.ip || "unknown"}`,
+          limit: 10,
+          windowMs: 15 * 60 * 1000,
+        });
+        if (!ipLimit.success) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Príliš veľa požiadaviek. Skúste to prosím znova o 15 minút.",
+          });
+        }
+        const emailLimit = await rateLimit({
+          key: `contact_form:clinic:${input.clinicId}:email:${trimmedEmail}`,
+          limit: 5,
+          windowMs: 15 * 60 * 1000,
+        });
+        if (!emailLimit.success) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Pre túto e-mailovú adresu bolo odoslaných príliš veľa správ. Skúste to znova neskôr.",
+          });
+        }
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        console.error("[website contact form] rate limit check failed:", err);
+      }
+
+      const [practice] = await ctx.db
+        .select({ id: practices.id, name: practices.name })
+        .from(practices)
+        .where(and(eq(practices.id, input.clinicId), isNull(practices.deletedAt)))
+        .limit(1);
+
+      if (!practice) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Clinic not found",
+        });
+      }
+
+      const [existingClient] = await ctx.db
+        .select({ id: clients.id })
+        .from(clients)
+        .where(
+          and(
+            eq(clients.practiceId, input.clinicId),
+            or(
+              eq(clients.email, trimmedEmail),
+              trimmedPhone ? eq(clients.phone, trimmedPhone) : undefined
+            ),
+            isNull(clients.deletedAt)
+          )
+        )
+        .limit(1);
+
+      let clientId = existingClient?.id;
+
+      if (!clientId) {
+        const parts = input.name.trim().split(/\s+/);
+        const firstName = parts[0] || input.name.trim();
+        const lastName = parts.slice(1).join(" ") || firstName;
+
+        const [createdClient] = await ctx.db
+          .insert(clients)
+          .values({
+            practiceId: input.clinicId,
+            firstName,
+            lastName,
+            email: trimmedEmail,
+            phone: trimmedPhone ?? null,
+            externalSource: "website_contact",
+            notes: "Lead captured from public website contact form",
+          })
+          .returning({ id: clients.id });
+
+        clientId = createdClient?.id;
+      }
+
+      // 2. Persist visitor inquiry
+      const [inquiry] = await ctx.db
+        .insert(extMarketingWebsiteInquiries)
+        .values({
+          practiceId: input.clinicId,
+          clientId: clientId ?? null,
+          name: input.name.trim(),
+          email: trimmedEmail,
+          phone: trimmedPhone ?? null,
+          message: input.message.trim(),
+          status: "new",
+          source: "website_contact",
+        })
+        .returning();
+
+      // 3. Create staff task in extMarketingStaffTasks
+      await ctx.db.insert(extMarketingStaffTasks).values({
+        practiceId: input.clinicId,
+        kind: "website_inquiry",
+        title: `Dopyt z webstránky: ${input.name.trim()}`,
+        detail: `${input.message.trim()}\n\nEmail: ${trimmedEmail}${trimmedPhone ? `\nTelefón: ${trimmedPhone}` : ""}`,
+        status: "open",
+        clientId: clientId ?? null,
+      });
+
+      // 4. Emit durable automation event
+      try {
+        await (ctx.db as any).insert(extAutomationEvents).values({
+          practiceId: input.clinicId,
+          eventType: "client_created",
+          sourceRouter: "marketing.submitWebsiteContactForm",
+          clientId: clientId ?? null,
+          dedupeKey: `website_inquiry_${inquiry.id}`,
+          status: "pending",
+          availableAt: new Date(),
+          payload: {
+            inquiryId: inquiry.id,
+            name: input.name.trim(),
+            email: trimmedEmail,
+            phone: trimmedPhone ?? null,
+            source: "website_contact",
+          },
+        });
+      } catch (evtErr) {
+        console.warn("[Website Contact Form] Durable event emission error:", evtErr);
+      }
+
+      // 5. Enroll in welcome_new_client customer journey
+      if (clientId) {
+        try {
+          await enrollInJourney(ctx.db as any, clientId, "welcome_new_client", input.clinicId);
+        } catch (jErr) {
+          console.warn("[Website Contact Form] Journey enrollment note:", jErr);
+        }
+      }
+
+      return { ok: true, inquiryId: inquiry.id };
+    }),
+
+  listWebsiteInquiries: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        status: z.enum(["new", "in_progress", "resolved", "archived"]).optional(),
+        limit: z.number().min(1).max(100).default(50),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const whereClauses = [
+        eq(extMarketingWebsiteInquiries.practiceId, ctx.practiceId),
+        isNull(extMarketingWebsiteInquiries.deletedAt),
+      ];
+
+      if (input?.status) {
+        whereClauses.push(eq(extMarketingWebsiteInquiries.status, input.status));
+      }
+
+      const inquiries = await ctx.db
+        .select()
+        .from(extMarketingWebsiteInquiries)
+        .where(and(...whereClauses))
+        .orderBy(desc(extMarketingWebsiteInquiries.createdAt))
+        .limit(input?.limit ?? 50);
+
+      return inquiries;
+    }),
+
+  updateWebsiteInquiryStatus: protectedProcedure
+    .use(requireRole("admin", "veterinarian", "front_desk"))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        status: z.enum(["new", "in_progress", "resolved", "archived"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db
+        .update(extMarketingWebsiteInquiries)
+        .set({
+          status: input.status,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(extMarketingWebsiteInquiries.id, input.id),
+            eq(extMarketingWebsiteInquiries.practiceId, ctx.practiceId),
+            isNull(extMarketingWebsiteInquiries.deletedAt)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Inquiry not found",
+        });
+      }
+
+      return { ok: true, inquiry: updated };
+    }),
+
+  trackWebsiteAction: publicProcedure
+    .input(
+      z.object({
+        clinicId: z.string(),
+        action: z.enum(["booking_cta_click", "phone_call_click", "review_click", "handout_view"]),
+        metadata: z.record(z.any()).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Safely record visitor action for analytics and attribution
+      console.log(`[Website Analytics] Clinic ${input.clinicId} action ${input.action}`);
+      return { ok: true };
+    }),
+
+  suggestWebsiteFaq: protectedProcedure
+    .input(z.object({ specialty: z.string().optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({ name: practices.name })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      try {
+        const model = configuredModel();
+        const prompt = `Si marketingový špecialista veterinárnej kliniky "${practice?.name ?? "Veterinárna ambulancia"}".
+Vytvor 4 často kladené otázky (FAQ) s odpoveďami pre majiteľov psov a mačiek pred návštevou kliniky.
+${input?.specialty ? `Zameraj sa na oblasť: ${input.specialty}` : ""}
+Formát JSON: pole objektov s kľúčmi "question" a "answer".`;
+
+        const result = await generateText({ model, prompt });
+        const text = result.text.trim();
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          return {
+            items: parsed.map((item: any, idx: number) => ({
+              id: `faq-ai-${Date.now()}-${idx}`,
+              question: String(item.question),
+              answer: String(item.answer),
+            })),
+          };
+        }
+      } catch (err) {
+        console.warn("[Website AI Suggest] Fallback FAQ generated:", err);
+      }
+
+      return {
+        items: [
+          { id: `faq-1`, question: "Musím sa na vyšetrenie vopred objednať?", answer: "Odporúčame online rezerváciu termínu, aby ste sa vyhli čakaniu. Akútne stavy ošetrujeme prednostne." },
+          { id: `faq-2`, question: "Ako pripraviť zviera pred plánovaným zákrokom?", answer: "Dospelý pes alebo mačka by mali byť nalačno 8-12 hodín pred anestéziou. Voda je povolená do 2 hodín pred príchodom." },
+          { id: `faq-3`, question: "Aké spôsoby platby prijímate?", answer: "Prijímame platby v hotovosti, platobnými kartami aj okamžitým bankovým prevodom." },
+          { id: `faq-4`, question: "Poskytujete pohotovostnú službu?", answer: "Mimo ordinačných hodín sme dostupní na pohotovostnom telefónnom čísle pre neodkladné prípady." },
+        ],
+      };
+    }),
+
 
   getPracticeId: protectedProcedure.query(async ({ ctx }) => {
     return {

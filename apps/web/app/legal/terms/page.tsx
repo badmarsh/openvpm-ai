@@ -113,7 +113,7 @@ export default function TermsPage() {
 
       <h2>Contact and governing law</h2>
       <p>
-        Questions? Email hello@openvpm.com. These terms are governed by the
+        Questions? Email jurkemik@significa.sk. These terms are governed by the
         laws of the State of Delaware, USA, without regard to conflict-of-law
         rules.
       </p>

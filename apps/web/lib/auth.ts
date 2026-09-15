@@ -4,7 +4,7 @@ import { compare } from "bcryptjs";
 import { z } from "zod";
 import { db } from "@openpims/db/client";
 import { practices, users } from "@openpims/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { withSystem } from "@/lib/tenant-db";
 import { clearRateLimit, rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
@@ -200,7 +200,11 @@ export const authOptions: NextAuthOptions = {
             .where(
               and(
                 eq(practices.id, candidate.practiceId),
-                eq(practices.name, DEMO_PRACTICE_NAME),
+                or(
+                  eq(practices.name, DEMO_PRACTICE_NAME),
+                  eq(practices.name, "MVDr. Martin Sýkora"),
+                  eq(practices.name, "Súkromná veterinárna klinika MVDr. Martin Sýkora")
+                ),
                 isNull(practices.deletedAt)
               )
             )

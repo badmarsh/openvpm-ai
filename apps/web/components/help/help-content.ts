@@ -310,9 +310,9 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       },
       {
         icon: "🩺",
-        title: "Objektívny klinický status",
+        title: "Objektívny klinický status & Vitals Quick-Stats",
         description:
-          "Vyplňte vitálne funkcie: hmotnosť, telesná teplota (°C), srdcová frekvencia, dych, CRT, stav slizníc a hydratácia.",
+          "Vyplňte vitálne funkcie: hmotnosť, telesná teplota (°C), srdcová frekvencia, dych, CRT, stav slizníc a hydratácia. V hlavičke správy sa zobrazuje interaktívny Vitals Quick-Stats pásik pre okamžitý prehľad.",
       },
       {
         icon: "💊",
@@ -328,6 +328,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       },
     ],
     tips: [
+      "V hlavičke každého SOAP záznamu nájdete Vitals Quick-Stats pásik, ktorý zvýrazňuje abnormálne hodnoty (horúčka, tachykardia).",
       "Po finalizácii je záznam read-only – akákoľvek dodatočná zmena sa zapíše do forenzného auditného denníka s presným časom a autorom.",
       "Z plánu liečby (P) systém automaticky predpripraví položky na vyúčtovanie do e-Kasy.",
       "Podané injekčné lieky a anestetiká automaticky znižujú zásoby v module Sklad.",
@@ -476,12 +477,13 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       },
       {
         icon: "📊",
-        title: "Denná uzávierka (Z-správa)",
+        title: "Rýchla denná uzávierka (Z-report)",
         description:
-          "Na konci dňa vykonajte dennú fiškálnu uzávierku tlačidlom „Uzávierka dňa\". Záznam sa uloží do histórie pre daňovú kontrolu.",
+          "Na konci zmeny využite rýchly akčný banner pre dennú uzávierku priamo v záložke Doklady ('Prejsť na uzávierky') alebo záložku Denné uzávierky (Z-report). Systém uzatvorí pokladňu a vytlačí povinný denný súhrn.",
       },
     ],
     tips: [
+      "V záložke Doklady nájdete priamo v záhlaví modrý akčný banner pre rýchlu dennú uzávierku bez nutnosti zložitého hľadania v menu.",
       "Každý doklad má unikátny kryptografický idempotency kľúč, ktorý zabraňuje nechcenému dvojitému zaúčtovaniu pri zlyhaní siete.",
       "Zákonný limit pre odoslanie offline dokladov je 48 hodín od ich vystavenia.",
       "Pri inšpekcii daňovým úradom máte k dispozícii kompletný auditný export všetkých tržieb a stornovaných položiek.",
@@ -903,8 +905,16 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         description:
           "Pridajte žltú lepiacu poznámku pre kolegov (napr. 'Pozor, pes v Boxe 2 je agresívny pri manipulácii s labkou').",
       },
+      {
+        icon: "💳",
+        title: "Prepustenie a stav „Čaká na faktúru\"",
+        description:
+          "Pacienti prepustení z ošetrenia alebo hospitalizácie (stav checked_out) majú na karte jantárový odznak „Čaká na faktúru\", ktorý recepciu naviguje k okamžitému vyúčtovaniu pred odchodom klienta.",
+      },
     ],
     tips: [
+      "Prepustení pacienti so statusom checked_out a jantárovým odznakom „Čaká na faktúru\" zabraňujú neúmyselnému odchodu majiteľa bez úhrady ošetrenia.",
+      "Whiteboard je dostupný v sekcii Recepcia & Tok aj v sekcii Účtovníctvo & Predpisy s odznakom „Nové\".",
       "Whiteboard je optimalizovaný pre dotykové monitory a tablety umiestnené priamo na hospitalizačnom oddelení a na operačke.",
       "Zmeny sa synchronizujú okamžite v reálnom čase medzi všetkými zariadeniami v klinike.",
       "Pred odovzdaním nočnej služby využite filter 'Iba nesplnené úlohy' pre rýchlu kontrolu stavu.",
@@ -1159,7 +1169,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   "/vet-intel": {
     title: "Veterinárny trhový radar & úradný vestník",
     intro:
-      "Strategický informačný a analytický modul pre majiteľov veterinárnych kliník. Monitoruje úradné vestníky ŠVPS SR a KVL SR (mimoriadne núdzové opatrenia, africký mor ošípaných AMO, vtáčia chrípka HPAI, besnota), legislatívne zmeny a poskytuje anonymizovaný regionálny cenový benchmark.",
+      "Strategický informačný a analytický modul pre majiteľov veterinárnych kliník. V rámci konsolidácie rozhrania bol tento modul plne integrovaný do Marketingového štúdia ako záložka „Konkurencia & Intel\" (/marketing?tab=competitors). Pôvodná trasa /vet-intel slúži ako automatické presmerovanie. Monitoruje úradné vestníky ŠVPS SR a KVL SR, legislatívne zmeny a regionálny cenový benchmark.",
     steps: [
       {
         icon: "🏛️",
@@ -1179,8 +1189,15 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         description:
           "Inšpirujte sa overenými manažérskymi postupmi pre retenciu klientov, cenotvorbu a zavádzanie moderného vybavenia kliniky.",
       },
+      {
+        icon: "🔄",
+        title: "Priamy prístup cez Kampane & SMS",
+        description:
+          "Kedykoľvek otvorte /marketing a kliknite na 4. záložku „Konkurencia & Intel\" pre plnohodnotný prehľad.",
+      },
     ],
     tips: [
+      "Trasa /vet-intel je plne spätne kompatibilná a automaticky vás presmeruje na /marketing?tab=competitors.",
       "Všetky trhové porovnania rešpektujú Etický kódex KVL SR a slúžia výhradne pre interné rozhodovanie manažmentu kliniky.",
       "Upozornenia na výskyt nebezpečných nákaz v okrese kliniky sa automaticky zobrazujú s vysokou prioritou.",
     ],
@@ -1340,47 +1357,48 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   },
 
   "/marketing": {
-    title: "Marketing a komunikácia s klientmi",
+    title: "Kampane & SMS (Marketing Studio)",
     intro:
-      "Centrálny modul pre budovanie vzťahov s majiteľmi zvierat, rast kliniky a edukáciu klientov. Zahŕňa hromadné kampane, automatické pripomienky, edukačné letáky s QR kódmi, správu reputácie na Google, TV displej v čakárni a správu webovej stránky ambulancie.",
+      "Integrované marketingové štúdio pre komunikáciu s majiteľmi, budovanie dobrého mena kliniky a edukáciu klientov. Združuje 4 hlavné záložky: Prehľad & Generátor, Kalendár obsahu, Schvaľovací proces a Konkurencia & Intel. Všetky generované výstupy podliehajú prísnej veterinárnej etike a schváleniu personálom.",
     steps: [
       {
-        icon: "🎯",
-        title: "Tvorba cielenej kampane",
+        icon: "📢",
+        title: "Prehľad & Generátor (Marketing Studio)",
         description:
-          "Zvoľte cieľovú skupinu (napr. majitelia psov nad 7 rokov, mačky bez vakcinácie) a pripravte personalizovanú SMS alebo e-mail.",
+          "Záložka 'overview': tvorba príspevkov na sociálne siete (Instagram, Facebook), generovanie TV slajdov do čakárne a tvorba edukačného multimediálneho obsahu s pomocou veterinárnej AI.",
       },
       {
-        icon: "📄",
-        title: "Edukačné materiály a letáky",
+        icon: "📅",
+        title: "Kalendár obsahu (Content Plan)",
         description:
-          "Využite modul Letáky s AI generátorom na tvorbu letákov o prevencii kliešťov, zubnom kameni či kastraciách s QR kódom.",
+          "Záložka 'calendar': týždenný a mesačný harmonogram tém (prevencia kliešťov, vakcinácie, dentálna hygiena, sezónne tipy) s možnosťou exportu plánu.",
       },
       {
-        icon: "⭐",
-        title: "Automatický zber Google recenzií",
+        icon: "📝",
+        title: "Schvaľovací proces (Approval Queue)",
         description:
-          "Systém po úspešnej vizite automaticky osloví spokojného majiteľa so žiadosťou o krátke hodnotenie na Google.",
+          "Záložka 'queue': kontrola a autorizácia všetkých konceptov pred ich odoslaním alebo publikovaním. Klinické tvrdenia vyžadujú overenie veterinárnym lekárom.",
       },
       {
-        icon: "🛡️",
-        title: "Sympathy Gate ochrana",
+        icon: "🌐",
+        title: "Konkurencia & Intel (Market Intelligence)",
         description:
-          "Automatická etická poistka okamžite vyradí klientov so zosnulým zvieratkom zo všetkých marketingových kampaní.",
+          "Záložka 'competitors': trhový monitoring a prehľad aktivít, služieb a hodnotení konkurenčných ambulancií v regióne pre strategické riadenie.",
       },
     ],
     tips: [
+      "Voľba aktívnej záložky sa automaticky premieta do URL parametra ?tab=... (overview, calendar, queue, competitors), čo uľahčuje zdieľanie odkazov medzi kolegami.",
+      "Všetky klinické tvrdenia v príspevkoch musia byť schválené licencovaným veterinárom v súlade so Zákonom 39/2007 Z. z.",
       "Najvyššiu odozvu majú preventívne kampane načasované podľa sezóny: jarná ochrana pred kliešťami, jesenné geriatrické prehliadky.",
-      "Brand Kit zabezpečuje, že všetky vaše letáky, e-maily a web používajú rovnaké logo a firemné farby kliniky.",
-      "Nikdy neposielajte marketingové správy po 20:00 hodine – rešpektujte súkromie klientov.",
+      "Nikdy neposielajte marketingové správy po 20:00 hodine – systém automaticky uplatňuje tichý nočný režim.",
     ],
     practicalExample: {
-      title: "Jarná kampaň na prevenciu parazitov s edukačným letákom",
-      badge: "Kampaň",
+      title: "Príprava sezónnej jarnej kampane cez Marketing Studio",
+      badge: "Kampane & SMS",
       scenario:
-        "Začína sezóna kliešťov a klinika chce upozorniť majiteľov na nebezpečenstvo babeziózy a lymskej boreliózy.",
+        "Začína sezóna kliešťov a klinika chce pripraviť sériu vzdelávacích príspevkov, TV slajd do čakárne a naplánovať termíny publikovania.",
       solution:
-        "Vytvorte v module Letáky leták 'Pozor na kliešte' s QR kódom na rezerváciu, vytlačte plagát do čakárne a cez modul Správy odošlite cielenú SMS majiteľom psov s odkazom na digitálnu verziu letáku.",
+        "V záložke 'Prehľad & Generátor' zadajte tému 'Kliešte a prevencia babeziózy'. AI vytvorí návrh príspevku a TV slajdu. V záložke 'Kalendár obsahu' nastavte publikáciu na utorok a štvrtok a v záložke 'Schvaľovací proces' lekár koncept jedným klikom schváli.",
     },
   },
 
@@ -1431,8 +1449,14 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   "/marketing/brand-kit": {
     title: "Brand Kit – vizuálna identita kliniky",
     intro:
-      "Centrálne nastavenie firemnej identity veterinárnej ambulancie. Uchováva logo v krivkách (SVG), firemnú paletu farieb, písma a oficiálne kontaktné údaje. Všetky generované materiály, e-maily, faktúry, web a TV obrazovky automaticky čerpajú z Brand Kitu pre jednotný reprezentatívny vzhľad.",
+      "Centrálne nastavenie firemnej identity veterinárnej ambulancie. Upozornenie: V rámci konsolidácie informačnej architektúry bolo nastavenie Brand Kitu presunuté priamo do Nastavení kliniky (/settings?tab=brandKit). Uchováva vektorové logo (SVG), firemnú paletu farieb, písma a oficiálne kontaktné údaje. Všetky generované materiály, e-maily, faktúry, web a TV obrazovky automaticky čerpajú z Brand Kitu.",
     steps: [
+      {
+        icon: "⚙️",
+        title: "Presun do Nastavení kliniky",
+        description:
+          "Pre konfiguráciu vizuálnej identity prejdite do sekcie Správa kliniky → Nastavenia a zvoľte záložku Brand Kit (/settings?tab=brandKit).",
+      },
       {
         icon: "🖼️",
         title: "Nahratie loga ambulancie",
@@ -1451,14 +1475,9 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         description:
           "Vyplňte oficiálny názov pracoviska, adresu, pohotovostný telefón a web pre automatické vkladanie do pätičiek.",
       },
-      {
-        icon: "👁️",
-        title: "Náhľad na dokumentoch",
-        description:
-          "Skontrolujte, ako bude vaša identita vyzerať na letáku, faktúre, prepúšťacej správe a TV obrazovke v čakárni.",
-      },
     ],
     tips: [
+      "Správa Brand Kitu je teraz plne integrovaná v Nastavenia → Brand Kit (/settings?tab=brandKit).",
       "Vektorový formát SVG zaručuje dokonale ostré zobrazenie loga na tlači A4 aj na 4K monitore v čakárni.",
       "Zvoľte kontrastné farby, ktoré spĺňajú štandardy čitateľnosti textu (WCAG AA).",
     ],
@@ -1468,7 +1487,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       scenario:
         "Nová klinika chce, aby všetky odosielané e-maily, tlačené recepty, faktúry a letáky mali rovnaký prémiový dizajn.",
       solution:
-        "V /marketing/brand-kit nahrajte logo a nastavte tyrkysovú a tmavomodrú farbu. Systém okamžite preformátuje hlavičky všetkých tlačových zostáv, prepúšťacích správ a e-mailových šablón.",
+        "V Nastavenia → Brand Kit nahrajte logo a nastavte tyrkysovú a tmavomodrú farbu. Systém okamžite preformátuje hlavičky všetkých tlačových zostáv, prepúšťacích správ a e-mailových šablón.",
     },
   },
 
@@ -1557,88 +1576,97 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   "/marketing/automations": {
     title: "Automatizácie & workflow pravidlá",
     intro:
-      "Konfigurátor automatických pravidiel, ktoré šetria personálu desiatky hodín týždenne. Zabezpečuje automatické odosielanie správ na základe udalostí v systéme: potvrdenie rezervácie, pripomienka 24h pred termínom, poďakovanie po vizite či pripomenutie ročnej kontroly.",
+      "Pokročilý riadiaci pult pre automatizáciu klinickej a klientskej komunikácie. Ponúka 6 prehľadných záložiek: Pravidlá (rules), Cesty (journeys), Segmenty (segments), Kanály (channels), Event Bus (events) a Centrum potlačení (suppression). Zabezpečuje bezobslužné odosielanie správ s prísnym rešpektovaním veterinárnej etiky a legislatívy.",
     steps: [
       {
         icon: "⚡",
-        title: "Výber spúšťača (Trigger)",
+        title: "Pravidlá & Spúšťače (Rules)",
         description:
-          "Zvoľte udalosť: Vytvorenie termínu, Ukončenie vizity, Expirácia vakcíny, Narodeniny pacienta.",
+          "Záložka Pravidlá: aktivujte a konfigurujte podmienené akcie (napr. pripomienka 24h pred termínom, potvrdenie rezervácie, výzva na kontrolu stehov).",
       },
       {
-        icon: "🎯",
-        title: "Nastavenie podmienok",
+        icon: "🗺️",
+        title: "Zákaznícke cesty (Journeys)",
         description:
-          "Obmedzte pravidlo na konkrétny druh zvierat (napr. len psy), vekovú kategóriu alebo typ zákroku.",
+          "Záložka Cesty: riadenie 5 kľúčových ciest – uvítanie nového klienta, sledovanie po návšteve, vakcinačná pripomienka, pooperačná starostlivosť a reaktivácia.",
       },
       {
-        icon: "✉️",
-        title: "Definovanie obsahu a kanála",
+        icon: "👥",
+        title: "CRM Segmentácia (Segments)",
         description:
-          "Pripravte šablónu s dynamickými premennými ({meno_klienta}, {meno_pacienta}, {cas_terminu}).",
+          "Záložka Segmenty: automatické dynamické členenie klientov do 12 kategórií (noví, aktívni, neaktívni 6m/12m, seniori, šteniatka, po operácii, VIP).",
       },
       {
-        icon: "⏱️",
-        title: "Časový odstup",
+        icon: "🔌",
+        title: "Kanály & Event Bus (Channels & Events)",
         description:
-          "Nastavte, kedy sa má správa odoslať (napr. 24 hodín pred termínom, 2 hodiny po vizite).",
+          "Záložky Kanály a Event Bus: napojenie SMS brány (Telnyx), e-mailov (Resend), sociálnych sietí a auditný monitoring doručiteľnosti udalostí.",
+      },
+      {
+        icon: "🛡️",
+        title: "Centrum potlačení (Suppression Center)",
+        description:
+          "Záložka Potlačenia: audit zablokovaných správ podľa bezpečnostných limitov: Sympathy Gate (úhyn pacienta), tichý nočný režim (20:00–08:00) a SMS limit (max 1 kampaň za 14 dní).",
       },
     ],
     tips: [
-      "Začnite s 3 základnými automatizáciami: Potvrdenie termínu, Pripomienka deň vopred a Revakcinácia po roku.",
-      "Automatizácie sú blokované v nočných hodinách (21:00 - 08:00), aby správy nerušili klientov v spánku.",
+      "Sympathy Gate je etická poistka, ktorú nie je možné vypnúť – pri úhyne zvieraťa okamžite zastaví všetky pripomienky a marketing.",
+      "Tichý nočný režim automaticky pozastavuje odosielanie správ medzi 20:00 a 08:00, aby klienti neboli rušení.",
+      "SMS frekvenčný limit chráni klientov pred zahltením (maximálne 1 kampaňová správa raz za 14 dní na jedného klienta).",
+      "Všetky zablokované správy sú s presným dôvodom zaznamenané v záložke Potlačenia (ext_automation_suppression_log).",
     ],
     practicalExample: {
-      title: "Eliminácia nedostavenia sa na termín (No-show)",
-      badge: "Automatizácia",
+      title: "Automatické zablokovanie pripomienky po úhyne pacienta",
+      badge: "Sympathy Gate",
       scenario:
-        "Klinika eviduje, že 15 % klientov zabudne prísť na objednaný termín, čo spôsobuje prestoje na operačnej sále.",
+        "Lekár zaevidoval eutanáziu ťažko chorého psa. O tri dni mal pacient naplánovanú pripomienku očkovania proti besnote.",
       solution:
-        "Aktivujte pravidlo 'Pripomienka termínu 24 hodín vopred'. Klient dostane SMS s časom vyšetrenia a inštrukciou 'Nalačno od polnoci'. Miera nedostavenia sa okamžite klesne pod 2 %.",
+        "Systém okamžite aktivuje Sympathy Gate: pripomienka vakcinácie je automaticky zrušená, správa sa zablokuje s dôvodom 'deceased_patient' a v Centre potlačení personál vidí auditný záznam. Namiesto SMS systém vytvorí pre personál internú úlohu na zaslanie kondolenčného listu.",
     },
   },
 
   "/marketing/consents": {
-    title: "GDPR súhlasy a právny audit",
+    title: "Skripty recepcie a informované súhlasy",
     intro:
-      "Komplexná správa súhlasov klientov so spracúvaním osobných údajov podľa Nariadenia EÚ 2016/679 (GDPR) a zákona č. 18/2018 Z. z. Zabezpečuje evidenciu súhlasov pre marketing, pripomienky, zmluvné podmienky a generuje certifikované protokoly pre kontrolu Úradu na ochranu osobných údajov SR.",
+      "Komunikačný a právny manuál personálu ambulancie. Združuje štandardizované telefonické skripty pre recepciu (uvítanie nových klientov, riešenie námietok na ceny, odovzdávanie pokynov po zákroku, krízová komunikácia), informované súhlasy pred anestéziou a operáciou a evidenciu GDPR súhlasov majiteľov.",
     steps: [
       {
-        icon: "📋",
-        title: "Prehľad stavu súhlasov",
+        icon: "📞",
+        title: "Telefonické štandardy recepcie",
         description:
-          "Tabuľka klientov s vyznačeným stavom udelených súhlasov (SMS marketing, e-mail newsletter, spracovanie údajov).",
+          "Prehľadné skripty pre personál: ako profesionálne privítať nového klienta, ako objednávať pacientov a ako odpovedať na najčastejšie otázky majiteľov.",
       },
       {
-        icon: "✍️",
-        title: "Zaznamenanie nového súhlasu",
+        icon: "💬",
+        title: "Riešenie námietok a otázok o cene",
         description:
-          "Zaevidujte udelenie súhlasu (osobne podpisom na recepcii, cez Klientsky portál alebo webový formulár).",
-      },
-      {
-        icon: "🚫",
-        title: "Okamžité odvolanie súhlasu (Opt-out)",
-        description:
-          "Ak klient požiada o zrušenie zasielania správ, jedným klikom súhlas odvoláte a systém zablokuje marketing.",
+          "Overené komunikačné formulácie pre personál pri vysvetľovaní skladby cien, odhadu nákladov na operáciu a potreby predoperačných vyšetrení.",
       },
       {
         icon: "📄",
-        title: "Export protokolu pre GDPR audit",
+        title: "Informované súhlasy (Anestézia & Chirurgia)",
         description:
-          "Vygenerujte časovo opečiatkovaný PDF výpis preukazujúci zákonnosť spracovania údajov pre inšpekciu ÚOOÚ SR.",
+          "Príprava a tlač zákonných protokolov informovaného súhlasu majiteľa pred chirurgickým zákrokom, hospitalizáciou, sedáciou alebo eutanáziou.",
+      },
+      {
+        icon: "🔒",
+        title: "GDPR súhlasy a odvolania (Opt-out)",
+        description:
+          "Evidencia udelených súhlasov so spracúvaním údajov, zasielaním SMS pripomienok a okamžité zaznamenanie odvolania súhlasu (Opt-out).",
       },
     ],
     tips: [
-      "Upozornenia na blížiace sa vakcinácie sú klasifikované ako priamy výkon veterinárnej starostlivosti, nie marketing.",
-      "Všetky zmeny súhlasov sú zaznamenané s presnou časovou pečiatkou a IP adresou v auditnom denníku.",
+      "Využívajte skripty pri zaúčaní nových recepčných a asistentiek pre garanciu jednotnej a vysoko profesionálnej úrovne kliniky.",
+      "Informovaný súhlas pred zákrokom chráni ambulanciu v prípade nepredvídaných anestetických komplikácií (Zákon 39/2007 Z. z.).",
+      "Pripomienky vakcinácií a zdravotného stavu sú zmluvným plnením veterinárnej starostlivosti, nie komerčným marketingom.",
     ],
     practicalExample: {
-      title: "Preukázanie súhlasu so zasielaním SMS pri kontrole",
-      badge: "GDPR audit",
+      title: "Telefonát majiteľa s námietkou na cenu predoperačného krvného vyšetrenia",
+      badge: "Skript recepcie",
       scenario:
-        "Klient namietal zaslanie pripomienky dentálnej hygieny a obrátil sa so sťažnosťou na úrad.",
+        "Majiteľ psa pred plánovanou kastráciou namieta, prečo má platiť 35 € za predoperačné biochemické a hematologické vyšetrenie krvi.",
       solution:
-        "V module GDPR Súhlasy vyhľadajte klienta a vygenerujte PDF protokol. Dokument jasne preukáže dátum a čas udelenia súhlasu pri registrácii na recepcii s podpisom.",
+        "Recepčná použije pripravený skript: 'Predoperačné vyšetrenie krvi nám umožňuje preveriť funkciu pečene a obličiek, ktoré odbúravajú narkózu. Vďaka tomu zvolíme najbezpečnejší typ anestézie presne pre vášho psíka a minimalizujeme akékoľvek riziko.' Majiteľ s vyšetrením bez zaváhania súhlasí.",
     },
   },
 
@@ -1689,34 +1717,29 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   "/marketing/plan": {
     title: "Obsahový plán – editoriálny kalendár",
     intro:
-      "Vizuálny plánovací kalendár pre marketingové a edukačné aktivity kliniky. Umožňuje vopred naplánovať sezónne kampane, príspevky na sociálne siete, zmeny otváracích hodín a odosielanie hromadných newsletterov.",
+      "Vizuálny plánovací kalendár pre marketingové a edukačné aktivity kliniky. V rámci konsolidácie rozhrania bol obsahový kalendár plne integrovaný ako 2. záložka v Marketingovom štúdiu (/marketing?tab=calendar). Pôvodná trasa /marketing/plan zabezpečuje okamžité presmerovanie.",
     steps: [
       {
         icon: "📅",
-        title: "Mesačný kalendárny pohľad",
+        title: "Týždenný a mesačný kalendárny plán",
         description:
-          "Prehľad naplánovaných aktivít farebne rozlíšených podľa kanála (SMS kampaň, e-mail, príspevok na sociálne siete, leták).",
+          "Prehľad naplánovaných príspevkov a vzdelávacích tém v záložke 'calendar' na adrese /marketing?tab=calendar.",
       },
       {
         icon: "➕",
-        title: "Naplánovanie novej aktivity",
+        title: "Naplánovanie novej témy",
         description:
-          "Kliknite na dátum v kalendári, zadajte tému, cieľovú skupinu, priraďte zodpovedného člena tímu a termín schválenia.",
+          "Zvoľte dátum v kalendári, zadajte tému (napr. kliešte, dentálna hygiena, vakcinácie) a cieľový komunikačný kanál.",
       },
       {
-        icon: "🤖",
-        title: "AI návrh sezónneho plánu",
+        icon: "📤",
+        title: "Export kalendára obsahu",
         description:
-          "Tlačidlo „AI navrhnúť plán\" analyzuje veterinárnu sezónu a navrhne optimálny harmonogram kampaní na celý mesiac.",
-      },
-      {
-        icon: "📊",
-        title: "Sledovanie plnenia",
-        description:
-          "Sledujte stav úloh: V príprave, Schválené, Odoslané, Vyhodnotené.",
+          "Tlačidlom „Exportovať kalendár\" stiahnite plán príspevkov pre personál recepcie alebo externého správcu sociálnych sietí.",
       },
     ],
     tips: [
+      "Trasa /marketing/plan vás automaticky presmeruje na integrovanú záložku Kalendár obsahu na /marketing?tab=calendar.",
       "Sezónne témy plánujte aspoň 3 týždne vopred (napr. kliešte vo februári, stomatologický mesiac v októbri, silvestrovský stres v novembri).",
       "Pravidelný obsah zvyšuje mieru návštevnosti webu a stabilizuje tržby v slabších mesiacoch.",
     ],
@@ -1726,7 +1749,46 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       scenario:
         "V decembri majitelia masovo hľadajú prípravky na upokojenie psov pred Silvestrom (Sileo, Tessie, feromóny, adaptogény).",
       solution:
-        "V obsahovom pláne naplánujte na 1. decembra edukačný článok na web, na 10. decembra leták do čakárne a na 15. decembra SMS kampaň majiteľom bojazlivých psov. Klinika včas pripraví zásoby a klienti prídu vopred.",
+        "V obsahovom pláne na /marketing?tab=calendar naplánujte na 1. decembra edukačný článok, na 10. decembra TV slajd a na 15. decembra SMS kampaň majiteľom bojazlivých psov.",
+    },
+  },
+
+  "/marketing/content-queue": {
+    title: "Schvaľovací proces obsahu (Content Queue)",
+    intro:
+      "Kontrolný a schvaľovací uzol pre marketingové koncepty pred ich publikovaním. V rámci konsolidácie bol tento modul integrovaný ako 3. záložka v Marketingovom štúdiu (/marketing?tab=queue). Pôvodná trasa /marketing/content-queue slúži ako automatické presmerovanie.",
+    steps: [
+      {
+        icon: "📝",
+        title: "Zoznam konceptov čakajúcich na schválenie",
+        description:
+          "Prehľad AI návrhov príspevkov, TV slajdov a letákov pripravených na kontrolu personálom kliniky.",
+      },
+      {
+        icon: "🩺",
+        title: "Klinická validácia veterinárom (Human-in-the-Loop)",
+        description:
+          "Všetky príspevky s medicínskym obsahom, liečebnými radami a dávkovaním liekov musí podpísať licencovaný veterinárny lekár.",
+      },
+      {
+        icon: "✅",
+        title: "Schválenie a zaradenie do frontu publikovania",
+        description:
+          "Jedným kliknutím personál schváli koncept, ktorý sa následne automaticky publikuje v naplánovanom čase.",
+      },
+    ],
+    tips: [
+      "Trasa /marketing/content-queue vás automaticky presmeruje na /marketing?tab=queue.",
+      "Zákon č. 39/2007 Z. z. vyžaduje odborný dohľad nad veterinárnymi tvrdeniami – schválenie lekárom je povinné pred publikáciou.",
+      "Neschválené alebo chybné koncepty môžete vrátiť na prepracovanie alebo jedným kliknutím odstrániť.",
+    ],
+    practicalExample: {
+      title: "Schválenie príspevku o nebezpečenstve hrozna a hrozienok pre psov",
+      badge: "Schvaľovanie",
+      scenario:
+        "AI vygenerovala návrh príspevku na sociálne siete o toxicite hrozna pre psov. Pred publikovaním je potrebné overiť odbornú správnosť textu.",
+      solution:
+        "Lekár v záložke 'Schvaľovací proces' skontroluje popis mechanizmu akútneho zlyhania obličiek, potvrdí odporúčanú prvú pomoc (vyvolanie vracania do 2 hodín) a klikne 'Schváliť koncept'. Príspevok sa zaradí do plánu na publikovanie.",
     },
   },
 
@@ -1821,7 +1883,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   "/marketing/wellness": {
     title: "Wellness plány – preventívne predplatné",
     intro:
-      "Tvorba a manažment preventívnych balíkov celoročnej starostlivosti. Umožňuje chovateľom a majiteľom predplatiť si ročnú starostlivosť (očkovania, odčervenia, dentálna hygiena, krvné testy, zľavy na zákroky) formou mesačných alebo ročných platieb, čo zabezpečuje klinike stabilný predvídateľný príjem.",
+      "Tvorba a manažment preventívnych balíkov celoročnej starostlivosti. Spadá pod novú sekciu Preventívna starostlivosť. Umožňuje chovateľom a majiteľom predplatiť si ročnú starostlivosť (očkovania, odčervenia, dentálna hygiena, krvné testy, zľavy na zákroky) formou mesačných alebo ročných platieb, čo zabezpečuje klinike stabilný predvídateľný príjem.",
     steps: [
       {
         icon: "📦",
@@ -1849,6 +1911,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       },
     ],
     tips: [
+      "Modul Wellness plánov je súčasťou sekcie Preventívna starostlivosť v hlavnej navigácii.",
       "Pacienti zaradení do wellness plánov navštevujú ambulanciu priemerne 3,5-krát častejšie než nepredplatení klienti.",
       "Predplatné výrazne zvyšuje záchyt ranných štádií chronických ochorení u seniorov (obličky, srdce, zuby).",
     ],
@@ -1859,6 +1922,84 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         "Majiteľ staršieho labradora chce mať istotu, že nič nezanedbá, ale obáva sa nárazových vysokých výdavkov na vyšetrenia.",
       solution:
         "Aktivujte balík 'Senior Pes': zahŕňa ročnú vakcináciu, 2x biochemický profil krvi, kontrolný RTG hrudníka a kĺbov a 10 % zľavu na lieky proti artróze. Majiteľ platí fixný mesačný poplatok a pes má zabezpečený špičkový celoročný monitoring.",
+    },
+  },
+
+  "/wellness": {
+    title: "Wellness plány (Preventívna starostlivosť)",
+    intro:
+      "Správa a predaj balíčkov preventívnej starostlivosti pre pacientov kliniky v sekcii Preventívna starostlivosť. Predstavuje moderný predplatiteľský model, ktorý majiteľom zvierat rozkladá výdavky a ambulancii garantuje stabilný opakovaný finančný tok pri vysokej kvalite prevencie.",
+    steps: [
+      {
+        icon: "📦",
+        title: "Prehľad dostupných plánov",
+        description:
+          "Prezrite si nakonfigurované wellness balíčky rozdelené podľa vekových kategórií zvierat a druhov (šteňatá, dospelé psy, seniori, mačky).",
+      },
+      {
+        icon: "🐾",
+        title: "Zápis pacienta a nastavenie platieb",
+        description:
+          "Zaregistrujte pacienta do zvoleného programu, nastavte mesačný alebo ročný fakturačný cyklus a spôsob úhrady.",
+      },
+      {
+        icon: "💳",
+        title: "Automatické uplatnenie benefitov",
+        description:
+          "Pri ošetrení systém deteguje aktívny balíček a zahrnuté položky (vakcinácia, kontrola chrupu, odčervenie) automaticky vynuluje v účte.",
+      },
+    ],
+    tips: [
+      "Navigačná sekcia Preventívna starostlivosť prepája Očkovania (/vaccinations) a Wellness plány (/wellness) na jednom mieste.",
+      "Zostatok nevyčerpaných položiek plánu vidí majiteľ zvieraťa aj vo svojom Klientskom portáli.",
+      "Pravidelný wellness skríning znižuje výskyt akútnych stavov a zlepšuje celoživotnú pohodu zvierat.",
+    ],
+    practicalExample: {
+      title: "Registrácia mačacieho seniora do preventívneho balíčka",
+      badge: "Preventívna starostlivosť",
+      scenario:
+        "Majiteľka 11-ročnej mačky chce pravidelne kontrolovať obličkové parametre bez nepredvídaných vysokých jednorazových účtov.",
+      solution:
+        "V module Wellness plány personál zvolí program 'Senior Mačka — Obličkový a dentálny skríning' s mesačnou platbou 16,90 €. Balíček pokrýva polročné meranie SDMA/kreatinínu, kontrolu tlaku a ročnú vakcináciu.",
+    },
+  },
+
+  "/vaccinations": {
+    title: "Očkovania a vakcinačné schémy",
+    intro:
+      "Evidencia imunizácie a vakcinačný register kliniky v sekcii Preventívna starostlivosť. Zabezpečuje sledovanie povinného očkovania proti besnote (Zákon č. 39/2007 Z. z.), evidenciu šarží a expirácií vakcín, automatický výpočet termínov revakcinácie a generovanie digitálnych očkovacích preukazov.",
+    steps: [
+      {
+        icon: "💉",
+        title: "Zápis aplikovanej vakcíny",
+        description:
+          "Zvoľte pacienta, zadajte podanú vakcínu (napr. Nobivac DHPPi, Versican Plus, Purevax) s číslom šarže a dátumom exspirácie.",
+      },
+      {
+        icon: "📅",
+        title: "Automatický výpočet revakcinácie",
+        description:
+          "Systém podľa typu očkovania a veku pacienta automaticky vypočíta termín ďalšej dávky (ročná revakcinácia alebo 3-ročný cyklus besnoty).",
+      },
+      {
+        icon: "🔔",
+        title: "Prepojenie na automatické SMS pripomienky",
+        description:
+          "Naplánovaný termín sa okamžite zaradí do zákazníckej cesty a klient dostane automatickú SMS pripomienku 14 dní a 3 dni pred expiráciou.",
+      },
+    ],
+    tips: [
+      "Očkovania sú spolu s Wellness plánmi začlenené do samostatnej sekcie Preventívna starostlivosť v bočnom menu.",
+      "Zákonné očkovanie psov proti besnote je v SR povinné do 3 týždňov po dovŕšení 3 mesiacov veku zvieraťa.",
+      "Číslo šarže vakcíny je možné pohodlne načítať čítačkou 2D čiarových kódov priamo z liekovky.",
+    ],
+    practicalExample: {
+      title: "Zaevidovanie šteniatkovskej primovakcinácie a plán revakcinácie",
+      badge: "Imunizácia",
+      scenario:
+        "8-týždňové šteňa nemeckého ovčiaka prichádza na prvé očkovanie proti parvoviróze a psinke.",
+      solution:
+        "V module Očkovania lekár vyberie vakcínu Nobivac Puppy DP, potvrdí šaržu a aplikáciu. Systém automaticky nastaví termín druhej dávky (DHPPi + L4) o 3 týždne a zaradí majiteľa do automatickej pripomienkovej SMS sekvencie.",
     },
   },
 
@@ -1979,8 +2120,15 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         description:
           "Záložka „Integrácie\": prepojte SMS bránu (Telnyx/Twilio), odosielanie e-mailov (Resend) a platobnú bránu Stripe.",
       },
+      {
+        icon: "🎨",
+        title: "Brand Kit & vizuálna identita",
+        description:
+          "Záložka „Brand Kit\": nahrajte firemné logo (SVG/PNG) a nastavte paletu farieb pre jednotný dizajn faktúr, lekárskych správ a letákov.",
+      },
     ],
     tips: [
+      "Vizuálnu identitu kliniky (logo, farby, typografia) konfigurujete v záložke Brand Kit priamo v Nastaveniach kliniky.",
       "Zmena údajov v profile pracoviska sa okamžite premietne do hlavičiek všetkých novovystavených dokladov a receptov.",
       "API kľúče pre SMS bránu a e-maily sú uložené v šifrovanej podobe a nikto z bežných zamestnancov k nim nemá prístup.",
     ],
@@ -2370,6 +2518,11 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
     { name: "Automatizácie", href: "/marketing/automations" },
     { name: "Marketing", href: "/marketing" },
   ],
+  "/marketing/content-queue": [
+    { name: "Marketing", href: "/marketing" },
+    { name: "Obsahový plán", href: "/marketing/plan" },
+    { name: "Automatizácie", href: "/marketing/automations" },
+  ],
   "/marketing/website": [
     { name: "Brand Kit", href: "/marketing/brand-kit" },
     { name: "TV Displej", href: "/marketing/tv" },
@@ -2381,9 +2534,22 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
     { name: "Médiá", href: "/marketing/media" },
   ],
   "/marketing/wellness": [
+    { name: "Očkovania", href: "/vaccinations" },
+    { name: "Wellness plány", href: "/wellness" },
     { name: "Pacienti", href: "/patients" },
-    { name: "Pripomienky", href: "/care-reminders" },
     { name: "Fakturácia", href: "/billing" },
+  ],
+  "/wellness": [
+    { name: "Očkovania", href: "/vaccinations" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "Fakturácia", href: "/billing" },
+    { name: "Pripomienky", href: "/care-reminders" },
+  ],
+  "/vaccinations": [
+    { name: "Wellness plány", href: "/wellness" },
+    { name: "Pripomienky", href: "/care-reminders" },
+    { name: "Pacienti", href: "/patients" },
+    { name: "Klinické záznamy", href: "/records" },
   ],
   "/marketing/competitors": [
     { name: "Veterinárny trhový radar", href: "/vet-intel" },

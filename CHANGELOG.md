@@ -8,6 +8,41 @@ as described in `docs/production-readiness/VERSIONING.md`.
 
 ## [Unreleased]
 
+### Added
+
+- **Brand-Kit-Aware Drag-and-Drop Clinic Website Builder:**
+  - Full-width visual editor canvas with accessible `@dnd-kit` drag handles, inline property editing sheets, and live responsive desktop/mobile viewport toggle.
+  - Comprehensive library of 17 shadcn/ui section templates: Hero Banner, About & Story, Services Grid, GDPR-Consent-Gated Team, Reviews & Ratings (Grid/Carousel), FAQ Accordion, Hours & Location with map embed, Online Booking CTA, Media Library Gallery, Educational Care Handouts, Trust & Certification Badges, Statistics Strip, Urgent Care Emergency Banner, Client Contact Form, Responsive Video Player, Social Proof Bar, and Sanitized Custom Rich Text.
+  - Automatic Brand Kit styling injecting `--wb-primary`, `--wb-secondary`, and calculated contrast text colors (`--wb-on-primary`) across all section components.
+  - Dedicated Drizzle schema table `ext_marketing_website_config` with draft vs. published state isolation.
+  - Backward compatibility seed fallback guaranteeing zero disruption for existing published clinic sites.
+  - Playwright E2E and Vitest unit test suites covering section schemas, drag reordering, and public rendering.
+
+## [0.6.0] - 2026-09-13
+
+### Added
+
+- **Pilot-Ready Slovak Integrations & Registries:**
+  - KVEPIS (ŠVPS SR) B2G submission pipeline: XML generator with strict XSD schema validation.
+  - CRSZ (Centrálny register spoločenských zvierat) chip registry lookup and PetPass validation.
+  - CEHZ (Centrálna evidencia hospodárskych zvierat) animal tracking data exports.
+  - ÚPVS (Ústredný portál verejnej správy) electronic delivery integration schemas.
+  - PetExpert veterinary insurance claim payload builder and export format.
+- **Clinical AI Trust & Audit Integrity:**
+  - Tamper-evident cryptographic hash chain for `ext_ai_audit_log` with practice-scoped sequence validation (`verify-ai-audit-trail.ts`).
+  - One-time clinical confirmation envelopes bound to actor, entity, revision, and draft hash.
+  - Deterministic evaluation harness (`clinical-eval-harness.test.ts`) with synthetic Slovak clinical cases.
+- **Mobile Client Portal PWA:**
+  - Progressive Web App (`/portal/:token`) for pet owners with responsive appointment booking, vaccination cards, and invoice history.
+- **Pilot Clinic Onboarding:**
+  - Production configurations and seed datasets for the first pilot deployment at Súkromná veterinárna klinika MVDr. Martin Sýkora (Rimavská Sobota).
+
+### Security
+
+- Full PostgreSQL Row-Level Security (RLS) enforcement verified on PG 16.
+- Fail-closed actor role resolution across all 26 agent tools (`assertAgentRole`).
+- Advisory transaction locks on AI audit event insertions preventing sequence collisions.
+
 ## [0.5.0] - 2026-09-12
 
 ### Added
@@ -41,6 +76,6 @@ as described in `docs/production-readiness/VERSIONING.md`.
 - Fail-closed actor role verification eliminating unauthenticated or fallback privileges.
 - Production dependency audits and Next.js / Sharp security updates.
 
-## [0.1.0] — unreleased baseline
+## [0.1.0] - 2026-03-18
 
 Package versions in `apps/web` and `packages/db` were `0.1.0`. Baseline repository state.

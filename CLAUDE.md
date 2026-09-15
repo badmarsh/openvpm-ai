@@ -32,7 +32,7 @@ Quick rules (full detail in the manual):
 - **Pick up** → move to *In Progress*, comment `[agent:<role>] plan: …`. WIP = 1 per agent.
 - **Finish** → move to *In Review*, flip the acceptance-criteria ☐ to ✅, comment
   `[agent:<role>] done: … · PR: <url> · tests: <evidence>`.
-- **Stuck** → move to *Blocked*, comment `[blocked] waiting on: … · @Evan`.
+- **Stuck** → move to *Blocked*, comment `[blocked] waiting on: … · @Marek`.
 - Sign every comment with your role: `[agent:eng|qa|gtm|ops|design]`.
 - **Never** delete issues, bulk-transition, or move a `risk:*` ticket to *Done* —
   those need a human.

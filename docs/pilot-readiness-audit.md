@@ -6,6 +6,9 @@
 **Status:** In-depth Pre-Implementation Audit (Phase 0)  
 **Authors:** Principal Staff Engineer, Security Architect & Clinical-AI Safety Lead  
 
+> **Status:** Pre-fix audit — 2026-09-09. All P0/P1 gaps identified here were subsequently fixed in Sprint 9.3.
+> Current evidence: [controlled-pilot-readiness-report.md](controlled-pilot-readiness-report.md) §2–§3 (CONDITIONAL-GO, 2026-09-12).
+
 ---
 
 ## 1. Executive Summary

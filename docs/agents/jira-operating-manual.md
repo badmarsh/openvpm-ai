@@ -78,7 +78,7 @@ the next agent has zero context.
   description, comment:
   `[agent:eng] done: <what changed> · PR: <url> · tests: <command/screen/evidence>`
 - **When stuck** → move to *Blocked*, comment:
-  `[blocked] waiting on: <thing> · @Evan`
+  `[blocked] waiting on: <thing> · @Marek`
 - **Signatures:** `[agent:eng]` `[agent:qa]` `[agent:gtm]` `[agent:ops]` `[agent:design]`.
 
 ## Labels — controlled vocabulary (do not invent new namespaces)

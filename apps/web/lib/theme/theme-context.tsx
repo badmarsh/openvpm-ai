@@ -27,7 +27,7 @@ const STORAGE_CUSTOM_CSS_KEY = "openvpm_gui_custom_css";
 
 export function GuiThemeProvider({ children }: { children: React.ReactNode }) {
   const [activeThemeId, setActiveThemeId] = useState<string>("supabase");
-  const [mode, setModeState] = useState<ThemeMode>("dark");
+  const [mode, setModeState] = useState<ThemeMode>("light");
   const [customThemeCss, setCustomThemeCss] = useState<string>("");
   const [parsedCustomTheme, setParsedCustomTheme] = useState<ParsedThemeSet | null>(null);
   const [mounted, setMounted] = useState(false);

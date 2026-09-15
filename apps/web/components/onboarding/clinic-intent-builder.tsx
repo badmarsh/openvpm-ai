@@ -161,7 +161,10 @@ export function ClinicIntentBuilder({
                       <Icon className="h-5 w-5" strokeWidth={1.8} />
                     </span>
                     <span className="mt-2.5 block max-w-[10rem] text-[13px] font-semibold leading-[1.3] text-slate-900 sm:text-sm">
-                      {option.label}
+                      {t(
+                        `onboarding.models.${option.value}.label`,
+                        option.label,
+                      )}
                     </span>
                     {active ? (
                       <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
@@ -214,7 +217,10 @@ export function ClinicIntentBuilder({
                       <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                     </span>
                     <span className="min-w-0 flex-1 text-[13px] font-medium leading-5 text-slate-800 sm:text-sm">
-                      {option.label}
+                      {t(
+                        `onboarding.firstGoals.${option.value}.label`,
+                        option.label,
+                      )}
                     </span>
                     <span
                       className={cn(
@@ -262,7 +268,12 @@ export function ClinicIntentBuilder({
                   {t(
                     "onboarding.intent.shapedFor",
                     `Shaped for ${selectedModel.shortLabel.toLowerCase()} care`,
-                    { model: selectedModel.shortLabel.toLowerCase() },
+                    {
+                      model: t(
+                        `onboarding.models.${selectedModel.value}.shortLabel`,
+                        selectedModel.shortLabel,
+                      ).toLowerCase(),
+                    },
                   )}
                 </p>
               </div>

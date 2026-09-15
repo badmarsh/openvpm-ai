@@ -62,3 +62,4 @@ export * from "./ext_automation";
 export * from "./ext_crm";
 export * from "./ext_content_calendar";
 export * from "./ext_channel_accounts";
+export * from "./ext_marketing_website";

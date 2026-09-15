@@ -18,6 +18,7 @@ import { useI18n } from "@/lib/i18n";
  * workflow they just tried, not a full PIMS rip-replace.
  */
 export function DemoConversionBar() {
+  return null;
   const pathname = usePathname();
   const visitorId = useFunnelVisitorId();
   const { t } = useI18n();

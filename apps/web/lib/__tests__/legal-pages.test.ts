@@ -9,11 +9,11 @@ describe("legal pages", () => {
     expect(terms).toContain("Terms of Service");
     expect(terms).toContain("Your data belongs to you");
     expect(terms).toContain("not a veterinarian");
-    expect(terms).toContain("hello@openvpm.com");
+    expect(terms).toContain("jurkemik@significa.sk");
     expect(privacy).toContain("Privacy Policy");
     expect(privacy).toContain("We do not sell personal data");
     expect(privacy).toContain("row-level security");
-    expect(privacy).toContain("hello@openvpm.com");
+    expect(privacy).toContain("jurkemik@significa.sk");
   });
 
   it("links the terms from signup and privacy from the portal", () => {

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/lib/i18n";
 
 type ReasonInput = {
   label: string;
@@ -20,6 +21,7 @@ export function ActionConfirmationDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel,
   confirmVariant = "default",
   isPending = false,
   reason,
@@ -31,6 +33,7 @@ export function ActionConfirmationDialog({
   title: string;
   description: string;
   confirmLabel: string;
+  cancelLabel?: string;
   confirmVariant?: "default" | "destructive";
   isPending?: boolean;
   reason?: ReasonInput;
@@ -38,6 +41,7 @@ export function ActionConfirmationDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useI18n();
   const titleId = useId();
   const descriptionId = useId();
   const reasonId = useId();
@@ -150,7 +154,7 @@ export function ActionConfirmationDialog({
 
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" disabled={isPending} onClick={onCancel}>
-            Cancel
+            {cancelLabel ?? t("common.cancel", "Cancel")}
           </Button>
           <Button
             ref={confirmRef}

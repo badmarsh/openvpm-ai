@@ -1,8 +1,16 @@
 # Getting Started with OpenVPM
 
-Welcome! This is the quick look at your new practice. When you first sign in,
-OpenVPM adds a few sample pets so the app feels real while you look around.
-You can remove them any time in **Settings → Data → Remove sample data**.
+This guide is available in two language versions. The in-app Guides viewer
+detects your language setting and loads the correct version automatically.
+
+- 🇬🇧 **English**: [Getting Started (English)](en/getting-started.md)
+- 🇸🇰 **Slovenčina**: [Začíname (Slovensky)](sk/getting-started.md)
+
+---
+
+> The guides below are a brief overview. For the full step-by-step
+> onboarding guide — including roles, password reset, demo mode, and client
+> portal access — open the language-specific page above.
 
 ## Your day, at a glance
 
@@ -52,6 +60,9 @@ connect by API when you are ready. See
 - [Ask the AI about a pet](ask-the-ai.md)
 - [Give every client a portal](client-portal.md)
 - [See your schedule in your own calendar](calendar-feed.md)
+- [Billing & Finance](en/billing-finance.md)
+- [Statutory Compliance](en/statutory-compliance.md)
+- [Clinic Website Builder](en/website-builder.md)
 - [Review clinic pilot fit and launch limits](../clinic-pilot-readiness.md)
 
 Every guide here also runs inside the app with your own data: open
