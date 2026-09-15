@@ -118,20 +118,8 @@ Všetky cloudové plány zahŕňajú 14-dňovú bezplatnú skúšobnú verziu (n
 ## Pilot Validation & PoC Evidence
 
 > **Aktuálny stav: PILOT-READY (v0.6)** — systém je schválený na kontrolované ostré pilotné nasadenie.
-> Prvý reálny pilotný klient: **Súkromná veterinárna klinika MVDr. Martin Sýkora, Rimavská Sobota.**
 
 > **Poznámka:** „Pilot-ready" nie je ekvivalent „battle-tested". Úplná GAP analýza: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md).
-
-### Prvý pilotný klient: Súkromná veterinárna klinika MVDr. Martin Sýkora
-
-- **Lokalita:** Kvetná 3, 979 01 Rimavská Sobota
-- **Web:** [vetsykora.sk](https://vetsykora.sk) · **Email:** info@vetsykora.sk · **Tel:** +421 903 949 401
-- **Stav:** Prvé reálne pilotné nasadenie OpenVPM AI. Čísla nižšie pochádzajú z predbežného testovania v kontrolovanom prostredí pred ostrým spustením produkcie:
-  * **342 ošetrených pacientov** (218 psov, 89 mačiek, 35 hospodárskych zvierat) — dáta z testovacieho prostredia
-  * **e-Kasa offline front:** Počas testovaného 45-min. výpadku offline front korektne zachoval transakcie; reálne podanie do CHDÚ v produkcii prebieha
-  * **KVEPIS súlad:** XML súbory overené voči XSD schéme SVPS SR; **reálne podanie na SVPS zatiaľ neuskutočnené** (testovací endpoint ešte nebol pridelený)
-  * **PetExpert:** 14 poistných udalostí spracovaných v demo prostredí; **live API integrácia s produkčnými credentials neprebehla**
-  * **Úspora času (merané v testovacom prostredí):** Skrátenie administratívneho záznamu z 7,2 na 4,1 min/pacienta (42 %)
 
 
 ---
