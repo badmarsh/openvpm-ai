@@ -6627,5 +6627,88 @@
   "legal": {
     "navTerms": "Podmienky",
     "navPrivacy": "Súkromie"
+  },
+  "sms": {
+    "programTitle": "Informácie o textových správach kliniky - VET.IS",
+    "programDescription": "Informácie o programe, súhlas s odosielaním, ochrana osobných údajov a podmienky pre textové správy poskytované VET.IS.",
+    "nav": {
+      "consent": "Súhlas",
+      "privacy": "Ochrana osobných údajov",
+      "terms": "Podmienky"
+    },
+    "footer": "Textové správy poskytuje VET.IS",
+    "optIn": {
+      "title": "Ako sa získava súhlas na odosielanie SMS",
+      "lastUpdated": "Posledná aktualizácia: 8. augusta 2026",
+      "collectionMethod": "Klienti môžu dať súhlas telefónne alebo pri osobnom prijatí. Zamestnanci kliniky prečítajú alebo ukážu nižšie uvedené upozornenie, spýtajú sa na výslovnú voľbu a zaznamenajú odpoveď klienta do OpenVPM. Ovládací prvok pre súhlas je voliteľný a nie je vybratý predvolene. Žiadna správa sa neodosiela, kým nie je súhlas zaznamenaný.",
+      "disclosureTitle": "Upozornenie ukázané alebo prečítané klientom",
+      "evidenceTitle": "Záznamy uložené",
+      "evidenceDetails": "OpenVPM zaznamenáva voľbu súhlasu, dátum a čas, mobilné číslo, text upozornenia a zdroj súhlasu. Odpoveď STOP vytvorí blokovanie, ktoré zastaví ďalšie odosielania. Odpoveď START, YES alebo UNSTOP môže obnoviť súhlas z telefónu klienta."
+    },
+    "privacy": {
+      "title": "Zásady ochrany osobných údajov pre SMS",
+      "lastUpdated": "Posledná aktualizácia: 8. augusta 2026",
+      "intro": "Tieto pravidlá sa vzťahujú na textové správy odosielané klinikou {clinicName} prostredníctvom OpenVPM. Klinika kontroluje informácie o klientoch; OpenVPM spracúva tieto informácie na poskytnutie služby odosielania správ.",
+      "usedFor": "Informácie používané na odosielanie správ",
+      "usedForDetails": "Klinika môže použiť vaše meno, mobilné číslo, informácie o zvieratách a termínoch, obsah správ, záznam o súbore a stav odhlásenia na odosielanie požadovaných veterinárnych služieb a odpovede vám.",
+      "howUsed": "Ako sa informácie používajú",
+      "howUsedItems": "Odosielanie pripomienok k termínom a aktualizácií rozvrhu.\nOdosielanie oznámení o očkovaní, starostlivosti, predpisoch a následných kontrolách.\nOdpovede na otázky klientov a zaznamenávanie preferencií komunikácie.\nZabezpečenie, riešenie problémov a dokumentácia služby odosielania správ.",
+      "noSale": "Žiadny predaj alebo propagačné zdieľanie",
+      "noSaleDetails": "Klinika a OpenVPM nepredávajú vaše osobné informácie. Údaje o súbore na odosielanie SMS a súhlas sa nezdieľajú s tretími stranami pre ich vlastné marketingové alebo propagačné účely.",
+      "retention": "Uchovávanie a bezpečnosť",
+      "retentionDetails": "Záznamy o súbore, správach a odhlásení sa uchovávajú ako súčasť obchodných a zdravotných záznamov kliniky počas potrebného času na poskytovanie služby a splnenie zákonných alebo operačných požiadaviek. OpenVPM používa šifrovanie pri prenose, prístup založený na rolách a izoláciu klientov na ochranu uložených záznamov.",
+      "yourChoices": "Vaše možnosti",
+      "yourChoicesDetails": "Odpoveďou STOP zastavíte textové správy alebo HELP pre pomoc. Môžete tiež kontaktovať kliniku a požiadať o jej záznamy alebo aktualizovať vaše preferencie komunikácie. Odhlásenie sa vzťahuje na textové správy; klinika vás môže stále kontaktovať inými kanálmi, keď je to vhodné.",
+      "contact": "Kontakt",
+      "noSaleDetailsAdditional": "Informácie môžu spracovávať poskytovatelia infraštruktúry OpenVPM, telekomunikační operátori a iní poskytovatelia služieb len v rozsahu potrebnom na doručovanie, zabezpečenie a podporu správ kliniky alebo na splnenie zákonných povinností."
+    },
+    "terms": {
+      "title": "Podmienky a pravidlá pre SMS",
+      "lastUpdated": "Posledná aktualizácia: 8. augusta 2026",
+      "program": "Program",
+      "programDetails": "Svojím súhlasom autorizujete kliniku {clinicName} na odosielanie veterinárnych servisných textových správ na mobilné číslo, ktoré ste poskytli. Správy môžu obsahovať pripomienky k termínom, oznámenia o očkovaní a starostlivosti, predpisy alebo následné kontroly a dvojstrannú podporu klientov. OpenVPM poskytuje technológiu odosielania správ pre kliniku.",
+      "consent": "Súhlas a frekvencia",
+      "consentDetails": "Váš súhlas je dobrovoľný a nie je podmienkou kúpy tovarov alebo služieb. Frekvencia správ sa líši podľa starostlivosti o vaše zvieratá a vašich interakcií s klinikou. Môžu sa uplatňovať poplatky za správy a dátový prenos.",
+      "optOut": "Odhlásenie a pomoc",
+      "optOutItems": "Odpovedzte STOP na zrušenie textových správ.\nOdpovedzte HELP pre pomoc.\nPo odhlásení môžete dostať jednu potvrdzovaciu správu. Neskôr môžete odpovedať START alebo dať klinike nový súhlas na obnovenie správ.",
+      "delivery": "Doručenie",
+      "deliveryDetails": "Operátori nie sú zodpovední za oneskorené alebo nedoručené správy. Textovanie nie je vhodné pre pohotovostné situácie. Kontaktujte pohotovostného veterinára priamo, keď je potrebná urgentná starostlivosť.",
+      "privacyContact": "Ochrana osobných údajov a kontakt",
+      "privacyContactDetails": "Zásady ochrany osobných údajov kliniky vysvetľujú, ako sa spracúvajú informácie o odosielaní správ. Pre pomoc s programom {contactMethod}",
+      "call": "zavolajte {phone}",
+      "visitWebsite": "navštívte webové stránky kliniky na {url}",
+      "contactDirectly": "kontaktujte kliniku {clinicName} priamo"
+    }
+  },
+  "clinicFit": {
+    "title": "Vhodnosť kliniky a pripravenosť pilotného projektu | OpenVPM",
+    "description": "Zistite, ktoré pracovné postupy kliniky OpenVPM sú dnes pripravené, ktoré vyžadujú podporovaný pilotný projekt a ktoré zatiaľ nie sú dostupné.",
+    "headerEyebrow": "Čestná kontrola vhodnosti kliniky",
+    "headerTitle": "Vedzte, čo je pripravené, skôr ako presuniete prácu kliniky.",
+    "headerDescription": "OpenVPM je dnes najsilnejší pre kliniky sprevádzajúcich zvieratá a kliniky domácich návštev, ktoré môžu pracovať v pripojenom prehliadači a začať spolu so svojím súčasným PIMS. Môžete to vyskúšať bez karty a rozhodnúť sa na základe skutočných dôkazov o pracovných postupoch.",
+    "startTrial": "Začnite 14-dňovú skúšobnú verziu",
+    "openDemo": "Otvoriť živú ukážku",
+    "noCardRequired": "Okamžitý prístup. Karta nie je potrebná. Zachovajte svoj súčasný PIMS na mieste, zatiaľ čo overujete skutočnú návštevu.",
+    "readyNowEyebrow": "Pripravené teraz",
+    "readyNowTitle": "Práca v klinike v pripojenom režime",
+    "pilotSetupEyebrow": "Nastavenie alebo podporovaný pilot",
+    "pilotSetupTitle": "Overte pred závislosťou na ňom",
+    "notYetEyebrow": "Zatiaľ nedostupné",
+    "notYetTitle": "Ponechajte iný pracovný postup na mieste",
+    "proveWorkflowTitle": "Dokážte najprv jeden pracovný postup.",
+    "proveWorkflowDescription": "Bezpečný pilotný projekt si získava prechod. Nežiada od vášho tímu, aby dôveroval zoznamu funkcií.",
+    "step1Title": "Potvrďte vhodnosť",
+    "step1Description": "Pomenujte pracovný postup, umiestnenie, zariadenia, roly zamestnancov a prekážky.",
+    "step2Title": "Prineste malý vzorku",
+    "step2Description": "Vyskúšajte niekoľko skutočných klientov a pacientov pred väčším importom.",
+    "step3Title": "Dokončite skutočnú návštevu",
+    "step3Description": "Rezervujte, zaznamenajte, ukončite, vystavte faktúru alebo zaznamenajte žiadne poplatky a overte odovzdanie.",
+    "step4Title": "Spustite pilotný týždeň",
+    "step4Description": "Overte exporty, roly, platby, komunikáciu, obnovu a podporu.",
+    "unsureTitle": "Nie ste si istí jedným nevyhnutným pracovným postupom?",
+    "unsureDescription": "Spýtajte sa, skôr ako presuniete údaje alebo zmeníte operácie kliniky. Povieme vám otvorene, či je pripravený, len pre pilot alebo nie je podporovaný.",
+    "planPilot": "Naplánujte pilotný projekt kliniky",
+    "startWithSample": "Začnite so vzorovými údajmi",
+    "emailWarning": "Nepridávajte exporty kliniky alebo údaje o pacientoch/klientoch do bežných e-mailov. Dohodneme bezpečný spôsob prenosu, ak prehľad migrácie potrebuje skutočné údaje."
   }
 }
