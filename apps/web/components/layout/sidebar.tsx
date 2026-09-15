@@ -31,6 +31,7 @@ import {
   Tv,
   MessageSquare,
   Building2,
+  Heart,
 } from "lucide-react";
 import { PawMark } from "@/components/brand/paw-mark";
 import {
@@ -179,6 +180,27 @@ const vanillaSections: NavSection[] = [
     ],
   },
   {
+    id: "preventive",
+    titleKey: "nav.sectionPreventive",
+    titleFallback: "Preventívna starostlivosť",
+    items: [
+      {
+        href: "/vaccinations",
+        label: "Očkovania",
+        i18nKey: "nav.vaccinations",
+        icon: Syringe,
+        roles: allRoles,
+      },
+      {
+        href: "/wellness",
+        label: "Wellness plány",
+        i18nKey: "nav.wellness",
+        icon: Heart,
+        roles: ["admin", "veterinarian", "front_desk"],
+      },
+    ],
+  },
+  {
     id: "pharmacy",
     titleKey: "nav.sectionPharmacyInventory",
     titleFallback: "Lekáreň & Sklad",
@@ -225,6 +247,14 @@ const vanillaSections: NavSection[] = [
         i18nKey: "nav.reports",
         icon: BarChart3,
         roles: ["admin", "veterinarian"],
+      },
+      {
+        href: "/whiteboard",
+        label: "Whiteboard",
+        i18nKey: "nav.whiteboard",
+        icon: Tv,
+        roles: ["admin", "veterinarian", "front_desk"],
+        badge: "Nové",
       },
     ],
   },

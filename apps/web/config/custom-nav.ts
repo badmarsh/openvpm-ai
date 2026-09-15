@@ -2,23 +2,16 @@ import type { ElementType } from "react";
 import {
   ReceiptText,
   Megaphone,
-  Newspaper,
   Tv,
   Image as ImageIcon,
   Mic,
   FileText,
-  Palette,
-  CalendarDays,
   Zap,
   Star,
   Globe,
   ShieldCheck,
-  ShieldAlert,
   Heart,
-  Building2,
   MessageSquare,
-  Headphones,
-  ClipboardList,
 } from "lucide-react";
 
 export type UserRole =
@@ -30,6 +23,7 @@ export type UserRole =
 
 export type NavSectionId =
   | "clinical"
+  | "preventive"
   | "frontDesk"
   | "pharmacy"
   | "billing"
@@ -63,30 +57,6 @@ export const customNavItems: CustomNavItem[] = [
     roles: ["admin", "veterinarian", "front_desk"],
     section: "marketing",
     exact: true,
-  },
-  {
-    href: "/marketing/brand-kit",
-    label: "Brand Kit",
-    i18nKey: "nav.marketingBrandKit",
-    icon: Palette,
-    roles: ["admin", "veterinarian"],
-    section: "marketing",
-  },
-  {
-    href: '/marketing/plan',
-    label: 'Plán obsahu',
-    i18nKey: 'nav.marketingPlan',
-    icon: CalendarDays,
-    roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'marketing',
-  },
-  {
-    href: '/marketing/content-queue',
-    label: 'Schvaľovanie obsahu',
-    i18nKey: 'nav.marketingContentQueue',
-    icon: CalendarDays,
-    roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'marketing',
   },
   {
     href: '/marketing/reviews',
@@ -137,17 +107,9 @@ export const customNavItems: CustomNavItem[] = [
     section: 'marketing',
   },
   {
-    href: '/marketing/suppression',
-    label: 'Centrum potlačení',
-    i18nKey: 'nav.marketingSuppression',
-    icon: ShieldAlert,
-    roles: ['admin', 'veterinarian'],
-    section: 'marketing',
-  },
-  {
     href: '/marketing/consents',
-    label: 'Súhlasy & skripty',
-    i18nKey: 'nav.marketingConsents',
+    label: 'Skripty recepcie',
+    i18nKey: 'nav.receptionScripts',
     icon: ShieldCheck,
     roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'marketing',
@@ -162,11 +124,11 @@ export const customNavItems: CustomNavItem[] = [
   },
   {
     href: '/marketing/wellness',
-    label: 'Čerpanie benefitov',
-    i18nKey: 'nav.wellnessRedemptions',
+    label: 'Wellness plány',
+    i18nKey: 'nav.wellness',
     icon: Heart,
     roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'frontDesk',
+    section: 'preventive',
   },
   // AI
   {
@@ -196,15 +158,6 @@ export const customNavItems: CustomNavItem[] = [
     section: "admin",
     badge: "AI",
   },
-  {
-    href: "/vet-intel",
-    label: "Vet Intelligence",
-    i18nKey: "nav.vetIntel",
-    icon: Building2,
-    roles: ["admin", "veterinarian"],
-    section: "admin",
-    badge: "AI",
-  },
   // Finance / admin
   {
     href: "/billing/ekasa",
@@ -213,23 +166,5 @@ export const customNavItems: CustomNavItem[] = [
     icon: ReceiptText,
     roles: ["admin", "veterinarian", "front_desk"],
     section: "billing",
-  },
-  // Support
-  {
-    href: "/support",
-    label: "Vzdialená Podpora",
-    i18nKey: "nav.remoteSupport",
-    icon: Headphones,
-    roles: ["admin", "veterinarian", "technician", "front_desk"],
-    section: "admin",
-  },
-  {
-    href: "/admin/pilot",
-    label: "Pilotná Reconciliácia",
-    i18nKey: "nav.pilotReconciliation",
-    icon: ClipboardList,
-    roles: ["admin", "veterinarian", "technician", "front_desk"],
-    section: "admin",
-    badge: "Pilot",
   },
 ];
