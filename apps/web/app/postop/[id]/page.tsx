@@ -13,10 +13,12 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 type OutcomeType = "ok" | "question" | "concern";
 
 export default function PublicPostopCheckinPage() {
+  const { t } = useI18n();
   const params = useParams();
   const id = (params.id as string) ?? "";
 
@@ -32,7 +34,7 @@ export default function PublicPostopCheckinPage() {
     },
     onError: (err) => {
       setErrorMessage(
-        err.message || "Nepodarilo sa odoslať odpoveď. Skontrolujte prosím internetové pripojenie."
+        err.message || t("postop.submitError", "Nepodarilo sa odoslať odpoveď. Skontrolujte prosím internetové pripojenie.")
       );
     },
   });
@@ -62,10 +64,9 @@ export default function PublicPostopCheckinPage() {
           <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mx-auto shadow-sm">
             <PawPrint className="w-6 h-6" />
           </div>
-          <h1 className="text-xl font-bold text-foreground">Pooperačná kontrola stavu</h1>
+          <h1 className="text-xl font-bold text-foreground">{t("postop.title", "Pooperačná kontrola stavu")}</h1>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-            Záleží nám na rýchlej a bezpečnej rekonvalescencii vášho miláčika. Vyplnenie zaberie len
-            niekoľko sekúnd.
+            {t("postop.subtitle", "Záleží nám na rýchlej a bezpečnej rekonvalescencii vášho miláčika. Vyplnenie zaberie len niekoľko sekúnd.")}
           </p>
         </header>
 
@@ -77,12 +78,12 @@ export default function PublicPostopCheckinPage() {
                 <HeartHandshake className="w-8 h-8" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-lg font-bold text-foreground">Ďakujeme za vašu odpoveď!</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("postop.thanksTitle", "Ďakujeme za vašu odpoveď!")}</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Informáciu sme bezpečne zaznamenali do zdravotného záznamu.
+                  {t("postop.thanksOk", "Informáciu sme bezpečne zaznamenali do zdravotného záznamu. Tešíme sa, že sa pacientovi darí dobre!")}
                   {outcome === "concern" || outcome === "question"
-                    ? " Náš veterinárny personál si vašu správu prečíta a v prípade potreby vás bude telefonicky kontaktovať."
-                    : " Tešíme sa, že sa pacientovi darí dobre!"}
+                    ? " " + t("postop.thanksConcern", "Náš veterinárny personál si vašu správu prečíta a v prípade potreby vás bude telefonicky kontaktovať.")
+                    : ""}
                 </p>
               </div>
             </div>
@@ -90,7 +91,7 @@ export default function PublicPostopCheckinPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-foreground block">
-                  Ako sa má váš pacient po zákroku?
+                  {t("postop.question", "Ako sa má váš pacient po zákroku?")}
                 </label>
 
                 <div className="grid grid-cols-1 gap-3">
@@ -110,9 +111,9 @@ export default function PublicPostopCheckinPage() {
                       }`}
                     />
                     <div>
-                      <div className="font-semibold text-sm">Darí sa dobre / Bez ťažkostí</div>
+                      <div className="font-semibold text-sm">{t("postop.okLabel", "Darí sa dobre / Bez ťažkostí")}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        Normálne pije, prijíma potravu, rana je čistá a pokojná.
+                        {t("postop.okDesc", "Normálne pije, prijíma potravu, rana je čistá a pokojná.")}
                       </div>
                     </div>
                   </button>
@@ -133,9 +134,9 @@ export default function PublicPostopCheckinPage() {
                       }`}
                     />
                     <div>
-                      <div className="font-semibold text-sm">Mám doplňujúcu otázku</div>
+                      <div className="font-semibold text-sm">{t("postop.questionLabel", "Mám doplňujúcu otázku")}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        Potrebujem poradiť ohľadom liekov, kŕmenia alebo režimu.
+                        {t("postop.questionDesc", "Potrebujem poradiť ohľadom liekov, kŕmenia alebo režimu.")}
                       </div>
                     </div>
                   </button>
@@ -156,9 +157,9 @@ export default function PublicPostopCheckinPage() {
                       }`}
                     />
                     <div>
-                      <div className="font-semibold text-sm">Niečo nie je v poriadku / Mám obavy</div>
+                      <div className="font-semibold text-sm">{t("postop.concernLabel", "Niečo nie je v poriadku / Mám obavy")}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        Zviera je apatické, odmieta piť, rana opúcha alebo bolí.
+                        {t("postop.concernDesc", "Zviera je apatické, odmieta piť, rana opúcha alebo bolí.")}
                       </div>
                     </div>
                   </button>
@@ -169,14 +170,14 @@ export default function PublicPostopCheckinPage() {
               {(outcome === "question" || outcome === "concern") && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <label className="text-xs font-semibold text-foreground block">
-                    {outcome === "concern" ? "Popíšte prosím, čo pozorujete:" : "Vaša otázka pre veterinára:"}
+                    {outcome === "concern" ? t("postop.concernPlaceholder", "Popíšte prosím, čo pozorujete:") : t("postop.questionPlaceholder", "Vaša otázka pre veterinára:")}
                   </label>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     rows={3}
                     maxLength={1000}
-                    placeholder="Napr. pacient nechce piť, rana mierne mokvá, liek odmieta prehltnúť..."
+                    placeholder={t("postop.notePlaceholder", "Napr. pacient nechce piť, rana mierne mokvá, liek odmieta prehltnúť...")}
                     className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/60"
                   />
                   <p className="text-[11px] text-muted-foreground text-right">{note.length} / 1000</p>
@@ -197,12 +198,12 @@ export default function PublicPostopCheckinPage() {
                 {submitMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Odosielam...
+                    {t("postop.sending", "Odosielam...")}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    Odoslať odpoveď klinike
+                    {t("postop.submitButton", "Odoslať odpoveď klinike")}
                   </>
                 )}
               </button>
@@ -213,11 +214,10 @@ export default function PublicPostopCheckinPage() {
           <div className="mt-8 pt-6 border-t space-y-2 text-center">
             <div className="flex items-center justify-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-bold">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>Akútne ohrozenie života pacienta</span>
+              <span>{t("postop.emergencyTitle", "Akútne ohrozenie života pacienta")}</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              V prípade krvácania, kolapsu, pretrvávajúceho zvracania alebo dusenia nečakajte na
-              vyhodnotenie formulára a okamžite volajte pohotovosť kliniky!
+              {t("postop.emergencyDesc", "V prípade krvácania, kolapsu, pretrvávajúceho zvracania alebo dusenia nečakajte na vyhodnotenie formulára a okamžite volajte pohotovosť kliniky!")}
             </p>
           </div>
         </div>

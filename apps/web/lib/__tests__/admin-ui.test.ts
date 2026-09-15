@@ -19,10 +19,11 @@ describe("admin UI", () => {
     expect(source).toContain("error, refetch");
     expect(source).toContain('error?.data?.code === "FORBIDDEN"');
     expect(source).toContain("Access Denied");
-    expect(source).toContain('title="Unable to load platform admin"');
     expect(source).toContain(
-      'action={{ label: "Retry", onClick: () => refetch() }}',
+      'title={t("admin.error.title", "Unable to load platform admin")}',
     );
+    expect(source).toContain('label: t("admin.error.retry", "Retry")');
+    expect(source).toContain('onClick: () => refetch()');
     expect(source).toContain("if (isLoading) return <PageLoading");
     expect(source).toContain("if (!data)");
     expect(source).not.toContain("if (isLoading || !data)");
@@ -114,9 +115,14 @@ describe("admin UI", () => {
     expect(source).toContain('{t("admin.table.setup", "Setup")}</th>');
     expect(source).toContain('{t("admin.table.metrics", "Metrics")}</th>');
     expect(source).toContain("setAnalyticsExcluded.mutate({");
-    expect(source).toContain('{p.analyticsExcluded ? "Excluded" : "Exclude"}');
+    expect(source).toContain(
+      't("admin.practices.excluded", "Excluded")',
+    );
+    expect(source).toContain('t("admin.practices.exclude", "Exclude")');
     expect(source).toContain("href={`mailto:${p.adminEmail}`}");
-    expect(source).toContain('!p.adminEmailVerifiedAt ? " · unverified" : ""');
+    expect(source).toContain(
+      't("admin.practices.unverified", "unverified")',
+    );
   });
 
   it("gives operators an explicit provider-profile inspection and switch", () => {
@@ -153,7 +159,7 @@ describe("admin UI", () => {
     );
     expect(source).toContain("const MESSAGING_HISTORY_LIMIT = 50");
     expect(source).toContain("setMessagingHistorySelection({");
-    expect(source).toMatch(/>\s*History\s*<\/button>/);
+    expect(source).toContain('t("admin.messaging.history", "History")');
     expect(carrierHistory).toContain("messagingHistory.events.map");
     expect(carrierHistory).toContain("messagingHistory.truncated");
     expect(carrierHistory).toContain("redacted operational events");

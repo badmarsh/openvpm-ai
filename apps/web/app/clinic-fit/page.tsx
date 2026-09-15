@@ -15,6 +15,7 @@ import {
   buildClinicFitDemoUrl,
   buildClinicFitSignupUrl,
 } from "@/lib/funnel-analytics";
+import { useI18n } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Clinic fit and pilot readiness | OpenVPM",
@@ -67,6 +68,7 @@ export default async function ClinicFitPage({
   const inboundAttribution = toUrlSearchParams(await searchParams);
   const clinicFitSignupUrl = buildClinicFitSignupUrl(inboundAttribution);
   const clinicFitDemoUrl = buildClinicFitDemoUrl(inboundAttribution);
+  const { t } = useI18n();
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
@@ -83,11 +85,11 @@ export default async function ClinicFitPage({
           </Link>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link href={clinicFitDemoUrl}>Open demo</Link>
+              <Link href={clinicFitDemoUrl}>{t("clinicFit.openDemo", "Open demo")}</Link>
             </Button>
             <Button size="sm" asChild>
               <Link href={clinicFitSignupUrl}>
-                Start free
+                {t("clinicFit.startFree", "Start free")}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
@@ -100,31 +102,27 @@ export default async function ClinicFitPage({
           <div className="mx-auto max-w-4xl px-6 py-16 text-center sm:py-20">
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Honest clinic-readiness check
+              {t("clinicFit.headerEyebrow", "Honest clinic-readiness check")}
             </span>
             <h1 className="mt-5 font-heading text-4xl font-bold tracking-tight sm:text-5xl">
-              Know what is ready before you move clinic work.
+              {t("clinicFit.headerTitle", "Know what is ready before you move clinic work.")}
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              OpenVPM is strongest today for companion-animal and house-call
-              clinics that can work in a connected browser and start alongside
-              their current PIMS. You can try it without a card and decide with
-              real workflow evidence.
+              {t("clinicFit.headerDescription", "OpenVPM is strongest today for companion-animal and house-call clinics that can work in a connected browser and start alongside their current PIMS. You can try it without a card and decide with real workflow evidence.")}
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button size="lg" asChild>
                 <Link href={clinicFitSignupUrl}>
-                  Start a 14-day trial
+                  {t("clinicFit.startTrial", "Start a 14-day trial")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href={clinicFitDemoUrl}>Open the live demo</Link>
+                <Link href={clinicFitDemoUrl}>{t("clinicFit.openDemo", "Open the live demo")}</Link>
               </Button>
             </div>
             <p className="mt-3 text-xs text-slate-500">
-              Immediate access. No credit card required. Keep your current PIMS
-              in place while you validate a real visit.
+              {t("clinicFit.noCardRequired", "Immediate access. No credit card required. Keep your current PIMS in place while you validate a real visit.")}
             </p>
           </div>
         </section>
@@ -133,22 +131,22 @@ export default async function ClinicFitPage({
           <div className="grid gap-5 lg:grid-cols-3">
             <CapabilityCard
               icon={<CheckCircle2 className="h-5 w-5" />}
-              eyebrow="Ready now"
-              title="Connected clinic-day work"
+              eyebrow={t("clinicFit.readyNowEyebrow", "Ready now")}
+              title={t("clinicFit.readyNowTitle", "Connected clinic-day work")}
               items={READY_NOW}
               tone="ready"
             />
             <CapabilityCard
               icon={<AlertTriangle className="h-5 w-5" />}
-              eyebrow="Setup or supported pilot"
-              title="Validate before depending on it"
+              eyebrow={t("clinicFit.pilotSetupEyebrow", "Setup or supported pilot")}
+              title={t("clinicFit.pilotSetupTitle", "Validate before depending on it")}
               items={PILOT_OR_SETUP}
               tone="pilot"
             />
             <CapabilityCard
               icon={<CircleX className="h-5 w-5" />}
-              eyebrow="Not available yet"
-              title="Keep another workflow in place"
+              eyebrow={t("clinicFit.notYetEyebrow", "Not available yet")}
+              title={t("clinicFit.notYetTitle", "Keep another workflow in place")}
               items={NOT_YET}
               tone="later"
             />
@@ -160,34 +158,33 @@ export default async function ClinicFitPage({
             <div>
               <Laptop className="h-8 w-8 text-emerald-700" />
               <h2 className="mt-4 font-heading text-3xl font-bold">
-                Prove one workflow first.
+                {t("clinicFit.proveWorkflowTitle", "Prove one workflow first.")}
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                A safe pilot earns the switch. It does not ask your team to
-                trust a feature list.
+                {t("clinicFit.proveWorkflowDescription", "A safe pilot earns the switch. It does not ask your team to trust a feature list.")}
               </p>
             </div>
             <ol className="grid gap-3 sm:grid-cols-2">
               {[
                 [
                   "1",
-                  "Confirm fit",
-                  "Name the workflow, location, devices, staff roles, and blockers.",
+                  t("clinicFit.step1Title", "Confirm fit"),
+                  t("clinicFit.step1Description", "Name the workflow, location, devices, staff roles, and blockers."),
                 ],
                 [
                   "2",
-                  "Bring a small sample",
-                  "Dry-run a few real clients and patients before a larger import.",
+                  t("clinicFit.step2Title", "Bring a small sample"),
+                  t("clinicFit.step2Description", "Dry-run a few real clients and patients before a larger import."),
                 ],
                 [
                   "3",
-                  "Complete a real visit",
-                  "Book, chart, close out, invoice or record no charge, and verify handoff.",
+                  t("clinicFit.step3Title", "Complete a real visit"),
+                  t("clinicFit.step3Description", "Book, chart, close out, invoice or record no charge, and verify handoff."),
                 ],
                 [
                   "4",
-                  "Run a pilot week",
-                  "Validate exports, roles, payments, communications, recovery, and support.",
+                  t("clinicFit.step4Title", "Run a pilot week"),
+                  t("clinicFit.step4Description", "Validate exports, roles, payments, communications, recovery, and support."),
                 ],
               ].map(([number, title, description]) => (
                 <li
@@ -210,26 +207,23 @@ export default async function ClinicFitPage({
         <section className="mx-auto max-w-3xl px-6 py-16 text-center">
           <PawPrint className="mx-auto h-8 w-8 text-emerald-700" />
           <h2 className="mt-4 font-heading text-3xl font-bold">
-            Unsure about one must-have workflow?
+            {t("clinicFit.unsureTitle", "Unsure about one must-have workflow?")}
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Ask before you move data or change clinic operations. We will tell
-            you plainly whether it is ready, pilot-only, or not supported.
+            {t("clinicFit.unsureDescription", "Ask before you move data or change clinic operations. We will tell you plainly whether it is ready, pilot-only, or not supported.")}
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild>
               <a href="mailto:jurkemik@significa.sk?subject=OpenVPM%20pilot%20-%20zaciname">
-                Plan a clinic pilot
+                {t("clinicFit.planPilot", "Plan a clinic pilot")}
               </a>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={clinicFitSignupUrl}>Start with sample data</Link>
+              <Link href={clinicFitSignupUrl}>{t("clinicFit.startWithSample", "Start with sample data")}</Link>
             </Button>
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            Do not attach clinic exports or patient/client data to ordinary
-            email. We will arrange a secure transfer method if a migration
-            review needs real data.
+            {t("clinicFit.emailWarning", "Do not attach clinic exports or patient/client data to ordinary email. We will arrange a secure transfer method if a migration review needs real data.")}
           </p>
         </section>
       </main>

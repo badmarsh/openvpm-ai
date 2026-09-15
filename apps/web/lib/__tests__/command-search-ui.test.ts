@@ -15,7 +15,7 @@ describe("command search UI", () => {
       'status === "authenticated" && role !== undefined'
     );
     expect(source).toContain(
-      "{ label: \"Settings\", href: \"/settings\", Icon: Settings, roles: [\"admin\"] }"
+      '{ labelKey: "commandSearch.navSettings", fallbackLabel: "Settings", href: "/settings", Icon: Settings, roles: ["admin"] }'
     );
     expect(source).toContain("const quickActionItems: CommandItemConfig[] =");
     expect(source).toContain(
@@ -44,12 +44,12 @@ describe("command search UI", () => {
     expect(source).toContain("!patients.data");
     expect(source).toContain("!clients.data");
     expect(source).toContain("const searchAccessUnavailable =");
-    expect(source).toContain("Unable to confirm search access");
-    expect(source).toContain("Unable to load search results");
-    expect(source).toContain("Retry before deciding this client or patient is missing.");
+    expect(source).toContain('t("commandSearch.accessUnavailable", "Unable to confirm search access")');
+    expect(source).toContain('t("commandSearch.unableToLoad", "Unable to load search results")');
+    expect(source).toContain('t("commandSearch.unableToLoadDesc", "Retry before deciding this client or patient is missing.")');
     expect(source).toContain("void patients.refetch();");
     expect(source).toContain("void clients.refetch();");
-    expect(source).toContain("Retry search");
+    expect(source).toContain('t("commandSearch.retrySearch", "Retry search")');
     expect(source.indexOf("{searchUnavailable && (")).toBeLessThan(
       source.indexOf("No patients or clients found.")
     );

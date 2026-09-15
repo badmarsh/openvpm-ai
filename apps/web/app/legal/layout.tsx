@@ -1,10 +1,20 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import sk from "@/messages/sk.json";
 
 export const metadata: Metadata = {
-  title: "Legal - OpenVPM",
-  description: "OpenVPM terms of service and privacy policy",
+  title: "Právne informácie - OpenVPM",
+  description: "OpenVPM obchodné podmienky a zásady ochrany súkromia",
 };
+
+function t(key: string, fallback: string): string {
+  const parts = key.split(".");
+  let obj: any = sk;
+  for (const part of parts) {
+    obj = obj?.[part];
+  }
+  return typeof obj === "string" ? obj : fallback;
+}
 
 export default function LegalLayout({
   children,
@@ -20,10 +30,10 @@ export default function LegalLayout({
           </Link>
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/legal/terms" className="hover:text-foreground">
-              Terms
+              {t("legal.navTerms", "Terms")}
             </Link>
             <Link href="/legal/privacy" className="hover:text-foreground">
-              Privacy
+              {t("legal.navPrivacy", "Privacy")}
             </Link>
           </nav>
         </div>

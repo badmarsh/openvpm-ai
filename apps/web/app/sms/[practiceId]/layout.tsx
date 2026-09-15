@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PawMark } from "@/components/brand/paw-mark";
+import { useI18n } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function SmsProgramLayout({
 }) {
   const { practiceId } = await params;
   const root = "/sms/" + encodeURIComponent(practiceId);
+  const { t } = useI18n();
 
   return (
     <div className="min-h-screen bg-surface">
@@ -36,13 +38,13 @@ export default async function SmsProgramLayout({
             className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground"
           >
             <Link href={root + "/opt-in"} className="hover:text-foreground">
-              Consent
+              {t("sms.nav.consent", "Consent")}
             </Link>
             <Link href={root + "/privacy"} className="hover:text-foreground">
-              Privacy
+              {t("sms.nav.privacy", "Privacy")}
             </Link>
             <Link href={root + "/terms"} className="hover:text-foreground">
-              Terms
+              {t("sms.nav.terms", "Terms")}
             </Link>
           </nav>
         </div>
@@ -54,7 +56,7 @@ export default async function SmsProgramLayout({
       </main>
       <footer className="border-t border-border bg-card">
         <div className="mx-auto max-w-3xl px-4 py-6 text-center text-xs text-muted-foreground">
-          Text messaging powered by VET.IS
+          {t("sms.footer", "Text messaging powered by VET.IS")}
         </div>
       </footer>
     </div>
