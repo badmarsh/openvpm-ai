@@ -17,6 +17,7 @@ import {
 import {
   UPLOAD_REQUEST_MAX_BYTES,
   UPLOAD_FILE_MAX_BYTES,
+  PATIENT_DOCUMENT_MAX_BYTES,
   uploadRequestContentLengthTooLarge,
 } from "@/lib/upload-limits";
 import { readRequestBytesWithLimit } from "@/lib/request-body";
@@ -41,6 +42,8 @@ const DASHBOARD_UPLOAD_CATEGORIES = [
   "branding",
   "patient-photos",
   "imaging",
+  "documents",
+  "lab-results",
 ] as const;
 const IDEMPOTENCY_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -248,30 +251,31 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       const patientId =
-        (dashboardCategory === "patient-photos" ||
-          dashboardCategory === "imaging") &&
+        dashboardCategory !== "branding" &&
         typeof patientIdValue === "string" &&
         IDEMPOTENCY_KEY_PATTERN.test(patientIdValue)
           ? patientIdValue
           : null;
-      if (
-        (dashboardCategory === "patient-photos" ||
-          dashboardCategory === "imaging") &&
-        !patientId
-      ) {
+      if (dashboardCategory !== "branding" && !patientId) {
         return NextResponse.json(
-          {
-            error:
-              "A canonical patientId is required for patient uploads",
-          },
+          { error: "A canonical patientId is required for patient uploads" },
           { status: 400 },
         );
       }
 
       // ---------- Validate size ----------
-      if (file.size > UPLOAD_FILE_MAX_BYTES) {
+      const isPatientDocument =
+        dashboardCategory === "documents" || dashboardCategory === "lab-results";
+      const maxFileBytes = isPatientDocument
+        ? PATIENT_DOCUMENT_MAX_BYTES
+        : UPLOAD_FILE_MAX_BYTES;
+      if (file.size > maxFileBytes) {
         return NextResponse.json(
-          { error: "File exceeds maximum size of 10 MB" },
+          {
+            error: isPatientDocument
+              ? "Document exceeds 4 MB. Compress the file or split large records into smaller PDFs."
+              : "File exceeds maximum size of 10 MB",
+          },
           { status: 400 },
         );
       }
@@ -301,7 +305,12 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
-      if (!effectiveMimeType.startsWith("image/")) {
+      if (
+        (dashboardCategory === "branding" ||
+          dashboardCategory === "patient-photos" ||
+          dashboardCategory === "imaging") &&
+        !effectiveMimeType.startsWith("image/")
+      ) {
         return NextResponse.json(
           { error: "Dashboard uploads must be image files" },
           { status: 400 },
@@ -316,10 +325,7 @@ export async function POST(req: NextRequest) {
 
       const checksumSha256 = checksumSha256Hex(buffer);
       const reservation = await withTenant(db, practiceId, async (tx) => {
-        if (
-          dashboardCategory === "patient-photos" ||
-          dashboardCategory === "imaging"
-        ) {
+        if (dashboardCategory !== "branding") {
           const [activePatient] = await tx
             .select({ id: patients.id })
             .from(patients)
@@ -346,16 +352,16 @@ export async function POST(req: NextRequest) {
           source:
             dashboardCategory === "branding"
               ? "practice_logo"
-              : dashboardCategory === "imaging"
-                ? "medical_imaging"
-                : "profile_photo",
+              : dashboardCategory === "patient-photos"
+                ? "profile_photo"
+                : dashboardCategory === "imaging"
+                  ? "medical_imaging"
+                  : dashboardCategory === "lab-results"
+                    ? "lab_report"
+                    : "external_record",
           entityType: dashboardCategory === "branding" ? "practice" : "patient",
           entityId: dashboardCategory === "branding" ? practiceId : patientId!,
-          patientId:
-            dashboardCategory === "patient-photos" ||
-            dashboardCategory === "imaging"
-              ? patientId
-              : null,
+          patientId: dashboardCategory !== "branding" ? patientId : null,
         });
       });
       if (!reservation) {
@@ -412,10 +418,15 @@ export async function POST(req: NextRequest) {
           .where(and(eq(practices.id, practiceId), isNull(practices.deletedAt)))
           .returning({ id: practices.id });
         if (!linked) throw new Error("Practice disappeared during upload");
-      } else if (dashboardCategory === "patient-photos") {
+      } else if (dashboardCategory !== "imaging") {
         const [linked] = await leaseTx
           .update(patients)
-          .set({ photoUrl: reservation.fileUrl, updatedAt: new Date() })
+          .set({
+            ...(dashboardCategory === "patient-photos"
+              ? { photoUrl: reservation.fileUrl }
+              : {}),
+            updatedAt: new Date(),
+          })
           .where(
             and(
               eq(patients.id, patientId!),

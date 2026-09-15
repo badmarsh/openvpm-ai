@@ -2201,6 +2201,10 @@ function VisitCloseout({
             </div>
           ) : canDraftClinical ? (
             <ClinicalCloseoutForm
+              patientName={appointment.patientName}
+              onRefreshAppointments={() => {
+                void utils.encounters.getCloseout.invalidate({ appointmentId });
+              }}
               diagnosisSummary={diagnosisSummary}
               setDiagnosisSummary={setDiagnosisSummary}
               dischargeInstructions={dischargeInstructions}
@@ -2740,6 +2744,8 @@ function ReadinessTile({ label, value }: { label: string; value: string }) {
 }
 
 type ClinicalCloseoutFormProps = {
+  onRefreshAppointments: () => void;
+  patientName: string | null;
   diagnosisSummary: string;
   setDiagnosisSummary: (value: string) => void;
   dischargeInstructions: string;
@@ -3257,6 +3263,28 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
               </option>
             ))}
           </select>
+          <Button variant="outline" size="sm" className="mt-2" asChild>
+            <Link
+              href={`/schedule?patient=${encodeURIComponent(props.patientName ?? "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Schedule follow-up (opens new tab)
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-2 ml-2"
+            onClick={props.onRefreshAppointments}
+          >
+            Refresh appointments
+          </Button>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Create the appointment, then refresh appointments here and select it
+            to link the follow-up. Your closeout stays open in this tab.
+          </p>
           {props.followUpAppointments.length === 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
               {t(
