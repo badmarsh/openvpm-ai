@@ -143,9 +143,19 @@ export const agentRouter = createRouter({
         if (e instanceof AgentPracticeNotFoundError) {
           throw practiceNotFound();
         }
+        const rawMsg = e instanceof Error ? e.message : "Agent run failed";
+        let clientMsg = rawMsg;
+        if (
+          rawMsg.includes("Service Unavailable") ||
+          rawMsg.includes("Proxy service is currently disabled") ||
+          rawMsg.includes("ECONNREFUSED")
+        ) {
+          clientMsg =
+            "AI Proxy služba nie je spustená (port 8045 - Service Unavailable). Prosím otvorte aplikáciu Antigravity Tools a zapnite v nej Proxy službu.";
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: e instanceof Error ? e.message : "Agent run failed",
+          message: clientMsg,
         });
       }
     }),

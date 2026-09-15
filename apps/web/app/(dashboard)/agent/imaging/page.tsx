@@ -28,6 +28,8 @@ import {
   CheckCircle2,
   ExternalLink,
   Share2,
+  Mic,
+  Square,
 } from "lucide-react";
 import { calculateVhs, type VhsResult } from "@/lib/imaging/vhs-calculator";
 import { trpc } from "@/lib/trpc";
@@ -178,6 +180,99 @@ export default function ImagingPage() {
   const [imageType, setImageType] = useState<ImageType>("xray");
   const [userPrompt, setUserPrompt] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Voice dictation for prompt
+  const [isPromptListening, setIsPromptListening] = useState(false);
+  const speechRecognizerRef = useRef<any>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  const togglePromptVoice = useCallback(async () => {
+    if (isPromptListening) {
+      speechRecognizerRef.current?.stop();
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+      setIsPromptListening(false);
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+
+    if (!navigator?.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error(
+        "Prístup k mikrofónu vyžaduje zabezpečené pripojenie (HTTPS alebo localhost). Skontrolujte povolenia prehliadača.",
+      );
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      const SpeechRec =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
+
+      if (!SpeechRec) {
+        toast.info(
+          "Prehliadač nepodporuje Web Speech API. Mikrofón bol detegovaný, pre plný záznam použite Hlasové diktovanie.",
+        );
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      const recognizer = new SpeechRec();
+      recognizer.continuous = true;
+      recognizer.interimResults = true;
+      recognizer.lang = "sk-SK";
+
+      recognizer.onresult = (event: any) => {
+        let finalTrans = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const res = event.results[i];
+          if (res && res[0]) {
+            finalTrans += res[0].transcript;
+          }
+        }
+        if (finalTrans) {
+          setUserPrompt((prev) => {
+            const trimmed = prev.trim();
+            return trimmed ? `${trimmed} ${finalTrans}` : finalTrans;
+          });
+        }
+      };
+
+      recognizer.onerror = (e: any) => {
+        console.warn("Speech recognition error:", e);
+        if (e.error === "not-allowed") {
+          toast.error(
+            "Prístup k mikrofónu bol zamietnutý. Povoľte mikrofón v nastaveniach prehliadača (ikona zámku v adresnom riadku).",
+          );
+        }
+        setIsPromptListening(false);
+      };
+
+      recognizer.onend = () => {
+        setIsPromptListening(false);
+      };
+
+      recognizer.start();
+      speechRecognizerRef.current = recognizer;
+      setIsPromptListening(true);
+      toast.success("Hlasové diktovanie spustené. Hovorte...");
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      let msg = "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.";
+      if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          msg = "Prístup k mikrofónu bol zamietnutý. Kliknite na ikonu zámku v adresnom riadku a povoľte mikrofón.";
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          msg = "Nebol nájdený žiadny mikrofón. Skontrolujte pripojenie zariadenia.";
+        }
+      }
+      toast.error(msg);
+      setIsPromptListening(false);
+    }
+  }, [isPromptListening]);
 
   // Analysis state
   const analyzeMutation = trpc.extensions.imaging.analyze.useMutation({
@@ -1074,9 +1169,34 @@ export default function ImagingPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">
-                    {t("imaging.config.promptLabel", "Klinické zameranie / Otázka pre AI (voliteľné)")}
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-foreground">
+                      {t("imaging.config.promptLabel", "Klinické zameranie / Otázka pre AI (voliteľné)")}
+                    </label>
+                    <Button
+                      type="button"
+                      variant={isPromptListening ? "destructive" : "ghost"}
+                      size="sm"
+                      onClick={togglePromptVoice}
+                      className={cn(
+                        "h-6 px-2 text-[11px] gap-1.5 rounded-md",
+                        isPromptListening && "animate-pulse font-semibold text-white",
+                      )}
+                      title={isPromptListening ? "Zastaviť diktovanie" : "Hlasové diktovanie otázky"}
+                    >
+                      {isPromptListening ? (
+                        <>
+                          <Square className="h-3 w-3 fill-current" />
+                          <span>Nahrávam...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="h-3 w-3 text-primary" />
+                          <span>Diktovať</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Textarea
                     placeholder={t("imaging.config.promptPlaceholder", "Napr.: Zameraj sa na pľúcne polia, podozrenie na edém alebo cudzie teleso v žalúdku...")}
                     value={userPrompt}

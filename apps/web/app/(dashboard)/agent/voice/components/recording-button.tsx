@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Mic, Square, Volume2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -217,10 +218,21 @@ export function RecordingButton({
       timerRef.current = setInterval(() => {
         setElapsed(Math.round((Date.now() - startTimeRef.current) / 1000));
       }, 1000);
-    } catch {
-      alert(
-        "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.",
-      );
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      let msg = "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.";
+      if (typeof window !== "undefined" && (!navigator?.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+        msg = "Prístup k mikrofónu vyžaduje zabezpečené pripojenie (HTTPS alebo localhost).";
+      } else if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          msg = "Prístup k mikrofónu bol v prehliadači zamietnutý. Kliknite na ikonu zámku v adresnom riadku a povoľte mikrofón.";
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          msg = "Nebol nájdený žiadny mikrofón. Skontrolujte pripojenie mikrofónu a skúste znova.";
+        } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+          msg = "Mikrofón je obsadený inou aplikáciou.";
+        }
+      }
+      toast.error(msg);
     }
   }, [onRecordingComplete, onInterimText, updateVisualizer]);
 

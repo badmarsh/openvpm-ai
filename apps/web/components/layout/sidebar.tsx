@@ -339,8 +339,14 @@ export function Sidebar({
 
   // Merge customNavItems into their declared sections
   const sections: NavSection[] = vanillaSections.map((section) => {
+    const existingHrefs = new Set(section.items.map((i) => i.href));
     const extra = customNavItems
-      .filter((item) => item.section === section.id)
+      .filter(
+        (item) =>
+          item.section === section.id &&
+          !existingHrefs.has(item.href) &&
+          !(section.id === "preventive" && item.href === "/marketing/wellness"),
+      )
       .map((item) => ({
         href: item.href,
         label: item.label,
