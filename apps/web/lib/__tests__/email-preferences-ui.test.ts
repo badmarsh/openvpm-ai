@@ -30,6 +30,11 @@ describe("email preferences UI", () => {
     expect(form).toContain("List-Unsubscribe=One-Click");
     expect(form).toContain('role="status"');
     expect(form).toContain('role="alert"');
-    expect(form).toContain("Immediate, no sign-in required.");
+    expect(form).toContain('t("emailPreferences.turnOffButton", "Vypnúť voliteľné emaily")');
+    expect(form).toContain('t("emailPreferences.savedTitle", "Nastavenie uložené")');
+    expect(form).toContain('t("emailPreferences.savedDesc", "Voliteľné emaily OpenVPM sú teraz vypnuté.');
+    expect(form).toContain('t("emailPreferences.immediateNote", "Okamžité, nie je potrebné prihlásenie.")');
+    expect(form).toContain('t("emailPreferences.invalidLink", "Tento odkaz na nastavenie emailov je neplatný');
+    expect(form).toContain('t("emailPreferences.saveError", "Nastavenie sa nepodarilo uloži.")');
   });
 });

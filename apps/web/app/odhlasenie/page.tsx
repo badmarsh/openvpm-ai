@@ -94,7 +94,7 @@ function UnsubscribeContent() {
       {isAlreadyUnsubscribed ? (
         <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-xs text-foreground space-y-2">
           <p className="font-semibold text-emerald-700 dark:text-emerald-300">
-            {t("odhlasenie.successMessage", "Vážená/vážený {name}, váš súhlas s marketingovými správami bol úspešne odvolaný.", { name: info.clientName })}
+            {t("odhlasenie.successMessage", "Vážená/vážený {name}, váš súhlas s marketingovými správami bol úspešne odvolaný.", { name: info.clientName ?? "" })}
           </p>
           <p className="text-muted-foreground leading-relaxed">
             {t("odhlasenie.successDesc", "Nebudeme vám posielať žiadne propagačné ponuky ani sezónne novinky. Dôležité lekárske upozornenia (výsledky vyšetrení, potvrdenia plánovaných termínov) vám budeme doručovať naďalej na základe poskytovania veterinárnej starostlivosti.")}
@@ -103,7 +103,7 @@ function UnsubscribeContent() {
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-foreground">
-            {t("odhlasenie.confirmIntro", "Vážená/vážený {name}, jedným kliknutím odvoláte svoj súhlas s odberom marketingových a propagačných SMS/email správ od {practice}.", { name: info.clientName, practice: info.practiceName })}
+            {t("odhlasenie.confirmIntro", "Vážená/vážený {name}, jedným kliknutím odvoláte svoj súhlas s odberom marketingových a propagačných SMS/email správ od {practice}.", { name: info.clientName ?? "", practice: info.practiceName ?? "" })}
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
             {t("odhlasenie.transactionalNote", "Transakčné správy (potvrdenia dohodnutých termínov, pripomienky návštevy) vám budeme doručovať naďalej – patria k riadnemu poskytovaniu veterinárnej starostlivosti.")}
