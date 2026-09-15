@@ -11,7 +11,7 @@ describe("public capability claims", () => {
 
     expect(source).toContain("GAP_ANALYSIS_POST_PILOT_READY.md");
     expect(source).toContain("PILOT-READY (v0.6)");
-    expect(source).toContain("simulovaného tienoveho behu");
+    expect(source).toContain("nie je ekvivalent");
     expect(source).toContain("Next.js 15");
     expect(source).toContain("React 19");
     expect(pilotDoc).toContain(
