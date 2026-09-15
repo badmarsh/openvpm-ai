@@ -1504,6 +1504,17 @@
       "revenue": "Tržby",
       "productionByDoctor": "Produkcia podľa lekára (MTD)",
       "production": "Produkcia"
+    },
+    "fieldVisits": {
+      "title": "Nedokončené terénne návštevy",
+      "description": "Po návratoch z terénu doplňte záznamy a uzavrite vyšetrenia. Platba nevydáva ani nedokončuje klinickú dokumentáciu.",
+      "errorLoad": "Nedokončené návštevy sa nedali načítať.",
+      "retry": "Skúsiť znova",
+      "notesPending": "Záznamy alebo uzavretie čakajú",
+      "resumeVisit": "Pokračovať vo vyšetrení",
+      "empty": "Na tejto stránke nie sú žiadne nedokončené terénne návštevy.",
+      "previous": "Predchádzajúce",
+      "next": "Ďalšie"
     }
   },
   "encounters.chargeCapture.addButton": "Pridať",
@@ -6525,5 +6536,11 @@
       "statutoryConfirmation": "Potvrdzujem správnosť a odbornosť tohto klinického záznamu ako ošetrujúci veterinárny lekár v súlade so Zákonom 39/2007 Z. z. o veterinárnej starostlivosti.",
       "signAndRecord": "Podpísať & Zapísať do karty pacienta"
     }
+  },
+  "ambulatory": {
+    "billNowTitle": "Fakturujte hneď, záznamy doplňte neskôr",
+    "billNowDescription": "Uložte zadané záznamy, potom pripravte účtovanie alebo prijmite platbu. Klinická dokumentácia zostane nedokončená, kým sa nevrátite, nepodpíšete ju a neuzavriete vyšetrenie.",
+    "chargesAndPayment": "Účtovanie a platba",
+    "unfinishedFieldVisits": "Nedokončené terénne návštevy"
   }
 }

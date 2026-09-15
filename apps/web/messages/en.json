@@ -1504,6 +1504,17 @@
       "revenue": "Revenue",
       "productionByDoctor": "Production by Doctor (MTD)",
       "production": "Production"
+    },
+    "fieldVisits": {
+      "title": "Unfinished field visits",
+      "description": "Return to notes and closeout after your farm calls. Taking payment does not sign or finish a clinical record.",
+      "errorLoad": "Could not load unfinished visits.",
+      "retry": "Retry",
+      "notesPending": "Notes or closeout pending",
+      "resumeVisit": "Resume visit",
+      "empty": "No unfinished field visits on this page.",
+      "previous": "Previous",
+      "next": "Next"
     }
   },
   "encounters.chargeCapture.addButton": "Add",
@@ -6525,5 +6536,11 @@
       "statutoryConfirmation": "I confirm the medical accuracy and validity of this clinical record as the attending veterinarian in accordance with Act No. 39/2007 Coll. on veterinary care.",
       "signAndRecord": "Sign & Save to Patient Chart"
     }
+  },
+  "ambulatory": {
+    "billNowTitle": "Bill now, finish notes later",
+    "billNowDescription": "Save any notes you have entered, then prepare charges or take payment. Your clinical record stays unfinished until you return to sign it and complete closeout.",
+    "chargesAndPayment": "Charges and payment",
+    "unfinishedFieldVisits": "Unfinished field visits"
   }
 }
