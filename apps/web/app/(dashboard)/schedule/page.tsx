@@ -1137,6 +1137,8 @@ function AppointmentDetailPopover({
   onStatusChange,
   onReschedule,
   onCancelRecurringSeries,
+  onDelete,
+  isDeleting,
   canUpdateStatus,
   canManageSchedule,
   canSendReminders,
@@ -1162,6 +1164,8 @@ function AppointmentDetailPopover({
     roomId: string | null;
   }) => void;
   onCancelRecurringSeries: (seriesId: string) => void;
+  onDelete: (id: string, reason: string) => void;
+  isDeleting: boolean;
   canUpdateStatus: boolean;
   canManageSchedule: boolean;
   canSendReminders: boolean;
@@ -1171,6 +1175,8 @@ function AppointmentDetailPopover({
 }) {
   const { t } = useI18n();
   const [inlineDoctorId, setInlineDoctorId] = useState<string>("");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const restoreFocusRef = useRef(true);
@@ -1892,6 +1898,38 @@ function AppointmentDetailPopover({
                 )}
                 {t("schedule.btnCancelFutureSeries", "Cancel Future Series")}
               </Button>
+            )}
+            {canManageSchedule && ["scheduled", "confirmed", "cancelled", "no_show"].includes(current) && (
+              <div className="w-full space-y-2">
+                <Button size="sm" variant="destructive" disabled={isDeleting} onClick={() => setConfirmDelete(true)}>
+                  {t("schedule.deleteAppointment.button", "Delete appointment")}
+                </Button>
+                {confirmDelete && (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <p className="text-sm">
+                      {t("schedule.deleteAppointment.confirmPrompt", "Remove this appointment from the schedule? Appointments with clinical or billing records must be corrected in the visit workspace.")}
+                    </p>
+                    <Input
+                      aria-label={t("schedule.deleteAppointment.reasonAriaLabel", "Reason for deleting appointment")}
+                      placeholder={t("schedule.deleteAppointment.reasonPlaceholder", "Reason for deleting (required)")}
+                      value={deleteReason}
+                      maxLength={500}
+                      onChange={(event) => setDeleteReason(event.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={isDeleting || deleteReason.trim().length < 3}
+                      onClick={() => onDelete(appointment.id, deleteReason.trim())}
+                    >
+                      {t("schedule.deleteAppointment.confirmButton", "Confirm deletion")}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
+                      {t("schedule.deleteAppointment.cancelButton", "Keep appointment")}
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
             {visibleStatusActions.map((action) => {
               if (action.status === "checked_in" && needsDoctorAssignment) {
@@ -2818,6 +2856,16 @@ function SchedulePageContent() {
 
   const utils = trpc.useUtils();
 
+  const deleteAppointment = trpc.appointments.delete.useMutation({
+    onSuccess: () => {
+      toast.success(t("schedule.deleteAppointment.toastSuccess", "Appointment deleted from the schedule"));
+      setSelectedAppointment(null);
+      utils.appointments.list.invalidate();
+      utils.dashboard.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const rescheduleAppointment = trpc.appointments.reschedule.useMutation({
     onSuccess: (result) => {
       toast.success(
@@ -3255,6 +3303,8 @@ function SchedulePageContent() {
             onClose={() => setSelectedAppointment(null)}
             onStatusChange={handleStatusChange}
             onReschedule={handleRescheduleAppointment}
+            onDelete={(id, reason) => deleteAppointment.mutate({ id, reason })}
+            isDeleting={deleteAppointment.isPending}
             onCancelRecurringSeries={handleCancelRecurringSeries}
             canUpdateStatus={canUpdateAppointmentStatus}
             canManageSchedule={canCreateAppointments}
