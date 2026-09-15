@@ -6576,5 +6576,56 @@
     "navEkasaTerminal": "e-Kasa Terminal",
     "navControlledSubstances": "Controlled Substances",
     "navSettings": "Settings"
+  },
+  "odhlasenie": {
+    "invalidLinkTitle": "Invalid link",
+    "invalidLinkDesc": "This unsubscribe link does not contain a valid identifier. If you wish to unsubscribe, please contact your veterinary clinic directly.",
+    "verifying": "Verifying details...",
+    "loading": "Loading...",
+    "expiredTitle": "Link expired or invalid",
+    "notFoundFallback": "Client was not found. Please contact us by phone.",
+    "alreadyUnsubscribedTitle": "Marketing messages are unsubscribed",
+    "unsubscribedTitle": "Unsubscribe from marketing messages",
+    "successMessage": "Dear {name}, your consent to marketing messages has been successfully revoked.",
+    "successDesc": "We will not send you any promotional offers or seasonal news. Important medical alerts (test results, appointment confirmations) will continue to be delivered as part of providing veterinary care.",
+    "confirmIntro": "Dear {name}, with one click you can revoke your consent to marketing and promotional SMS/email messages from {practice}.",
+    "transactionalNote": "Transactional messages (appointment confirmations, visit reminders) will continue to be delivered – they are part of the regular provision of veterinary care.",
+    "unsubscribeButton": "Unsubscribe from marketing messages",
+    "contactPrompt": "Need to contact the reception? Call"
+  },
+  "postop": {
+    "title": "Post-op condition check",
+    "subtitle": "We care about a quick and safe recovery for your pet. It takes only a few seconds to complete.",
+    "question": "How is your patient doing after the procedure?",
+    "okLabel": "Doing well / No concerns",
+    "okDesc": "Drinking and eating normally, wound is clean and calm.",
+    "questionLabel": "I have a follow-up question",
+    "questionDesc": "I need advice about medication, feeding, or routine.",
+    "concernLabel": "Something is wrong / I have concerns",
+    "concernDesc": "The animal is lethargic, refuses to drink, the wound is swollen or painful.",
+    "concernPlaceholder": "Please describe what you observe:",
+    "questionPlaceholder": "Your question for the veterinarian:",
+    "notePlaceholder": "E.g. the patient won't drink, the wound is slightly moist, refuses to swallow medication...",
+    "submitError": "Failed to submit the response. Please check your internet connection.",
+    "sending": "Sending...",
+    "submitButton": "Submit response to the clinic",
+    "thanksTitle": "Thank you for your response!",
+    "thanksConcern": "We have safely recorded this information in the health record. Our veterinary staff will read your message and contact you by phone if needed.",
+    "thanksOk": "We have safely recorded this information in the health record. We are glad the patient is doing well!",
+    "emergencyTitle": "Acute life-threatening emergency",
+    "emergencyDesc": "In case of bleeding, collapse, persistent vomiting, or choking, do not wait for the form to be evaluated – call the clinic's emergency line immediately!"
+  },
+  "emailPreferences": {
+    "invalidLink": "This email preference link is invalid or incomplete.",
+    "saveError": "We could not save that preference.",
+    "saveErrorRetry": "We could not save that preference. Try again.",
+    "savedTitle": "Preference saved",
+    "savedDesc": "Optional OpenVPM emails are now off. No sign-in or sales call was required.",
+    "turnOffButton": "Turn off optional emails",
+    "immediateNote": "Immediate, no sign-in required."
+  },
+  "legal": {
+    "navTerms": "Terms",
+    "navPrivacy": "Privacy"
   }
 }

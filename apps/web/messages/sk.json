@@ -6576,5 +6576,56 @@
     "navEkasaTerminal": "e-Kasa terminál",
     "navControlledSubstances": "Kontrolované látky",
     "navSettings": "Nastavenia"
+  },
+  "odhlasenie": {
+    "invalidLinkTitle": "Neplatný odkaz",
+    "invalidLinkDesc": "Odkaz na odhlásenie neobsahuje platný identifikátor. Ak si želáte odhlásiť správy, kontaktujte vašu veterinárnu kliniku priamo.",
+    "verifying": "Overujem údaje...",
+    "loading": "Načítavam...",
+    "expiredTitle": "Odkaz vypršal alebo je neplatný",
+    "notFoundFallback": "Klient nebol nájdený. Kontaktujte nás prosím telefonicky.",
+    "alreadyUnsubscribedTitle": "Marketingové správy sú odhlásené",
+    "unsubscribedTitle": "Odhlásenie z marketingových správ",
+    "successMessage": "Vážená/vážený {name}, váš súhlas s marketingovými správami bol úspešne odvolaný.",
+    "successDesc": "Nebudeme vám posielať žiadne propagačné ponuky ani sezónne novinky. Dôležité lekárske upozornenia (výsledky vyšetrení, potvrdenia plánovaných termínov) vám budeme doručovať naďalej na základe poskytovania veterinárnej starostlivosti.",
+    "confirmIntro": "Vážená/vážený {name}, jedným kliknutím odvoláte svoj súhlas s odberom marketingových a propagačných SMS/email správ od {practice}.",
+    "transactionalNote": "Transakčné správy (potvrdenia dohodnutých termínov, pripomienky návštevy) vám budeme doručovať naďalej – patria k riadnemu poskytovaniu veterinárnej starostlivosti.",
+    "unsubscribeButton": "Odhlásiť marketingové správy",
+    "contactPrompt": "Potrebujete sa spojiť s recepciou? Volajte na"
+  },
+  "postop": {
+    "title": "Pooperačná kontrola stavu",
+    "subtitle": "Záleží nám na rýchlej a bezpečnej rekonvalescencii vášho miláčika. Vyplnenie zaberie len niekoľko sekúnd.",
+    "question": "Ako sa má váš pacient po zákroku?",
+    "okLabel": "Darí sa dobre / Bez ťažkostí",
+    "okDesc": "Normálne pije, prijíma potravu, rana je čistá a pokojná.",
+    "questionLabel": "Mám doplňujúcu otázku",
+    "questionDesc": "Potrebujem poradiť ohľadom liekov, kŕmenia alebo režimu.",
+    "concernLabel": "Niečo nie je v poriadku / Mám obavy",
+    "concernDesc": "Zviera je apatické, odmieta piť, rana opúcha alebo bolí.",
+    "concernPlaceholder": "Popíšte prosím, čo pozorujete:",
+    "questionPlaceholder": "Vaša otázka pre veterinára:",
+    "notePlaceholder": "Napr. pacient nechce piť, rana mierne mokvá, liek odmieta prehltnúť...",
+    "submitError": "Nepodarilo sa odoslať odpoveď. Skontrolujte prosím internetové pripojenie.",
+    "sending": "Odosielam...",
+    "submitButton": "Odoslať odpoveď klinike",
+    "thanksTitle": "Ďakujeme za vašu odpoveď!",
+    "thanksConcern": "Informáciu sme bezpečne zaznamenali do zdravotného záznamu. Náš veterinárny personál si vašu správu prečíta a v prípade potreby vás bude telefonicky kontaktovať.",
+    "thanksOk": "Informáciu sme bezpečne zaznamenali do zdravotného záznamu. Tešíme sa, že sa pacientovi darí dobre!",
+    "emergencyTitle": "Akútne ohrozenie života pacienta",
+    "emergencyDesc": "V prípade krvácania, kolapsu, pretrvávajúceho zvracania alebo dusenia nečakajte na vyhodnotenie formulára a okamžite volajte pohotovosť kliniky!"
+  },
+  "emailPreferences": {
+    "invalidLink": "Tento odkaz na nastavenie emailov je neplatný alebo neúplný.",
+    "saveError": "Nastavenie sa nepodarilo uloži.",
+    "saveErrorRetry": "Nastavenie sa nepodarilo uloži. Skúste to znova.",
+    "savedTitle": "Nastavenie uložené",
+    "savedDesc": "Voliteľné emaily OpenVPM sú teraz vypnuté. Nebol potrebný žiadny prihlasovací účet ani telefonát.",
+    "turnOffButton": "Vypnúť voliteľné emaily",
+    "immediateNote": "Okamžité, nie je potrebné prihlásenie."
+  },
+  "legal": {
+    "navTerms": "Podmienky",
+    "navPrivacy": "Súkromie"
   }
 }
