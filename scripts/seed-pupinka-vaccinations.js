@@ -104,11 +104,11 @@ async function seed() {
   console.log(`Pupinka weights count: ${weights[0].count}`);
   if (parseInt(weights[0].count, 10) === 0) {
     await sql`
-      INSERT INTO patient_weights (id, created_at, updated_at, practice_id, patient_id, weight_kg, recorded_at, recorded_by)
+      INSERT INTO patient_weights (id, created_at, updated_at, patient_id, weight_kg, recorded_at, recorded_by)
       VALUES 
-        (${crypto.randomUUID()}, NOW(), NOW(), ${PRACTICE_ID}, ${PUPINKA_ID}, 3.85, '2026-01-15T09:00:00Z', ${DR_SYKORA_ID}),
-        (${crypto.randomUUID()}, NOW(), NOW(), ${PRACTICE_ID}, ${PUPINKA_ID}, 4.10, '2026-04-12T10:15:00Z', ${DR_SYKORA_ID}),
-        (${crypto.randomUUID()}, NOW(), NOW(), ${PRACTICE_ID}, ${PUPINKA_ID}, 4.20, '2026-05-20T14:30:00Z', ${DR_SYKORA_ID});
+        (${crypto.randomUUID()}, NOW(), NOW(), ${PUPINKA_ID}, 3.85, '2026-01-15T09:00:00Z', ${DR_SYKORA_ID}),
+        (${crypto.randomUUID()}, NOW(), NOW(), ${PUPINKA_ID}, 4.10, '2026-04-12T10:15:00Z', ${DR_SYKORA_ID}),
+        (${crypto.randomUUID()}, NOW(), NOW(), ${PUPINKA_ID}, 4.20, '2026-05-20T14:30:00Z', ${DR_SYKORA_ID});
     `;
     console.log('✓ Added 3 weight history points for Pupinka');
   }

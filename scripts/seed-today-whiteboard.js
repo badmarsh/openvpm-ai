@@ -33,11 +33,27 @@ async function seedWhiteboard() {
   console.log('Current local date for appointments:', now.toISOString());
 
   // Delete today's existing appointments if any to avoid duplicates
+  // First, delete any lab results that reference these appointments to avoid FK constraint
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-  await sql`DELETE FROM appointments WHERE practice_id = ${practiceId} AND start_time >= ${startOfDay} AND start_time <= ${endOfDay}`;
-  console.log('Cleared existing appointments for today.');
+  // Delete lab results tied to today's appointments (subquery avoids array param issues)
+  await sql`
+    DELETE FROM lab_results
+    WHERE appointment_id IN (
+      SELECT id FROM appointments
+      WHERE practice_id = ${practiceId}
+      AND start_time >= ${startOfDay}
+      AND start_time <= ${endOfDay}
+    )
+  `;
+  await sql`
+    DELETE FROM appointments
+    WHERE practice_id = ${practiceId}
+    AND start_time >= ${startOfDay}
+    AND start_time <= ${endOfDay}
+  `;
+  console.log('Cleared existing appointments (and dependent lab results) for today.');
 
   // Create appointments for today
   const appointmentsToCreate = [
