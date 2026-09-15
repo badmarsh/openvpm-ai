@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Zap,
@@ -43,7 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-export default function MarketingAutomationsPage() {
+function MarketingAutomationsContent() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
   const searchParams = useSearchParams();
@@ -970,5 +970,19 @@ export default function MarketingAutomationsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function MarketingAutomationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MarketingAutomationsContent />
+    </Suspense>
   );
 }
