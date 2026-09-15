@@ -6570,5 +6570,25 @@
     "billNowDescription": "Uložte zadané záznamy, potom pripravte účtovanie alebo prijmite platbu. Klinická dokumentácia zostane nedokončená, kým sa nevrátite, nepodpíšete ju a neuzavriete vyšetrenie.",
     "chargesAndPayment": "Účtovanie a platba",
     "unfinishedFieldVisits": "Nedokončené terénne návštevy"
-  }
+  },
+  "encounters.workReconciliation.whyVoidedPrompt": "Prečo je tento úkon zrušený alebo opravený?",
+  "encounters.workReconciliation.whyNoChargePrompt": "Prečo je tento úkon bez poplatku?",
+  "encounters.workReconciliation.reasonInstruction": "Zadajte aspoň 3 znaky. Tento dôvod a vaše meno budú zaznamenané.",
+  "encounters.workReconciliation.confirmVoidButton": "Potvrdiť zrušenie / opravu",
+  "encounters.workReconciliation.confirmNoChargeButton": "Potvrdiť bez poplatku",
+  "encounters.chargeCapture.checkQuantitiesAndPrices": "Skontrolujte množstvá a ceny položiek. Použite kladné množstvá s najviac tromi desatinnými miestami a platné peňažné sumy v podporovanom rozsahu.",
+  "encounters.chargeCapture.setTaxRateNotice": "Nastavte daňovú sadzbu pracoviska medzi 0 a 100 % v Nastaveniach pred uložením položiek.",
+  "encounters.chargeCapture.performedWorkAriaLabel": "Vykonaný úkon {label}",
+  "inventory.markup.label": "Prirážka k nákupnej cene (%)",
+  "inventory.markup.apply": "Použiť prirážku",
+  "inventory.markup.prompt": "Zadajte nákupnú cenu za jednotku a percento prirážky.",
+  "inventory.markup.calculated": "Predajná cena za jednotku: {price}. Uložte produkt pre zachovanie tejto ceny.",
+  "inventory.actions.saveProduct": "Uložiť produkt",
+  "schedule.deleteAppointment.button": "Zmazať termín",
+  "schedule.deleteAppointment.confirmPrompt": "Odstrániť tento termín z harmonogramu? Termíny s klinickými alebo fakturačnými záznamami musia byť opravené v pracovnom priestore návštevy.",
+  "schedule.deleteAppointment.reasonAriaLabel": "Dôvod zmazania termínu",
+  "schedule.deleteAppointment.reasonPlaceholder": "Dôvod zmazania (povinné)",
+  "schedule.deleteAppointment.confirmButton": "Potvrdiť zmazanie",
+  "schedule.deleteAppointment.cancelButton": "Ponechať termín",
+  "schedule.deleteAppointment.toastSuccess": "Termín bol odstránený z harmonogramu"
 }

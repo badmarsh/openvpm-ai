@@ -1,5 +1,10 @@
 "use client";
 
+import { ReconciliationReasonActions } from "@/components/records/reconciliation-reason-actions";
+
+import { isValidSettingsTaxRate } from "@/lib/settings-policy";
+import { isSupportedQuantity, quantityLineTotalCents } from "@/lib/quantity";
+
 import {
   useCallback,
   useDeferredValue,
@@ -4306,6 +4311,8 @@ function VisitWorkReconciliation({
               return (
                 <div
                   key={item.id}
+                  role="group"
+                  aria-label={`Performed work ${item.sourceLabel}`}
                   className="rounded-md border border-border p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -4405,76 +4412,18 @@ function VisitWorkReconciliation({
                               )}
                             </Button>
                           </div>
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <Input
-                              value={reason}
-                              maxLength={500}
-                              placeholder={t(
-                                "encounters.workReconciliation.reasonPlaceholder",
-                                "Reason required for no charge or void/correction",
-                              )}
-                              aria-label={t(
-                                "encounters.workReconciliation.reconciliationReasonAriaLabel",
-                                "Reconciliation reason for {label}",
-                                { label: item.sourceLabel },
-                              )}
-                              disabled={resolve.isPending || reopen.isPending}
-                              onChange={(event) =>
-                                setReasons((current) => ({
-                                  ...current,
-                                  [item.id]: event.target.value,
-                                }))
-                              }
-                            />
-                            <Button
-                              variant="outline"
-                              disabled={
-                                reason.trim().length < 3 ||
-                                resolve.isPending ||
-                                reopen.isPending
-                              }
-                              onClick={() =>
-                                resolve.mutate({
-                                  appointmentId,
-                                  workItemId: item.id,
-                                  resolution: {
-                                    status: "no_charge",
-                                    reason: reason.trim(),
-                                  },
-                                })
-                              }
-                            >
-                              {t(
-                                "encounters.workReconciliation.noChargeButton",
-                                "No charge",
-                              )}
-                            </Button>
-                            {canVoid ? (
-                              <Button
-                                variant="outline"
-                                disabled={
-                                  reason.trim().length < 3 ||
-                                  resolve.isPending ||
-                                  reopen.isPending
-                                }
-                                onClick={() =>
-                                  resolve.mutate({
-                                    appointmentId,
-                                    workItemId: item.id,
-                                    resolution: {
-                                      status: "voided",
-                                      reason: reason.trim(),
-                                    },
-                                  })
-                                }
-                              >
-                                {t(
-                                  "encounters.workReconciliation.voidCorrectedButton",
-                                  "Void/corrected",
-                                )}
-                              </Button>
-                            ) : null}
-                          </div>
+                          <ReconciliationReasonActions
+                            label={item.sourceLabel}
+                            canVoid={canVoid}
+                            disabled={resolve.isPending || reopen.isPending}
+                            onResolve={(resolution) =>
+                              resolve.mutate({
+                                appointmentId,
+                                workItemId: item.id,
+                                resolution,
+                              })
+                            }
+                          />
                         </>
                       ) : staleCharge ? (
                         <p className="text-sm text-destructive">
@@ -4790,7 +4739,10 @@ function ChargeCapture({
   }, [selected?.id, selected?.quantity]);
   const previewTotals = tryCalculateInvoiceTaxTotals(
     items.map((item) => ({
-      lineTotalCents: item.quantity * moneyToCents(item.unitPrice || "0"),
+      lineTotalCents: quantityLineTotalCents(
+        moneyToCents(item.unitPrice || "0"),
+        item.quantity,
+      ),
       taxable: item.taxable,
     })),
     configQuery.data?.taxRatePercent ?? "0.00",
@@ -4812,7 +4764,7 @@ function ChargeCapture({
     (selected.stockQuantity !== null && quantity <= selected.stockQuantity);
   const canAdd =
     Boolean(selected) &&
-    Number.isInteger(quantity) &&
+    isSupportedQuantity(quantity) &&
     quantity > 0 &&
     selectedHasStock &&
     items.length < BILLING_INVOICE_MAX_ITEMS;
@@ -5039,13 +4991,6 @@ function ChargeCapture({
               "Charge capture is locked because tax and currency settings could not be confirmed. Refresh before creating charges.",
             )}
           </div>
-        ) : !previewTotals ? (
-          <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-            {t(
-              "encounters.chargeCapture.invalidTotalsError",
-              "Set the practice tax rate between 0 and 100% and keep the invoice total within the supported currency range before saving charges.",
-            )}
-          </div>
         ) : !clientId || !patientId ? (
           <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
             {t(
@@ -5094,6 +5039,16 @@ function ChargeCapture({
                 )}
               </div>
             ) : null}
+            {!previewTotals && (
+              <p
+                role="alert"
+                className="rounded-md border border-destructive p-3 text-sm text-destructive"
+              >
+                {isValidSettingsTaxRate(configQuery.data?.taxRatePercent ?? "")
+                  ? t("encounters.chargeCapture.checkQuantitiesAndPrices", "Check charge quantities and prices. Use positive quantities with at most three decimals and valid currency amounts within the supported range.")
+                  : t("encounters.chargeCapture.setTaxRateNotice", "Set the practice tax rate between 0 and 100% in Settings before saving charges.")}
+              </p>
+            )}
             {readyVisitPrescriptionCharges.length > 0 ? (
               <div className="rounded-md border border-primary/30 bg-primary/[0.04] p-3">
                 <p className="text-sm font-medium">
@@ -5205,7 +5160,8 @@ function ChargeCapture({
               />
               <Input
                 type="number"
-                min={1}
+                min={0.001}
+                step="0.001"
                 max={selected?.stockQuantity ?? undefined}
                 value={quantity}
                 aria-label={t(
@@ -5213,9 +5169,7 @@ function ChargeCapture({
                   "Charge quantity",
                 )}
                 aria-invalid={!selectedHasStock}
-                onChange={(event) =>
-                  setQuantity(Math.max(1, Number(event.target.value) || 1))
-                }
+                onChange={(event) => setQuantity(Number(event.target.value))}
               />
               <Button
                 type="button"
@@ -5270,7 +5224,8 @@ function ChargeCapture({
                         {t("encounters.chargeCapture.qtyLabel", "Qty")}
                         <Input
                           type="number"
-                          min={1}
+                          min={0.001}
+                          step="0.001"
                           max={10000}
                           value={item.quantity}
                           aria-label={t(
@@ -5286,10 +5241,7 @@ function ChargeCapture({
                                 candidate.key === item.key
                                   ? {
                                       ...candidate,
-                                      quantity: Math.max(
-                                        1,
-                                        Number(event.target.value) || 1,
-                                      ),
+                                      quantity: Number(event.target.value),
                                     }
                                   : candidate,
                               ),

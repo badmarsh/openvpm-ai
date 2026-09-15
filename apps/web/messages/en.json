@@ -6570,5 +6570,25 @@
     "billNowDescription": "Save any notes you have entered, then prepare charges or take payment. Your clinical record stays unfinished until you return to sign it and complete closeout.",
     "chargesAndPayment": "Charges and payment",
     "unfinishedFieldVisits": "Unfinished field visits"
-  }
+  },
+  "encounters.workReconciliation.whyVoidedPrompt": "Why is this work void or corrected?",
+  "encounters.workReconciliation.whyNoChargePrompt": "Why is there no charge?",
+  "encounters.workReconciliation.reasonInstruction": "Enter at least 3 characters. This reason and your name will be recorded.",
+  "encounters.workReconciliation.confirmVoidButton": "Confirm void/correction",
+  "encounters.workReconciliation.confirmNoChargeButton": "Confirm no charge",
+  "encounters.chargeCapture.checkQuantitiesAndPrices": "Check charge quantities and prices. Use positive quantities with at most three decimals and valid currency amounts within the supported range.",
+  "encounters.chargeCapture.setTaxRateNotice": "Set the practice tax rate between 0 and 100% in Settings before saving charges.",
+  "encounters.chargeCapture.performedWorkAriaLabel": "Performed work {label}",
+  "inventory.markup.label": "Markup on cost (%)",
+  "inventory.markup.apply": "Apply markup",
+  "inventory.markup.prompt": "Enter cost per unit and a markup percentage.",
+  "inventory.markup.calculated": "Selling price per unit: {price}. Save the product to keep this price.",
+  "inventory.actions.saveProduct": "Save product",
+  "schedule.deleteAppointment.button": "Delete appointment",
+  "schedule.deleteAppointment.confirmPrompt": "Remove this appointment from the schedule? Appointments with clinical or billing records must be corrected in the visit workspace.",
+  "schedule.deleteAppointment.reasonAriaLabel": "Reason for deleting appointment",
+  "schedule.deleteAppointment.reasonPlaceholder": "Reason for deleting (required)",
+  "schedule.deleteAppointment.confirmButton": "Confirm deletion",
+  "schedule.deleteAppointment.cancelButton": "Keep appointment",
+  "schedule.deleteAppointment.toastSuccess": "Appointment deleted from the schedule"
 }

@@ -48,7 +48,7 @@ import {
   PRESCRIPTION_QUANTITY_MIN,
   PRESCRIPTION_REFILLS_MIN,
   isPrescriptionNonnegativeIntegerInputValid,
-  isPrescriptionOptionalPositiveIntegerInputValid,
+  isPrescriptionOptionalQuantityInputValid,
   isPrescriptionOptionalTextInputValid,
   isPrescriptionRequiredTextInputValid,
 } from "@/lib/records/prescription-policy";
@@ -207,7 +207,7 @@ export function AmbulatoryVisitRecordsCard({
       prescription.frequency,
       PRESCRIPTION_FREQUENCY_MAX_LENGTH,
     ) &&
-    isPrescriptionOptionalPositiveIntegerInputValid(prescription.quantity) &&
+    isPrescriptionOptionalQuantityInputValid(prescription.quantity) &&
     isPrescriptionNonnegativeIntegerInputValid(prescription.refillsRemaining) &&
     isPrescriptionOptionalTextInputValid(
       prescription.instructions,
@@ -529,6 +529,7 @@ export function AmbulatoryVisitRecordsCard({
                   label="Quantity"
                   value={prescription.quantity}
                   type="number"
+                  step="0.001"
                   min={PRESCRIPTION_QUANTITY_MIN}
                   max={PRESCRIPTION_COUNT_MAX}
                   onChange={(value) => updatePrescription("quantity", value)}
@@ -647,6 +648,7 @@ function FieldInput({
   min,
   max,
   maxLength,
+  step,
 }: {
   label: string;
   value: string;
@@ -655,6 +657,7 @@ function FieldInput({
   min?: number | string;
   max?: number;
   maxLength?: number;
+  step?: string;
 }) {
   return (
     <label className="space-y-1">
@@ -662,6 +665,7 @@ function FieldInput({
       <Input
         type={type}
         value={value}
+        step={step}
         min={min}
         max={max}
         maxLength={maxLength}
