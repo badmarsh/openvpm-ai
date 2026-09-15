@@ -8,6 +8,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 type PracticeOption = {
   id: string;
@@ -322,6 +323,7 @@ export function ClinicPilotConsole({
 }: {
   practices: PracticeOption[];
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const {
     data: pilots,
@@ -422,12 +424,15 @@ export function ClinicPilotConsole({
         <div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <FlaskConical className="h-4 w-4" />
-            <span className="text-sm">First supported clinic cohort</span>
+            <span className="text-sm">
+              {t("admin.pilotConsole.title", "First supported clinic cohort")}
+            </span>
           </div>
           <p className="mt-2 max-w-3xl text-xs text-muted-foreground">
-            Operator decisions are separate from product evidence. Saving here
-            records an immutable, PHI-free snapshot; it never emails a clinic,
-            enables texting, changes billing, or calls a provider.
+            {t(
+              "admin.pilotConsole.desc",
+              "Operator decisions are separate from product evidence. Saving here records an immutable, PHI-free snapshot; it never emails a clinic, enables texting, changes billing, or calls a provider.",
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -437,7 +442,12 @@ export function ClinicPilotConsole({
             onChange={(event) => setCandidateId(event.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            <option value="">Select a registered clinic…</option>
+            <option value="">
+              {t(
+                "admin.pilotConsole.selectClinicPlaceholder",
+                "Select a registered clinic…",
+              )}
+            </option>
             {candidates.map((practice) => (
               <option key={practice.id} value={practice.id}>
                 {practice.name}
@@ -458,18 +468,18 @@ export function ClinicPilotConsole({
             }}
             className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
-            Review for pilot
+            {t("admin.pilotConsole.reviewBtn", "Review for pilot")}
           </button>
         </div>
       </div>
 
       {error ? (
         <p className="mt-4 text-sm text-destructive">
-          Could not load the pilot cohort: {error.message}
+          {t("admin.pilotConsole.errorQueue", "Could not load the pilot cohort: {error}", { error: error.message })}
         </p>
       ) : isLoading ? (
         <p className="mt-4 text-sm text-muted-foreground">
-          Loading pilot operations…
+          {t("admin.pilotConsole.loadingQueue", "Loading pilot operations…")}
         </p>
       ) : pilots && pilots.length > 0 ? (
         <div className="mt-5 grid gap-3">
@@ -499,7 +509,7 @@ export function ClinicPilotConsole({
                     onClick={() => editPilot(pilot)}
                     className="rounded border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
                   >
-                    Review
+                    {t("admin.pilotConsole.review", "Review")}
                   </button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
@@ -564,8 +574,10 @@ export function ClinicPilotConsole({
         </div>
       ) : (
         <p className="mt-4 text-sm text-muted-foreground">
-          No clinic has been enrolled in the controlled cohort. Qualification is
-          intentionally deliberate.
+          {t(
+            "admin.pilotConsole.emptyQueue",
+            "No clinic has been enrolled in the controlled cohort. Qualification is intentionally deliberate.",
+          )}
         </p>
       )}
 
@@ -573,10 +585,16 @@ export function ClinicPilotConsole({
         <div className="mt-5 rounded-md border border-primary/30 bg-muted/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-medium">Pilot review · {draft.practiceName}</p>
+              <p className="font-medium">
+                {t("admin.pilotConsole.drawerTitle", "Pilot review · {name}", {
+                  name: draft.practiceName,
+                })}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Record only operational facts. Never enter client, patient,
-                clinical, payment-card, or credential data here.
+                {t(
+                  "admin.pilotConsole.drawerWarning",
+                  "Record only operational facts. Never enter client, patient, clinical, payment-card, or credential data here.",
+                )}
               </p>
             </div>
             <button
@@ -584,13 +602,13 @@ export function ClinicPilotConsole({
               onClick={() => setDraft(null)}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </button>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="text-xs font-medium">
-              Workflow
+              {t("admin.pilotConsole.workflow", "Workflow")}
               <select
                 value={draft.workflow}
                 onChange={(event) =>
@@ -601,12 +619,19 @@ export function ClinicPilotConsole({
                 }
                 className="mt-1 block w-full rounded border border-input bg-background px-2 py-2 text-sm"
               >
-                <option value="general_practice">General practice</option>
-                <option value="house_call">House call</option>
+                <option value="general_practice">
+                  {t(
+                    "admin.pilotConsole.workflows.general_practice",
+                    "General practice",
+                  )}
+                </option>
+                <option value="house_call">
+                  {t("admin.pilotConsole.workflows.house_call", "House call")}
+                </option>
               </select>
             </label>
             <label className="text-xs font-medium">
-              Stage
+              {t("admin.pilotConsole.stage", "Stage")}
               <select
                 value={draft.stage}
                 onChange={(event) => {
@@ -631,7 +656,7 @@ export function ClinicPilotConsole({
                     value={option}
                     disabled={stageRequirements(draft, option).length > 0}
                   >
-                    {humanize(option)}
+                    {t(`admin.pilotConsole.stages.${option}`, humanize(option))}
                     {stageRequirements(draft, option).length > 0
                       ? " · gated"
                       : ""}
@@ -640,7 +665,7 @@ export function ClinicPilotConsole({
               </select>
             </label>
             <label className="text-xs font-medium">
-              Readiness decision
+              {t("admin.pilotConsole.decision", "Readiness decision")}
               <select
                 value={draft.decision}
                 onChange={(event) => {
@@ -658,13 +683,16 @@ export function ClinicPilotConsole({
               >
                 {validDecisions(draft).map((option) => (
                   <option key={option} value={option}>
-                    {humanize(option)}
+                    {t(
+                      `admin.pilotConsole.decisions.${option}`,
+                      humanize(option),
+                    )}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs font-medium">
-              Support cadence
+              {t("admin.pilotConsole.supportCadence", "Support cadence")}
               <select
                 value={draft.supportCadence}
                 onChange={(event) =>
@@ -676,9 +704,15 @@ export function ClinicPilotConsole({
                 }
                 className="mt-1 block w-full rounded border border-input bg-background px-2 py-2 text-sm capitalize"
               >
-                <option value="daily">Daily</option>
-                <option value="twice_weekly">Twice weekly</option>
-                <option value="weekly">Weekly</option>
+                <option value="daily">
+                  {t("admin.pilotConsole.cadences.daily", "Daily")}
+                </option>
+                <option value="twice_weekly">
+                  {t("admin.pilotConsole.cadences.twice_weekly", "Twice weekly")}
+                </option>
+                <option value="weekly">
+                  {t("admin.pilotConsole.cadences.weekly", "Weekly")}
+                </option>
               </select>
             </label>
           </div>
@@ -686,7 +720,10 @@ export function ClinicPilotConsole({
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <fieldset className="rounded border border-border p-3">
               <legend className="px-1 text-xs font-semibold">
-                Clinic fit · all required to qualify
+                {t(
+                  "admin.pilotConsole.qualificationLegend",
+                  "Clinic fit · all required to qualify",
+                )}
               </legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {Object.entries(qualificationLabels).map(([key, label]) => (
@@ -709,14 +746,17 @@ export function ClinicPilotConsole({
                         })
                       }
                     />
-                    {label}
+                    {t(`admin.pilotConsole.qualifications.${key}`, label)}
                   </label>
                 ))}
               </div>
             </fieldset>
             <fieldset className="rounded border border-border p-3">
               <legend className="px-1 text-xs font-semibold">
-                Launch readiness · all required to approve
+                {t(
+                  "admin.pilotConsole.readinessLegend",
+                  "Launch readiness · all required to approve",
+                )}
               </legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {Object.entries(readinessLabels).map(([key, label]) => (
@@ -734,7 +774,7 @@ export function ClinicPilotConsole({
                         })
                       }
                     />
-                    {label}
+                    {t(`admin.pilotConsole.readiness.${key}`, label)}
                   </label>
                 ))}
               </div>
@@ -743,11 +783,14 @@ export function ClinicPilotConsole({
 
           <fieldset className="mt-4 rounded border border-border p-3">
             <legend className="px-1 text-xs font-semibold">
-              Evidence attestations
+              {t(
+                "admin.pilotConsole.attestationsLegend",
+                "Evidence attestations",
+              )}
             </legend>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-xs font-medium">
-                Client communication path
+                {t("admin.pilotConsole.commPath", "Client communication path")}
                 <select
                   value={draft.communicationMode}
                   onChange={(event) =>
@@ -760,9 +803,17 @@ export function ClinicPilotConsole({
                   }
                   className="mt-1 block w-full rounded border border-input bg-background px-2 py-2 text-sm"
                 >
-                  <option value="email_only">Verified email fallback</option>
+                  <option value="email_only">
+                    {t(
+                      "admin.pilotConsole.commModes.email_only",
+                      "Verified email fallback",
+                    )}
+                  </option>
                   <option value="email_and_sms">
-                    Email and operational SMS
+                    {t(
+                      "admin.pilotConsole.commModes.email_and_sms",
+                      "Email and operational SMS",
+                    )}
                   </option>
                 </select>
               </label>
@@ -778,7 +829,10 @@ export function ClinicPilotConsole({
                       })
                     }
                   />
-                  Selected communication path was tested successfully
+                  {t(
+                    "admin.pilotConsole.commTested",
+                    "Selected communication path was tested successfully",
+                  )}
                 </label>
                 <label className="flex gap-2">
                   <input
@@ -795,7 +849,10 @@ export function ClinicPilotConsole({
                       })
                     }
                   />
-                  Operator confirmed the observed visit was real clinic work
+                  {t(
+                    "admin.pilotConsole.firstVisitValidated",
+                    "Operator confirmed the observed visit was real clinic work",
+                  )}
                 </label>
                 <label className="flex gap-2">
                   <input
@@ -812,7 +869,10 @@ export function ClinicPilotConsole({
                       })
                     }
                   />
-                  Operator reviewed five distinct days as real clinic use
+                  {t(
+                    "admin.pilotConsole.clinicUseValidated",
+                    "Operator reviewed five distinct days as real clinic use",
+                  )}
                 </label>
                 <label className="flex gap-2">
                   <input
@@ -836,12 +896,18 @@ export function ClinicPilotConsole({
                       });
                     }}
                   />
-                  Clinic explicitly accepted the golden day and go-live
+                  {t(
+                    "admin.pilotConsole.clinicAcceptanceConfirmed",
+                    "Clinic explicitly accepted the golden day and go-live",
+                  )}
                 </label>
               </div>
               {draft.clinicAcceptanceConfirmed ? (
                 <label className="text-xs font-medium md:col-start-2">
-                  Accepting clinic administrator
+                  {t(
+                    "admin.pilotConsole.acceptingAdmin",
+                    "Accepting clinic administrator",
+                  )}
                   <select
                     value={draft.clinicAcceptanceByUserId}
                     onChange={(event) =>
@@ -865,7 +931,7 @@ export function ClinicPilotConsole({
 
           <fieldset className="mt-4 rounded border border-border p-3">
             <legend className="px-1 text-xs font-semibold">
-              Open blockers
+              {t("admin.pilotConsole.blockersLegend", "Open blockers")}
             </legend>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {Object.entries(blockerLabels).map(([key, label]) => {
@@ -902,7 +968,7 @@ export function ClinicPilotConsole({
                         });
                       }}
                     />
-                    {label}
+                    {t(`admin.pilotConsole.blockers.${key}`, label)}
                   </label>
                 );
               })}
@@ -911,7 +977,7 @@ export function ClinicPilotConsole({
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="text-xs font-medium">
-              Next action
+              {t("admin.pilotConsole.nextAction", "Next action")}
               <select
                 value={draft.nextAction}
                 onChange={(event) =>
@@ -924,13 +990,16 @@ export function ClinicPilotConsole({
               >
                 {validNextActions(draft).map((option) => (
                   <option key={option} value={option}>
-                    {humanize(option)}
+                    {t(
+                      `admin.pilotConsole.nextActions.${option}`,
+                      humanize(option),
+                    )}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs font-medium">
-              Target start
+              {t("admin.pilotConsole.targetStart", "Target start")}
               <input
                 type="date"
                 value={draft.targetStartOn}
@@ -941,7 +1010,7 @@ export function ClinicPilotConsole({
               />
             </label>
             <label className="text-xs font-medium">
-              Next review
+              {t("admin.pilotConsole.nextReview", "Next review")}
               <input
                 type="datetime-local"
                 disabled={
@@ -957,7 +1026,7 @@ export function ClinicPilotConsole({
               />
             </label>
             <label className="text-xs font-medium">
-              Change reason
+              {t("admin.pilotConsole.reason", "Change reason")}
               <select
                 value={draft.reason}
                 onChange={(event) =>
@@ -970,13 +1039,16 @@ export function ClinicPilotConsole({
               >
                 {reasonOptions.map((option) => (
                   <option key={option} value={option}>
-                    {humanize(option)}
+                    {t(
+                      `admin.pilotConsole.reasons.${option}`,
+                      humanize(option),
+                    )}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs font-medium">
-              Last contact
+              {t("admin.pilotConsole.lastContact", "Last contact")}
               <input
                 type="datetime-local"
                 value={draft.lastContactAt}
@@ -987,7 +1059,7 @@ export function ClinicPilotConsole({
               />
             </label>
             <label className="text-xs font-medium">
-              Contact outcome
+              {t("admin.pilotConsole.contactOutcome", "Contact outcome")}
               <select
                 value={draft.lastContactOutcome}
                 onChange={(event) =>
@@ -999,10 +1071,15 @@ export function ClinicPilotConsole({
                 }
                 className="mt-1 block w-full rounded border border-input bg-background px-2 py-2 text-sm capitalize"
               >
-                <option value="">Not recorded</option>
+                <option value="">
+                  {t("admin.pilotConsole.notRecorded", "Not recorded")}
+                </option>
                 {contactOutcomeOptions.map((option) => (
                   <option key={option} value={option}>
-                    {humanize(option)}
+                    {t(
+                      `admin.pilotConsole.outcomes.${option}`,
+                      humanize(option),
+                    )}
                   </option>
                 ))}
               </select>
@@ -1011,13 +1088,21 @@ export function ClinicPilotConsole({
 
           {save.error ? (
             <p className="mt-4 text-sm text-destructive">
-              Could not save pilot review: {save.error.message}
+              {t(
+                "admin.pilotConsole.saveError",
+                "Could not save pilot review: {error}",
+                { error: save.error.message },
+              )}
             </p>
           ) : null}
           {draftStageIssues.length > 0 ? (
             <p className="mt-4 rounded border border-amber-300/70 bg-amber-50 p-2 text-xs text-amber-900">
               <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
-              This stage is gated: {draftStageIssues.join(", ")}.
+              {t(
+                "admin.pilotConsole.gatedStage",
+                "This stage is gated: {issues}.",
+                { issues: draftStageIssues.join(", ") },
+              )}
             </p>
           ) : null}
           <div className="mt-4 flex justify-end">
@@ -1027,7 +1112,9 @@ export function ClinicPilotConsole({
               onClick={submit}
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {save.isPending ? "Saving…" : "Save audited review"}
+              {save.isPending
+                ? t("admin.pilotConsole.savingBtn", "Saving…")
+                : t("admin.pilotConsole.saveBtn", "Save audited review")}
             </button>
           </div>
         </div>

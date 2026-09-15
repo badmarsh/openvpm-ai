@@ -61,7 +61,28 @@
     },
     "smsHealth": {
       "loadError": "Could not load SMS operations health.",
-      "loading": "Loading SMS operations health…"
+      "loading": "Loading SMS operations health…",
+      "readOnlyDesc": "Read-only carrier, provider-profile, provider-event, send-attempt, and delivery evidence. This monitor never enables sending or changes provider state.",
+      "rolloutConfigured": "Rollout configured",
+      "needsAttention": "Needs attention",
+      "safelyDeferred": "Safely deferred",
+      "valid": "Valid",
+      "fix": "Fix",
+      "telnyxProvider": "Telnyx provider",
+      "apiKeyShape": "API key shape",
+      "webhookKeyShape": "Webhook key shape",
+      "registrationKeyShape": "Registration key shape",
+      "provisioningScopeExact": "Provisioning scope exact",
+      "sendingScopeExact": "Sending scope exact",
+      "inboundGateEnabled": "Inbound gate enabled",
+      "scopeSummary": "Provisioning {prov} · sending {send} · scopes {pScope}/{sScope}/{lScope} (provisioning / sending practice / sending location). No secret values are shown.",
+      "critical": "Critical",
+      "attention": "Attention",
+      "sendExceptions": "Send exceptions",
+      "deliveryExceptions": "Delivery exceptions",
+      "providerEvents": "Provider events",
+      "noExceptions": "No SMS operational exceptions need attention.",
+      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue."
     },
     "recovery": {
       "noVerifiedContact": "No verified admin contact",
@@ -69,7 +90,18 @@
       "noTrialEnd": "No trial end",
       "empty": "No clinic workspaces need activation recovery.",
       "loadError": "Could not load activation recovery.",
-      "loading": "Loading activation recovery…"
+      "loading": "Loading activation recovery…",
+      "rank": "Rank",
+      "clinicContact": "Clinic contact",
+      "trial": "Trial",
+      "setup": "Setup",
+      "realActivity": "Real activity",
+      "stage": "Stage",
+      "desc": "Ranked by the next operator action, then by days since a real clinic milestone. Internal/test workspaces and sample data are excluded.",
+      "helpRequested": "Help requested {date}",
+      "clientsAndVisits": "{clients} clients · {visits} visits",
+      "lastActivityStalled": "Last {date} · stalled {days}d",
+      "priority": "Priority {priority}"
     },
     "messaging": {
       "notSubmitted": "Not submitted",
@@ -82,12 +114,45 @@
       "closeHistory": "Close history",
       "historyLoadError": "Could not load carrier lifecycle history.",
       "historyEmpty": "No carrier lifecycle evidence has been recorded.",
-      "selectHistoryAgain": "Select History again to load carrier evidence."
+      "selectHistoryAgain": "Select History again to load carrier evidence.",
+      "desc": "Brand and campaign submissions incur Telnyx charges and require an explicit confirmation. Refresh is read-only. Assignment never enables sending.",
+      "clinic": "Clinic",
+      "brand": "Brand",
+      "campaign": "Campaign",
+      "numbers": "Numbers",
+      "operatorAction": "Operator action",
+      "history": "History",
+      "submitBrand": "Submit brand",
+      "retryBrand": "Retry reviewed brand",
+      "submitCampaign": "Submit campaign",
+      "retryCampaign": "Retry reviewed campaign",
+      "assignNumbers": "Assign numbers",
+      "inspectProfile": "Inspect profile",
+      "enableProfile": "Enable provider profile",
+      "disableProfile": "Disable provider profile",
+      "refresh": "Refresh",
+      "recoverProviderIds": "Recover provider IDs",
+      "clearStaleLock": "No object — clear stale lock",
+      "recorded": "Recorded",
+      "lifecycleEvent": "Lifecycle event",
+      "operationalEvidence": "Operational evidence",
+      "historyTruncated": "History is truncated at {limit} events. Review the newest evidence before taking any separate operator action.",
+      "loadingHistory": "Loading redacted carrier history…"
     },
     "journey": {
       "empty": "No first-party journey cohorts recorded yet.",
       "loadError": "Could not load journey cohorts.",
-      "loading": "Loading journey cohorts..."
+      "loading": "Loading journey cohorts...",
+      "visit": "Visit",
+      "demo": "Demo",
+      "planStarted": "Plan started",
+      "planBuilt": "Plan built",
+      "accountForm": "Account form",
+      "signupSubmitted": "Signup submitted",
+      "registered": "Registered",
+      "activated": "Activated",
+      "paymentMethod": "Payment method",
+      "positivePayment": "Positive payment"
     },
     "practices": {
       "noActiveContact": "No active admin contact",
@@ -96,11 +161,28 @@
       "extendTrialTitle": "Give this trial 14 more days",
       "empty": "No practices yet.",
       "extendTrialError": "Could not extend the trial",
-      "analyticsError": "Could not update funnel inclusion"
+      "analyticsError": "Could not update funnel inclusion",
+      "exclude": "Exclude",
+      "excluded": "Excluded",
+      "unverified": "unverified"
     },
     "funnel": {
       "loadError": "Could not load the funnel.",
-      "loading": "Loading funnel..."
+      "loading": "Loading funnel...",
+      "signups": "Signups",
+      "setupStarted": "Setup started",
+      "setupComplete": "Setup complete",
+      "activated": "Activated",
+      "firstVisitDone": "First visit done",
+      "paymentMethod": "Payment method",
+      "firstPositivePayment": "First positive payment",
+      "currentlyActive": "Currently active",
+      "billingConversion": "First real visit → billing setup",
+      "opportunities": "Conversion opportunities",
+      "within24h": "Within 24h",
+      "within72h": "Within 72h",
+      "evidenceQuality": "Conversion evidence quality",
+      "jurisdictionCohorts": "Jurisdiction cohorts"
     },
     "pilot": {
       "title": "Daily Audit & Reconciliation with VetSoftware v2",
@@ -122,6 +204,157 @@
       "modalTitle": "Report Discrepancy with VetSoftware v2",
       "modalDesc": "Enter discrepancy details regarding numbers, prices, or patient records.",
       "discrepancySaved": "Discrepancy was successfully logged."
+    },
+    "pilotConsole": {
+      "title": "First supported clinic cohort",
+      "desc": "Operator decisions are separate from product evidence. Saving here records an immutable, PHI-free snapshot; it never emails a clinic, enables texting, changes billing, or calls a provider.",
+      "selectClinicPlaceholder": "Select a registered clinic…",
+      "reviewBtn": "Review for pilot",
+      "emptyQueue": "No clinic has been enrolled in the controlled cohort. Qualification is intentionally deliberate.",
+      "loadingQueue": "Loading pilot operations…",
+      "errorQueue": "Could not load the pilot cohort: {error}",
+      "review": "Review",
+      "drawerTitle": "Pilot review · {name}",
+      "drawerWarning": "Record only operational facts. Never enter client, patient, clinical, payment-card, or credential data here.",
+      "workflow": "Workflow",
+      "workflows": {
+        "general_practice": "General practice",
+        "house_call": "House call"
+      },
+      "stage": "Stage",
+      "decision": "Readiness decision",
+      "supportCadence": "Support cadence",
+      "cadences": {
+        "daily": "Daily",
+        "twice_weekly": "Twice weekly",
+        "weekly": "Weekly"
+      },
+      "qualificationLegend": "Clinic fit · all required to qualify",
+      "readinessLegend": "Launch readiness · all required to approve",
+      "attestationsLegend": "Evidence attestations",
+      "commPath": "Client communication path",
+      "commModes": {
+        "email_only": "Verified email fallback",
+        "email_and_sms": "Email and operational SMS"
+      },
+      "commTested": "Selected communication path was tested successfully",
+      "firstVisitValidated": "Operator confirmed the observed visit was real clinic work",
+      "clinicUseValidated": "Operator reviewed five distinct days as real clinic use",
+      "clinicAcceptanceConfirmed": "Clinic explicitly accepted the golden day and go-live",
+      "acceptingAdmin": "Accepting clinic administrator",
+      "blockersLegend": "Open blockers",
+      "nextAction": "Next action",
+      "targetStart": "Target start",
+      "nextReview": "Next review",
+      "reason": "Change reason",
+      "lastContact": "Last contact",
+      "contactOutcome": "Contact outcome",
+      "notRecorded": "Not recorded",
+      "saveError": "Could not save pilot review: {error}",
+      "gatedStage": "This stage is gated: {issues}.",
+      "saveBtn": "Save audited review",
+      "savingBtn": "Saving…",
+      "qualifications": {
+        "supportedClinicType": "Supported clinic type",
+        "supportedJurisdictionConfirmed": "US pilot jurisdiction confirmed",
+        "singleLocation": "One-location scope",
+        "connectedModeAccepted": "Connected mode accepted",
+        "parallelRunAccepted": "Parallel run accepted",
+        "championConfirmed": "Clinic champion confirmed",
+        "supportedWorkflowConfirmed": "Target workflow supported",
+        "noUnsupportedMustHave": "No unsupported must-have"
+      },
+      "readiness": {
+        "rolesAndDevicesValidated": "Roles and devices validated",
+        "migrationPlanAccepted": "Migration plan accepted",
+        "sampleValidationAccepted": "Sample validation accepted",
+        "firstVisitScheduled": "First real visit scheduled",
+        "exportAndRollbackConfirmed": "Export and rollback confirmed",
+        "supportCadenceConfirmed": "Support cadence confirmed"
+      },
+      "blockers": {
+        "workflow_fit": "Workflow fit",
+        "data_import": "Data import",
+        "staff_training": "Staff training",
+        "record_accuracy": "Record accuracy",
+        "billing": "Billing",
+        "payments": "Payments",
+        "email": "Email",
+        "sms": "SMS",
+        "permissions": "Permissions",
+        "device_connectivity": "Device/connectivity",
+        "backup_export": "Backup/export",
+        "support_coverage": "Support coverage"
+      },
+      "stages": {
+        "candidate": "Candidate",
+        "parallel_setup": "Parallel setup",
+        "visit_validation": "Visit validation",
+        "pilot_week": "Pilot week",
+        "graduation_review": "Graduation review",
+        "completed": "Completed",
+        "closed": "Closed"
+      },
+      "decisions": {
+        "pending": "Pending",
+        "eligible": "Eligible",
+        "approved": "Approved",
+        "paused": "Paused",
+        "not_a_fit": "Not a fit",
+        "graduated": "Graduated"
+      },
+      "nextActions": {
+        "confirm_fit": "Confirm fit",
+        "schedule_setup": "Schedule setup",
+        "validate_import": "Validate import",
+        "complete_first_visit": "Complete first visit",
+        "review_communications": "Review communications",
+        "configure_payment": "Configure payment",
+        "review_clinic_week": "Review clinic week",
+        "resolve_blockers": "Resolve blockers",
+        "decide_graduation": "Decide graduation",
+        "support_retention": "Support retention",
+        "revisit_fit": "Revisit fit"
+      },
+      "reasons": {
+        "initial_review": "Initial review",
+        "clinic_feedback": "Clinic feedback",
+        "product_evidence": "Product evidence",
+        "support_review": "Support review",
+        "blocker_review": "Blocker review",
+        "graduation_decision": "Graduation decision"
+      },
+      "outcomes": {
+        "replied": "Replied",
+        "no_reply": "No reply",
+        "scheduled": "Scheduled",
+        "completed": "Completed",
+        "declined": "Declined"
+      }
+    },
+    "smsRecovery": {
+      "title": "SMS evidence recovery",
+      "desc": "Bounded, oldest-first operational evidence only. Phone numbers, message bodies, free-text provider payloads, and clinic PHI are never rendered here. Every write requires exact history review and a fresh UUID operation key.",
+      "refreshEvidence": "Refresh evidence",
+      "providerProjectionTitle": "Provider-event projection",
+      "providerProjectionSubtitle": "Redacted lifecycle state only. Message bodies, phone numbers, and raw provider detail never leave the server boundary.",
+      "providerEventsEmpty": "No provider events need projection or operator review.",
+      "reviewIncident": "Review incident",
+      "historyTitle": "Provider-event resolution history",
+      "historySubtitle": "Newest {limit} immutable resolution records. This view contains operational UUIDs and resolution classifications only; message, sender, provider detail, and PHI fields are excluded server-side.",
+      "historyEmpty": "No provider-event resolutions are recorded.",
+      "historyTruncated": "Resolution history is bounded to the newest {limit} rows.",
+      "sendAttemptsTitle": "Send-attempt exceptions",
+      "sendAttemptsSubtitle": "At most {limit} rows. Orphan communication claims are visible for investigation but have no unsafe repair shortcut.",
+      "sendAttemptsEmpty": "No stale send attempts need recovery.",
+      "deliveryEventsTitle": "Delivery-event exceptions",
+      "deliveryEventsSubtitle": "At most {limit} actionable events. Stale accepted sends without a final callback remain monitor-only.",
+      "deliveryEventsEmpty": "No delivery events need reconciliation.",
+      "staleMonitorNotice": "{count} accepted send(s) have no final callback. Monitor provider delivery evidence; this console intentionally offers no resend or status override.",
+      "inspectHistory": "Inspect history",
+      "manualOnly": "Manual investigation only",
+      "close": "Close",
+      "applyResolution": "Apply audited resolution"
     }
   },
   "agent": {
@@ -476,6 +709,42 @@
         "passwordMinLength": "Use at least {min} characters for the password.",
         "hostedCheckoutUnavailable": "Hosted checkout is unavailable. Please try again.",
         "accountCreatedSignIn": "Account created. Please sign in."
+      },
+      "chooseWorkflow": "Choose your first useful workflow",
+      "firstDaySummary": "Here’s a useful starting point for {practiceName}. You can change any of it once you’re inside.",
+      "noCardRequired": "No card required.",
+      "yourWorkspace": "Your workspace",
+      "countryDesc": "This sets your currency, tax defaults, time zone, and rollout eligibility.",
+      "anotherCountry": "Another country",
+      "usNotice": "OpenVPM can format this workspace for your region, but the supported design-partner rollout is currently limited to US clinics. Explore with sample data only; do not move live clinic work yet.",
+      "otherCountryNotice": "Hosted workspaces are not available in your country yet. You can still explore the immediate demo or review the self-hosted project.",
+      "passwordLengthDesc": "At least {min} characters.",
+      "freeDaysNotice": "Free for 14 days. No credit card required.",
+      "backToFirstDay": "Back to my first day",
+      "termsPrefix": "By creating a workspace you agree to the ",
+      "termsOfService": "Terms of Service",
+      "and": " and ",
+      "privacyPolicy": "Privacy Policy",
+      "previewHeading": "Your first day, already taking shape.",
+      "previewSubheading": "Built around {model} care and the first outcome you chose. You can change any of it once you’re inside.",
+      "preview": {
+        "kpis": {
+          "todaysVisits": "Today's visits",
+          "newPatients": "New patients",
+          "revenue": "Revenue"
+        },
+        "schedule": {
+          "title": "Today's schedule",
+          "wellnessExam": "Wellness exam",
+          "vaccination": "Vaccination",
+          "dentalCleaning": "Dental cleaning",
+          "sickVisit": "Sick visit"
+        },
+        "ai": {
+          "title": "Ask AI",
+          "placeholder": "Which pets are due for vaccines?",
+          "button": "Ask"
+        }
       }
     },
     "forgotPassword": {
@@ -2363,7 +2632,6 @@
     "encounters": "Encounters",
     "admin": "Platform Admin",
     "sectionClinicalPatients": "Clinical & Patients",
-    "sectionPreventive": "Preventive Care",
     "sectionFrontDeskFlow": "Front Desk & Flow",
     "sectionPharmacyInventory": "Pharmacy & Inventory",
     "sectionStatutoryBilling": "Statutory & Billing",
@@ -2373,7 +2641,6 @@
     "wellnessRedemptions": "Wellness Redemptions",
     "vaccinations": "Vaccinations",
     "wellness": "Wellness Plans",
-    "whiteboard": "Whiteboard",
     "badgeNew": "New",
     "receptionScripts": "Reception Scripts",
     "pilotReconciliation": "Daily Audit (Pilot)"
@@ -5463,31 +5730,36 @@
         "title": "Run one real visit",
         "body": "Add one owner and pet, then work from check-in through the client handoff.",
         "pictureLabel": "Your clinic day",
-        "rowLabel": "New patient"
+        "rowLabel": "New patient",
+        "label": "Run one real visit"
       },
       "import_records": {
         "title": "Plan a safe first import",
         "body": "Inventory an export and review one representative chart before anything goes live.",
         "pictureLabel": "Migration preview",
-        "rowLabel": "Review one chart"
+        "rowLabel": "Review one chart",
+        "label": "Bring records from my current PIMS"
       },
       "start_fresh": {
         "title": "Build your first real visit",
         "body": "Set your clinic basics, add one owner and pet, then book the first appointment.",
         "pictureLabel": "Your clinic day",
-        "rowLabel": "First appointment"
+        "rowLabel": "First appointment",
+        "label": "Start fresh"
       },
       "explore_sample": {
         "title": "Explore a ready-made clinic",
         "body": "Open a sample schedule and patient timeline without using real clinic data.",
         "pictureLabel": "Sample clinic",
-        "rowLabel": "Guided visit"
+        "rowLabel": "Guided visit",
+        "label": "Explore with sample data"
       },
       "self_host": {
         "title": "Review the self-hosted path",
         "body": "Confirm deployment and data-ownership controls before moving any live work.",
         "pictureLabel": "Self-hosted setup",
-        "rowLabel": "Deployment plan"
+        "rowLabel": "Deployment plan",
+        "label": "Evaluate self-hosting"
       },
       "ariaLabel": "Your first-day recommendations",
       "tagBestNextStep": "Best next step",
@@ -5531,6 +5803,26 @@
       "dayHeading": "Your first OpenVPM day",
       "shapedFor": "Shaped for {model} care",
       "reviewNotice": "Nothing moves until you review it."
+    },
+    "clinicModels": {
+      "companion": {
+        "label": "Companion animal clinic"
+      },
+      "mobile": {
+        "label": "Mobile or house-call practice"
+      },
+      "equine": {
+        "label": "Equine or farm practice"
+      },
+      "specialty": {
+        "label": "Specialty or wellness"
+      },
+      "shelter": {
+        "label": "Shelter or nonprofit"
+      },
+      "exploring": {
+        "label": "I’m exploring"
+      }
     }
   },
   "species": {

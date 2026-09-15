@@ -1,4 +1,4 @@
-﻿# Fakturácia a financie
+# Fakturácia a financie
 
 Táto stránka vysvetľuje správu faktúr, evidenciu platieb, prevádzku
 pokladnice e-Kasa, nastavenie predplatného a export účtovných dát v OpenVPM AI.
@@ -16,6 +16,12 @@ Vyberte klienta a pridajte riadkové položky zo zoznamu služieb alebo
 produktov. Ceny, daňové kódy a popisy sa dopĺňajú automaticky z katalógu
 nakonfigurovaného v **Nastavenia → Služby**. Faktúru uložte ako koncept
 alebo ju odošlite priamo klientovi.
+
+**Prepojenie na Whiteboard („Čaká na faktúru“)**: Pacienti prepustení z vyšetrenia
+alebo hospitalizácie (status `checked_out`) majú na prevádzkovej tabuli Whiteboard
+výrazný jantárový odznak **„Čaká na faktúru“**. Recepcia tak na prvý pohľad vidí
+pacientov s nevyrovnaným účtom a jedným kliknutím vystaví faktúru alebo pokladničný
+blok pred odchodom klienta.
 
 **Úprava**: Otvorte ľubovoľnú neuhradenú faktúru a kliknite na **Upraviť**.
 
@@ -70,9 +76,12 @@ fiškálny UID a vytlačí alebo odošle doklad e-mailom.
 **Podporované sadzby DPH**: ZERO (0 %), REDUCED_5 (5 %), REDUCED (10 %),
 REDUCED_19 (19 %), STANDARD_23 (23 %).
 
-**Denná uzávierka**: Na konci dňa prejdite do
-**Fakturácia → e-Kasa → Denná uzávierka** a kliknite na **Spustiť
-uzávierku**. Systém vygeneruje povinný denný súhrn.
+**Rýchla denná uzávierka (Z-report)**: Na konci dňa prejdite do
+**Fakturácia → e-Kasa** (`/billing/ekasa`). V záložke **Doklady** nájdete
+priamo v záhlaví rýchly akčný banner pre dennú uzávierku s tlačidlom
+**„Prejsť na uzávierky“**. Uzávierku môžete kedykoľvek spustiť aj v záložke
+**Denné uzávierky (Z-report)** kliknutím na **„Vykonať dennú uzávierku (Z-report)“**.
+Systém uzatvorí fiškálny deň a vygeneruje povinný denný súhrn.
 
 **Storno dokladu**: Len rola Správca praxe alebo Veterinárny lekár.
 Otvorte doklad e-Kasa a kliknite na **Stornovať doklad**. Uvediete

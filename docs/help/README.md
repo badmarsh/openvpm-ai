@@ -1,4 +1,4 @@
-﻿# OpenVPM Help
+# OpenVPM Help
 
 Short guides for running your clinic on OpenVPM. Each one takes a minute or
 two. The same walkthroughs live inside the app: open **Settings** and click
@@ -7,17 +7,13 @@ two. The same walkthroughs live inside the app: open **Settings** and click
 > **Language**: Help pages are available in English (`en/`) and Slovak (`sk/`).
 > The in-app Guides viewer detects your language setting and loads the correct
 > version automatically.
->
-> **Known limitation**: Some sidebar navigation items display in Slovak
-> regardless of your language setting. This is because 12 custom navigation
-> keys are not yet in the i18n dictionary. This is a known issue.
 
 ---
 
 ## For Front Desk Staff
 
 - [Getting started](getting-started.md) — first login, account setup, demo
-  mode
+  mode, consolidated navigation
 - [Your day sheet](your-day.md) — book visits, check pets in, keep the team
   on the same page
 - [Give every client a portal](client-portal.md) — pet parents see visits
@@ -25,9 +21,9 @@ two. The same walkthroughs live inside the app: open **Settings** and click
 - [See your schedule in your own calendar](calendar-feed.md) — Google,
   Apple, or Outlook sync
 - [Billing & Finance](en/billing-finance.md) — create invoices, record
-  payments, issue e-Kasa receipts
+  payments, issue e-Kasa receipts, quick daily closure
 - [Wellness Plans](en/wellness.md) — enrol patients, redeem services,
-  manage billing cycle
+  manage billing cycle in Preventive Care
 
 ---
 
@@ -49,15 +45,15 @@ two. The same walkthroughs live inside the app: open **Settings** and click
 - [Getting started](getting-started.md) — roles & permissions, inviting
   team members
 - [Admin Settings](en/admin-settings.md) — practice setup, guides,
-  data management
+  brand kit, data management
 - [Billing & Finance](en/billing-finance.md) — invoicing, e-Kasa, Stripe,
   accounting exports
 - [Inventory & Pharmacy](en/inventory-pharmacy.md) — stock management,
   controlled substances audit log
 - [Statutory Compliance](en/statutory-compliance.md) — KVEPIS, CRSZ,
   withdrawal periods, carcass disposal
-- [Marketing & Communications](en/marketing.md) — automated journeys,
-  care reminders, Marketing Studio
+- [Campaigns & SMS](en/marketing.md) — automated journeys,
+  Suppression Center, Marketing Studio, reception scripts
 - [Clinic Website Builder](en/website-builder.md) — drag-and-drop
   website editor, brand kit, publishing
 - [Reports](en/reports.md) — revenue, appointments, service performance,
@@ -96,7 +92,7 @@ All pages above have Slovak counterparts in the `sk/` directory:
 - [Sklad a lekáreň](sk/inventory-pharmacy.md)
 - [Laboratórne výsledky a zobrazovacie metódy](sk/lab-imaging.md)
 - [Reporty](sk/reports.md)
-- [Marketingové Štúdio a komunikácia](sk/marketing.md)
+- [Kampane & SMS a komunikácia](sk/marketing.md)
 - [Webová stránka kliniky](sk/website-builder.md)
 - [Wellness plány](sk/wellness.md)
 

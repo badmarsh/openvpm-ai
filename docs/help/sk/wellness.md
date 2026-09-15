@@ -1,7 +1,10 @@
-﻿# Wellness plány
+# Wellness plány
 
 Wellness plány vám umožňujú ponúkať klientom mesačné alebo ročné
-preventívne balíky. Plány znižujú náklady na rutinnú starostlivosť
+preventívne balíky. V rámci konsolidovanej navigácie nájdete tento modul
+v novej dedikovanej sekcii **Preventívna starostlivosť** (`/wellness` a
+`/marketing/wellness`), ktorá združuje **Očkovania** (`/vaccinations`)
+a **Wellness plány**. Plány znižujú náklady na rutinnú starostlivosť
 pre klientov a zároveň poskytujú praxi predvídateľný pravidelný príjem.
 
 > **Roly**: Správca praxe a Recepcia vytvárajú a spravujú plány

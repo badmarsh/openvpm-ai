@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 
 const EMPTY_UUID = "00000000-0000-4000-8000-000000000000";
 const QUEUE_LIMIT = 25;
@@ -250,6 +251,7 @@ function deliveryReasons(
 }
 
 export function SmsRecoveryConsole() {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const attemptQueue = trpc.admin.smsSendAttemptQueue.useQuery(
     { staleMinutes: 15, limit: QUEUE_LIMIT },
@@ -581,13 +583,15 @@ export function SmsRecoveryConsole() {
         <div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <ShieldCheck className="h-4 w-4" />
-            <span className="text-sm">SMS evidence recovery</span>
+            <span className="text-sm">
+              {t("admin.smsRecovery.title", "SMS evidence recovery")}
+            </span>
           </div>
           <p className="mt-2 max-w-3xl text-xs text-muted-foreground">
-            Bounded, oldest-first operational evidence only. Phone numbers,
-            message bodies, free-text provider payloads, and clinic PHI are
-            never rendered here. Every write requires exact history review and a
-            fresh UUID operation key.
+            {t(
+              "admin.smsRecovery.desc",
+              "Bounded, oldest-first operational evidence only. Phone numbers, message bodies, free-text provider payloads, and clinic PHI are never rendered here. Every write requires exact history review and a fresh UUID operation key.",
+            )}
           </p>
         </div>
         <Button
@@ -602,17 +606,24 @@ export function SmsRecoveryConsole() {
           onClick={refreshQueues}
         >
           <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh evidence
+          {t("admin.smsRecovery.refreshEvidence", "Refresh evidence")}
         </Button>
       </div>
 
       <ActionNotice message={actionMessage} error={actionError} />
 
       <div className="mt-5">
-        <h3 className="text-sm font-semibold">Provider-event projection</h3>
+        <h3 className="text-sm font-semibold">
+          {t(
+            "admin.smsRecovery.providerProjectionTitle",
+            "Provider-event projection",
+          )}
+        </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Redacted lifecycle state only. Message bodies, phone numbers, and raw
-          provider detail never leave the server boundary.
+          {t(
+            "admin.smsRecovery.providerProjectionSubtitle",
+            "Redacted lifecycle state only. Message bodies, phone numbers, and raw provider detail never leave the server boundary.",
+          )}
         </p>
         {providerEventQueue.error ? (
           <QueueError>
@@ -705,7 +716,10 @@ export function SmsRecoveryConsole() {
                               })
                             }
                           >
-                            Review incident
+                            {t(
+                              "admin.smsRecovery.reviewIncident",
+                              "Review incident",
+                            )}
                             <ChevronRight className="ml-1 h-4 w-4" />
                           </Button>
                         ) : (
@@ -722,7 +736,10 @@ export function SmsRecoveryConsole() {
                         colSpan={5}
                         className="px-3 py-6 text-center text-muted-foreground"
                       >
-                        No provider events need projection or operator review.
+                        {t(
+                          "admin.smsRecovery.providerEventsEmpty",
+                          "No provider events need projection or operator review.",
+                        )}
                       </td>
                     </tr>
                   ) : null}
@@ -764,7 +781,7 @@ export function SmsRecoveryConsole() {
               variant="ghost"
               onClick={() => setProviderEventSelection(null)}
             >
-              Close
+              {t("admin.smsRecovery.close", "Close")}
             </Button>
           </div>
           <p className="mt-3 text-xs text-amber-950">
@@ -941,19 +958,24 @@ export function SmsRecoveryConsole() {
             }}
           >
             <ShieldCheck className="mr-2 h-4 w-4" />
-            Apply audited resolution
+            {t("admin.smsRecovery.applyResolution", "Apply audited resolution")}
           </Button>
         </div>
       ) : null}
 
       <div className="mt-5">
         <h3 className="text-sm font-semibold">
-          Provider-event resolution history
+          {t(
+            "admin.smsRecovery.historyTitle",
+            "Provider-event resolution history",
+          )}
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Newest {QUEUE_LIMIT} immutable resolution records. This view contains
-          operational UUIDs and resolution classifications only; message,
-          sender, provider detail, and PHI fields are excluded server-side.
+          {t(
+            "admin.smsRecovery.historySubtitle",
+            "Newest {limit} immutable resolution records. This view contains operational UUIDs and resolution classifications only; message, sender, provider detail, and PHI fields are excluded server-side.",
+            { limit: QUEUE_LIMIT },
+          )}
         </p>
         {providerEventResolutionHistory.error ? (
           <QueueError>
@@ -1012,7 +1034,10 @@ export function SmsRecoveryConsole() {
                         colSpan={4}
                         className="px-3 py-5 text-center text-muted-foreground"
                       >
-                        No provider-event resolutions are recorded.
+                        {t(
+                          "admin.smsRecovery.historyEmpty",
+                          "No provider-event resolutions are recorded.",
+                        )}
                       </td>
                     </tr>
                   ) : null}
@@ -1021,7 +1046,11 @@ export function SmsRecoveryConsole() {
             </div>
             {providerEventResolutionHistory.data.truncated ? (
               <p className="mt-2 text-xs font-medium text-amber-700">
-                Resolution history is bounded to the newest {QUEUE_LIMIT} rows.
+                {t(
+                  "admin.smsRecovery.historyTruncated",
+                  "Resolution history is bounded to the newest {limit} rows.",
+                  { limit: QUEUE_LIMIT },
+                )}
               </p>
             ) : null}
           </>
@@ -1034,10 +1063,15 @@ export function SmsRecoveryConsole() {
 
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
         <div>
-          <h3 className="text-sm font-semibold">Send-attempt exceptions</h3>
+          <h3 className="text-sm font-semibold">
+            {t("admin.smsRecovery.sendAttemptsTitle", "Send-attempt exceptions")}
+          </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            At most {QUEUE_LIMIT} rows. Orphan communication claims are visible
-            for investigation but have no unsafe repair shortcut.
+            {t(
+              "admin.smsRecovery.sendAttemptsSubtitle",
+              "At most {limit} rows. Orphan communication claims are visible for investigation but have no unsafe repair shortcut.",
+              { limit: QUEUE_LIMIT },
+            )}
           </p>
           {attemptQueue.error ? (
             <QueueError>
@@ -1090,12 +1124,18 @@ export function SmsRecoveryConsole() {
                               })
                             }
                           >
-                            Inspect history
+                            {t(
+                              "admin.smsRecovery.inspectHistory",
+                              "Inspect history",
+                            )}
                             <ChevronRight className="ml-1 h-4 w-4" />
                           </Button>
                         ) : (
                           <span className="text-xs font-medium text-amber-700">
-                            Manual investigation only
+                            {t(
+                              "admin.smsRecovery.manualOnly",
+                              "Manual investigation only",
+                            )}
                           </span>
                         )}
                       </td>
@@ -1107,7 +1147,10 @@ export function SmsRecoveryConsole() {
                         colSpan={3}
                         className="px-3 py-6 text-center text-muted-foreground"
                       >
-                        No stale send attempts need recovery.
+                        {t(
+                          "admin.smsRecovery.sendAttemptsEmpty",
+                          "No stale send attempts need recovery.",
+                        )}
                       </td>
                     </tr>
                   ) : null}
@@ -1122,10 +1165,18 @@ export function SmsRecoveryConsole() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold">Delivery-event exceptions</h3>
+          <h3 className="text-sm font-semibold">
+            {t(
+              "admin.smsRecovery.deliveryEventsTitle",
+              "Delivery-event exceptions",
+            )}
+          </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            At most {QUEUE_LIMIT} actionable events. Stale accepted sends
-            without a final callback remain monitor-only.
+            {t(
+              "admin.smsRecovery.deliveryEventsSubtitle",
+              "At most {limit} actionable events. Stale accepted sends without a final callback remain monitor-only.",
+              { limit: QUEUE_LIMIT },
+            )}
           </p>
           {deliveryQueue.error ? (
             <QueueError>
@@ -1175,7 +1226,10 @@ export function SmsRecoveryConsole() {
                             })
                           }
                         >
-                          Inspect history
+                          {t(
+                            "admin.smsRecovery.inspectHistory",
+                            "Inspect history",
+                          )}
                           <ChevronRight className="ml-1 h-4 w-4" />
                         </Button>
                       </td>
@@ -1187,7 +1241,10 @@ export function SmsRecoveryConsole() {
                         colSpan={3}
                         className="px-3 py-6 text-center text-muted-foreground"
                       >
-                        No delivery events need reconciliation.
+                        {t(
+                          "admin.smsRecovery.deliveryEventsEmpty",
+                          "No delivery events need reconciliation.",
+                        )}
                       </td>
                     </tr>
                   ) : null}
@@ -1201,10 +1258,14 @@ export function SmsRecoveryConsole() {
           )}
           {deliveryQueue.data?.staleAcceptedWithoutFinalDelivery.length ? (
             <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              {deliveryQueue.data.staleAcceptedWithoutFinalDelivery.length}{" "}
-              accepted send(s) have no final callback. Monitor provider delivery
-              evidence; this console intentionally offers no resend or status
-              override.
+              {t(
+                "admin.smsRecovery.staleMonitorNotice",
+                "{count} accepted send(s) have no final callback. Monitor provider delivery evidence; this console intentionally offers no resend or status override.",
+                {
+                  count:
+                    deliveryQueue.data.staleAcceptedWithoutFinalDelivery.length,
+                },
+              )}
             </div>
           ) : null}
         </div>
@@ -1225,7 +1286,7 @@ export function SmsRecoveryConsole() {
               variant="ghost"
               onClick={() => setAttemptSelection(null)}
             >
-              Close
+              {t("admin.smsRecovery.close", "Close")}
             </Button>
           </div>
           {attemptDetail.error ? (
@@ -1543,7 +1604,7 @@ export function SmsRecoveryConsole() {
               variant="ghost"
               onClick={() => setDeliverySelection(null)}
             >
-              Close
+              {t("admin.smsRecovery.close", "Close")}
             </Button>
           </div>
           {deliveryDetail.error ? (

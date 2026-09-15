@@ -1,4 +1,4 @@
-﻿# Začíname s OpenVPM
+# Začíname s OpenVPM
 
 Vitajte v OpenVPM — otvorenom systéme pre správu veterinárnej praxe. Tento
 sprievodca vás prevedie prvým prihlásením, nastavením praxe a prehľadom
@@ -77,6 +77,20 @@ z ich záznamu (otvorte klienta, kliknite na **Odoslať odkaz na portál**).
 Odkaz ich automaticky prihlási a otvorí ich osobný portál na `/portal`.
 Platnosť odkazov vyprší po nastaviteľnom čase; nový odkaz môžete kedykoľvek
 vygenerovať zo záznamu klienta.
+
+---
+
+## Navigácia v systéme
+
+Bočný navigačný panel bol konsolidovaný na ~32 kľúčových položiek rozdelených do 7 prehľadných sekcií podľa denného toku ambulancie:
+
+- **Klinická karta:** Pacienti (`/patients`), Záznamy SOAP (`/records`), Vyšetrenia (`/encounters`), Laboratórium (`/lab-results`), Zdravotné pripomienky (`/care-reminders`), Pripomienky (`/recalls`), AI Analýza snímkov (`/agent/imaging`), AI Hlasové diktovanie (`/agent/voice`).
+- **Preventívna starostlivosť:** Očkovania (`/vaccinations`) a Wellness plány (`/wellness`).
+- **Recepcia & Tok:** Rozvrh (`/schedule`), Čakáreň (`/waiting-room`), Prevádzková tabuľa (`/whiteboard`), Klienti (`/clients`), Pošta & Správy (`/inbox`).
+- **Lekáreň & Sklad:** Sklad liečiv (`/inventory`), Omamné látky OPL (`/controlled-substances`).
+- **Účtovníctvo & Predpisy:** Fakturácia (`/billing`), e-Kasa doklady (`/billing/ekasa`), Štatutárne registre (`/statutory`), Prehľady (`/reports`), Whiteboard (`/whiteboard`).
+- **Kampane & SMS:** Marketingové Štúdio (`/marketing` so 4 záložkami), Recenzie (`/marketing/reviews`), Letáky (`/marketing/handouts`), Správy & SMS (`/marketing/messages`), Web kliniky (`/marketing/website`), Čakáreň TV (`/marketing/tv`), Automatizácie (`/marketing/automations`), Skripty recepcie (`/marketing/consents`), Knižnica médií (`/marketing/media`).
+- **Správa & Manažment:** Platform Admin (`/admin`), Nastavenia kliniky & Brand Kit (`/settings`), AI Agent (`/agent`), Prepúšťacie správy (`/agent/discharge`).
 
 ---
 

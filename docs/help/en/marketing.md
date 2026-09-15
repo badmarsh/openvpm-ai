@@ -1,18 +1,38 @@
-﻿# Marketing & Communications
+# Campaigns & SMS and Communications
 
-OpenVPM's marketing module sends automated messages to clients, manages
-your online reputation, and helps you reach the right clients at the right
-time. Navigate to **Marketing** (`/marketing`).
+The **Campaigns & SMS** module (`/marketing`) manages automated outreach to pet parents, protects your clinic's online reputation, and helps you communicate with the right clients at the right time in accordance with strict veterinary ethics and Slovak regulations.
 
-> **Roles**: Admin has full access. Veterinarians can view campaigns and
-> approve clinical content. Technicians and Front Desk have read access.
+> **Roles**: Practice Admin has full access. Veterinarians can view campaigns and approve clinical content. Technicians and Front Desk have read access and work with reception scripts.
 
 ---
 
-## 1. Communications overview
+## 1. Marketing Studio (`/marketing`)
 
-The marketing module works with 12 built-in CRM segments that automatically
-classify your clients based on their activity:
+The unified `/marketing` module integrates 4 key workspace tabs with automatic URL parameter sync (`?tab=...`):
+
+1. **Overview & Generator (`?tab=overview`):**
+   - Create social media posts (Facebook, Instagram) using veterinary AI assistance.
+   - Generate educational TV slides for waiting room displays.
+   - Multimedia content and printable handouts.
+2. **Content Calendar (`?tab=calendar`):**
+   - Weekly and monthly schedule of topics (tick prevention, vaccination schedules, dental care, senior pet wellness).
+   - Export content plan to calendar.
+   - Legacy route `/marketing/plan` automatically redirects to this tab.
+3. **Approval Queue (`?tab=queue`):**
+   - Staff review hub.
+   - All AI-generated drafts with clinical claims (drug dosages, treatment advice, disease prevention) must be verified and signed off by a licensed veterinarian (Human-in-the-Loop, Act 39/2007 Coll.).
+   - Legacy route `/marketing/content-queue` automatically redirects to this tab.
+4. **Competitors & Intel (`?tab=competitors`):**
+   - Market intelligence and monitoring of neighboring veterinary practices and reputation in your district.
+   - Legacy route `/vet-intel` automatically redirects to this tab.
+
+> ℹ️ **Brand Kit**: Clinic visual identity setup (logo, colors, typography) was consolidated from marketing directly into **Practice Settings** (`/settings?tab=brandKit`).
+
+---
+
+## 2. Automatic CRM Client Segmentation
+
+The system automatically classifies your pet owner database into 12 real-time CRM segments:
 
 | Segment | Who it includes |
 |---|---|
@@ -29,14 +49,13 @@ classify your clients based on their activity:
 | Dental attention | Dental procedure due or flagged |
 | High-value VIP | Top revenue clients |
 
-Segments are computed automatically — you do not need to maintain them
-manually.
-
 ---
 
-## 2. Care reminders & automated journeys
+## 3. Automations & Suppression Center (`/marketing/automations`)
 
-Five automated customer journeys run in the background once configured:
+The automations module is organized into 6 specialized tabs: **Rules** (`rules`), **Journeys** (`journeys`), **Segments** (`segments`), **Channels** (`channels`), **Event Bus** (`events`), and **Suppression** (`suppression`).
+
+### Five built-in customer journeys:
 
 | Journey | Trigger | Messages |
 |---|---|---|
@@ -44,62 +63,46 @@ Five automated customer journeys run in the background once configured:
 | Post-visit follow-up | Visit completed | Thank-you + 24-hour review request |
 | Vaccine reminder | Vaccine due date approaching | 14-day reminder + 3-day countdown + overdue notice |
 | Post-operative care | Surgery completed | 24-hour condition check + day-3 recovery + day-10 suture check |
-| Patient reactivation | 12 months since last visit | Recall message |
+| Patient reactivation | 12 months since last visit | Annual wellness recall |
 
-### ⚠️ Sympathy Flow — mandatory hard block
+### ⚠️ Ethical Safeguards & Suppression Center (`?tab=suppression`)
 
-> **This is not a configurable setting. It cannot be disabled.**
+The **Suppression** tab (`/marketing/automations?tab=suppression`) provides an immutable audit log of all blocked communications according to legal and ethical limits:
 
-When a patient's status is set to **deceased**, or when a euthanasia is
-recorded in the system, the following happens **automatically and
-permanently**:
-
-- All automated reminders for that patient are **immediately suppressed** —
-  including vaccine reminders, recall messages, post-visit follow-ups, and
-  review requests
-- Any open care reminder for the patient is dismissed with the reason
-  *"Sympathy Gate: Patient deceased / euthanized"*
-- A condolence staff task is created automatically so a team member can
-  reach out to the owner personally
-- Every suppression is logged to the audit trail with reason code
-  `deceased_patient`
-
-This behaviour applies to all five journeys listed above. There is no
-override, no whitelist, and no opt-out.
+1. **Sympathy Gate (Mandatory & Non-configurable):**
+   - As soon as a patient status is set to **Deceased / Euthanized**, the system **immediately and permanently suppresses all automated communications** (vaccination reminders, recalls, Google review requests).
+   - All open care reminders are dismissed with reason: *"Sympathy Gate: Patient deceased / euthanized."*
+   - An internal staff task is created automatically for personalized condolence.
+   - Every blocked message is logged to the audit trail with code `deceased_patient`.
+2. **Quiet Hours:**
+   - All automated SMS and promotional messages are paused between **20:00 and 08:00** to respect client privacy.
+3. **SMS Rate Limit (Frequency Cap):**
+   - Maximum 1 campaign message per 14 days per client to prevent fatigue and spam complaints.
 
 ---
 
-## 3. Marketing Studio
+## 4. Reception Scripts & Informed Consents (`/marketing/consents`)
 
-Create social media posts, waiting room TV content, and printed client
-handouts from **Marketing → Studio**.
+The module at `/marketing/consents` provides communication and legal protocols for front-desk staff:
 
-AI-generated content drafts are produced by the system's AI model.
-**Any draft containing clinical claims** (treatment advice, dosage
-information, disease prevention) must be approved by a licensed veterinarian
-before publishing. The system enforces this review requirement.
+- **Reception Phone Scripts:** Standardized workflows for welcoming new clients, scheduling appointments, and handling pricing questions.
+- **Informed Consents:** Generation and digital signing of informed consent forms before anesthesia, surgery, hospitalization, and euthanasia (Act 39/2007 Coll.).
+- **GDPR Consents & Opt-out:** Logging client consent and instant processing of opt-out requests.
 
 ---
 
-## 4. Reputation management
+## 5. Reputation Management & Reviews (`/marketing/reviews`)
 
-Incoming reviews are displayed in **Marketing → Reviews**. Each review
-has a 24-hour response SLA tracked by the system.
-
-Reviews with a rating of **2 stars or below** are automatically escalated:
-the system sets an escalation flag and creates a staff task so a team
-member can respond promptly.
+- Automated Google Business Profile review requests following successful visits.
+- 24-hour SLA tracking for responding to reviews.
+- **Escalation:** Negative reviews (2 stars or below) automatically trigger an urgent staff task for management resolution.
 
 ---
 
-## 5. Waiting room TV
+## 6. Waiting Room TV (`/marketing/tv` and `/tv`)
 
-Display your appointment queue, wellness promotions, and practice
-announcements on a screen in your waiting room at `/tv`. The TV display
-updates automatically and requires no additional hardware — just open the
-URL on any browser connected to a screen.
+Display live appointment queues, Marketing Studio slides, and clinic announcements on any screen in your waiting room at `/tv`.
 
 ---
 
-Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
-person will answer.
+Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk).

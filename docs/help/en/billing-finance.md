@@ -1,4 +1,4 @@
-﻿# Billing & Finance
+# Billing & Finance
 
 This page explains how to manage invoices, record payments, operate the e-Kasa fiscal cash register, configure your subscription, and export accounting data in OpenVPM AI.
 
@@ -9,6 +9,8 @@ This page explains how to manage invoices, record payments, operate the e-Kasa f
 Go to **Billing** (`/billing`) to access all invoices. To create a new invoice, click **New Invoice**, select a client, and add service or product line items. Line items can be typed manually or pulled from your service catalogue (configured in **Settings**). Save the invoice to commit it as an open draft.
 
 You can edit any open invoice at any time — change quantities, prices, or line items before a payment is recorded. Once fully paid, an invoice is locked.
+
+**Whiteboard sync ("Invoice pending" badge)**: Patients discharged from treatment or hospitalization (status `checked_out`) carry a prominent amber **"Invoice pending"** badge on the Whiteboard. This alerts reception to unsettled visits and enables one-click billing before pet parents leave.
 
 To void an invoice, open it and click **Void**. This action is restricted to **admin** and **veterinarian** roles. A voided invoice is retained in the system for audit purposes and cannot be deleted.
 
@@ -57,9 +59,9 @@ VAT rates supported:
 | `REDUCED_19` | 19 % |
 | `STANDARD_23` | 23 % |
 
-### Daily Closure
+### Daily Closure (Z-Report)
 
-Perform the mandatory daily Z-report closure from **Settings → e-Kasa**. The closure totals all transactions for the day and transmits the summary to Financna sprava SR. This must be completed each business day before midnight.
+Perform the mandatory daily Z-report closure from **Billing → e-Kasa** (`/billing/ekasa`). On the **Receipts** tab, a quick-action banner in the header provides a direct **"Go to Closures"** button. You can also run the closure directly on the **Daily Closures (Z-Report)** tab by clicking **"Perform Daily Closure (Z-Report)"**. The closure totals all transactions for the day and transmits the summary to Financna sprava SR. This must be completed each business day before midnight.
 
 ### Voiding a Receipt
 

@@ -50,9 +50,12 @@ describe("HELP_CONTENT comprehensive coverage and quality audit", () => {
       "/marketing/consents",
       "/marketing/media",
       "/marketing/plan",
+      "/marketing/content-queue",
       "/marketing/website",
       "/marketing/tv",
       "/marketing/wellness",
+      "/wellness",
+      "/vaccinations",
       "/marketing/competitors",
       "/reports",
     ];

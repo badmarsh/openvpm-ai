@@ -1,4 +1,4 @@
-﻿# Getting Started with OpenVPM
+# Getting Started with OpenVPM
 
 Welcome to OpenVPM — your open veterinary practice management system. This
 guide walks you through your first login, setting up your practice, and
@@ -77,6 +77,20 @@ their client record (open the client, click **Send portal link**). The link
 authenticates them automatically and opens their personal portal view at
 `/portal`. Links expire after a configurable period; regenerate them from the
 client record at any time.
+
+---
+
+## System Navigation
+
+The sidebar navigation has been consolidated into ~32 streamlined items grouped into 7 logical sections aligned with daily clinic workflow:
+
+- **Clinical Record:** Patients (`/patients`), SOAP Records (`/records`), Encounters (`/encounters`), Lab Results (`/lab-results`), Care Reminders (`/care-reminders`), Recalls (`/recalls`), AI Medical Imaging (`/agent/imaging`), AI Voice Dictation (`/agent/voice`).
+- **Preventive Care:** Vaccinations (`/vaccinations`) and Wellness Plans (`/wellness`).
+- **Front Desk & Flow:** Schedule (`/schedule`), Waiting Room (`/waiting-room`), Whiteboard (`/whiteboard`), Clients (`/clients`), Messages & Inbox (`/inbox`).
+- **Pharmacy & Inventory:** Stock & Supplies (`/inventory`), Controlled Substances (`/controlled-substances`).
+- **Billing & Compliance:** Invoicing (`/billing`), e-Kasa Receipts (`/billing/ekasa`), Statutory Registers (`/statutory`), Reports (`/reports`), Whiteboard (`/whiteboard`).
+- **Campaigns & SMS:** Marketing Studio (`/marketing` with 4 tabs), Reviews (`/marketing/reviews`), Handouts (`/marketing/handouts`), Messages & SMS (`/marketing/messages`), Website Builder (`/marketing/website`), Waiting Room TV (`/marketing/tv`), Automations (`/marketing/automations`), Reception Scripts (`/marketing/consents`), Media Library (`/marketing/media`).
+- **Management & Admin:** Platform Admin (`/admin`), Clinic Settings & Brand Kit (`/settings`), AI Agent (`/agent`), Discharge Summaries (`/agent/discharge`).
 
 ---
 

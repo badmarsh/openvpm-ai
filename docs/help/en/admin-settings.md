@@ -1,4 +1,4 @@
-﻿# Admin Settings
+# Admin Settings
 
 **Settings** (`/settings`) is your practice control panel. Everything from
 user roles and service templates to e-Kasa configuration and data exports
@@ -19,21 +19,12 @@ The settings page is organised into the following sections:
 | **Templates** | SOAP note, discharge, prescription, and email templates |
 | **Reminders** | Vaccine recall rules, care reminder timing |
 | **e-Kasa** | Fiscal cash register hardware, DIČ, IČ DPH, connection test |
+| **Brand Kit** | Practice logo (SVG/PNG), primary/secondary colors, document headers |
 | **Data import** | Migrate records from previous system (`/settings/import-v2`) |
 | **Data export & backup** | CSV exports, database JSON backup |
 | **API keys** | Generate and revoke API keys for integrations |
 | **Subscription & billing** | Plan management, Stripe Connect setup |
 | **Guides** | In-app interactive walkthroughs |
-
-> **Known limitation — sidebar labels**: Some sidebar navigation items are
-> displayed in Slovak regardless of your language setting. This occurs
-> because 12 custom navigation keys are not yet in the i18n dictionary;
-> the sidebar falls back to hardcoded Slovak labels for those items. This
-> is a known issue being addressed in a future release.
-
-> **Accessibility note**: The application's root HTML `lang` attribute is
-> hardcoded to `sk` (Slovak) regardless of user language preference. Screen
-> readers and browser translation tools will detect the page as Slovak.
 
 ---
 

@@ -1,8 +1,11 @@
-﻿# Wellness Plans
+# Wellness Plans
 
 Wellness plans let you offer clients a bundled monthly or annual
-preventive care subscription. Plans reduce the cost of routine care
-for clients while providing your practice with predictable recurring
+preventive care subscription. Following the navigation consolidation,
+this module lives in the new dedicated **Preventive Care** section
+(`/wellness` and `/marketing/wellness`), which unifies **Vaccinations**
+(`/vaccinations`) and **Wellness Plans**. Plans reduce the cost of routine
+care for clients while providing your practice with predictable recurring
 revenue.
 
 > **Roles**: Admin and Front Desk create and manage plans and enrolments.

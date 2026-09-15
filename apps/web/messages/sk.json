@@ -14,11 +14,11 @@
       "missingData": "Prehľad správy prebehol bez vrátenia údajov. Skúste to znova."
     },
     "kpi": {
-      "practices": "Veterinárne praxe",
-      "estMrr": "Odh. MRR",
+      "practices": "Ambulancie",
+      "estMrr": "Odhad MRR",
       "activeTrials": "Aktívne skúšobné verzie",
-      "active": "Aktívne",
-      "pastDue": "Po lehote splatnosti"
+      "active": "Aktívne predplatné",
+      "pastDue": "Po splatnosti"
     },
     "sections": {
       "smsHealth": "Zdravotný stav SMS operácií",
@@ -61,7 +61,28 @@
     },
     "smsHealth": {
       "loadError": "Nepodarilo sa načítať zdravotný stav SMS operácií.",
-      "loading": "Načítavam zdravotný stav SMS operácií…"
+      "loading": "Načítavam zdravotný stav SMS operácií…",
+      "readOnlyDesc": "Iba na čítanie: evidencia operátora, profilu poskytovateľa, udalostí, pokusov o odoslanie a doručenia. Tento monitor nikdy neaktivuje odosielanie ani nemení stav poskytovateľa.",
+      "rolloutConfigured": "Nasadenie nakonfigurované",
+      "needsAttention": "Vyžaduje pozornosť",
+      "safelyDeferred": "Bezpečne odložené",
+      "valid": "Platné",
+      "fix": "Opraviť",
+      "telnyxProvider": "Poskytovateľ Telnyx",
+      "apiKeyShape": "Formát API kľúča",
+      "webhookKeyShape": "Formát webhook kľúča",
+      "registrationKeyShape": "Formát registračného kľúča",
+      "provisioningScopeExact": "Presný rozsah provisioningu",
+      "sendingScopeExact": "Presný rozsah odosielania",
+      "inboundGateEnabled": "Prichádzajúca brána povolená",
+      "scopeSummary": "Provisioning {prov} · odosielanie {send} · rozsahy {pScope}/{sScope}/{lScope} (provisioning / odosielajúca prax / odosielajúca pobočka). Žiadne tajné hodnoty sa nezobrazujú.",
+      "critical": "Kritické",
+      "attention": "Pozornosť",
+      "sendExceptions": "Výnimky odoslania",
+      "deliveryExceptions": "Výnimky doručenia",
+      "providerEvents": "Udalosti poskytovateľa",
+      "noExceptions": "Žiadne prevádzkové SMS výnimky nevyžadujú pozornosť.",
+      "bounded": "Výsledky sú ohraničené. Vyriešte najstaršie položky a obnovte zvyšok frontu."
     },
     "recovery": {
       "noVerifiedContact": "Žiadny overený kontakt administrátora",
@@ -69,7 +90,18 @@
       "noTrialEnd": "Bez konca skúšobnej verzie",
       "empty": "Žiadne pracovné priestory kliník nepotrebujú obnovu aktivácie.",
       "loadError": "Nepodarilo sa načítať obnovu aktivácie.",
-      "loading": "Načítavam obnovu aktivácie…"
+      "loading": "Načítavam obnovu aktivácie…",
+      "rank": "Poradie",
+      "clinicContact": "Kontakt ambulancie",
+      "trial": "Skúšobná verzia",
+      "setup": "Nastavenie",
+      "realActivity": "Reálna aktivita",
+      "stage": "Fáza",
+      "desc": "Zoradené podľa ďalšej akcie operátora a dní od reálneho klinického míľnika. Interné/testovacie priestory a vzorové dáta sú vylúčené.",
+      "helpRequested": "Pomoc vyžiadaná {date}",
+      "clientsAndVisits": "{clients} klientov · {visits} návštev",
+      "lastActivityStalled": "Naposledy {date} · pozastavené {days}d",
+      "priority": "Priorita {priority}"
     },
     "messaging": {
       "notSubmitted": "Neodoslané",
@@ -82,12 +114,45 @@
       "closeHistory": "Zavrieť históriu",
       "historyLoadError": "Nepodarilo sa načítať históriu životného cyklu operátora.",
       "historyEmpty": "Nebola zaznamenaná žiadna evidencia životného cyklu operátora.",
-      "selectHistoryAgain": "Pre načítanie evidencie operátora znova kliknite na Históriu."
+      "selectHistoryAgain": "Pre načítanie evidencie operátora znova kliknite na Históriu.",
+      "desc": "Odoslanie značky a kampane podlieha poplatkom Telnyx a vyžaduje výslovné potvrdenie. Obnovenie je iba na čítanie. Priradenie nikdy neaktivuje odosielanie.",
+      "clinic": "Ambulancia",
+      "brand": "Značka",
+      "campaign": "Kampaň",
+      "numbers": "Čísla",
+      "operatorAction": "Akcia operátora",
+      "history": "História",
+      "submitBrand": "Odoslať značku",
+      "retryBrand": "Znovu odoslať skontrolovanú značku",
+      "submitCampaign": "Odoslať kampaň",
+      "retryCampaign": "Znovu odoslať skontrolovanú kampaň",
+      "assignNumbers": "Priradiť čísla",
+      "inspectProfile": "Skontrolovať profil",
+      "enableProfile": "Povoliť profil poskytovateľa",
+      "disableProfile": "Zakázať profil poskytovateľa",
+      "refresh": "Obnoviť",
+      "recoverProviderIds": "Obnoviť ID poskytovateľa",
+      "clearStaleLock": "Žiadny objekt — vymazať expirovaný zámok",
+      "recorded": "Zaznamenané",
+      "lifecycleEvent": "Udalosť životného cyklu",
+      "operationalEvidence": "Prevádzková evidencia",
+      "historyTruncated": "História je ohraničená na {limit} udalostí. Pred vykonaním ďalšej akcie operátora skontrolujte najnovšiu evidenciu.",
+      "loadingHistory": "Načítavam históriu operátora…"
     },
     "journey": {
       "empty": "Zatiaľ neboli zaznamenané žiadne kohorty cesty prvej strany.",
       "loadError": "Nepodarilo sa načítať kohorty cesty.",
-      "loading": "Načítavam kohorty cesty..."
+      "loading": "Načítavam kohorty cesty...",
+      "visit": "Návšteva",
+      "demo": "Ukážka",
+      "planStarted": "Plán začatý",
+      "planBuilt": "Plán vytvorený",
+      "accountForm": "Účet zobrazený",
+      "signupSubmitted": "Registrácia odoslaná",
+      "registered": "Zaregistrované",
+      "activated": "Aktivované",
+      "paymentMethod": "Platobná metóda",
+      "positivePayment": "Kladná platba"
     },
     "practices": {
       "noActiveContact": "Žiadny aktívny kontakt administrátora",
@@ -96,11 +161,28 @@
       "extendTrialTitle": "Predĺžiť túto skúšobnú verziu o 14 dní",
       "empty": "Zatiaľ žiadne praxe.",
       "extendTrialError": "Nepodarilo sa predĺžiť skúšobnú verziu",
-      "analyticsError": "Nepodarilo sa zmeniť zahrnutie do lievika"
+      "analyticsError": "Nepodarilo sa zmeniť zahrnutie do lievika",
+      "exclude": "Vylúčiť",
+      "excluded": "Vylúčené",
+      "unverified": "neoverené"
     },
     "funnel": {
       "loadError": "Nepodarilo sa načítať lievik.",
-      "loading": "Načítavam lievik..."
+      "loading": "Načítavam lievik...",
+      "signups": "Registrácie",
+      "setupStarted": "Nastavenie začaté",
+      "setupComplete": "Nastavenie dokončené",
+      "activated": "Aktivované",
+      "firstVisitDone": "Prvá návšteva ukončená",
+      "paymentMethod": "Platobná metóda",
+      "firstPositivePayment": "Prvá kladná platba",
+      "currentlyActive": "Aktuálne aktívne",
+      "billingConversion": "Prvá reálna návšteva → nastavenie fakturácie",
+      "opportunities": "Konverzné príležitosti",
+      "within24h": "Do 24h",
+      "within72h": "Do 72h",
+      "evidenceQuality": "Kvalita konverznej evidencie",
+      "jurisdictionCohorts": "Kohorty podľa jurisdikcie"
     },
     "pilot": {
       "title": "Denná kontrola & Reconciliácia s VetSoftware v2",
@@ -122,6 +204,157 @@
       "modalTitle": "Nahlásiť nezrovnalosť s VetSoftware v2",
       "modalDesc": "Zadajte detail nezrovnalosti v číslach, cenách alebo dátach pacientov.",
       "discrepancySaved": "Nezrovnalosť bola úspešne zaznamenaná."
+    },
+    "pilotConsole": {
+      "title": "Kohorta pilotných kliník",
+      "desc": "Rozhodnutia operátora sú oddelené od systémovej evidencie. Uloženie vytvorí nemenný auditný záznam bez chránených údajov; nikdy neodosiela email, neaktivuje SMS, nemení fakturáciu ani nevolá externého poskytovateľa.",
+      "selectClinicPlaceholder": "Vyberte registrovanú ambulanciu…",
+      "reviewBtn": "Posúdiť pre pilot",
+      "emptyQueue": "Žiadna ambulancia zatiaľ nebola zaradená do riadenej pilotnej kohorty. Kvalifikačný proces je úmyselne dôkladný.",
+      "loadingQueue": "Načítavam operácie pilotu…",
+      "errorQueue": "Nepodarilo sa načítať kohortu pilotu: {error}",
+      "review": "Posúdiť",
+      "drawerTitle": "Posúdenie pilotu · {name}",
+      "drawerWarning": "Zaznamenávajte výlučne prevádzkové fakty. Nikdy sem nevkladajte osobné údaje klientov, pacientov, klinické záznamy, čísla platobných kariet ani prístupové heslá.",
+      "workflow": "Workflow",
+      "workflows": {
+        "general_practice": "Všeobecná veterinárna prax",
+        "house_call": "Výjazdová služba (House call)"
+      },
+      "stage": "Fáza",
+      "decision": "Rozhodnutie o pripravenosti",
+      "supportCadence": "Režim podpory",
+      "cadences": {
+        "daily": "Denne",
+        "twice_weekly": "Dvakrát týždenne",
+        "weekly": "Týždenne"
+      },
+      "qualificationLegend": "Klinická zhoda · všetky povinné pre zaradenie",
+      "readinessLegend": "Pripravenosť na spustenie · všetky povinné pre schválenie",
+      "attestationsLegend": "Prevádzkové potvrdenia a overenia",
+      "commPath": "Komunikačný kanál s klientmi",
+      "commModes": {
+        "email_only": "Iba overený email (Fallback)",
+        "email_and_sms": "Email a plnohodnotná SMS brána"
+      },
+      "commTested": "Zvolený komunikačný kanál bol úspešne otestovaný",
+      "firstVisitValidated": "Operátor overil, že sledovaná návšteva bola reálna klinická prax",
+      "clinicUseValidated": "Operátor overil 5 samostatných dní reálnej klinickej prevádzky",
+      "clinicAcceptanceConfirmed": "Ambulancia výslovne odsúhlasila pilotný deň a ostrý nábeh (go-live)",
+      "acceptingAdmin": "Schvaľujúci správca ambulancie",
+      "blockersLegend": "Aktívne prevádzkové prekážky",
+      "nextAction": "Ďalší krok",
+      "targetStart": "Plánovaný začiatok",
+      "nextReview": "Nasledujúca kontrola",
+      "reason": "Dôvod zmeny",
+      "lastContact": "Posledný kontakt",
+      "contactOutcome": "Výsledok kontaktu",
+      "notRecorded": "Nezaznamenané",
+      "saveError": "Nepodarilo sa uložiť posúdenie pilotu: {error}",
+      "gatedStage": "Táto fáza má nesplnené podmienky: {issues}.",
+      "saveBtn": "Uložiť auditované posúdenie",
+      "savingBtn": "Ukladám…",
+      "qualifications": {
+        "supportedClinicType": "Podporovaný typ kliniky",
+        "supportedJurisdictionConfirmed": "Slovenská pilotná jurisdikcia potvrdená",
+        "singleLocation": "Jedno pracovisko",
+        "connectedModeAccepted": "Online cloudový režim odsúhlasený",
+        "parallelRunAccepted": "Paralelná testovacia prevádzka (shadow-run) odsúhlasená",
+        "championConfirmed": "Klinický garant (MVDr.) potvrdený",
+        "supportedWorkflowConfirmed": "Cieľové klinické workflowy podporované",
+        "noUnsupportedMustHave": "Žiadne nepodporované kritické požiadavky"
+      },
+      "readiness": {
+        "rolesAndDevicesValidated": "Roly personálu a hardvérové zariadenia overené",
+        "migrationPlanAccepted": "Migračný plán dát schválený",
+        "sampleValidationAccepted": "Klinická vzorka dát validovaná lekárom",
+        "firstVisitScheduled": "Prvá reálna návšteva naplánovaná",
+        "exportAndRollbackConfirmed": "Zálohy, export a rollback plán potvrdené",
+        "supportCadenceConfirmed": "Režim dennej podpory odsúhlasený"
+      },
+      "blockers": {
+        "workflow_fit": "Zhoda klinického workflowu",
+        "data_import": "Import dát",
+        "staff_training": "Zaškolenie personálu",
+        "record_accuracy": "Presnosť a integrita záznamov",
+        "billing": "Fakturácia a cenník",
+        "payments": "Platby a e-Kasa",
+        "email": "Emailové notifikácie",
+        "sms": "SMS brána",
+        "permissions": "Oprávnenia a roly",
+        "device_connectivity": "Zariadenia a stabilita pripojenia",
+        "backup_export": "Zálohovanie a export",
+        "support_coverage": "Dostupnosť podpory"
+      },
+      "stages": {
+        "candidate": "Kandidát",
+        "parallel_setup": "Paralelné nastavenie",
+        "visit_validation": "Validácia návštevy",
+        "pilot_week": "Pilotný týždeň",
+        "graduation_review": "Záverečné posúdenie",
+        "completed": "Dokončené",
+        "closed": "Uzavreté"
+      },
+      "decisions": {
+        "pending": "Čaká na rozhodnutie",
+        "eligible": "Spôsobilé",
+        "approved": "Schválené",
+        "paused": "Pozastavené",
+        "not_a_fit": "Nevyhovujúce",
+        "graduated": "Úspešne absolvované"
+      },
+      "nextActions": {
+        "confirm_fit": "Potvrdiť klinickú zhodu",
+        "schedule_setup": "Naplánovať nastavenie",
+        "validate_import": "Validovať import dát",
+        "complete_first_visit": "Absolvovať prvú návštevu",
+        "review_communications": "Skontrolovať komunikáciu",
+        "configure_payment": "Konfigurovať platby",
+        "review_clinic_week": "Vyhodnotiť pilotný týždeň",
+        "resolve_blockers": "Odstrániť prekážky",
+        "decide_graduation": "Rozhodnúť o ukončení pilotu",
+        "support_retention": "Podpora retencie",
+        "revisit_fit": "Znovu posúdiť zhodu"
+      },
+      "reasons": {
+        "initial_review": "Počiatočné posúdenie",
+        "clinic_feedback": "Spätná väzba ambulancie",
+        "product_evidence": "Systémová evidencia",
+        "support_review": "Kontrola podpory",
+        "blocker_review": "Prehodnotenie prekážok",
+        "graduation_decision": "Rozhodnutie o ukončení pilotu"
+      },
+      "outcomes": {
+        "replied": "Odpovedali",
+        "no_reply": "Bez odpovede",
+        "scheduled": "Naplánované",
+        "completed": "Dokončené",
+        "declined": "Odmietnuté"
+      }
+    },
+    "smsRecovery": {
+      "title": "Obnova evidencie SMS správ",
+      "desc": "Iba ohraničená operatívna evidencia zoradená od najstaršej. Telefónne čísla, telá správ, textové payloady poskytovateľov ani citlivé zdravotné údaje sa tu nikdy nezobrazujú. Každý zápis vyžaduje kontrolu presnej histórie a čerstvý UUID operačný kľúč.",
+      "refreshEvidence": "Obnoviť evidenciu",
+      "providerProjectionTitle": "Projekcia udalostí poskytovateľa",
+      "providerProjectionSubtitle": "Iba anonymizovaný stav životného cyklu. Telá správ, telefónne čísla a nespracované detaily poskytovateľa nikdy neopustia serverové rozhranie.",
+      "providerEventsEmpty": "Žiadne udalosti poskytovateľa nevyžadujú projekciu ani zásah operátora.",
+      "reviewIncident": "Posúdiť incident",
+      "historyTitle": "História riešenia udalostí poskytovateľa",
+      "historySubtitle": "Najnovších {limit} nemenných záznamov o vyriešení. Tento prehľad obsahuje iba operačné UUID a klasifikácie riešenia; správy, odosielatelia, detaily providera a osobné údaje sú vylúčené na strane servera.",
+      "historyEmpty": "Nie sú zaznamenané žiadne vyriešenia udalostí poskytovateľa.",
+      "historyTruncated": "História riešení je ohraničená na najnovších {limit} riadkov.",
+      "sendAttemptsTitle": "Výnimky pokusov o odoslanie",
+      "sendAttemptsSubtitle": "Maximálne {limit} riadkov. Osirelé komunikačné nároky sú viditeľné pre vyšetrenie, ale nemajú žiadnu nebezpečnú skratku opravy.",
+      "sendAttemptsEmpty": "Žiadne expirované pokusy o odoslanie nevyžadujú obnovu.",
+      "deliveryEventsTitle": "Výnimky udalostí doručenia",
+      "deliveryEventsSubtitle": "Maximálne {limit} spracovateľných udalostí. Expirované prijaté odoslania bez finálneho callbacku zostávajú iba na monitorovanie.",
+      "deliveryEventsEmpty": "Žiadne udalosti doručenia nevyžadujú zosúladenie.",
+      "staleMonitorNotice": "{count} prijatých odoslaní nemá finálny callback. Sledujte evidenciu doručenia poskytovateľa; táto konzola úmyselne neponúka opätovné odoslanie ani prepísanie stavu.",
+      "inspectHistory": "Skontrolovať históriu",
+      "manualOnly": "Iba manuálne preverenie",
+      "close": "Zavrieť",
+      "applyResolution": "Aplikovať auditované riešenie"
     }
   },
   "agent": {
@@ -476,6 +709,42 @@
         "passwordMinLength": "Použite aspoň {min} znakov pre heslo.",
         "hostedCheckoutUnavailable": "Platobná brána je nedostupná. Skúste to znova.",
         "accountCreatedSignIn": "Účet bol vytvorený. Prihláste sa, prosím."
+      },
+      "chooseWorkflow": "Vyberte si prvý užitočný workflow",
+      "firstDaySummary": "Tu je užitočný východiskový bod pre {practiceName}. Po vstupe do aplikácie môžete čokoľvek zmeniť.",
+      "noCardRequired": "Kreditná karta sa nevyžaduje.",
+      "yourWorkspace": "Váš pracovný priestor",
+      "countryDesc": "Nastavuje menu, daňové predvolby, časové pásmo a dostupnosť funkcií.",
+      "anotherCountry": "Iná krajina",
+      "usNotice": "OpenVPM dokáže formátovať tento priestor pre váš región, ale riadený nábeh je aktuálne overený pre slovenské a pilotné kliniky. Odporúčame najprv preskúmať vzorové dáta.",
+      "otherCountryNotice": "Cloudové priestory zatiaľ nie sú plne spustené vo vašej krajine. Môžete si vyskúšať okamžité demo alebo preskúmať projekt.",
+      "passwordLengthDesc": "Minimálne {min} znakov.",
+      "freeDaysNotice": "Zadarmo na 14 dní. Bez potreby platobnej karty.",
+      "backToFirstDay": "Späť na môj prvý deň",
+      "termsPrefix": "Vytvorením pracovného priestoru súhlasíte s ",
+      "termsOfService": "Podmienkami používania",
+      "and": " a ",
+      "privacyPolicy": "Zásadami ochrany osobných údajov",
+      "previewHeading": "Váš prvý deň už nadobúda reálne kontúry.",
+      "previewSubheading": "Prispôsobené pre {model} starostlivosť a váš prvý cieľ. Po vstupe môžete čokoľvek upraviť.",
+      "preview": {
+        "kpis": {
+          "todaysVisits": "Dnešné návštevy",
+          "newPatients": "Noví pacienti",
+          "revenue": "Tržby"
+        },
+        "schedule": {
+          "title": "Dnešný rozvrh",
+          "wellnessExam": "Preventívna prehliadka",
+          "vaccination": "Vakcinácia",
+          "dentalCleaning": "Dentálna hygiena",
+          "sickVisit": "Akútne vyšetrenie"
+        },
+        "ai": {
+          "title": "Opýtať sa AI",
+          "placeholder": "Ktoré zvieratá majú termín na vakcináciu?",
+          "button": "Opýtať sa"
+        }
       }
     },
     "forgotPassword": {
@@ -2315,7 +2584,7 @@
     "estimates": "Cenové ponuky",
     "inventory": "Sklad",
     "inbox": "Schránka",
-    "whiteboard": "Prevádzková tabuľa",
+    "whiteboard": "Whiteboard",
     "agent": "Agent",
     "controlledSubstances": "Kontrolované látky",
     "reports": "Prehľady",
@@ -2363,7 +2632,6 @@
     "encounters": "Vyšetrenia",
     "admin": "Správa platformy",
     "sectionClinicalPatients": "Klinika & Pacienti",
-    "sectionPreventive": "Preventívna starostlivosť",
     "sectionFrontDeskFlow": "Recepcia & Tok",
     "sectionPharmacyInventory": "Lekáreň & Sklad",
     "sectionStatutoryBilling": "Účtovníctvo & Predpisy",
@@ -2373,7 +2641,6 @@
     "wellnessRedemptions": "Čerpanie benefitov",
     "vaccinations": "Očkovania",
     "wellness": "Wellness plány",
-    "whiteboard": "Whiteboard",
     "badgeNew": "Nové",
     "receptionScripts": "Skripty recepcie",
     "pilotReconciliation": "Denná kontrola (Pilot)"
@@ -5463,31 +5730,36 @@
         "title": "Vykonať jedno reálne vyšetrenie",
         "body": "Pridajte jedného majiteľa a zviera, potom prejdite celým procesom od príjmu až po odovzdanie pacienta.",
         "pictureLabel": "Váš bežný deň na klinike",
-        "rowLabel": "Nový pacient"
+        "rowLabel": "Nový pacient",
+        "label": "Absolvovať jednu reálnu návštevu"
       },
       "import_records": {
         "title": "Naplánovať bezpečný prvý import",
         "body": "Zmapujte export a skontrolujte jednu reprezentatívnu kartu predtým, než čokoľvek spustíte naživo.",
         "pictureLabel": "Náhľad migrácie",
-        "rowLabel": "Skontrolovať jednu kartu"
+        "rowLabel": "Skontrolovať jednu kartu",
+        "label": "Importovať záznamy z terajšieho softvéru"
       },
       "start_fresh": {
         "title": "Vytvoriť vaše prvé vyšetrenie",
         "body": "Nastavte základné údaje kliniky, pridajte jedného majiteľa a zviera a objednajte prvého pacienta.",
         "pictureLabel": "Váš deň na klinike",
-        "rowLabel": "Prvé objednanie"
+        "rowLabel": "Prvé objednanie",
+        "label": "Začať nanovo s čistým systémom"
       },
       "explore_sample": {
         "title": "Preskúmať pripravenú kliniku",
         "body": "Otvorte si ukážkový rozvrh a časovú os pacienta bez nutnosti použiť reálne dáta vašej kliniky.",
         "pictureLabel": "Ukážková klinika",
-        "rowLabel": "Sprievodca vyšetrením"
+        "rowLabel": "Sprievodca vyšetrením",
+        "label": "Preskúmať systém so vzorovými dátami"
       },
       "self_host": {
         "title": "Preskúmať možnosť vlastného hostingu",
         "body": "Overte nasadenie a kontrolu nad vlastníctvom dát pred presunom akejkoľvek živej práce.",
         "pictureLabel": "Vlastné nasadenie",
-        "rowLabel": "Plán nasadenia"
+        "rowLabel": "Plán nasadenia",
+        "label": "Vyhodnotiť vlastný hosting (on-premise)"
       },
       "ariaLabel": "Odporúčania na prvý deň",
       "tagBestNextStep": "Najlepší ďalší krok",
@@ -5531,6 +5803,26 @@
       "dayHeading": "Váš prvý deň v OpenVPM",
       "shapedFor": "Pripravené pre starostlivosť: {model}",
       "reviewNotice": "Nič sa neodošle ani nezapíše bez vašej kontroly."
+    },
+    "clinicModels": {
+      "companion": {
+        "label": "Klinika spoločenských zvierat (psy, mačky)"
+      },
+      "mobile": {
+        "label": "Výjazdová alebo mobilná veterinárna prax"
+      },
+      "equine": {
+        "label": "Konská prax a hospodárske zvieratá"
+      },
+      "specialty": {
+        "label": "Špecializovaná klinika alebo wellness"
+      },
+      "shelter": {
+        "label": "Útulok alebo nezisková organizácia"
+      },
+      "exploring": {
+        "label": "Iba skúmam možnosti systému"
+      }
     }
   },
   "species": {
