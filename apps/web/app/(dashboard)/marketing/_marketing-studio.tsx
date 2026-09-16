@@ -208,7 +208,7 @@ export function MarketingStudioContent() {
       const prompt = `Veterinary clinic social media visual: ${selectedTopic}. Clean, professional veterinary photography, healthy animal, fear-free clinic, soft warm lighting, high quality.`;
       const res = await generateImageMutation.mutateAsync({
         prompt,
-        model: "wanx2.1-t2i-turbo",
+        model: "wan2.1-t2i-turbo",
       });
       if (res.url) {
         setGeneratedImageUrl(res.url);

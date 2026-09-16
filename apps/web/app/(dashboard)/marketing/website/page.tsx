@@ -70,13 +70,47 @@ export default function MarketingWebsitePage() {
   });
 
   const saveMutation = trpc.extensions.marketing.updateWebsiteSections.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setSaveStatus("saved");
       utils.extensions.marketing.getWebsiteConfig.invalidate();
+      if (data?.published) {
+        utils.extensions.marketing.getPublicWebsiteData.invalidate();
+        toast.success(
+          t(
+            "marketing.website.publishedSuccess",
+            "Webstránka bola úspešne publikovaná a je dostupná online!"
+          )
+        );
+      } else {
+        toast.success(
+          t(
+            "marketing.website.draftSaved",
+            "Koncept webstránky bol úspešne uložený."
+          )
+        );
+      }
     },
     onError: (err) => {
       setSaveStatus("unsaved");
       toast.error(err.message || "Nepodarilo sa uložiť zmeny sekcií.");
+    },
+  });
+
+  const publishMutation = trpc.extensions.marketing.publishWebsite.useMutation({
+    onSuccess: () => {
+      setSaveStatus("saved");
+      utils.extensions.marketing.getWebsiteConfig.invalidate();
+      utils.extensions.marketing.getPublicWebsiteData.invalidate();
+      toast.success(
+        t(
+          "marketing.website.publishedSuccess",
+          "Webstránka bola úspešne publikovaná a je dostupná online!"
+        )
+      );
+    },
+    onError: (err) => {
+      setSaveStatus("unsaved");
+      toast.error(err.message || "Nepodarilo sa publikovať webstránku.");
     },
   });
 
@@ -85,15 +119,58 @@ export default function MarketingWebsitePage() {
       utils.extensions.marketing.getWebsiteConfig.invalidate();
       utils.extensions.marketing.getPublicWebsiteData.invalidate();
       if (data.published) {
-        toast.success("Webstránka kliniky bola úspešne publikovaná a je dostupná online!");
+        toast.success(
+          t(
+            "marketing.website.publishedSuccess",
+            "Webstránka bola úspešne publikovaná a je dostupná online!"
+          )
+        );
       } else {
-        toast.info("Webstránka kliniky bola prepnutá do režimu konceptu (nepublikovaná).");
+        toast.info(
+          t(
+            "marketing.website.unpublishSuccess",
+            "Webstránka kliniky bola prepnutá do režimu konceptu (nepublikovaná)."
+          )
+        );
       }
     },
     onError: (err) => {
       toast.error(err.message || "Nepodarilo sa zmeniť stav publikovania webstránky.");
     },
   });
+
+  // Warn before navigating away if there are unsaved/pending changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === "unsaved" || saveStatus === "saving") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saveStatus]);
+
+  // Explicit instant save actions
+  const handleManualSave = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    setSaveStatus("saving");
+    saveMutation.mutate({ sections, publishLive: false });
+  }, [saveMutation, sections]);
+
+  const handlePublish = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    setSaveStatus("saving");
+    publishMutation.mutate({ sections });
+  }, [publishMutation, sections]);
+
+  const handleUnpublish = useCallback(() => {
+    toggleMutation.mutate({ published: false, sections });
+  }, [toggleMutation, sections]);
 
   // Initialize draft sections from query once loaded
   const hasInitializedRef = useRef(false);
@@ -244,7 +321,7 @@ export default function MarketingWebsitePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {config?.published && (
             <>
               <Button
@@ -254,27 +331,80 @@ export default function MarketingWebsitePage() {
                 className="gap-1.5"
               >
                 {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                {copied ? "Skopírované" : "Kopírovať link"}
+                {copied ? t("marketing.website.copied", "Skopírované") : t("marketing.website.copyLink", "Kopírovať link")}
               </Button>
               <Link href={publicUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <ExternalLink className="h-4 w-4" />
-                  Otvoriť live
+                  {t("marketing.website.openLive", "Otvoriť live")}
                 </Button>
               </Link>
             </>
           )}
 
+          {/* Manual Save Draft Button */}
           <Button
-            variant={config?.published ? "destructive" : "default"}
+            variant="outline"
             size="sm"
-            disabled={toggleMutation.isPending || configQuery.isLoading}
-            onClick={() => toggleMutation.mutate({ published: !config?.published })}
-            className="gap-2 font-bold shadow-xs"
+            disabled={saveMutation.isPending || configQuery.isLoading}
+            onClick={handleManualSave}
+            className="gap-2 font-semibold shadow-2xs"
+            title="Uložiť aktuálny koncept stránky"
           >
-            {toggleMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin" />}
-            {config?.published ? "Skryť webstránku" : "Publikovať webstránku"}
+            {saveMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+            ) : (
+              <Save className="h-4 w-4 text-primary" />
+            )}
+            {t("marketing.website.saveDraft", "Uložiť koncept")}
           </Button>
+
+          {/* Publish / Publish Changes Button */}
+          {config?.published ? (
+            <>
+              <Button
+                variant="default"
+                size="sm"
+                disabled={publishMutation.isPending || saveMutation.isPending}
+                onClick={handlePublish}
+                className="gap-2 font-bold shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {publishMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {t("marketing.website.publishChanges", "Publikovať zmeny na web")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={toggleMutation.isPending}
+                onClick={handleUnpublish}
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive text-xs"
+                title="Skryť webstránku pred verejnosťou"
+              >
+                {toggleMutation.isPending && <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />}
+                {t("marketing.website.hideWebsite", "Skryť webstránku")}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              disabled={publishMutation.isPending || configQuery.isLoading}
+              onClick={handlePublish}
+              className="gap-2 font-bold shadow-xs"
+            >
+              {publishMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="h-4 w-4" />
+              )}
+              {t("marketing.website.publishWebsite", "Publikovať webstránku")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -413,9 +543,59 @@ export default function MarketingWebsitePage() {
               </Badge>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saveMutation.isPending || configQuery.isLoading}
+                onClick={handleManualSave}
+                className="h-8 gap-1.5 text-xs font-semibold"
+                title="Uložiť koncept"
+              >
+                {saveMutation.isPending ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                ) : (
+                  <Save className="h-3.5 w-3.5 text-primary" />
+                )}
+                {t("marketing.website.saveDraft", "Uložiť koncept")}
+              </Button>
+
+              {config?.published ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={publishMutation.isPending || saveMutation.isPending}
+                  onClick={handlePublish}
+                  className="h-8 gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
+                  title="Publikovať zmeny na live web"
+                >
+                  {publishMutation.isPending ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  {t("marketing.website.publishChanges", "Publikovať zmeny")}
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={publishMutation.isPending || configQuery.isLoading}
+                  onClick={handlePublish}
+                  className="h-8 gap-1.5 text-xs font-bold shadow-2xs"
+                  title="Publikovať webstránku online"
+                >
+                  {publishMutation.isPending ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Globe className="h-3.5 w-3.5" />
+                  )}
+                  {t("marketing.website.publishWebsite", "Publikovať webstránku")}
+                </Button>
+              )}
+
               {/* Viewport switcher */}
-              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border">
+              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border ml-1">
                 <button
                   type="button"
                   onClick={() => setPreviewMode("desktop")}

@@ -9,6 +9,7 @@ const contentSecurityPolicy = [
   `frame-ancestors 'self'${process.env.PREVIEW_FRAME_ANCESTORS ? ` ${process.env.PREVIEW_FRAME_ANCESTORS.trim()}` : ""}`,
   "form-action 'self'",
   "img-src 'self' data: blob: https:",
+  "media-src 'self' blob: data:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   [
@@ -53,7 +54,7 @@ const securityHeaders = [
   {
     key: "Permissions-Policy",
     value:
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+      "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()",
   },
 ];
 

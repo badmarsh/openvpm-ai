@@ -1,5 +1,9 @@
 import { generateText } from "ai";
 import { configuredModel } from "@/lib/agent/runner";
+import {
+  hasInferenceProxyConfiguration,
+  inferenceProxyBaseUrl,
+} from "@/lib/agent/inference-proxy";
 import { readPrimaryObject } from "@/lib/s3";
 
 const STT_SYSTEM_PROMPT = `Si profesionálny asistent veterinárneho lekára na Slovensku špecializovaný na presný prepis hovoreného slova do textu.
@@ -45,11 +49,81 @@ export async function transcribeAudio(fileKey: string): Promise<string> {
   const mimeType = object.contentType ?? "audio/webm";
 
   const ac = new AbortController();
-  const timeout = setTimeout(() => ac.abort(new Error("Audio transcription timed out after 60s")), 60_000);
+  const timeout = setTimeout(
+    () => ac.abort(new Error("Audio transcription timed out after 60s")),
+    60_000,
+  );
 
-  let result;
   try {
-    result = await generateText({
+    // When using a local inference proxy (e.g. Gemini via Antigravity), bypass
+    // @ai-sdk/openai-compatible's UnsupportedFunctionalityError on audio files
+    // by sending the multimodal audio data URL directly to chat completions.
+    if (hasInferenceProxyConfiguration()) {
+      const baseURL = inferenceProxyBaseUrl()!;
+      const apiKey = process.env.AI_API_KEY || "";
+      const modelCandidates = [
+        process.env.AI_MODEL?.replace(/^(google\/|models\/)/, ""),
+        "gemini-2.5-flash",
+        "gemini-3-flash",
+      ].filter((m): m is string => Boolean(m && m.trim()));
+
+      let lastError: Error | null = null;
+      for (const model of modelCandidates) {
+        try {
+          const res = await fetch(`${baseURL}/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: STT_SYSTEM_PROMPT },
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: "Transkribuj toto veterinárne audio slovo po slove. Vráť výhradne čistý prepísaný text:",
+                    },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: `data:${mimeType};base64,${base64Audio}`,
+                      },
+                    },
+                  ],
+                },
+              ],
+            }),
+            signal: ac.signal,
+          });
+
+          if (res.ok) {
+            const data = (await res.json()) as any;
+            const content = data?.choices?.[0]?.message?.content;
+            if (typeof content === "string" && content.trim()) {
+              return content.trim();
+            }
+          } else {
+            const errText = await res.text().catch(() => "");
+            lastError = new Error(
+              `Model ${model} transcription failed (${res.status}): ${errText}`,
+            );
+          }
+        } catch (err: any) {
+          lastError = err;
+        }
+      }
+
+      throw (
+        lastError ??
+        new Error("Inference proxy failed to transcribe audio")
+      );
+    }
+
+    const result = await generateText({
       model: configuredModel(),
       system: STT_SYSTEM_PROMPT,
       messages: [
@@ -63,9 +137,9 @@ export async function transcribeAudio(fileKey: string): Promise<string> {
       ],
       abortSignal: ac.signal,
     });
+
+    return result.text.trim();
   } finally {
     clearTimeout(timeout);
   }
-
-  return result.text.trim();
 }

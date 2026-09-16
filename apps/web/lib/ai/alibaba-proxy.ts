@@ -11,7 +11,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 
-export const ALIBABA_DEFAULT_IMAGE_MODEL = "wanx2.1-t2i-turbo";
+export const ALIBABA_DEFAULT_IMAGE_MODEL = "wan2.1-t2i-turbo";
 export const ALIBABA_DEFAULT_VIDEO_MODEL = "wan2.1-t2v-turbo";
 export const ALIBABA_DEFAULT_CHAT_MODEL = "qwen-plus";
 
@@ -112,7 +112,8 @@ export async function generateAlibabaImage(
   options: ImageGenerationOptions
 ): Promise<ImageGenerationResult> {
   const { baseUrl, apiKey } = getAlibabaProxyConfig();
-  const model = options.model || ALIBABA_DEFAULT_IMAGE_MODEL;
+  const rawModel = options.model || ALIBABA_DEFAULT_IMAGE_MODEL;
+  const model = rawModel.startsWith("wanx") ? rawModel.replace("wanx", "wan") : rawModel;
 
   const res = await fetch(`${baseUrl}/images/generations`, {
     method: "POST",

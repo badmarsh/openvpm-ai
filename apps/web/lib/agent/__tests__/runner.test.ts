@@ -4,6 +4,7 @@ import {
   AgentNotConfiguredError,
   isAgentConfigured,
   buildFallbackSummary,
+  isProxyFormatError,
 } from "../runner";
 
 afterEach(() => {
@@ -149,3 +150,31 @@ describe("buildFallbackSummary", () => {
     expect(summaryEn).toContain("The agent reached the step limit");
   });
 });
+
+describe("isProxyFormatError", () => {
+  it("detects the Chinese proxy format error message", () => {
+    const msg =
+      "很抱歉，当前模型在尝试调取实时信息时遇到了格式异常。若需要查询实时天气或最新资讯，请尝试使用联网模式（模型名带 -online 后缀）或配置天气/搜索插件。";
+    expect(isProxyFormatError(msg)).toBe(true);
+  });
+
+  it("detects individual keywords from proxy format exceptions", () => {
+    expect(isProxyFormatError("格式异常")).toBe(true);
+    expect(isProxyFormatError("调取实时信息")).toBe(true);
+    expect(isProxyFormatError("联网模式")).toBe(true);
+    expect(isProxyFormatError("model-online")).toBe(true);
+  });
+
+  it("returns false for regular Slovak/English natural language answers", () => {
+    expect(
+      isProxyFormatError("Pre 12 kg psa je dávka karprofénu 48 mg denne."),
+    ).toBe(false);
+    expect(
+      isProxyFormatError("The recommended dose of carprofen is 4 mg/kg."),
+    ).toBe(false);
+    expect(isProxyFormatError(null)).toBe(false);
+    expect(isProxyFormatError(undefined)).toBe(false);
+    expect(isProxyFormatError("")).toBe(false);
+  });
+});
+

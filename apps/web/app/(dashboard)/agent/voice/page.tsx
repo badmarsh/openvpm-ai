@@ -536,16 +536,52 @@ function VoiceDictationContent() {
 
       const res = await fetch("/demo/voice-demo.webm");
       if (!res.ok) throw new Error(t("voice.demo.notFound", "Demo nahrávka nebola nájdená"));
-      const blob = await res.blob();
-      // Pre istotu získame reálnu dĺžku z Audio elementu
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      await new Promise<void>((resolve, reject) => {
-        audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
-        audio.addEventListener("error", () => reject(new Error(t("voice.demo.loadError", "Nepodarilo sa načítať demo audio"))), { once: true });
-      });
-      const duration = Math.round(audio.duration || 36);
-      URL.revokeObjectURL(url);
+      const arrayBuffer = await res.arrayBuffer();
+      // Prehrávač a upload očakáva korektný audio/webm MIME type
+      const blob = new Blob([arrayBuffer], { type: "audio/webm" });
+
+      // Získame reálnu dĺžku s bezpečným fallbackom na 36 s (nikdy nezlyhá celá operácia)
+      let duration = 36;
+      try {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio();
+        duration = await new Promise<number>((resolve) => {
+          const timer = setTimeout(() => {
+            cleanup();
+            resolve(36);
+          }, 1500);
+
+          const cleanup = () => {
+            clearTimeout(timer);
+            URL.revokeObjectURL(url);
+          };
+
+          audio.addEventListener(
+            "loadedmetadata",
+            () => {
+              const d = Math.round(audio.duration || 36);
+              cleanup();
+              resolve(d > 0 && isFinite(d) ? d : 36);
+            },
+            { once: true },
+          );
+
+          audio.addEventListener(
+            "error",
+            () => {
+              cleanup();
+              resolve(36);
+            },
+            { once: true },
+          );
+
+          audio.src = url;
+          audio.load();
+        });
+      } catch {
+        duration = 36;
+      }
+
       handleRecordingComplete(blob, duration);
       toast.success(t("voice.demo.loaded", "Demo nahrávka bola načítaná"));
     } catch (err) {
@@ -574,7 +610,7 @@ function VoiceDictationContent() {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 p-2 sm:p-4 w-full max-w-[1800px] mx-auto">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
@@ -703,9 +739,9 @@ function VoiceDictationContent() {
         </Card>
       ) : (
         /* Main 2-Column Editor Layout */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Patient, Presets & Recording */}
-          <div className="lg:col-span-6 flex flex-col gap-4">
+          <div className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 flex flex-col gap-4">
             {/* Patient Search */}
             <Card>
               <CardHeader className="pb-3">
@@ -927,9 +963,9 @@ function VoiceDictationContent() {
                   <textarea
                     value={rawTranscript}
                     onChange={(e) => setRawTranscript(e.target.value)}
-                    rows={3}
+                    rows={4}
                     placeholder={t("voice.transcript.placeholder", "Sem môžete vložiť alebo upraviť surový text...")}
-                    className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
+                    className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-y min-h-[90px] leading-relaxed"
                   />
                   <div className="flex justify-end">
                     <Button
@@ -954,7 +990,7 @@ function VoiceDictationContent() {
           </div>
 
           {/* Right Column: SOAP Preview & Actions */}
-          <div className="lg:col-span-6 flex flex-col gap-4">
+          <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 flex flex-col gap-4">
             <Card className="flex flex-col h-full min-h-[550px] shadow-sm">
               <CardHeader className="pb-3 border-b border-border flex-row items-center justify-between space-y-0">
                 <div className="flex items-center gap-2">

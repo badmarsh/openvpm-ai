@@ -2440,7 +2440,12 @@
       "copied": "Copied",
       "openLive": "Open live",
       "publishWebsite": "Publish website",
+      "publishChanges": "Publish changes to web",
       "hideWebsite": "Hide website",
+      "saveDraft": "Save draft",
+      "draftSaved": "Website draft successfully saved.",
+      "publishedSuccess": "Clinic website was successfully published and is live online!",
+      "unpublishSuccess": "Clinic website was switched to draft mode (unpublished).",
       "sectionsCount": "sections on page",
       "deviceDesktop": "Desktop",
       "deviceMobile": "Mobile",
@@ -5992,7 +5997,10 @@
       "copyDate": "Date",
       "charCount": "{count} chars",
       "sectionPlaceholder": "Fill in {section}...",
-      "noData": "No data"
+      "noData": "No data",
+      "layoutGrid": "Grid (2×2)",
+      "layoutList": "List (1 column)",
+      "layoutTitle": "SOAP layout"
     },
     "page": {
       "title": "Voice Dictation",
@@ -6083,7 +6091,13 @@
       "recordAgain": "Record again",
       "process": "Process with Gemini AI",
       "processing": "AI is analysing and structuring the veterinary dictation...",
-      "processingHint": "Converting audio to text and categorising it into the SOAP structure."
+      "processingHint": "Converting audio to text and categorising it into the SOAP structure.",
+      "micPermissionDenied": "Microphone access was denied. If you just allowed it, reload the page (F5 / Reload), or check microphone permissions in Windows Settings.",
+      "micSecureRequired": "Microphone access requires a secure connection (HTTPS or localhost).",
+      "micNotFound": "No microphone found. Check your microphone connection and try again.",
+      "micBusy": "Microphone is busy with another application.",
+      "micGenericError": "Could not access microphone. Check browser permissions.",
+      "dictatePrompt": "Dictate clinical findings..."
     },
     "transcript": {
       "title": "Raw dictation transcript",

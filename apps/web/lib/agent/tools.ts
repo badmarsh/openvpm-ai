@@ -881,12 +881,38 @@ const calculateDrugDose: AgentTool = {
     },
     required: ["drugId", "species", "weightKg"],
   },
-  zod: z.object({
+  zod: z.preprocess((val: any) => {
+    if (val && typeof val === "object") {
+      const copy = { ...val };
+      if (!copy.drugId && (copy.drug || copy.drug_name || copy.name)) {
+        copy.drugId = copy.drug || copy.drug_name || copy.name;
+      }
+      if (typeof copy.drugId === "string") {
+        copy.drugId = copy.drugId.trim().toLowerCase().replace(/_/g, "-");
+      }
+      if (
+        copy.weightKg === undefined &&
+        (copy.weight !== undefined ||
+          copy.patient_weight_kg !== undefined ||
+          copy.patient_weight !== undefined)
+      ) {
+        copy.weightKg =
+          copy.weight ?? copy.patient_weight_kg ?? copy.patient_weight;
+      }
+      if (typeof copy.species === "string") {
+        const s = copy.species.toLowerCase().trim();
+        if (s === "dog" || s === "pes" || s === "canine") copy.species = "canine";
+        if (s === "cat" || s === "macka" || s === "mačka" || s === "feline") copy.species = "feline";
+      }
+      return copy;
+    }
+    return val;
+  }, z.object({
     drugId: formularyDrugIdInput,
     species: z.enum(["canine", "feline"]),
     weightKg: z.number().finite().positive().max(DOSING_WEIGHT_MAX_KG),
     concentrationMgPerMl: z.number().finite().positive().optional(),
-  }),
+  })),
   readOnly: true,
   async execute(args, ctx) {
     assertAgentRole(

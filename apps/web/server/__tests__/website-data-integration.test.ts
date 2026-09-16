@@ -372,4 +372,40 @@ describe("Website Data Integration Contracts & Guardrails", () => {
       expect(finding?.message).not.toContain("काशी");
     });
   });
+
+  describe("Atomic Save & Publish Contract Guardrails", () => {
+    const updateInputSchema = z.object({
+      sections: z.array(websiteSectionSchema),
+      publishLive: z.boolean().optional().default(false),
+    });
+
+    const toggleInputSchema = z.object({
+      published: z.boolean().optional(),
+      sections: z.array(websiteSectionSchema).optional(),
+    }).optional();
+
+    const publishInputSchema = z.object({
+      sections: z.array(websiteSectionSchema).optional(),
+    }).optional();
+
+    it("validates updateWebsiteSections payload with publishLive flag", () => {
+      const seed = getSeedWebsiteSections("Klinika");
+      const validPayload = { sections: seed, publishLive: true };
+      const parsed = updateInputSchema.safeParse(validPayload);
+      expect(parsed.success).toBe(true);
+    });
+
+    it("validates toggleWebsite payload with in-flight sections", () => {
+      const seed = getSeedWebsiteSections("Klinika");
+      const validPayload = { published: true, sections: seed };
+      const parsed = toggleInputSchema.safeParse(validPayload);
+      expect(parsed.success).toBe(true);
+    });
+
+    it("validates publishWebsite payload with custom sections", () => {
+      const seed = getSeedWebsiteSections("Klinika");
+      const parsed = publishInputSchema.safeParse({ sections: seed });
+      expect(parsed.success).toBe(true);
+    });
+  });
 });

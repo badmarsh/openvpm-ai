@@ -2440,7 +2440,12 @@
       "copied": "Skopírované",
       "openLive": "Otvoriť live",
       "publishWebsite": "Publikovať webstránku",
+      "publishChanges": "Publikovať zmeny na web",
       "hideWebsite": "Skryť webstránku",
+      "saveDraft": "Uložiť koncept",
+      "draftSaved": "Koncept webstránky bol úspešne uložený.",
+      "publishedSuccess": "Webstránka bola úspešne publikovaná a je dostupná online!",
+      "unpublishSuccess": "Webstránka kliniky bola prepnutá do režimu konceptu (nepublikovaná).",
       "sectionsCount": "sekcií na stránke",
       "deviceDesktop": "Desktop",
       "deviceMobile": "Mobil",
@@ -5992,7 +5997,10 @@
       "copyDate": "Dátum",
       "charCount": "{count} zn.",
       "sectionPlaceholder": "Doplňte {section}...",
-      "noData": "Žiadne údaje"
+      "noData": "Žiadne údaje",
+      "layoutGrid": "Mriežka (2×2)",
+      "layoutList": "Zoznam (1 stĺpec)",
+      "layoutTitle": "Rozloženie SOAP"
     },
     "page": {
       "title": "Hlasové diktovanie",
@@ -6083,7 +6091,13 @@
       "recordAgain": "Nahrať znova",
       "process": "Spracovať cez Gemini AI",
       "processing": "AI analyzuje a štruktúruje veterinárne diktovanie...",
-      "processingHint": "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry."
+      "processingHint": "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.",
+      "micPermissionDenied": "Prístup k mikrofónu bol zamietnutý. Ak ste mikrofón práve povolili, obnovte stránku (F5 / Reload), alebo skontrolujte povolenia v Nastaveniach Windows.",
+      "micSecureRequired": "Prístup k mikrofónu vyžaduje zabezpečené pripojenie (HTTPS alebo localhost).",
+      "micNotFound": "Nebol nájdený žiadny mikrofón. Skontrolujte pripojenie mikrofónu a skúste znova.",
+      "micBusy": "Mikrofón je obsadený inou aplikáciou.",
+      "micGenericError": "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.",
+      "dictatePrompt": "Diktujte klinický nález..."
     },
     "transcript": {
       "title": "Surový prepis diktátu",
