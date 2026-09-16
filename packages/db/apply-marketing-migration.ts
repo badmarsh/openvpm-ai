@@ -7,6 +7,9 @@ async function applyMigration() {
   console.log("Applying marketing schema additions to PostgreSQL...");
 
   await db.execute(sql`
+    ALTER TYPE ai_audit_entity_type ADD VALUE IF NOT EXISTS 'marketing_content';
+    ALTER TYPE ai_audit_entity_type ADD VALUE IF NOT EXISTS 'marketing_media';
+
     ALTER TABLE ext_marketing_media_assets ADD COLUMN IF NOT EXISTS url text;
     ALTER TABLE ext_marketing_media_assets ADD COLUMN IF NOT EXISTS patient_name text;
     ALTER TABLE ext_marketing_media_assets ADD COLUMN IF NOT EXISTS subjects_present boolean NOT NULL DEFAULT false;
@@ -36,6 +39,9 @@ async function applyMigration() {
     );
 
     CREATE INDEX IF NOT EXISTS ext_mkt_competitor_practice_idx ON ext_marketing_competitor_snapshots (practice_id, deleted_at);
+
+    ALTER TABLE ext_marketing_staff_tasks ADD COLUMN IF NOT EXISTS due_at timestamptz;
+    CREATE INDEX IF NOT EXISTS ext_mkt_staff_tasks_due_at_idx ON ext_marketing_staff_tasks (due_at);
   `);
 
   console.log("✓ Marketing schema additions successfully applied!");

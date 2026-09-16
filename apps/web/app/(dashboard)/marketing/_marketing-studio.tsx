@@ -347,7 +347,7 @@ export function MarketingStudioContent() {
               <span>Brand Kit kliniky</span>
             </Button>
           </Link>
-          <Link href="/marketing/tv">
+          <Link href="/waiting-room">
             <Button
               variant="outline"
               size="sm"

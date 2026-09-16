@@ -32,7 +32,8 @@ export type AgentUserRole =
   | "veterinarian"
   | "technician"
   | "front_desk"
-  | "viewer";
+  | "viewer"
+  | "service_agent";
 
 export const ALL_AGENT_ROLES: readonly AgentUserRole[] = [
   "admin",
@@ -40,6 +41,7 @@ export const ALL_AGENT_ROLES: readonly AgentUserRole[] = [
   "technician",
   "front_desk",
   "viewer",
+  "service_agent",
 ];
 
 /**

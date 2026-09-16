@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { MarketingStudioContent } from "./_marketing-studio";
+import { ContentCalendarTab } from "@/components/marketing/content-calendar-tab";
+import { SocialApprovalQueueTab } from "@/components/marketing/social-approval-queue-tab";
 
 type TabId = "overview" | "calendar" | "queue" | "competitors";
 
@@ -31,91 +33,6 @@ function TabLoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-    </div>
-  );
-}
-
-function CalendarTab() {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Kalendár obsahu</h1>
-          <p className="text-xs text-muted-foreground">Plánovanie a správa príspevkov pre sociálne siete</p>
-        </div>
-        <Button className="text-xs gap-1.5" variant="outline" size="sm">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>Exportovať kalendár</span>
-        </Button>
-      </div>
-
-      <div className="rounded-xl border bg-card p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-sm">Týždenný plán obsahu</h2>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 text-xs">&lt; Pred</Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs">Dnes</Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs">Ďalší &gt;</Button>
-          </div>
-        </div>
-        <div className="grid grid-cols-7 gap-2">
-          {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((day, i) => (
-            <div key={i} className="border rounded-lg p-3 text-center">
-              <div className="text-xs font-medium text-muted-foreground">{day}</div>
-              <div className="text-sm font-bold">{15 + i}</div>
-              <div className="text-[10px] mt-1 space-y-1">
-                {i < 3 && (
-                  <div className="p-1 bg-rose-100 dark:bg-rose-900/30 rounded text-rose-700 dark:text-rose-300 truncate">
-                    Kliešte & Blchy
-                  </div>
-                )}
-                {i >= 2 && i < 5 && (
-                  <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-300 truncate">
-                    Vakcinácia
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function QueueTab() {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Schvaľovací proces</h1>
-          <p className="text-xs text-muted-foreground">Návrhy obsahu čakajúce na schválenie</p>
-        </div>
-      </div>
-      <div className="rounded-xl border bg-card p-5 shadow-xs space-y-4">
-        {[1, 2, 3].map((item) => (
-          <div key={item} className="border rounded-lg p-4 flex flex-col sm:flex-row gap-4">
-            <div className="bg-muted border-2 border-dashed rounded-xl w-16 h-16 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">Sezónna kampaň #{item}: Kliešte a blchy</div>
-              <div className="text-xs text-muted-foreground mt-1">Návrh príspevku pre Instagram a Facebook</div>
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant="secondary" className="text-xs">Instagram</Badge>
-                <Badge variant="secondary" className="text-xs">Facebook</Badge>
-                <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 ml-auto">
-                  Čaká na schválenie
-                </Badge>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-3 shrink-0">
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="text-xs">Odmietnuť</Button>
-                <Button size="sm" className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white">Schváliť</Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -239,8 +156,16 @@ function MarketingStudioInner() {
           <MarketingStudioContent />
         </Suspense>
       )}
-      {activeTab === "calendar" && <CalendarTab />}
-      {activeTab === "queue" && <QueueTab />}
+      {activeTab === "calendar" && (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <ContentCalendarTab />
+        </Suspense>
+      )}
+      {activeTab === "queue" && (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <SocialApprovalQueueTab />
+        </Suspense>
+      )}
       {activeTab === "competitors" && <CompetitorsTab />}
     </div>
   );

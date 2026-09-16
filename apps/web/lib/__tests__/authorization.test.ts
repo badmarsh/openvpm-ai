@@ -14,6 +14,7 @@ const ALL_STAFF_ROLES: readonly AgentUserRole[] = [
   "veterinarian",
   "technician",
   "front_desk",
+  "service_agent",
 ];
 
 describe("assertAgentRole — fail-closed authorization boundary", () => {
@@ -95,12 +96,27 @@ describe("assertAgentRole — fail-closed authorization boundary", () => {
     it("denies 'viewer' for controlled substances log", () => {
       expect(() => assertAgentRole(ctx("viewer"), CS_LOG_ROLES)).toThrow();
     });
+
+    it("denies 'service_agent' for prescription creation", () => {
+      expect(() => assertAgentRole(ctx("service_agent"), PRESCRIPTION_ROLES)).toThrow();
+    });
+
+    it("denies 'service_agent' for controlled substances log", () => {
+      expect(() => assertAgentRole(ctx("service_agent"), CS_LOG_ROLES)).toThrow();
+    });
+
+    it("denies 'service_agent' for clinical roles", () => {
+      expect(() => assertAgentRole(ctx("service_agent"), CLINICAL_ROLES)).toThrow();
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────
   // ALLOW: properly authorized roles
   // ─────────────────────────────────────────────────────────────────────
   describe("ALLOW: authorized roles must not throw", () => {
+    it("allows 'service_agent' for all staff read/write tools", () => {
+      expect(() => assertAgentRole(ctx("service_agent"), ALL_STAFF_ROLES)).not.toThrow();
+    });
     it("allows 'veterinarian' for prescription creation", () => {
       expect(() => assertAgentRole(ctx("veterinarian"), PRESCRIPTION_ROLES)).not.toThrow();
     });

@@ -152,6 +152,7 @@ export async function draftSoapNote(
       model: configuredModel(),
       system: SOAP_DRAFT_SYSTEM_PROMPT,
       prompt: buildSoapDraftPrompt(context),
+      temperature: 0,
       maxOutputTokens: SOAP_DRAFT_MAX_OUTPUT_TOKENS,
       abortSignal: ac.signal,
     });

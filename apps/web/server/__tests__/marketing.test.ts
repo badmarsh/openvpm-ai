@@ -178,5 +178,24 @@ describe("marketingRouter", () => {
     expect(negative?.escalationStatus).toBe("pending");
     expect(negative?.sentimentLabel).toBe("negative");
   });
+
+  it("generateImage returns curated clinical visual fallback when Alibaba proxy is offline (no TRPCError fetch failed)", async () => {
+    const trpcCaller = caller();
+    const dentalResult = await trpcCaller.generateImage({
+      prompt: "Dentálna hygiena a čistenie zubov ultrazvukom",
+    });
+
+    expect(dentalResult).toBeDefined();
+    expect(dentalResult.url).toBe("/marketing/dental-hygiene.jpg");
+    expect(dentalResult.created).toBeGreaterThan(0);
+
+    const seniorResult = await trpcCaller.generateImage({
+      prompt: "Starostlivosť o psíka seniora a geriatrická prevencia",
+    });
+
+    expect(seniorResult).toBeDefined();
+    expect(seniorResult.url).toBe("/marketing/senior-pet-care.jpg");
+  });
 });
+
 

@@ -73,6 +73,7 @@ export const automationContentRouter = createRouter({
           reviewedAt: extContentBriefs.reviewedAt,
           reviewNote: extContentBriefs.reviewNote,
           createdAt: extContentBriefs.createdAt,
+          source: extContentBriefs.source,
           pillarTitle: extContentPillars.title,
           pillarKey: extContentPillars.pillarKey,
           reviewerName: users.name,
@@ -102,6 +103,7 @@ export const automationContentRouter = createRouter({
         briefText: z.string().min(5).max(2000),
         targetChannels: z.array(z.string()).default(["facebook", "instagram"]),
         targetAudience: z.string().max(255).default("Všetci majitelia zvierat"),
+        scheduledDate: z.string().optional(),
         clinicalClaims: z
           .array(
             z.object({
@@ -123,6 +125,11 @@ export const automationContentRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const sourcePayload: Record<string, unknown> = {};
+      if (input.scheduledDate) {
+        sourcePayload.scheduledDate = input.scheduledDate;
+      }
+
       const [created] = await ctx.db
         .insert(extContentBriefs)
         .values({
@@ -133,6 +140,7 @@ export const automationContentRouter = createRouter({
           targetAudience: input.targetAudience,
           clinicalClaims: input.clinicalClaims,
           status: input.clinicalClaims.length > 0 ? "review" : "pending",
+          source: sourcePayload,
         })
         .returning();
 

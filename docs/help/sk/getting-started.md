@@ -89,7 +89,7 @@ Bočný navigačný panel bol konsolidovaný na ~32 kľúčových položiek rozd
 - **Recepcia & Tok:** Rozvrh (`/schedule`), Čakáreň (`/waiting-room`), Prevádzková tabuľa (`/whiteboard`), Klienti (`/clients`), Pošta & Správy (`/inbox`).
 - **Lekáreň & Sklad:** Sklad liečiv (`/inventory`), Omamné látky OPL (`/controlled-substances`).
 - **Účtovníctvo & Predpisy:** Fakturácia (`/billing`), e-Kasa doklady (`/billing/ekasa`), Štatutárne registre (`/statutory`), Prehľady (`/reports`), Whiteboard (`/whiteboard`).
-- **Kampane & SMS:** Marketingové Štúdio (`/marketing` so 4 záložkami), Recenzie (`/marketing/reviews`), Letáky (`/marketing/handouts`), Správy & SMS (`/marketing/messages`), Web kliniky (`/marketing/website`), Čakáreň TV (`/marketing/tv`), Automatizácie (`/marketing/automations`), Skripty recepcie (`/marketing/consents`), Knižnica médií (`/marketing/media`).
+- **Kampane & SMS:** Marketingové Štúdio (`/marketing` so 4 záložkami), Recenzie (`/marketing/reviews`), Letáky (`/marketing/handouts`), Správy & SMS (`/marketing/messages`), Web kliniky (`/marketing/website`), Automatizácie (`/marketing/automations`), Skripty recepcie (`/marketing/consents`), Knižnica médií (`/marketing/media`).
 - **Správa & Manažment:** Platform Admin (`/admin`), Nastavenia kliniky & Brand Kit (`/settings`), AI Agent (`/agent`), Prepúšťacie správy (`/agent/discharge`).
 
 ---

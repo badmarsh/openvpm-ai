@@ -920,6 +920,10 @@ describe("new clinical agent tools", () => {
     // none of the local rules cover.
     expect(result.safe).toBe(false);
     expect(result.severity).toBe("unknown");
+    expect((result as Record<string, unknown>).status).toBe("unknown_not_evaluated");
+    expect((result as Record<string, unknown>).evaluationStatus).toBe(
+      "unknown_not_evaluated",
+    );
     expect(
       result.warnings.some((w) => w.includes("does not recognize")),
     ).toBe(true);
@@ -939,10 +943,54 @@ describe("new clinical agent tools", () => {
     const result = (await tool.execute(
       { patientId: PATIENT_ID, candidateDrug: "Maropitant (Cerenia) 16mg" },
       ctx
-    )) as { safe: boolean; severity: string };
+    )) as { safe: boolean; severity: string; status?: string; evaluationStatus?: string };
 
     expect(result.safe).toBe(true);
     expect(result.severity).toBe("safe");
+    expect(result.status).toBe("safe");
+    expect(result.evaluationStatus).toBe("evaluated_safe");
+  });
+
+  it("check_withdrawal_periods detects statutory violation and enforces minimum floor", async () => {
+    const tool = getTool("check_withdrawal_periods")!;
+    const { ctx } = toolDb(
+      [
+        [
+          {
+            id: "wp-1",
+            patientId: PATIENT_ID,
+            patientName: "Berta",
+            patientSpecies: "bovine",
+            medicationName: "Draxxin 100 mg/ml inj.",
+            batchNumber: "B123",
+            targetAnimalType: "bovine",
+            meatWithdrawalDays: 0, // Unsafe 0-day entry
+            milkWithdrawalDays: 0,
+            administeredAt: new Date("2026-09-01"),
+            safeUntil: new Date("2026-09-01"),
+            notes: "Routine",
+          },
+        ],
+      ],
+      {},
+    );
+
+    const results = (await tool.execute(
+      { patientId: PATIENT_ID, activeOnly: false },
+      ctx,
+    )) as Array<{
+      id: string;
+      hasStatutoryViolation: boolean;
+      statutoryWarnings: string[];
+      safeUntilDate: string | null;
+    }>;
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.hasStatutoryViolation).toBe(true);
+    expect(results[0]?.statutoryWarnings.length).toBeGreaterThan(0);
+    expect(results[0]?.statutoryWarnings[0]).toContain("Draxxin");
+    // Effective safe until date clamped to at least 22 days from Sept 1 (Sept 23)
+    expect(results[0]?.safeUntilDate).toBe("2026-09-23");
   });
 
   it("audit_missed_charges validates schema", () => {

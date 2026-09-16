@@ -44,6 +44,13 @@ export function AgentMessageBubble({
               : "bg-muted text-foreground border border-border/40 rounded-tl-xs",
         )}
       >
+        {!isUser && !message.isError && (
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+              {t("agent.aiGeneratedBadge", "Vygenerované AI Asistentom")}
+            </span>
+          </div>
+        )}
         <div className="whitespace-pre-wrap">{message.content}</div>
 
         {!isUser && (

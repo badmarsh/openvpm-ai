@@ -21,6 +21,7 @@ import {
   extCrmSegments,
   extCrmSegmentMemberships,
   extContentPillars,
+  extContentBriefs,
   extChannelAccounts,
   extMarketingOperativeScripts,
   extMarketingMessageTemplates,
@@ -1382,6 +1383,142 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       },
     ]);
     console.log("✓ Created 3 ext_channel_accounts");
+  }
+
+  // -------------------------------------------------------------------------
+  // 11g. Content Calendar Briefs & KVL Approval Queue (ext_content_briefs)
+  // -------------------------------------------------------------------------
+  const existingBriefs = await db.query.extContentBriefs.findMany({
+    where: eq(extContentBriefs.practiceId, practiceId),
+  });
+
+  if (existingBriefs.length === 0) {
+    console.log("Seeding content calendar briefs...");
+    const pillars = await db.query.extContentPillars.findMany({
+      where: eq(extContentPillars.practiceId, practiceId),
+    });
+    const pillarMap = new Map(pillars.map((p) => [p.pillarKey, p.id]));
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const tomorrowStr = new Date(now.getTime() + 86400_000).toISOString().slice(0, 10);
+    const inTwoDaysStr = new Date(now.getTime() + 2 * 86400_000).toISOString().slice(0, 10);
+    const inFourDaysStr = new Date(now.getTime() + 4 * 86400_000).toISOString().slice(0, 10);
+
+    await db.insert(extContentBriefs).values([
+      {
+        practiceId,
+        pillarId: pillarMap.get("parasite_seasonal") || null,
+        briefText: "Sezóna kliešťov vrcholí! Pripravili sme pre vás prehľad najúčinnejších antiparazitárnych prípravkov na mieru pre vášho psa alebo mačku. Chráňte svojich miláčikov včas.",
+        targetChannels: ["google_business", "facebook", "instagram"],
+        targetAudience: "Majitelia psov a mačiek v endemických oblastiach",
+        clinicalClaims: [
+          {
+            claim: "Odporúčané dávkovanie systémových antiparazitík je každých 12 týždňov pre tablety alebo mesačne pre topické roztoky.",
+            kind: "dosage",
+            sourceRef: "SPC lieku & KVL SR smernica",
+          },
+          {
+            claim: "Včasná a kontinuálna prevencia znižuje riziko prenosu babeziózy a kliešťovej encefalitídy o viac ako 95%.",
+            kind: "prevention_efficacy",
+            sourceRef: "ESCCAP klinické odporúčania",
+          },
+        ],
+        status: "review",
+        generatedBy: "autopilot_content_planner",
+        generatedAt: new Date(Date.now() - 3600_000),
+        confidence: 94,
+        source: {
+          scheduledDate: tomorrowStr,
+          seasonHint: "spring_parasites",
+        },
+      },
+      {
+        practiceId,
+        pillarId: pillarMap.get("dental_health") || null,
+        briefText: "Až 80% psov nad 3 roky trpí ochorením ďasien. Neliečený zápal a zubný kameň môžu viesť k závažnému poškodeniu srdcových chlopní a obličiek. Objednajte sa na kontrolu chrupu.",
+        targetChannels: ["facebook", "instagram"],
+        targetAudience: "Chovatelia dospelých psov a mačiek",
+        clinicalClaims: [
+          {
+            claim: "Neliečený zubný kameň a parodontitída spôsobujú bakteriálnu translokáciu a zvyšujú riziko endokarditídy a chronického zlyhávania obličiek.",
+            kind: "diagnosis",
+            sourceRef: "Veterinárna stomatologická asociácia",
+            verdict: "approved",
+            reviewerNote: "Klinicky presné a v súlade s etickým kódexom.",
+          },
+        ],
+        status: "approved",
+        generatedBy: "autopilot_content_planner",
+        generatedAt: new Date(Date.now() - 24 * 3600_000),
+        confidence: 96,
+        reviewedBy: userId,
+        reviewedAt: new Date(Date.now() - 12 * 3600_000),
+        reviewNote: "Schválené MVDr. Martin Sýkora v súlade so Zákonom 39/2007 Z. z. a KVL SR.",
+        source: {
+          scheduledDate: todayStr,
+        },
+      },
+      {
+        practiceId,
+        pillarId: pillarMap.get("preventive_care") || null,
+        briefText: "Nezabudnite na pravidelnú ročnú preventívnu prehliadku a vakcináciu. Komplexná kontrola zdravotného stavu pomáha zachytiť skryté ochorenia v počiatočných štádiách.",
+        targetChannels: ["google_business", "facebook"],
+        targetAudience: "Všetci registrovaní klienti kliniky",
+        clinicalClaims: [],
+        status: "pending",
+        generatedBy: "autopilot_content_planner",
+        generatedAt: new Date(Date.now() - 48 * 3600_000),
+        confidence: 91,
+        source: {
+          scheduledDate: inTwoDaysStr,
+        },
+      },
+      {
+        practiceId,
+        pillarId: pillarMap.get("senior_wellness") || null,
+        briefText: "Geriatrický screening: Špeciálna preventívna starostlivosť pre zvieracích seniorov. Zahŕňa vyšetrenie krvi, moču, krvného tlaku a posúdenie mobility.",
+        targetChannels: ["facebook", "instagram"],
+        targetAudience: "Majitelia psov nad 7 rokov a mačiek nad 8 rokov",
+        clinicalClaims: [
+          {
+            claim: "Pravidelný screening u seniorov od 5 rokov veku odhalí subklinické zlyhávanie obličiek.",
+            kind: "diagnosis",
+            sourceRef: "Iris staging guidelines",
+            verdict: "rejected",
+            reviewerNote: "Vekové vymedzenie je nejednoznačné, upresniť plemennú predispozíciu.",
+          },
+        ],
+        status: "rejected",
+        generatedBy: "autopilot_content_planner",
+        generatedAt: new Date(Date.now() - 72 * 3600_000),
+        confidence: 88,
+        reviewedBy: userId,
+        reviewedAt: new Date(Date.now() - 36 * 3600_000),
+        reviewNote: "Potrebné upraviť vekovú hranicu pre obrie plemená a doplniť SDMA biomarker.",
+        source: {
+          scheduledDate: inFourDaysStr,
+        },
+      },
+      {
+        practiceId,
+        pillarId: pillarMap.get("clinic_stories") || null,
+        briefText: "Úspešný príbeh z našej chirurgie: 4-ročná sučka Luna po zložitej ortopedickej operácii kolena opäť radostne behá. Ďakujeme majiteľom za vzornú pooperačnú rehabilitáciu.",
+        targetChannels: ["facebook", "instagram"],
+        targetAudience: "Komunita a priaznivci kliniky",
+        clinicalClaims: [],
+        status: "approved",
+        generatedBy: "staff_dr_sykora",
+        generatedAt: new Date(Date.now() - 96 * 3600_000),
+        confidence: 99,
+        reviewedBy: userId,
+        reviewedAt: new Date(Date.now() - 80 * 3600_000),
+        reviewNote: "GDPR súhlas overený na recepcii, príbeh schválený.",
+        source: {
+          scheduledDate: todayStr,
+        },
+      },
+    ] as any);
+    console.log("✓ Created 5 ext_content_briefs");
   }
 
   // -------------------------------------------------------------------------

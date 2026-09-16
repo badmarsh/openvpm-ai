@@ -321,9 +321,11 @@ export const extMarketingStaffTasks = pgTable("ext_marketing_staff_tasks", {
   detail: text("detail").notNull().default(""),
   status: text("status").notNull().default("open"),
   clientId: uuid("client_id").references(() => clients.id),
+  dueAt: timestamp("due_at", { withTimezone: true }),
 }, (t) => ({
   practiceIdx: index("ext_mkt_staff_tasks_practice_idx").on(t.practiceId, t.deletedAt),
   clientIdx: index("ext_mkt_staff_tasks_client_idx").on(t.clientId),
+  dueAtIdx: index("ext_mkt_staff_tasks_due_at_idx").on(t.dueAt),
 }));
 
 export const extMarketingStaffTasksRelations = relations(extMarketingStaffTasks, ({ one }) => ({

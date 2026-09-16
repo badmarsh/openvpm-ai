@@ -2,7 +2,6 @@ import type { ElementType } from "react";
 import {
   ReceiptText,
   Megaphone,
-  Tv,
   Image as ImageIcon,
   Mic,
   FileText,
@@ -88,14 +87,6 @@ export const customNavItems: CustomNavItem[] = [
     i18nKey: 'nav.marketingWebsite',
     icon: Globe,
     roles: ['admin', 'veterinarian'],
-    section: 'marketing',
-  },
-  {
-    href: '/marketing/tv',
-    label: 'Čakáreň TV',
-    i18nKey: 'nav.waitingRoomTv',
-    icon: Tv,
-    roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'marketing',
   },
   {

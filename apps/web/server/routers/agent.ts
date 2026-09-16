@@ -102,6 +102,11 @@ export const agentRouter = createRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await assertActivePractice(ctx);
+      if (input.allowWrites) {
+        console.info(
+          `[audit:agent_writes_enabled] Practice: ${ctx.practiceId}, User: ${ctx.user.id} (${ctx.session.user.role}), Instruction length: ${input.instruction.length}`,
+        );
+      }
       try {
         return await runAgent({
           instruction: input.instruction,

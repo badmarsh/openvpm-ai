@@ -99,9 +99,9 @@ Modul na adrese `/marketing/consents` slúži ako komunikačný a právny štand
 
 ---
 
-## 6. Televízia v čakárni (`/marketing/tv` a `/tv`)
+## 6. Televízia v čakárni (`/waiting-room` a `/tv`)
 
-Zobrazujte rad čakajúcich, edukačné slajdy z Marketingového štúdia a novinky kliniky na Smart TV v čakárni na adrese `/tv`.
+Zobrazujte rad čakajúcich, edukačné slajdy z Marketingového štúdia a novinky kliniky na Smart TV v čakárni na adrese `/tv`. Správa slajdov je integrovaná priamo v `/waiting-room`.
 
 ---
 

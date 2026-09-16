@@ -2415,7 +2415,7 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
   "/waiting-room": [
     { name: "Rozvrh", href: "/schedule" },
     { name: "Klinická tabuľa", href: "/whiteboard" },
-    { name: "TV Displej", href: "/marketing/tv" },
+    { name: "Klinické záznamy", href: "/records" },
     { name: "Pacienti", href: "/patients" },
   ],
   "/whiteboard": [
@@ -2479,13 +2479,13 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
   "/marketing/handouts": [
     { name: "Brand Kit", href: "/marketing/brand-kit" },
     { name: "Médiá", href: "/marketing/media" },
-    { name: "TV Displej", href: "/marketing/tv" },
+    { name: "Čakáreň TV", href: "/waiting-room" },
     { name: "Marketing", href: "/marketing" },
   ],
   "/marketing/brand-kit": [
     { name: "Letáky", href: "/marketing/handouts" },
     { name: "Web ambulancie", href: "/marketing/website" },
-    { name: "TV Displej", href: "/marketing/tv" },
+    { name: "Čakáreň TV", href: "/waiting-room" },
     { name: "Marketing", href: "/marketing" },
   ],
   "/marketing/reviews": [
@@ -2525,7 +2525,7 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
   ],
   "/marketing/website": [
     { name: "Brand Kit", href: "/marketing/brand-kit" },
-    { name: "TV Displej", href: "/marketing/tv" },
+    { name: "Čakáreň TV", href: "/waiting-room" },
     { name: "Marketing", href: "/marketing" },
   ],
   "/marketing/tv": [

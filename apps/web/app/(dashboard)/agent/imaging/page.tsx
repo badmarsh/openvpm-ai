@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -137,7 +137,7 @@ const PRESETS_IMAGING: ImagingPreset[] = [
   },
 ];
 
-export default function ImagingPage() {
+function ImagingContent() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
   const searchParams = useSearchParams();
@@ -1635,5 +1635,25 @@ export default function ImagingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ImagingPage() {
+  const { t } = useI18n();
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-96 items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground">
+              {t("imaging.page.loading", "Načítavam diagnostiku snímkov...")}
+            </span>
+          </div>
+        </div>
+      }
+    >
+      <ImagingContent />
+    </Suspense>
   );
 }

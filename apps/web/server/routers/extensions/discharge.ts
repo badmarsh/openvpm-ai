@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { generateText } from "ai";
@@ -150,6 +151,7 @@ export const dischargeRouter = createRouter({
           model,
           system: systemPrompt,
           prompt: userPrompt,
+          temperature: 0,
         });
 
         await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
@@ -836,7 +838,7 @@ Vykonaná starostlivosť: ${input.treatment || "štandardná terapia"}
 
 Vráť JSON: { "title": string, "body": string }`;
 
-        const res = await generateText({ model, prompt });
+        const res = await generateText({ model, prompt, temperature: 0 });
         const raw = res.text.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
         const parsed = JSON.parse(raw);
         if (parsed.title) title = parsed.title;
@@ -861,6 +863,21 @@ Vráť JSON: { "title": string, "body": string }`;
           validatorFindings: validationReport.findings,
         })
         .returning();
+
+      if (item) {
+        const draftHash = createHash("sha256").update(`${title}\n${body}`).digest("hex");
+        await appendAiAuditEvent(ctx.db, {
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorName: ctx.user.name || "Veterinarian",
+          actorRole: ctx.user.role,
+          entityType: "marketing_content",
+          entityId: item.id,
+          actionType: "create_marketing_post_from_case",
+          originalDraftHash: draftHash,
+          confirmedContentHash: draftHash,
+        });
+      }
 
       return {
         item,

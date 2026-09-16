@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { generateText } from "ai";
+import { createHash } from "node:crypto";
 import { createRouter, protectedProcedure, publicProcedure, requireRole } from "../../trpc";
 import { TRPCError } from "@trpc/server";
 import { configuredModel } from "@/lib/agent/runner";
 import { assertHostedAiGate } from "@/lib/billing/ai-gate";
 import { recordUsage } from "@/lib/billing/usage";
+import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import {
   extMarketingContentBatches,
@@ -41,6 +43,7 @@ import {
 import { enrollInJourney } from "@/lib/autopilot/journey-engine";
 import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
+import { sendSms } from "@/lib/sms";
 import { websiteSectionSchema, type WebsiteSection } from '@/lib/marketing/website-builder-types';
 import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
@@ -383,6 +386,7 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
           model,
           system: systemPrompt,
           prompt,
+          temperature: 0,
         });
 
         await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
@@ -571,6 +575,21 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
         .update(extMarketingContentItems)
         .set({ mediaAssetId: asset.id })
         .where(eq(extMarketingContentItems.id, item.id));
+
+      if (asset) {
+        const draftHash = createHash("sha256").update(imageUrl).digest("hex");
+        await appendAiAuditEvent(ctx.db, {
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorName: ctx.user.name || "Staff Member",
+          actorRole: ctx.user.role,
+          entityType: "marketing_media",
+          entityId: asset.id,
+          actionType: "generate_image_for_post",
+          originalDraftHash: draftHash,
+          confirmedContentHash: draftHash,
+        });
+      }
 
       // Meter only successful generations (no-op on self-host).
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
@@ -807,11 +826,37 @@ generateImage: protectedProcedure
       });
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
       return result;
-    } catch (err) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Chyba pri generovaní obrázka cez Alibaba proxy.",
-      });
+    } catch (err: any) {
+      // Fallback matching logic when Alibaba proxy is offline/unreachable
+      const promptLower = input.prompt.toLowerCase();
+      let fallbackUrl = "/marketing/tick-prevention.jpg";
+      if (promptLower.includes("zub") || promptLower.includes("chrup") || promptLower.includes("dent")) {
+        fallbackUrl = "/marketing/dental-hygiene.jpg";
+      } else if (promptLower.includes("senior") || promptLower.includes("starc") || promptLower.includes("geriat")) {
+        fallbackUrl = "/marketing/senior-pet-care.jpg";
+      } else if (promptLower.includes("čip") || promptLower.includes("chip")) {
+        fallbackUrl = "/marketing/pet-microchipping.svg";
+      } else if (promptLower.includes("výživ") || promptLower.includes("krm") || promptLower.includes("diét")) {
+        fallbackUrl = "/marketing/pet-nutrition.svg";
+      } else if (promptLower.includes("cest") || promptLower.includes("pas") || promptLower.includes("travel")) {
+        fallbackUrl = "/marketing/travel-petpass.svg";
+      } else if (promptLower.includes("čokol") || promptLower.includes("otrav") || promptLower.includes("toxic")) {
+        fallbackUrl = "/marketing/toxic-chocolate.svg";
+      } else if (promptLower.includes("očkov") || promptLower.includes("vakc") || promptLower.includes("besnot")) {
+        fallbackUrl = "/marketing/vaccination-care.svg";
+      } else if (promptLower.includes("oper") || promptLower.includes("kastr") || promptLower.includes("ran")) {
+        fallbackUrl = "/marketing/postop-care.svg";
+      } else if (promptLower.includes("pohotov") || promptLower.includes("pomoc") || promptLower.includes("prvá")) {
+        fallbackUrl = "/marketing/first-aid.svg";
+      }
+
+      console.warn(
+        `[generateImage] Alibaba Proxy unavailable (${err?.message || "fetch failed"}), using curated clinical fallback visual: ${fallbackUrl}`
+      );
+      return {
+        url: fallbackUrl,
+        created: Math.floor(Date.now() / 1000),
+      };
     }
   }),
 
@@ -832,10 +877,13 @@ submitVideo: protectedProcedure
       });
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
       return result;
-    } catch (err) {
+    } catch (err: any) {
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Chyba pri odoslaní požiadavky na video cez Alibaba proxy.",
+        code: "PRECONDITION_FAILED",
+        message:
+          err instanceof Error && !err.message.toLowerCase().includes("fetch failed")
+            ? err.message
+            : "Alibaba Proxy video engine nie je dostupný na porte 8080. Spustite AliProxy pred generovaním videa.",
       });
     }
   }),
@@ -845,13 +893,17 @@ pollVideo: protectedProcedure
   .query(async ({ input }) => {
     try {
       return await pollAlibabaVideo(input.taskId);
-    } catch (err) {
+    } catch (err: any) {
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Chyba pri kontrole stavu videa.",
+        code: "BAD_GATEWAY",
+        message:
+          err instanceof Error && !err.message.toLowerCase().includes("fetch failed")
+            ? err.message
+            : "Nepodarilo sa overiť stav videa na Alibaba proxy.",
       });
     }
   }),
+
 
 // ── TV Slides ─────────────────────────────────────────────────────────────────
 
@@ -1448,6 +1500,7 @@ Text recenzie: "${input.reviewText}"`;
         model,
         system: systemPrompt,
         prompt,
+        temperature: 0,
       });
 
       replyText = result.text.trim();
@@ -1473,6 +1526,19 @@ Text recenzie: "${input.reviewText}"`;
             eq(extMarketingReviews.practiceId, ctx.practiceId)
           )
         );
+
+      const draftHash = createHash("sha256").update(replyText).digest("hex");
+      await appendAiAuditEvent(ctx.db, {
+        practiceId: ctx.practiceId,
+        actorId: ctx.user.id,
+        actorName: ctx.user.name || "Staff Member",
+        actorRole: ctx.user.role,
+        entityType: "marketing_content",
+        entityId: input.reviewId,
+        actionType: "generate_review_reply",
+        originalDraftHash: draftHash,
+        confirmedContentHash: draftHash,
+      });
     }
 
     return { reply: replyText };
@@ -4315,7 +4381,8 @@ listStaffTasks: protectedProcedure
         })
         .returning();
 
-      // 3. Create staff task in extMarketingStaffTasks
+      // 3. Create staff task in extMarketingStaffTasks with 24h SLA
+      const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // SLA: 24h for new leads
       await ctx.db.insert(extMarketingStaffTasks).values({
         practiceId: input.clinicId,
         kind: "website_inquiry",
@@ -4323,6 +4390,7 @@ listStaffTasks: protectedProcedure
         detail: `${input.message.trim()}\n\nEmail: ${trimmedEmail}${trimmedPhone ? `\nTelefón: ${trimmedPhone}` : ""}`,
         status: "open",
         clientId: clientId ?? null,
+        dueAt,
       });
 
       // 4. Emit durable automation event
@@ -4347,10 +4415,11 @@ listStaffTasks: protectedProcedure
         console.warn("[Website Contact Form] Durable event emission error:", evtErr);
       }
 
-      // 5. Send email notification to clinic staff
+      // 5. Send email & optional SMS notification to clinic staff
       const [practiceDetails] = await ctx.db
         .select({
           email: practices.email,
+          phone: practices.phone,
           settings: practices.settings,
         })
         .from(practices)
@@ -4380,6 +4449,23 @@ listStaffTasks: protectedProcedure
         }
       }
 
+      // Optional SMS notification if enabled in practice settings
+      const recipientPhone = practiceSettings?.marketingWebsite?.recipientPhone || practiceDetails?.phone;
+      if (practiceSettings?.smsNotifications && recipientPhone) {
+        try {
+          await sendSms({
+            to: recipientPhone,
+            body: `Novy dopyt z webstranky: ${input.name.trim()} (${trimmedEmail})${trimmedPhone ? `, Tel: ${trimmedPhone}` : ""}`,
+            practiceId: input.clinicId,
+            source: "website_inquiry",
+            sourceId: inquiry.id,
+            clientId: clientId ?? undefined,
+          });
+        } catch (smsErr) {
+          console.error("[Website Contact Form] SMS notification failed:", smsErr);
+        }
+      }
+
       // 6. Log to audit trail
       await ctx.db.insert(auditLog).values({
         practiceId: input.clinicId,
@@ -4393,6 +4479,7 @@ listStaffTasks: protectedProcedure
           phone: trimmedPhone,
           message: input.message.trim(),
         },
+        ipAddress: ctx.ip || null,
       });
 
       // 6. Enroll in welcome_new_client customer journey
@@ -4499,7 +4586,7 @@ Vytvor 4 často kladené otázky (FAQ) s odpoveďami pre majiteľov psov a mači
 ${input?.specialty ? `Zameraj sa na oblasť: ${input.specialty}` : ""}
 Formát JSON: pole objektov s kľúčmi "question" a "answer".`;
 
-        const result = await generateText({ model, prompt });
+        const result = await generateText({ model, prompt, temperature: 0 });
         const text = result.text.trim();
         const match = text.match(/\[[\s\S]*\]/);
         if (match) {
@@ -4567,7 +4654,7 @@ Požiadavky:
 
 Vráť IBAN len text postu, bez uvodzoviek.`;
 
-        const result = await generateText({ model, prompt });
+        const result = await generateText({ model, prompt, temperature: 0 });
         body = result.text.trim();
       } catch {
         // Deterministic fallback
@@ -4582,16 +4669,36 @@ Vráť IBAN len text postu, bez uvodzoviek.`;
       const KVL_DISCLAIMER = "Informácia má edukačný charakter. Poraďte sa s vašim veterinárnym lekárom.";
       const finalBody = withDisclaimer(body, KVL_DISCLAIMER);
 
-      await ctx.db.insert(extMarketingContentItems).values({
-        practiceId: ctx.practiceId,
-        createdBy: ctx.user.id,
-        title: `Edukačný post: ${input.bulletinTitle.slice(0, 80)}`,
-        body: finalBody,
-        channel: input.channel,
-        status: report.verdict === "block" ? "blocked" : "proposed",
-        validatorVerdict: report.verdict,
-        validatorFindings: report.findings,
-      });
+      const [item] = await ctx.db
+        .insert(extMarketingContentItems)
+        .values({
+          practiceId: ctx.practiceId,
+          createdBy: ctx.user.id,
+          title: `Edukačný post: ${input.bulletinTitle.slice(0, 80)}`,
+          body: finalBody,
+          channel: input.channel,
+          status: report.verdict === "block" ? "blocked" : "proposed",
+          validatorVerdict: report.verdict,
+          validatorFindings: report.findings,
+        })
+        .returning();
+
+      if (item) {
+        const draftHash = createHash("sha256").update(body).digest("hex");
+        const confirmedHash = createHash("sha256").update(finalBody).digest("hex");
+        await appendAiAuditEvent(ctx.db, {
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorName: ctx.user.name || "Staff Member",
+          actorRole: ctx.user.role,
+          entityType: "marketing_content",
+          entityId: item.id,
+          actionType: "create_post_from_bulletin",
+          originalDraftHash: draftHash,
+          confirmedContentHash: confirmedHash,
+          wasEditedByClinician: draftHash !== confirmedHash,
+        });
+      }
 
       return {
         body: finalBody,

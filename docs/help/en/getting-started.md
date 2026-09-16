@@ -89,7 +89,7 @@ The sidebar navigation has been consolidated into ~32 streamlined items grouped 
 - **Front Desk & Flow:** Schedule (`/schedule`), Waiting Room (`/waiting-room`), Whiteboard (`/whiteboard`), Clients (`/clients`), Messages & Inbox (`/inbox`).
 - **Pharmacy & Inventory:** Stock & Supplies (`/inventory`), Controlled Substances (`/controlled-substances`).
 - **Billing & Compliance:** Invoicing (`/billing`), e-Kasa Receipts (`/billing/ekasa`), Statutory Registers (`/statutory`), Reports (`/reports`), Whiteboard (`/whiteboard`).
-- **Campaigns & SMS:** Marketing Studio (`/marketing` with 4 tabs), Reviews (`/marketing/reviews`), Handouts (`/marketing/handouts`), Messages & SMS (`/marketing/messages`), Website Builder (`/marketing/website`), Waiting Room TV (`/marketing/tv`), Automations (`/marketing/automations`), Reception Scripts (`/marketing/consents`), Media Library (`/marketing/media`).
+- **Campaigns & SMS:** Marketing Studio (`/marketing` with 4 tabs), Reviews (`/marketing/reviews`), Handouts (`/marketing/handouts`), Messages & SMS (`/marketing/messages`), Website Builder (`/marketing/website`), Automations (`/marketing/automations`), Reception Scripts (`/marketing/consents`), Media Library (`/marketing/media`).
 - **Management & Admin:** Platform Admin (`/admin`), Clinic Settings & Brand Kit (`/settings`), AI Agent (`/agent`), Discharge Summaries (`/agent/discharge`).
 
 ---

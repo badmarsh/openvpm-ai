@@ -132,9 +132,10 @@ export async function POST(req: Request) {
             db: tx,
             practiceId: auth.ctx.practiceId,
             // Human actor when supplied; otherwise identify the actor by key
-            // and leave userRole undefined so role-gated tools fail closed.
+            // and assign the dedicated minimal "service_agent" role so staff read
+            // tools succeed while clinician-gated write tools fail closed.
             userId: actor ? actor.id : `apikey:${auth.ctx.apiKeyId}`,
-            ...(actor ? { userRole: actor.role } : {}),
+            userRole: actor ? actor.role : "service_agent",
             postCommitEffect: (effect) => postCommitEffects.push(effect),
           },
         });

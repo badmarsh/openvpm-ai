@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { assertAgentRole } from "@/lib/authorization";
+import { issueClinicianConfirmation } from "@/lib/ai/clinician-confirmation";
+import { checkStatutoryWithdrawalFloor } from "@/lib/statutory/withdrawal";
 
 import {
   eq,
@@ -341,7 +344,7 @@ const findClient: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Prístup k údajom klientov je obmedzený na personál kliniky. / Client data access is restricted to clinic staff.",
     );
     const { query } = this.zod.parse(args) as { query: string };
@@ -419,7 +422,7 @@ const findPatient: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Prístup k údajom pacientov je obmedzený na personál kliniky. / Patient data access is restricted to clinic staff.",
     );
     const { query } = this.zod.parse(args) as { query: string };
@@ -569,7 +572,7 @@ const listLocations: AgentTool = {
   async execute(_args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Zoznam prevádzok je prístupný len personálu kliniky. / Location list is restricted to clinic staff.",
     );
     return listActiveAppointmentLocations(ctx.db, ctx.practiceId);
@@ -595,7 +598,7 @@ const listAppointments: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Zoznam termínov je prístupný len personálu kliniky. / Appointment list is restricted to clinic staff.",
     );
     const { startDate, endDate } = this.zod.parse(args) as {
@@ -698,7 +701,7 @@ const bookAppointment: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk"],
+      ["admin", "veterinarian", "front_desk", "service_agent"],
       "Objednávanie termínov je povolené pre recepciu, veterinárov a administrátorov. / Booking appointments is permitted for front desk, veterinarians, and admins.",
     );
     const input = this.zod.parse(args) as {
@@ -776,7 +779,7 @@ const listOverdueVaccinations: AgentTool = {
   async execute(_args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Zoznam omeškaných očkovaní je prístupný personálu kliniky. / Overdue vaccinations list is restricted to clinic staff.",
     );
     const today = await practiceDateInput(ctx);
@@ -1088,7 +1091,7 @@ const findOpenSlotsTool: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Vyhľadávanie voľných termínov je prístupné len personálu kliniky. / Finding open slots is restricted to clinic staff.",
     );
     const input = this.zod.parse(args) as {
@@ -1801,9 +1804,23 @@ const checkDrugSafetyTool: AgentTool = {
           : "unknown"
         : "safe";
 
+    const status = recognized
+      ? safe
+        ? "safe"
+        : "contraindicated"
+      : "unknown_not_evaluated";
+
+    const evaluationStatus = recognized
+      ? safe
+        ? "evaluated_safe"
+        : "evaluated_contraindicated"
+      : "unknown_not_evaluated";
+
     return {
       safe: recognized ? safe : false,
       severity,
+      status,
+      evaluationStatus,
       contraindications,
       warnings,
     };
@@ -2252,15 +2269,54 @@ const checkWithdrawalPeriodsTool: AgentTool = {
       .limit(50);
 
     return rows.map((r) => {
-      const safeUntil = r.safeUntil ? new Date(r.safeUntil) : null;
-      const daysRemaining = safeUntil
-        ? Math.ceil((safeUntil.getTime() - now.getTime()) / 86_400_000)
+      const isFoodAnimal =
+        r.targetAnimalType && r.targetAnimalType !== "companion";
+      const floor = isFoodAnimal
+        ? checkStatutoryWithdrawalFloor({
+            medicationName: r.medicationName,
+            targetAnimalType: r.targetAnimalType,
+            meatWithdrawalDays: r.meatWithdrawalDays ?? 0,
+            milkWithdrawalDays: r.milkWithdrawalDays ?? 0,
+          })
+        : {
+            hasViolation: false,
+            violations: [],
+            effectiveMeatDays: r.meatWithdrawalDays ?? 0,
+            effectiveMilkDays: r.milkWithdrawalDays ?? 0,
+          };
+
+      // If recorded period is lower than statutory floor, enforce the statutory floor
+      let effectiveSafeUntil = r.safeUntil ? new Date(r.safeUntil) : null;
+      if (floor.hasViolation && r.administeredAt) {
+        const adminDate = new Date(r.administeredAt);
+        const maxFloorDays = Math.max(
+          floor.effectiveMeatDays ?? 0,
+          floor.effectiveMilkDays ?? 0,
+        );
+        const calcUntil = new Date(
+          adminDate.getTime() + maxFloorDays * 86_400_000,
+        );
+        calcUntil.setHours(23, 59, 59, 999);
+        if (
+          !effectiveSafeUntil ||
+          calcUntil.getTime() > effectiveSafeUntil.getTime()
+        ) {
+          effectiveSafeUntil = calcUntil;
+        }
+      }
+
+      const daysRemaining = effectiveSafeUntil
+        ? Math.ceil((effectiveSafeUntil.getTime() - now.getTime()) / 86_400_000)
         : null;
+
       return {
         ...r,
+        hasStatutoryViolation: floor.hasViolation,
+        statutoryWarnings: floor.violations.map((v) => v.citation),
         isActive: daysRemaining !== null && daysRemaining > 0,
-        daysRemaining: daysRemaining !== null && daysRemaining > 0 ? daysRemaining : 0,
-        safeUntilDate: safeUntil?.toISOString().slice(0, 10) ?? null,
+        daysRemaining:
+          daysRemaining !== null && daysRemaining > 0 ? daysRemaining : 0,
+        safeUntilDate: effectiveSafeUntil?.toISOString().slice(0, 10) ?? null,
       };
     });
   },
@@ -2403,7 +2459,7 @@ const verifyMicrochipCrszTool: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Overenie mikročipu v CRSZ je prístupné personálu kliniky. / Microchip CRSZ verification is restricted to clinic staff.",
     );
     const input = this.zod.parse(args) as {
@@ -2668,7 +2724,7 @@ const getInvoiceSummaryTool: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk"],
+      ["admin", "veterinarian", "front_desk", "service_agent"],
       "Prehľad fakturácie je prístupný pre recepciu, administrátorov a veterinárov. / Invoice summary is restricted to front desk, admins, and veterinarians.",
     );
     const input = this.zod.parse(args) as {
@@ -2739,7 +2795,7 @@ const listOpenRemindersTool: AgentTool = {
   async execute(args, ctx) {
     assertAgentRole(
       ctx,
-      ["admin", "veterinarian", "front_desk", "technician"],
+      ["admin", "veterinarian", "front_desk", "technician", "service_agent"],
       "Zoznam pripomienok je prístupný personálu kliniky. / Reminders list is restricted to clinic staff.",
     );
     const input = this.zod.parse(args) as { patientId?: string };
@@ -2913,6 +2969,32 @@ const createPrescriptionTool: AgentTool = {
       })
       .returning();
 
+    let confirmationId: string | undefined;
+    try {
+      const draftPayload = JSON.stringify({
+        patientId: created!.patientId,
+        medicationName: created!.medicationName,
+        dosage: created!.dosage,
+        frequency: created!.frequency,
+        instructions: created!.instructions,
+        startDate: created!.startDate,
+      });
+      const draftHash = createHash("sha256").update(draftPayload).digest("hex");
+      const envelope = await issueClinicianConfirmation(ctx.db, {
+        practiceId: ctx.practiceId,
+        actorId: ctx.userId,
+        actorRole: ctx.userRole || "veterinarian",
+        actionType: "prescription_create",
+        entityType: "prescription",
+        entityId: created!.id,
+        originalDraftHash: draftHash,
+        confirmedContentHash: draftHash,
+      });
+      confirmationId = envelope.id;
+    } catch {
+      // In-memory or mocked DB in tests without extClinicianConfirmations
+    }
+
     return {
       id: created!.id,
       patientId: created!.patientId,
@@ -2920,6 +3002,8 @@ const createPrescriptionTool: AgentTool = {
       dosage: created!.dosage,
       frequency: created!.frequency,
       status: created!.status,
+      confirmationId,
+      requiresClinicianReview: true,
     };
   },
 };

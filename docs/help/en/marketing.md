@@ -99,9 +99,9 @@ The module at `/marketing/consents` provides communication and legal protocols f
 
 ---
 
-## 6. Waiting Room TV (`/marketing/tv` and `/tv`)
+## 6. Waiting Room TV (`/waiting-room` and `/tv`)
 
-Display live appointment queues, Marketing Studio slides, and clinic announcements on any screen in your waiting room at `/tv`.
+Display live appointment queues, Marketing Studio slides, and clinic announcements on any screen in your waiting room at `/tv`. Slide management is integrated directly in `/waiting-room`.
 
 ---
 

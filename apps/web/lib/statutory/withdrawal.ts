@@ -215,6 +215,148 @@ export function calculateWithdrawalSafeUntil(
   };
 }
 
+export interface StatutoryFloorViolation {
+  medicationName: string;
+  field: "meat" | "milk" | "eggs";
+  recordedDays: number;
+  statutoryMinimumDays: number;
+  citation: string;
+}
+
+export interface StatutoryFloorCheckResult {
+  hasViolation: boolean;
+  violations: StatutoryFloorViolation[];
+  statutoryDrug?: VeterinaryDrugCatalogItem;
+  effectiveMeatDays: number;
+  effectiveMilkDays: number;
+  effectiveEggsDays: number;
+}
+
+/**
+ * Validates entered or stored withdrawal days against official statutory minimums
+ * under Slovak Law 39/2007 Z. z. (§ 22), EU Regulation 2019/6 (Article 115 cascade rules),
+ * and the official ŠÚKL / ŠVPS veterinary drug catalog.
+ *
+ * Prevents dangerous false-negative clearances (e.g. entering 0 days for food-animal antibiotics).
+ */
+export function checkStatutoryWithdrawalFloor(params: {
+  medicationName: string;
+  targetAnimalType?: string | null;
+  meatWithdrawalDays: number;
+  milkWithdrawalDays: number;
+  eggWithdrawalDays?: number;
+  isCascade?: boolean;
+}): StatutoryFloorCheckResult {
+  if (
+    params.targetAnimalType &&
+    ["companion", "canine", "feline", "pet"].includes(params.targetAnimalType.toLowerCase())
+  ) {
+    return {
+      hasViolation: false,
+      violations: [],
+      statutoryDrug: undefined,
+      effectiveMeatDays: params.meatWithdrawalDays,
+      effectiveMilkDays: params.milkWithdrawalDays,
+      effectiveEggsDays: params.eggWithdrawalDays ?? 0,
+    };
+  }
+
+  const normName = params.medicationName.trim().toLowerCase();
+  const matchedCatalogDrug = COMMON_VETERINARY_DRUGS.find((d) => {
+    const dName = d.name.toLowerCase();
+    const dSub = d.activeSubstance.toLowerCase();
+    return (
+      normName.includes(d.id.toLowerCase()) ||
+      normName.includes(dName.split(" ")[0]!.toLowerCase()) ||
+      normName.includes(dSub.split(" ")[0]!.toLowerCase())
+    );
+  });
+
+  const violations: StatutoryFloorViolation[] = [];
+  const isCascade = Boolean(params.isCascade);
+
+  // 1. Statutory Cascade Minimums (EU Regulation 2019/6 Art. 115 / Zákon 39/2007 Z. z.)
+  // When cascade is applied: meat min 28 days, milk min 7 days, eggs min 7 days.
+  let minMeat = isCascade ? 28 : 0;
+  let minMilk = isCascade ? 7 : 0;
+  let minEggs = isCascade ? 7 : 0;
+
+  // 2. SPC Catalog Minimums for known registered veterinary products
+  if (matchedCatalogDrug) {
+    if (matchedCatalogDrug.meatWithdrawalDays > minMeat) {
+      minMeat = matchedCatalogDrug.meatWithdrawalDays;
+    }
+    if (matchedCatalogDrug.milkWithdrawalDays > minMilk) {
+      minMilk = matchedCatalogDrug.milkWithdrawalDays;
+    }
+    if ((matchedCatalogDrug.eggWithdrawalDays ?? 0) > minEggs) {
+      minEggs = matchedCatalogDrug.eggWithdrawalDays ?? 0;
+    }
+  }
+
+  // Check meat floor
+  if (params.meatWithdrawalDays < minMeat) {
+    violations.push({
+      medicationName: params.medicationName,
+      field: "meat",
+      recordedDays: params.meatWithdrawalDays,
+      statutoryMinimumDays: minMeat,
+      citation:
+        isCascade && minMeat === 28
+          ? "Nariadenie EÚ 2019/6 Čl. 115 (Zákonná kaskáda: minimálne 28 dní pre mäso)"
+          : `Registrácia ŠÚKL / SPC (${matchedCatalogDrug?.name || params.medicationName}): minimálne ${minMeat} dní pre mäso`,
+    });
+  }
+
+  // Check milk floor (for dairy species or when specified/cataloged)
+  const isNonMilkingSpecies = params.targetAnimalType === "porcine";
+  const checkMilk =
+    !isNonMilkingSpecies ||
+    (params.milkWithdrawalDays !== undefined && params.milkWithdrawalDays > 0) ||
+    Boolean(matchedCatalogDrug?.milkWithdrawalDays && matchedCatalogDrug.milkWithdrawalDays > 0);
+
+  if (checkMilk && params.milkWithdrawalDays < minMilk) {
+    violations.push({
+      medicationName: params.medicationName,
+      field: "milk",
+      recordedDays: params.milkWithdrawalDays,
+      statutoryMinimumDays: minMilk,
+      citation:
+        isCascade && minMilk === 7
+          ? "Nariadenie EÚ 2019/6 Čl. 115 (Zákonná kaskáda: minimálne 7 dní pre mlieko)"
+          : `Registrácia ŠÚKL / SPC (${matchedCatalogDrug?.name || params.medicationName}): minimálne ${minMilk} dní pre mlieko`,
+    });
+  }
+
+  // Check eggs floor (only for poultry or when egg days specified/cataloged)
+  const checkEggs =
+    params.targetAnimalType === "poultry" ||
+    params.eggWithdrawalDays !== undefined ||
+    Boolean(matchedCatalogDrug?.eggWithdrawalDays && matchedCatalogDrug.eggWithdrawalDays > 0);
+
+  if (checkEggs && (params.eggWithdrawalDays ?? 0) < minEggs) {
+    violations.push({
+      medicationName: params.medicationName,
+      field: "eggs",
+      recordedDays: params.eggWithdrawalDays ?? 0,
+      statutoryMinimumDays: minEggs,
+      citation:
+        isCascade && minEggs === 7
+          ? "Nariadenie EÚ 2019/6 Čl. 115 (Zákonná kaskáda: minimálne 7 dní pre vajcia)"
+          : `Registrácia ŠÚKL / SPC: minimálne ${minEggs} dní pre vajcia`,
+    });
+  }
+
+  return {
+    hasViolation: violations.length > 0,
+    violations,
+    statutoryDrug: matchedCatalogDrug,
+    effectiveMeatDays: Math.max(params.meatWithdrawalDays, minMeat),
+    effectiveMilkDays: Math.max(params.milkWithdrawalDays, minMilk),
+    effectiveEggsDays: Math.max(params.eggWithdrawalDays ?? 0, minEggs),
+  };
+}
+
 export interface WithdrawalCertificateParams {
   clinicName: string;
   clinicAddress?: string | null;

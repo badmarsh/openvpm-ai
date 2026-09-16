@@ -20,11 +20,19 @@ import {
   Timer,
   Sun,
   Snowflake,
+  Sliders,
+  Plus,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { useI18n } from "@/lib/i18n";
 
@@ -194,6 +202,115 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
 
   // Fetch custom marketing TV slides
   const { data: tvSlides } = trpc.extensions.marketing.listTvSlides.useQuery();
+
+  const utils = trpc.useUtils();
+  const practiceQuery = trpc.settings.getPractice.useQuery(undefined, { retry: false });
+  const practiceId = practiceQuery.data?.id;
+
+  // Slide management state
+  const [isSlideManagerOpen, setIsSlideManagerOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<TvSlide | null>(null);
+
+  const [slideTitle, setSlideTitle] = useState("");
+  const [slideBody, setSlideBody] = useState("");
+  const [slideDuration, setSlideDuration] = useState(12);
+  const [slideSortOrder, setSlideSortOrder] = useState(0);
+  const [slideIsActive, setSlideIsActive] = useState(true);
+
+  const resetSlideForm = () => {
+    setSlideTitle("");
+    setSlideBody("");
+    setSlideDuration(12);
+    setSlideSortOrder(0);
+    setSlideIsActive(true);
+    setEditingSlide(null);
+  };
+
+  const openCreateSlide = () => {
+    resetSlideForm();
+    const maxOrder =
+      (tvSlides as any[])?.reduce(
+        (max: number, item: any) => Math.max(max, item.sortOrder ?? 0),
+        0
+      ) ?? 0;
+    setSlideSortOrder(maxOrder + 10);
+    setIsCreateDialogOpen(true);
+  };
+
+  const openEditSlide = (slide: any) => {
+    setEditingSlide(slide);
+    setSlideTitle(slide.title);
+    setSlideBody(slide.body ?? "");
+    setSlideDuration(slide.durationSeconds ?? 12);
+    setSlideSortOrder(slide.sortOrder ?? 0);
+    setSlideIsActive(slide.isActive ?? true);
+    setIsCreateDialogOpen(true);
+  };
+
+  const createSlideMutation = trpc.extensions.marketing.createTvSlide.useMutation({
+    onSuccess: () => {
+      setIsCreateDialogOpen(false);
+      resetSlideForm();
+      utils.extensions.marketing.listTvSlides.invalidate();
+    },
+  });
+
+  const updateSlideMutation = trpc.extensions.marketing.updateTvSlide.useMutation({
+    onSuccess: () => {
+      setIsCreateDialogOpen(false);
+      resetSlideForm();
+      utils.extensions.marketing.listTvSlides.invalidate();
+    },
+  });
+
+  const deleteSlideMutation = trpc.extensions.marketing.deleteTvSlide.useMutation({
+    onSuccess: () => {
+      utils.extensions.marketing.listTvSlides.invalidate();
+    },
+  });
+
+  const handleSaveSlide = () => {
+    if (!slideTitle.trim()) return;
+    if (editingSlide) {
+      updateSlideMutation.mutate({
+        id: editingSlide.id,
+        title: slideTitle.trim(),
+        body: slideBody.trim() || null,
+        durationSeconds: slideDuration,
+        sortOrder: slideSortOrder,
+        isActive: slideIsActive,
+      });
+    } else {
+      createSlideMutation.mutate({
+        title: slideTitle.trim(),
+        body: slideBody.trim() || undefined,
+        durationSeconds: slideDuration,
+        sortOrder: slideSortOrder,
+      });
+    }
+  };
+
+  const handleToggleSlideActive = (slide: any) => {
+    updateSlideMutation.mutate({
+      id: slide.id,
+      isActive: !slide.isActive,
+    });
+  };
+
+  const handleDeleteSlide = (slide: any) => {
+    if (
+      window.confirm(
+        t(
+          "marketing.tv.deleteConfirm",
+          `Naozaj chcete vymazať slajd "${slide.title}"?`,
+          { title: slide.title }
+        )
+      )
+    ) {
+      deleteSlideMutation.mutate({ id: slide.id });
+    }
+  };
 
   const waitlistEntries = waitlistData ?? [];
 
@@ -398,6 +515,34 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
           </Button>
 
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSlideManagerOpen(true)}
+            className="gap-1.5"
+            title={t("marketing.tv.manageSlides", "Správa TV slajdov")}
+          >
+            <Sliders className="h-4 w-4 text-purple-600" />
+            <span className="hidden sm:inline">
+              {t("marketing.tv.manageSlides", "Správa slajdov")}
+            </span>
+          </Button>
+
+          {practiceId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/tv/${practiceId}`, "_blank")}
+              className="gap-1.5"
+              title={t("marketing.tv.openPublicScreen", "Otvoriť TV obrazovku")}
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span className="hidden md:inline">
+                {t("marketing.tv.openPublicScreen", "TV Obrazovka")}
+              </span>
+            </Button>
+          )}
+
+          <Button
             variant="default"
             size="sm"
             onClick={toggleFullscreen}
@@ -578,12 +723,23 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
           {/* Rotating Custom Slides or Fallback Announcements */}
           <Card className="border border-border bg-card shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-bold text-primary">
-                <Sparkles className="h-4 w-4" />
-                {hasCustomSlides
-                  ? t("marketing.tv.title", "Čakáreň TV – Slajdy")
-                  : t("waitingRoom.announcementsTitle", "Clinic Announcements & Health Tips")}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm font-bold text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  {hasCustomSlides
+                    ? t("marketing.tv.title", "Čakáreň TV – Slajdy")
+                    : t("waitingRoom.announcementsTitle", "Clinic Announcements & Health Tips")}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSlideManagerOpen(true)}
+                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-primary"
+                >
+                  <Sliders className="h-3.5 w-3.5" />
+                  <span>{t("marketing.tv.manageSlides", "Správa")}</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3.5 text-xs text-muted-foreground">
               {hasCustomSlides ? (
@@ -726,6 +882,294 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
           <span>
             {t("waitingRoom.completedToday", "Completed today: {count}", { count: completedToday.length })}
           </span>
+        </div>
+      )}
+      {/* ─── Slide Manager Modal ─── */}
+      {isSlideManagerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-xl border bg-background p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <Tv className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {t("marketing.tv.title", "Čakáreň TV – Slajdy")}
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={openCreateSlide} className="gap-1.5 text-xs">
+                  <Plus className="h-3.5 w-3.5" />
+                  {t("marketing.tv.newSlide", "Nový slajd")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSlideManagerOpen(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "marketing.tv.description",
+                "Spravujte slajdy zobrazované na TV obrazovke v čakárni, upravujte ich poradie, trvanie a sledujte živý náhľad."
+              )}
+            </p>
+
+            {/* Slides table */}
+            <div className="rounded-lg border overflow-hidden">
+              {(!tvSlides || tvSlides.length === 0) ? (
+                <div className="p-8 text-center border-dashed">
+                  <Tv className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+                  <h4 className="text-sm font-semibold">Žiadne vlastné slajdy</h4>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                    {t(
+                      "marketing.tv.noSlides",
+                      "Zatiaľ nemáte vytvorené vlastné slajdy. TV obrazovka automaticky rotuje predvolené veterinárne oznamy."
+                    )}
+                  </p>
+                  <Button size="sm" onClick={openCreateSlide} className="mt-3 gap-1.5 text-xs">
+                    <Plus className="h-3.5 w-3.5" />
+                    {t("marketing.tv.newSlide", "Nový slajd")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="text-[11px] text-muted-foreground uppercase bg-muted/50 border-b">
+                      <tr>
+                        <th className="px-3 py-2 w-12 text-center">{t("marketing.tv.colOrder", "Poradie")}</th>
+                        <th className="px-3 py-2">{t("marketing.tv.colTitle", "Názov oznamu")}</th>
+                        <th className="px-3 py-2 w-24">{t("marketing.tv.colDuration", "Trvanie")}</th>
+                        <th className="px-3 py-2 w-24 text-center">{t("marketing.tv.colStatus", "Stav")}</th>
+                        <th className="px-3 py-2 w-24 text-right">{t("marketing.tv.colActions", "Akcie")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {(tvSlides as any[]).map((slide) => (
+                        <tr key={slide.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-2.5 text-center font-mono text-muted-foreground">
+                            {slide.sortOrder}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="font-semibold text-foreground block">{slide.title}</span>
+                            {slide.body && (
+                              <span className="text-[11px] text-muted-foreground line-clamp-1">
+                                {slide.body}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Clock className="h-3 w-3 text-primary" />
+                              <span>{slide.durationSeconds}s</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSlideActive(slide)}
+                              className="cursor-pointer"
+                              title={slide.isActive ? "Kliknutím deaktivujete" : "Kliknutím aktivujete"}
+                            >
+                              {slide.isActive ? (
+                                <Badge
+                                  variant="default"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] py-0 px-1.5"
+                                >
+                                  {t("marketing.tv.active", "Aktívny")}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] py-0 px-1.5 text-muted-foreground">
+                                  {t("marketing.tv.inactive", "Vypnutý")}
+                                </Badge>
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                onClick={() => openEditSlide(slide)}
+                                title={t("common.edit", "Upraviť")}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDeleteSlide(slide)}
+                                title={t("common.delete", "Odstrániť")}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t">
+              {practiceId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1.5"
+                  onClick={() => window.open(`/tv/${practiceId}`, "_blank")}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t("marketing.tv.openPublicScreen", "Otvoriť TV obrazovku")}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSlideManagerOpen(false)}
+                className="text-xs ml-auto"
+              >
+                {t("common.close", "Zavrieť")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Create / Edit Slide Modal ─── */}
+      {isCreateDialogOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl border bg-background p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-semibold tracking-tight">
+                {editingSlide
+                  ? t("marketing.tv.editSlideTitle", "Upraviť slajd")
+                  : t("marketing.tv.newSlideTitle", "Pridať nový slajd")}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCreateDialogOpen(false)}
+                className="h-7 w-7 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="font-medium text-foreground">
+                  {t("marketing.tv.fieldTitle", "Názov slajdu")} <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  placeholder="napr. Sezónna ochrana pred parazitmi"
+                  value={slideTitle}
+                  onChange={(e) => setSlideTitle(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-medium text-foreground">
+                  {t("marketing.tv.fieldBody", "Podrobný text správy")}
+                </label>
+                <Textarea
+                  rows={3}
+                  placeholder="Krátky text pre klientov v čakárni..."
+                  value={slideBody}
+                  onChange={(e) => setSlideBody(e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-medium text-foreground">
+                    {t("marketing.tv.fieldDuration", "Doba zobrazenia (sekundy)")}
+                  </label>
+                  <Input
+                    type="number"
+                    min={5}
+                    max={60}
+                    value={slideDuration}
+                    onChange={(e) =>
+                      setSlideDuration(Math.max(5, Math.min(60, parseInt(e.target.value) || 12)))
+                    }
+                    className="h-8 text-xs"
+                  />
+                  <span className="text-[10px] text-muted-foreground">5 až 60 sekúnd</span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-medium text-foreground">
+                    {t("marketing.tv.fieldSortOrder", "Poradie")}
+                  </label>
+                  <Input
+                    type="number"
+                    value={slideSortOrder}
+                    onChange={(e) => setSlideSortOrder(parseInt(e.target.value) || 0)}
+                    className="h-8 text-xs"
+                  />
+                  <span className="text-[10px] text-muted-foreground">Nižšie číslo = skôr</span>
+                </div>
+              </div>
+
+              {editingSlide && (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="edit-slide-active"
+                    checked={slideIsActive}
+                    onChange={(e) => setSlideIsActive(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="edit-slide-active" className="font-medium cursor-pointer">
+                    {t("marketing.tv.fieldActive", "Aktívny na TV obrazovke")}
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreateDialogOpen(false)}
+                disabled={createSlideMutation.isPending || updateSlideMutation.isPending}
+                className="text-xs"
+              >
+                {t("common.cancel", "Zrušiť")}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveSlide}
+                disabled={
+                  !slideTitle.trim() ||
+                  createSlideMutation.isPending ||
+                  updateSlideMutation.isPending
+                }
+                className="text-xs"
+              >
+                {createSlideMutation.isPending || updateSlideMutation.isPending ? (
+                  <span className="flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    {t("common.saving", "Ukladám...")}
+                  </span>
+                ) : editingSlide ? (
+                  t("common.saveChanges", "Uložiť zmeny")
+                ) : (
+                  t("marketing.tv.createSlide", "Vytvoriť slajd")
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

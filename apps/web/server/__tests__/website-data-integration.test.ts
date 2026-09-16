@@ -11,6 +11,7 @@ import { validateWebsiteSections } from "@/server/routers/extensions/marketing";
 import { SECTION_TEMPLATES } from "@/components/marketing/website-editor-palette";
 import { validateMarketingText } from "@/lib/marketing/validator";
 import { TRPCError } from "@trpc/server";
+import { resolveLiveStatValue } from "@/components/marketing/website-sections/stats";
 import enMessages from "@/messages/en.json";
 import skMessages from "@/messages/sk.json";
 
@@ -406,6 +407,153 @@ describe("Website Data Integration Contracts & Guardrails", () => {
       const seed = getSeedWebsiteSections("Klinika");
       const parsed = publishInputSchema.safeParse({ sections: seed });
       expect(parsed.success).toBe(true);
+    });
+  });
+
+  describe("Phase 1: Contact Form CRM Integration & SLA Guardrails", () => {
+    it("calculates 24-hour SLA due date for newly submitted inquiries", () => {
+      const submissionTime = new Date("2026-09-16T12:00:00.000Z");
+      const dueAt = new Date(submissionTime.getTime() + 24 * 60 * 60 * 1000);
+
+      expect(dueAt.toISOString()).toBe("2026-09-17T12:00:00.000Z");
+      expect(dueAt.getTime() - submissionTime.getTime()).toBe(86400000);
+    });
+
+    it("verifies staff inquiry task structure with SLA dueAt", () => {
+      const taskSchema = z.object({
+        practiceId: z.string().uuid(),
+        kind: z.literal("website_inquiry"),
+        title: z.string().min(1),
+        detail: z.string(),
+        status: z.literal("open"),
+        clientId: z.string().uuid().nullable(),
+        dueAt: z.date(),
+      });
+
+      const sampleTask = {
+        practiceId: "00000000-0000-0000-0000-000000000001",
+        kind: "website_inquiry" as const,
+        title: "Dopyt z webstránky: Mária Kováčová",
+        detail: "Mám záujem o termín.\n\nEmail: maria@example.com\nTelefón: +421905123456",
+        status: "open" as const,
+        clientId: "00000000-0000-0000-0000-000000000002",
+        dueAt: new Date(Date.now() + 86400000),
+      };
+
+      const result = taskSchema.safeParse(sampleTask);
+      expect(result.success).toBe(true);
+    });
+
+    it("validates auditLog structure for website contact form submissions", () => {
+      const auditLogEntrySchema = z.object({
+        practiceId: z.string(),
+        userId: z.null(),
+        action: z.literal("website_contact_form_submission"),
+        entityType: z.literal("inquiry"),
+        entityId: z.string().uuid(),
+        changes: z.object({
+          name: z.string(),
+          email: z.string().email(),
+          phone: z.string().optional(),
+          message: z.string(),
+        }),
+        ipAddress: z.string().nullable(),
+      });
+
+      const sampleLog = {
+        practiceId: "clin-1",
+        userId: null,
+        action: "website_contact_form_submission" as const,
+        entityType: "inquiry" as const,
+        entityId: "00000000-0000-0000-0000-000000000001",
+        changes: {
+          name: "Jozef Mrkvička",
+          email: "jozef@mrkvicka.sk",
+          phone: "+421911222333",
+          message: "Dobrý deň, je možné prísť na čipovanie?",
+        },
+        ipAddress: "127.0.0.1",
+      };
+
+      const result = auditLogEntrySchema.safeParse(sampleLog);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe("Phase 2.1: Live Stats Data Resolution Engine", () => {
+    const liveStats = {
+      patientCount: 14500,
+      fiveStarReviewCount: 180,
+      yearsInPractice: 15,
+    };
+
+    it("resolves patients live metric with Slovak formatting and plus suffix", () => {
+      const stat = { value: "0", label: "Pacienti", source: "patients" as const };
+      const resolved = resolveLiveStatValue(stat, liveStats);
+      // sk-SK locale separator is non-breaking space (or normal space)
+      expect(resolved).toMatch(/14[\s\u00A0]500\+/);
+    });
+
+    it("resolves reviews live metric with count and plus suffix", () => {
+      const stat = { value: "0", label: "Recenzie", source: "reviews" as const };
+      const resolved = resolveLiveStatValue(stat, liveStats);
+      expect(resolved).toBe("180+");
+    });
+
+    it("resolves years live metric with count and plus suffix", () => {
+      const stat = { value: "0", label: "Roky praxe", source: "years" as const };
+      const resolved = resolveLiveStatValue(stat, liveStats);
+      expect(resolved).toBe("15+");
+    });
+
+    it("preserves custom text when source is custom", () => {
+      const stat = { value: "24/7 Pohotovosť", label: "Dostupnosť", source: "custom" as const };
+      const resolved = resolveLiveStatValue(stat, liveStats);
+      expect(resolved).toBe("24/7 Pohotovosť");
+    });
+
+    it("falls back to stat.value when liveStats is not provided", () => {
+      const stat = { value: "10 000+", label: "Pacienti", source: "patients" as const };
+      const resolved = resolveLiveStatValue(stat, undefined);
+      expect(resolved).toBe("10 000+");
+    });
+
+    it("falls back to stat.value when metric is 0", () => {
+      const emptyStats = { patientCount: 0, fiveStarReviewCount: 0, yearsInPractice: 0 };
+      const stat = { value: "5 000+", label: "Pacienti", source: "patients" as const };
+      const resolved = resolveLiveStatValue(stat, emptyStats);
+      expect(resolved).toBe("5 000+");
+    });
+
+    it("has complete symmetric dictionary keys for liveStats editor controls", () => {
+      const enStats = (enMessages as any).marketing?.website?.liveStats;
+      const skStats = (skMessages as any).marketing?.website?.liveStats;
+
+      expect(enStats).toBeDefined();
+      expect(skStats).toBeDefined();
+
+      const requiredKeys = [
+        "source",
+        "sourceCustom",
+        "sourcePatients",
+        "sourceReviews",
+        "sourceYears",
+        "useLiveData",
+        "customText",
+        "fallbackValue",
+        "subtext",
+        "label",
+        "customValue",
+        "liveBadge",
+        "staticBadge",
+      ];
+
+      for (const key of requiredKeys) {
+        expect(enStats[key]).toBeDefined();
+        expect(skStats[key]).toBeDefined();
+        expect(typeof enStats[key]).toBe("string");
+        expect(typeof skStats[key]).toBe("string");
+      }
     });
   });
 });

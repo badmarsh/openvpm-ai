@@ -95,13 +95,30 @@ export async function checkAlibabaProxyHealth(): Promise<AlibabaHealthResult> {
       uptimeSeconds: data.uptime_seconds,
     };
   } catch (err: any) {
+    const isNetworkError =
+      err?.name === "TypeError" ||
+      (typeof err?.message === "string" && err.message.toLowerCase().includes("fetch failed"));
     return {
       online: false,
       isConfigured,
       baseUrl,
-      error: err?.message || "Alibaba Proxy nie je dostupné na " + baseUrl,
+      error: isNetworkError
+        ? "Spojenie odmietnuté (AliProxy na porte 8080 nebeží)"
+        : err?.message || "Alibaba Proxy nie je dostupné na " + baseUrl,
     };
   }
+}
+
+function formatProxyNetworkError(err: unknown, baseUrl: string): Error {
+  if (
+    err instanceof TypeError ||
+    (err instanceof Error && err.message.toLowerCase().includes("fetch failed"))
+  ) {
+    return new Error(
+      `Alibaba Proxy nie je dostupné na ${baseUrl}. Uistite sa, že lokálna služba AliProxy beží.`
+    );
+  }
+  return err instanceof Error ? err : new Error(String(err));
 }
 
 /**
@@ -115,40 +132,44 @@ export async function generateAlibabaImage(
   const rawModel = options.model || ALIBABA_DEFAULT_IMAGE_MODEL;
   const model = rawModel.startsWith("wanx") ? rawModel.replace("wanx", "wan") : rawModel;
 
-  const res = await fetch(`${baseUrl}/images/generations`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      prompt: options.prompt,
-      size: options.size || "1024*1024",
-      n: options.n || 1,
-    }),
-    signal: AbortSignal.timeout(60_000),
-  });
+  try {
+    const res = await fetch(`${baseUrl}/images/generations`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        prompt: options.prompt,
+        size: options.size || "1024*1024",
+        n: options.n || 1,
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => null);
-    const message =
-      errorBody?.error?.message ||
-      `Image generation failed with status ${res.status}`;
-    throw new Error(message);
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => null);
+      const message =
+        errorBody?.error?.message ||
+        `Image generation failed with status ${res.status}`;
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    const first = json?.data?.[0];
+    if (!first || (!first.url && !first.b64_json)) {
+      throw new Error("No image data returned from Alibaba proxy");
+    }
+
+    return {
+      url: first.url,
+      b64_json: first.b64_json,
+      created: json.created || Math.floor(Date.now() / 1000),
+    };
+  } catch (err: unknown) {
+    throw formatProxyNetworkError(err, baseUrl);
   }
-
-  const json = await res.json();
-  const first = json?.data?.[0];
-  if (!first || (!first.url && !first.b64_json)) {
-    throw new Error("No image data returned from Alibaba proxy");
-  }
-
-  return {
-    url: first.url,
-    b64_json: first.b64_json,
-    created: json.created || Math.floor(Date.now() / 1000),
-  };
 }
 
 /**
@@ -161,39 +182,43 @@ export async function submitAlibabaVideo(
   const { baseUrl, apiKey } = getAlibabaProxyConfig();
   const model = options.model || ALIBABA_DEFAULT_VIDEO_MODEL;
 
-  const res = await fetch(`${baseUrl}/videos/generations`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      input: { prompt: options.prompt },
-      parameters: options.parameters,
-    }),
-    signal: AbortSignal.timeout(30_000),
-  });
+  try {
+    const res = await fetch(`${baseUrl}/videos/generations`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        input: { prompt: options.prompt },
+        parameters: options.parameters,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => null);
-    const message =
-      errorBody?.error?.message ||
-      `Video submission failed with status ${res.status}`;
-    throw new Error(message);
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => null);
+      const message =
+        errorBody?.error?.message ||
+        `Video submission failed with status ${res.status}`;
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    const taskId = json?.output?.task_id || json?.id;
+    if (!taskId) {
+      throw new Error("No task_id returned for video generation request");
+    }
+
+    return {
+      taskId,
+      status: json?.output?.task_status || "PENDING",
+      requestId: json?.request_id,
+    };
+  } catch (err: unknown) {
+    throw formatProxyNetworkError(err, baseUrl);
   }
-
-  const json = await res.json();
-  const taskId = json?.output?.task_id || json?.id;
-  if (!taskId) {
-    throw new Error("No task_id returned for video generation request");
-  }
-
-  return {
-    taskId,
-    status: json?.output?.task_status || "PENDING",
-    requestId: json?.request_id,
-  };
 }
 
 /**
@@ -203,37 +228,41 @@ export async function submitAlibabaVideo(
 export async function pollAlibabaVideo(taskId: string): Promise<VideoPollResult> {
   const { baseUrl, apiKey } = getAlibabaProxyConfig();
 
-  const res = await fetch(`${baseUrl}/videos/generations/${encodeURIComponent(taskId)}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    signal: AbortSignal.timeout(15_000),
-  });
+  try {
+    const res = await fetch(`${baseUrl}/videos/generations/${encodeURIComponent(taskId)}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => null);
-    const message =
-      errorBody?.error?.message ||
-      `Video polling failed with status ${res.status}`;
-    throw new Error(message);
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => null);
+      const message =
+        errorBody?.error?.message ||
+        `Video polling failed with status ${res.status}`;
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    const output = json?.output;
+    const status = output?.task_status || "UNKNOWN";
+    const videoUrl = output?.video_url || output?.url;
+    const error = output?.message || output?.error || (status === "FAILED" ? "Video generation failed" : undefined);
+
+    return {
+      taskId,
+      status,
+      videoUrl,
+      error,
+      submitTime: output?.submit_time,
+      scheduledTime: output?.scheduled_time,
+      endTime: output?.end_time,
+    };
+  } catch (err: unknown) {
+    throw formatProxyNetworkError(err, baseUrl);
   }
-
-  const json = await res.json();
-  const output = json?.output;
-  const status = output?.task_status || "UNKNOWN";
-  const videoUrl = output?.video_url || output?.url;
-  const error = output?.message || output?.error || (status === "FAILED" ? "Video generation failed" : undefined);
-
-  return {
-    taskId,
-    status,
-    videoUrl,
-    error,
-    submitTime: output?.submit_time,
-    scheduledTime: output?.scheduled_time,
-    endTime: output?.end_time,
-  };
 }
 
 /**
@@ -249,37 +278,41 @@ export async function generateAlibabaChat(options: {
   const { baseUrl, apiKey } = getAlibabaProxyConfig();
   const model = options.model || ALIBABA_DEFAULT_CHAT_MODEL;
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: options.messages,
-      temperature: options.temperature,
-      max_tokens: options.maxTokens,
-    }),
-    signal: AbortSignal.timeout(45_000),
-  });
+  try {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: options.messages,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
 
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => null);
-    const message =
-      errorBody?.error?.message ||
-      `Chat completion failed with status ${res.status}`;
-    throw new Error(message);
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => null);
+      const message =
+        errorBody?.error?.message ||
+        `Chat completion failed with status ${res.status}`;
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    const content = json?.choices?.[0]?.message?.content || "";
+
+    return {
+      content,
+      model: json?.model || model,
+      usage: json?.usage,
+    };
+  } catch (err: unknown) {
+    throw formatProxyNetworkError(err, baseUrl);
   }
-
-  const json = await res.json();
-  const content = json?.choices?.[0]?.message?.content || "";
-
-  return {
-    content,
-    model: json?.model || model,
-    usage: json?.usage,
-  };
 }
 
 /**

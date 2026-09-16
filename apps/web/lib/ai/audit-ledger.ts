@@ -32,7 +32,9 @@ export interface AppendAiAuditEventInput {
     | "discharge_report"
     | "imaging_analysis"
     | "treatment_plan"
-    | "prescription";
+    | "prescription"
+    | "marketing_content"
+    | "marketing_media";
   entityId: string;
   actionType: string;
   originalDraftHash: string;
@@ -62,10 +64,16 @@ export async function appendAiAuditEvent(
   input: AppendAiAuditEventInput,
 ) {
   // 1. Fail-closed role enforcement
+  const allowedRoles =
+    input.entityType === "marketing_content" ||
+    input.entityType === "marketing_media"
+      ? (["admin", "veterinarian", "front_desk"] as const)
+      : (["admin", "veterinarian"] as const);
+
   assertAgentRole(
     { userRole: input.actorRole },
-    ["admin", "veterinarian"],
-    "Audit logging of AI confirmation requires an authorized clinical role.",
+    allowedRoles,
+    "Audit logging of AI confirmation requires an authorized role.",
   );
 
   // 2. Validate input parameters

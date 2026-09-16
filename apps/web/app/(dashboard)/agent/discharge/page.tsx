@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -109,7 +109,7 @@ const PRESETS_SK: ClinicalPreset[] = [
   },
 ];
 
-export default function DischargePage() {
+function DischargeContent() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
   const searchParams = useSearchParams();
@@ -1354,5 +1354,25 @@ export default function DischargePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DischargePage() {
+  const { t } = useI18n();
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-96 items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground">
+              {t("discharge.page.loading", "Načítavam prepúšťaciu správu...")}
+            </span>
+          </div>
+        </div>
+      }
+    >
+      <DischargeContent />
+    </Suspense>
   );
 }

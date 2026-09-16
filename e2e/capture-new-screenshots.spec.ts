@@ -375,7 +375,7 @@ test("Generovanie 23 nových screenshotov v Light Mode (1920x1080)", async ({ br
 
   // G2: 08-03-tv-cakarena-prezentacia.png
   console.log("16/23 — TV čakáreň prezentácia...");
-  await page.goto("/marketing/tv", { waitUntil: "domcontentloaded", timeout: 35000 });
+  await page.goto("/waiting-room", { waitUntil: "domcontentloaded", timeout: 35000 });
   await dismissOverlays(page);
   await page.waitForTimeout(3000);
   await safeScreenshot(page, "08-03-tv-cakarena-prezentacia.png", "TV čakáreň");

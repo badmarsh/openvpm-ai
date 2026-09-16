@@ -10,27 +10,34 @@ interface StatsSectionProps {
   isEditor?: boolean;
 }
 
+export function resolveLiveStatValue(
+  stat: { value: string; source?: "custom" | "patients" | "reviews" | "years" },
+  liveStats?: WebsitePublicData["liveStats"]
+): string {
+  if (!liveStats) return stat.value;
+
+  switch (stat.source) {
+    case "patients": {
+      const count = liveStats.patientCount;
+      return typeof count === "number" && count > 0 ? `${count.toLocaleString("sk-SK")}+` : stat.value;
+    }
+    case "reviews": {
+      const count = liveStats.fiveStarReviewCount;
+      return typeof count === "number" && count > 0 ? `${count.toLocaleString("sk-SK")}+` : stat.value;
+    }
+    case "years": {
+      const years = liveStats.yearsInPractice;
+      return typeof years === "number" && years > 0 ? `${years}+` : stat.value;
+    }
+    case "custom":
+    default:
+      return stat.value;
+  }
+}
+
 export function StatsSection({ content, contextData }: StatsSectionProps) {
   const formatStatValue = (stat: (typeof content.items)[number]) => {
-    if (!contextData?.liveStats) return stat.value;
-
-    switch (stat.source) {
-      case "patients": {
-        const count = contextData.liveStats.patientCount;
-        return count > 0 ? `${count.toLocaleString("sk-SK")}+` : stat.value;
-      }
-      case "reviews": {
-        const count = contextData.liveStats.fiveStarReviewCount;
-        return count > 0 ? `${count.toLocaleString("sk-SK")}+` : stat.value;
-      }
-      case "years": {
-        const years = contextData.liveStats.yearsInPractice;
-        return years > 0 ? `${years}+` : stat.value;
-      }
-      case "custom":
-      default:
-        return stat.value;
-    }
+    return resolveLiveStatValue(stat, contextData?.liveStats);
   };
 
   return (

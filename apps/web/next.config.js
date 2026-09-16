@@ -66,6 +66,15 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/marketing/tv",
+        destination: "/waiting-room",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = withBundleAnalyzer(nextConfig);

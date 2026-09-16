@@ -12,6 +12,10 @@ import {
   clients,
 } from "@openpims/db";
 import { applySympathyGate } from "@/lib/marketing/messaging";
+import {
+  checkStatutoryWithdrawalFloor,
+  calculateWithdrawalSafeUntil,
+} from "@/lib/statutory/withdrawal";
 
 const vetProcedure = protectedProcedure.use(
   requireRole("admin", "veterinarian", "technician")
@@ -139,16 +143,37 @@ export const statutoryRouter = createRouter({
         });
       }
 
+      if (input.targetAnimalType !== "companion") {
+        const floorCheck = checkStatutoryWithdrawalFloor({
+          medicationName: input.medicationName,
+          targetAnimalType: input.targetAnimalType,
+          meatWithdrawalDays: input.meatWithdrawalDays,
+          milkWithdrawalDays: input.milkWithdrawalDays,
+        });
+
+        if (floorCheck.hasViolation) {
+          const details = floorCheck.violations
+            .map(
+              (v) =>
+                `${v.field}: zadané ${v.recordedDays} d., minimum ${v.statutoryMinimumDays} d. (${v.citation})`,
+            )
+            .join("; ");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Ochranná lehota nespĺňa zákonné minimum podľa registrácie lieku alebo kaskády (Zákon č. 39/2007 Z. z., Nariadenie EÚ 2019/6): ${details}`,
+          });
+        }
+      }
+
       const adminDate = input.administeredAt
         ? new Date(input.administeredAt)
         : new Date();
-      const maxDays = Math.max(
+      const calc = calculateWithdrawalSafeUntil(
+        adminDate,
         input.meatWithdrawalDays,
-        input.milkWithdrawalDays
+        input.milkWithdrawalDays,
       );
-      const safeUntil = new Date(
-        adminDate.getTime() + maxDays * 24 * 60 * 60 * 1000
-      );
+      const safeUntil = calc.safeUntil;
 
       const [created] = await ctx.db
         .insert(extWithdrawalPeriods)

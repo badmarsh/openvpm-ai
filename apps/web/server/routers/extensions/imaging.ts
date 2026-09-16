@@ -219,6 +219,7 @@ export const imagingRouter = createRouter({
         const result = await generateText({
           model,
           system: systemPrompt,
+          temperature: 0,
           messages: [
             {
               role: "user",
@@ -934,6 +935,21 @@ export const imagingRouter = createRouter({
           validatorFindings: validationReport.findings,
         })
         .returning();
+
+      if (item) {
+        const draftHash = createHash("sha256").update(`${title}\n${body}`).digest("hex");
+        await appendAiAuditEvent(ctx.db, {
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorName: ctx.user.name || "Veterinarian",
+          actorRole: ctx.user.role,
+          entityType: "marketing_content",
+          entityId: item.id,
+          actionType: "create_marketing_quiz_from_imaging",
+          originalDraftHash: draftHash,
+          confirmedContentHash: draftHash,
+        });
+      }
 
       return {
         item,

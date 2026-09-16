@@ -37,6 +37,8 @@ export const aiAuditEntityTypeEnum = pgEnum("ai_audit_entity_type", [
   "imaging_analysis",
   "treatment_plan",
   "prescription",
+  "marketing_content",
+  "marketing_media",
 ]);
 
 export const extAiAuditLog = pgTable(

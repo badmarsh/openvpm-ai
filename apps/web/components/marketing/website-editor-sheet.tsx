@@ -757,62 +757,152 @@ export function WebsiteEditorSheet({
                 </div>
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
-                    <Label className="font-bold">Štatistické ukazovatele & Dáta</Label>
-                    <span className="text-[11px] text-muted-foreground">Prepojené s live databázou</span>
+                    <Label className="font-bold">{t("marketing.website.liveStats.source", "Štatistické ukazovatele & Dáta")}</Label>
+                    <span className="text-[11px] text-muted-foreground">{t("marketing.website.liveStats.liveBadge", "Prepojené s live databázou")}</span>
                   </div>
-                  {(draftContent.items || []).map((item: any, idx: number) => (
-                    <div key={item.id} className="p-3 border border-border rounded-xl bg-muted/20 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px]">Zdroj dát</Label>
-                          <Select
-                            value={item.source || "custom"}
-                            onValueChange={(val) => {
-                              const updated = [...draftContent.items];
-                              updated[idx].source = val;
-                              updateField("items", updated);
-                            }}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="custom">Vlastný text</SelectItem>
-                              <SelectItem value="patients">Počet pacientov (Live)</SelectItem>
-                              <SelectItem value="reviews">5★ Recenzie (Live)</SelectItem>
-                              <SelectItem value="years">Roky praxe (Live)</SelectItem>
-                            </SelectContent>
-                          </Select>
+                  {(draftContent.items || []).map((item: any, idx: number) => {
+                    const isLiveData = item.source && item.source !== "custom";
+
+                    return (
+                      <div key={item.id} className="p-3 border border-border rounded-xl bg-muted/20 space-y-3">
+                        <div className="flex items-center justify-between pb-1 border-b border-border/50">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={`stat-live-toggle-${item.id}`}
+                              checked={isLiveData}
+                              onCheckedChange={(checked) => {
+                                const updated = [...draftContent.items];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  source: checked ? "patients" : "custom",
+                                };
+                                updateField("items", updated);
+                              }}
+                            />
+                            <Label htmlFor={`stat-live-toggle-${item.id}`} className="text-xs font-medium cursor-pointer">
+                              {isLiveData
+                                ? t("marketing.website.liveStats.useLiveData", "Použiť živé dáta z databázy")
+                                : t("marketing.website.liveStats.customText", "Vlastný text")}
+                            </Label>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {isLiveData
+                              ? t("marketing.website.liveStats.liveBadge", "ŽIVÉ PREPOJENIE")
+                              : t("marketing.website.liveStats.staticBadge", "STATICKÉ")}
+                          </span>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          {isLiveData ? (
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">{t("marketing.website.liveStats.source", "Zdroj údajov")}</Label>
+                              <Select
+                                value={item.source || "patients"}
+                                onValueChange={(val) => {
+                                  const updated = [...draftContent.items];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    source: val,
+                                  };
+                                  updateField("items", updated);
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="patients">{t("marketing.website.liveStats.sourcePatients", "Počet pacientov (Live IS)")}</SelectItem>
+                                  <SelectItem value="reviews">{t("marketing.website.liveStats.sourceReviews", "Počet 5★ recenzií (Live)")}</SelectItem>
+                                  <SelectItem value="years">{t("marketing.website.liveStats.sourceYears", "Roky praxe kliniky (Live)")}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">{t("marketing.website.liveStats.customValue", "Vlastná hodnota")}</Label>
+                              <Input
+                                placeholder="napr. 15+"
+                                value={item.value}
+                                onChange={(e) => {
+                                  const updated = [...draftContent.items];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    value: e.target.value,
+                                  };
+                                  updateField("items", updated);
+                                }}
+                                className="text-xs h-8"
+                              />
+                            </div>
+                          )}
+
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">
+                              {isLiveData
+                                ? t("marketing.website.liveStats.fallbackValue", "Záložná hodnota (ak nie sú dáta)")
+                                : t("marketing.website.liveStats.subtext", "Doplnkový text")}
+                            </Label>
+                            <Input
+                              placeholder={isLiveData ? "napr. 10 000+" : "napr. V regióne"}
+                              value={isLiveData ? item.value : (item.subtext || "")}
+                              onChange={(e) => {
+                                const updated = [...draftContent.items];
+                                if (isLiveData) {
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    value: e.target.value,
+                                  };
+                                } else {
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    subtext: e.target.value,
+                                  };
+                                }
+                                updateField("items", updated);
+                              }}
+                              className="text-xs h-8"
+                            />
+                          </div>
+                        </div>
+
                         <div className="space-y-1">
-                          <Label className="text-[10px]">Záložná hodnota</Label>
+                          <Label className="text-[10px]">{t("marketing.website.liveStats.label", "Popis ukazovateľa")}</Label>
                           <Input
-                            placeholder="napr. 15+"
-                            value={item.value}
+                            placeholder="napr. Ošetrených pacientov"
+                            value={item.label}
                             onChange={(e) => {
                               const updated = [...draftContent.items];
-                              updated[idx].value = e.target.value;
+                              updated[idx] = {
+                                ...updated[idx],
+                                label: e.target.value,
+                              };
                               updateField("items", updated);
                             }}
                             className="text-xs h-8"
                           />
                         </div>
+
+                        {isLiveData && (
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">{t("marketing.website.liveStats.subtext", "Doplnkový text")}</Label>
+                            <Input
+                              placeholder="napr. Psov, mačiek a drobných zvierat"
+                              value={item.subtext || ""}
+                              onChange={(e) => {
+                                const updated = [...draftContent.items];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  subtext: e.target.value,
+                                };
+                                updateField("items", updated);
+                              }}
+                              className="text-xs h-8"
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px]">Popis ukazovateľa</Label>
-                        <Input
-                          placeholder="napr. Rokov praxe"
-                          value={item.label}
-                          onChange={(e) => {
-                            const updated = [...draftContent.items];
-                            updated[idx].label = e.target.value;
-                            updateField("items", updated);
-                          }}
-                          className="text-xs h-8"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
