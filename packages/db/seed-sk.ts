@@ -408,7 +408,11 @@ async function seedSlovak() {
   console.log("\nSlovak seed completed successfully in openvpm_ai database!");
 }
 
-seedSlovak().catch((err) => {
-  console.error("Seed error:", err);
-  process.exit(1);
-});
+seedSlovak()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Seed error:", err);
+    process.exit(1);
+  });
