@@ -1742,6 +1742,51 @@ export const appointmentsRouter = createRouter({
           deleted: true,
         },
       );
+
+      // ── Autopilot event bus: cancellation recorded as a client no-show ───
+      // When staff cancel an appointment with a no-show reason (e.g.
+      // "no_show", "klient sa nedostavil – no-show"), emit the durable
+      // appointment_no_show event. Idempotent per appointment: dedupeKey is
+      // shared with the updateStatus no-show path, so double emission across
+      // paths is a no-op. Fires outside the transaction; failures never roll
+      // back the cancellation.
+      if (deleted.clientId && /no[\s_-]?show/i.test(input.reason)) {
+        try {
+          await (ctx.db as any)
+            .insert(extAutomationEvents)
+            .values({
+              practiceId: ctx.practiceId,
+              eventType: "appointment_no_show",
+              clientId: deleted.clientId,
+              patientId: deleted.patientId ?? null,
+              appointmentId: deleted.id,
+              sourceRouter: "appointments.delete",
+              dedupeKey: `appointment_no_show_${deleted.id}`,
+              emittedBy: ctx.user?.id ?? null,
+              status: "pending",
+              availableAt: new Date(),
+              payload: {
+                appointmentId: deleted.id,
+                clientId: deleted.clientId,
+                patientId: deleted.patientId,
+                cancellationReason: input.reason,
+              },
+            })
+            .onConflictDoNothing();
+          await createMessagesForTrigger(ctx.db, ctx.practiceId, {
+            eventId: deleted.id,
+            triggerKey: "appointment_no_show",
+            clientId: deleted.clientId,
+            patientId: deleted.patientId ?? undefined,
+          });
+        } catch (err) {
+          console.error(
+            "Marketing appointment_no_show (cancel-with-reason) trigger error:",
+            err,
+          );
+        }
+      }
+
       return { id: deleted.id };
     }),
 

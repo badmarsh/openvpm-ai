@@ -7,6 +7,8 @@ import {
   clients,
   communications,
   emailSuppressions,
+  extAutomationEvents,
+  extAutomationSuppressionLog,
   locationMessaging,
   locations,
   patients,
@@ -756,4 +758,144 @@ export const careRemindersRouter = createRouter({
         return { id: updated[0]!.id, ids: updated.map((row) => row.id) };
       }),
     ),
+
+  /**
+   * Autopilot reminder sweep: scans vaccination records whose *latest* record
+   * per patient is past (or nearing) its next due date and emits durable
+   * `vaccine_due` events into ext_automation_events for the rules/journey
+   * engines. Emission is idempotent — each vaccination record emits at most
+   * once via a deterministic dedupeKey.
+   *
+   * SKILL.md §3 Unconditional Sympathy Gate: deceased patients never receive
+   * an event. Instead, every blocked emission is audited in the unified
+   * suppression log with reason `deceased_patient`.
+   *
+   * Runs outside any transaction: each insert is an independent idempotent
+   * statement so a partial failure can never leave the sweep half-committed.
+   */
+  runVaccineSweep: manageProcedure
+    .input(
+      z
+        .object({
+          /** 0 = strictly overdue; N>0 also includes vaccines due within N days. */
+          lookaheadDays: z.number().int().min(0).max(90).default(0),
+          limit: z.number().int().min(1).max(1000).default(500),
+        })
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await activePractice(ctx.db, ctx.practiceId);
+      const lookaheadDays = input?.lookaheadDays ?? 0;
+      const limit = input?.limit ?? 500;
+
+      const result = await ctx.db.execute(sql`
+        select
+          lv.id as "vaccinationRecordId",
+          lv.patient_id as "patientId",
+          lv.vaccine_name as "vaccineName",
+          lv.next_due_date as "nextDueDate",
+          p.status as "patientStatus",
+          p.name as "patientName",
+          p.client_id as "clientId"
+        from (
+          select distinct on (vr.patient_id)
+            vr.id, vr.patient_id, vr.vaccine_name, vr.next_due_date
+          from vaccination_records vr
+          where vr.practice_id = ${ctx.practiceId}
+            and vr.deleted_at is null
+            and vr.next_due_date is not null
+          order by vr.patient_id, vr.administered_at desc, vr.created_at desc
+        ) lv
+        join patients p
+          on p.id = lv.patient_id
+         and p.practice_id = ${ctx.practiceId}
+         and p.deleted_at is null
+        where lv.next_due_date <= (current_date + make_interval(days => ${lookaheadDays}))
+        order by lv.next_due_date asc
+        limit ${limit}
+      `);
+
+      const rows = (
+        (result as unknown as { rows?: Record<string, unknown>[] }).rows ?? []
+      ) as {
+        vaccinationRecordId: string;
+        patientId: string;
+        vaccineName: string;
+        nextDueDate: string;
+        patientStatus: string;
+        patientName: string;
+        clientId: string;
+      }[];
+
+      let emitted = 0;
+      let alreadyQueued = 0;
+      let suppressedDeceased = 0;
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+
+      for (const row of rows) {
+        // ── Sympathy Gate (SKILL.md §3) ──────────────────────────────────
+        if (row.patientStatus === "deceased") {
+          try {
+            await ctx.db
+              .insert(extAutomationSuppressionLog)
+              .values({
+                practiceId: ctx.practiceId,
+                clientId: row.clientId,
+                patientId: row.patientId,
+                suppressionReason: "deceased_patient",
+                blockedAction: "sweep:vaccine_due",
+                dedupeKey: `${row.clientId}:deceased_patient:vaccine_due_sweep:${row.patientId}:${today}`,
+                detail: `Sympathy Gate: vaccine_due event suppressed for deceased patient (${row.patientName ?? "pacient"}). No automated outreach will be sent.`,
+              })
+              .onConflictDoNothing();
+          } catch (err) {
+            console.error("[automation] vaccine sweep suppression log failed", err);
+          }
+          suppressedDeceased++;
+          continue;
+        }
+
+        try {
+          const inserted = await ctx.db
+            .insert(extAutomationEvents)
+            .values({
+              practiceId: ctx.practiceId,
+              eventType: "vaccine_due",
+              clientId: row.clientId,
+              patientId: row.patientId,
+              sourceRouter: "careReminders.runVaccineSweep",
+              dedupeKey: `vaccine_due_sweep_${row.vaccinationRecordId}`,
+              emittedBy: ctx.user.id,
+              status: "pending",
+              availableAt: now,
+              payload: {
+                vaccinationRecordId: row.vaccinationRecordId,
+                vaccineName: row.vaccineName,
+                nextDueDate: row.nextDueDate,
+                lookaheadDays,
+                clientId: row.clientId,
+                patientId: row.patientId,
+              },
+            })
+            .onConflictDoNothing()
+            .returning({ id: extAutomationEvents.id });
+          if (inserted.length > 0) {
+            emitted++;
+          } else {
+            alreadyQueued++;
+          }
+        } catch (err) {
+          console.error("[automation] vaccine_due sweep emission failed", err);
+        }
+      }
+
+      return {
+        scanned: rows.length,
+        emitted,
+        alreadyQueued,
+        suppressedDeceased,
+        lookaheadDays,
+      };
+    }),
 });

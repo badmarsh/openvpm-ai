@@ -2187,7 +2187,70 @@
       "addFirstSupplier": "Pridať prvého dodávateľa"
     },
     "adjustStockAria": "Upraviť zásoby pre {name}",
-    "startTrackingAria": "Spustiť sledovanie zásob pre {name}"
+    "startTrackingAria": "Spustiť sledovanie zásob pre {name}",
+    "wholesalerImport": {
+      "title": "Importovať dodací list",
+      "description": "Nahrajte CSV, TXT alebo textový export PDF od slovenských vetdistribútorov. Položky skontrolujete a s maržou naskladníte jedným klikom.",
+      "wholesalerLabel": "Distribútor",
+      "wholesalerHint": "Voľba „Automaticky rozpoznať“ detekuje formát podľa obsahu súboru.",
+      "dropzoneAria": "Nahrať súbor dodacieho listu",
+      "dropzoneTitle": "Presuňte súbor sem, alebo kliknite pre výber",
+      "dropzoneHint": "Podporované: CSV, TXT, EDI (max. 5 MB)",
+      "parsing": "Analyzujem dodací list...",
+      "parseSuccess": "Dodací list bol úspešne načítaný ({count} položiek).",
+      "parseError": "Nepodarilo sa spracovať dodací list.",
+      "wholesalers": {
+        "AUTO": "Automaticky rozpoznať",
+        "CYMEDICA": "Cymedica",
+        "PHARMOS": "Pharmos a.s.",
+        "SAMOHYL": "Samohýl SK",
+        "HENRY_SCHEIN": "Henry Schein",
+        "BIOPHARM": "Biopharm",
+        "KOMVET": "Komvet",
+        "SG_VET": "SG-Vet",
+        "SANVET": "Sanvet",
+        "PHRAMED": "Phramed",
+        "GENERIC_CSV": "Generický CSV"
+      },
+      "metaSupplier": "Distribútor / Dodávateľ",
+      "metaNoteNumber": "Číslo DL",
+      "metaIssueDate": "Dátum vystavenia",
+      "metaTotal": "Spolu s DPH",
+      "uploadAnother": "Nahrať iný",
+      "noBatchWarning": "Položky bez uvedenej šarže budú označené predvolenou hodnotou BEZ-SARZE.",
+      "controlledWarning": "Dodací list obsahuje omamné/psychotropné látky. Každú takúto položku musíte explicitne potvrdiť (predvolené: preskočiť).",
+      "markupLabel": "Marža na nákupnú cenu (%)",
+      "markupSliderAria": "Posuvník marže",
+      "resetPrices": "Znovu prepočítať ceny podľa marže",
+      "markupHint": "Navrhovaná predajná cena = nákupná cena bez DPH × (1 + marža). Jednotlivé riadky môžete upraviť ručne.",
+      "colProduct": "Priradený produkt / Položka",
+      "colCode": "Kód",
+      "colBatch": "Šarža / Expirácia",
+      "colQty": "Množstvo",
+      "colPurchasePrice": "Nákup bez DPH",
+      "colVat": "DPH",
+      "colRetailPrice": "Predajná cena",
+      "colAction": "Akcia",
+      "controlledBadge": "Omamná látka",
+      "unlinkProduct": "Zrušiť prepojenie",
+      "linkExisting": "Prepojiť s katalógom",
+      "linkSearchPlaceholder": "Hľadať produkt podľa názvu alebo kódu…",
+      "linkSearching": "Hľadám…",
+      "linkNoResults": "Nenašiel sa žiadny produkt.",
+      "stockShort": "skl.",
+      "expiryShort": "Exp",
+      "noExpiry": "Bez expirácie",
+      "retailPriceAria": "Predajná cena za jednotku",
+      "currentPrice": "akt.",
+      "actionUpdateStock": "Naskladniť",
+      "actionCreate": "Vytvoriť produkt",
+      "actionSkip": "Preskočiť",
+      "controlledNeedsReview": "Vyžaduje kontrolu",
+      "confirming": "Naskladňujem…",
+      "confirmButton": "Potvrdiť a naskladniť ({count})",
+      "confirmSuccess": "Sklad aktualizovaný: {updated} naskladnených, {created} nových produktov.",
+      "confirmError": "Chyba pri zápise položiek do skladu."
+    }
   },
   "labResults": {
     "loadingInbox": "Načítava sa schránka laboratórnych výsledkov…",
@@ -2592,7 +2655,72 @@
       "channelDisconnected": "Kanál bol odpojený.",
       "channelDisconnectError": "Chyba pri odpájaní kanála.",
       "reviewsSynced": "Synchronizácia dokončená: načítaných {count} nových recenzií, eskalovaných {escalated}.",
-      "reviewsSyncError": "Chyba pri synchronizácii recenzií."
+      "reviewsSyncError": "Chyba pri synchronizácii recenzií.",
+      "recalculateAllSegments": "Prepočítať segmenty",
+      "recalculatingSegments": "Prepočítavam segmenty…",
+      "segmentsRecalculated": "Prepočítaných {segments} segmentov — spolu {members} členstiev.",
+      "lastRecalculated": "Naposledy prepočítané: {date}",
+      "neverRecalculated": "Zatiaľ neprepočítané",
+      "viewSegmentMembers": "Zobraziť klientov v segmente",
+      "membersDialogTitle": "Klienti v segmente: {segment}",
+      "membersDialogDesc": "Aktívni klienti patriaci do tohto segmentu. Kliknutím otvoríte kartu klienta.",
+      "loadingMembers": "Načítavam klientov segmentu...",
+      "noMembers": "V tomto segmente zatiaľ nie sú žiadni klienti",
+      "noMembersHint": "Spustite prepočet segmentov pre aktualizáciu členstva.",
+      "unnamedClient": "Klient bez mena",
+      "membersShowing": "Zobrazených {shown} z {total}",
+      "loadMoreMembers": "Ďalších 25",
+      "segmentSympathyNote": "Sympathy Gate: klienti so zosnulými pacientmi sú automaticky vylúčení zo všetkých segmentov.",
+      "segmentCatalog": {
+        "puppy_kitten": {
+          "name": "Šteniatka a mačiatka",
+          "description": "Klienti so psom alebo mačkou mladšou ako 1 rok. Vhodné pre puppy balíčky, prvé očkovanie a socializačné kampane."
+        },
+        "senior_pet": {
+          "name": "Seniorski pacienti (7+ rokov)",
+          "description": "Klienti so psom alebo mačkou vo veku 7 a viac rokov. Geriatrické skríningy, senior panely a preventívne prehliadky."
+        },
+        "chronic_patient": {
+          "name": "Chronickí pacienti",
+          "description": "Pacienti s ≥2 receptami za posledných 6 mesiacov alebo ≥4 dokončenými návštevami za 12 mesiacov. Manažment dlhodobej liečby a kontroly."
+        },
+        "vip_clients": {
+          "name": "VIP klienti",
+          "description": "Klienti s úhradami ≥ 1 500 € za posledných 12 mesiacov. Vernostný program, prioritné rezervácie a prémiová starostlivosť."
+        },
+        "churn_risk": {
+          "name": "Riziko odchodu",
+          "description": "Predtým aktívni klienti (≥2 návštevy) bez návštevy 6–12 mesiacov. Win-back kampane skôr, než prejdú k inej klinike."
+        },
+        "unvaccinated_overdue": {
+          "name": "Po termíne očkovania",
+          "description": "Pacienti, ktorých posledný vakcinačný záznam má prekročený dátum ďalšej dávky. Pripomienky očkovania podľa zmluvného právneho základu."
+        },
+        "wellness_enrolled": {
+          "name": "Členovia wellness programu",
+          "description": "Klienti s aktívnym wellness plánom. Preventívna starostlivosť, pripomienky čerpania benefítov a fakturácie."
+        },
+        "dental_attention": {
+          "name": "Vyžadujú dentálnu starostlivosť",
+          "description": "Pacienti s patologickým nálezom v zubnej karte (kaz, zlomenina, vratkosť…) za posledných 18 mesiacov. Dentálne recall kampane."
+        },
+        "post_op_recovery": {
+          "name": "Po operačnej rekonvalescencii",
+          "description": "Pacienti so zaznamenanou operáciou za posledných 30 dní. Post-op kontroly 24 h / 3. deň / 10. deň."
+        },
+        "frequent_flyer": {
+          "name": "Častí návštevníci",
+          "description": "Klienti s ≥6 dokončenými návštevami za posledných 12 mesiacov. Loajalita, prednostné termíny a referenčné programy."
+        },
+        "weight_management": {
+          "name": "Redukcia hmotnosti",
+          "description": "Pacienti so zvýšeným telesným skóre kondície (BCS ≥7/9 alebo ≥4/5) za posledný rok. Diétne programy a kontrolné váženia."
+        },
+        "lapsed_inactive": {
+          "name": "Neaktívni 12+ mesiacov",
+          "description": "Klienti bez dokončenej návštevy viac ako 12 mesiacov a bez budúcej rezervácie. Reaktivačné (recall) kampane."
+        }
+      }
     }
   },
   "nav": {

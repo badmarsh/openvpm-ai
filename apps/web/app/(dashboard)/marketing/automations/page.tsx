@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Zap,
   Clock,
@@ -25,6 +26,7 @@ import {
   Moon,
   Gauge,
   UserX,
+  Phone,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -95,6 +97,45 @@ function MarketingAutomationsContent() {
       toast.error(err.message || t("marketing.automations.segmentRecomputeError", "Nepodarilo sa prepočítať segment."));
     },
   });
+  const recalculateAllMutation = trpc.extensions.crmSegments.recalculateAll.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        t(
+          "marketing.automations.segmentsRecalculated",
+          `Prepočítaných ${data.segmentCount} segmentov — spolu ${data.totalMembers} členstiev.`,
+          { segments: data.segmentCount, members: data.totalMembers }
+        )
+      );
+      utils.extensions.crmSegments.list.invalidate();
+      setMembersPage(0);
+      if (drilldownSegmentKey) {
+        utils.extensions.crmSegments.getSegmentMembers.invalidate();
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.automations.segmentRecomputeError", "Nepodarilo sa prepočítať segment."));
+    },
+  });
+
+  // 3b. Segment drill-down state (member inspection dialog)
+  const SEGMENT_PAGE_SIZE = 25;
+  const [drilldownSegmentKey, setDrilldownSegmentKey] = useState<string | null>(null);
+  const [drilldownSegmentName, setDrilldownSegmentName] = useState<string>("");
+  const [membersPage, setMembersPage] = useState(0);
+  const membersQuery = trpc.extensions.crmSegments.getSegmentMembers.useQuery(
+    {
+      segmentKey: drilldownSegmentKey ?? "puppy_kitten",
+      limit: SEGMENT_PAGE_SIZE,
+      offset: membersPage * SEGMENT_PAGE_SIZE,
+    },
+    { enabled: drilldownSegmentKey !== null }
+  );
+
+  const openSegmentDrilldown = (segmentKey: string, displayName: string) => {
+    setDrilldownSegmentKey(segmentKey);
+    setDrilldownSegmentName(displayName);
+    setMembersPage(0);
+  };
 
   // 4. Channel Accounts Query & Mutation
   const channelsQuery = trpc.extensions.automationChannels.list.useQuery();
@@ -431,13 +472,26 @@ function MarketingAutomationsContent() {
 
         {/* 3. CRM SEGMENTS TAB */}
         <TabsContent value="segments" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {t(
                 "marketing.automations.segmentsDesc",
                 "12 deterministických segmentov pacientov a klientov. Plný súlad s GDPR Art. 9 a Art. 22."
               )}
             </p>
+            <Button
+              size="sm"
+              onClick={() => recalculateAllMutation.mutate()}
+              disabled={recalculateAllMutation.isPending}
+              className="gap-1.5 text-xs shrink-0"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${recalculateAllMutation.isPending ? "animate-spin" : ""}`}
+              />
+              {recalculateAllMutation.isPending
+                ? t("marketing.automations.recalculatingSegments", "Prepočítavam segmenty…")
+                : t("marketing.automations.recalculateAllSegments", "Prepočítať segmenty")}
+            </Button>
           </div>
 
           {segmentsQuery.isLoading ? (
@@ -451,6 +505,18 @@ function MarketingAutomationsContent() {
               <p className="text-sm font-medium text-foreground">
                 {t("marketing.automations.noSegments", "Žiadne segmenty nie sú k dispozícii")}
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 text-xs"
+                onClick={() => recalculateAllMutation.mutate()}
+                disabled={recalculateAllMutation.isPending}
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 mr-1.5 ${recalculateAllMutation.isPending ? "animate-spin" : ""}`}
+                />
+                {t("marketing.automations.recalculateAllSegments", "Prepočítať segmenty")}
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -458,50 +524,93 @@ function MarketingAutomationsContent() {
                 const isRecomputing =
                   recomputeSegmentMutation.isPending &&
                   recomputeSegmentMutation.variables?.id === seg.id;
+                const displayName = t(
+                  `marketing.automations.segmentCatalog.${seg.segmentKey}.name`,
+                  seg.name
+                );
+                const displayDescription = t(
+                  `marketing.automations.segmentCatalog.${seg.segmentKey}.description`,
+                  seg.description
+                );
 
                 return (
                   <div
                     key={seg.id}
-                    className="rounded-2xl border bg-card border-border p-4 shadow-sm space-y-3 flex flex-col justify-between"
+                    className="rounded-2xl border bg-card border-border p-4 shadow-sm space-y-3 flex flex-col justify-between transition-all duration-200 hover:shadow-md hover:border-primary/40"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-bold text-sm text-foreground">{seg.name}</h3>
+                        <button
+                          type="button"
+                          className="text-left min-w-0"
+                          onClick={() => openSegmentDrilldown(seg.segmentKey, displayName)}
+                          title={t("marketing.automations.viewSegmentMembers", "Zobraziť klientov v segmente")}
+                        >
+                          <h3 className="font-bold text-sm text-foreground hover:text-primary transition-colors">
+                            {displayName}
+                          </h3>
                           <span className="font-mono text-[10px] text-muted-foreground block mt-0.5">
                             {seg.segmentKey}
                           </span>
-                        </div>
+                        </button>
                         <Badge variant="outline" className="text-[10px] uppercase shrink-0">
                           {seg.refreshStrategy}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                        {seg.description}
+                        {displayDescription}
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                        <Users className="w-3.5 h-3.5 text-primary" />
-                        <span>{seg.memberCountCache} {t("marketing.automations.clientsCount", "klientov")}</span>
+                    <div className="pt-3 border-t border-border/60 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 font-semibold text-foreground hover:text-primary transition-colors"
+                          onClick={() => openSegmentDrilldown(seg.segmentKey, displayName)}
+                        >
+                          <Users className="w-3.5 h-3.5 text-primary" />
+                          <span>{seg.memberCountCache} {t("marketing.automations.clientsCount", "klientov")}</span>
+                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs px-2"
+                          disabled={isRecomputing}
+                          onClick={() => recomputeSegmentMutation.mutate({ id: seg.id })}
+                        >
+                          <RefreshCw className={`w-3 h-3 mr-1 ${isRecomputing ? "animate-spin" : ""}`} />
+                          {t("marketing.automations.recompute", "Prepočítať")}
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs px-2"
-                        disabled={isRecomputing}
-                        onClick={() => recomputeSegmentMutation.mutate({ id: seg.id })}
-                      >
-                        <RefreshCw className={`w-3 h-3 mr-1 ${isRecomputing ? "animate-spin" : ""}`} />
-                        {t("marketing.automations.recompute", "Prepočítať")}
-                      </Button>
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {seg.lastRefreshedAt
+                          ? t("marketing.automations.lastRecalculated", "Naposledy prepočítané: {date}", {
+                              date: new Date(seg.lastRefreshedAt).toLocaleString("sk-SK", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }),
+                            })
+                          : t("marketing.automations.neverRecalculated", "Zatiaľ neprepočítané")}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+            {t(
+              "marketing.automations.segmentSympathyNote",
+              "Sympathy Gate: klienti so zosnulými pacientmi sú automaticky vylúčení zo všetkých segmentov."
+            )}
+          </p>
         </TabsContent>
 
         {/* 4. CHANNELS TAB */}
@@ -967,6 +1076,128 @@ function MarketingAutomationsContent() {
               {t("marketing.automations.modalBtnSubmit", "Pripojiť kanál")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Segment Members Drill-Down Dialog */}
+      <Dialog
+        open={drilldownSegmentKey !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDrilldownSegmentKey(null);
+            setMembersPage(0);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[640px] max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              {t("marketing.automations.membersDialogTitle", "Klienti v segmente: {segment}", {
+                segment: drilldownSegmentName,
+              })}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "marketing.automations.membersDialogDesc",
+                "Aktívni klienti patriaci do tohto segmentu. Kliknutím otvoríte kartu klienta."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-2">
+            {membersQuery.isLoading ? (
+              <div className="p-12 text-center text-sm text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
+                {t("marketing.automations.loadingMembers", "Načítavam klientov segmentu...")}
+              </div>
+            ) : !membersQuery.data || membersQuery.data.members.length === 0 ? (
+              <div className="p-12 text-center space-y-2 border rounded-xl bg-muted/20">
+                <CheckCircle2 className="w-10 h-10 text-muted-foreground/50 mx-auto" />
+                <p className="text-sm font-medium text-foreground">
+                  {t("marketing.automations.noMembers", "V tomto segmente zatiaľ nie sú žiadni klienti")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "marketing.automations.noMembersHint",
+                    "Spustite prepočet segmentov pre aktualizáciu členstva."
+                  )}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {membersQuery.data.members.map((member) => (
+                  <Link
+                    key={member.clientId}
+                    href={`/clients/${member.clientId}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-foreground truncate">
+                        {member.displayName || t("marketing.automations.unnamedClient", "Klient bez mena")}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground mt-0.5">
+                        {member.email && <span className="truncate">{member.email}</span>}
+                        {member.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {member.phone}
+                          </span>
+                        )}
+                        {member.city && <span>{member.city}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {member.enrolledAt && (
+                        <span className="hidden sm:block text-[10px] text-muted-foreground">
+                          {new Date(member.enrolledAt).toLocaleDateString("sk-SK")}
+                        </span>
+                      )}
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {membersQuery.data && membersQuery.data.total > 0 && (
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between border-t border-border/60 mt-2">
+              <span className="text-[11px] text-muted-foreground self-center">
+                {t("marketing.automations.membersShowing", "Zobrazených {shown} z {total}", {
+                  shown: Math.min(
+                    (membersPage + 1) * SEGMENT_PAGE_SIZE,
+                    membersQuery.data.total
+                  ),
+                  total: membersQuery.data.total,
+                })}
+              </span>
+              <div className="flex items-center gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  disabled={membersPage === 0 || membersQuery.isFetching}
+                  onClick={() => setMembersPage((p) => Math.max(0, p - 1))}
+                >
+                  {t("common.back", "Späť")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  disabled={
+                    membersQuery.isFetching ||
+                    (membersPage + 1) * SEGMENT_PAGE_SIZE >= membersQuery.data.total
+                  }
+                  onClick={() => setMembersPage((p) => p + 1)}
+                >
+                  {membersQuery.isFetching && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                  {t("marketing.automations.loadMoreMembers", "Ďalších 25")}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

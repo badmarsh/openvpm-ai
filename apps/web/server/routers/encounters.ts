@@ -63,6 +63,7 @@ import {
   syncVisitWorkItems,
 } from "../visit-billing-integrity";
 import { createMessagesForTrigger } from "@/lib/marketing/messaging";
+import { emitPostOperativeCareIfSurgical } from "@/lib/autopilot/postoperative";
 
 type EncounterDb = Pick<
   Database,
@@ -2647,6 +2648,25 @@ export const encountersRouter = createRouter({
               err
             );
           });
+
+        // ── Post-operative care trigger (fire-and-forget, post-commit) ─────
+        // If the completed visit carries surgical signals (surgical procedure
+        // codes, recorded anesthesia, or post-op discharge instructions),
+        // emit a durable surgery_completed / post_operative_care event so the
+        // autopilot can start the 24 h / day 3 / day 10 recovery journey.
+        // Idempotent per appointment via a deterministic dedupeKey.
+        void emitPostOperativeCareIfSurgical(ctx.db, ctx.practiceId, {
+          appointmentId: input.appointmentId,
+          clientId: _trigger.clientId,
+          patientId: _trigger.patientId,
+          visitCloseoutId: safeResult.closeout?.id ?? null,
+          emittedBy: ctx.user?.id ?? null,
+        }).catch((err: unknown) => {
+          console.error(
+            "[automation] post_operative_care event insertion failed",
+            err
+          );
+        });
       }
 
       return safeResult;
