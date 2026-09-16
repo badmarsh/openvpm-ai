@@ -374,6 +374,17 @@ function buildToolSet(
   return Object.fromEntries(entries) as ToolSet;
 }
 
+export function isProxyFormatError(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return (
+    text.includes("很抱歉") ||
+    text.includes("调取实时信息") ||
+    text.includes("格式异常") ||
+    text.includes("联网模式") ||
+    text.includes("-online")
+  );
+}
+
 /**
  * Run the OpenVPM Agent against a natural-language instruction. Executes a
  * tool-use loop scoped to the caller's practice. Write tools are gated behind
@@ -432,6 +443,9 @@ export async function runAgent(opts: {
   const timeout = setTimeout(() => ac.abort(new Error("Agent run timed out after 60s")), 60_000);
 
   let result;
+  let text = "";
+  let iterations = 1;
+  let stopReason: string | null = null;
   try {
     result = await generateText({
       model: resolveModel(modelId),
@@ -447,6 +461,23 @@ export async function runAgent(opts: {
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       abortSignal: ac.signal,
     });
+    iterations = result.steps.length;
+    stopReason = result.finishReason ?? null;
+    text = result.text.trim();
+    if (!text && result.steps && result.steps.length > 0) {
+      const combined = result.steps
+        .map((s) => s.text?.trim())
+        .filter(Boolean)
+        .join("\n\n");
+      if (combined) {
+        text = combined;
+      }
+    }
+  } catch (e) {
+    const errText = e instanceof Error ? e.message : String(e);
+    if (!isProxyFormatError(errText)) {
+      throw e;
+    }
   } finally {
     clearTimeout(timeout);
   }
@@ -454,25 +485,49 @@ export async function runAgent(opts: {
   // Meter only successful agent runs for hosted billing (no-op on self-host).
   await recordUsage({ practiceId: opts.context.practiceId, kind: "ai_run" });
 
-  let text = result.text.trim();
-  if (!text && result.steps && result.steps.length > 0) {
-    const combined = result.steps
-      .map((s) => s.text?.trim())
-      .filter(Boolean)
-      .join("\n\n");
-    if (combined) {
-      text = combined;
+  // If the upstream proxy returned a format exception (e.g. Chinese plugin error from Antigravity Tools),
+  // recover by running a direct, grounded completion without external tools so the user receives a clean response.
+  if (!text || isProxyFormatError(text)) {
+    const isSlovak =
+      /[áäčďéíĺľňóôŕšťúýž]/i.test(opts.instruction) ||
+      /\b(podrobnosti|pacient|klient|vyhladaj|zisti|liek|termin|ockovanie|vysetrenie|kocka|pes|macka|davkovanie|karprofen|meloxikam)\b/i.test(
+        opts.instruction,
+      );
+    const directSystemPrompt = isSlovak
+      ? `${SYSTEM_PROMPT}\n\nDÔLEŽITÉ UPOZORNENIE: Poskytnite priamu, odbornú a bezpečnú odpoveď v slovenskom jazyku bez volania externých nástrojov alebo generovania blokov kódu.`
+      : `${SYSTEM_PROMPT}\n\nIMPORTANT: Provide a direct, professional, and factual response in the prompt language without invoking external tools or generating code blocks.`;
+
+    const acFallback = new AbortController();
+    const fallbackTimeout = setTimeout(
+      () => acFallback.abort(new Error("Fallback run timed out after 30s")),
+      30_000,
+    );
+    try {
+      const fallbackResult = await generateText({
+        model: resolveModel(modelId),
+        system: directSystemPrompt,
+        ...messagesInput,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        abortSignal: acFallback.signal,
+      });
+      text = fallbackResult.text.trim();
+      stopReason = fallbackResult.finishReason ?? null;
+    } catch {
+      // If fallback completion fails, fall through to buildFallbackSummary
+    } finally {
+      clearTimeout(fallbackTimeout);
     }
   }
-  if (!text) {
+
+  if (!text || isProxyFormatError(text)) {
     text = buildFallbackSummary(toolCalls, opts.instruction);
   }
 
   return {
     text,
     toolCalls,
-    iterations: result.steps.length,
-    stopReason: result.finishReason ?? null,
+    iterations,
+    stopReason,
   };
 }
 

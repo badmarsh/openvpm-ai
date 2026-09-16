@@ -1180,6 +1180,26 @@ describe("new clinical agent tools", () => {
     expect(tool.readOnly).toBe(true);
     expect(tool.zod.parse({ patientId: PATIENT_ID })).toEqual({ patientId: PATIENT_ID });
   });
+
+  it("calculate_drug_dose normalizes species aliases ('dog', 'pes', 'macka', 'cat')", () => {
+    const tool = getTool("calculate_drug_dose")!;
+    const parsed1 = tool.zod.parse({ drugId: "carprofen", species: "dog", weightKg: 12 });
+    expect(parsed1.species).toBe("canine");
+
+    const parsed2 = tool.zod.parse({ drugId: "carprofen", species: "pes", weightKg: 12 });
+    expect(parsed2.species).toBe("canine");
+
+    const parsed3 = tool.zod.parse({ drugId: "amoxicillin_clavulanate", species: "macka", weightKg: 4 });
+    expect(parsed3.species).toBe("feline");
+  });
+
+  it("calculate_drug_dose accepts parameter aliases (drug_name, weight)", () => {
+    const tool = getTool("calculate_drug_dose")!;
+    const parsed = tool.zod.parse({ drug_name: "carprofen", species: "canine", weight: 12 });
+    expect(parsed.drugId).toBe("carprofen");
+    expect(parsed.weightKg).toBe(12);
+  });
 });
+
 
 

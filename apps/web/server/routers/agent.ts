@@ -152,6 +152,15 @@ export const agentRouter = createRouter({
         ) {
           clientMsg =
             "AI Proxy služba nie je spustená (port 8045 - Service Unavailable). Prosím otvorte aplikáciu Antigravity Tools a zapnite v nej Proxy službu.";
+        } else if (
+          rawMsg.includes("很抱歉") ||
+          rawMsg.includes("调取实时信息") ||
+          rawMsg.includes("格式异常") ||
+          rawMsg.includes("-online") ||
+          rawMsg.includes("联网模式")
+        ) {
+          clientMsg =
+            "AI asistent zaznamenal dočasnú chybu pri formátovaní odpovede z proxy modelu. Skúste prosím otázku zopakovať.";
         }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

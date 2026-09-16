@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Upload,
   ImageIcon,
@@ -139,6 +140,8 @@ const PRESETS_IMAGING: ImagingPreset[] = [
 export default function ImagingPage() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
+  const searchParams = useSearchParams();
+  const urlPatientId = searchParams.get("patientId");
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<"editor" | "history">("editor");
@@ -163,6 +166,27 @@ export default function ImagingPage() {
     breed?: string | null;
     clientName: string;
   } | null>(null);
+
+  const initialPatientQ = trpc.patients.getById.useQuery(
+    { id: urlPatientId ?? "" },
+    { enabled: Boolean(urlPatientId) && !selectedPatient },
+  );
+
+  useEffect(() => {
+    if (initialPatientQ.data && !selectedPatient) {
+      const p = initialPatientQ.data;
+      const clientName =
+        [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ").trim() ||
+        t("imaging.defaultClientName", "Klient");
+      setSelectedPatient({
+        id: p.id,
+        name: p.name,
+        species: p.species,
+        breed: p.breed,
+        clientName,
+      });
+    }
+  }, [initialPatientQ.data, selectedPatient, t]);
 
   const patientSearchQ = trpc.patients.search.useQuery(
     { query: patientSearch },

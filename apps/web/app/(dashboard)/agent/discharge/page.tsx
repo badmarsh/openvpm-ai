@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   FileText,
   Send,
@@ -111,6 +112,8 @@ const PRESETS_SK: ClinicalPreset[] = [
 export default function DischargePage() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
+  const searchParams = useSearchParams();
+  const urlPatientId = searchParams.get("patientId");
 
   // Patient selection
   const [patientSearchOpen, setPatientSearchOpen] = useState(false);
@@ -122,6 +125,31 @@ export default function DischargePage() {
     breed?: string | null;
     clientName: string;
   } | null>(null);
+
+  const initialPatientQ = trpc.patients.getById.useQuery(
+    { id: urlPatientId ?? "" },
+    { enabled: Boolean(urlPatientId) && !selectedPatient }
+  );
+
+  useEffect(() => {
+    if (initialPatientQ.data && !selectedPatient) {
+      const p = initialPatientQ.data;
+      const clientName =
+        [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ").trim() ||
+        t("discharge.defaultClientName", "Klient");
+      setSelectedPatient({
+        id: p.id,
+        name: p.name,
+        species: p.species,
+        breed: p.breed,
+        clientName,
+      });
+      setPetName(p.name);
+      if (p.species) {
+        setSpecies(p.breed ? `${p.species} (${p.breed})` : p.species);
+      }
+    }
+  }, [initialPatientQ.data, selectedPatient, t]);
 
   const patientSearchQ = trpc.patients.search.useQuery(
     { query: patientSearch },

@@ -248,14 +248,6 @@ const vanillaSections: NavSection[] = [
         icon: BarChart3,
         roles: ["admin", "veterinarian"],
       },
-      {
-        href: "/whiteboard",
-        label: "Whiteboard",
-        i18nKey: "nav.whiteboard",
-        icon: Tv,
-        roles: ["admin", "veterinarian", "front_desk"],
-        badge: "Nové",
-      },
     ],
   },
   {
@@ -337,15 +329,15 @@ export function Sidebar({
     }));
   };
 
-  // Merge customNavItems into their declared sections
+  // Merge customNavItems into their declared sections with global href deduplication guard
+  const seenGlobalHrefs = new Set<string>();
   const sections: NavSection[] = vanillaSections.map((section) => {
     const existingHrefs = new Set(section.items.map((i) => i.href));
     const extra = customNavItems
       .filter(
         (item) =>
           item.section === section.id &&
-          !existingHrefs.has(item.href) &&
-          !(section.id === "preventive" && item.href === "/marketing/wellness"),
+          !existingHrefs.has(item.href),
       )
       .map((item) => ({
         href: item.href,
@@ -356,7 +348,12 @@ export function Sidebar({
         badge: item.badge,
         exact: item.exact,
       }));
-    return { ...section, items: [...section.items, ...extra] };
+    const uniqueItems = [...section.items, ...extra].filter((item) => {
+      if (seenGlobalHrefs.has(item.href)) return false;
+      seenGlobalHrefs.add(item.href);
+      return true;
+    });
+    return { ...section, items: uniqueItems };
   });
 
   return (

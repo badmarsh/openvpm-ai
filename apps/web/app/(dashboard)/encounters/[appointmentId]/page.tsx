@@ -30,11 +30,13 @@ import {
   Download,
   FileText,
   FlaskConical,
+  Image as ImageIcon,
   Loader2,
   Package,
   Pill,
   Plus,
   ReceiptEuro,
+  Sparkles,
   Stethoscope,
   Save,
   Scissors,
@@ -649,47 +651,57 @@ export default function EncounterWorkspacePage() {
             </div>
           </div>
         </div>
-        {nextAction && canManageVisit(role) ? (
-          <Button
-            disabled={
-              updateStatus.isPending ||
-              (nextAction.status === "in_exam" && missingClinicalTarget)
-            }
-            title={
-              nextAction.status === "in_exam" && missingClinicalTarget
-                ? t("encounters.workspace.attachBeforeExamTooltip", "Attach a patient before starting the exam.")
-                : undefined
-            }
-            onClick={() =>
-              updateStatus.mutate({
-                id: appointmentId,
-                status: nextAction.status,
-              })
-            }
-          >
-            {updateStatus.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            {nextAction.status === "checked_in"
-              ? t("encounters.workspace.actionCheckIn", "Check in")
-              : nextAction.status === "in_exam"
-                ? t("encounters.workspace.actionStartExam", "Start exam")
-                : nextAction.label}
-          </Button>
-        ) : appointment.status === "in_exam" && canManageVisit(role) ? (
-          <Button
-            onClick={() => {
-              const closeout = document.getElementById("visit-closeout");
-              closeout?.scrollIntoView({ behavior: "smooth", block: "start" });
-              closeout?.focus({ preventScroll: true });
-            }}
-          >
-            <ClipboardCheck className="mr-2 h-4 w-4" />
-            {t("encounters.workspace.reviewCloseout", "Review closeout")}
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {appointment.patientId ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/agent/imaging?patientId=${appointment.patientId}`}>
+                <ImageIcon className="mr-1.5 h-4 w-4 text-primary" />
+                {t("encounters.workspace.imagingAi", "Snímky & AI analýza")}
+              </Link>
+            </Button>
+          ) : null}
+          {nextAction && canManageVisit(role) ? (
+            <Button
+              disabled={
+                updateStatus.isPending ||
+                (nextAction.status === "in_exam" && missingClinicalTarget)
+              }
+              title={
+                nextAction.status === "in_exam" && missingClinicalTarget
+                  ? t("encounters.workspace.attachBeforeExamTooltip", "Attach a patient before starting the exam.")
+                  : undefined
+              }
+              onClick={() =>
+                updateStatus.mutate({
+                  id: appointmentId,
+                  status: nextAction.status,
+                })
+              }
+            >
+              {updateStatus.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              {nextAction.status === "checked_in"
+                ? t("encounters.workspace.actionCheckIn", "Check in")
+                : nextAction.status === "in_exam"
+                  ? t("encounters.workspace.actionStartExam", "Start exam")
+                  : nextAction.label}
+            </Button>
+          ) : appointment.status === "in_exam" && canManageVisit(role) ? (
+            <Button
+              onClick={() => {
+                const closeout = document.getElementById("visit-closeout");
+                closeout?.scrollIntoView({ behavior: "smooth", block: "start" });
+                closeout?.focus({ preventScroll: true });
+              }}
+            >
+              <ClipboardCheck className="mr-2 h-4 w-4" />
+              {t("encounters.workspace.reviewCloseout", "Review closeout")}
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <VisitCompletionGuide
@@ -2295,10 +2307,18 @@ function VisitCloseout({
                   · {closeout?.followUpDisposition?.replace("_", " ")}
                 </p>
               </div>
-              <Button variant="outline" size="sm" onClick={downloadDischarge}>
-                <Download className="mr-2 h-4 w-4" />
-                {t("encounters.closeout.downloadDischarge", "Download discharge")}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/agent/discharge?patientId=${appointment.patientId}&appointmentId=${appointmentId}`}>
+                    <Sparkles className="mr-2 h-4 w-4 text-purple-600" />
+                    {t("encounters.closeout.generateAiDischarge", "Vygenerovať AI správu")}
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadDischarge}>
+                  <Download className="mr-2 h-4 w-4" />
+                  {t("encounters.closeout.downloadDischarge", "Download discharge")}
+                </Button>
+              </div>
             </div>
             <dl className="grid gap-3 rounded-md border border-border bg-background p-3 text-sm sm:grid-cols-2">
               <div>

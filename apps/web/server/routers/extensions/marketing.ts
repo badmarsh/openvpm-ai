@@ -28,6 +28,7 @@ import {
   extMarketingWebsiteConfig,
   extMarketingWebsiteInquiries,
   extAutomationEvents,
+  auditLog,
   patients,
   clients,
   practices,
@@ -38,6 +39,8 @@ import {
   bookingPages,
 } from '@openpims/db';
 import { enrollInJourney } from "@/lib/autopilot/journey-engine";
+import { appBaseUrl } from "@/lib/app-url";
+import { sendEmail } from "@/lib/email";
 import { websiteSectionSchema, type WebsiteSection } from '@/lib/marketing/website-builder-types';
 import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
 import { analyzeCompetitors } from '@/lib/marketing/competitors';
@@ -3740,24 +3743,40 @@ listStaffTasks: protectedProcedure
 
   updateWebsiteSections: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
-    .input(z.object({ sections: z.array(websiteSectionSchema) }))
+    .input(
+      z.object({
+        sections: z.array(websiteSectionSchema),
+        publishLive: z.boolean().optional().default(false),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // Validate all free-text fields against marketing compliance regulations
       validateWebsiteSections(input.sections);
 
       const [existing] = await ctx.db
-        .select({ id: extMarketingWebsiteConfig.id })
+        .select({
+          id: extMarketingWebsiteConfig.id,
+          published: extMarketingWebsiteConfig.published,
+        })
         .from(extMarketingWebsiteConfig)
         .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
         .limit(1);
 
+      const shouldPublishLive = input.publishLive;
+
       if (existing) {
+        const updateData: any = {
+          sectionsDraft: input.sections,
+          updatedAt: new Date(),
+        };
+        if (shouldPublishLive) {
+          updateData.sectionsPublished = input.sections;
+          updateData.publishedAt = new Date();
+          updateData.published = true;
+        }
         await ctx.db
           .update(extMarketingWebsiteConfig)
-          .set({
-            sectionsDraft: input.sections,
-            updatedAt: new Date(),
-          })
+          .set(updateData)
           .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId));
       } else {
         await ctx.db
@@ -3765,17 +3784,41 @@ listStaffTasks: protectedProcedure
           .values({
             practiceId: ctx.practiceId,
             sectionsDraft: input.sections,
-            sectionsPublished: null,
-            published: false,
+            sectionsPublished: shouldPublishLive ? input.sections : null,
+            published: shouldPublishLive,
+            publishedAt: shouldPublishLive ? new Date() : null,
           });
       }
 
-      return { ok: true, count: input.sections.length };
+      if (shouldPublishLive) {
+        const [practice] = await ctx.db
+          .select({ settings: practices.settings })
+          .from(practices)
+          .where(eq(practices.id, ctx.practiceId))
+          .limit(1);
+        const settings = (practice?.settings ?? {}) as Record<string, any>;
+        await ctx.db
+          .update(practices)
+          .set({
+            settings: {
+              ...settings,
+              websitePublished: true,
+            },
+          })
+          .where(eq(practices.id, ctx.practiceId));
+      }
+
+      return { ok: true, count: input.sections.length, published: shouldPublishLive };
     }),
 
   toggleWebsite: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
-    .input(z.object({ published: z.boolean().optional() }).optional())
+    .input(
+      z.object({
+        published: z.boolean().optional(),
+        sections: z.array(websiteSectionSchema).optional(),
+      }).optional()
+    )
     .mutation(async ({ ctx, input }) => {
       const [practice] = await ctx.db
         .select({
@@ -3797,9 +3840,11 @@ listStaffTasks: protectedProcedure
       const nextPublished = input?.published !== undefined ? input.published : !currentPublished;
 
       const seedSections = getSeedWebsiteSections(practice?.name || "");
-      const draftToPublish = existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
-        ? existingConfig.sectionsDraft
-        : seedSections;
+      const draftToPublish = input?.sections && Array.isArray(input.sections) && input.sections.length > 0
+        ? input.sections
+        : (existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
+            ? (existingConfig.sectionsDraft as WebsiteSection[])
+            : seedSections);
 
       if (nextPublished) {
         // Enforce compliance validation before publishing live
@@ -3811,6 +3856,9 @@ listStaffTasks: protectedProcedure
           published: nextPublished,
           updatedAt: new Date(),
         };
+        if (input?.sections) {
+          updateData.sectionsDraft = input.sections;
+        }
         if (nextPublished) {
           updateData.sectionsPublished = draftToPublish;
           updateData.publishedAt = new Date();
@@ -3824,8 +3872,8 @@ listStaffTasks: protectedProcedure
           .insert(extMarketingWebsiteConfig)
           .values({
             practiceId: ctx.practiceId,
-            sectionsDraft: seedSections,
-            sectionsPublished: nextPublished ? seedSections : null,
+            sectionsDraft: draftToPublish,
+            sectionsPublished: nextPublished ? draftToPublish : null,
             published: nextPublished,
             publishedAt: nextPublished ? new Date() : null,
           });
@@ -3842,7 +3890,77 @@ listStaffTasks: protectedProcedure
         })
         .where(eq(practices.id, ctx.practiceId));
 
-      return { published: nextPublished };
+      return { published: nextPublished, count: draftToPublish.length };
+    }),
+
+  publishWebsite: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(
+      z.object({
+        sections: z.array(websiteSectionSchema).optional(),
+      }).optional()
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [practice] = await ctx.db
+        .select({
+          name: practices.name,
+          settings: practices.settings,
+        })
+        .from(practices)
+        .where(eq(practices.id, ctx.practiceId))
+        .limit(1);
+
+      const [existingConfig] = await ctx.db
+        .select()
+        .from(extMarketingWebsiteConfig)
+        .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId))
+        .limit(1);
+
+      const seedSections = getSeedWebsiteSections(practice?.name || "");
+      const sectionsToPublish = input?.sections && Array.isArray(input.sections) && input.sections.length > 0
+        ? input.sections
+        : (existingConfig?.sectionsDraft && Array.isArray(existingConfig.sectionsDraft) && existingConfig.sectionsDraft.length > 0
+            ? (existingConfig.sectionsDraft as WebsiteSection[])
+            : seedSections);
+
+      // Validate all sections before publishing
+      validateWebsiteSections(sectionsToPublish);
+
+      if (existingConfig) {
+        await ctx.db
+          .update(extMarketingWebsiteConfig)
+          .set({
+            sectionsDraft: sectionsToPublish,
+            sectionsPublished: sectionsToPublish,
+            published: true,
+            publishedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(extMarketingWebsiteConfig.practiceId, ctx.practiceId));
+      } else {
+        await ctx.db
+          .insert(extMarketingWebsiteConfig)
+          .values({
+            practiceId: ctx.practiceId,
+            sectionsDraft: sectionsToPublish,
+            sectionsPublished: sectionsToPublish,
+            published: true,
+            publishedAt: new Date(),
+          });
+      }
+
+      const settings = (practice?.settings ?? {}) as Record<string, any>;
+      await ctx.db
+        .update(practices)
+        .set({
+          settings: {
+            ...settings,
+            websitePublished: true,
+          },
+        })
+        .where(eq(practices.id, ctx.practiceId));
+
+      return { ok: true, published: true, count: sectionsToPublish.length };
     }),
 
   getPublicWebsiteData: publicProcedure
@@ -4188,7 +4306,7 @@ listStaffTasks: protectedProcedure
       try {
         await (ctx.db as any).insert(extAutomationEvents).values({
           practiceId: input.clinicId,
-          eventType: "client_created",
+          eventType: "website_inquiry",
           sourceRouter: "marketing.submitWebsiteContactForm",
           clientId: clientId ?? null,
           dedupeKey: `website_inquiry_${inquiry.id}`,
@@ -4206,7 +4324,55 @@ listStaffTasks: protectedProcedure
         console.warn("[Website Contact Form] Durable event emission error:", evtErr);
       }
 
-      // 5. Enroll in welcome_new_client customer journey
+      // 5. Send email notification to clinic staff
+      const [practiceDetails] = await ctx.db
+        .select({
+          email: practices.email,
+          settings: practices.settings,
+        })
+        .from(practices)
+        .where(eq(practices.id, input.clinicId))
+        .limit(1);
+      
+      const staffEmail = practiceDetails?.email || "";
+      const practiceSettings = (practiceDetails?.settings ?? {}) as Record<string, any>;
+      const recipientEmail = practiceSettings?.marketingWebsite?.recipientEmail || staffEmail;
+      
+      if (recipientEmail) {
+        try {
+          await sendEmail({
+            to: recipientEmail,
+            subject: `Nový dopyt z webstránky - ${practice?.name || "Klinika"}`,
+            html: `
+              <p>Nový dopyt od: <strong>${input.name.trim()}</strong></p>
+              <p>Email: ${trimmedEmail}</p>
+              ${trimmedPhone ? `<p>Telefón: ${trimmedPhone}</p>` : ""}
+              <p>Správa:</p>
+              <blockquote>${input.message.trim()}</blockquote>
+              <p><a href="${appBaseUrl()}/dashboard/marketing/staff-tasks?filter=status:open">Zobraziť v systéme</a></p>
+            `,
+          });
+        } catch (emailErr) {
+          console.error("[Website Contact Form] Email notification failed:", emailErr);
+        }
+      }
+
+      // 6. Log to audit trail
+      await ctx.db.insert(auditLog).values({
+        practiceId: input.clinicId,
+        userId: null,
+        action: "website_contact_form_submission",
+        entityType: "inquiry",
+        entityId: inquiry.id,
+        changes: {
+          name: input.name.trim(),
+          email: trimmedEmail,
+          phone: trimmedPhone,
+          message: input.message.trim(),
+        },
+      });
+
+      // 6. Enroll in welcome_new_client customer journey
       if (clientId) {
         try {
           await enrollInJourney(ctx.db as any, clientId, "welcome_new_client", input.clinicId);

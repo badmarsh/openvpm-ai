@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, LayoutGrid, Rows3 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,7 @@ export function SoapPreview({
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [activeStyle, setActiveStyle] = useState<SoapStyle>("standard");
+  const [viewLayout, setViewLayout] = useState<"grid" | "list">("grid");
 
   const update = (key: keyof SoapSectionsData, value: string) => {
     onChange?.({ ...sections, [key]: value });
@@ -141,7 +142,11 @@ export function SoapPreview({
   const hasContent = Object.values(sections).some((v) => v.trim().length > 0);
   if (!hasContent && !editable) return null;
 
-  const layout = compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2";
+  const layout = compact
+    ? "grid-cols-1"
+    : viewLayout === "list"
+      ? "grid-cols-1"
+      : "grid-cols-1 xl:grid-cols-2";
   const filledCount = SECTION_ORDER.filter(
     (k) => (sections[k] ?? "").trim().length > 0,
   ).length;
@@ -167,7 +172,43 @@ export function SoapPreview({
           </Badge>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Layout switcher: 2x2 Grid vs Full-width List */}
+          <div
+            className="flex items-center rounded-lg border bg-muted/30 p-0.5"
+            role="group"
+            aria-label={t("voice.soap.layoutTitle", "Rozloženie SOAP")}
+          >
+            <button
+              type="button"
+              onClick={() => setViewLayout("grid")}
+              className={cn(
+                "p-1 text-xs rounded-md transition-all",
+                viewLayout === "grid"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={t("voice.soap.layoutGrid", "Mriežka (2×2)")}
+              aria-label={t("voice.soap.layoutGrid", "Mriežka (2×2)")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewLayout("list")}
+              className={cn(
+                "p-1 text-xs rounded-md transition-all",
+                viewLayout === "list"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={t("voice.soap.layoutList", "Zoznam (1 stĺpec)")}
+              aria-label={t("voice.soap.layoutList", "Zoznam (1 stĺpec)")}
+            >
+              <Rows3 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           {/* Style selector for AI reformatting */}
           {onReformat && (
             <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
@@ -234,21 +275,21 @@ export function SoapPreview({
                 config.color,
               )}
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className={cn(
-                      "h-5 w-5 rounded-md text-xs font-bold flex items-center justify-center text-white shadow-xs",
+                      "h-5 w-5 rounded-md text-xs font-bold flex items-center justify-center text-white shrink-0 shadow-xs",
                       config.bgBadge,
                     )}
                   >
                     {config.letter}
                   </span>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="text-xs font-semibold text-foreground truncate">
                     {label}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {charCount > 0 && (
                     <span className="text-[10px] font-mono text-muted-foreground">
                       {t("voice.soap.charCount", "{count} zn.", {
@@ -256,7 +297,7 @@ export function SoapPreview({
                       })}
                     </span>
                   )}
-                  <span className="text-[11px] text-muted-foreground/80 hidden sm:inline">
+                  <span className="text-[11px] text-muted-foreground/80 hidden sm:inline max-w-[220px] xl:max-w-none truncate">
                     {description}
                   </span>
                 </div>
@@ -266,8 +307,8 @@ export function SoapPreview({
                 <Textarea
                   value={sections[key]}
                   onChange={(e) => update(key, e.target.value)}
-                  rows={compact ? 2 : 3}
-                  className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-3 leading-relaxed"
+                  rows={compact ? 2 : viewLayout === "list" ? 4 : 5}
+                  className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[110px] p-3 leading-relaxed"
                   placeholder={t(
                     "voice.soap.sectionPlaceholder",
                     "Doplňte {section}...",
@@ -275,7 +316,7 @@ export function SoapPreview({
                   )}
                 />
               ) : (
-                <div className="p-3 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap min-h-[50px]">
+                <div className="p-3 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap min-h-[70px]">
                   {sections[key] ? (
                     sections[key]
                   ) : (

@@ -122,24 +122,7 @@ export const customNavItems: CustomNavItem[] = [
     roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'marketing',
   },
-  {
-    href: '/marketing/wellness',
-    label: 'Wellness plány',
-    i18nKey: 'nav.wellness',
-    icon: Heart,
-    roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'preventive',
-  },
   // AI
-  {
-    href: "/agent/imaging",
-    label: "Analýza Snímkov",
-    i18nKey: "nav.agentImaging",
-    icon: ImageIcon,
-    roles: ["admin", "veterinarian"],
-    section: "clinical",
-    badge: "AI",
-  },
   {
     href: "/agent/voice",
     label: "Hlasové Diktovanie",
@@ -147,15 +130,6 @@ export const customNavItems: CustomNavItem[] = [
     icon: Mic,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
     section: "clinical",
-    badge: "AI",
-  },
-  {
-    href: "/agent/discharge",
-    label: "Prepúšťacie Správy",
-    i18nKey: "nav.agentDischarge",
-    icon: FileText,
-    roles: ["admin", "veterinarian", "technician", "front_desk"],
-    section: "admin",
     badge: "AI",
   },
   // Finance / admin

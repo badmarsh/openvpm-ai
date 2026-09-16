@@ -5,6 +5,7 @@ import { Mic, Square, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface RecordingButtonProps {
   onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
@@ -21,6 +22,7 @@ export function RecordingButton({
   disabled = false,
   size = "default",
 }: RecordingButtonProps) {
+  const { t } = useI18n();
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(16).fill(5));
@@ -220,21 +222,21 @@ export function RecordingButton({
       }, 1000);
     } catch (err) {
       console.error("Microphone access error:", err);
-      let msg = "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.";
+      let msg = t("voice.recording.micGenericError", "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.");
       if (typeof window !== "undefined" && (!navigator?.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
-        msg = "Prístup k mikrofónu vyžaduje zabezpečené pripojenie (HTTPS alebo localhost).";
+        msg = t("voice.recording.micSecureRequired", "Prístup k mikrofónu vyžaduje zabezpečené pripojenie (HTTPS alebo localhost).");
       } else if (err instanceof DOMException) {
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-          msg = "Prístup k mikrofónu bol v prehliadači zamietnutý. Kliknite na ikonu zámku v adresnom riadku a povoľte mikrofón.";
+          msg = t("voice.recording.micPermissionDenied", "Prístup k mikrofónu bol zamietnutý. Ak ste mikrofón práve povolili, obnovte stránku (F5 / Reload), alebo skontrolujte povolenia v Nastaveniach Windows.");
         } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-          msg = "Nebol nájdený žiadny mikrofón. Skontrolujte pripojenie mikrofónu a skúste znova.";
+          msg = t("voice.recording.micNotFound", "Nebol nájdený žiadny mikrofón. Skontrolujte pripojenie mikrofónu a skúste znova.");
         } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-          msg = "Mikrofón je obsadený inou aplikáciou.";
+          msg = t("voice.recording.micBusy", "Mikrofón je obsadený inou aplikáciou.");
         }
       }
       toast.error(msg);
     }
-  }, [onRecordingComplete, onInterimText, updateVisualizer]);
+  }, [onRecordingComplete, onInterimText, updateVisualizer, t]);
 
   const stopRecording = useCallback(() => {
     if (
@@ -357,7 +359,7 @@ export function RecordingButton({
 
         {isRecording && (
           <span className="text-xs text-red-500 font-medium animate-pulse mt-0.5">
-            Diktujte klinický nález...
+            {t("voice.recording.dictatePrompt", "Diktujte klinický nález...")}
           </span>
         )}
       </div>
