@@ -13,6 +13,7 @@
   "scripts": {
     "type-check": "tsc --noEmit",
     "db:push": "drizzle-kit push",
+    "db:bootstrap": "tsx bootstrap-db.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx seed.ts",

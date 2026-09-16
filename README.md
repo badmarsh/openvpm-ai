@@ -210,8 +210,8 @@ pnpm install --frozen-lockfile
 # 5. Overenie čistoty open-source vydania
 pnpm verify:oss-release
 
-# 6. Aplikovanie schémy (Zero-Conflict Upstream Sync) a RLS politík
-pnpm db:push
+# 6. Aplikovanie schémy (Zero-Conflict Upstream Sync), object vrstvy a RLS politík
+pnpm db:bootstrap
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls
 OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls:test
 # Pre produkčné nasadenie nastavte vlastné silné heslo:
@@ -220,6 +220,7 @@ OPENPIMS_APP_DB_PASSWORD='local-openpims-app' pnpm db:rls:test
 
 # 7. Naplnenie ukážkovými slovenskými dátami
 pnpm db:seed
+pnpm db:seed:marketing
 
 # 8. Spustenie vývojového servera (štandardne port 3001)
 pnpm dev
@@ -228,6 +229,18 @@ pnpm dev
 Otvorte [http://localhost:3001](http://localhost:3001) a prihláste sa pomocou demo účtu:
 - **Admin:** `admin@neighborhoodvet.example.com` / `password123`
 - **Veterinárny lekár:** `sarah.chen@neighborhoodvet.example.com` / `password123`
+
+> **Poznámka k `pnpm db:bootstrap`:** Tento príkaz je jediné odporúčané vstupné
+> dvere do šchémy. Zabalí `db:push` a navyše (čomu `db:push` samostatne nestačí
+> pri drizzle-kit 0.31.10): (1) na čistej databáze najprv materializuje unikátne
+> indexy, ktoré podpierajú kompozitné tenant cudzie kľúče, a potom dotiahne
+> push; (2) aplikuje object vrstvu z journalu — imutabilné klinické funkcie,
+> triggers a DO bloky (SOAP lifecycle guardy, ochrana consent dôkazov,
+> dispense-charge ochrana) — bez akéhokoľvek úpravu v `packages/db/drizzle/`;
+> (3) overí, že všetky journal funkcie a kritické ovládacie objekty existujú.
+> Príkaz je idempotentný — bezpečne ho opakujte pri každej zmene schémy.
+> `db:push` naďalej funguje pre inkrmentálne zmeny, no po ňom odporúčame
+> `pnpm db:bootstrap` ako kontrolný prechod.
 
 ### Spustenie testov a validácia
 
