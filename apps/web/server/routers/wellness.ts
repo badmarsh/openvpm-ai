@@ -8,8 +8,10 @@ import {
   clients,
   patients,
   practices,
+  extAutomationEvents,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
+import { createMessagesForTrigger } from "@/lib/marketing/messaging";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { computeNextBillingDate } from "@/lib/wellness/billing";
 import { generateDueWellnessInvoices } from "@/lib/wellness/invoicing";
@@ -311,6 +313,44 @@ export const wellnessRouter = createRouter({
           nextBillingDate: startDate,
         })
         .returning();
+
+      // ── Post-commit: emit wellness_enrolled into the durable event bus ──
+      // Fire safely outside the insert: an automation failure must NOT roll
+      // back a completed enrollment. Idempotent per enrollment via dedupeKey.
+      // The enroll gate above already blocks deceased patients (sympathy gate).
+      try {
+        await (ctx.db as any)
+          .insert(extAutomationEvents)
+          .values({
+            practiceId: ctx.practiceId,
+            eventType: "wellness_enrolled",
+            clientId: enrollment!.clientId,
+            patientId: enrollment!.patientId ?? null,
+            sourceRouter: "wellness.enroll",
+            dedupeKey: `wellness_enrolled_${enrollment!.id}`,
+            emittedBy: ctx.user?.id ?? null,
+            status: "pending",
+            availableAt: new Date(),
+            payload: {
+              enrollmentId: enrollment!.id,
+              planId: input.planId,
+              startDate,
+              clientId: input.clientId,
+              patientId: input.patientId ?? null,
+            },
+          })
+          .onConflictDoNothing();
+
+        await createMessagesForTrigger(ctx.db, ctx.practiceId, {
+          eventId: enrollment!.id,
+          triggerKey: "wellness_enrolled",
+          clientId: input.clientId,
+          patientId: input.patientId,
+        });
+      } catch (err) {
+        console.error("[automation] wellness_enrolled trigger error:", err);
+      }
+
       return enrollment!;
     }),
 

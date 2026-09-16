@@ -2187,7 +2187,70 @@
       "addFirstSupplier": "Add first supplier"
     },
     "adjustStockAria": "Adjust stock for {name}",
-    "startTrackingAria": "Start stock tracking for {name}"
+    "startTrackingAria": "Start stock tracking for {name}",
+    "wholesalerImport": {
+      "title": "Import delivery note",
+      "description": "Upload a CSV, TXT or PDF text export from Slovak veterinary wholesalers. Review the items and stock them with a margin in one click.",
+      "wholesalerLabel": "Wholesaler",
+      "wholesalerHint": "“Auto-detect” recognises the format from the file content.",
+      "dropzoneAria": "Upload delivery note file",
+      "dropzoneTitle": "Drag the file here, or click to browse",
+      "dropzoneHint": "Supported: CSV, TXT, EDI (max. 5 MB)",
+      "parsing": "Analysing delivery note...",
+      "parseSuccess": "Delivery note parsed successfully ({count} items).",
+      "parseError": "Could not process the delivery note.",
+      "wholesalers": {
+        "AUTO": "Auto-detect",
+        "CYMEDICA": "Cymedica",
+        "PHARMOS": "Pharmos a.s.",
+        "SAMOHYL": "Samohýl SK",
+        "HENRY_SCHEIN": "Henry Schein",
+        "BIOPHARM": "Biopharm",
+        "KOMVET": "Komvet",
+        "SG_VET": "SG-Vet",
+        "SANVET": "Sanvet",
+        "PHRAMED": "Phramed",
+        "GENERIC_CSV": "Generic CSV"
+      },
+      "metaSupplier": "Wholesaler / Supplier",
+      "metaNoteNumber": "Note no.",
+      "metaIssueDate": "Issue date",
+      "metaTotal": "Total incl. VAT",
+      "uploadAnother": "Upload another",
+      "noBatchWarning": "Items without a stated batch will be flagged with the default value BEZ-SARZE (no batch).",
+      "controlledWarning": "This delivery note contains narcotic/psychotropic substances. Each such line must be explicitly confirmed by staff (default: skip).",
+      "markupLabel": "Markup on purchase price (%)",
+      "markupSliderAria": "Markup slider",
+      "resetPrices": "Recalculate prices from markup",
+      "markupHint": "Proposed retail price = purchase price excl. VAT × (1 + markup). You can adjust individual rows manually.",
+      "colProduct": "Matched product / Item",
+      "colCode": "Code",
+      "colBatch": "Batch / Expiry",
+      "colQty": "Quantity",
+      "colPurchasePrice": "Purchase excl. VAT",
+      "colVat": "VAT",
+      "colRetailPrice": "Retail price",
+      "colAction": "Action",
+      "controlledBadge": "Controlled substance",
+      "unlinkProduct": "Unlink",
+      "linkExisting": "Link to catalog",
+      "linkSearchPlaceholder": "Search product by name or code…",
+      "linkSearching": "Searching…",
+      "linkNoResults": "No product found.",
+      "stockShort": "stk.",
+      "expiryShort": "Exp",
+      "noExpiry": "No expiry",
+      "retailPriceAria": "Retail price per unit",
+      "currentPrice": "curr.",
+      "actionUpdateStock": "Add to stock",
+      "actionCreate": "Create product",
+      "actionSkip": "Skip",
+      "controlledNeedsReview": "Requires review",
+      "confirming": "Stocking…",
+      "confirmButton": "Confirm & stock ({count})",
+      "confirmSuccess": "Inventory updated: {updated} restocked, {created} new products.",
+      "confirmError": "Error writing items into inventory."
+    }
   },
   "labResults": {
     "loadingInbox": "Loading clinic lab inbox…",
@@ -2592,7 +2655,72 @@
       "channelDisconnected": "Channel disconnected.",
       "channelDisconnectError": "Failed to disconnect channel.",
       "reviewsSynced": "Sync complete: {count} new reviews loaded, {escalated} escalated.",
-      "reviewsSyncError": "Failed to sync reviews."
+      "reviewsSyncError": "Failed to sync reviews.",
+      "recalculateAllSegments": "Recalculate segments",
+      "recalculatingSegments": "Recalculating segments…",
+      "segmentsRecalculated": "Recalculated {segments} segments — {members} total memberships.",
+      "lastRecalculated": "Last recalculated: {date}",
+      "neverRecalculated": "Not recalculated yet",
+      "viewSegmentMembers": "View clients in segment",
+      "membersDialogTitle": "Clients in segment: {segment}",
+      "membersDialogDesc": "Active clients belonging to this segment. Click to open the client card.",
+      "loadingMembers": "Loading segment members...",
+      "noMembers": "No clients in this segment yet",
+      "noMembersHint": "Run segment recalculation to refresh membership.",
+      "unnamedClient": "Unnamed client",
+      "membersShowing": "Showing {shown} of {total}",
+      "loadMoreMembers": "Next 25",
+      "segmentSympathyNote": "Sympathy Gate: clients whose patients are all deceased are automatically excluded from every segment.",
+      "segmentCatalog": {
+        "puppy_kitten": {
+          "name": "Puppies & kittens",
+          "description": "Clients with a dog or cat younger than 1 year. Ideal for puppy packages, first vaccinations and socialisation campaigns."
+        },
+        "senior_pet": {
+          "name": "Senior patients (7+ years)",
+          "description": "Clients with a dog or cat aged 7 years or more. Geriatric screening, senior panels and preventive check-ups."
+        },
+        "chronic_patient": {
+          "name": "Chronic patients",
+          "description": "Patients with ≥2 prescriptions in the last 6 months or ≥4 completed visits in 12 months. Long-term care and follow-up management."
+        },
+        "vip_clients": {
+          "name": "VIP clients",
+          "description": "Clients with payments of €1,500+ over the last 12 months. Loyalty programme, priority booking and premium care."
+        },
+        "churn_risk": {
+          "name": "Churn risk",
+          "description": "Previously active clients (≥2 visits) with no visit for 6–12 months. Win-back campaigns before they switch clinics."
+        },
+        "unvaccinated_overdue": {
+          "name": "Vaccination overdue",
+          "description": "Patients whose latest vaccination record is past its next due date. Vaccination reminders under the contractual legal basis."
+        },
+        "wellness_enrolled": {
+          "name": "Wellness plan members",
+          "description": "Clients with an active wellness plan. Preventive care, benefit-redemption reminders and billing."
+        },
+        "dental_attention": {
+          "name": "Needs dental attention",
+          "description": "Patients with a pathological dental chart finding (decay, fracture, mobility…) in the last 18 months. Dental recall campaigns."
+        },
+        "post_op_recovery": {
+          "name": "Post-operative recovery",
+          "description": "Patients with a recorded surgery in the last 30 days. Post-op checks at 24 h / day 3 / day 10."
+        },
+        "frequent_flyer": {
+          "name": "Frequent visitors",
+          "description": "Clients with ≥6 completed visits in the last 12 months. Loyalty, early access to slots and referral programmes."
+        },
+        "weight_management": {
+          "name": "Weight management",
+          "description": "Patients with an elevated body condition score (BCS ≥7/9 or ≥4/5) in the last year. Diet programmes and weigh-in recalls."
+        },
+        "lapsed_inactive": {
+          "name": "Lapsed — 12+ months inactive",
+          "description": "Clients without a completed visit for over 12 months and no upcoming booking. Reactivation (recall) campaigns."
+        }
+      }
     }
   },
   "nav": {
