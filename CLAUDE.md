@@ -9,7 +9,7 @@ Instructions for Claude Code agents working in this repo.
 ## OpenVPM AI Architectural Skill & Guardrails
 All agents working in this repository MUST follow the skill defined in [`.claude/skills/openvpm-ai/SKILL.md`](.claude/skills/openvpm-ai/SKILL.md):
 - **Zero-Conflict Upstream Sync:** Never modify upstream schema files in `packages/db/schema/*.ts`. Add all new tables into `packages/db/schema/ext_*.ts`.
-- **Database Migrations:** Exclusively use `pnpm db:push` to keep `_journal.json` clean.
+- **Database Migrations:** Exclusively use `pnpm db:push` to keep `_journal.json` clean. For bringing a database to a complete, verified state (fresh installs and after schema changes), run `pnpm db:bootstrap` — it wraps `db:push` and additionally applies the journal object layer (clinical safety functions/triggers) that `db:push` cannot manage, then verifies. Never edit `packages/db/drizzle/*`; `db:bootstrap` only reads it.
 - **tRPC Extensions:** Mount extensions under `extensions: extensionsRouter` in `apps/web/server/routers/_app.ts`.
 - **Navigation:** Extend navigation via `apps/web/config/custom-nav.ts`.
 - **i18n:** No `app/[locale]/...` URL route prefixes. Maintain 100% dictionary symmetry between `en.json` and `sk.json`.
