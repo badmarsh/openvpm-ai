@@ -27,6 +27,10 @@ import {
   Gauge,
   UserX,
   Phone,
+  Play,
+  Eye,
+  Check,
+  Search,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -43,6 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 function MarketingAutomationsContent() {
@@ -197,8 +202,90 @@ function MarketingAutomationsContent() {
   const [connectDisplayName, setConnectDisplayName] = useState("");
   const [connectAccountId, setConnectAccountId] = useState("");
 
-  // 5. Live Events Query
-  const eventsQuery = trpc.extensions.automationEvents.list.useQuery({ limit: 30 });
+  // 5. Live Events & Queue Metrics Queries & Mutations
+  const eventsQuery = trpc.extensions.automationEvents.list.useQuery({ limit: 50 });
+  const queueMetricsQuery = trpc.extensions.automationEvents.getQueueMetrics.useQuery(undefined, {
+    refetchInterval: 10_000,
+  });
+
+  const processQueueMutation = trpc.extensions.automationEvents.processQueueNow.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        t(
+          "marketing.automations.queueProcessedSuccess",
+          `Fronta udalostí bola úspešne spracovaná (${data.processedCount} udalostí).`,
+          { count: data.processedCount }
+        )
+      );
+      utils.extensions.automationEvents.list.invalidate();
+      utils.extensions.automationEvents.getQueueMetrics.invalidate();
+      utils.extensions.automationSuppression.getMetrics.invalidate();
+      utils.extensions.automationSuppression.listLogs.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.automations.queueProcessError", "Chyba pri spracovaní fronty."));
+    },
+  });
+
+  const simulateEventMutation = trpc.extensions.automationEvents.simulateEvent.useMutation({
+    onSuccess: (data) => {
+      setSimulationResult(data);
+      if (data.suppressed) {
+        toast.warning(
+          t(
+            "marketing.automations.simSuppressedToast",
+            "Sympathy Gate: Udalosť bola potlačená z dôvodu úmrtia pacienta."
+          )
+        );
+      } else {
+        toast.success(
+          t(
+            "marketing.automations.simSuccessToast",
+            `Udalosť ${data.eventType} bola odoslaná do zbernice (zhoda s ${data.matchedRulesCount} pravidlami).`,
+            { type: data.eventType, count: data.matchedRulesCount }
+          )
+        );
+      }
+      utils.extensions.automationEvents.list.invalidate();
+      utils.extensions.automationEvents.getQueueMetrics.invalidate();
+      utils.extensions.automationSuppression.getMetrics.invalidate();
+      utils.extensions.automationSuppression.listLogs.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || t("marketing.automations.simErrorToast", "Chyba pri simulácii udalosti."));
+    },
+  });
+
+  // Modal State for Event Simulation
+  const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
+  const [simEventType, setSimEventType] = useState<
+    "appointment_no_show" | "vaccine_due" | "post_operative_care" | "wellness_enrolled" | "visit_completed" | "surgery_completed" | "patient_deceased"
+  >("appointment_no_show");
+  const [simPatientSearch, setSimPatientSearch] = useState("");
+  const [simSelectedPatientId, setSimSelectedPatientId] = useState("");
+  const [simSelectedPatientName, setSimSelectedPatientName] = useState("");
+  const [simPayloadText, setSimPayloadText] = useState(
+    JSON.stringify(
+      {
+        service: "Preventívna vakcinácia",
+        appointmentId: "appt_demo_01",
+        noShowCount: 1,
+      },
+      null,
+      2
+    )
+  );
+  const [simProcessImmediately, setSimProcessImmediately] = useState(true);
+  const [simulationResult, setSimulationResult] = useState<any | null>(null);
+
+  // Patient Search Query for simulation
+  const simPatientsQuery = trpc.patients.list.useQuery(
+    { search: simPatientSearch, limit: 6 },
+    { enabled: simPatientSearch.trim().length >= 2 }
+  );
+
+  // Payload Drawer/Dialog State
+  const [selectedEventForPayload, setSelectedEventForPayload] = useState<any | null>(null);
 
   // 6. Suppression Metrics Query
   const suppressionMetricsQuery = trpc.extensions.automationSuppression.getMetrics.useQuery();
@@ -263,12 +350,16 @@ function MarketingAutomationsContent() {
           </TabsTrigger>
           <TabsTrigger value="events" className="flex items-center gap-1.5 py-2">
             <Activity className="w-4 h-4" />
-            <span>{t("marketing.automations.tabEvents", "Event Bus")}</span>
-            {eventsQuery.data && (
+            <span>{t("marketing.automations.tabEvents", "Udalosti & Zbernica")}</span>
+            {queueMetricsQuery.data ? (
+              <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
+                {queueMetricsQuery.data.pending > 0 ? `${queueMetricsQuery.data.pending} čaka` : queueMetricsQuery.data.total}
+              </Badge>
+            ) : eventsQuery.data ? (
               <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
                 {eventsQuery.data.length}
               </Badge>
-            )}
+            ) : null}
           </TabsTrigger>
           <TabsTrigger value="suppression" className="flex items-center gap-1.5 py-2">
             <ShieldAlert className="w-4 h-4" />
@@ -752,26 +843,174 @@ function MarketingAutomationsContent() {
           )}
         </TabsContent>
 
-        {/* 5. LIVE EVENT BUS TAB */}
+        {/* 5. LIVE EVENT BUS & WORKER CONTROL TAB */}
         <TabsContent value="events" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              {t(
-                "marketing.automations.eventsDesc",
-                "Durable append-only event bus. Zaznamenáva každú udalosť kliniky (návštevy, vakcíny, operácie) pred spracovaním pravidlami."
-              )}
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => eventsQuery.refetch()}
-              disabled={eventsQuery.isFetching}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${eventsQuery.isFetching ? "animate-spin" : ""}`} />
-              {t("common.refresh", "Obnoviť")}
-            </Button>
+          {/* Real-time Status Metric Chips */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  {t("marketing.automations.statusPending", "Čakajúce")}
+                </span>
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                  V rade
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {queueMetricsQuery.data?.pending ?? 0}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {t("marketing.automations.pendingDesc", "Pripravené na spracovanie workerom")}
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-blue-500" />
+                  {t("marketing.automations.statusProcessing", "Spracovávané")}
+                </span>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                  Aktívne
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {queueMetricsQuery.data?.processing ?? 0}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {t("marketing.automations.processingDesc", "Zamknuté a vyhodnocované pravidlami")}
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  {t("marketing.automations.statusProcessed", "Spracované")}
+                </span>
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                  Dokončené
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {queueMetricsQuery.data?.processed ?? 0}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {t("marketing.automations.processedDesc", "Pravidlá a cesty úspešne spustené")}
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-destructive" />
+                  {t("marketing.automations.statusFailed", "Zlyhané / Preskočené")}
+                </span>
+                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">
+                  Chyba
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {(queueMetricsQuery.data?.failed ?? 0) + (queueMetricsQuery.data?.skipped ?? 0)}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {queueMetricsQuery.data?.failed ?? 0} zlyhaní, {queueMetricsQuery.data?.skipped ?? 0} preskočených
+              </p>
+            </div>
           </div>
 
+          {/* Stuck Claims Alert if > 0 */}
+          {queueMetricsQuery.data?.stuck ? queueMetricsQuery.data.stuck > 0 ? (
+            <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Uviaznuté claimy:</strong> {queueMetricsQuery.data.stuck} udalostí je v stave spracovania dlhšie než 5 minút. Kliknite na "Spracovať frontu teraz" pre automatickú obnovu claimov.
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 text-xs border-amber-400 hover:bg-amber-100"
+                onClick={() => processQueueMutation.mutate()}
+                disabled={processQueueMutation.isPending}
+              >
+                {processQueueMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                Obnoviť claimy
+              </Button>
+            </div>
+          ) : null : null}
+
+          {/* Controls Bar: Process Queue Now, Simulate Event, Refresh */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-muted/20">
+            <div>
+              <h3 className="font-semibold text-sm text-foreground">
+                {t("marketing.automations.queueManagement", "Správa fronty zbernice a worker")}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t(
+                  "marketing.automations.eventsDesc",
+                  "Durable append-only event bus. Zaznamenáva každú udalosť kliniky (návštevy, vakcíny, operácie) pred spracovaním pravidlami."
+                )}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => processQueueMutation.mutate()}
+                disabled={processQueueMutation.isPending}
+                className="gap-1.5 text-xs shadow-sm bg-primary text-primary-foreground"
+                title={t("marketing.automations.btnProcessQueueNow", "Spracovať frontu teraz")}
+              >
+                {processQueueMutation.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                )}
+                <span>
+                  {processQueueMutation.isPending
+                    ? t("marketing.automations.processingQueue", "Spracovávam frontu…")
+                    : t("marketing.automations.btnProcessQueueNow", "Spracovať frontu teraz")}
+                </span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSimulationResult(null);
+                  setIsSimulateModalOpen(true);
+                }}
+                className="gap-1.5 text-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>{t("marketing.automations.btnSimulateEvent", "Simulovať udalosť")}</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  eventsQuery.refetch();
+                  queueMetricsQuery.refetch();
+                }}
+                disabled={eventsQuery.isFetching || queueMetricsQuery.isFetching}
+                className="text-xs"
+                title={t("common.refresh", "Obnoviť")}
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${
+                    eventsQuery.isFetching || queueMetricsQuery.isFetching ? "animate-spin" : ""
+                  }`}
+                />
+              </Button>
+            </div>
+          </div>
+
+          {/* Events List */}
           {eventsQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
@@ -783,6 +1022,15 @@ function MarketingAutomationsContent() {
               <p className="text-sm font-medium text-foreground">
                 {t("marketing.automations.noEvents", "Žiadne zaznamenané udalosti")}
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 text-xs"
+                onClick={() => setIsSimulateModalOpen(true)}
+              >
+                <Sparkles className="w-3 h-3 mr-1.5 text-amber-500" />
+                {t("marketing.automations.btnSimulateFirst", "Simulovať prvú udalosť")}
+              </Button>
             </div>
           ) : (
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
@@ -795,13 +1043,17 @@ function MarketingAutomationsContent() {
                       <th className="py-3 px-4">{t("marketing.automations.status", "Stav")}</th>
                       <th className="py-3 px-4">{t("marketing.automations.source", "Zdroj")}</th>
                       <th className="py-3 px-4">{t("marketing.automations.dedupeKey", "Dedupe Key")}</th>
+                      <th className="py-3 px-4 text-right">{t("common.actions", "Akcia")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {eventsQuery.data.map((evt) => (
                       <tr key={evt.id} className="hover:bg-muted/20 transition-colors">
                         <td className="py-3 px-4 font-mono font-medium text-foreground">
-                          {evt.eventType}
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-primary" />
+                            {evt.eventType}
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
                           {new Date(evt.occurredAt).toLocaleString("sk-SK", {
@@ -819,11 +1071,19 @@ function MarketingAutomationsContent() {
                                 ? "default"
                                 : evt.status === "pending"
                                 ? "secondary"
+                                : evt.status === "processing"
+                                ? "outline"
                                 : evt.status === "skipped"
                                 ? "outline"
                                 : "destructive"
                             }
-                            className="text-[10px]"
+                            className={`text-[10px] ${
+                              evt.status === "processing"
+                                ? "border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-950"
+                                : evt.status === "skipped"
+                                ? "border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950"
+                                : ""
+                            }`}
                           >
                             {evt.status}
                           </Badge>
@@ -831,8 +1091,20 @@ function MarketingAutomationsContent() {
                         <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
                           {evt.sourceRouter || "system"}
                         </td>
-                        <td className="py-3 px-4 font-mono text-[10px] text-muted-foreground truncate max-w-[200px]">
+                        <td className="py-3 px-4 font-mono text-[10px] text-muted-foreground truncate max-w-[180px]" title={evt.dedupeKey || ""}>
                           {evt.dedupeKey || "—"}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => setSelectedEventForPayload(evt)}
+                            title={t("marketing.automations.inspectPayload", "Zobraziť detail a payload")}
+                          >
+                            <Eye className="w-3.5 h-3.5 text-primary" />
+                            <span>Detail</span>
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -1198,6 +1470,366 @@ function MarketingAutomationsContent() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Simulate Event Modal */}
+      <Dialog open={isSimulateModalOpen} onOpenChange={setIsSimulateModalOpen}>
+        <DialogContent className="sm:max-w-[560px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              {t("marketing.automations.simModalTitle", "Simulovať udalosť zbernice")}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "marketing.automations.simModalDesc",
+                "Otestujte reakciu pravidiel, zákazníckych ciest a Sympathy Gate pri vstupe udalosti."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 py-2 text-xs">
+            {/* Event Type Selector */}
+            <div className="space-y-1.5">
+              <Label htmlFor="sim-event-type">{t("marketing.automations.simEventType", "Typ udalosti")}</Label>
+              <select
+                id="sim-event-type"
+                value={simEventType}
+                onChange={(e) => {
+                  const val = e.target.value as any;
+                  setSimEventType(val);
+                  setSimulationResult(null);
+                  if (val === "appointment_no_show") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { service: "Preventívna vakcinácia", appointmentId: "appt_demo_01", noShowCount: 1 },
+                        null,
+                        2
+                      )
+                    );
+                  } else if (val === "vaccine_due") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { vaccineName: "Nobivac DHPPi+L4", dueDate: "2026-10-01", daysUntilDue: 14 },
+                        null,
+                        2
+                      )
+                    );
+                  } else if (val === "post_operative_care") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { procedure: "Kastrácia / Orchiektómia", surgeon: "MVDr. Martin Sýkora", sutureRemovalDays: 10 },
+                        null,
+                        2
+                      )
+                    );
+                  } else if (val === "wellness_enrolled") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { planName: "Senior Prevent Plus", monthlyFee: 29.9, benefits: ["4x kontrola", "1x biochémia"] },
+                        null,
+                        2
+                      )
+                    );
+                  } else if (val === "visit_completed") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { diagnosis: "Otitis externa", followUpRequired: false },
+                        null,
+                        2
+                      )
+                    );
+                  } else if (val === "surgery_completed") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { procedure: "Dentálna hygiena a extrakcia", hospitalizationHours: 4 },
+                        null,
+                        2
+                      )
+                    );
+                  } else if (val === "patient_deceased") {
+                    setSimPayloadText(
+                      JSON.stringify(
+                        { reason: "Klinická eutanázia pre multiorgánové zlyhanie", sympathyGateTrigger: true },
+                        null,
+                        2
+                      )
+                    );
+                  }
+                }}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="appointment_no_show">appointment_no_show (Nedorazenie na termín)</option>
+                <option value="vaccine_due">vaccine_due (Termín preočkovania)</option>
+                <option value="post_operative_care">post_operative_care (Pooperačná starostlivosť)</option>
+                <option value="wellness_enrolled">wellness_enrolled (Zápis do wellness)</option>
+                <option value="visit_completed">visit_completed (Ukončená návšteva)</option>
+                <option value="surgery_completed">surgery_completed (Ukončená operácia)</option>
+                <option value="patient_deceased">patient_deceased (Úmrtie pacienta - Sympathy Gate)</option>
+              </select>
+            </div>
+
+            {/* Patient Picker (Optional) */}
+            <div className="space-y-1.5 relative">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sim-patient-search">
+                  {t("marketing.automations.simPatientLabel", "Priradiť pacienta (voliteľné)")}
+                </Label>
+                {simSelectedPatientId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSimSelectedPatientId("");
+                      setSimSelectedPatientName("");
+                      setSimPatientSearch("");
+                    }}
+                    className="text-[10px] text-destructive hover:underline"
+                  >
+                    Odobrať pacienta
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  id="sim-patient-search"
+                  placeholder={
+                    simSelectedPatientName
+                      ? `Vybraný: ${simSelectedPatientName}`
+                      : "Hľadať pacienta podľa mena..."
+                  }
+                  value={simPatientSearch}
+                  onChange={(e) => setSimPatientSearch(e.target.value)}
+                  className="h-8 text-xs pl-7"
+                />
+                <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-2.5" />
+              </div>
+
+              {simPatientsQuery.data?.items && simPatientsQuery.data.items.length > 0 && simPatientSearch.trim().length >= 2 && (
+                <div className="absolute z-20 w-full mt-1 max-h-36 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-lg space-y-1">
+                  {simPatientsQuery.data.items.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        setSimSelectedPatientId(p.id);
+                        setSimSelectedPatientName(`${p.name} (${p.species}${p.status === "deceased" ? " - ZOSNULÝ" : ""})`);
+                        setSimPatientSearch("");
+                      }}
+                      className={`cursor-pointer rounded px-2 py-1.5 text-xs hover:bg-muted transition-colors flex items-center justify-between ${
+                        p.status === "deceased" ? "text-purple-600 font-semibold" : ""
+                      }`}
+                    >
+                      <span>
+                        {p.name} — {p.species} {p.breed ? `(${p.breed})` : ""}
+                      </span>
+                      {p.status === "deceased" && (
+                        <Badge variant="outline" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200">
+                          Zosnulý
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {simSelectedPatientName && (
+                <p className="text-[11px] text-primary font-medium flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  {simSelectedPatientName}
+                </p>
+              )}
+            </div>
+
+            {/* JSON Payload Editor */}
+            <div className="space-y-1.5">
+              <Label htmlFor="sim-payload">{t("marketing.automations.simPayloadJson", "Payload udalosti (JSON)")}</Label>
+              <Textarea
+                id="sim-payload"
+                rows={5}
+                value={simPayloadText}
+                onChange={(e) => setSimPayloadText(e.target.value)}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            {/* Checkbox: Process Immediately */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="sim-process-imm"
+                checked={simProcessImmediately}
+                onChange={(e) => setSimProcessImmediately(e.target.checked)}
+                className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+              />
+              <label htmlFor="sim-process-imm" className="text-xs text-foreground cursor-pointer select-none">
+                {t("marketing.automations.simProcessImmediately", "Okamžite spustiť worker a vyhodnotiť pravidlá")}
+              </label>
+            </div>
+
+            {/* Live Simulation Result Feedback Box */}
+            {simulationResult && (
+              <div
+                className={`p-3.5 rounded-xl border space-y-2 ${
+                  simulationResult.suppressed
+                    ? "border-purple-300 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200"
+                    : "border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold">
+                  {simulationResult.suppressed ? (
+                    <>
+                      <ShieldAlert className="w-4 h-4 text-purple-700 dark:text-purple-300" />
+                      <span>Sympathy Gate Aktívna!</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
+                      <span>Udalosť úspešne spracovaná</span>
+                    </>
+                  )}
+                </div>
+                <p className="text-xs leading-relaxed">{simulationResult.message}</p>
+                {simulationResult.matchedRules && simulationResult.matchedRules.length > 0 && (
+                  <div className="space-y-1 pt-1 border-t border-emerald-200 dark:border-emerald-800">
+                    <span className="font-semibold text-[11px] block">Zodpovedajúce pravidlá:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {simulationResult.matchedRules.map((r: any) => (
+                        <Badge key={r.id} variant="outline" className="text-[10px] bg-background">
+                          {r.name} ({r.actionType})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsSimulateModalOpen(false)}>
+              {t("common.close", "Zavrieť")}
+            </Button>
+            <Button
+              disabled={simulateEventMutation.isPending}
+              onClick={() => {
+                let parsedPayload = {};
+                try {
+                  parsedPayload = JSON.parse(simPayloadText);
+                } catch {
+                  toast.error("Neplatný formát JSON payloadu");
+                  return;
+                }
+                simulateEventMutation.mutate({
+                  eventType: simEventType,
+                  patientId: simSelectedPatientId || undefined,
+                  payload: parsedPayload,
+                  processImmediately: simProcessImmediately,
+                });
+              }}
+              className="gap-1.5"
+            >
+              {simulateEventMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Play className="w-3.5 h-3.5 fill-current" />
+              {t("marketing.automations.btnRunSimulation", "Spustiť simuláciu")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payload Inspection Dialog */}
+      <Dialog
+        open={selectedEventForPayload !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEventForPayload(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[540px] max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              <span>Detail udalosti: {selectedEventForPayload?.eventType}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Dedupe Key: {selectedEventForPayload?.dedupeKey || "—"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-3 py-2 text-xs">
+            <div className="grid grid-cols-2 gap-2 p-3 bg-muted/20 rounded-lg border">
+              <div>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Stav</span>
+                <Badge
+                  variant={
+                    selectedEventForPayload?.status === "processed"
+                      ? "default"
+                      : selectedEventForPayload?.status === "pending"
+                      ? "secondary"
+                      : selectedEventForPayload?.status === "skipped"
+                      ? "outline"
+                      : "destructive"
+                  }
+                  className="text-[10px] mt-0.5"
+                >
+                  {selectedEventForPayload?.status}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Čas vzniku</span>
+                <span className="font-mono text-[11px] text-foreground">
+                  {selectedEventForPayload?.occurredAt
+                    ? new Date(selectedEventForPayload.occurredAt).toLocaleString("sk-SK")
+                    : "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Zdrojový router</span>
+                <span className="font-mono text-[11px] text-foreground">
+                  {selectedEventForPayload?.sourceRouter || "system"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Event ID</span>
+                <span className="font-mono text-[10px] text-muted-foreground truncate block" title={selectedEventForPayload?.id}>
+                  {selectedEventForPayload?.id}
+                </span>
+              </div>
+            </div>
+
+            {selectedEventForPayload?.processedReason && (
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800 space-y-1">
+                <span className="font-semibold text-[10px] uppercase text-purple-700 dark:text-purple-300 block">
+                  Dôvod spracovania / vynechania (Audit):
+                </span>
+                <p className="text-xs text-purple-900 dark:text-purple-200">
+                  {selectedEventForPayload.processedReason}
+                </p>
+              </div>
+            )}
+
+            {selectedEventForPayload?.failureReason && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-lg border border-rose-200 dark:border-rose-800 space-y-1">
+                <span className="font-semibold text-[10px] uppercase text-rose-700 dark:text-rose-300 block">
+                  Dôvod zlyhania:
+                </span>
+                <p className="text-xs text-rose-900 dark:text-rose-200 font-mono">
+                  {selectedEventForPayload.failureReason}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <span className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider block">
+                JSON Payload:
+              </span>
+              <pre className="p-3 bg-muted/60 rounded-lg text-[11px] font-mono overflow-x-auto max-h-56 whitespace-pre-wrap">
+                {JSON.stringify(selectedEventForPayload?.payload ?? {}, null, 2)}
+              </pre>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setSelectedEventForPayload(null)}>
+              {t("common.close", "Zavrieť")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

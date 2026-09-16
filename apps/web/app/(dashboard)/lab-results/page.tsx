@@ -16,12 +16,14 @@ import {
   UserRoundCheck,
   Activity,
   UploadCloud,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { AnalyzerImportPanel } from "@/components/lab/analyzer-import-panel";
+import { AnalyteTrendVisualization } from "@/components/lab/analyte-trend-visualization";
 import {
   dateTimeLocalInputUtcInstant,
   formatDateTimeLocalInputForTimeZone,
@@ -54,13 +56,13 @@ type CompletionForm = {
   resultFlag: "unknown" | "normal" | "abnormal" | "critical";
 };
 
-const FILTERS: Array<{ value: InboxFilter; label: string }> = [
-  { value: "action_required", label: "Action required" },
-  { value: "awaiting_results", label: "Awaiting values" },
-  { value: "awaiting_review", label: "Awaiting review" },
-  { value: "critical", label: "Critical" },
-  { value: "follow_up", label: "Follow-up" },
-  { value: "all", label: "All" },
+const FILTERS: Array<{ value: InboxFilter; labelKey: string; fallbackLabel: string }> = [
+  { value: "action_required", labelKey: "labResults.filterActionRequired", fallbackLabel: "Vyžaduje akciu" },
+  { value: "awaiting_results", labelKey: "labResults.filterAwaitingValues", fallbackLabel: "Čaká na hodnoty" },
+  { value: "awaiting_review", labelKey: "labResults.filterAwaitingReview", fallbackLabel: "Čaká na kontrolu" },
+  { value: "critical", labelKey: "labResults.filterCritical", fallbackLabel: "Kritické" },
+  { value: "follow_up", labelKey: "labResults.filterFollowUp", fallbackLabel: "Následná starostlivosť" },
+  { value: "all", labelKey: "labResults.filterAll", fallbackLabel: "Všetky" },
 ];
 const INBOX_FILTER_VALUES = new Set<InboxFilter>(
   FILTERS.map((item) => item.value),
@@ -80,20 +82,20 @@ function formatEvidenceTime(
   value: Date | string | null | undefined,
   timeZone?: string | null,
 ): string {
-  if (!value) return "Not recorded";
+  if (!value) return "Nezaznamenané";
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not recorded";
+  if (Number.isNaN(date.getTime())) return "Nezaznamenané";
   try {
-    return date.toLocaleString("en-US", {
-      month: "short",
+    return date.toLocaleString("sk-SK", {
       day: "numeric",
+      month: "short",
       year: "numeric",
-      hour: "numeric",
+      hour: "2-digit",
       minute: "2-digit",
       timeZone: timeZone ?? undefined,
     });
   } catch {
-    return date.toLocaleString("en-US");
+    return date.toLocaleString("sk-SK");
   }
 }
 
@@ -211,7 +213,7 @@ function LabResultsInboxContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const utils = trpc.useUtils();
-  const [mainTab, setMainTab] = useState<"inbox" | "analyzers">("inbox");
+  const [mainTab, setMainTab] = useState<"inbox" | "analyzers" | "trends">("inbox");
   const [filter, setFilter] = useState<InboxFilter>("action_required");
   const [actionPanel, setActionPanel] = useState<ActionPanel>(null);
   const [completion, setCompletion] = useState<CompletionForm>(EMPTY_COMPLETION);
@@ -335,17 +337,17 @@ function LabResultsInboxContent() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-heading text-2xl font-semibold">
-            {t("labResults.title", "Lab Inbox")}
+            {t("labResults.title", "Laboratórne výsledky")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isFrontDesk
               ? t(
                   "labResults.subtitleFrontDesk",
-                  "Your assigned lab follow-up, with instructions from the clinical team.",
+                  "Vaša priradená následná laboratórna starostlivosť s pokynmi od klinického tímu.",
                 )
               : t(
                   "labResults.subtitleClinical",
-                  "One clinic-wide queue for pending values, clinical review, and owned follow-up.",
+                  "Jeden celoklinický front pre čakajúce hodnoty, klinickú kontrolu a pridelenú následnú starostlivosť.",
                 )}
           </p>
         </div>
@@ -377,10 +379,21 @@ function LabResultsInboxContent() {
           <Activity className="h-4 w-4" />
           <span>{t("labResults.tabAnalyzerImport", "Import z analyzátorov (IDEXX / Fuji / Mindray)")}</span>
         </Button>
+        <Button
+          variant={mainTab === "trends" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMainTab("trends")}
+          className="gap-2"
+        >
+          <TrendingUp className="h-4 w-4 text-emerald-600" />
+          <span>{t("labResults.tabAnalyteTrends", "Trendy analytov (Kreatinín, Urea, ALT, ALP, Glukóza, Leukocyty)")}</span>
+        </Button>
       </div>
 
       {mainTab === "analyzers" ? (
         <AnalyzerImportPanel />
+      ) : mainTab === "trends" ? (
+        <AnalyteTrendVisualization />
       ) : (
         <>
           {selectedResultId ? (
@@ -412,17 +425,7 @@ function LabResultsInboxContent() {
               onClick={() => setFilter(item.value)}
               className="shrink-0"
             >
-              {item.value === "action_required"
-                ? t("labResults.filterActionRequired", "Action required")
-                : item.value === "awaiting_results"
-                  ? t("labResults.filterAwaitingValues", "Awaiting values")
-                  : item.value === "awaiting_review"
-                    ? t("labResults.filterAwaitingReview", "Awaiting review")
-                    : item.value === "critical"
-                      ? t("labResults.filterCritical", "Critical")
-                      : item.value === "follow_up"
-                        ? t("labResults.filterFollowUp", "Follow-up")
-                        : t("labResults.filterAll", "All")}
+              {t(item.labelKey, item.fallbackLabel)}
             </Button>
           ))}
         </div>

@@ -2337,7 +2337,10 @@
     "btnSaveOwnership": "Uložiť priradenie",
     "recordOutcomeTitle": "Zaznamenať výsledok následnej starostlivosti",
     "fieldWhatWasCompleted": "Čo bolo vykonané?",
-    "placeholderOutcome": "Majiteľ kontaktovaný; kontrolný test naplánovaný na…"
+    "placeholderOutcome": "Majiteľ kontaktovaný; kontrolný test naplánovaný na…",
+    "tabAnalyteTrends": "Trendy analytov (Kreatinín, Urea, ALT, ALP, Glukóza, Leukocyty)",
+    "trendsTitle": "Longitudinálne trendy kľúčových analytov",
+    "trendsDesc": "Sledovanie vývoja obličkových, pečeňových, metabolických a hematologických parametrov v čase (Zákon 39/2007 Z. z.)."
   },
   "locale": {
     "language": "Jazyk",
@@ -2465,7 +2468,10 @@
       "approveSuccess": "Odpoveď bola oficiálne schválená a publikovaná.",
       "escalateSuccess": "Recenzia bola úspešne eskalovaná na personál.",
       "allSentiments": "Všetky sentimenty",
-      "onlyEscalated": "Eskalované"
+      "onlyEscalated": "Eskalované",
+      "aiGenerate": "Generovať AI odpoveď",
+      "copyAndApprove": "Kopírovať a označiť za vybavené",
+      "copyReply": "Kopírovať odpoveď"
     },
     "media": {
       "editPrefix": "úprava",

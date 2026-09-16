@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, asc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import {
   labAnalyzerReports,
+  labResults,
   patients,
   clients,
   users,
@@ -402,5 +403,202 @@ export const labImportRouter = createRouter({
         .returning();
 
       return updated;
+    }),
+
+  /**
+   * Získa longitudinálnu históriu a trendy kľúčových analytov pacienta
+   * (Kreatinín, Močovina, ALT, ALP, Glukóza, Leukocyty).
+   */
+  getPatientAnalyteHistory: staffProcedure
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const TARGET_CONFIGS = [
+        {
+          code: "CREA",
+          name: "Kreatinín (CREA)",
+          defaultUnit: "µmol/L",
+          category: "Obličkový profil",
+          aliases: ["CREA", "CREATININE", "KREATININ", "KREAT"],
+        },
+        {
+          code: "UREA",
+          name: "Močovina (Urea / BUN)",
+          defaultUnit: "mmol/L",
+          category: "Obličkový profil",
+          aliases: ["UREA", "BUN", "MOCOVINA", "MOC"],
+        },
+        {
+          code: "ALT",
+          name: "ALT (Alanínaminotransferáza)",
+          defaultUnit: "U/L",
+          category: "Pečeňový profil",
+          aliases: ["ALT", "ALAT", "SGPT"],
+        },
+        {
+          code: "ALP",
+          name: "ALP (Alkalická fosfatáza)",
+          defaultUnit: "U/L",
+          category: "Pečeňový profil",
+          aliases: ["ALP", "ALKP", "AP"],
+        },
+        {
+          code: "GLU",
+          name: "Glukóza (GLU)",
+          defaultUnit: "mmol/L",
+          category: "Metabolický profil",
+          aliases: ["GLU", "GLUCOSE", "GLUKOZA", "GLUK"],
+        },
+        {
+          code: "WBC",
+          name: "Leukocyty (WBC)",
+          defaultUnit: "10^9/L",
+          category: "Hematologický profil",
+          aliases: ["WBC", "LEU", "LEUKOCYTES", "LEUKOCYTY", "LEUK"],
+        },
+      ];
+
+      // 1. Fetch analyzer reports for this patient
+      const reports = await ctx.db.query.labAnalyzerReports.findMany({
+        where: and(
+          eq(labAnalyzerReports.patientId, input.patientId),
+          eq(labAnalyzerReports.practiceId, ctx.practiceId),
+          isNull(labAnalyzerReports.deletedAt)
+        ),
+        orderBy: [asc(labAnalyzerReports.createdAt)],
+      });
+
+      // 2. Fetch clinical lab results for this patient
+      const clinicalRows = await ctx.db.query.labResults.findMany({
+        where: and(
+          eq(labResults.patientId, input.patientId),
+          eq(labResults.practiceId, ctx.practiceId),
+          isNull(labResults.deletedAt)
+        ),
+        orderBy: [asc(labResults.createdAt)],
+      });
+
+      // 3. For each target config, collect data points
+      const trends = TARGET_CONFIGS.map((cfg) => {
+        const datapoints: Array<{
+          id: string;
+          date: string;
+          value: number;
+          unit: string;
+          refLow: number | null;
+          refHigh: number | null;
+          flag: "NORMAL" | "HIGH" | "LOW" | "CRITICAL" | "unknown";
+          source: string;
+        }> = [];
+
+        // From analyzer reports
+        for (const report of reports) {
+          const reportDate = (report.sampleDate || report.createdAt || new Date()).toISOString();
+          const items = (report.parsedResults as LabAnalyteResult[]) || [];
+          for (const item of items) {
+            const codeUpper = (item.code || "").toUpperCase().trim();
+            const nameUpper = (item.name || "").toUpperCase().trim();
+            const matched =
+              cfg.aliases.includes(codeUpper) ||
+              cfg.aliases.some((a) => nameUpper.includes(a));
+
+            if (matched && typeof item.value === "number" && !isNaN(item.value)) {
+              datapoints.push({
+                id: `${report.id}-${cfg.code}`,
+                date: reportDate,
+                value: item.value,
+                unit: item.unit || cfg.defaultUnit,
+                refLow: item.refLow ?? null,
+                refHigh: item.refHigh ?? null,
+                flag: (item.flag as any) || "NORMAL",
+                source: report.fileName || report.analyzerType,
+              });
+            }
+          }
+        }
+
+        // From clinical results
+        for (const row of clinicalRows) {
+          const rowDate = (row.completedAt || row.createdAt || new Date()).toISOString();
+          const nameUpper = (row.testName || "").toUpperCase().trim();
+          const matched = cfg.aliases.some((a) => nameUpper.includes(a));
+
+          if (matched && row.resultValue) {
+            const parsedVal = parseFloat(row.resultValue.replace(",", "."));
+            if (!isNaN(parsedVal)) {
+              datapoints.push({
+                id: `${row.id}-${cfg.code}`,
+                date: rowDate,
+                value: parsedVal,
+                unit: row.unit || cfg.defaultUnit,
+                refLow: row.referenceRangeLow ? parseFloat(row.referenceRangeLow) : null,
+                refHigh: row.referenceRangeHigh ? parseFloat(row.referenceRangeHigh) : null,
+                flag: (row.resultFlag?.toUpperCase() as any) || "NORMAL",
+                source: "Klinické vyšetrenie",
+              });
+            }
+          }
+        }
+
+        // Sort datapoints chronologically
+        datapoints.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const latest = datapoints.length > 0 ? datapoints[datapoints.length - 1] : null;
+        const previous = datapoints.length > 1 ? datapoints[datapoints.length - 2] : null;
+
+        const latestValue = latest ? latest.value : null;
+        const previousValue = previous ? previous.value : null;
+        const unit = latest?.unit || cfg.defaultUnit;
+
+        let diff: number | null = null;
+        let diffPercent: number | null = null;
+        let trend: "up" | "down" | "stable" | "none" = "none";
+
+        if (latestValue !== null && previousValue !== null) {
+          diff = Number((latestValue - previousValue).toFixed(2));
+          diffPercent =
+            previousValue !== 0
+              ? Number((((latestValue - previousValue) / previousValue) * 100).toFixed(1))
+              : 0;
+
+          // Threshold 5% for up/down
+          if (latestValue > previousValue * 1.05) {
+            trend = "up";
+          } else if (latestValue < previousValue * 0.95) {
+            trend = "down";
+          } else {
+            trend = "stable";
+          }
+        }
+
+        return {
+          code: cfg.code,
+          name: cfg.name,
+          category: cfg.category,
+          unit,
+          datapoints,
+          count: datapoints.length,
+          latestValue,
+          latestDate: latest?.date ?? null,
+          latestFlag: latest?.flag ?? "unknown",
+          previousValue,
+          previousDate: previous?.date ?? null,
+          diff,
+          diffPercent,
+          trend,
+          refLow: latest?.refLow ?? null,
+          refHigh: latest?.refHigh ?? null,
+        };
+      });
+
+      return {
+        patientId: input.patientId,
+        reportsCount: reports.length,
+        clinicalResultsCount: clinicalRows.length,
+        trends,
+      };
     }),
 });

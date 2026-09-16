@@ -433,21 +433,8 @@ function AnalyzerUploadModal({
       return;
     }
 
-    if (confidenceScore !== null) {
-      // Human-in-the-loop clinical verification (Act 39/2007 & Act 139/1998)
-      setIsDiffModalOpen(true);
-      return;
-    }
-
-    saveMutation.mutate({
-      patientId: selectedPatientId || undefined,
-      analyzerType: parsedPreview.analyzerType,
-      deviceModel: parsedPreview.deviceModel,
-      species,
-      fileName: fileName || "lab_export.csv",
-      rawContent: rawText,
-      parsedResults: parsedPreview.results,
-    });
+    // Enforcement of mandatory Veterinarian Sign-off Gate (Zákon 39/2007 Z. z. §3 & Zákon 139/1998)
+    setIsDiffModalOpen(true);
   };
 
   return (
@@ -658,9 +645,14 @@ function AnalyzerUploadModal({
             size="sm"
             onClick={handleSave}
             disabled={saveMutation.isPending || isPdfLoading || !parsedPreview || parsedPreview.results.length === 0}
+            className="gap-1.5"
           >
-            {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {confidenceScore !== null ? "Overiť a schváliť (KVL)" : "Uložiť nález"}
+            {saveMutation.isPending ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            )}
+            Overiť a schváliť (KVL SR)
           </Button>
         </div>
       </div>
@@ -677,19 +669,19 @@ function AnalyzerUploadModal({
               analyzerType: parsedPreview.analyzerType,
               deviceModel: parsedPreview.deviceModel,
               species,
-              fileName: fileName || "lab_report.pdf",
-              rawContent: rawText || fileName || "PDF Import",
+              fileName: fileName || "lab_export.csv",
+              rawContent: rawText || fileName || "Analyzátor Import",
               parsedResults: parsedPreview.results,
             });
           }}
           patientName={selectedPatientName || "Nepriradený pacient"}
           species={species}
-          sourceTitle={`PDF Laboratórny protokol (${fileName || "Protokol"})`}
-          overallConfidence={confidenceScore ?? 0.92}
+          sourceTitle={`${parsedPreview.analyzerType} Laboratórny protokol (${fileName || "Analyzátor"})`}
+          overallConfidence={confidenceScore ?? 0.95}
           fields={parsedPreview.results.map((r) => ({
             label: `${r.name} (${r.code})`,
             proposedValue: `${r.value} ${r.unit || ""}`.trim(),
-            confidence: confidenceScore ?? 0.9,
+            confidence: confidenceScore ?? 0.95,
           }))}
         />
       )}

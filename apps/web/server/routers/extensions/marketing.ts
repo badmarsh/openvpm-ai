@@ -1030,7 +1030,7 @@ listReviews: protectedProcedure
     z.object({
       limit: z.number().min(1).max(100).default(50),
       unansweredOnly: z.boolean().default(false),
-      platform: z.enum(['all', 'google', 'facebook']).default('all'),
+      platform: z.enum(['all', 'google', 'facebook', 'internal']).default('all'),
       sentiment: z.enum(['all', 'positive', 'neutral', 'negative', 'mixed']).default('all'),
       escalation: z.enum(['all', 'none', 'pending', 'escalated', 'resolved', 'wont_fix']).default('all'),
     })
@@ -1062,7 +1062,7 @@ createReview: protectedProcedure
   .use(requireRole('admin', 'veterinarian', 'front_desk'))
   .input(
     z.object({
-      platform: z.enum(['google', 'facebook']).default('google'),
+      platform: z.enum(['google', 'facebook', 'internal']).default('google'),
       reviewerName: z.string().min(2).max(100),
       rating: z.number().int().min(1).max(5),
       reviewText: z.string().min(1).max(2000),
@@ -1398,15 +1398,21 @@ generateReviewReply: protectedProcedure
   .use(requireRole('admin', 'veterinarian', 'front_desk'))
   .input(
     z.object({
-      platform: z.enum(['google', 'facebook']).default('google'),
-      reviewerName: z.string(),
+      reviewId: z.string().uuid().optional(),
+      platform: z.enum(['google', 'facebook', 'internal', 'web']).default('google'),
+      reviewerName: z.string().optional(),
+      clientName: z.string().optional(),
       rating: z.number().min(1).max(5),
       reviewText: z.string(),
-      tone: z.enum(['warm', 'professional', 'apologetic', 'concise']).default('warm'),
+      tone: z.enum(['warm', 'professional', 'apologetic', 'concise']).optional(),
     })
   )
   .mutation(async ({ ctx, input }) => {
     await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
+    const name = (input.clientName || input.reviewerName || "Vážený klient").trim();
+    const effectiveTone = input.tone ?? (input.rating >= 4 ? 'warm' : 'apologetic');
+
+    let replyText = "";
     try {
       const model = configuredModel();
       const toneMap = {
@@ -1417,17 +1423,25 @@ generateReviewReply: protectedProcedure
       };
 
       const systemPrompt = `Si veterinárny lekár a riaditeľ slovenskej veterinárnej kliniky.
-Píšeš oficiálnu odpoveď na ${input.platform === 'google' ? 'Google' : 'Facebook'} recenziu od chovateľa.
-Pravidlá:
+Píšeš oficiálnu odpoveď na ${input.platform === 'facebook' ? 'Facebook' : input.platform === 'google' ? 'Google' : 'klinickú'} recenziu od chovateľa.
+Pravidlá v súlade s etickým kódexom Komory veterinárnych lekárov SR (KVL SR):
 1. Píš v spisovnej slovenčine s diakritikou.
-2. Tón: ${toneMap[input.tone]}.
-3. Nikdy nespomínaj citlivé lekárske diagnózy ani celé mená tretích osôb (GDPR).
-4. Rozsah: 2 až 4 vety.
-5. Zakončenie: 'S úctou, tím veterinárnej kliniky' alebo 'S pozdravom, tím veterinárnej kliniky'.
+2. Tón: ${toneMap[effectiveTone]}.
+3. Pre hodnotenia 4-5 hviezdičiek:
+   - Vyjadri vďaku za prejavenú dôveru a vernosť pri starostlivosti o zvieracieho člena rodiny.
+   - Pozvi na ďalšiu preventívnu návštevu.
+4. Pre hodnotenia 1-3 hviezdičky:
+   - Prejav empatické a nekonfrontačné uznanie situácie a ústretové ospravedlnenie za nesplnenie očakávaní.
+   - Zdôrazni záväzok k najvyššej možnej kvalite veterinárnej starostlivosti.
+   - Ponúkni možnosť priameho, diskrétneho rozhovoru telefonicky alebo e-mailom s vedením kliniky pre prešetrenie.
+5. Prísne dodržuj veterinárne tajomstvo a GDPR: NIKDY verejne nerozoberaj konkrétne diagnózy, liečebné postupy ani citlivé informácie.
+6. Rozsah: 2 až 4 kultivované vety.
+7. Zakončenie: 'S úctou, tím veterinárnej kliniky'.
 Vráť iba samotný text odpovede bez úvodzoviek a vysvetlení.`;
 
-      const prompt = `Recenzent: ${input.reviewerName}
+      const prompt = `Recenzent / Klient: ${name}
 Hodnotenie: ${input.rating}/5 hviezdičiek
+Platforma: ${input.platform}
 Text recenzie: "${input.reviewText}"`;
 
       const result = await generateText({
@@ -1436,23 +1450,32 @@ Text recenzie: "${input.reviewText}"`;
         prompt,
       });
 
-      return { reply: result.text.trim() };
+      replyText = result.text.trim();
     } catch {
-      // Fallback templates
+      // Fallback templates compliant with KVL SR ethical code
       if (input.rating >= 5) {
-        return {
-          reply: `Milá/Milý ${input.reviewerName}, veľmi pekne ďakujeme za milé slová a dôveru v náš tím pri starostlivosti o vášho miláčika! Zdravie a pohoda našich zvieracích pacientov sú u nás vždy na prvom mieste. S úctou, tím veterinárnej kliniky. 🐾`,
-        };
+        replyText = `Dobrý deň, ${name}, veľmi pekne ďakujeme za milé slová a dôveru v náš tím pri starostlivosti o vášho miláčika! Zdravie a pohoda našich zvieracích pacientov sú u nás vždy na prvom mieste. Tešíme sa na vašu ďalšiu preventívnu návštevu. S úctou, tím veterinárnej kliniky. 🐾`;
       } else if (input.rating >= 4) {
-        return {
-          reply: `Dobrý deň, ${input.reviewerName}, ďakujeme za Vaše hodnotenie a spätnú väzbu. Neustále sa snažíme zlepšovať organizáciu a kvalitu našich služieb. Tešíme sa na ďalšiu návštevu! S úctou, tím veterinárnej kliniky.`,
-        };
+        replyText = `Dobrý deň, ${name}, ďakujeme za Vaše hodnotenie a priazeň. Neustále sa snažíme poskytovať tú najlepšiu veterinárnu starostlivosť a servis pre chovateľov. Radi Vás i Vášho zvieracieho parťáka opäť privítame na našej klinike. S úctou, tím veterinárnej kliniky.`;
       } else {
-        return {
-          reply: `Dobrý deň, ${input.reviewerName}, ďakujeme za hodnotenie. Veľmi nás mrzí, že Vaša skúsenosť nesplnila očakávania – na každom pacientovi a spokojnosti majiteľa nám úprimne záleží. Prosím kontaktujte vedenie kliniky, radi situáciu detailne preveríme a osobne vyriešime. S úctou, tím kliniky.`,
-        };
+        replyText = `Dobrý deň, ${name}, ďakujeme za spätnú väzbu. Veľmi nás mrzí, že Vaša skúsenosť nesplnila očakávania – na každom pacientovi a spokojnosti majiteľa nám úprimne záleží. Z dôvodu ochrany osobných a lekárskych údajov nemôžeme detaily riešiť verejne, no radi situáciu osobne preveríme. Prosím, kontaktujte priamo vedenie kliniky, aby sme našli riešenie k Vašej spokojnosti. S úctou, tím veterinárnej kliniky.`;
       }
     }
+
+    // Persist draft if reviewId is passed
+    if (input.reviewId) {
+      await ctx.db
+        .update(extMarketingReviews)
+        .set({ aiReplyDraft: replyText })
+        .where(
+          and(
+            eq(extMarketingReviews.id, input.reviewId),
+            eq(extMarketingReviews.practiceId, ctx.practiceId)
+          )
+        );
+    }
+
+    return { reply: replyText };
   }),
 
 seedReviews: protectedProcedure

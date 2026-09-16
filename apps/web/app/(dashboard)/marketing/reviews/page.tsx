@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   Clock,
   ShieldAlert,
+  Copy,
+  Globe,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
@@ -149,10 +151,11 @@ export default function ReviewsPage() {
   const { t } = useI18n();
 
   // Filters state
-  const [platformFilter, setPlatformFilter] = useState<"all" | "google" | "facebook">("all");
+  const [platformFilter, setPlatformFilter] = useState<"all" | "google" | "facebook" | "internal">("all");
+  const [ratingFilter, setRatingFilter] = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unanswered" | "replied">("all");
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "positive" | "neutral" | "negative" | "mixed">("all");
   const [escalationFilter, setEscalationFilter] = useState<"all" | "none" | "pending" | "escalated" | "resolved" | "wont_fix">("all");
-  const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Interaction state
@@ -167,7 +170,7 @@ export default function ReviewsPage() {
   const [isEscalateModalOpen, setIsEscalateModalOpen] = useState(false);
 
   // New review form state
-  const [newPlatform, setNewPlatform] = useState<"google" | "facebook">("google");
+  const [newPlatform, setNewPlatform] = useState<"google" | "facebook" | "internal">("google");
   const [newName, setNewName] = useState("");
   const [newRating, setNewRating] = useState(5);
   const [newText, setNewText] = useState("");
@@ -181,7 +184,7 @@ export default function ReviewsPage() {
     platform: platformFilter,
     sentiment: sentimentFilter,
     escalation: escalationFilter,
-    unansweredOnly,
+    unansweredOnly: statusFilter === "unanswered",
   });
 
   const replyMutation = trpc.extensions.marketing.replyToReview.useMutation({
@@ -277,16 +280,25 @@ export default function ReviewsPage() {
 
   const rawReviews = listQuery.data ?? [];
 
-  // Filter in-memory by search query
+  // Filter in-memory by rating, status, and search query
   const reviews = useMemo(() => {
-    if (!searchQuery.trim()) return rawReviews;
+    let result = rawReviews;
+    if (ratingFilter !== "all") {
+      result = result.filter((r) => (r.rating ?? 5) === ratingFilter);
+    }
+    if (statusFilter === "replied") {
+      result = result.filter((r) => Boolean(r.replyText));
+    } else if (statusFilter === "unanswered") {
+      result = result.filter((r) => !r.replyText);
+    }
+    if (!searchQuery.trim()) return result;
     const q = searchQuery.toLowerCase();
-    return rawReviews.filter(
+    return result.filter(
       (r) =>
         (r.reviewerName || "").toLowerCase().includes(q) ||
         (r.reviewText && r.reviewText.toLowerCase().includes(q))
     );
-  }, [rawReviews, searchQuery]);
+  }, [rawReviews, ratingFilter, statusFilter, searchQuery]);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -300,6 +312,8 @@ export default function ReviewsPage() {
         googleAvg: "0.0",
         facebookTotal: 0,
         facebookAvg: "0.0",
+        internalTotal: 0,
+        internalAvg: "0.0",
         counts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
       };
     }
@@ -312,6 +326,8 @@ export default function ReviewsPage() {
     let googleCount = 0;
     let fbSum = 0;
     let fbCount = 0;
+    let internalSum = 0;
+    let internalCount = 0;
 
     for (const r of rawReviews) {
       const star = Math.min(5, Math.max(1, r.rating || 5)) as 1 | 2 | 3 | 4 | 5;
@@ -322,6 +338,9 @@ export default function ReviewsPage() {
       if (r.platform === "facebook") {
         fbSum += r.rating ?? 5;
         fbCount++;
+      } else if (r.platform === "internal") {
+        internalSum += r.rating ?? 5;
+        internalCount++;
       } else {
         googleSum += r.rating ?? 5;
         googleCount++;
@@ -336,6 +355,8 @@ export default function ReviewsPage() {
       googleAvg: googleCount > 0 ? (googleSum / googleCount).toFixed(1) : "0.0",
       facebookTotal: fbCount,
       facebookAvg: fbCount > 0 ? (fbSum / fbCount).toFixed(1) : "0.0",
+      internalTotal: internalCount,
+      internalAvg: internalCount > 0 ? (internalSum / internalCount).toFixed(1) : "0.0",
       counts,
     };
   }, [rawReviews]);
@@ -485,98 +506,187 @@ export default function ReviewsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-        {/* Platform Tabs */}
-        <div className="inline-flex rounded-lg border bg-muted/40 p-1">
-          <button
-            type="button"
-            onClick={() => setPlatformFilter("all")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-              platformFilter === "all"
-                ? "bg-background text-foreground shadow-sm font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("marketing.reviews.platformAll", "Všetky platformy")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setPlatformFilter("google")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
-              platformFilter === "google"
-                ? "bg-background text-foreground shadow-sm font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <GoogleIcon className="w-3.5 h-3.5" />
-            Google ({stats.googleTotal})
-          </button>
-          <button
-            type="button"
-            onClick={() => setPlatformFilter("facebook")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
-              platformFilter === "facebook"
-                ? "bg-background text-foreground shadow-sm font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <FacebookIcon className="w-3.5 h-3.5" />
-            Facebook ({stats.facebookTotal})
-          </button>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Platform Tabs */}
+          <div className="inline-flex rounded-lg border bg-muted/40 p-1">
+            <button
+              type="button"
+              onClick={() => setPlatformFilter("all")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                platformFilter === "all"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("marketing.reviews.platformAll", "Všetky platformy")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlatformFilter("google")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+                platformFilter === "google"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <GoogleIcon className="w-3.5 h-3.5" />
+              Google ({stats.googleTotal})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlatformFilter("facebook")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+                platformFilter === "facebook"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FacebookIcon className="w-3.5 h-3.5" />
+              Facebook ({stats.facebookTotal})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlatformFilter("internal")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+                platformFilter === "internal"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5 text-indigo-500" />
+              Interné ({stats.internalTotal})
+            </button>
+          </div>
+
+          {/* Rating Filter (1-5 Stars) */}
+          <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-lg border border-border/40">
+            <span className="text-xs font-medium text-muted-foreground px-2">Hodnotenie:</span>
+            <button
+              type="button"
+              onClick={() => setRatingFilter("all")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                ratingFilter === "all"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Všetky
+            </button>
+            {([5, 4, 3, 2, 1] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRatingFilter(ratingFilter === r ? "all" : r)}
+                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-0.5 cursor-pointer ${
+                  ratingFilter === r
+                    ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-amber-500"
+                }`}
+              >
+                <span>{r}</span>
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              </button>
+            ))}
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-lg border border-border/40">
+            <span className="text-xs font-medium text-muted-foreground px-2">Stav:</span>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                statusFilter === "all"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Všetky
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("unanswered")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                statusFilter === "unanswered"
+                  ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold"
+                  : "text-muted-foreground hover:text-amber-600"
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              Čaká na odpoveď
+              {stats.unanswered > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
+                  {stats.unanswered}
+                </Badge>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("replied")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                statusFilter === "replied"
+                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold"
+                  : "text-muted-foreground hover:text-emerald-600"
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              Zodpovedané
+            </button>
+          </div>
         </div>
 
-        {/* Sentiment & Escalation Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/40 rounded-lg border border-border/40">
-          <button
-            type="button"
-            onClick={() => setSentimentFilter("all")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-              sentimentFilter === "all"
-                ? "bg-background text-foreground shadow-sm font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("marketing.reviews.allSentiments", "Všetky sentimenty")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSentimentFilter("positive")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-              sentimentFilter === "positive"
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold"
-                : "text-muted-foreground hover:text-emerald-600"
-            }`}
-          >
-            Pozitívne
-          </button>
-          <button
-            type="button"
-            onClick={() => setSentimentFilter("negative")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-              sentimentFilter === "negative"
-                ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-semibold"
-                : "text-muted-foreground hover:text-rose-600"
-            }`}
-          >
-            Negatívne
-          </button>
-          <button
-            type="button"
-            onClick={() => setEscalationFilter(escalationFilter === "escalated" ? "all" : "escalated")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
-              escalationFilter === "escalated"
-                ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-semibold"
-                : "text-muted-foreground hover:text-purple-600"
-            }`}
-          >
-            <ShieldAlert className="w-3 h-3" />
-            {t("marketing.reviews.onlyEscalated", "Eskalované")}
-          </button>
-        </div>
+        {/* Sentiment & Search row */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/40 rounded-lg border border-border/40">
+            <button
+              type="button"
+              onClick={() => setSentimentFilter("all")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                sentimentFilter === "all"
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("marketing.reviews.allSentiments", "Všetky sentimenty")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSentimentFilter("positive")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                sentimentFilter === "positive"
+                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold"
+                  : "text-muted-foreground hover:text-emerald-600"
+              }`}
+            >
+              Pozitívne
+            </button>
+            <button
+              type="button"
+              onClick={() => setSentimentFilter("negative")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                sentimentFilter === "negative"
+                  ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-semibold"
+                  : "text-muted-foreground hover:text-rose-600"
+              }`}
+            >
+              Negatívne
+            </button>
+            <button
+              type="button"
+              onClick={() => setEscalationFilter(escalationFilter === "escalated" ? "all" : "escalated")}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                escalationFilter === "escalated"
+                  ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-semibold"
+                  : "text-muted-foreground hover:text-purple-600"
+              }`}
+            >
+              <ShieldAlert className="w-3 h-3" />
+              {t("marketing.reviews.onlyEscalated", "Eskalované")}
+            </button>
+          </div>
 
-        {/* Search & Answered Filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 md:w-64">
+          <div className="relative flex-1 sm:max-w-xs">
             <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
             <Input
               value={searchQuery}
@@ -585,26 +695,6 @@ export default function ReviewsPage() {
               className="h-8 pl-8 text-xs bg-background"
             />
           </div>
-
-          <Button
-            variant={unansweredOnly ? "default" : "outline"}
-            size="sm"
-            onClick={() => setUnansweredOnly(!unansweredOnly)}
-            className="text-xs h-8 gap-1.5"
-          >
-            <Filter className="w-3 h-3" />
-            {t("marketing.reviews.unanswered", "Iba bez odpovede")}
-            {stats.unanswered > 0 && (
-              <Badge
-                variant="secondary"
-                className={`ml-1 text-[10px] px-1.5 py-0 ${
-                  unansweredOnly ? "bg-primary-foreground text-primary" : ""
-                }`}
-              >
-                {stats.unanswered}
-              </Badge>
-            )}
-          </Button>
         </div>
       </div>
 
@@ -684,6 +774,14 @@ export default function ReviewsPage() {
                               <FacebookIcon className="w-3 h-3" />
                               Facebook
                             </Badge>
+                          ) : review.platform === "internal" ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] gap-1 py-0 px-1.5 bg-purple-50/60 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                            >
+                              <Globe className="w-3 h-3 text-purple-600" />
+                              Interné
+                            </Badge>
                           ) : (
                             <Badge
                               variant="outline"
@@ -720,30 +818,52 @@ export default function ReviewsPage() {
 
                         {/* Sentiment, Severity, Escalation & SLA Badges */}
                         <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                          {review.sentimentLabel && (
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] px-1.5 py-0 gap-1 ${
-                                review.sentimentLabel === "positive"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40"
-                                  : review.sentimentLabel === "negative"
-                                  ? "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40"
-                                  : review.sentimentLabel === "mixed"
-                                  ? "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40"
-                                  : "bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-900"
-                              }`}
-                            >
-                              {review.sentimentLabel === "positive"
-                                ? "Pozitívna"
-                                : review.sentimentLabel === "negative"
-                                ? "Negatívna"
-                                : review.sentimentLabel === "mixed"
-                                ? "Zmiešaná"
-                                : "Neutrálna"}
-                              {review.sentimentScore != null &&
-                                ` (${review.sentimentScore > 0 ? "+" : ""}${review.sentimentScore}%)`}
-                            </Badge>
-                          )}
+                          {(() => {
+                            const isEscalated = review.escalationStatus === "escalated";
+                            const isNegative =
+                              review.sentimentLabel === "negative" ||
+                              (review.rating != null && review.rating <= 2);
+                            const isPositive =
+                              review.sentimentLabel === "positive" ||
+                              (review.rating != null && review.rating >= 4);
+
+                            if (isEscalated || isNegative) {
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 gap-1 bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 font-semibold"
+                                >
+                                  <AlertTriangle className="w-2.5 h-2.5" />
+                                  {isEscalated ? "Negatívna / Eskalácia" : "Negatívna"}
+                                  {review.sentimentScore != null &&
+                                    ` (${review.sentimentScore > 0 ? "+" : ""}${review.sentimentScore}%)`}
+                                </Badge>
+                              );
+                            }
+
+                            if (isPositive) {
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 gap-1 bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 font-medium"
+                                >
+                                  <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
+                                  Pozitívna
+                                  {review.sentimentScore != null &&
+                                    ` (+${review.sentimentScore}%)`}
+                                </Badge>
+                              );
+                            }
+
+                            return (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 gap-1 bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-900"
+                              >
+                                Neutrálna
+                              </Badge>
+                            );
+                          })()}
 
                           {review.severity && review.severity !== "none" && (
                             <Badge
@@ -863,7 +983,22 @@ export default function ReviewsPage() {
                       <p className="text-foreground/80 whitespace-pre-wrap text-[11px] leading-relaxed">
                         {review.replyText}
                       </p>
-                      <div className="pt-1 flex justify-end">
+                      <div className="pt-1 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(review.replyText || "");
+                              toast.success("Odpoveď bola skopírovaná do schránky.");
+                            } catch {
+                              toast.error("Nepodarilo sa skopírovať.");
+                            }
+                          }}
+                          className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Kopírovať odpoveď
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -895,7 +1030,8 @@ export default function ReviewsPage() {
                           variant="ghost"
                           onClick={() =>
                             generateReplyMutation.mutate({
-                              platform: (review.platform as "google" | "facebook") || "google",
+                              reviewId: review.id,
+                              platform: (review.platform as "google" | "facebook" | "internal") || "google",
                               reviewerName: review.reviewerName || "Klient",
                               rating: review.rating ?? 5,
                               reviewText: review.reviewText || "",
@@ -965,38 +1101,75 @@ export default function ReviewsPage() {
                         <Button
                           size="sm"
                           disabled={!replyText.trim() || approveReviewReplyMutation.isPending}
-                          onClick={() =>
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(replyText.trim());
+                              toast.info("Odpoveď skopírovaná do schránky.");
+                            } catch {
+                              // ignore
+                            }
                             approveReviewReplyMutation.mutate({
                               id: review.id,
                               approvedReplyText: replyText.trim(),
-                            })
-                          }
-                          className="text-xs h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            });
+                          }}
+                          className="text-xs h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                         >
-                          {approveReviewReplyMutation.isPending && (
+                          {approveReviewReplyMutation.isPending ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
                           )}
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Schváliť & Publikovať
+                          {t("marketing.reviews.copyAndApprove", "Kopírovať a označiť za vybavené")}
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      {!review.replyText ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setReplyingTo(review.id);
-                            setReplyText("");
-                          }}
-                          className="text-xs flex-1 h-8"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                          {t("marketing.reviews.reply", "Odpovedať na recenziu")}
-                        </Button>
-                      ) : null}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {!review.replyText ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setReplyingTo(review.id);
+                                setReplyText("");
+                              }}
+                              className="text-xs h-8"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                              {t("marketing.reviews.reply", "Odpovedať")}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setReplyingTo(review.id);
+                                setReplyText("");
+                                generateReplyMutation.mutate({
+                                  reviewId: review.id,
+                                  platform: (review.platform as "google" | "facebook" | "internal") || "google",
+                                  reviewerName: review.reviewerName || "Klient",
+                                  rating: review.rating ?? 5,
+                                  reviewText: review.reviewText || "",
+                                  tone: (review.rating ?? 5) < 3 ? "apologetic" : "warm",
+                                });
+                              }}
+                              disabled={generateReplyMutation.isPending && replyingTo === review.id}
+                              className="text-xs h-8 gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                            >
+                              {generateReplyMutation.isPending && replyingTo === review.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              )}
+                              {t("marketing.reviews.aiSuggest", "Generovať AI odpoveď")}
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
 
                       {review.escalationStatus !== "escalated" && (
                         <Button
@@ -1048,31 +1221,44 @@ export default function ReviewsPage() {
                 <label className="font-semibold text-foreground">
                   {t("marketing.reviews.platform", "Platforma")}
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setNewPlatform("google")}
-                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
                       newPlatform === "google"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
                         : "hover:bg-muted text-muted-foreground"
                     }`}
                   >
-                    <GoogleIcon className="w-4 h-4" />
-                    Google Recenzia
+                    <GoogleIcon className="w-3.5 h-3.5" />
+                    Google
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setNewPlatform("facebook")}
-                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
                       newPlatform === "facebook"
                         ? "border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
                         : "hover:bg-muted text-muted-foreground"
                     }`}
                   >
-                    <FacebookIcon className="w-4 h-4" />
-                    Facebook Odporúčanie
+                    <FacebookIcon className="w-3.5 h-3.5" />
+                    Facebook
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNewPlatform("internal")}
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                      newPlatform === "internal"
+                        ? "border-purple-600 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5 text-purple-600" />
+                    Interné
                   </button>
                 </div>
               </div>
