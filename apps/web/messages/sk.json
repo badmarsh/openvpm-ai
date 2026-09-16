@@ -6322,7 +6322,18 @@
       "loaded": "Demo nahrávka bola načítaná",
       "failed": "Načítanie demo nahrávky zlyhalo",
       "defaultPatientName": "Bono",
-      "defaultClientName": "Majiteľ"
+      "defaultClientName": "Majiteľ",
+      "simulateMic": "Simulovať mikrofón",
+      "startSimulation": "Spustiť simuláciu mikrofónu",
+      "simulationRunning": "Prebieha simulácia mikrofónu z demo nahrávky...",
+      "simulationBadge": "Simulovaný mikrofón (Demo)",
+      "simulationActive": "Režim simulácie mikrofónu je aktívny",
+      "muteSpeaker": "Stlmiť odposluch",
+      "unmuteSpeaker": "Zapnúť odposluch",
+      "switchToHardware": "Fyzický mikrofón",
+      "switchToSimulation": "Simulovaný mikrofón",
+      "fallbackToSim": "Spustiť simuláciu mikrofónu s demo nahrávkou",
+      "simCompleted": "Simulované nahrávanie bolo dokončené ({seconds} s)"
     },
     "history": {
       "title": "História hlasových diktovaní",
@@ -6575,6 +6586,7 @@
     "defaultClientName": "Klient",
     "defaultPetName": "Pacient",
     "defaultSpecies": "zviera",
+    "encounterFollowUpDue": "Kontrola: {date}",
     "presetApplied": "Šablóna „{name}“ aplikovaná",
     "marketingFailed": "Nepodarilo sa vytvoriť príspevok.",
     "copyFailed": "Kopírovanie zlyhalo",

@@ -23,6 +23,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/book",
   "/capture",
   "/clinic-fit",
+  "/demo",
   "/email-preferences",
   "/forgot-password",
   "/h",

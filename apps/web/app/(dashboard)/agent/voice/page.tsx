@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -37,7 +37,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RecordingButton } from "./components/recording-button";
+import { RecordingButton, type RecordingButtonHandle } from "./components/recording-button";
 import { AudioPlayer } from "./components/audio-player";
 import { ClinicalTemplatesModal } from "./components/clinical-templates";
 import { VoiceCommandsModal } from "./components/voice-commands";
@@ -77,6 +77,9 @@ function VoiceDictationContent() {
   const searchParams = useSearchParams();
   const patientIdParam = searchParams.get("patientId");
   const utils = trpc.useUtils();
+  const simulateMicParam = searchParams.get("simulateMic");
+  const isSimulateMicRequested = simulateMicParam === "true" || simulateMicParam === "1";
+  const recordingButtonRef = useRef<RecordingButtonHandle>(null);
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<"editor" | "history">("editor");
@@ -500,10 +503,10 @@ function VoiceDictationContent() {
     [resetState, selectedPatient, audioBlob, handleProcess, dictationId, handleSave, router, t],
   );
 
-  const [loadingDemo, setLoadingDemo] = useState(false);
+  const [isStartingSimulation, setIsStartingSimulation] = useState(false);
 
-  const handleLoadDemo = useCallback(async () => {
-    setLoadingDemo(true);
+  const handleStartSimulatedRecording = useCallback(async () => {
+    setIsStartingSimulation(true);
     try {
       if (!selectedPatient) {
         let pCandidate = null;
@@ -534,62 +537,21 @@ function VoiceDictationContent() {
         }
       }
 
-      const res = await fetch("/demo/voice-demo.webm");
-      if (!res.ok) throw new Error(t("voice.demo.notFound", "Demo nahrávka nebola nájdená"));
-      const arrayBuffer = await res.arrayBuffer();
-      // Prehrávač a upload očakáva korektný audio/webm MIME type
-      const blob = new Blob([arrayBuffer], { type: "audio/webm" });
+      // Reset prior recording/SOAP state before new simulated recording
+      setAudioBlob(null);
+      setAudioDuration(0);
+      setDictationId(null);
+      setRawTranscript("");
+      setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
 
-      // Získame reálnu dĺžku s bezpečným fallbackom na 36 s (nikdy nezlyhá celá operácia)
-      let duration = 36;
-      try {
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio();
-        duration = await new Promise<number>((resolve) => {
-          const timer = setTimeout(() => {
-            cleanup();
-            resolve(36);
-          }, 1500);
-
-          const cleanup = () => {
-            clearTimeout(timer);
-            URL.revokeObjectURL(url);
-          };
-
-          audio.addEventListener(
-            "loadedmetadata",
-            () => {
-              const d = Math.round(audio.duration || 36);
-              cleanup();
-              resolve(d > 0 && isFinite(d) ? d : 36);
-            },
-            { once: true },
-          );
-
-          audio.addEventListener(
-            "error",
-            () => {
-              cleanup();
-              resolve(36);
-            },
-            { once: true },
-          );
-
-          audio.src = url;
-          audio.load();
-        });
-      } catch {
-        duration = 36;
-      }
-
-      handleRecordingComplete(blob, duration);
-      toast.success(t("voice.demo.loaded", "Demo nahrávka bola načítaná"));
+      toast.info(t("voice.demo.simulationRunning", "Prebieha simulácia mikrofónu z demo nahrávky..."));
+      await recordingButtonRef.current?.start(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("voice.demo.failed", "Načítanie demo nahrávky zlyhalo"));
     } finally {
-      setLoadingDemo(false);
+      setIsStartingSimulation(false);
     }
-  }, [handleRecordingComplete, selectedPatient, utils, t]);
+  }, [selectedPatient, utils, t]);
 
   const handleCopySoap = () => {
     const text = `${t("voice.soap.subjective", "Subjektívne (S)")}:\n${soapSections.subjective}\n\n${t("voice.soap.objective", "Objektívne (O)")}:\n${soapSections.objective}\n\n${t("voice.soap.assessment", "Hodnotenie (A)")}:\n${soapSections.assessment}\n\n${t("voice.soap.plan", "Plán (P)")}:\n${soapSections.plan}`;
@@ -872,28 +834,30 @@ function VoiceDictationContent() {
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                 <RecordingButton
+                  ref={recordingButtonRef}
                   onRecordingComplete={handleRecordingComplete}
                   onCommandDetected={(actionKey, phrase) => {
                     handleExecuteVoiceCommand(actionKey, phrase);
                   }}
                   disabled={!canRecord}
                   size="large"
+                  initialSimulated={isSimulateMicRequested}
                 />
 
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleLoadDemo}
-                  disabled={loadingDemo || isProcessing}
-                  className="text-xs gap-1.5"
+                  onClick={handleStartSimulatedRecording}
+                  disabled={isStartingSimulation || isProcessing}
+                  className="text-xs gap-1.5 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/5"
                 >
-                  {loadingDemo ? (
+                  {isStartingSimulation ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Volume2 className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
                   )}
-                  {t("voice.demo.load", "Načítať demo nahrávku")}
+                  {t("voice.demo.startSimulation", "Spustiť simuláciu mikrofónu")}
                 </Button>
 
                 {/* Recorded Audio Preview */}

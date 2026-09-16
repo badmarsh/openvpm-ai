@@ -114,6 +114,8 @@ function DischargeContent() {
   const utils = trpc.useUtils();
   const searchParams = useSearchParams();
   const urlPatientId = searchParams.get("patientId");
+  // Deep-link from /encounters/[appointmentId] carries the visit context too.
+  const urlAppointmentId = searchParams.get("appointmentId");
 
   // Patient selection
   const [patientSearchOpen, setPatientSearchOpen] = useState(false);
@@ -150,6 +152,42 @@ function DischargeContent() {
       }
     }
   }, [initialPatientQ.data, selectedPatient, t]);
+
+  // Encounter context: when the clinician arrives from the visit workspace the
+  // signed clinical closeout (diagnosis, discharge instructions, follow-up) is
+  // the anamnesis this report must start from. Without it the AI writes a
+  // discharge summary from empty fields.
+  const encounterCloseoutQ = trpc.encounters.getCloseout.useQuery(
+    { appointmentId: urlAppointmentId ?? "" },
+    { enabled: Boolean(urlAppointmentId), retry: false }
+  );
+
+  useEffect(() => {
+    const closeout = encounterCloseoutQ.data?.closeout;
+    if (!closeout) return;
+
+    // Prefill only untouched fields — never clobber what the clinician typed.
+    if (closeout.diagnosisSummary) {
+      setDiagnosis((prev) => (prev.trim() === "" ? closeout.diagnosisSummary ?? "" : prev));
+    }
+    if (closeout.dischargeInstructions) {
+      setTreatment((prev) =>
+        prev.trim() === "" ? closeout.dischargeInstructions ?? "" : prev
+      );
+    }
+    const followUpParts = [
+      closeout.followUpNotes?.trim() || "",
+      closeout.followUpDueDate
+        ? t("discharge.encounterFollowUpDue", "Kontrola: {date}", {
+            date: closeout.followUpDueDate,
+          })
+        : "",
+    ].filter(Boolean);
+    if (followUpParts.length > 0) {
+      const followUpText = followUpParts.join("\n");
+      setFollowUp((prev) => (prev.trim() === "" ? followUpText : prev));
+    }
+  }, [encounterCloseoutQ.data, t]);
 
   const patientSearchQ = trpc.patients.search.useQuery(
     { query: patientSearch },

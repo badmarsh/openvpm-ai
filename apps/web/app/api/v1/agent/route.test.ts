@@ -231,6 +231,7 @@ describe("POST /api/v1/agent", () => {
         db: mocks.tx,
         practiceId: PRACTICE_ID,
         userId: `apikey:${API_KEY_ID}`,
+        userRole: "service_agent",
         postCommitEffect: expect.any(Function),
       },
     });
@@ -324,6 +325,7 @@ describe("POST /api/v1/agent", () => {
         db: mocks.tx,
         practiceId: PRACTICE_ID,
         userId: `apikey:${API_KEY_ID}`,
+        userRole: "service_agent",
         postCommitEffect: expect.any(Function),
       },
     });
@@ -378,6 +380,7 @@ describe("POST /api/v1/agent", () => {
         db: mocks.tx,
         practiceId: PRACTICE_ID,
         userId: `apikey:${API_KEY_ID}`,
+        userRole: "service_agent",
         postCommitEffect: expect.any(Function),
       },
     });

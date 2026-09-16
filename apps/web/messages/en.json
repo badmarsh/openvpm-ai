@@ -6322,7 +6322,18 @@
       "loaded": "Demo recording loaded",
       "failed": "Loading the demo recording failed",
       "defaultPatientName": "Bono",
-      "defaultClientName": "Owner"
+      "defaultClientName": "Owner",
+      "simulateMic": "Simulate microphone",
+      "startSimulation": "Start microphone simulation",
+      "simulationRunning": "Microphone simulation from demo recording in progress...",
+      "simulationBadge": "Simulated Microphone (Demo)",
+      "simulationActive": "Microphone simulation mode is active",
+      "muteSpeaker": "Mute monitor",
+      "unmuteSpeaker": "Unmute monitor",
+      "switchToHardware": "Physical microphone",
+      "switchToSimulation": "Simulated microphone",
+      "fallbackToSim": "Launch microphone simulation with demo recording",
+      "simCompleted": "Simulated recording completed ({seconds} s)"
     },
     "history": {
       "title": "Voice dictation history",
@@ -6575,6 +6586,7 @@
     "defaultClientName": "Client",
     "defaultPetName": "Patient",
     "defaultSpecies": "animal",
+    "encounterFollowUpDue": "Follow-up: {date}",
     "presetApplied": "Preset “{name}” applied",
     "marketingFailed": "Failed to create the post.",
     "copyFailed": "Failed to copy",

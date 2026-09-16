@@ -7,12 +7,16 @@
  * Architecture:
  * - No pg LISTEN/NOTIFY (incompatible with serverless/pgBouncer)
  * - Polling every 60 seconds via Vercel cron
- * - Claim pattern: UPDATE ... SET status='processing' WHERE status='pending' LIMIT 10
+ * - Claim pattern: a single UPDATE ... WHERE status='pending' ... RETURNING *.
+ *   The UPDATE re-checks `status='pending'` under the row lock and RETURNING
+ *   hands back exactly the rows THIS invocation flipped, so two overlapping
+ *   workers can never both receive the same event.
  * - Stuck claim recovery: events in 'processing' > 5 min → reset to 'pending'
  *
  * See EVENT-ENGINE-PLAN.md §C for full design.
  */
 
+import { randomUUID } from "node:crypto";
 import { and, eq, gt, inArray, isNull, lte, sql, gte, lt } from "drizzle-orm";
 import type { Database } from "@openpims/db/client";
 import {
@@ -43,6 +47,20 @@ const STUCK_CLAIM_THRESHOLD_MINUTES = 5;
  * In production, this would be the Vercel function ID or pod name.
  */
 const POD_ID = process.env.VERCEL_FUNCTION_ID ?? `worker_${Date.now()}`;
+
+/**
+ * Per-invocation claim token.
+ *
+ * POD_ID alone is NOT unique per run: it is a module-level constant, so every
+ * concurrent `pollAndProcess()` inside one warm instance (cron + tRPC-triggered
+ * drain, or two overlapping cron fires) shares it. Claiming by POD_ID would
+ * hand the same rows to both runs. Each invocation therefore gets its own
+ * token, and the claim is proven by the UPDATE's RETURNING clause rather than
+ * by re-selecting on the token.
+ */
+function createClaimToken(): string {
+  return `${POD_ID}:${randomUUID()}`;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -147,15 +165,21 @@ async function recoverStuckClaims(
 /**
  * Claim up to `limit` pending events that are available for processing.
  *
- * Uses SELECT ... FOR UPDATE SKIP LOCKED pattern via Drizzle's `for` clause.
- * This prevents multiple workers from processing the same event.
+ * Exclusivity comes from the claiming UPDATE itself, not from a follow-up
+ * SELECT: the `status = 'pending'` predicate is re-evaluated under the row
+ * lock, and `RETURNING` yields precisely the rows this invocation flipped.
+ * A competing worker that lost the race simply gets zero rows back.
+ *
+ * (The previous implementation re-selected on `lockedBy = POD_ID`; because
+ * POD_ID is shared by every concurrent run in a warm instance, both runs
+ * received the same events and processed them twice.)
  */
 async function claimPendingEvents(
   db: Database,
   now: Date,
   limit: number
 ): Promise<AutomationEvent[]> {
-  // First, find event IDs to claim (without locking)
+  // Cheap pre-filter: narrows the UPDATE's id list so the claim stays small.
   const pendingEvents = await db
     .select({ id: extAutomationEvents.id })
     .from(extAutomationEvents)
@@ -175,31 +199,21 @@ async function claimPendingEvents(
 
   const eventIds = pendingEvents.map((e) => e.id);
 
-  // Claim the events atomically
-  await db
+  // Claim the events atomically and take back only what we actually claimed.
+  const claimedEvents = await db
     .update(extAutomationEvents)
     .set({
       status: "processing" as const,
       lockedAt: now,
-      lockedBy: POD_ID,
+      lockedBy: createClaimToken(),
     })
     .where(
       and(
         inArray(extAutomationEvents.id, eventIds),
         eq(extAutomationEvents.status, "pending" as const)
       )
-    );
-
-  // Fetch the full event rows
-  const claimedEvents = await db
-    .select()
-    .from(extAutomationEvents)
-    .where(
-      and(
-        inArray(extAutomationEvents.id, eventIds),
-        eq(extAutomationEvents.lockedBy, POD_ID)
-      )
-    );
+    )
+    .returning();
 
   return claimedEvents;
 }

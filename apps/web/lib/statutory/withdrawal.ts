@@ -227,6 +227,14 @@ export interface StatutoryFloorCheckResult {
   hasViolation: boolean;
   violations: StatutoryFloorViolation[];
   statutoryDrug?: VeterinaryDrugCatalogItem;
+  /**
+   * True when the substance is not in the ŠÚKL catalog and the target is a
+   * food-producing animal. Such an administration has no SPC withdrawal period
+   * for this species and therefore falls under the statutory cascade
+   * (Nariadenie EÚ 2019/6 Čl. 111/115) — callers must not treat the recorded
+   * value as verified.
+   */
+  unknownSubstanceForFoodAnimal: boolean;
   effectiveMeatDays: number;
   effectiveMilkDays: number;
   effectiveEggsDays: number;
@@ -255,6 +263,7 @@ export function checkStatutoryWithdrawalFloor(params: {
       hasViolation: false,
       violations: [],
       statutoryDrug: undefined,
+      unknownSubstanceForFoodAnimal: false,
       effectiveMeatDays: params.meatWithdrawalDays,
       effectiveMilkDays: params.milkWithdrawalDays,
       effectiveEggsDays: params.eggWithdrawalDays ?? 0,
@@ -291,6 +300,39 @@ export function checkStatutoryWithdrawalFloor(params: {
     }
     if ((matchedCatalogDrug.eggWithdrawalDays ?? 0) > minEggs) {
       minEggs = matchedCatalogDrug.eggWithdrawalDays ?? 0;
+    }
+  }
+
+  // 3. Fail-closed default for UNRECOGNISED substances in food-producing
+  //    animals. A product that is absent from the ŠÚKL catalog has no SPC
+  //    withdrawal period for this species, which under Nariadenie EÚ 2019/6
+  //    Čl. 111/115 places the administration in the statutory cascade — so the
+  //    cascade minima (meat 28 d, milk 7 d, eggs 7 d) are the legal floor.
+  //
+  //    Recording 0 days for such a substance would clear the animal for
+  //    slaughter / milk immediately. That is never defensible, so a zero (or
+  //    missing) value is clamped to the cascade floor instead of passing
+  //    silently. Explicitly recorded non-zero values are left to the treating
+  //    veterinarian — they are reported through
+  //    `unknownSubstanceForFoodAnimal` rather than silently rewritten.
+  const unknownSubstanceForFoodAnimal = !matchedCatalogDrug;
+  if (unknownSubstanceForFoodAnimal) {
+    const species = params.targetAnimalType?.toLowerCase() ?? "";
+    // Milk withdrawal only exists for lactating food species — clamping it for
+    // poultry or pigs would raise a meaningless violation.
+    const isMilkProducingSpecies =
+      species === "" ||
+      ["bovine", "ovine", "caprine", "equine", "goat", "sheep", "cow"]
+        .includes(species);
+
+    if (params.meatWithdrawalDays <= 0) {
+      minMeat = Math.max(minMeat, 28);
+    }
+    if (isMilkProducingSpecies && params.milkWithdrawalDays <= 0) {
+      minMilk = Math.max(minMilk, 7);
+    }
+    if (species === "poultry" && (params.eggWithdrawalDays ?? 0) <= 0) {
+      minEggs = Math.max(minEggs, 7);
     }
   }
 
@@ -351,6 +393,7 @@ export function checkStatutoryWithdrawalFloor(params: {
     hasViolation: violations.length > 0,
     violations,
     statutoryDrug: matchedCatalogDrug,
+    unknownSubstanceForFoodAnimal,
     effectiveMeatDays: Math.max(params.meatWithdrawalDays, minMeat),
     effectiveMilkDays: Math.max(params.milkWithdrawalDays, minMilk),
     effectiveEggsDays: Math.max(params.eggWithdrawalDays ?? 0, minEggs),
