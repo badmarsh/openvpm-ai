@@ -137,6 +137,15 @@ jobs:
 
       - run: pnpm --filter @openpims/db db:rls
 
+      # Seed completeness contract: the documented seed flow must produce the
+      # demo dataset every feature page expects (automation journeys/rules, the
+      # 12 canonical CRM segments, content pillars/briefs, channel accounts).
+      - name: Verify documented seed flow completeness
+        run: |
+          pnpm --filter @openpims/db db:seed
+          pnpm db:seed:marketing
+          pnpm db:seed:verify
+
       # Client treatment-plan decisions are legal record evidence. Prove the
       # sealed revision/response graph, signature hash binding, replay refusal,
       # immutable grants, and tenant/no-context isolation in real PostgreSQL.

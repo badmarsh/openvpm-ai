@@ -9,6 +9,16 @@ import { eq, and, desc } from "drizzle-orm";
 import { createRouter, protectedProcedure } from "../../trpc";
 import { extAutomationJourneys } from "@openpims/db";
 import type { AutomationJourneyStep } from "@openpims/db";
+import { CRM_SEGMENT_KEYS } from "@/lib/autopilot/segmentation-engine";
+
+/**
+ * Journey segment targeting: must be canonical keys (empty = all clients).
+ * Plain z.enum (not .refine) so the router input keeps full static typing.
+ */
+const segmentKeyEnum = z.enum(
+  CRM_SEGMENT_KEYS as unknown as [string, ...string[]]
+);
+const targetSegmentKeysSchema = z.array(segmentKeyEnum);
 
 export const automationJourneysRouter = createRouter({
   /**
@@ -43,6 +53,7 @@ export const automationJourneysRouter = createRouter({
         frequencyCapWindowDays: z.number().int().min(1).default(30),
         frequencyCapMaxSteps: z.number().int().min(0).default(4),
         allowReentry: z.boolean().default(false),
+        targetSegmentKeys: targetSegmentKeysSchema.default([]),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -63,6 +74,7 @@ export const automationJourneysRouter = createRouter({
           frequencyCapWindowDays: input.frequencyCapWindowDays,
           frequencyCapMaxSteps: input.frequencyCapMaxSteps,
           allowReentry: input.allowReentry,
+          targetSegmentKeys: input.targetSegmentKeys,
           createdBy: ctx.user?.id ?? null,
         })
         .returning();
@@ -88,6 +100,7 @@ export const automationJourneysRouter = createRouter({
         frequencyCapWindowDays: z.number().int().min(1).optional(),
         frequencyCapMaxSteps: z.number().int().min(0).optional(),
         allowReentry: z.boolean().optional(),
+        targetSegmentKeys: targetSegmentKeysSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

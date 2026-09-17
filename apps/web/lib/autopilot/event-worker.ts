@@ -23,7 +23,7 @@ import {
   extAutomationEvents,
   extAutomationEventStatusEnum,
 } from "@openpims/db";
-import { evaluateRules } from "./rules-engine";
+import { evaluateRules, executeRuleAction } from "./rules-engine";
 import { advanceJourney } from "./journey-engine";
 
 // ---------------------------------------------------------------------------
@@ -276,10 +276,10 @@ async function processSingleEvent(
   // Step 1: Evaluate rules for this event
   const ruleMatches = await evaluateRules(db, event);
 
-  // Step 2: Execute matched rules
+  // Step 2: Execute matched rules (real implementation in rules-engine.ts)
   for (const match of ruleMatches) {
     try {
-      await executeRuleAction(db, event, match, now);
+      await executeRuleAction(db, event, match.rule, now);
     } catch (error) {
       console.error(
         `[automation-worker] Rule action failed for event ${event.id}:`,
@@ -306,37 +306,4 @@ async function processSingleEvent(
     .where(eq(extAutomationEvents.id, event.id));
 }
 
-/**
- * Execute a single rule action.
- */
-async function executeRuleAction(
-  db: Database,
-  event: AutomationEvent,
-  match: any, // RuleMatch type from rules-engine
-  now: Date
-): Promise<void> {
-  const { actionType, actionJson } = match.rule;
 
-  switch (actionType) {
-    case "create_journey":
-      // Journey enrollment handled by journey engine
-      break;
-
-    case "send_communication":
-      // Communication sending handled by messaging.ts
-      break;
-
-    case "create_task":
-      // Task creation handled by marketing router
-      break;
-
-    case "create_content_brief":
-      // Content brief creation handled by content calendar
-      break;
-
-    default:
-      console.warn(
-        `[automation-worker] Unknown action type: ${actionType}`
-      );
-  }
-}

@@ -11,7 +11,7 @@
  * See ARCHITECTURE-RESEARCH.md §D for full design.
  */
 
-import { and, eq, desc, sql, isNull, lte } from "drizzle-orm";
+import { and, eq, desc, sql, isNull, lte, gte } from "drizzle-orm";
 import type { Database } from "@openpims/db/client";
 import {
   extAutomationJourneys,
@@ -25,6 +25,7 @@ import {
   type AutomationJourneyStep,
 } from "@openpims/db";
 import { consentGateCheck } from "./consent-gate";
+import { clientMatchesAnySegment } from "./rules-engine";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,6 +73,24 @@ export async function enrollInJourney(
     return;
   }
 
+  // Segment targeting: when the journey declares target segments, only
+  // clients with a live membership in at least one may enroll.
+  const targetKeys = journey.targetSegmentKeys ?? [];
+  if (targetKeys.length > 0) {
+    const eligible = await clientMatchesAnySegment(
+      db,
+      practiceId,
+      clientId,
+      targetKeys
+    );
+    if (!eligible) {
+      console.log(
+        `[journey-engine] Client ${clientId} not in target segments [${targetKeys.join(",")}] for journey ${journeyKey} — skipping enrollment`
+      );
+      return;
+    }
+  }
+
   // Check enrollment cap
   if (journey.frequencyCapMaxSteps) {
     const windowDays = journey.frequencyCapWindowDays ?? 30;
@@ -86,7 +105,9 @@ export async function enrollInJourney(
           eq(extAutomationEnrollments.practiceId, practiceId),
           eq(extAutomationEnrollments.clientId, clientId),
           eq(extAutomationEnrollments.journeyId, journey.id),
-          sql`${extAutomationEnrollments.createdAt} >= ${windowStart}`
+          // NOTE: use gte(), not sql-template interpolation — postgres-js cannot
+          // serialize a JS Date passed through raw sql (ERR_INVALID_ARG_TYPE).
+          gte(extAutomationEnrollments.createdAt, windowStart)
         )
       )
       .limit(1);

@@ -5,6 +5,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { createDailyClosure } from "@/lib/ekasa/service";
 import { withTenant } from "@/lib/tenant-db";
 import { cronAuthError } from "@/lib/cron-auth";
+import { reportCronHeartbeat } from "@/lib/cron-heartbeat";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,12 @@ export async function GET(req: Request) {
       }
     }
 
+    await reportCronHeartbeat({
+      job: "ekasa-daily-closure",
+      status: created === processed ? "ok" : "degraded",
+      detail: `${created}/${processed} daily closures created for ${dateStr}`,
+      metrics: { processed, created },
+    });
     return NextResponse.json({
       success: true,
       date: dateStr,
@@ -49,7 +56,13 @@ export async function GET(req: Request) {
       created,
       durationMs: Date.now() - startedAt.getTime(),
     });
-  } catch {
+  } catch (error) {
+    await reportCronHeartbeat({
+      job: "ekasa-daily-closure",
+      status: "failed",
+      detail: error instanceof Error ? error.message : String(error),
+      metrics: { processed, created },
+    });
     return NextResponse.json(
       {
         success: false,

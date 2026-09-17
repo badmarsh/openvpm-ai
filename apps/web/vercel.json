@@ -73,6 +73,18 @@
     {
       "path": "/api/cron/automation-worker",
       "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/cron/ekasa-daily-closure",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/ekasa-retry",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/message-queue-drain",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

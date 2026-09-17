@@ -199,7 +199,7 @@ This skill enforces core architectural rules, zero-conflict upstream synchroniza
   4. `post_operative_care` (24h condition check + day 3 recovery + day 10 suture check)
   5. `patient_reactivation` (12-month recall for inactive pets)
 - **12 Canonical CRM Segments (`ext_crm_segments`):**
-  Deterministic segmentation (`new_clients`, `active_clients`, `inactive_6mo`, `inactive_12mo`, `post_surgery`, `vaccine_due_soon`, `vaccine_overdue`, `seniors`, `puppy_kitten`, `chronic_care`, `dental_attention`, `high_value_vip`).
+  Deterministic segmentation (`puppy_kitten`, `senior_pet`, `chronic_patient`, `vip_clients`, `churn_risk`, `unvaccinated_overdue`, `wellness_enrolled`, `dental_attention`, `post_op_recovery`, `frequent_flyer`, `weight_management`, `lapsed_inactive`) — the single canonical set implemented by `lib/autopilot/segmentation-engine.ts` (`CRM_SEGMENT_DEFINITIONS`) and seeded by `packages/db/seed-marketing.ts`.
 - **OAuth Token Security (`ext_channel_accounts`):**
   Tokens for Google Business Profile, Facebook, Instagram, and YouTube MUST be encrypted at rest and NEVER exposed over tRPC APIs.
 - **Reputation SLA & Reception Escalation:**

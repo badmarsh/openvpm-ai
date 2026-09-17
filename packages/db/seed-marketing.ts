@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config({ path: "../../.env" });
 import { db } from "./client";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, isNull } from "drizzle-orm";
 import {
   practices,
   users,
@@ -909,6 +909,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "welcome_new_client",
+        // Untargeted: every new client is eligible.
+        targetSegmentKeys: [],
         name: "Uvítací program pre nového klienta",
         description: "Multikanálová uvítacia sekvencia po prvej registrácii klienta na klinike.",
         triggerEventType: "client_created",
@@ -949,6 +951,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "post_visit_followup",
+        // Untargeted: every visited client is eligible.
+        targetSegmentKeys: [],
         name: "Následná starostlivosť po ambulantnej návšteve",
         description: "Kontrola zdravotného stavu po vyšetrení a žiadosť o Google recenziu.",
         triggerEventType: "visit_completed",
@@ -982,6 +986,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "vaccine_reminder_journey",
+        // Only clients with overdue unvaccinated patients enroll.
+        targetSegmentKeys: ["unvaccinated_overdue"],
         name: "Vakcinačná recall kampaň",
         description: "Viacstupňové pripomenutie blížiaceho sa a exspirovaného termínu očkovania.",
         triggerEventType: "vaccine_due",
@@ -1024,6 +1030,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "post_operative_care",
+        // Only clients with a pet in post-op recovery enroll.
+        targetSegmentKeys: ["post_op_recovery"],
         name: "Pooperačný protokol a starostlivosť o rany",
         description: "Intenzívne sledovanie rekonvalescencie pacienta po chirurgickom zákroku.",
         triggerEventType: "surgery_completed",
@@ -1066,6 +1074,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "patient_reactivation",
+        // Only churn-risk clients enroll.
+        targetSegmentKeys: ["churn_risk"],
         name: "Reaktivácia neaktívneho pacienta (Ročný recall)",
         description: "Oslovenie majiteľov, ktorí nenavštívili kliniku viac ako 12 mesiacov.",
         triggerEventType: "inactive_recall",
@@ -1102,171 +1112,234 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
 
   // -------------------------------------------------------------------------
   // 11d. 12 Canonical CRM Segments (ext_crm_segments)
+  //
+  // MUST mirror CRM_SEGMENT_DEFINITIONS in
+  // apps/web/lib/autopilot/segmentation-engine.ts exactly: the engine only
+  // computes memberships for those keys, so any other system key would be
+  // dead data (see the seed/engine drift guard test).
   // -------------------------------------------------------------------------
-  const existingSegments = await db.query.extCrmSegments.findMany({
-    where: eq(extCrmSegments.practiceId, practiceId),
+  const canonicalSegmentKeys = [
+    "puppy_kitten",
+    "senior_pet",
+    "chronic_patient",
+    "vip_clients",
+    "churn_risk",
+    "unvaccinated_overdue",
+    "wellness_enrolled",
+    "dental_attention",
+    "post_op_recovery",
+    "frequent_flyer",
+    "weight_management",
+    "lapsed_inactive",
+  ];
+  const liveSegments = await db.query.extCrmSegments.findMany({
+    where: and(
+      eq(extCrmSegments.practiceId, practiceId),
+      isNull(extCrmSegments.deletedAt)
+    ),
   });
 
-  if (existingSegments.length === 0) {
+  // Retire dead system rows from the pre-unification seed (set-A keys such as
+  // new_clients / inactive_6mo): the engine never computes them.
+  const deadKeys = liveSegments.filter(
+    (s) => s.isSystem && !canonicalSegmentKeys.includes(s.segmentKey)
+  );
+  for (const dead of deadKeys) {
+    await db
+      .update(extCrmSegments)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(extCrmSegments.id, dead.id));
+  }
+  if (deadKeys.length > 0) {
+    console.log(
+      `✓ Retired ${deadKeys.length} dead system segment(s): ${deadKeys.map((s) => s.segmentKey).join(", ")}`
+    );
+  }
+
+  const liveKeys = new Set(
+    liveSegments
+      .filter((s) => !deadKeys.some((d) => d.id === s.id))
+      .map((s) => s.segmentKey)
+  );
+  const missingKeys = canonicalSegmentKeys.filter((k) => !liveKeys.has(k));
+
+  if (missingKeys.length > 0) {
     console.log("Seeding 12 canonical ext_crm_segments...");
     await db.insert(extCrmSegments).values([
       {
         practiceId,
-        segmentKey: "new_clients",
-        name: "Noví klienti (do 30 dní)",
-        description: "Klienti s prvou registráciou alebo návštevou za posledný mesiac.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "event_driven",
-        conditionJson: { activeWithinDays: 30 },
-        conditionSql: "clients.created_at >= NOW() - INTERVAL '30 days'",
-        memberCountCache: 12,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "active_clients",
-        name: "Aktívni klienti (posledných 6 mesiacov)",
-        description: "Pravidelne navštevujúci klienti s aktivitou za 180 dní.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: { activeWithinDays: 180 },
-        conditionSql: "last_visit_at >= NOW() - INTERVAL '180 days'",
-        memberCountCache: 148,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "inactive_6mo",
-        name: "Neaktívni 6–12 mesiacov",
-        description: "Klienti bez návštevy viac ako pol roka, vhodní na jemnú pripomienku.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: { inactiveDays: 180 },
-        conditionSql: "last_visit_at < NOW() - INTERVAL '180 days' AND last_visit_at >= NOW() - INTERVAL '365 days'",
-        memberCountCache: 43,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "inactive_12mo",
-        name: "Dlhodobo neaktívni (>12 mesiacov)",
-        description: "Cieľová skupina pre reaktiváciu a ročný preventívny recall.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: { inactiveDays: 365 },
-        conditionSql: "last_visit_at < NOW() - INTERVAL '365 days'",
-        memberCountCache: 61,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "post_surgery",
-        name: "Pacienti po operáciách a chirurgii",
-        description: "Zvieratá v rekonvalescencii vyžadujúce pooperačný dohľad.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "event_driven",
-        conditionJson: { visitTypes: ["surgery"] },
-        conditionSql: "appointments.type = 'surgery' AND appointments.start_time >= NOW() - INTERVAL '14 days'",
-        memberCountCache: 5,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "vaccine_due_soon",
-        name: "Blížiaca sa revakcinácia (do 30 dní)",
-        description: "Pacienti s platnosťou očkovania končiacou v priebehu 30 dní.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: {},
-        conditionSql: "care_reminders.category = 'vaccine' AND care_reminders.due_date BETWEEN NOW() AND NOW() + INTERVAL '30 days'",
-        memberCountCache: 28,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "vaccine_overdue",
-        name: "Exspirovaná vakcinácia (po termíne)",
-        description: "Zvieratá s prepadnutým termínom povinnej alebo odporúčanej vakcíny.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: {},
-        conditionSql: "care_reminders.category = 'vaccine' AND care_reminders.due_date < NOW() AND care_reminders.status = 'open'",
-        memberCountCache: 19,
-        createdBy: userId,
-      },
-      {
-        practiceId,
-        segmentKey: "seniors",
-        name: "Geriatrickí pacienti (Seniori 7+ rokov)",
-        description: "Staršie psy a mačky s odporúčaným geriatrickým screeningom krvi a moču.",
-        isSystem: true,
-        isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: { minAgeYears: 7 },
-        conditionSql: "patients.date_of_birth <= NOW() - INTERVAL '7 years'",
-        memberCountCache: 52,
-        createdBy: userId,
-      },
-      {
-        practiceId,
         segmentKey: "puppy_kitten",
-        name: "Mláďatá a juniori (do 1 roka)",
-        description: "Šteniatka a mačiatka v procese základnej vakcinácie, čipovania a socializácie.",
+        name: "Šteniatka a mačiatka",
+        description:
+          "Klienti so psom alebo mačkou mladšou ako 1 rok. Vhodné pre puppy balíčky, prvé očkovanie a socializačné kampane.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: { maxAgeYears: 1 },
-        conditionSql: "patients.date_of_birth > NOW() - INTERVAL '1 year'",
-        memberCountCache: 17,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: { species: ["canine", "feline"], maxAgeYears: 1 },
+        conditionSql:
+          "patients.species IN ('canine','feline') AND patients.dob >= current_date - interval '1 year'",
+        memberCountCache: 0,
         createdBy: userId,
       },
       {
         practiceId,
-        segmentKey: "chronic_care",
-        name: "Chronickí pacienti v dispenzári",
-        description: "Pacienti s chronickými diagnózami (cukrovka, renálna insuficiencia, kardiaci).",
+        segmentKey: "senior_pet",
+        name: "Seniorski pacienti (7+ rokov)",
+        description:
+          "Klienti so psom alebo mačkou vo veku 7 a viac rokov. Geriatrické skríningy, senior panely a preventívne prehliadky.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "manual",
-        conditionJson: { patientStatus: "active" },
-        conditionSql: "patient_conditions.is_chronic = true",
-        memberCountCache: 14,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: { species: ["canine", "feline"], minAgeYears: 7 },
+        conditionSql:
+          "patients.species IN ('canine','feline') AND patients.dob <= current_date - interval '7 years'",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "chronic_patient",
+        name: "Chronickí pacienti",
+        description:
+          "Pacienti s ≥2 receptami za posledných 6 mesiacov alebo ≥4 dokončenými návštevami za 12 mesiacov. Manažment dlhodobej liečby a kontroly.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: { activeWithinDays: 365 },
+        conditionSql: "(prescriptions_180d >= 2) OR (completed_visits_365d >= 4)",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "vip_clients",
+        name: "VIP klienti",
+        description:
+          "Klienti s úhradami ≥ 1 500 € za posledných 12 mesiacov. Vernostný program, prioritné rezervácie a prémiová starostlivosť.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: {},
+        conditionSql: "sum(invoices.paid_amount last 365d) >= 1500 EUR",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "churn_risk",
+        name: "Riziko odchodu",
+        description:
+          "Predtým aktívni klienti (≥2 návštevy) bez návštevy 6–12 mesiacov. Win-back kampane skôr, než prejdú k inej klinike.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: { inactiveDays: 180 },
+        conditionSql: "visit_count >= 2 AND last_visit BETWEEN 180d AND 365d ago",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "unvaccinated_overdue",
+        name: "Po termíne očkovania",
+        description:
+          "Pacienti, ktorých posledný vakcinačný záznam má prekročený dátum ďalšej dávky. Pripomienky očkovania podľa zmluvného právneho základu.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: {},
+        conditionSql: "latest_vaccination.next_due_date < current_date",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "wellness_enrolled",
+        name: "Členovia wellness programu",
+        description:
+          "Klienti s aktívnym wellness plánom. Preventívna starostlivosť, pripomienky čerpania benefítov a fakturácie.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: {},
+        conditionSql: "wellness_enrollments.status = 'active'",
+        memberCountCache: 0,
         createdBy: userId,
       },
       {
         practiceId,
         segmentKey: "dental_attention",
-        name: "Indikovaná stomatologická hygiena",
-        description: "Pacienti s diagnostikovaným zubným kameňom II.-IV. stupňa.",
+        name: "Vyžadujú dentálnu starostlivosť",
+        description:
+          "Pacienti s patologickým nálezom v zubnej karte (kaz, zlomenina, vratkosť…) za posledných 18 mesiacov. Dentálne recall kampane.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "event_driven",
-        conditionJson: { visitTypes: ["dental"] },
-        conditionSql: "soap_notes.assessment ILIKE '%stomatit%' OR soap_notes.assessment ILIKE '%tartar%'",
-        memberCountCache: 22,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: {},
+        conditionSql:
+          "dental_charts.condition NOT IN ('HEALTHY','MISSING','CROWNED') within 18 months",
+        memberCountCache: 0,
         createdBy: userId,
       },
       {
         practiceId,
-        segmentKey: "high_value_vip",
-        name: "Lojálni a VIP klienti kliniky",
-        description: "Klienti s vysokou mierou dodržiavania termínov a kompletnou prevenciou.",
+        segmentKey: "post_op_recovery",
+        name: "Po operačnej rekonvalescencii",
+        description:
+          "Pacienti so zaznamenanou operáciou (surgery_completed) za posledných 30 dní. Post-op kontroly 24 h / 3. deň / 10. deň.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
-        conditionJson: { activeWithinDays: 90 },
-        conditionSql: "invoice_totals_annual >= 500",
-        memberCountCache: 35,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: {},
+        conditionSql:
+          "ext_automation_events.event_type = 'surgery_completed' within 30 days",
+        memberCountCache: 0,
         createdBy: userId,
       },
-    ]);
+      {
+        practiceId,
+        segmentKey: "frequent_flyer",
+        name: "Častí návštevníci",
+        description:
+          "Klienti s ≥6 dokončenými návštevami za posledných 12 mesiacov. Loajalita, prednostné termíny a referenčné programy.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: { activeWithinDays: 365 },
+        conditionSql: "completed_visits_365d >= 6",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "weight_management",
+        name: "Redukcia hmotnosti",
+        description:
+          "Pacienti so zvýšeným telesným skóre kondície (BCS ≥7/9 alebo ≥4/5) za posledný rok. Diétne programy a kontrolné váženia.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: {},
+        conditionSql: "vital_signs.body_condition_score >= threshold within 12 months",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+      {
+        practiceId,
+        segmentKey: "lapsed_inactive",
+        name: "Neaktívni 12+ mesiacov",
+        description:
+          "Klienti bez dokončenej návštevy viac ako 12 mesiacov a bez budúcej rezervácie. Reaktivačné (recall) kampane.",
+        isSystem: true,
+        isActive: true,
+        refreshStrategy: "scheduled" as const,
+        conditionJson: { inactiveDays: 365 },
+        conditionSql:
+          "last_completed_visit < now() - interval '365 days' AND no future appointment",
+        memberCountCache: 0,
+        createdBy: userId,
+      },
+    ].filter((row) => missingKeys.includes(row.segmentKey)));
     console.log("✓ Created 12 canonical ext_crm_segments");
   }
 
