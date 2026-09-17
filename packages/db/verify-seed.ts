@@ -83,7 +83,10 @@ async function main() {
   expect("users", userRows.length >= 1, `${userRows.length} live user(s)`);
 
   const journeys = await db
-    .select({ journeyKey: extAutomationJourneys.journeyKey })
+    .select({
+      journeyKey: extAutomationJourneys.journeyKey,
+      targetSegmentKeys: extAutomationJourneys.targetSegmentKeys,
+    })
     .from(extAutomationJourneys)
     .where(isNull(extAutomationJourneys.deletedAt));
   const journeyKeys = new Set(journeys.map((j) => j.journeyKey));
@@ -94,6 +97,34 @@ async function main() {
     missingJourneys.length === 0
       ? `${journeys.length} journey(s), all 5 canonical keys present`
       : `missing: ${missingJourneys.join(", ")} (have ${journeys.length})`
+  );
+
+  // Journey segment targeting must match the seed contract (P1 #8): the
+  // three recall/recovery journeys enroll only their target segment.
+  const expectedTargeting: Record<string, string[]> = {
+    vaccine_reminder_journey: ["unvaccinated_overdue"],
+    post_operative_care: ["post_op_recovery"],
+    patient_reactivation: ["churn_risk"],
+    welcome_new_client: [],
+    post_visit_followup: [],
+  };
+  const targetingMismatches: string[] = [];
+  for (const j of journeys) {
+    const expected = expectedTargeting[j.journeyKey];
+    if (expected === undefined) continue;
+    const actual = [...(j.targetSegmentKeys ?? [])].sort();
+    if (JSON.stringify(actual) !== JSON.stringify([...expected].sort())) {
+      targetingMismatches.push(
+        `${j.journeyKey}: have [${actual.join(",")}], want [${expected.join(",")}]`
+      );
+    }
+  }
+  expect(
+    "journey segment targeting",
+    targetingMismatches.length === 0,
+    targetingMismatches.length === 0
+      ? "all 5 canonical journeys carry their seeded targeting"
+      : targetingMismatches.join("; ")
   );
 
   const rules = await db

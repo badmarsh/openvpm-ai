@@ -449,6 +449,16 @@ export const extAutomationJourneys = pgTable(
       .default(4),
     /** Whether a new trigger event may re-enroll a client already enrolled. */
     allowReentry: boolean("allow_reentry").notNull().default(false),
+    /**
+     * Optional segment targeting: when non-empty, only clients with a LIVE
+     * membership in at least ONE of these segment keys may enroll (enforced
+     * in journey-engine.enrollInJourney + rules-engine.scheduleJourneyEnrollment).
+     * Empty array = every client is eligible (legacy behaviour).
+     */
+    targetSegmentKeys: jsonb("target_segment_keys")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     createdBy: uuid("created_by").references(() => users.id),
   },
   (table) => ({

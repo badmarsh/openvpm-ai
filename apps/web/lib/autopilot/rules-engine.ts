@@ -287,7 +287,12 @@ async function clientMatchesAllSegments(
   return ids.every((id) => live.has(id));
 }
 
-async function clientMatchesAnySegment(
+/**
+ * Client has a LIVE membership in ANY of the given segment keys.
+ * Exported so journey-engine enrollment enforces journey targeting
+ * with the same fail-closed semantics as rule conditions.
+ */
+export async function clientMatchesAnySegment(
   db: Database,
   practiceId: string,
   clientId: string,
@@ -368,6 +373,26 @@ async function scheduleJourneyEnrollment(
       `[rules-engine] Journey not found: ${action.journeyKey} (rule ${rule.ruleKey})`
     );
     return;
+  }
+
+  // Segment targeting: journey-level eligibility, same semantics as rule
+  // condition segmentKeys (ANY match; unknown keys fail closed → skip).
+  const targetKeys = journey.targetSegmentKeys ?? [];
+  if (targetKeys.length > 0) {
+    if (
+      !event.clientId ||
+      !(await clientMatchesAnySegment(
+        db,
+        event.practiceId,
+        event.clientId,
+        targetKeys
+      ))
+    ) {
+      console.log(
+        `[rules-engine] Client ${event.clientId} not in target segments [${targetKeys.join(",")}] for journey ${action.journeyKey} — skipping enrollment`
+      );
+      return;
+    }
   }
 
   await db

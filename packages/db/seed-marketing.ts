@@ -909,6 +909,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "welcome_new_client",
+        // Untargeted: every new client is eligible.
+        targetSegmentKeys: [],
         name: "Uvítací program pre nového klienta",
         description: "Multikanálová uvítacia sekvencia po prvej registrácii klienta na klinike.",
         triggerEventType: "client_created",
@@ -949,6 +951,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "post_visit_followup",
+        // Untargeted: every visited client is eligible.
+        targetSegmentKeys: [],
         name: "Následná starostlivosť po ambulantnej návšteve",
         description: "Kontrola zdravotného stavu po vyšetrení a žiadosť o Google recenziu.",
         triggerEventType: "visit_completed",
@@ -982,6 +986,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "vaccine_reminder_journey",
+        // Only clients with overdue unvaccinated patients enroll.
+        targetSegmentKeys: ["unvaccinated_overdue"],
         name: "Vakcinačná recall kampaň",
         description: "Viacstupňové pripomenutie blížiaceho sa a exspirovaného termínu očkovania.",
         triggerEventType: "vaccine_due",
@@ -1024,6 +1030,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "post_operative_care",
+        // Only clients with a pet in post-op recovery enroll.
+        targetSegmentKeys: ["post_op_recovery"],
         name: "Pooperačný protokol a starostlivosť o rany",
         description: "Intenzívne sledovanie rekonvalescencie pacienta po chirurgickom zákroku.",
         triggerEventType: "surgery_completed",
@@ -1066,6 +1074,8 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
       {
         practiceId,
         journeyKey: "patient_reactivation",
+        // Only churn-risk clients enroll.
+        targetSegmentKeys: ["churn_risk"],
         name: "Reaktivácia neaktívneho pacienta (Ročný recall)",
         description: "Oslovenie majiteľov, ktorí nenavštívili kliniku viac ako 12 mesiacov.",
         triggerEventType: "inactive_recall",
@@ -1164,7 +1174,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Klienti so psom alebo mačkou mladšou ako 1 rok. Vhodné pre puppy balíčky, prvé očkovanie a socializačné kampane.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: { species: ["canine", "feline"], maxAgeYears: 1 },
         conditionSql:
           "patients.species IN ('canine','feline') AND patients.dob >= current_date - interval '1 year'",
@@ -1179,7 +1189,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Klienti so psom alebo mačkou vo veku 7 a viac rokov. Geriatrické skríningy, senior panely a preventívne prehliadky.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: { species: ["canine", "feline"], minAgeYears: 7 },
         conditionSql:
           "patients.species IN ('canine','feline') AND patients.dob <= current_date - interval '7 years'",
@@ -1194,7 +1204,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Pacienti s ≥2 receptami za posledných 6 mesiacov alebo ≥4 dokončenými návštevami za 12 mesiacov. Manažment dlhodobej liečby a kontroly.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: { activeWithinDays: 365 },
         conditionSql: "(prescriptions_180d >= 2) OR (completed_visits_365d >= 4)",
         memberCountCache: 0,
@@ -1208,7 +1218,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Klienti s úhradami ≥ 1 500 € za posledných 12 mesiacov. Vernostný program, prioritné rezervácie a prémiová starostlivosť.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: {},
         conditionSql: "sum(invoices.paid_amount last 365d) >= 1500 EUR",
         memberCountCache: 0,
@@ -1222,7 +1232,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Predtým aktívni klienti (≥2 návštevy) bez návštevy 6–12 mesiacov. Win-back kampane skôr, než prejdú k inej klinike.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: { inactiveDays: 180 },
         conditionSql: "visit_count >= 2 AND last_visit BETWEEN 180d AND 365d ago",
         memberCountCache: 0,
@@ -1236,7 +1246,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Pacienti, ktorých posledný vakcinačný záznam má prekročený dátum ďalšej dávky. Pripomienky očkovania podľa zmluvného právneho základu.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: {},
         conditionSql: "latest_vaccination.next_due_date < current_date",
         memberCountCache: 0,
@@ -1250,7 +1260,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Klienti s aktívnym wellness plánom. Preventívna starostlivosť, pripomienky čerpania benefítov a fakturácie.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: {},
         conditionSql: "wellness_enrollments.status = 'active'",
         memberCountCache: 0,
@@ -1264,7 +1274,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Pacienti s patologickým nálezom v zubnej karte (kaz, zlomenina, vratkosť…) za posledných 18 mesiacov. Dentálne recall kampane.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: {},
         conditionSql:
           "dental_charts.condition NOT IN ('HEALTHY','MISSING','CROWNED') within 18 months",
@@ -1279,7 +1289,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Pacienti so zaznamenanou operáciou (surgery_completed) za posledných 30 dní. Post-op kontroly 24 h / 3. deň / 10. deň.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: {},
         conditionSql:
           "ext_automation_events.event_type = 'surgery_completed' within 30 days",
@@ -1294,7 +1304,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Klienti s ≥6 dokončenými návštevami za posledných 12 mesiacov. Loajalita, prednostné termíny a referenčné programy.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: { activeWithinDays: 365 },
         conditionSql: "completed_visits_365d >= 6",
         memberCountCache: 0,
@@ -1308,7 +1318,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Pacienti so zvýšeným telesným skóre kondície (BCS ≥7/9 alebo ≥4/5) za posledný rok. Diétne programy a kontrolné váženia.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: {},
         conditionSql: "vital_signs.body_condition_score >= threshold within 12 months",
         memberCountCache: 0,
@@ -1322,7 +1332,7 @@ Kliešte a blchy už dávno nie sú len sezónnou záležitosťou jari. V dôsle
           "Klienti bez dokončenej návštevy viac ako 12 mesiacov a bez budúcej rezervácie. Reaktivačné (recall) kampane.",
         isSystem: true,
         isActive: true,
-        refreshStrategy: "scheduled",
+        refreshStrategy: "scheduled" as const,
         conditionJson: { inactiveDays: 365 },
         conditionSql:
           "last_completed_visit < now() - interval '365 days' AND no future appointment",

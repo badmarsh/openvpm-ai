@@ -757,6 +757,13 @@
       "when": 1789203003658,
       "tag": "0107_bouncy_human_fly",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1789626723560,
+      "tag": "0108_adorable_misty_knight",
+      "breakpoints": true
     }
   ]
 }
