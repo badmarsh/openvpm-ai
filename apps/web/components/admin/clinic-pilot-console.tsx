@@ -14,6 +14,8 @@ type PracticeOption = {
   id: string;
   name: string;
   analyticsExcluded: boolean;
+  email?: string | null;
+  adminEmail?: string | null;
 };
 
 const qualificationLabels = {
@@ -448,11 +450,14 @@ export function ClinicPilotConsole({
                 "Select a registered clinic…",
               )}
             </option>
-            {candidates.map((practice) => (
-              <option key={practice.id} value={practice.id}>
-                {practice.name}
-              </option>
-            ))}
+            {candidates.map((practice) => {
+              const detail = practice.email || practice.adminEmail;
+              return (
+                <option key={practice.id} value={practice.id}>
+                  {practice.name}{detail ? ` (${detail})` : ""}
+                </option>
+              );
+            })}
           </select>
           <button
             type="button"

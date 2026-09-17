@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ export function MessagingWizard({
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
 }) {
+  const { t } = useI18n();
   const utils = trpc.useUtils();
   const defaultMode = useMemo(
     () => defaultMessagingSetupMode(location?.existingPhone),
@@ -355,7 +357,7 @@ export function MessagingWizard({
                 {checking || provision.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                {continueLabel({ step, mode, eligibility, numbers })}
+                {continueLabel({ step, mode, eligibility, numbers, t })}
                 {step !== "done" && !checking && !provision.isPending ? (
                   <ArrowRight className="ml-2 h-4 w-4" />
                 ) : null}
@@ -682,13 +684,15 @@ function continueLabel({
   mode,
   eligibility,
   numbers,
+  t,
 }: {
   step: Step;
   mode: MessagingSetupMode;
   eligibility: { eligible: boolean; detail?: string } | null;
   numbers: SearchNumber[];
+  t?: (key: string, fallback?: string) => string;
 }) {
-  if (step === "choose") return "Continue";
+  if (step === "choose") return t?.("common.continue", "Continue") ?? "Continue";
   if (step === "confirm" && mode === "host" && eligibility === null) {
     return "Check eligibility";
   }
@@ -696,6 +700,6 @@ function continueLabel({
     return "Search numbers";
   }
   if (step === "registration") return "Purchase number and start setup";
-  if (step === "done") return "Done";
-  return "Continue";
+  if (step === "done") return t?.("common.done", "Hotovo") ?? "Hotovo";
+  return t?.("common.continue", "Continue") ?? "Continue";
 }

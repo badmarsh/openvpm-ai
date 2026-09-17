@@ -229,6 +229,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.practiceId = user.practiceId;
+        token.email = user.email;
         const u = user as unknown as Record<string, unknown>;
         if (u.emailVerifiedAt !== undefined) {
           token.emailVerifiedAt = u.emailVerifiedAt ? String(u.emailVerifiedAt) : null;
@@ -247,6 +248,62 @@ export const authOptions: NextAuthOptions = {
         }
         if (u.trialEndsAt !== undefined) {
           token.trialEndsAt = u.trialEndsAt ? String(u.trialEndsAt) : null;
+        }
+      } else if (token.id || token.email) {
+        try {
+          const [dbUser] = await withSystem(db, (tx) =>
+            tx
+              .select({
+                id: users.id,
+                role: users.role,
+                practiceId: users.practiceId,
+                emailVerifiedAt: users.emailVerifiedAt,
+                practiceCreatedAt: practices.createdAt,
+                recoveryHold: practices.recoveryHold,
+                billingTier: practices.subscriptionTier,
+                billingStatus: practices.billingStatus,
+                trialEndsAt: practices.trialEndsAt,
+              })
+              .from(users)
+              .innerJoin(
+                practices,
+                and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+              )
+              .where(
+                and(
+                  token.id
+                    ? eq(users.id, token.id)
+                    : eq(users.email, token.email as string),
+                  isNull(users.deletedAt),
+                ),
+              )
+              .limit(1),
+          );
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.practiceId = dbUser.practiceId;
+            if (dbUser.emailVerifiedAt !== undefined) {
+              token.emailVerifiedAt = dbUser.emailVerifiedAt ? String(dbUser.emailVerifiedAt) : null;
+            }
+            if (dbUser.practiceCreatedAt !== undefined) {
+              token.practiceCreatedAt = dbUser.practiceCreatedAt ? String(dbUser.practiceCreatedAt) : null;
+            }
+            if (dbUser.recoveryHold !== undefined) {
+              token.recoveryHold = Boolean(dbUser.recoveryHold);
+            }
+            if (dbUser.billingTier !== undefined) {
+              token.billingTier = dbUser.billingTier ? String(dbUser.billingTier) : null;
+            }
+            if (dbUser.billingStatus !== undefined) {
+              token.billingStatus = dbUser.billingStatus ? String(dbUser.billingStatus) : null;
+            }
+            if (dbUser.trialEndsAt !== undefined) {
+              token.trialEndsAt = dbUser.trialEndsAt ? String(dbUser.trialEndsAt) : null;
+            }
+          }
+        } catch {
+          // If DB is temporarily unreachable, fall back to existing claims
         }
       }
       return token;

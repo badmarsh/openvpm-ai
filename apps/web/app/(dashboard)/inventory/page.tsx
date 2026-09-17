@@ -119,6 +119,23 @@ function expirationBadge(
   return null;
 }
 
+function formatProductCategory(
+  category: string | null | undefined,
+  t: (key: string, fallback?: string) => string
+): string {
+  if (!category) return "\u2014";
+  const normalized = category.toLowerCase().trim();
+  const key =
+    normalized === "supplies"
+      ? "supply"
+      : normalized === "medications"
+        ? "medication"
+        : normalized === "foods"
+          ? "food"
+          : normalized;
+  return t(`inventory.categories.${key}`, category);
+}
+
 const trimmedOrUndefined = (value: string) => value.trim() || undefined;
 const trimmedOrNull = (value: string) => value.trim() || null;
 
@@ -1390,8 +1407,8 @@ export default function InventoryPage() {
                         <td className="px-4 py-3 text-muted-foreground">
                           {product.sku || "\u2014"}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground capitalize">
-                          {product.category || "\u2014"}
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {formatProductCategory(product.category, t)}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatCurrency(product.unitPrice)}

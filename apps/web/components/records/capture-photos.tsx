@@ -203,7 +203,7 @@ export function CapturePhotos({
 
               <div className="mt-5 flex justify-end">
                 <Button variant="outline" size="sm" onClick={handleClose}>
-                  Done
+                  {t("common.done", "Hotovo")}
                 </Button>
               </div>
             </div>

@@ -2916,7 +2916,7 @@ function StaffTab() {
                       {confirmDeactivate === user.id ? (
                         <div className="flex items-center justify-end gap-1">
                           <span className="mr-2 text-xs text-destructive">
-                            Deactivate?
+                            {t("settings.staff.confirmDeactivate", "Deactivate?")}
                           </span>
                           <Button
                             size="sm"
@@ -2927,14 +2927,14 @@ function StaffTab() {
                               setConfirmDeactivate(null);
                             }}
                           >
-                            Yes
+                            {t("common.yes", "Yes")}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setConfirmDeactivate(null)}
                           >
-                            No
+                            {t("common.no", "No")}
                           </Button>
                         </div>
                       ) : (
@@ -5292,8 +5292,16 @@ function WellnessPlansTab() {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="capitalize text-muted-foreground">
-                    {plan.billingInterval}
+                  <div className="text-muted-foreground">
+                    {plan.billingInterval === "monthly"
+                      ? t("settings.wellness.monthly", "Monthly")
+                      : plan.billingInterval === "annual"
+                        ? t("settings.wellness.annual", "Annual")
+                        : plan.billingInterval === "quarterly"
+                          ? t("settings.wellness.quarterly", "Quarterly")
+                          : plan.billingInterval === "biannual"
+                            ? t("settings.wellness.biannual", "Biannual")
+                            : plan.billingInterval}
                   </div>
                   <Badge variant="outline" className="mt-1">
                     {t("settings.wellness.invoiceSchedule", "Plán fakturácie")}
@@ -5319,7 +5327,9 @@ function WellnessPlansTab() {
                       })
                     }
                   >
-                    {plan.active ? "Deactivate" : "Reactivate"}
+                    {plan.active
+                      ? t("settings.wellness.deactivate", "Deactivate")
+                      : t("settings.wellness.reactivate", "Reactivate")}
                   </Button>
                 </td>
               </tr>
@@ -5628,7 +5638,9 @@ function TemplatesTab() {
             {updateMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            {selectedTemplate.isActive !== false ? "Deactivate" : "Activate"}
+            {selectedTemplate.isActive !== false
+              ? t("settings.templates.deactivate", "Deactivate")
+              : t("settings.templates.activate", "Activate")}
           </Button>
         </div>
 

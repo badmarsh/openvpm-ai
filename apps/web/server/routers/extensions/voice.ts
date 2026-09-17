@@ -37,6 +37,7 @@ import {
   ClinicianConfirmationError,
 } from "@/lib/ai/clinician-confirmation";
 import { formatTranscriptToSoap, type SoapStyle } from "@/lib/voice/soap-formatter";
+import { resolvePracticeLanguageModel } from "@/lib/ai/ai-config-resolver";
 import { extractBillableItemsFromSoap } from "@/lib/voice/treatment-extractor";
 import { uploadFile, readPrimaryObject } from "@/lib/s3";
 import { VOICE_AUDIO_RETENTION_MS } from "@/lib/voice/retention";
@@ -162,10 +163,16 @@ export const voiceRouter = createRouter({
 
       // 5. SOAP formátovanie
       try {
+        const aiModel = await resolvePracticeLanguageModel(
+          ctx.db,
+          ctx.practiceId,
+          "voiceSoap",
+        );
         const soap = await formatTranscriptToSoap(transcript, {
           style: input.style as SoapStyle,
           patientName: patient.name,
           species: patient.species,
+          model: aiModel,
         });
 
         const [completed] = await ctx.db
@@ -332,7 +339,14 @@ export const voiceRouter = createRouter({
 
       // 2. SOAP formátovanie
       try {
-        const soap = await formatTranscriptToSoap(transcript);
+        const aiModel = await resolvePracticeLanguageModel(
+          ctx.db,
+          ctx.practiceId,
+          "voiceSoap",
+        );
+        const soap = await formatTranscriptToSoap(transcript, {
+          model: aiModel,
+        });
         const [updated] = await ctx.db
           .update(voiceDictations)
           .set({
@@ -443,10 +457,17 @@ export const voiceRouter = createRouter({
         }
       }
 
+      const aiModel = await resolvePracticeLanguageModel(
+        ctx.db,
+        ctx.practiceId,
+        "voiceSoap",
+      );
+
       const soap = await formatTranscriptToSoap(input.transcript, {
         style: input.style as SoapStyle,
         patientName,
         species,
+        model: aiModel,
       });
 
       if (input.dictationId) {

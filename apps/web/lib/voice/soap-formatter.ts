@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateText } from "ai";
+import { generateText, type LanguageModel } from "ai";
 import { configuredModel } from "@/lib/agent/runner";
 
 const soapSectionsSchema = z.object({
@@ -18,6 +18,7 @@ export interface SoapFormatOptions {
   style?: SoapStyle;
   species?: string | null;
   patientName?: string | null;
+  model?: LanguageModel;
 }
 
 export function getSystemPrompt(style: SoapStyle = "standard"): string {
@@ -141,7 +142,7 @@ export async function formatTranscriptToSoap(
   let result;
   try {
     result = await generateText({
-      model: configuredModel(),
+      model: options.model ?? configuredModel(),
       system: getSystemPrompt(style),
       prompt: `${patientContext}Transkripcia diktovania:\n\n${transcript}`,
       abortSignal: ac.signal,

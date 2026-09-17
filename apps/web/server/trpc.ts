@@ -149,13 +149,14 @@ async function activeSessionOrNull(
     };
   }
 
-  const [activeUser] = await withTenant(
+  let [activeUser] = await withTenant(
     database,
     session.user.practiceId,
     (tx) =>
       tx
         .select({
           id: users.id,
+          practiceId: users.practiceId,
           emailVerifiedAt: users.emailVerifiedAt,
           practiceCreatedAt: practices.createdAt,
           recoveryHold: practices.recoveryHold,
@@ -174,6 +175,45 @@ async function activeSessionOrNull(
         )
         .limit(1),
   );
+
+  // Self-heal stale session claims (e.g. after DB restore or practice reassignment)
+  if (!activeUser && (session.user.id || session.user.email)) {
+    try {
+      const healedUsers = await withSystem(database, (tx: any) => {
+        const query = tx?.select?.({
+          id: users.id,
+          practiceId: users.practiceId,
+          emailVerifiedAt: users.emailVerifiedAt,
+          practiceCreatedAt: practices.createdAt,
+          recoveryHold: practices.recoveryHold,
+        });
+        if (!query?.from) return [];
+        return query
+          .from(users)
+          .innerJoin(
+            practices,
+            and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+          )
+          .where(
+            and(
+              session.user.id
+                ? eq(users.id, session.user.id)
+                : eq(users.email, session.user.email),
+              isNull(users.deletedAt),
+            ),
+          )
+          .limit(1);
+      });
+      const healedUser = Array.isArray(healedUsers) ? healedUsers[0] : undefined;
+      if (healedUser) {
+        session.user.id = healedUser.id;
+        session.user.practiceId = healedUser.practiceId;
+        activeUser = healedUser;
+      }
+    } catch {
+      // Ignore self-healing errors if query fails or mock is partial
+    }
+  }
 
   if (activeUser) {
     activeSessionCache.set(cacheKey, {

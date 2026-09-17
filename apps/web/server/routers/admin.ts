@@ -1220,6 +1220,7 @@ export const adminRouter = createRouter({
         .select({
           id: practices.id,
           name: practices.name,
+          email: practices.email,
           tier: practices.subscriptionTier,
           billingStatus: practices.billingStatus,
           trialEndsAt: practices.trialEndsAt,
