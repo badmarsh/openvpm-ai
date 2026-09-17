@@ -143,6 +143,7 @@ export const extAutomationSuppressionReasonEnum = pgEnum(
     "manual_block",
     "cooldown",
     "sensitivity_period",
+    "sms_rate_limit",
     "unknown_contact",
   ],
 );
