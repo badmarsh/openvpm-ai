@@ -154,31 +154,31 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 | P2-2 | SQL zo zadania je voči schéme neplatné: `records`, `medical_records`, `encounters` neexistujú; SOAP = `soap_notes` (**6 665**, nie 6 664); „29 kritických tabuliek“ vs. realita **174** | `evidence/03-brief-sql.txt` |
 | P2-3 | `dashboard.getStats` a `dashboard.getCharts` nikto z UI volá — dashboard používa `getDashboard`, ktorý ich logiku duplicuje (riziko driftu) | `server/routers/dashboard.ts:138,220,393` |
 | P2-4 | Guardian widget sa pri chybe **schová** (`return null`) — bezpečnostný prvok ticho zmizne | `components/dashboard/clinical-guardian-widget.tsx:70-72` |
-| P2-5 | Chýbajúci most predpis → omamné látky: `prescriptions` nemá `is_controled`/odkaz na `controlled_substance_log`; register sa vedie ručne na inej obrazovke. V SOAP editore **nie je ochranný modal** (brief ho očakáva); jediná obrana je interakčný check, ten je inertný (P1-1) | `schema.sql`, `app/(dashboard)/records/new-soap/[patientId]/page.tsx` |
-| P2-6 | V legálnom registri SR sa používa americký `dea_schedule varchar(10)`; `controlled_substance_log.patient_id` je NULLOVELNÝ (záznam bez pacienta prejde) | `schema.sql` |
+| P2-5 | Chýbajúci most predpis → omamné látky: `prescriptions` nemá `is_controlled` ani odkaz na `controlled_substance_log`; register sa vedie ručne na inej obrazovke. V SOAP editore **nie je ochranný modal** (brief ho očakáva); jediná obrana je interakčný check, ten je inertný (P1-1) | `schema.sql`, `app/(dashboard)/records/new-soap/[patientId]/page.tsx` |
+| P2-6 | V legálnom registri SR sa používa americký `dea_schedule varchar(10)`; `controlled_substance_log.patient_id` môže byť NULL (záznam bez pacienta prejde) | `schema.sql` |
 | P2-7 | `clinical_notes` — mŕtva tabuľka (0 riadkov): nikde sa do nej nezapisuje, ale stále ju číta kontrola pri zlúčení pacienta | `server/routers/patients.ts:364` |
 | P2-8 | 193 z 438 FK vedúcich stĺpcov nemá index → sekvenčné skeny pri kontrole reštrikcií (pri 10 492 `legacy_financial_documents` a raste) | `evidence/01-structure.txt` |
-| P2-9 | `whiteboard.getActive` má `.limit(100)` bez pagination — nad 100 termíňov deň sa skratuje bez varovania | `server/routers/whiteboard.ts:183` |
-| P2-10 | i18n: kľúče s pole (array) sa nedajú rozlíšiť — `getNestedValue` vracia len reťazce, takže `t("marketing.calendar.dayNamesShort.0","Po")` **vždy** padne na fallback. V EN móde tak kalendár obsahu ukazuje **slovenské** skratky dní | `lib/i18n/context.tsx:31-43`, `components/marketing/content-calendar-tab.tsx:168-174` |
-| P2-11 | Orphanou katalógy: `messages/parts/*.json` a `messages/{sk,en}_automations.json` nikde nespájajú do behu; `track1-*.json` je **bytová kópia** `records-*.json` (zhodné MD5) → ~300 KB mŕtveho bremena; 4 kľúče v `*_automations.json` chýbajú v `sk/en.json` (zatiaľ nebolia, lebo sa nikde nepoužívajú) | `apps/web/messages/` |
+| P2-9 | `whiteboard.getActive` má `.limit(100)` bez pagination — ak je v dni viac ako 100 termínov, odpoveď sa skráti bez varovania | `server/routers/whiteboard.ts:183` |
+| P2-10 | i18n: polia (array) v katalógu sa nedajú načítať — `getNestedValue` vracia iba reťazce, takže `t("marketing.calendar.dayNamesShort.0","Po")` **vždy** padne na fallback. V EN móde tak kalendár obsahu ukazuje **slovenské** skratky dní | `lib/i18n/context.tsx:31-43`, `components/marketing/content-calendar-tab.tsx:168-174` |
+| P2-11 | Orphanované katalógy: `messages/parts/*.json` a `messages/{sk,en}_automations.json` sa do behu nikde nespájajú; `track1-*.json` je **binárne identická kópia** `records-*.json` (zhodné MD5) → ~300 KB mŕtveho bremena; 4 kľúče v `*_automations.json` chýbajú v `sk/en.json` (zatiaľ nevadia, lebo sa nikde nepoužívajú) | `apps/web/messages/` |
 | P2-12 | `scripts/check-i18n-symmetry.js` v skutočnosti kontroluje **len `settings.booking`** (109 kľúčov) a nie je napojený v CI ani v `package.json` scripts. Reálna symetria je OK, ale nič ju nevynucuje | `apps/web/scripts/check-i18n-symmetry.js` |
-| P2-13 | ~12 hodnot v sk.json je nenatranslatovaných (vecne v poriadku pre brand/acronym, menej pre: `Audit`, `Editor`, `Offline`, `Online`, `Sync`, `Trigger`, `Interval`, `Program`, `Model`, `Branding`, `Logo`, `Desktop`) | `evidence/05-i18n-symmetry.txt` |
+| P2-13 | ~12 hodnot v sk.json je nenatranslatovaných (pre brandy a skratky je to v poriadku, menej pre: `Audit`, `Editor`, `Offline`, `Online`, `Sync`, `Trigger`, `Interval`, `Program`, `Model`, `Branding`, `Logo`, `Desktop`) | `evidence/05-i18n-symmetry.txt` |
 | P2-14 | Server hádza používateľské hlášky natvrdo v slovenčine → v EN lokalite anglické UI so slovenskou chybovou hláškou | `server/routers/extensions/ai-settings.ts:284,390` |
 | P2-15 | V produkčnej ceste je default `http://127.0.0.1:8080/v1` (aliproxy) — v kontajneri neexistuje; zlyhanie AI sa ukáže až pri samotnom requeste | `lib/ai/ai-config-resolver.ts:158-169`, `extensions/ai-settings.ts:294` |
 | P2-16 | `GET /clients` neagreguje pacientov — zoznam majiteľov nemá stĺpec „počet zvierat“ (agregácia je len v `getById`) | `server/routers/clients.ts:198-260`, `app/(dashboard)/clients/page.tsx:157-175` |
-| P2-17 | Formátovanie/lint: 25 procedúr v `extensions/marketing.ts` je na stĺpci 0; `patients.ts` 1 987 riadkov, `records.ts` 4 932, stránka pacienta **4 287 riadkov**; `db: any` v `lib/ai/ai-crypto`-klientoch a `applySympathyGate(db: Database \| any, …)` | viacero |
+| P2-17 | Formátovanie/lint: 25 procedúr v `extensions/marketing.ts` začína na stĺpci 0 (nulové odsadenie); `patients.ts` 1 987 riadkov, `records.ts` 4 932, stránka pacienta **4 287 riadkov**; `db: any` v `lib/ai/ai-crypto`-klientoch a `applySympathyGate(db: Database \| any, …)` | viacero |
 | P2-18 | SK pravopis: „**Pre** zaznamenanie súhlasu zadajte platné číslo mobilu.“ (čechizmus, správne „Na zaznamenanie…“) | `messages/sk.json` → `clients.form.smsValidNumberRequired` |
-| P2-19 | Západo-kód: v kóde je label „Klienti“, ale `sk.json/nav.clients` = „**Majitelia**“ → v UI je správne „Majitelia“, ale fallback sa líši (ľahký drift) | `components/layout/sidebar.tsx:103-108` |
+| P2-19 | Popisok vs. katalóg: v kóde je label „Klienti“, ale `sk.json/nav.clients` = „**Majitelia**“ → v UI je správne „Majitelia“, ale fallback sa líši (ľahký drift) | `components/layout/sidebar.tsx:103-108` |
 
 ### Čo je naopak v poriadku (overené, nie len prečítané)
 
 - **RLS funkčne drží:** 10 exekučných testov — deny-by-default, izolácia čítania, tichý 0-row cross-tenant UPDATE, `WITH CHECK` odmietne cross-tenant INSERT, `practices` self-only.
 - **`withTenant` nastavuje GUC ako `set_config(..., true)` vnútri transakcie** → odolné voči prepájaniu pooled konekcií; `publicProcedure`/`portalProcedure` explicitne `withSystem`.
-- **Integrita:** `patients.client_id` NOT NULL + FK, `soap_notes.patient_id` FK, `appointments.patient_id` FK — siroty sú vylúčené na úrovni DDL (briefové `SELECT … WHERE client_id IS NULL` je preto vždy 0 a nie je dôkazom kvality dát). Hard-DELETE pacienta s anamnézou schéma **odmietne** (RESTRICT) → mäkkymazanie je jediná cesta, čo GUI rešpektuje.
+- **Integrita:** `patients.client_id` NOT NULL + FK, `soap_notes.patient_id` FK, `appointments.patient_id` FK — siroty sú vylúčené na úrovni DDL (briefové `SELECT … WHERE client_id IS NULL` je preto vždy 0 a nie je dôkazom kvality dát). Hard-DELETE pacienta s anamnézou schéma **odmietne** (RESTRICT) → mäkké zmazanie (`deleted_at`) je jediná cesta, čo GUI rešpektuje.
 - **Ošetrenie dešifrovania API kľúčov:** `ai-config-resolver.ts:109-117` (`tryDecrypt` → varovanie + fallback), `extensions/ai-settings.ts:70-77` (`safeDecrypt`), mutation `262-290`/`370-398` → `TRPCError BAD_REQUEST`. Žiadna fatálna cesta, aplikácia nepadá.
-- **SOAP editor:** `finalizeSoapNote` je transakčný, s `expectedRevision` (optimistické zamykanie), rolne `admin|veterinarian`, webhook až po commite; AI draft má 30 s abort a graceful `SoapDraftUnavailableError`.
+- **SOAP editor:** `finalizeSoapNote` je transakčný, s `expectedRevision` (optimistické zamykanie), obmedzené na role `admin|veterinarian`, webhook až po commite; AI draft má 30 s abort a graceful `SoapDraftUnavailableError`.
 - **Časový modul** `lib/date-input.ts`: 19/19 testov, vrátane 23-h/25-h dňa pri prechode na letný/zimný čas a odmietnutia neexistujúceho času v „dziere“.
-- **SQL injection:** `sqlStringLiteral()` škáluje `'` a `practices.timezone` prechádza `isSupportedPracticeTimezone` → OK; zvyšok ide cez parametre.
+- **SQL injection:** `sqlStringLiteral()` zdvojnásobuje úvodzovky `'` a `practices.timezone` prechádza `isSupportedPracticeTimezone` → OK; zvyšok ide cez parametre.
 - **GUI→tRPC wiring:** 0 rozbitých odkazov na 618 procedúr; alias `visitTreatmentPlans` (deprecated) funguje.
 - **`/clients/new`:** adresné polia plne po slovensky — *Ulica a číslo* / *Mesto* / *Okres / Kraj* / *PSČ* so slovenskými placeholdermi; GDPR poučenie o SMS + potvrdenie súhlasu + história súhlasov prítomné.
 - **Počítadlá dashboardu a obrazovky vyšetrení** nie sú natvrdo 0 — `dashboard.ts:138-220` a `encounters/page.tsx:71-93` počítajú z reálnych dotazov; prázdne stavy (`EmptyState`) a chybové panely sú implementované.
@@ -187,19 +187,19 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 
 ## 3. Akčný zoznam
 
-### 3.1 Okamžite (deň 1, bez migrácie)
+### 3.1 Okamžite (1. deň, bez migrácie)
 
 | # | Úkon | Súbor / riadok |
 |---|---|---|
 | 1 | Zmeniť DB connect pilotnej inštancie na `openpims_app` a **rotovať** heslo `openpims…` | deployment env; `packages/db/apply-rls.ts:33-51` |
-| 2 | Spustiť RLS aserciu aj bez billing-u | `apps/web/lib/rls-assertion.ts:16-23` → `return !envFlagEnabled("SKIP_RLS_BOOT_ASSERTION") && (NODE_ENV==='production' \|\| !isDev)` |
+| 2 | Spúšťať RLS aserciu aj bez billing režimu | `apps/web/lib/rls-assertion.ts:16-23` → `return !envFlagEnabled("SKIP_RLS_BOOT_ASSERTION") && (NODE_ENV==='production' \|\| !isDev)` |
 | 3 | Odstrániť klientsky dupla-filtr a memo na „dnes“ | `app/(dashboard)/encounters/page.tsx:40,71-77` |
 | 4 | Fix konca dátumového rozsahu v oboch zákonných výstupoch | `server/routers/reports.ts:415-418`, `522-525` (kód v P1-4) |
 | 5 | Guardian: pri `error` zobraziť varovanie, nie `null` | `components/dashboard/clinical-guardian-widget.tsx:70-72` |
 | 6 | Pridať `AI_SETTINGS_ENCRYPTION_KEY` do `.env.example` + hard-fail v prod | `lib/ai/ai-crypto.ts:14-29` |
 | 7 | Spustiť `live-checks.sql` na 5434 a priložiť výstup | `artifacts/data-rls-gui-audit-2026-09-17/live-checks.sql` (18/18 validovaných) |
 
-### 3.2 Migrácie (deň 2-3)
+### 3.2 Migrácie (2.–3. deň)
 
 ```sql
 -- (A) vynútiť RLS aj pre vlastníka (po prepnutí na openpims_app!)
