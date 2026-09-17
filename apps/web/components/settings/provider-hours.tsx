@@ -34,6 +34,8 @@ const DAY_KEYS = [
   "saturday",
 ] as const;
 
+const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0] as const;
+
 function weekdayPreset(): ProviderWindow[] {
   return [1, 2, 3, 4, 5].map((dayOfWeek) => ({
     dayOfWeek,
@@ -323,7 +325,7 @@ export function ProviderHours() {
                     </div>
 
                     <div className="space-y-2">
-                      {DAYS.map((_, dayOfWeek) => {
+                      {DISPLAY_DAYS.map((dayOfWeek) => {
                         const dayKey = DAY_KEYS[dayOfWeek] ?? "sunday";
                         const dayFallback = DAYS[dayOfWeek] ?? "Sunday";
                         const dayName = t(

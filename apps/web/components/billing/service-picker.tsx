@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 export interface ServicePickerService {
   id: string;
@@ -32,6 +33,7 @@ export function ServicePicker({
   disabled?: boolean;
   formatPrice?: (price: string) => string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -136,7 +138,7 @@ export function ServicePicker({
         )}
       >
         <span className="truncate">
-          {selected ? selected.name : "Search services..."}
+          {selected ? selected.name : t("settings.templates.searchServices", "Search services...")}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
@@ -150,15 +152,15 @@ export function ServicePicker({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Type a service name..."
-              aria-label="Search services"
+              placeholder={t("billing.servicePicker.typeServiceName", "Type a service name...")}
+              aria-label={t("billing.servicePicker.searchServicesAria", "Search services")}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
           <div ref={listRef} role="listbox" className="max-h-64 overflow-y-auto p-1">
             {results.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                No services match &quot;{query}&quot;.
+                {t("billing.servicePicker.noMatch", "No services match \"{query}\".", { query })}
               </p>
             ) : (
               results.map((service, index) => (

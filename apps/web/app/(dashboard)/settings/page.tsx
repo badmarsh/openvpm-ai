@@ -2140,24 +2140,26 @@ function ClientPaymentProcessingSection({
           <div>
             <p className="text-muted-foreground">{t("settings.billing.stripeApi", "Stripe API")}</p>
             <p className="font-medium">
-              {data.stripeConfigured ? "Configured" : "Missing"}
+              {data.stripeConfigured
+                ? t("settings.billing.stripeConfigured", "Configured")
+                : t("settings.billing.stripeMissing", "Missing")}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">{t("settings.billing.cardPayments", "Card payments")}</p>
             <p className="font-medium">
               {data.enabled || data.status === "not_required"
-                ? "Enabled"
-                : "Disabled"}
+                ? t("settings.billing.cardPaymentsEnabled", "Enabled")
+                : t("settings.billing.cardPaymentsDisabled", "Disabled")}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">{t("settings.billing.payouts", "Payouts")}</p>
             <p className="font-medium">
               {data.payoutsEnabled
-                ? t("settings.billing.payoutsEnabled", "Povolené")
+                ? t("settings.billing.payoutsEnabled", "Enabled")
                 : data.connectRequired
-                  ? t("settings.billing.payoutsPending", "Čaká sa")
+                  ? t("settings.billing.payoutsPending", "Pending")
                   : t("settings.billing.payoutsNa", "N/A")}
             </p>
           </div>

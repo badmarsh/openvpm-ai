@@ -11,6 +11,7 @@ import {
 import { Check, ChevronsUpDown, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { TEMPLATE_CATALOG_SEARCH_MAX_LENGTH } from "@/lib/templates/catalog-search";
 
 export type TemplateCatalogItem = {
@@ -37,6 +38,7 @@ export function TemplateCatalogPicker({
   onSelect: (item: TemplateCatalogItem | null) => void;
   formatPrice: (price: string) => string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -147,7 +149,11 @@ export function TemplateCatalogPicker({
         }}
       >
         <span className="truncate">
-          {value ? selectedLabel : `Search ${label}s...`}
+          {value
+            ? selectedLabel
+            : itemType === "service"
+              ? t("settings.templates.searchServices", "Search services...")
+              : t("settings.templates.searchProducts", "Search products...")}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0" />
       </button>
@@ -159,14 +165,22 @@ export function TemplateCatalogPicker({
             <input
               ref={inputRef}
               role="combobox"
-              aria-label={`Search ${label}s`}
+              aria-label={
+                itemType === "service"
+                  ? t("settings.templates.searchServices", "Search services...")
+                  : t("settings.templates.searchProducts", "Search products...")
+              }
               aria-autocomplete="list"
               aria-expanded="true"
               aria-controls={listboxId}
               aria-activedescendant={activeOptionId}
               maxLength={TEMPLATE_CATALOG_SEARCH_MAX_LENGTH}
               value={query}
-              placeholder={`Search ${label} name, code, or category`}
+              placeholder={
+                itemType === "service"
+                  ? t("settings.templates.searchServicesPlaceholder", "Search service name, code, or category")
+                  : t("settings.templates.searchProductsPlaceholder", "Search product name, code, or category")
+              }
               className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleKeyDown}
@@ -196,7 +210,7 @@ export function TemplateCatalogPicker({
                 inputRef.current?.focus();
               }}
             >
-              <X className="h-4 w-4" /> Clear selected {label}
+              <X className="h-4 w-4" /> {itemType === "service" ? t("settings.templates.clearSelectedService", "Clear selected {label}") : t("settings.templates.clearSelectedProduct", "Clear selected {label}")}
             </button>
           ) : null}
 
@@ -210,15 +224,17 @@ export function TemplateCatalogPicker({
           >
             {queryIsStale || catalogQuery.isFetching ? (
               <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Searching...
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("settings.templates.searching", "Searching...")}
               </div>
             ) : catalogQuery.error ? (
               <div role="alert" className="px-3 py-6 text-sm text-destructive">
-                Catalog search failed. Edit the query to retry.
+                {t("settings.templates.searchFailed", "Catalog search failed. Edit the query to retry.")}
               </div>
             ) : results.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                No active {label}s match &quot;{query.trim()}&quot;.
+                {itemType === "service"
+                  ? t("settings.templates.noActiveServicesMatch", "No active services match \"{query}\".", { query: query.trim() })
+                  : t("settings.templates.noActiveProductsMatch", "No active products match \"{query}\".", { query: query.trim() })}
               </p>
             ) : (
               results.map((item, index) => (
@@ -250,7 +266,7 @@ export function TemplateCatalogPicker({
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {[item.code, item.category].filter(Boolean).join(" · ") ||
-                        "No code or category"}
+                        t("settings.templates.noCodeOrCategory", "No code or category")}
                     </span>
                   </span>
                   <span className="shrink-0 tabular-nums text-muted-foreground">

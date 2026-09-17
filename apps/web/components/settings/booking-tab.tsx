@@ -27,6 +27,7 @@ import {
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const WEEKDAY_DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 
 const LEAD_TIME_OPTIONS = [
   { value: 0, key: "none", label: "No notice needed" },
@@ -346,11 +347,12 @@ export function BookingTab() {
           </p>
         </div>
         <div className="space-y-2">
-          {WEEKDAY_LABELS.map((label, day) => {
+          {WEEKDAY_DISPLAY_ORDER.map((day) => {
+            const label = WEEKDAY_LABELS[day];
             const hours = config.hours[day];
             const dayKey = WEEKDAY_KEYS[day];
             return (
-              <div key={label} className="flex items-center gap-3">
+              <div key={dayKey} className="flex items-center gap-3">
                 <label className="flex w-24 items-center gap-2 text-sm text-gray-700">
                   <input
                     type="checkbox"
