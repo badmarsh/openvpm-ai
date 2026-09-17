@@ -66,10 +66,17 @@ Keď používateľ zadá požiadavku na deploy, agent postupuje cez nasledujúce
 
 ### Fáza 2: Spustenie deploymentu na dev.significa.sk
 
-Pretože `docker-compose.yml` na serveri má nastavený `context: https://github.com/badmarsh/openvpm-ai.git#main`, Docker pri builde s parametrom `--pull` alebo `--no-cache` stiahne **najnovší commit priamo z remote `main`**:
+Deployment je možné spustiť dvoma spôsobmi:
 
-Agent vykoná vzdialený príkaz cez SSH:
+#### Metóda A: Cez oficiálny Dokploy Webhook (Odporúčaná — zobrazí build v Dokploy UI)
+Tento endpoint zaradí build do fronty Dokployu, zobrazí live logy v UI pod **Deployments** a prebuduje kontajnery:
 
+```bash
+curl -X POST https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ
+```
+
+#### Metóda B: Manuálny núdzový postup cez SSH
+Ak je potrebné vykonať build priamo bez Dokploy UI:
 ```bash
 ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose build --no-cache web && docker compose up -d --remove-orphans web"
 ```

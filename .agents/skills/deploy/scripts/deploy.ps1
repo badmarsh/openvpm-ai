@@ -53,19 +53,21 @@ if ($LASTEXITCODE -ne 0) {
 $latestCommit = git log -1 --oneline
 Write-Host "✓ Nasadzovaný commit: $latestCommit" -ForegroundColor Green
 
-# 5. Remote deploy via SSH on dev.significa.sk
-Write-Host "`n[5/5] Spúšťam zostavenie a nasadenie na serveri dev.significa.sk..." -ForegroundColor Yellow
-
-$remoteCommands = "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && "
-if ($RunDbInit) {
-    $remoteCommands += "echo '==> Spúšťam db-init...' && docker compose run --rm db-init && "
-}
-$remoteCommands += "echo '==> Prebudovávam web z GitHub main...' && docker compose build --no-cache web && echo '==> Reštartujem web službu...' && docker compose up -d --remove-orphans web"
-
-ssh root@dev.significa.sk $remoteCommands
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Chyba pri zostavovaní na serveri!" -ForegroundColor Red
-    exit 1
+# 5. Trigger Dokploy deployment via official webhook
+Write-Host "`n[5/5] Spúšťam deployment cez Dokploy Webhook..." -ForegroundColor Yellow
+$webhookUrl = "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ"
+try {
+    $res = Invoke-RestMethod -Uri $webhookUrl -Method Post -SkipCertificateCheck
+    Write-Host "✓ Dokploy odpoveď: $($res.message)" -ForegroundColor Green
+    Write-Host "Build je aktívny a viditeľný priamo v Dokploy UI pod Deployments!" -ForegroundColor Cyan
+} catch {
+    Write-Host "Webhook zlyhal ($($_.Exception.Message)), spúšťam manuálny SSH fallback..." -ForegroundColor Yellow
+    $remoteCommands = "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && "
+    if ($RunDbInit) {
+        $remoteCommands += "echo '==> Spúšťam db-init...' && docker compose run --rm db-init && "
+    }
+    $remoteCommands += "echo '==> Prebudovávam web z GitHub main...' && docker compose build --no-cache web && echo '==> Reštartujem web službu...' && docker compose up -d --remove-orphans web"
+    ssh root@dev.significa.sk $remoteCommands
 }
 
 # Smoke test
