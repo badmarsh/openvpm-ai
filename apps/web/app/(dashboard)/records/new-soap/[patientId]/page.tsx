@@ -21,6 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
 import { CapturePhotos } from "@/components/records/capture-photos";
+import { ClinicalGuardianConfirmDialog } from "@/components/clinical/clinical-guardian-confirm-dialog";
+import type { EvaluatedSafetyAlert } from "@/lib/ai/clinical-guardian";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   hasSoapContent,
@@ -184,6 +187,14 @@ export default function NewSoapNotePage() {
   const saveDraftMutation = trpc.records.saveSoapDraft.useMutation();
   const finalizeMutation = trpc.records.finalizeSoapNote.useMutation();
   const discardMutation = trpc.records.discardSoapDraft.useMutation();
+  const checkMedicationsMutation = trpc.extensions.clinicalGuardian.checkMedications.useMutation();
+  const recordAlertsMutation = trpc.extensions.clinicalGuardian.recordAlerts.useMutation();
+
+  const [draftMode, setDraftMode] = useState<"flash" | "pro">("flash");
+  const [detectedAlerts, setDetectedAlerts] = useState<EvaluatedSafetyAlert[]>([]);
+  const [guardianConfirmOpen, setGuardianConfirmOpen] = useState(false);
+  const [pendingFinalizeSaved, setPendingFinalizeSaved] = useState<{ id: string; revision: number } | null>(null);
+
   const [draftInitialized, setDraftInitialized] = useState(false);
   const draftInitializedRef = useRef(false);
   const [saveState, setSaveState] = useState<SoapDraftSaveState>("idle");
@@ -426,45 +437,20 @@ export default function NewSoapNotePage() {
     ) {
       return;
     }
-    draftWithAi.mutate({ patientId: params.patientId });
+    draftWithAi.mutate({
+      patientId: params.patientId,
+      mode: draftMode,
+      deepThinking: draftMode === "pro",
+    });
   }
 
-  async function handleFinalize() {
-    if (finalizedElsewhereRef.current) return;
-    if (!appointmentId) {
-      toast.error(t("records.newSoap.openActiveVisitFirst", "Open an active visit before finalizing a SOAP note"));
-      return;
-    }
-    if (!params.patientId || !patient) {
-      toast.error(t("records.newSoap.loadPatientFirst", "Load the patient before finalizing a SOAP note"));
-      return;
-    }
-    if (!canSave) {
-      toast.error(t("records.newSoap.addSectionFirst", "Add at least one SOAP section before finalizing"));
-      return;
-    }
-    if (hasTemplatePrompts) {
-      toast.error(t("records.newSoap.replacePromptsFirst", "Replace or delete every draft prompt before finalizing"));
-      return;
-    }
-    const saved = await persistDraft();
-    if (!saved) return;
-    if (
-      !window.confirm(
-        t(
-          "records.newSoap.confirmFinalize",
-          "Finalize this SOAP note? The signed note cannot be edited; later clarification must be an attributed addendum.",
-        ),
-      )
-    ) {
-      return;
-    }
+  async function executeFinalize(savedRecord: { id: string; revision: number }) {
     try {
       const result = await finalizeMutation.mutateAsync({
         patientId: params.patientId,
-        appointmentId,
-        noteId: saved.id,
-        expectedRevision: saved.revision,
+        appointmentId: appointmentId!,
+        noteId: savedRecord.id,
+        expectedRevision: savedRecord.revision,
       });
       if (result.outcome === "conflict") {
         if (result.note.status === "finalized") {
@@ -488,6 +474,94 @@ export default function NewSoapNotePage() {
           : t("records.newSoap.finalizeFailed", "SOAP note could not be finalized"),
       );
     }
+  }
+
+  const handleGuardianEditPrescription = () => {
+    setGuardianConfirmOpen(false);
+    toast.info(t("clinicalGuardian.dialog.editPrescriptionToast", "Upravte predpis v pláne vyšetrenia."));
+  };
+
+  const handleGuardianProceedAnyway = async () => {
+    if (!pendingFinalizeSaved) return;
+    setGuardianConfirmOpen(false);
+    try {
+      await recordAlertsMutation.mutateAsync({
+        patientId: params.patientId,
+        encounterId: appointmentId,
+        alerts: detectedAlerts.map((a) => ({
+          category: a.category,
+          severity: a.severity,
+          title: a.title,
+          message: a.message,
+          suggestedAction: a.suggestedAction,
+          acknowledged: true,
+        })),
+      });
+    } catch {
+      // non-blocking
+    }
+    await executeFinalize(pendingFinalizeSaved);
+  };
+
+  async function handleFinalize() {
+    if (finalizedElsewhereRef.current) return;
+    if (!appointmentId) {
+      toast.error(t("records.newSoap.openActiveVisitFirst", "Open an active visit before finalizing a SOAP note"));
+      return;
+    }
+    if (!params.patientId || !patient) {
+      toast.error(t("records.newSoap.loadPatientFirst", "Load the patient before finalizing a SOAP note"));
+      return;
+    }
+    if (!canSave) {
+      toast.error(t("records.newSoap.addSectionFirst", "Add at least one SOAP section before finalizing"));
+      return;
+    }
+    if (hasTemplatePrompts) {
+      toast.error(t("records.newSoap.replacePromptsFirst", "Replace or delete every draft prompt before finalizing"));
+      return;
+    }
+    const saved = await persistDraft();
+    if (!saved) return;
+
+    // Check medication safety with Clinical Guardian before finalizing
+    const planText = soapSectionText(sectionsRef.current.plan);
+    const candidateMeds = planText
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 2)
+      .map((name) => ({ name }));
+
+    if (candidateMeds.length > 0) {
+      try {
+        const alerts = await checkMedicationsMutation.mutateAsync({
+          patientId: params.patientId,
+          encounterId: appointmentId,
+          medications: candidateMeds,
+        });
+        if (alerts && alerts.length > 0 && alerts.some((a) => a.severity === "critical")) {
+          setDetectedAlerts(alerts);
+          setPendingFinalizeSaved(saved);
+          setGuardianConfirmOpen(true);
+          return;
+        }
+      } catch {
+        // fail-safe
+      }
+    }
+
+    if (
+      !window.confirm(
+        t(
+          "records.newSoap.confirmFinalize",
+          "Finalize this SOAP note? The signed note cannot be edited; later clarification must be an attributed addendum.",
+        ),
+      )
+    ) {
+      return;
+    }
+
+    await executeFinalize(saved);
   }
 
   function useServerDraft() {
@@ -917,13 +991,40 @@ export default function NewSoapNotePage() {
         <div className="flex flex-col items-end gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <CapturePhotos patientId={params.patientId} />
+            <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setDraftMode("flash")}
+                className={cn(
+                  "px-2 py-1 rounded text-xs font-medium transition-colors",
+                  draftMode === "flash"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                ⚡ {t("records.newSoap.modeFlash", "Flash")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraftMode("pro")}
+                className={cn(
+                  "px-2 py-1 rounded text-xs font-medium transition-colors",
+                  draftMode === "pro"
+                    ? "bg-background text-violet-600 dark:text-violet-400 font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                🧠 {t("records.newSoap.modePro", "Konzílium (Pro)")}
+              </button>
+            </div>
             <Button
-              variant="outline"
+              variant={draftMode === "pro" ? "default" : "outline"}
               size="sm"
               onClick={handleDraftWithAi}
               disabled={
                 !isOnline || !aiConfigured || !canUseAi || draftWithAi.isPending
               }
+              className={draftMode === "pro" ? "bg-violet-600 hover:bg-violet-700 text-white" : ""}
             >
               {draftWithAi.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -932,7 +1033,9 @@ export default function NewSoapNotePage() {
               )}
               {draftWithAi.isPending
                 ? t("records.newSoap.draftingAi", "Drafting...")
-                : t("records.newSoap.draftWithAi", "Draft with AI")}
+                : draftMode === "pro"
+                  ? t("records.newSoap.draftConsilium", "Konziliárny rozbor (Pro)")
+                  : t("records.newSoap.draftWithAi", "Draft with AI")}
             </Button>
           </div>
           {needsAiBillingSetup && !agentStatus.isLoading ? (
@@ -1213,6 +1316,15 @@ export default function NewSoapNotePage() {
           </Button>
         </div>
       </div>
+
+      <ClinicalGuardianConfirmDialog
+        open={guardianConfirmOpen}
+        onOpenChange={setGuardianConfirmOpen}
+        alerts={detectedAlerts}
+        onEditPrescription={handleGuardianEditPrescription}
+        onProceedAnyway={handleGuardianProceedAnyway}
+        isProcessing={finalizeMutation.isPending || recordAlertsMutation.isPending}
+      />
     </div>
   );
 }

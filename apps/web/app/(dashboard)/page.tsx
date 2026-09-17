@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ActivationChecklist } from "@/components/dashboard/activation-checklist";
 import { UnfinishedFieldVisits } from "@/components/dashboard/unfinished-field-visits";
+import { ClinicalGuardianWidget } from "@/components/dashboard/clinical-guardian-widget";
 import { EmptyState } from "@/components/common/empty-state";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -334,6 +335,8 @@ export default function DashboardPage() {
           })}
         </div>
       ) : null}
+
+      <ClinicalGuardianWidget />
 
       <section
         className="rounded-lg border border-border bg-card"

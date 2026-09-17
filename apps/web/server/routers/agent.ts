@@ -22,6 +22,7 @@ import {
 import { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
 import { billingEnforced } from "@/lib/billing/plans";
 import { readHostedAiAccess } from "@/lib/billing/ai-access";
+import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
 
 export { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
 
@@ -83,6 +84,8 @@ export const agentRouter = createRouter({
         instruction: z.string().trim().min(1).max(AGENT_INSTRUCTION_MAX_LENGTH),
         // Writes (e.g. booking) are opt-in per run and require an explicit flag.
         allowWrites: z.boolean().default(false),
+        // Enable deep thinking / clinical consilium mode (e.g. Gemini 3.1 Pro)
+        deepThinking: z.boolean().default(false).optional(),
         // Prior turns (oldest first) for multi-turn chat. Bounded to keep the
         // prompt small; the client sends a trailing window of the conversation.
         history: z
@@ -108,10 +111,23 @@ export const agentRouter = createRouter({
         );
       }
       try {
+        let modelOverride: string | undefined = undefined;
+        if (input.deepThinking) {
+          try {
+            const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "deepThinking");
+            if (resolved?.modelId) {
+              modelOverride = resolved.modelId;
+            }
+          } catch {
+            // fallback
+          }
+        }
+
         return await runAgent({
           instruction: input.instruction,
           allowWrites: input.allowWrites,
           history: input.history,
+          model: modelOverride,
           context: {
             db: ctx.db,
             practiceId: ctx.practiceId,

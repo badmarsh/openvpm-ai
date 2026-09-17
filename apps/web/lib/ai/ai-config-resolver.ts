@@ -20,7 +20,8 @@ export type AiFeatureKey =
   | "labParser"
   | "imageGeneration"
   | "videoGeneration"
-  | "marketingCopy";
+  | "marketingCopy"
+  | "deepThinking";
 
 export interface ResolvedModelConfig {
   provider: "openai" | "gemini" | "alibaba" | "default";
@@ -85,6 +86,14 @@ export async function resolveFeatureConfig(
         baseUrl: ali.baseUrl,
         apiKey: ali.apiKey,
         duration: 5,
+      };
+    }
+    if (feature === "deepThinking") {
+      return {
+        provider: "gemini",
+        modelId: "gemini-3.1-pro",
+        temperature: featureMapping?.temperature ?? 0.1,
+        maxTokens: featureMapping?.maxTokens ?? 8192,
       };
     }
     return {

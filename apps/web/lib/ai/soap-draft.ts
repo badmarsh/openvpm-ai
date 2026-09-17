@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { generateText, type LanguageModel } from "ai";
 import { configuredModel } from "@/lib/agent/runner";
 import { SOAP_SECTION_MAX_LENGTH } from "@/lib/records/soap-content";
 
@@ -141,7 +141,8 @@ export class SoapDraftUnavailableError extends Error {
 
 /** Generate a SOAP draft. Throws AgentNotConfiguredError when no AI key is set. */
 export async function draftSoapNote(
-  context: SoapDraftContext
+  context: SoapDraftContext,
+  customModel?: LanguageModel,
 ): Promise<SoapDraft> {
   const ac = new AbortController();
   const timeout = setTimeout(() => ac.abort(new Error("SOAP draft timed out after 30s")), 30_000);
@@ -149,7 +150,7 @@ export async function draftSoapNote(
   let result;
   try {
     result = await generateText({
-      model: configuredModel(),
+      model: customModel ?? configuredModel(),
       system: SOAP_DRAFT_SYSTEM_PROMPT,
       prompt: buildSoapDraftPrompt(context),
       temperature: 0,

@@ -398,7 +398,8 @@
       "allowWrites": "Allow writes: appointments and patient vitals",
       "send": "Send",
       "writeWarning": "Write mode can create appointments or record patient vitals. It turns off automatically after this run.",
-      "sending": "Sending..."
+      "sending": "Sending...",
+      "deepThinking": "Deep Reasoning (Concilium)"
     },
     "trace": {
       "toolCallSingular": "{count} tool call",
@@ -648,7 +649,9 @@
     "successToggle": "Automation status changed",
     "successDelete": "Automation removed",
     "infoTitle": "💡 How do automations work?",
-    "infoDescription": "Rules are triggered by events (discharge, visit anniversary…). AI generates a message in Slovak/Hungarian with a Fear-Free tone. Messages are sent via SMS or email — configure Twilio/Resend in settings."
+    "infoDescription": "Rules are triggered by events (discharge, visit anniversary…). AI generates a message in Slovak/Hungarian with a Fear-Free tone. Messages are sent via SMS or email — configure Twilio/Resend in settings.",
+    "tabClient": "Client Automations",
+    "tabClinical": "Clinical Guardian & Rules"
   },
   "auth": {
     "login": {
@@ -3641,6 +3644,11 @@
     },
     "tabs": {
       "dental": "Dental Chart"
+    },
+    "newSoap": {
+      "modeFlash": "Flash",
+      "modePro": "Concilium (Pro)",
+      "draftConsilium": "Clinical Concilium Draft (Pro)"
     }
   },
   "records.backToVisit": "Back to visit",
@@ -4338,7 +4346,9 @@
         "videoGenTitle": "Video Generation",
         "videoGenDesc": "Educational veterinary video clips for social media and pet owners (WAN models).",
         "marketingTitle": "Marketing & Social Posts",
-        "marketingDesc": "Drafting educational posts and client communication campaigns."
+        "marketingDesc": "Drafting educational posts and client communication campaigns.",
+        "deepThinkingTitle": "Deep Reasoning & Clinical Concilium (Deep Thinking)",
+        "deepThinkingDesc": "Complex diagnostic dilemmas, polymorbid geriatric patients, and longitudinal chart synthesis (recommended: Gemini 3.1 Pro)."
       },
       "compliance": {
         "title": "Clinical & Statutory Safety Gate",
@@ -7159,5 +7169,62 @@
     "planPilot": "Plan a clinic pilot",
     "startWithSample": "Start with sample data",
     "emailWarning": "Do not attach clinic exports or patient/client data to ordinary email. We will arrange a secure transfer method if a migration review needs real data."
+  },
+  "clinicalGuardian": {
+    "widget": {
+      "title": "Clinical Guardian & Statutory Deadlines",
+      "subtitle": "Automated medication safety and statutory deadline surveillance",
+      "criticalBadge": "{count} critical",
+      "statutoryBadge": "{count} statutory",
+      "runAudit": "Check statutory deadlines now",
+      "auditButton": "Audit",
+      "allGoodTitle": "All clinical checks and statutory deadlines clear",
+      "allGoodDesc": "No drug contraindications, overdue rabies observations, or pending CRSZ microchips detected.",
+      "actionPrefix": "Recommended action:",
+      "goToStatutory": "Resolve in module",
+      "openPatient": "Patient chart",
+      "resolveButton": "Resolved",
+      "resolvedSuccess": "Alert marked as resolved.",
+      "resolveError": "Failed to mark alert as resolved.",
+      "auditSuccess": "Statutory deadline audit complete ({count} new alerts).",
+      "auditError": "Audit failed."
+    },
+    "dialog": {
+      "title": "Clinical Guardian: Contraindication Risk Detected",
+      "subtitle": "The system identified a pharmacological risk or contraindication according to clinical safety rules.",
+      "recommendation": "Recommendation:",
+      "hitlNotice": "Human-in-the-loop (Zákon 39/2007 Z. z.): AI acts strictly as an assistant. Final clinical prescribing authority rests entirely with the attending veterinarian.",
+      "editPrescription": "Edit prescription",
+      "proceedAnyway": "Acknowledge & proceed",
+      "editPrescriptionToast": "Please adjust the medication plan in the visit record."
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "rules": {
+      "medSafetyTitle": "Medication Safety",
+      "medSafetyDesc": "Automatic detection of contraindications during patient visits",
+      "statutoryTitle": "Statutory Deadlines",
+      "statutoryDesc": "Surveillance of deadlines under Veterinary Act 39/2007 Coll.",
+      "hitlTitle": "Human-in-the-Loop & Ethics",
+      "hitlDesc": "Statutory legal and ethical safeguards for AI"
+    },
+    "alerts": {
+      "title": "Clinical Guardian Alerts Log",
+      "subtitle": "Overview of detected medication risks and statutory deadlines",
+      "emptyTitle": "No alerts in selected category",
+      "emptyDesc": "All monitored clinical records and statutory deadlines are compliant."
+    },
+    "status": {
+      "open": "Open",
+      "resolved": "Resolved",
+      "dismissed": "Acknowledged"
+    },
+    "actions": {
+      "dismissSuccess": "Alert acknowledged.",
+      "dismissError": "Failed to acknowledge alert."
+    }
   }
 }

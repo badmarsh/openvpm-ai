@@ -398,7 +398,8 @@
       "allowWrites": "Povoliť zápis: termíny a vitálne funkcie pacientov",
       "send": "Odoslať",
       "writeWarning": "Režim zápisu môže vytvárať termíny alebo zaznamenávať vitálne funkcie pacientov. Po tomto spustení sa automaticky vypne.",
-      "sending": "Odosielam..."
+      "sending": "Odosielam...",
+      "deepThinking": "Hlbšia analýza (Konzílium)"
     },
     "trace": {
       "toolCallSingular": "{count} volanie nástroja",
@@ -648,7 +649,9 @@
     "successToggle": "Stav automatizácie bol zmenený",
     "successDelete": "Automatizácia bola odstránená",
     "infoTitle": "💡 Ako fungujú automatizácie?",
-    "infoDescription": "Pravidlá sa spúšťajú na základe udalostí (prepustenie z ambulancie, výročie návštevy…). AI generuje správu v slovenčine/maďarčine s Fear-Free tónom. Správy sú odosielané cez SMS alebo e-mail — nakonfigurujte Twilio/Resend v nastaveniach."
+    "infoDescription": "Pravidlá sa spúšťajú na základe udalostí (prepustenie z ambulancie, výročie návštevy…). AI generuje správu v slovenčine/maďarčine s Fear-Free tónom. Správy sú odosielané cez SMS alebo e-mail — nakonfigurujte Twilio/Resend v nastaveniach.",
+    "tabClient": "Klientske automatizácie",
+    "tabClinical": "Klinický strážca & Pravidlá"
   },
   "auth": {
     "login": {
@@ -3641,6 +3644,11 @@
     },
     "tabs": {
       "dental": "Zubný záznam"
+    },
+    "newSoap": {
+      "modeFlash": "Flash",
+      "modePro": "Konzílium (Pro)",
+      "draftConsilium": "Konziliárny rozbor (Pro)"
     }
   },
   "records.backToVisit": "Späť na návštevu",
@@ -4338,7 +4346,9 @@
         "videoGenTitle": "Generovanie videa",
         "videoGenDesc": "Tvorba krátkych edukačných videí pre sociálne siete a majiteľov (WAN modely).",
         "marketingTitle": "Marketing & Sociálne siete",
-        "marketingDesc": "Generovanie edukačných príspevkov a textov pre sociálne siete a web."
+        "marketingDesc": "Generovanie edukačných príspevkov a textov pre sociálne siete a web.",
+        "deepThinkingTitle": "Hĺbková analýza & Konzílium (Deep Thinking)",
+        "deepThinkingDesc": "Komplexné medicínske rébusy, polymorbidní pacienti a syntéza dlhoročnej histórie (odporúčané: Gemini 3.1 Pro)."
       },
       "compliance": {
         "title": "Klinická a legislatívna bezpečnosť",
@@ -7159,5 +7169,62 @@
     "planPilot": "Naplánujte pilotný projekt kliniky",
     "startWithSample": "Začnite so vzorovými údajmi",
     "emailWarning": "Nepridávajte exporty kliniky alebo údaje o pacientoch/klientoch do bežných e-mailov. Dohodneme bezpečný spôsob prenosu, ak prehľad migrácie potrebuje skutočné údaje."
+  },
+  "clinicalGuardian": {
+    "widget": {
+      "title": "Klinický strážca & Zákonné lehoty",
+      "subtitle": "Automatický dohľad nad liekovou bezpečnosťou a lehotami ŠVPS SR",
+      "criticalBadge": "{count} kritických",
+      "statutoryBadge": "{count} zákonných",
+      "runAudit": "Skontrolovať zákonné lehoty teraz",
+      "auditButton": "Audit",
+      "allGoodTitle": "Všetky klinické kontroly a zákonné lehoty v poriadku",
+      "allGoodDesc": "Neboli zistené žiadne kontraindikácie ani omeškané hlásenia besnoty či CRSZ.",
+      "actionPrefix": "Odporúčaný krok:",
+      "goToStatutory": "Riešiť v moduloch",
+      "openPatient": "Karta pacienta",
+      "resolveButton": "Vyriešené",
+      "resolvedSuccess": "Upozornenie bolo vyriešené.",
+      "resolveError": "Nepodarilo sa označiť za vyriešené.",
+      "auditSuccess": "Audit zákonných lehôt dokončený ({count} nových upozornení).",
+      "auditError": "Audit zlyhal."
+    },
+    "dialog": {
+      "title": "Klinický strážca: Zistené riziko kontraindikácie",
+      "subtitle": "Systém identifikoval farmakologické riziko alebo kontraindikáciu podľa klinických pravidiel.",
+      "recommendation": "Odporúčanie:",
+      "hitlNotice": "Human-in-the-loop (Zákon 39/2007 Z. z.): AI slúži výhradne ako asistent. Konečné klinické rozhodnutie je plne v kompetencii ošetrujúceho veterinárneho lekára.",
+      "editPrescription": "Upraviť predpis",
+      "proceedAnyway": "Viem o tom, pokračovať",
+      "editPrescriptionToast": "Upravte predpis v pláne vyšetrenia."
+    },
+    "severity": {
+      "critical": "Kritické",
+      "warning": "Varovanie",
+      "info": "Informácia"
+    },
+    "rules": {
+      "medSafetyTitle": "Lieková bezpečnosť",
+      "medSafetyDesc": "Automatická detekcia kontraindikácií pri vyšetrení",
+      "statutoryTitle": "Zákonné lehoty ŠVPS",
+      "statutoryDesc": "Dohľad nad lehotami Zákona č. 39/2007 Z. z.",
+      "hitlTitle": "Human-in-the-Loop & Etika",
+      "hitlDesc": "Právne a etické poistky pre AI"
+    },
+    "alerts": {
+      "title": "Zoznam upozornení Klinického strážcu",
+      "subtitle": "Prehľad zachytených liekových rizík a zákonných lehôt",
+      "emptyTitle": "Žiadne upozornenia v zvolenej kategórii",
+      "emptyDesc": "Všetky sledované klinické záznamy a zákonné lehoty sú v súlade."
+    },
+    "status": {
+      "open": "Otvorené",
+      "resolved": "Vyriešené",
+      "dismissed": "Vzaté na vedomie"
+    },
+    "actions": {
+      "dismissSuccess": "Upozornenie bolo vzaté na vedomie.",
+      "dismissError": "Nepodarilo sa odmietnuť upozornenie."
+    }
   }
 }

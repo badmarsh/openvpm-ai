@@ -28,6 +28,8 @@ import {
   SoapDraftUnavailableError,
   draftSoapNote,
 } from "@/lib/ai/soap-draft";
+import { resolvePracticeLanguageModel } from "@/lib/ai/ai-config-resolver";
+import type { LanguageModel } from "ai";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordUsage } from "@/lib/billing/usage";
 import { readHostedAiAccess } from "@/lib/billing/ai-access";
@@ -361,6 +363,8 @@ export const aiRouter = createRouter({
           "Visit context",
           SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
         ),
+        mode: z.enum(["flash", "pro"]).default("flash").optional(),
+        deepThinking: z.boolean().default(false).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -492,13 +496,29 @@ export const aiRouter = createRouter({
       }
 
       try {
-        const draft = await draftSoapNote({
-          patient,
-          allergies,
-          activeProblems: problems,
-          latestVitals: latestVitals ?? null,
-          visitContext: input.visitContext,
-        });
+        let customModel: LanguageModel | undefined = undefined;
+        if (input.mode === "pro" || input.deepThinking) {
+          try {
+            customModel = await resolvePracticeLanguageModel(
+              ctx.db,
+              ctx.practiceId,
+              "deepThinking",
+            );
+          } catch {
+            // fallback to default
+          }
+        }
+
+        const draft = await draftSoapNote(
+          {
+            patient,
+            allergies,
+            activeProblems: problems,
+            latestVitals: latestVitals ?? null,
+            visitContext: input.visitContext,
+          },
+          customModel,
+        );
         // Meter successful drafts like agent runs (no-op on self-host).
         await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
         return draft;

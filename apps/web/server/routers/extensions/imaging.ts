@@ -26,6 +26,8 @@ import {
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
+import { resolvePracticeLanguageModel } from "@/lib/ai/ai-config-resolver";
+import type { LanguageModel } from "ai";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 import { readPrimaryObject } from "@/lib/s3";
 import { calculateVhs as computeVhs } from "@/lib/imaging/vhs-calculator";
@@ -212,14 +214,27 @@ export const imagingRouter = createRouter({
           ? `Analyzuj tento medicínsky obraz (${input.imageType}). Otázka lekára: ${input.userPrompt}`
           : `Analyzuj tento medicínsky obraz (${input.imageType}). Poskytni štruktúrovaný popis nálezov.`;
 
-        const model = configuredModel();
+        let model: LanguageModel;
+        try {
+          model = await resolvePracticeLanguageModel(ctx.db, ctx.practiceId, "imagingRtg");
+        } catch {
+          model = configuredModel();
+        }
+
         const systemPrompt =
           MODALITY_SYSTEM_PROMPTS[input.imageType] ?? MEDICAL_IMAGING_SYSTEM_PROMPT;
 
         const result = await generateText({
           model,
           system: systemPrompt,
-          temperature: 0,
+          temperature: 0.1,
+          providerOptions: {
+            google: {
+              thinking: {
+                budgetTokens: 2048,
+              },
+            },
+          },
           messages: [
             {
               role: "user",

@@ -827,6 +827,23 @@ export function AiSettingsTab() {
                 alibabaModels={alibabaModels}
                 t={t}
               />
+
+              {/* Feature 8: Deep Thinking & Clinical Consilium */}
+              <FeatureRow
+                icon={<Sparkles className="h-5 w-5 text-violet-500" />}
+                title={t("settings.ai.features.deepThinkingTitle", "Hĺbková analýza & Konzílium (Deep Thinking)")}
+                description={t(
+                  "settings.ai.features.deepThinkingDesc",
+                  "Rozšírené uvažovanie pre zložité diferenciálne diagnózy, multimodálne RTG rozbory a konziliárne vyšetrenia.",
+                )}
+                mapping={featureMappings.deepThinking}
+                onChangeProvider={(p) => updateFeature("deepThinking", "provider", p)}
+                onChangeModel={(m) => updateFeature("deepThinking", "model", m)}
+                openaiModels={openaiModels}
+                geminiModels={geminiModels}
+                alibabaModels={alibabaModels}
+                t={t}
+              />
             </div>
           </div>
         </CardContent>

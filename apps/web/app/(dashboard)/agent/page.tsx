@@ -124,6 +124,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const [messages, setMessages] = useState<PersistedChatMessage[]>([]);
   const [instruction, setInstruction] = useState("");
   const [allowWrites, setAllowWrites] = useState(false);
+  const [deepThinking, setDeepThinking] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [dateLabel, setDateLabel] = useState("");
   const idRef = useRef(0);
@@ -238,6 +239,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
       {
         instruction: text,
         allowWrites: writes,
+        deepThinking,
         history: history.length > 0 ? history : undefined,
       },
       {
@@ -724,10 +726,43 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                     className="max-h-36 w-full resize-none bg-transparent px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
                   />
 
-                  <div className="flex items-center justify-between gap-3 px-1 pt-1">
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      {instruction.length > 0 && `${instruction.length}/${AGENT_INSTRUCTION_MAX_LENGTH}`}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none">
+                        <input
+                          type="checkbox"
+                          checked={deepThinking}
+                          onChange={(e) => setDeepThinking(e.target.checked)}
+                          disabled={!canRun || run.isPending}
+                          className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <Sparkles
+                          className={`h-3.5 w-3.5 ${
+                            deepThinking ? "text-violet-500 animate-pulse" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span
+                          className={
+                            deepThinking
+                              ? "font-semibold text-violet-600 dark:text-violet-400"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {t("agent.composer.deepThinking", "Hlbšia analýza (Konzílium)")}
+                        </span>
+                        {deepThinking && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] h-4 px-1 border-violet-400 text-violet-600 dark:text-violet-400"
+                          >
+                            Pro
+                          </Badge>
+                        )}
+                      </label>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {instruction.length > 0 && `${instruction.length}/${AGENT_INSTRUCTION_MAX_LENGTH}`}
+                      </span>
+                    </div>
 
                     <Button
                       type="button"

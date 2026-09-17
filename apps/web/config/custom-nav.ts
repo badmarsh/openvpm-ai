@@ -90,12 +90,12 @@ export const customNavItems: CustomNavItem[] = [
     section: 'marketing',
   },
   {
-    href: '/marketing/automations',
+    href: '/automations',
     label: 'Automatizácie',
-    i18nKey: 'nav.marketingAutomations',
+    i18nKey: 'nav.automations',
     icon: Zap,
     roles: ['admin', 'veterinarian'],
-    section: 'marketing',
+    section: 'admin',
   },
   {
     href: '/marketing/consents',

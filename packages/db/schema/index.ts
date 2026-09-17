@@ -64,3 +64,4 @@ export * from "./ext_content_calendar";
 export * from "./ext_channel_accounts";
 export * from "./ext_marketing_website";
 export * from "./ext_ai_settings";
+export * from "./ext_clinical_guardian";

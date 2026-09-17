@@ -42,6 +42,7 @@ export interface PracticeAiFeatureMappings {
   imageGeneration?: FeatureAiMapping;
   videoGeneration?: FeatureAiMapping;
   marketingCopy?: FeatureAiMapping;
+  deepThinking?: FeatureAiMapping;
   [featureKey: string]: FeatureAiMapping | undefined;
 }
 
