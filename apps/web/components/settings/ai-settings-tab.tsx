@@ -44,6 +44,11 @@ import {
   Cpu,
 } from "lucide-react";
 import type { CachedAiModel, FeatureAiMapping, PracticeAiFeatureMappings } from "@openpims/db";
+import {
+  DEFAULT_ALIBABA_PRESETS,
+  DEFAULT_GEMINI_PRESETS,
+  DEFAULT_PRACTICE_FEATURE_MAPPINGS,
+} from "@/lib/ai/ai-presets";
 
 export function AiSettingsTab() {
   const { t } = useI18n();
@@ -85,21 +90,15 @@ export function AiSettingsTab() {
   const [alibabaIsActive, setAlibabaIsActive] = useState(false);
   const [showAlibabaKey, setShowAlibabaKey] = useState(false);
 
-  // Cached models lists (from server or fresh fetch)
+  // Cached models lists (from server or fresh fetch, with well-known presets as defaults)
   const [openaiModels, setOpenaiModels] = useState<CachedAiModel[]>([]);
-  const [geminiModels, setGeminiModels] = useState<CachedAiModel[]>([]);
-  const [alibabaModels, setAlibabaModels] = useState<CachedAiModel[]>([]);
+  const [geminiModels, setGeminiModels] = useState<CachedAiModel[]>(DEFAULT_GEMINI_PRESETS);
+  const [alibabaModels, setAlibabaModels] = useState<CachedAiModel[]>(DEFAULT_ALIBABA_PRESETS);
 
-  // Feature mappings
-  const [featureMappings, setFeatureMappings] = useState<PracticeAiFeatureMappings>({
-    assistant: { provider: "default", model: "gemini-3.8-flash-medium", temperature: 0.2 },
-    imagingRtg: { provider: "default", model: "gemini-3.8-flash-medium", temperature: 0.1 },
-    voiceSoap: { provider: "default", model: "gemini-3.8-flash-medium" },
-    labParser: { provider: "default", model: "gemini-3.8-flash-medium" },
-    imageGeneration: { provider: "alibaba", model: "wan2.1-t2i-turbo", size: "1024*1024" },
-    videoGeneration: { provider: "alibaba", model: "wan-t2v", duration: 5 },
-    marketingCopy: { provider: "default", model: "gemini-3.8-flash-medium" },
-  });
+  // Feature mappings initialized with requested veterinary & operational defaults
+  const [featureMappings, setFeatureMappings] = useState<PracticeAiFeatureMappings>(
+    DEFAULT_PRACTICE_FEATURE_MAPPINGS,
+  );
 
   // Action states
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
@@ -117,16 +116,26 @@ export function AiSettingsTab() {
       setGeminiBaseUrl(settings.gemini.baseUrl);
       setGeminiApiKey(settings.gemini.maskedKey || "");
       setGeminiIsActive(settings.gemini.isActive);
-      setGeminiModels(settings.gemini.cachedModels || []);
+      setGeminiModels(
+        settings.gemini.cachedModels && settings.gemini.cachedModels.length > 0
+          ? settings.gemini.cachedModels
+          : DEFAULT_GEMINI_PRESETS,
+      );
 
       setAlibabaMode(settings.alibaba.mode);
       setAlibabaBaseUrl(settings.alibaba.baseUrl);
       setAlibabaApiKey(settings.alibaba.maskedKey || "");
       setAlibabaIsActive(settings.alibaba.isActive);
-      setAlibabaModels(settings.alibaba.cachedModels || []);
+      setAlibabaModels(
+        settings.alibaba.cachedModels && settings.alibaba.cachedModels.length > 0
+          ? settings.alibaba.cachedModels
+          : DEFAULT_ALIBABA_PRESETS,
+      );
 
       if (settings.featureMappings && Object.keys(settings.featureMappings).length > 0) {
-        setFeatureMappings((prev) => ({ ...prev, ...settings.featureMappings }));
+        setFeatureMappings({ ...DEFAULT_PRACTICE_FEATURE_MAPPINGS, ...settings.featureMappings });
+      } else {
+        setFeatureMappings(DEFAULT_PRACTICE_FEATURE_MAPPINGS);
       }
     }
   }, [settings]);
@@ -241,7 +250,7 @@ export function AiSettingsTab() {
     setFeatureMappings((prev) => ({
       ...prev,
       [key]: {
-        ...(prev[key] || { provider: "default", model: "gemini-3.8-flash-medium" }),
+        ...(prev[key] || DEFAULT_PRACTICE_FEATURE_MAPPINGS[key as keyof PracticeAiFeatureMappings] || { provider: "gemini", model: "gemini-3.8-flash" }),
         [field]: value,
       },
     }));
@@ -886,28 +895,47 @@ function FeatureRow({
   const provider = mapping?.provider || "default";
   const model = mapping?.model || "";
 
+  const handleProviderChange = (newProvider: string) => {
+    onChangeProvider(newProvider);
+    if (newProvider === "gemini") {
+      if (filterImageOnly) onChangeModel("imagen-3.0-generate-002");
+      else onChangeModel("gemini-3.8-flash");
+    } else if (newProvider === "alibaba") {
+      if (filterVideoOnly) onChangeModel("wan3.0-video");
+      else if (filterImageOnly) onChangeModel("qwen-image-3.0");
+      else if (filterVisionOnly) onChangeModel("qwen-vl-max");
+      else onChangeModel("qwen-plus");
+    } else if (newProvider === "openai") {
+      if (openaiModels.length > 0) onChangeModel(openaiModels[0].id);
+      else onChangeModel("gpt-4o-mini");
+    }
+  };
+
   // Available models for currently selected provider
   const availableModels = useMemo(() => {
     let list: CachedAiModel[] = [];
-    if (provider === "openai") list = openaiModels;
-    else if (provider === "gemini") list = geminiModels;
-    else if (provider === "alibaba") list = alibabaModels;
+    if (provider === "openai") list = [...openaiModels];
+    else if (provider === "gemini") list = [...geminiModels];
+    else if (provider === "alibaba") list = [...alibabaModels];
 
+    let filtered = list;
     if (filterVisionOnly) {
       const visionList = list.filter((m) => m.isVision);
-      if (visionList.length > 0) return visionList;
-    }
-    if (filterImageOnly) {
+      if (visionList.length > 0) filtered = visionList;
+    } else if (filterImageOnly) {
       const imgList = list.filter((m) => m.isImageGeneration);
-      if (imgList.length > 0) return imgList;
-    }
-    if (filterVideoOnly) {
+      if (imgList.length > 0) filtered = imgList;
+    } else if (filterVideoOnly) {
       const vidList = list.filter((m) => m.isVideoGeneration);
-      if (vidList.length > 0) return vidList;
+      if (vidList.length > 0) filtered = vidList;
     }
 
-    return list;
-  }, [provider, openaiModels, geminiModels, alibabaModels, filterVisionOnly, filterImageOnly, filterVideoOnly]);
+    if (model && !filtered.some((m) => m.id === model)) {
+      return [{ id: model, name: model }, ...filtered];
+    }
+
+    return filtered;
+  }, [provider, model, openaiModels, geminiModels, alibabaModels, filterVisionOnly, filterImageOnly, filterVideoOnly]);
 
   return (
     <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -922,7 +950,7 @@ function FeatureRow({
       <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
         {/* Provider Select */}
         <div className="w-40">
-          <Select value={provider} onValueChange={onChangeProvider}>
+          <Select value={provider} onValueChange={handleProviderChange}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder={t("settings.ai.features.provider", "Poskytovateľ")} />
             </SelectTrigger>

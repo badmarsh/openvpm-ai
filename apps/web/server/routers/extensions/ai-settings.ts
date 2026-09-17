@@ -9,33 +9,11 @@ import {
 import { extAiSettings, type CachedAiModel, type PracticeAiFeatureMappings } from "@openpims/db";
 import { encryptAiApiKey, decryptAiApiKey, maskApiKey } from "@/lib/ai/ai-crypto";
 import { checkAlibabaProxyHealth } from "@/lib/ai/alibaba-proxy";
-
-// Fallback known models for providers when remote /models is minimal
-const DEFAULT_ALIBABA_PRESETS: CachedAiModel[] = [
-  { id: "qwen-plus", name: "Qwen Plus (Chat & SOAP)", isVision: false },
-  { id: "qwen-max", name: "Qwen Max (Reasoning & Complex)", isVision: false },
-  { id: "qwen-turbo", name: "Qwen Turbo (Fast Chat)", isVision: false },
-  { id: "qwen2.5-72b-instruct", name: "Qwen 2.5 72B Instruct", isVision: false },
-  { id: "qwen-vl-max", name: "Qwen VL Max (RTG & Vision)", isVision: true },
-  { id: "qwen2.5-vl-72b-instruct", name: "Qwen 2.5 VL 72B (Vision)", isVision: true },
-  { id: "wan2.1-t2i-turbo", name: "Wan 2.1 Text-to-Image Turbo", isImageGeneration: true },
-  { id: "wanx2.1-t2i-turbo", name: "Wanx 2.1 Text-to-Image", isImageGeneration: true },
-  { id: "wan-t2v", name: "Wan Text-to-Video (Auto-failover Group)", isVideoGeneration: true },
-  { id: "wan-i2v", name: "Wan Image-to-Video (Auto-failover Group)", isVideoGeneration: true },
-  { id: "wan2.1-t2v-turbo", name: "Wan 2.1 Video Turbo", isVideoGeneration: true },
-  { id: "wan2.1-i2v-turbo", name: "Wan 2.1 Image-to-Video Turbo", isVideoGeneration: true },
-  { id: "wan3.0-video-prime", name: "Wan 3.0 Video Prime", isVideoGeneration: true },
-  { id: "wan3.0-video", name: "Wan 3.0 Video", isVideoGeneration: true },
-];
-
-const DEFAULT_GEMINI_PRESETS: CachedAiModel[] = [
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Fast Multimodal)", isVision: true },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Clinical Reasoning)", isVision: true },
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", isVision: true },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", isVision: true },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", isVision: true },
-  { id: "imagen-3.0-generate-002", name: "Imagen 3 (Image Generation)", isImageGeneration: true },
-];
+import {
+  DEFAULT_ALIBABA_PRESETS,
+  DEFAULT_GEMINI_PRESETS,
+  DEFAULT_PRACTICE_FEATURE_MAPPINGS,
+} from "@/lib/ai/ai-presets";
 
 export const aiSettingsRouter = createRouter({
   /**
@@ -71,7 +49,7 @@ export const aiSettingsRouter = createRouter({
           hasKey: false,
           maskedKey: "",
           isActive: false,
-          cachedModels: [] as CachedAiModel[],
+          cachedModels: DEFAULT_GEMINI_PRESETS,
           lastTestedAt: null,
           lastStatus: null,
           lastStatusMessage: null,
@@ -82,7 +60,7 @@ export const aiSettingsRouter = createRouter({
           hasKey: false,
           maskedKey: "",
           isActive: false,
-          cachedModels: [] as CachedAiModel[],
+          cachedModels: DEFAULT_ALIBABA_PRESETS,
           lastTestedAt: null,
           lastStatus: null,
           lastStatusMessage: null,
@@ -111,7 +89,11 @@ export const aiSettingsRouter = createRouter({
         hasKey: Boolean(decryptedGemini),
         maskedKey: maskApiKey(decryptedGemini),
         isActive: config.geminiIsActive,
-        cachedModels: (config.geminiCachedModels || []) as CachedAiModel[],
+        cachedModels: (
+          (config.geminiCachedModels as CachedAiModel[])?.length
+            ? (config.geminiCachedModels as CachedAiModel[])
+            : DEFAULT_GEMINI_PRESETS
+        ),
         lastTestedAt: config.geminiLastTestedAt,
         lastStatus: config.geminiLastStatus,
         lastStatusMessage: config.geminiLastStatusMessage,
@@ -122,7 +104,11 @@ export const aiSettingsRouter = createRouter({
         hasKey: Boolean(decryptedAlibaba),
         maskedKey: maskApiKey(decryptedAlibaba),
         isActive: config.alibabaIsActive,
-        cachedModels: (config.alibabaCachedModels || []) as CachedAiModel[],
+        cachedModels: (
+          (config.alibabaCachedModels as CachedAiModel[])?.length
+            ? (config.alibabaCachedModels as CachedAiModel[])
+            : DEFAULT_ALIBABA_PRESETS
+        ),
         lastTestedAt: config.alibabaLastTestedAt,
         lastStatus: config.alibabaLastStatus,
         lastStatusMessage: config.alibabaLastStatusMessage,

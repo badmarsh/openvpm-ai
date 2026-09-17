@@ -11,6 +11,7 @@ import {
   ALIBABA_DEFAULT_VIDEO_MODEL,
   getAlibabaProxyConfig,
 } from "./alibaba-proxy";
+import { DEFAULT_PRACTICE_FEATURE_MAPPINGS } from "./ai-presets";
 
 export type AiFeatureKey =
   | "assistant"
@@ -62,7 +63,7 @@ export async function resolveFeatureConfig(
 ): Promise<ResolvedModelConfig> {
   const config = await getPracticeAiConfig(db, practiceId);
   const mappings = (config?.featureMappings || {}) as PracticeAiFeatureMappings;
-  const featureMapping = mappings[feature];
+  const featureMapping = mappings[feature] || (config ? DEFAULT_PRACTICE_FEATURE_MAPPINGS[feature] : undefined);
 
   if (!config || !featureMapping || featureMapping.provider === "default") {
     // Default system fallbacks per feature
@@ -70,7 +71,7 @@ export async function resolveFeatureConfig(
       const ali = getAlibabaProxyConfig();
       return {
         provider: "alibaba",
-        modelId: ALIBABA_DEFAULT_IMAGE_MODEL,
+        modelId: "qwen-image-3.0",
         baseUrl: ali.baseUrl,
         apiKey: ali.apiKey,
         size: "1024*1024",
@@ -80,7 +81,7 @@ export async function resolveFeatureConfig(
       const ali = getAlibabaProxyConfig();
       return {
         provider: "alibaba",
-        modelId: ALIBABA_DEFAULT_VIDEO_MODEL,
+        modelId: "wan3.0-video",
         baseUrl: ali.baseUrl,
         apiKey: ali.apiKey,
         duration: 5,

@@ -67,6 +67,7 @@ import {
   ALIBABA_DEFAULT_IMAGE_MODEL,
   ALIBABA_DEFAULT_VIDEO_MODEL,
 } from "@/lib/ai/alibaba-proxy";
+import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
 import { proceduralIllustration } from "@/lib/marketing/illustration";
 import { assertPatientNotDeceased } from "./_safety";
 
@@ -819,10 +820,14 @@ generateImage: protectedProcedure
   .mutation(async ({ ctx, input }) => {
     await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
     try {
+      const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "imageGeneration");
+      const model = input.model && input.model !== ALIBABA_DEFAULT_IMAGE_MODEL ? input.model : resolved.modelId;
       const result = await generateAlibabaImage({
         prompt: input.prompt,
-        model: input.model,
-        size: input.size,
+        model,
+        size: input.size || (resolved.size as any) || "1024*1024",
+        baseUrl: resolved.baseUrl,
+        apiKey: resolved.apiKey,
       });
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
       return result;
@@ -871,9 +876,16 @@ submitVideo: protectedProcedure
   .mutation(async ({ ctx, input }) => {
     await assertHostedAiGate({ db: ctx.db, practiceId: ctx.practiceId });
     try {
+      const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "videoGeneration");
+      const model = input.model && input.model !== ALIBABA_DEFAULT_VIDEO_MODEL ? input.model : resolved.modelId;
       const result = await submitAlibabaVideo({
         prompt: input.prompt,
-        model: input.model,
+        model,
+        baseUrl: resolved.baseUrl,
+        apiKey: resolved.apiKey,
+        parameters: {
+          duration: resolved.duration || 5,
+        },
       });
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
       return result;
@@ -890,9 +902,13 @@ submitVideo: protectedProcedure
 
 pollVideo: protectedProcedure
   .input(z.object({ taskId: z.string().min(1) }))
-  .query(async ({ input }) => {
+  .query(async ({ ctx, input }) => {
     try {
-      return await pollAlibabaVideo(input.taskId);
+      const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "videoGeneration");
+      return await pollAlibabaVideo(input.taskId, {
+        baseUrl: resolved.baseUrl,
+        apiKey: resolved.apiKey,
+      });
     } catch (err: any) {
       throw new TRPCError({
         code: "BAD_GATEWAY",
