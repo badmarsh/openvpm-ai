@@ -1,0 +1,132 @@
+---
+name: deploy
+description: Safe, one-click deployment of the latest remote main branch to Dokploy on dev.significa.sk for OpenVPM AI. Triggers on "deploy", "deployni", "nasad", "deploy main", "dokploy deploy", "nasad na dev.significa.sk". Runs pre-flight checks (git status, i18n symmetry, type-check), verifies git push to origin/main, triggers build & rollout on dev.significa.sk, and runs smoke tests.
+---
+
+# Deploy Skill — OpenVPM AI na server dev.significa.sk
+
+Tento skill riadi bezpečný, reprodukovateľný a overený deployment najnovšej vetvy `main` aplikácie **OpenVPM AI** z lokálneho prostredia na server **`dev.significa.sk`** do existujúcej Dokploy Compose aplikácie **`openvpm-ai`**.
+
+---
+
+## 1. Kedy sa tento skill aktivuje
+
+Aktivuje sa vždy, keď používateľ požiada o nasadenie:
+- `deploy` / `deployni to`
+- `nasad na server` / `nasad na dev.significa.sk`
+- `deploy main` / `deploy latest remote main`
+- `dokploy deploy`
+
+---
+
+## 2. Architektúra a serverové parametre
+
+- **Server & SSH:** `root@dev.significa.sk`
+- **Verejná doména:** `https://vet.dev.significa.sk`
+- **Dokploy Project ID:** `DcWUBuOSe4H0UfF-OpLPb` (OpenVPM AI)
+- **Dokploy Environment ID:** `dgpMIXk6UxZf_nS2fH3xU` (production)
+- **Dokploy Compose App ID:** `pvdhIxlCIhYTKvnmrZ8Mk` (`openvpm-ai`)
+- **Interný appName na disku:** `compose-parse-online-port-wdunfq`
+- **Cesta ku kódu na serveri:** `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/`
+- **Kľúčové kontajnery:**
+  - `compose-parse-online-port-wdunfq-web-1` (Next.js 15 standalone app, port 3000)
+  - `compose-parse-online-port-wdunfq-postgres-1` (Postgres 16, volume `postgres_data`)
+  - `compose-parse-online-port-wdunfq-minio-1` (MinIO S3 storage, volume `minio_data`)
+  - `compose-parse-online-port-wdunfq-db-init-1` (Drizzle bootstrap & Slovak seed)
+
+---
+
+## 3. Automatizovaný postup agenta (Execution Workflow)
+
+Keď používateľ zadá požiadavku na deploy, agent postupuje cez nasledujúce 4 fázy:
+
+### Fáza 1: Lokálne Pre-flight kontroly (Pred odoslaním na server)
+
+1. **Kontrola čistoty gitu a secretov:**
+   ```bash
+   git status
+   ```
+   - Ak existujú nezastagované zmeny, agent ich zanalyzuje.
+   - Uistí sa, že sa necommituje žiadny `.env`, API kľúče (`sk_`, `pk_`), heslá ani privátne kľúče.
+   - Ak sú pripravené zmeny v kóde, commitne ich a pushne:
+     ```bash
+     git push origin main
+     ```
+2. **Kontrola symetrie lokalizácie (i18n 100% Symmetry):**
+   ```bash
+   node -e "const en=require('./apps/web/messages/en.json'); const sk=require('./apps/web/messages/sk.json'); function keys(o,p=''){return Object.keys(o).flatMap(k=>{const path=p?p+'.'+k:k;return(typeof o[k]==='object'&&o[k]!==null)?keys(o[k],path):[path];});} const kEn=keys(en),kSk=keys(sk),sEn=new Set(kEn),sSk=new Set(kSk); const missing=kEn.filter(k=>!sSk.has(k)),extra=kSk.filter(k=>!sEn.has(k)); if(missing.length||extra.length){console.error('i18n asymmetry detected!',{missing,extra});process.exit(1);}else{console.log('✓ i18n 100% symmetric ('+kEn.length+' keys)');}"
+   ```
+3. **Overenie kompilácie (TypeScript check):**
+   ```bash
+   pnpm --filter @openpims/web type-check
+   ```
+   *Ak type-check zlyhá, deploy sa ZASTAVÍ a chyby sa nahlásia.*
+
+---
+
+### Fáza 2: Spustenie deploymentu na dev.significa.sk
+
+Pretože `docker-compose.yml` na serveri má nastavený `context: https://github.com/badmarsh/openvpm-ai.git#main`, Docker pri builde s parametrom `--pull` alebo `--no-cache` stiahne **najnovší commit priamo z remote `main`**:
+
+Agent vykoná vzdialený príkaz cez SSH:
+
+```bash
+ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose build --no-cache web && docker compose up -d --remove-orphans web"
+```
+
+> [!NOTE]
+> **Zmena schémy / migrácií databázy:**  
+> Ak nasadzovaný commit obsahuje zmeny v schéme databázy (`packages/db/schema/` alebo `seed-sk.ts`), pred reštartom webu sa spustí inicializačný kontajner:
+> ```bash
+> ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose run --rm db-init"
+> ```
+
+---
+
+### Fáza 3: Post-Deploy Verifikácia (Smoke Testy)
+
+Hneď po reštarte kontajnera agent automaticky overí funkčnosť:
+
+1. **HTTP dostupnosť domény a TLS:**
+   ```bash
+   curl -kIv https://vet.dev.significa.sk
+   ```
+   *Očakávaný stav:* HTTP `307 Temporary Redirect` (na `/login`) alebo HTTP `200 OK`.
+
+2. **Systémový Health Check:**
+   ```bash
+   curl -s https://vet.dev.significa.sk/api/health
+   ```
+   *Overenie:* Databázový ping v poriadku, schémy v stave bez nežiaduceho driftu.
+
+3. **Kontrola logov nového kontajnera:**
+   ```bash
+   ssh root@dev.significa.sk "docker logs compose-parse-online-port-wdunfq-web-1 --tail=40"
+   ```
+   *Overenie:* Žiadne `UnhandledPromiseRejection`, žiadne fatálne chyby pri štarte Next.js.
+
+---
+
+### Fáza 4: Správa pre používateľa
+
+Agent používateľovi oznámi:
+- Commit hash a správu commitu, ktorý bol nasadený z vetvy `main`.
+- Stav kontajnerov (`web`, `postgres`, `minio`).
+- Výsledok smoke testu na doméne `https://vet.dev.significa.sk`.
+- Čas trvania buildu a pripravenosť systému na testovanie.
+
+---
+
+## 4. Núdzový Rollback
+
+V prípade fatálnej chyby po deployi agent okamžite ponúkne alebo vykoná návrat na predchádzajúci stabilný stav:
+
+```bash
+# Návrat na predchádzajúci git commit na serveri
+ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && git log -n 3 --oneline"
+```
+Pre prebudovanie staršieho commitu stačí zmeniť tag alebo prepnúť context na konkrétny commit hash a spustiť:
+```bash
+docker compose build web && docker compose up -d web
+```
+Alebo v Dokploy UI kliknúť na **Deployments** -> **Rollback**.
