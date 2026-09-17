@@ -19,7 +19,18 @@ This skill enforces core architectural rules, zero-conflict upstream synchroniza
   - Dev Server Port: **3005** (`http://localhost:3005`)
   - Use this vanilla instance as a live baseline to inspect original workflows, component patterns, and upstream behavior before introducing custom extensions.
 
+### Database Targeting & Dual-Environment Sync Guardrails
+
+1. **Strict Local Database Naming (`-d openvpm_ai`):**
+   - Pri lokálnych psql dopytoch: `docker exec -i openvpm-postgres-1 psql -U openpims -d openvpm_ai`.
+   - **NIKDY nepoužívať `-d openpims` na lokálnom počítači.** Lokálna DB `openpims` je nemigrovaná šablóna; `.env` (`DATABASE_URL`) používa výhradne `openvpm_ai`.
+2. **Strict Remote Database Target (`openvpm-postgres-cfoqxx`):**
+   - Produkčná DB na `dev.significa.sk`: `docker exec -i $(docker ps -q -f name=openvpm-postgres-cfoqxx) psql -U openpims -d openpims`.
+3. **Dual-Environment Data Sync:**
+   - Pri tvorbe alebo úprave demo/seed dát bez obmedzenia aplikovať zmeny **vždy na oboch prostrediach súčasne** (lokálne `openvpm_ai` aj produkcia `openpims`).
+
 ---
+
 
 ## 1. Architectural Guardrails (Zero-Conflict Upstream Sync)
 

@@ -207,4 +207,23 @@ curl -s -o /dev/null -w "%{http_code}" https://vet.dev.significa.sk/login
 | Storage | Local MinIO (`localhost:9000`) | — | Server MinIO (`minio:9000`, volume `minio_data`) |
 | Logs | Terminal stdout | Terminal stdout | `/etc/dokploy/logs/compose-parse-online-port-wdunfq/` or `docker logs` |
 
+### Database Targeting & Dual-Environment Sync Guardrails
+
+1. **Strict Local Database Naming (`-d openvpm_ai`):**
+   - Pri spúšťaní lokálnych SQL dopytov alebo seedovaní cez Docker:
+     `docker exec -i openvpm-postgres-1 psql -U openpims -d openvpm_ai`
+   - **NIKDY nepoužívať `-d openpims` na lokálnom počítači.** Lokálna databáza `openpims` je nemigrovaná šablóna; aplikácia v `.env` (`DATABASE_URL`) číta a zapisuje výhradne do `openvpm_ai`.
+
+2. **Strict Remote Database Target (`openvpm-postgres-cfoqxx`):**
+   - Na serveri `dev.significa.sk` je produkčnou databázou samostatná Docker Swarm služba:
+     `docker exec -i $(docker ps -q -f name=openvpm-postgres-cfoqxx) psql -U openpims -d openpims`
+   - Nikdy necieliť na staré kontajnery typu `compose-parse-online-port-wdunfq-postgres-1`.
+
+3. **Dual-Environment Data Sync (Automatická synchronizácia prostredí):**
+   - Vždy, keď používateľ požiada o vytvorenie, doplnenie alebo úpravu demo dát (vyšetrenia, pacienti, termíny, testovacie záznamy) bez explicitného obmedzenia na jedno prostredie, agent **MUSÍ aplikovať zmenu na OBOCH prostrediach súčasne** v tom istom kroku:
+     1. Lokálne: kontajner `openvpm-postgres-1` -> DB `openvpm_ai`
+     2. Produkcia: kontajner `openvpm-postgres-cfoqxx` -> DB `openpims`
+   - Po vykonaní overiť počty záznamov na oboch stranách, aby nedochádzalo k desynchronizácii a stavu „na webe to je, ale lokálne nie“.
+
+
 
