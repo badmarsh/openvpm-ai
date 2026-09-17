@@ -1,0 +1,76 @@
+DDL_LOAD: OK (schema.sql executed without error)
+
+### schema object counts
+  tables | rls_enabled | rls_forced | policies | foreign_keys | indexes | enums
+  178 | 174 | 0 | 189 | 606 | 801 | 145
+
+### tables WITHOUT rls
+  relname
+  auth_tokens
+  ext_support_session_audit
+  sessions
+  verification_tokens
+
+### rls tables with NO policy (deny-all)
+  (0 rows)
+
+### tenant tables: practice_id nullability / FK / rls
+  tbl | not_null | has_fk | rls
+  audit_log | false | true | true
+  ext_support_sessions | true | false | true
+  funnel_events | false | true | true
+  sms_delivery_event_history | false | true | true
+  sms_provider_event_resolutions | false | true | true
+  sms_provider_events | false | true | true
+  stripe_events | false | true | true
+  visit_treatment_plan_presentations | true | false | true
+  visit_treatment_plan_response_lines | true | false | true
+  visit_treatment_plan_responses | true | false | true
+  visit_treatment_plan_revision_lines | true | false | true
+  visit_treatment_plan_revisions | true | false | true
+
+### FK child columns with NO index (seq-scan / lock risk on parent delete)
+  child | parent | col
+  ai_imaging_analyses | appointments | appointment_id
+  ai_imaging_analyses | patients | patient_id
+  ai_imaging_analyses | users | requested_by
+  appointment_waitlist | clients | client_id
+  appointment_waitlist | users | created_by
+  appointment_waitlist | patients | patient_id
+  appointment_waitlist | appointment_types | type_id
+  appointments | clients | client_id
+  appointments | locations | location_id
+  appointments | recurring_series | recurring_series_id
+  appointments | rooms | room_id
+  appointments | appointment_types | type_id
+  audit_log | users | user_id
+  auth_tokens | users | user_id
+  capture_sessions | appointments | appointment_id
+  capture_sessions | users | created_by
+  case_entries | appointments | appointment_id
+  cases | users | primary_vet_id
+  clinic_pilot_events | clinic_pilots | clinic_pilot_id
+  clinic_pilot_events | clinic_pilots | clinic_pilot_id
+  clinic_pilot_events | visit_closeouts | first_visit_validated_closeout_id
+  clinic_pilots | visit_closeouts | first_visit_validated_closeout_id
+  clinical_notes | users | author_id
+  clinical_record_corrections | appointments | appointment_id
+  clinical_record_corrections | users | corrected_by
+  clinical_record_corrections | lab_results | lab_result_id
+  clinical_record_corrections | patient_allergies | patient_allergy_id
+  clinical_record_corrections | patient_allergies | patient_allergy_id
+  clinical_record_corrections | patients | patient_id
+  clinical_record_corrections | soap_notes | soap_note_id
+  clinical_record_corrections | vaccination_records | vaccination_record_id
+  clinical_record_corrections | vital_signs | vital_sign_id
+  communications | users | assigned_to
+  communications | clients | client_id
+  consent_receipt_capabilities | consent_requests | consent_request_id
+  consent_receipt_capabilities | files | file_id
+  consent_requests | appointments | appointment_id
+  consent_requests | users | created_by
+  consent_requests | files | file_id
+  consent_requests | consent_forms | form_id
+  ... +159 more
+
+[done]

@@ -1,0 +1,18 @@
+=== Brief SQL re-executed against the real schema (PG16 / PGlite) ===
+OK    | brief F1.1 clients                   | {"count":0}
+OK    | brief F1.1 patients                  | {"count":0}
+ERROR | brief F1.1 "records"                 | relation "records" does not exist
+ERROR | brief F1.1 medical_records           | relation "medical_records" does not exist
+ERROR | brief F1.1 encounters                | relation "encounters" does not exist
+OK    | brief F1.1 soap_notes                | {"count":0}
+OK    | brief F1.2 orphan patients           | {"count":0}
+ERROR | brief F1.2 orphan records            | relation "records" does not exist
+OK    | brief F1.2 orphan appts              | {"count":0}
+OK    | brief F1.3 rls 29 tables             | {"relname":"appointments","relrowsecurity":true}
+OK    | brief F1.4 practice_id null (patients) | {"count":0}
+ERROR | brief F1.4 practice_id null (records) | relation "records" does not exist
+OK    | appointments today (utc cast)        | {"count":0}
+OK    | appointments today (tz aware)        | {"count":0}
+OK    | table named "records" exists?        | {"count":0}
+
+FK columns: 438 leading-column FKs, 193 without a supporting index
