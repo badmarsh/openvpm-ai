@@ -4,6 +4,7 @@ import { ekasaReceipts, ekasaConfig } from "@openpims/db";
 import { eq, and, isNull, or } from "drizzle-orm";
 import { sendToEkasaApi } from "@/lib/ekasa/service";
 import { cronAuthError } from "@/lib/cron-auth";
+import { reportCronHeartbeat } from "@/lib/cron-heartbeat";
 import { isEkasaFiscalizationEnabled } from "@/lib/ekasa/fiscal";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,12 @@ export async function GET(req: Request) {
   if (authError) return authError;
 
   if (!isEkasaFiscalizationEnabled()) {
+    await reportCronHeartbeat({
+      job: "ekasa-retry",
+      status: "ok",
+      detail: "e-Kasa fiscalization is disabled",
+      metrics: { processed: 0 },
+    });
     return NextResponse.json({
       success: true,
       skipped: true,
@@ -40,6 +47,12 @@ export async function GET(req: Request) {
     });
 
     if (pendingReceipts.length === 0) {
+      await reportCronHeartbeat({
+        job: "ekasa-retry",
+        status: "ok",
+        detail: "no pending receipts",
+        metrics: { processed: 0 },
+      });
       return NextResponse.json({
         success: true,
         processed: 0,
@@ -112,6 +125,12 @@ export async function GET(req: Request) {
       }
     }
 
+    await reportCronHeartbeat({
+      job: "ekasa-retry",
+      status: stillFailed === 0 ? "ok" : "degraded",
+      detail: `${confirmed}/${processed} receipts confirmed, ${stillFailed} still failing`,
+      metrics: { processed, confirmed, stillFailed },
+    });
     return NextResponse.json({
       success: true,
       processed,
@@ -119,7 +138,13 @@ export async function GET(req: Request) {
       stillFailed,
       durationMs: Date.now() - startedAt.getTime(),
     });
-  } catch {
+  } catch (error) {
+    await reportCronHeartbeat({
+      job: "ekasa-retry",
+      status: "failed",
+      detail: error instanceof Error ? error.message : String(error),
+      metrics: { processed, confirmed, stillFailed },
+    });
     return NextResponse.json(
       {
         success: false,

@@ -141,7 +141,12 @@ async function main() {
   const segments = await db
     .select({ segmentKey: extCrmSegments.segmentKey })
     .from(extCrmSegments)
-    .where(isNull(extCrmSegments.deletedAt));
+    .where(
+      and(
+        isNull(extCrmSegments.deletedAt),
+        eq(extCrmSegments.isSystem, true)
+      )
+    );
   const segmentKeys = segments.map((s) => s.segmentKey);
   const missingSegments = CANONICAL_SEGMENT_KEYS.filter(
     (k) => !segmentKeys.includes(k as string)

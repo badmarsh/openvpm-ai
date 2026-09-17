@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CRM_SEGMENT_KEYS } from "../segmentation-engine";
 
@@ -12,7 +13,9 @@ import { CRM_SEGMENT_KEYS } from "../segmentation-engine";
  * source of truth; the seed and the skill file must stay subsets of it.
  */
 function repoFile(relativePath: string): string {
-  return new URL(`../../../../../${relativePath}`, import.meta.url).pathname;
+  return fileURLToPath(
+    new URL(`../../../../../${relativePath}`, import.meta.url)
+  );
 }
 
 describe("CRM canonical segments — seed/spec/engine drift guard", () => {

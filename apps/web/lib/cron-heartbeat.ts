@@ -21,6 +21,9 @@ export const CRON_HEARTBEAT_JOBS = [
   "sms-operations",
   "sms-provider-events",
   "automation-worker",
+  "ekasa-daily-closure",
+  "ekasa-retry",
+  "message-queue-drain",
 ] as const;
 
 export type CronHeartbeatJob = (typeof CRON_HEARTBEAT_JOBS)[number];

@@ -27,6 +27,9 @@ describe("Vercel cron schedule", () => {
         "/api/cron/conversion-reconcile",
         "/api/cron/prescription-expiry",
         "/api/cron/automation-worker",
+        "/api/cron/ekasa-daily-closure",
+        "/api/cron/ekasa-retry",
+        "/api/cron/message-queue-drain",
       ]),
     );
 
