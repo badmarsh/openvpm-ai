@@ -529,11 +529,11 @@ export const getTemplatesData = (practiceId: string): Array<TemplateRow & { item
 export const miscTranslations = {
   practice: {
     name: "Súkromná veterinárna klinika MVDr. Martin Sýkora",
-    address: "Lúčna 15, 821 08 Bratislava",
+    address: "Kvetná 3, Rimavská Sobota, Slovakia",
   },
   location: {
-    name: "Hlavná klinika",
-    address: "Lúčna 15, 821 08 Bratislava",
+    name: "Hlavná ambulancia Rimavská Sobota",
+    address: "Kvetná 3, Rimavská Sobota, Slovakia",
   },
   rooms: [
     "Ordinácia 1",

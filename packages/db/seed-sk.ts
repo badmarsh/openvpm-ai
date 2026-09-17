@@ -45,6 +45,8 @@ async function seedSlovak() {
     await db
       .update(practices)
       .set({
+        address: "Kvetná 3, Rimavská Sobota, Slovakia",
+        phone: "0903 949 401",
         website: "https://vetsykora.sk",
         timezone: "Europe/Bratislava",
         country: "SK",
@@ -69,8 +71,8 @@ async function seedSlovak() {
       .insert(practices)
       .values({
         name: "Súkromná veterinárna klinika MVDr. Martin Sýkora",
-        address: "Železničná 14, 979 01 Rimavská Sobota",
-        phone: "+421 905 123 456",
+        address: "Kvetná 3, Rimavská Sobota, Slovakia",
+        phone: "0903 949 401",
         email: "ambulancia@vetsykora.sk",
         website: "https://vetsykora.sk",
         timezone: "Europe/Bratislava",
@@ -102,15 +104,22 @@ async function seedSlovak() {
   let locationId: string;
   if (existingLocation) {
     locationId = existingLocation.id;
-    console.log(`✓ Location exists: ${existingLocation.name}`);
+    await db
+      .update(locations)
+      .set({
+        address: "Kvetná 3, Rimavská Sobota, Slovakia",
+        phone: "0903 949 401",
+      })
+      .where(eq(locations.id, locationId));
+    console.log(`✓ Location exists & updated: ${existingLocation.name}`);
   } else {
     const [location] = await db
       .insert(locations)
       .values({
         practiceId,
         name: "Hlavná ambulancia Rimavská Sobota",
-        address: "Železničná 14, 979 01 Rimavská Sobota",
-        phone: "+421 905 123 456",
+        address: "Kvetná 3, Rimavská Sobota, Slovakia",
+        phone: "0903 949 401",
         isPrimary: true,
       })
       .returning();
@@ -163,7 +172,7 @@ async function seedSlovak() {
       isVeterinarian: true,
       emailVerifiedAt: new Date(),
       passwordHash: PASSWORD_HASH,
-      phone: "+421 905 123 456",
+      phone: "0903 949 401",
       licenseNumber: "KVL-SK-19842",
     });
   }

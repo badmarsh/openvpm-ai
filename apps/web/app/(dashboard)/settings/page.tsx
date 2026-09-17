@@ -313,6 +313,24 @@ const ROLE_BADGE: Record<string, string> = {
 
 const ROOM_TYPES = ["exam", "surgery", "treatment", "boarding"] as const;
 
+function getRoomTypeLabel(
+  t: (key: string, fallback?: string, params?: Record<string, string | number>) => string,
+  type: string | null | undefined,
+): string {
+  switch (type) {
+    case "exam":
+      return t("settings.rooms.typeExam", "Vyšetrovňa");
+    case "surgery":
+      return t("settings.rooms.typeSurgery", "Operačná sála");
+    case "treatment":
+      return t("settings.rooms.typeTreatment", "Ošetrovňa");
+    case "boarding":
+      return t("settings.rooms.typeBoarding", "Hospitalizácia");
+    default:
+      return type ? type.charAt(0).toUpperCase() + type.slice(1) : "-";
+  }
+}
+
 type PracticeInfoForm = {
   name: string;
   address: string;
@@ -3126,9 +3144,9 @@ function AppointmentTypesTab() {
                 })
               }
             >
-              {ROOM_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+              {ROOM_TYPES.map((roomType) => (
+                <option key={roomType} value={roomType}>
+                  {getRoomTypeLabel(t, roomType)}
                 </option>
               ))}
             </select>
@@ -3230,9 +3248,9 @@ function AppointmentTypesTab() {
                           })
                         }
                       >
-                        {ROOM_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                        {ROOM_TYPES.map((roomType) => (
+                          <option key={roomType} value={roomType}>
+                            {getRoomTypeLabel(t, roomType)}
                           </option>
                         ))}
                       </select>
@@ -3278,8 +3296,8 @@ function AppointmentTypesTab() {
                         style={{ backgroundColor: type.color ?? "#6b7280" }}
                       />
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">
-                      {type.defaultRoomType ?? "-"}
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {getRoomTypeLabel(t, type.defaultRoomType)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
@@ -4973,9 +4991,9 @@ function RoomsTab() {
                 })
               }
             >
-              {ROOM_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+              {ROOM_TYPES.map((roomType) => (
+                <option key={roomType} value={roomType}>
+                  {getRoomTypeLabel(t, roomType)}
                 </option>
               ))}
             </select>
@@ -5035,8 +5053,8 @@ function RoomsTab() {
                 className="border-b border-border last:border-0"
               >
                 <td className="px-4 py-3 font-medium">{room.name}</td>
-                <td className="px-4 py-3 text-muted-foreground capitalize">
-                  {room.type}
+                <td className="px-4 py-3 text-muted-foreground">
+                  {getRoomTypeLabel(t, room.type)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {roomLocations.find(
