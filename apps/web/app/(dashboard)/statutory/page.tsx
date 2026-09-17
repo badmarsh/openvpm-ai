@@ -26,6 +26,7 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { CrszPanel } from "@/components/statutory/crsz-panel";
@@ -683,17 +684,15 @@ function RabiesRegisterTab() {
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <Input
-              type="date"
+            <DatePicker
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(val) => setStartDate(val)}
               className="h-9 w-36 text-xs"
             />
             <span>{t("statutory.dateRangeTo")}</span>
-            <Input
-              type="date"
+            <DatePicker
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(val) => setEndDate(val)}
               className="h-9 w-36 text-xs"
             />
           </div>
@@ -1005,17 +1004,15 @@ function TreatmentDiaryTab() {
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <Input
-              type="date"
+            <DatePicker
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(val) => setStartDate(val)}
               className="h-9 w-36 text-xs"
             />
             <span>{t("statutory.dateRangeTo")}</span>
-            <Input
-              type="date"
+            <DatePicker
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(val) => setEndDate(val)}
               className="h-9 w-36 text-xs"
             />
           </div>
@@ -1443,9 +1440,9 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
         {/* Date range filter */}
         <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 w-36 text-xs" />
+          <DatePicker value={startDate} onChange={(val) => setStartDate(val)} className="h-8 w-36 text-xs" />
           <span>do</span>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-8 w-36 text-xs" />
+          <DatePicker value={endDate} onChange={(val) => setEndDate(val)} className="h-8 w-36 text-xs" />
         </div>
       </div>
 

@@ -1,11 +1,11 @@
 import { useRef, useState, useEffect } from "react";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDateYmdToDisplay, parseDisplayToDateYmd } from "@/lib/date-display";
+import { formatDateTimeLocalToDisplay } from "@/lib/date-display";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export interface DatePickerProps {
+interface DateTimePickerProps {
   value?: string | null;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -18,10 +18,10 @@ export interface DatePickerProps {
   max?: string;
 }
 
-export function DatePicker({
+export function DateTimePicker({
   value,
   onChange,
-  placeholder = "dd.mm.yyyy",
+  placeholder = "dd.mm.yyyy --:--",
   className,
   disabled,
   id,
@@ -29,30 +29,30 @@ export function DatePicker({
   required,
   min,
   max,
-}: DatePickerProps) {
+}: DateTimePickerProps) {
   const nativeRef = useRef<HTMLInputElement>(null);
-  const [display, setDisplay] = useState(() => formatDateYmdToDisplay(value));
+  const [display, setDisplay] = useState(() => formatDateTimeLocalToDisplay(value));
 
   useEffect(() => {
-    setDisplay(formatDateYmdToDisplay(value));
+    setDisplay(formatDateTimeLocalToDisplay(value));
   }, [value]);
 
   const handleSelect = (nextValue: string) => {
     onChange(nextValue);
-    setDisplay(formatDateYmdToDisplay(nextValue));
+    setDisplay(formatDateTimeLocalToDisplay(nextValue));
   };
 
   return (
     <div
       className={cn(
-        "relative flex items-center gap-1.5 rounded-md border border-input bg-background px-2.5 py-1 text-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+        "relative flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         disabled && "opacity-50 cursor-not-allowed",
         className,
       )}
     >
       <input
         ref={nativeRef}
-        type="date"
+        type="datetime-local"
         value={value ?? ""}
         onChange={(e) => handleSelect(e.target.value)}
         disabled={disabled}
@@ -68,34 +68,21 @@ export function DatePicker({
         type="text"
         value={display}
         placeholder={placeholder}
+        readOnly
         disabled={disabled}
-        className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-auto text-inherit min-w-0 flex-1"
-        onChange={(e) => {
-          const text = e.target.value;
-          setDisplay(text);
-          const parsed = parseDisplayToDateYmd(text);
-          if (parsed) {
-            onChange(parsed);
-          } else if (text.trim() === "") {
-            onChange("");
-          }
-        }}
-        onClick={() => {
-          if (!display) {
-            nativeRef.current?.showPicker?.();
-          }
-        }}
+        className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-auto text-sm"
+        onClick={() => nativeRef.current?.showPicker?.()}
       />
       <Button
         type="button"
         variant="ghost"
         size="icon"
         disabled={disabled}
-        className="h-6 w-6 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
         onClick={() => nativeRef.current?.showPicker?.()}
-        aria-label="Otvoriť kalendár"
+        aria-label="Otvoriť výber dátumu a času"
       >
-        <CalendarIcon className="h-3.5 w-3.5" />
+        <CalendarIcon className="h-4 w-4" />
       </Button>
     </div>
   );

@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageLogsView } from "@/components/communications/message-logs-view";
 import {
   Mail,
   MessageSquare,
@@ -174,8 +177,25 @@ function canMutateInboxRole(role?: string | null): boolean {
 }
 
 export default function InboxPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <InboxContent />
+    </Suspense>
+  );
+}
+
+function InboxContent() {
   const { t } = useI18n();
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "logs" ? "logs" : "inbox";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClientName, setSelectedClientName] = useState<string>("");
@@ -586,7 +606,7 @@ export default function InboxPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h2 className="font-heading text-xl font-semibold">
             {t("inbox.title", "Inbox")}
@@ -595,13 +615,34 @@ export default function InboxPage() {
             {t("inbox.subtitle", "Client communications")}
           </p>
         </div>
-        {canMutateInbox ? (
-          <Button onClick={handleNewMessage} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t("inbox.newMessage", "New Message")}
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-3">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="inbox" className="gap-1.5">
+                <InboxIcon className="h-3.5 w-3.5" />
+                {t("inbox.tabInbox", "Schránka")}
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                {t("inbox.tabLogs", "Správy & Logy")}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {activeTab === "inbox" && canMutateInbox ? (
+            <Button onClick={handleNewMessage} className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t("inbox.newMessage", "New Message")}
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      {activeTab === "logs" ? (
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <MessageLogsView />
+        </div>
+      ) : (
+        <>
 
       {showSmsStatusError ? (
         <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 shadow-sm">
@@ -1436,6 +1477,8 @@ export default function InboxPage() {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

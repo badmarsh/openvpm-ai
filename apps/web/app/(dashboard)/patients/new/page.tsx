@@ -7,6 +7,7 @@ import { AlertCircle, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { EmptyState } from "@/components/common/empty-state";
 import { toast } from "sonner";
 import {
@@ -471,12 +472,11 @@ function NewPatientForm() {
             <label className="text-sm font-medium" htmlFor="dob">
               {t("patients.form.dob", "Date of Birth")}
             </label>
-            <Input
+            <DatePicker
               id="dob"
               name="dob"
-              type="date"
               value={form.dob}
-              onChange={(e) => updateField("dob", e.target.value)}
+              onChange={(val) => updateField("dob", val)}
               className="mt-1"
             />
           </div>

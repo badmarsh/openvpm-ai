@@ -460,22 +460,25 @@ function SettingsPageInner() {
     );
   }
 
-  if (!session?.user) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="font-heading text-xl font-semibold">
-          {t("settings.accessDeniedTitle", "Access Denied")}
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {/* Only administrators can access practice settings. */}
-          {t(
-            "settings.accessDeniedDescription",
-            "Only administrators can access practice settings.",
-          )}
-        </p>
-      </div>
-    );
+  if (session?.user?.role !== "admin") {
+    // Non-admin staff are restricted exclusively to the personal security / password tab
+    if (activeTab !== "security") {
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
+          <h2 className="font-heading text-xl font-semibold">
+            {t("settings.accessDeniedTitle", "Access Denied")}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {/* Only administrators can access practice settings. */}
+            {t(
+              "settings.accessDeniedDescription",
+              "Only administrators can access practice settings.",
+            )}
+          </p>
+        </div>
+      );
+    }
   }
 
   return (
@@ -544,20 +547,20 @@ function SettingsPageInner() {
 
         {/* Tab content */}
         <div className="min-w-0 w-full max-w-full flex-1">
-          {isAdmin && activeTab === "practice" && <PracticeInfoTab />}
-          {isAdmin && activeTab === "brandKit" && <BrandKitTab />}
-          {isAdmin && activeTab === "locations" && <LocationsTab />}
-          {isAdmin && activeTab === "staff" && <StaffTab />}
-          {isAdmin && activeTab === "appointmentTypes" && <AppointmentTypesTab />}
-          {isAdmin && activeTab === "rooms" && <RoomsTab />}
-          {isAdmin && activeTab === "services" && <ServicesTab />}
-          {isAdmin && activeTab === "data" && <DataTab />}
-          {isAdmin && activeTab === "templates" && <TemplatesTab />}
-          {isAdmin && activeTab === "wellness" && <WellnessPlansTab />}
-          {isAdmin && activeTab === "messaging" && <MessagingTab />}
-          {isAdmin && activeTab === "booking" && <BookingTab />}
-          {isAdmin && activeTab === "billing" && <BillingTab />}
-          {isAdmin && activeTab === "ai" && <AiSettingsTab />}
+          {activeTab === "practice" && <PracticeInfoTab />}
+          {activeTab === "brandKit" && <BrandKitTab />}
+          {activeTab === "locations" && <LocationsTab />}
+          {activeTab === "staff" && <StaffTab />}
+          {activeTab === "appointmentTypes" && <AppointmentTypesTab />}
+          {activeTab === "rooms" && <RoomsTab />}
+          {activeTab === "services" && <ServicesTab />}
+          {activeTab === "data" && <DataTab />}
+          {activeTab === "templates" && <TemplatesTab />}
+          {activeTab === "wellness" && <WellnessPlansTab />}
+          {activeTab === "messaging" && <MessagingTab />}
+          {activeTab === "booking" && <BookingTab />}
+          {activeTab === "billing" && <BillingTab />}
+          {activeTab === "ai" && <AiSettingsTab />}
           {activeTab === "security" && <SecurityTab />}
         </div>
       </div>

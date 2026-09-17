@@ -74,14 +74,6 @@ export const customNavItems: CustomNavItem[] = [
     section: 'marketing',
   },
   {
-    href: '/marketing/messages',
-    label: 'Správy & SMS',
-    i18nKey: 'nav.marketingMessages',
-    icon: MessageSquare,
-    roles: ['admin', 'veterinarian', 'front_desk'],
-    section: 'marketing',
-  },
-  {
     href: '/marketing/website',
     label: 'Web kliniky',
     i18nKey: 'nav.marketingWebsite',

@@ -41,6 +41,7 @@ import {
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
 import {
   PatientHeaderSkeleton,
@@ -1799,8 +1800,10 @@ export default function PatientDetailPage() {
         {activeTab === "weight" && (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
-              Includes weights recorded here and in vitals. Review a vitals
-              entry in the Vitals tab to correct its original clinical record.
+              {t(
+                "patients.weight.includesVitalsHelp",
+                "Includes weights recorded here and in vitals. Review a vitals entry in the Vitals tab to correct its original clinical record.",
+              )}
             </p>
             {canManagePatientDetail && (
               <form
@@ -1850,28 +1853,37 @@ export default function PatientDetailPage() {
                       className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
-                  <label className="block text-xs font-medium text-muted-foreground">
-                    Measured at (
-                    {recordsSettingsTimeZone ?? "loading clinic timezone…"})
-                    <input
-                      type="datetime-local"
+                  <div className="w-full sm:max-w-xs">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      {t(
+                        "patients.weight.measuredAtLabel",
+                        `Measured at (${recordsSettingsTimeZone ?? "clinic timezone"})`,
+                        {
+                          timeZone:
+                            recordsSettingsTimeZone ??
+                            t(
+                              "patients.weight.loadingTimezone",
+                              "loading clinic timezone…",
+                            ),
+                        },
+                      )}
+                    </label>
+                    <DateTimePicker
                       value={weightMeasuredAt}
                       disabled={!recordsSettingsTimeZone}
                       max={formatDateTimeLocalInputForTimeZone(
                         new Date(),
                         recordsSettingsTimeZone,
                       )}
-                      aria-invalid={!weightTimeValid}
-                      onChange={(event) =>
-                        setWeightMeasuredAt(event.target.value)
-                      }
-                      className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                      onChange={(val) => setWeightMeasuredAt(val)}
                     />
-                    <span className="mt-1 block font-normal">
-                      Leave blank to record now; set a date for historical
-                      records.
+                    <span className="mt-1 block text-[11px] text-muted-foreground font-normal">
+                      {t(
+                        "patients.weight.leaveBlankHelp",
+                        "Leave blank to record now; set a date for historical records.",
+                      )}
                     </span>
-                  </label>
+                  </div>
                   <Button type="submit" disabled={!canSubmitWeight}>
                     {addWeight.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

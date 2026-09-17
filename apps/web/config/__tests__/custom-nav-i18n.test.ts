@@ -36,7 +36,7 @@ describe("custom-nav i18n keys (I18N-COLLISION-1)", () => {
       .map((item) => item.i18nKey)
       .filter((key): key is string => Boolean(key));
 
-    expect(keys.length).toBeGreaterThanOrEqual(10);
+    expect(keys.length).toBeGreaterThanOrEqual(9);
     const missingSk: string[] = [];
     const missingEn: string[] = [];
 

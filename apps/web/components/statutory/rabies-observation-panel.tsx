@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -484,10 +485,9 @@ export function RabiesObservationPanel() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="font-medium text-foreground">Dátum poranenia / pohryznutia *</label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={newBiteDate}
-                    onChange={(e) => setNewBiteDate(e.target.value)}
+                    onChange={(val) => setNewBiteDate(val)}
                     className="mt-1 h-8 text-xs"
                   />
                 </div>

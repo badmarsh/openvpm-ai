@@ -80,10 +80,10 @@ function visibleHrefs(role: Role): string[] {
 }
 
 describe("IA-PHASE4-NAV-COUNT: canonical sidebar entries", () => {
-  it("exposes exactly 32 canonical entries to an admin", () => {
+  it("exposes exactly 31 canonical entries to an admin", () => {
     const hrefs = visibleHrefs("admin");
-    expect(hrefs).toHaveLength(32);
-    expect(new Set(hrefs).size).toBe(32);
+    expect(hrefs).toHaveLength(31);
+    expect(new Set(hrefs).size).toBe(31);
   });
 
   it("never renders the same href twice for any role", () => {
