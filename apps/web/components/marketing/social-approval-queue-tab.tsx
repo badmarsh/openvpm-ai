@@ -88,7 +88,7 @@ export function SocialApprovalQueueTab() {
     if (channel === "instagram") {
       formattedText = `${brief.briefText}\n\n.\n.\n🐾 #veterinarnaklinika #vetsykora #zdraviezvierat #starostlivostopsa #veterinar #bratislava #prevencia`;
     } else if (channel === "facebook") {
-      formattedText = `${brief.briefText}\n\n📍 Veterinárna klinika MVDr. Martin Sýkora | Objednávky: +421 905 123 456`;
+      formattedText = `${brief.briefText}\n\n📍 Veterinárna klinika MVDr. Martin Sýkora | Objednávky: 0903 949 401`;
     } else if (channel === "google_business") {
       formattedText = `${brief.briefText}\n\n📞 Rezervácie a informácie na našej klinike.`;
     }

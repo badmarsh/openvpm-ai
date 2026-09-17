@@ -293,7 +293,7 @@ async function seedMarketingDemo() {
         practiceId,
         createdBy: userId,
         title: "Vitajte vo Veterinárnej klinike MVDr. Martin Sýkora",
-        body: "Pohotovostný telefón: +421 905 123 456. Ordinačné hodiny: Po-Pi 8:00–18:00, So 8:30–12:00. Pripravte si prosím očkovací preukaz pacienta.",
+        body: "Pohotovostný telefón: 0903 949 401. Ordinačné hodiny: Po-Pi 8:00–18:00, So 8:30–12:00. Pripravte si prosím očkovací preukaz pacienta.",
         durationSeconds: 12,
         sortOrder: 1,
         isActive: true,
@@ -384,7 +384,7 @@ Váš miláčik úspešne absolvoval plánovaný chirurgický zákrok. Aby rekon
 * Silné krvácanie alebo výtok z rany
 * Bledé sliznice alebo zrýchlené sťažené dýchanie
 
-**Telefón kliniky MVDr. Martin Sýkora:** +421 905 123 456
+**Telefón kliniky MVDr. Martin Sýkora:** 0903 949 401
 `,
       },
       {
