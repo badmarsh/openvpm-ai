@@ -812,7 +812,7 @@ export default function WhiteboardPage() {
     const columns = [
       {
         key: "waiting",
-        label: t("whiteboard.columns.waiting", "Waiting"),
+        label: t("whiteboard.columns.waiting", t("whiteboard.column.waiting", "Waiting")),
         statuses: ["confirmed"],
         color: "bg-blue-500",
         headerBg: "bg-blue-500/10",
@@ -820,7 +820,7 @@ export default function WhiteboardPage() {
       },
       {
         key: "in_progress",
-        label: t("whiteboard.columns.inProgress", "In Progress"),
+        label: t("whiteboard.columns.inProgress", t("whiteboard.column.inProgress", "In Progress")),
         statuses: ["checked_in", "in_exam"],
         color: "bg-amber-500",
         headerBg: "bg-amber-500/10",
@@ -828,7 +828,7 @@ export default function WhiteboardPage() {
       },
       {
         key: "completed",
-        label: t("whiteboard.columns.completed", "Completed"),
+        label: t("whiteboard.columns.completed", t("whiteboard.column.completed", "Completed")),
         statuses: ["checked_out"],
         color: "bg-green-500",
         headerBg: "bg-green-500/10",

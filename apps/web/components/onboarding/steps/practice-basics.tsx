@@ -64,7 +64,7 @@ export function PracticeBasicsStep({
 
   const [name, setName] = useState("");
   const [country, setCountry] = useState<ClinicRegionCode | "">("");
-  const [timezone, setTimezone] = useState("America/New_York");
+  const [timezone, setTimezone] = useState("Europe/Bratislava");
   const [ownerRole, setOwnerRole] = useState<
     "veterinarian" | "non_clinical" | ""
   >("");
@@ -85,7 +85,10 @@ export function PracticeBasicsStep({
         ? savedCountry
         : "",
     );
-    setTimezone(practice.timezone ?? "America/New_York");
+    setTimezone(
+      practice.timezone ??
+        (savedCountry ? regionDefaults(savedCountry).timezone : "Europe/Bratislava"),
+    );
     setOwnerRole(clinicalProfile.isVeterinarian ? "veterinarian" : "");
     setLicenseNumber(clinicalProfile.licenseNumber ?? "");
     setFilled(true);
@@ -232,13 +235,13 @@ export function PracticeBasicsStep({
         </FormField>
       </div>
 
-      {country && country !== "US" ? (
+      {country && country !== "US" && country !== "SK" ? (
         <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            The supported design-partner rollout is currently limited to US
-            clinics. This workspace is for sample-data evaluation only until
-            your region is supported.
+            The supported design-partner rollout is currently limited to Slovak
+            and US clinics. This workspace is for sample-data evaluation only
+            until your region is supported.
           </p>
         </div>
       ) : null}
