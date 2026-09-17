@@ -430,10 +430,25 @@ function SettingsPageInner() {
   const { data: session, status } = useSession();
   const { openWelcome } = useWelcome();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as Tab) || "practice";
-  const [activeTab, setActiveTab] = useState<Tab>(
-    tabs.some((t) => t.id === initialTab) ? initialTab : "practice",
-  );
+  const isAdmin = session?.user?.role === "admin";
+  const visibleTabs = isAdmin ? tabs : tabs.filter((t) => t.id === "security");
+  const urlTab = searchParams.get("tab") as Tab | null;
+  const initialTab: Tab =
+    isAdmin && urlTab && tabs.some((t) => t.id === urlTab)
+      ? urlTab
+      : isAdmin
+        ? "practice"
+        : "security";
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setActiveTab("security");
+    } else if (urlTab && tabs.some((t) => t.id === urlTab)) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab, isAdmin]);
 
   if (status === "loading") {
     return (
@@ -445,7 +460,7 @@ function SettingsPageInner() {
     );
   }
 
-  if (session?.user?.role !== "admin") {
+  if (!session?.user) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <ShieldAlert className="h-12 w-12 text-muted-foreground mb-4" />
@@ -466,68 +481,83 @@ function SettingsPageInner() {
   return (
     <div className="min-w-0 w-full max-w-full space-y-6 overflow-hidden">
       <PageHeader
-        title={t("settings.header.title", "Settings")}
-        subtitle={t(
-          "settings.header.subtitle",
-          "Practice configuration and staff management",
-        )}
+        title={
+          isAdmin
+            ? t("settings.header.title", "Settings")
+            : t("settings.tabs.security", "Security & Password")
+        }
+        subtitle={
+          isAdmin
+            ? t(
+                "settings.header.subtitle",
+                "Practice configuration and staff management",
+              )
+            : t(
+                "settings.security.accountSubtitle",
+                "Správa vášho profilu a prístupových údajov",
+              )
+        }
         actions={
-          <Button
-          variant="outline"
-          size="sm"
-          data-tour="settings-guides"
-          onClick={openWelcome}
-        >
-          <Compass className="mr-2 h-4 w-4" />
-          {t("settings.header.guides", "Guides")}
-        </Button>
-      }
+          isAdmin ? (
+            <Button
+              variant="outline"
+              size="sm"
+              data-tour="settings-guides"
+              onClick={openWelcome}
+            >
+              <Compass className="mr-2 h-4 w-4" />
+              {t("settings.header.guides", "Guides")}
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="flex min-w-0 w-full max-w-full flex-col gap-6 lg:flex-row lg:gap-8">
-        {/* Section nav: horizontal scroll on small screens, vertical on lg+ */}
-        <nav
-          className="min-w-0 max-w-full overflow-hidden lg:w-56 lg:shrink-0"
-          aria-label={t("settings.header.sectionsAria", "Sekcie nastavení")}
-        >
-          <div className="flex w-full max-w-full gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    activeTab === tab.id
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {t(tab.labelKey, tab.label)}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
+        {/* Section nav: only show when there are multiple tabs */}
+        {visibleTabs.length > 1 && (
+          <nav
+            className="min-w-0 max-w-full overflow-hidden lg:w-56 lg:shrink-0"
+            aria-label={t("settings.header.sectionsAria", "Sekcie nastavení")}
+          >
+            <div className="flex w-full max-w-full gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+              {visibleTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      activeTab === tab.id
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {t(tab.labelKey, tab.label)}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
 
         {/* Tab content */}
         <div className="min-w-0 w-full max-w-full flex-1">
-          {activeTab === "practice" && <PracticeInfoTab />}
-          {activeTab === "brandKit" && <BrandKitTab />}
-          {activeTab === "locations" && <LocationsTab />}
-          {activeTab === "staff" && <StaffTab />}
-          {activeTab === "appointmentTypes" && <AppointmentTypesTab />}
-          {activeTab === "rooms" && <RoomsTab />}
-          {activeTab === "services" && <ServicesTab />}
-          {activeTab === "data" && <DataTab />}
-          {activeTab === "templates" && <TemplatesTab />}
-          {activeTab === "wellness" && <WellnessPlansTab />}
-          {activeTab === "messaging" && <MessagingTab />}
-          {activeTab === "booking" && <BookingTab />}
-          {activeTab === "billing" && <BillingTab />}
-          {activeTab === "ai" && <AiSettingsTab />}
+          {isAdmin && activeTab === "practice" && <PracticeInfoTab />}
+          {isAdmin && activeTab === "brandKit" && <BrandKitTab />}
+          {isAdmin && activeTab === "locations" && <LocationsTab />}
+          {isAdmin && activeTab === "staff" && <StaffTab />}
+          {isAdmin && activeTab === "appointmentTypes" && <AppointmentTypesTab />}
+          {isAdmin && activeTab === "rooms" && <RoomsTab />}
+          {isAdmin && activeTab === "services" && <ServicesTab />}
+          {isAdmin && activeTab === "data" && <DataTab />}
+          {isAdmin && activeTab === "templates" && <TemplatesTab />}
+          {isAdmin && activeTab === "wellness" && <WellnessPlansTab />}
+          {isAdmin && activeTab === "messaging" && <MessagingTab />}
+          {isAdmin && activeTab === "booking" && <BookingTab />}
+          {isAdmin && activeTab === "billing" && <BillingTab />}
+          {isAdmin && activeTab === "ai" && <AiSettingsTab />}
           {activeTab === "security" && <SecurityTab />}
         </div>
       </div>

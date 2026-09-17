@@ -5170,6 +5170,8 @@
   "settings.security.passwordMinPlaceholder": "Min. {min} characters",
   "settings.security.saving": "Saving...",
   "settings.security.submit": "Change Password",
+  "settings.security.accountSubtitle": "Manage your profile and access credentials",
+  "settings.security.myAccount": "My Profile & Password",
   "settings.practice.detailsTitle": "Practice details",
   "settings.practice.detailsSubtitle": "Your practice name, contact info, and timezone.",
   "settings.practice.name": "Practice Name",

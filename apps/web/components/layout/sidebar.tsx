@@ -32,6 +32,7 @@ import {
   MessageSquare,
   Building2,
   Heart,
+  KeyRound,
 } from "lucide-react";
 import { PawMark } from "@/components/brand/paw-mark";
 import {
@@ -559,26 +560,64 @@ export function Sidebar({
       <div className="border-t border-border p-2 space-y-1">
         {session?.user && !isCollapsed && (
           <div className="flex items-center gap-3 rounded-lg bg-accent/40 px-3 py-2 border border-border/50">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0">
+            <Link
+              href="/settings?tab=security"
+              className="flex items-center gap-3 min-w-0 flex-1 group hover:opacity-85 transition-opacity"
+              title={t("settings.security.myAccount", "Môj profil & zmena hesla")}
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                {session.user.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)}
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                  {session.user.name}
+                </p>
+                <p className="truncate text-[10px] text-muted-foreground capitalize font-medium">
+                  {session.user.role
+                    ? t(
+                        `roles.${session.user.role}`,
+                        session.user.role.replace("_", " "),
+                      )
+                    : ""}
+                </p>
+              </div>
+            </Link>
+            <Link
+              href="/settings?tab=security"
+              aria-label={t("settings.tabs.security", "Zabezpečenie & Heslo")}
+              title={t("settings.tabs.security", "Zabezpečenie & Heslo")}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+            >
+              <KeyRound className="h-4 w-4" />
+            </Link>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              aria-label={t("common.signOut", "Odhlásiť sa")}
+              title={t("common.signOut", "Odhlásiť sa")}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {session?.user && isCollapsed && (
+          <div className="flex flex-col items-center gap-1.5 py-1">
+            <Link
+              href="/settings?tab=security"
+              aria-label={t("settings.tabs.security", "Zabezpečenie & Heslo")}
+              title={t("settings.tabs.security", "Zabezpečenie & Heslo")}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+            >
               {session.user.name
                 ?.split(" ")
                 .map((n) => n[0])
                 .join("")
                 .slice(0, 2)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-foreground">
-                {session.user.name}
-              </p>
-              <p className="truncate text-[10px] text-muted-foreground capitalize font-medium">
-                {session.user.role
-                  ? t(
-                      `roles.${session.user.role}`,
-                      session.user.role.replace("_", " "),
-                    )
-                  : ""}
-              </p>
-            </div>
+            </Link>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               aria-label={t("common.signOut", "Odhlásiť sa")}

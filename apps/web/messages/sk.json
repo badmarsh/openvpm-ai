@@ -5170,6 +5170,8 @@
   "settings.security.passwordMinPlaceholder": "Min. {min} znakov",
   "settings.security.saving": "Ukladám...",
   "settings.security.submit": "Zmeniť heslo",
+  "settings.security.accountSubtitle": "Správa vášho profilu a prístupových údajov",
+  "settings.security.myAccount": "Môj profil & zmena hesla",
   "settings.practice.detailsTitle": "Údaje o praxi",
   "settings.practice.detailsSubtitle": "Názov praxe, kontaktné údaje a časové pásmo.",
   "settings.practice.name": "Názov praxe",
