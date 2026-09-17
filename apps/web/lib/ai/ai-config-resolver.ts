@@ -106,13 +106,23 @@ export async function resolveFeatureConfig(
 
   const { provider, model, temperature, maxTokens, size, duration } = featureMapping;
 
+  function tryDecrypt(encrypted: string | null | undefined): string | undefined {
+    if (!encrypted) return undefined;
+    try {
+      return decryptAiApiKey(encrypted) || undefined;
+    } catch (err) {
+      console.warn("[ai-config-resolver] Could not decrypt custom API key, falling back:", err instanceof Error ? err.message : err);
+      return undefined;
+    }
+  }
+
   if (provider === "openai" && config.openaiIsActive) {
-    const apiKey = decryptAiApiKey(config.openaiApiKeyEncrypted);
+    const apiKey = tryDecrypt(config.openaiApiKeyEncrypted);
     return {
       provider: "openai",
       modelId: model,
       baseUrl: config.openaiBaseUrl || undefined,
-      apiKey: apiKey || undefined,
+      apiKey,
       temperature,
       maxTokens,
       size,
@@ -120,25 +130,25 @@ export async function resolveFeatureConfig(
   }
 
   if (provider === "gemini" && config.geminiIsActive) {
-    const apiKey = decryptAiApiKey(config.geminiApiKeyEncrypted);
+    const apiKey = tryDecrypt(config.geminiApiKeyEncrypted);
     const baseUrl = config.geminiBaseUrl || "https://generativelanguage.googleapis.com/v1beta/openai/";
     return {
       provider: "gemini",
       modelId: model,
       baseUrl,
-      apiKey: apiKey || undefined,
+      apiKey,
       temperature,
       maxTokens,
     };
   }
 
   if (provider === "alibaba" && config.alibabaIsActive) {
-    const apiKey = decryptAiApiKey(config.alibabaApiKeyEncrypted);
+    const apiKey = tryDecrypt(config.alibabaApiKeyEncrypted);
     return {
       provider: "alibaba",
       modelId: model,
       baseUrl: config.alibabaBaseUrl || "http://127.0.0.1:8080/v1",
-      apiKey: apiKey || undefined,
+      apiKey,
       temperature,
       maxTokens,
       size,

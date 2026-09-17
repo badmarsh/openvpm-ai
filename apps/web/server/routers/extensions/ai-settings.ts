@@ -69,9 +69,18 @@ export const aiSettingsRouter = createRouter({
       };
     }
 
-    const decryptedOpenai = decryptAiApiKey(config.openaiApiKeyEncrypted);
-    const decryptedGemini = decryptAiApiKey(config.geminiApiKeyEncrypted);
-    const decryptedAlibaba = decryptAiApiKey(config.alibabaApiKeyEncrypted);
+    const safeDecrypt = (val: string | null | undefined): string => {
+      try {
+        return decryptAiApiKey(val);
+      } catch (err) {
+        console.warn("[ai-settings] Failed to decrypt stored API key, treating as unconfigured:", err instanceof Error ? err.message : err);
+        return "";
+      }
+    };
+
+    const decryptedOpenai = safeDecrypt(config.openaiApiKeyEncrypted);
+    const decryptedGemini = safeDecrypt(config.geminiApiKeyEncrypted);
+    const decryptedAlibaba = safeDecrypt(config.alibabaApiKeyEncrypted);
 
     return {
       openai: {
@@ -267,9 +276,16 @@ export const aiSettingsRouter = createRouter({
       // Resolve key
       let rawKey = input.apiKey?.trim() || "";
       if (rawKey.startsWith("••••") || !rawKey) {
-        if (input.provider === "openai") rawKey = decryptAiApiKey(existing?.openaiApiKeyEncrypted);
-        if (input.provider === "gemini") rawKey = decryptAiApiKey(existing?.geminiApiKeyEncrypted);
-        if (input.provider === "alibaba") rawKey = decryptAiApiKey(existing?.alibabaApiKeyEncrypted);
+        try {
+          if (input.provider === "openai") rawKey = decryptAiApiKey(existing?.openaiApiKeyEncrypted);
+          if (input.provider === "gemini") rawKey = decryptAiApiKey(existing?.geminiApiKeyEncrypted);
+          if (input.provider === "alibaba") rawKey = decryptAiApiKey(existing?.alibabaApiKeyEncrypted);
+        } catch {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Uložený API kľúč sa nepodarilo dešifrovať. Zadajte ho znova.",
+          });
+        }
       }
 
       // Resolve base URL
@@ -366,9 +382,16 @@ export const aiSettingsRouter = createRouter({
 
       let rawKey = input.apiKey?.trim() || "";
       if (rawKey.startsWith("••••") || !rawKey) {
-        if (input.provider === "openai") rawKey = decryptAiApiKey(existing?.openaiApiKeyEncrypted);
-        if (input.provider === "gemini") rawKey = decryptAiApiKey(existing?.geminiApiKeyEncrypted);
-        if (input.provider === "alibaba") rawKey = decryptAiApiKey(existing?.alibabaApiKeyEncrypted);
+        try {
+          if (input.provider === "openai") rawKey = decryptAiApiKey(existing?.openaiApiKeyEncrypted);
+          if (input.provider === "gemini") rawKey = decryptAiApiKey(existing?.geminiApiKeyEncrypted);
+          if (input.provider === "alibaba") rawKey = decryptAiApiKey(existing?.alibabaApiKeyEncrypted);
+        } catch {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Uložený API kľúč sa nepodarilo dešifrovať. Zadajte ho znova.",
+          });
+        }
       }
 
       let baseUrl = input.baseUrl?.trim() || "";
