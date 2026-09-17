@@ -606,7 +606,7 @@ function InboxContent() {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h2 className="font-heading text-xl font-semibold">
             {t("inbox.title", "Inbox")}
@@ -615,26 +615,30 @@ function InboxContent() {
             {t("inbox.subtitle", "Client communications")}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="inbox" className="gap-1.5">
-                <InboxIcon className="h-3.5 w-3.5" />
-                {t("inbox.tabInbox", "Schránka")}
-              </TabsTrigger>
-              <TabsTrigger value="logs" className="gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                {t("inbox.tabLogs", "Správy & Logy")}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          {activeTab === "inbox" && canMutateInbox ? (
-            <Button onClick={handleNewMessage} className="gap-2">
+        {canMutateInbox ? (
+          activeTab === "inbox" ? (
+            <Button onClick={handleNewMessage} className="gap-2 shrink-0">
               <Plus className="h-4 w-4" />
               {t("inbox.newMessage", "New Message")}
             </Button>
-          ) : null}
-        </div>
+          ) : null
+        ) : null}
+      </div>
+
+      {/* Tabs directly below title, aligned left */}
+      <div className="mb-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="inbox" className="gap-1.5">
+              <InboxIcon className="h-3.5 w-3.5" />
+              {t("inbox.tabInbox", "Schránka")}
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              {t("inbox.tabLogs", "Správy & Logy")}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {activeTab === "logs" ? (
