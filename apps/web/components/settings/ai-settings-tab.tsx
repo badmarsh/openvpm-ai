@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Loader2,
   CheckCircle2,
@@ -42,6 +44,9 @@ import {
   ShieldAlert,
   RefreshCw,
   Cpu,
+  Search,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import type { CachedAiModel, FeatureAiMapping, PracticeAiFeatureMappings } from "@openpims/db";
 import {
@@ -968,18 +973,17 @@ function FeatureRow({
         {/* Model Select or input */}
         <div className="w-56">
           {availableModels.length > 0 ? (
-            <Select value={model} onValueChange={onChangeModel}>
-              <SelectTrigger className="h-8 text-xs font-mono">
-                <SelectValue placeholder={t("settings.ai.features.model", "Model")} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableModels.map((m) => (
-                  <SelectItem key={m.id} value={m.id} className="text-xs font-mono">
-                    {m.name || m.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ModelPicker
+              model={model}
+              onChangeModel={onChangeModel}
+              availableModels={availableModels}
+              placeholder={t("settings.ai.features.model", "Model")}
+              searchPlaceholder={t("settings.ai.features.searchModel", "Hľadať model...")}
+              noModelsText={t("settings.ai.features.noModelsFound", "Žiadne modely sa nenašli")}
+              useCustomText={(custom) =>
+                t("settings.ai.features.useCustomModel", `Použiť model "${custom}"`, { model: custom })
+              }
+            />
           ) : (
             <Input
               value={model}
@@ -991,5 +995,157 @@ function FeatureRow({
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Searchable & Scrollable Model Picker Popover ─────────────────
+interface ModelPickerProps {
+  model: string;
+  onChangeModel: (model: string) => void;
+  availableModels: CachedAiModel[];
+  placeholder: string;
+  searchPlaceholder: string;
+  noModelsText: string;
+  useCustomText: (custom: string) => string;
+}
+
+function ModelPicker({
+  model,
+  onChangeModel,
+  availableModels,
+  placeholder,
+  searchPlaceholder,
+  noModelsText,
+  useCustomText,
+}: ModelPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return availableModels;
+    const q = search.toLowerCase();
+    return availableModels.filter(
+      (m) =>
+        m.id.toLowerCase().includes(q) ||
+        (m.name && m.name.toLowerCase().includes(q)),
+    );
+  }, [availableModels, search]);
+
+  const selectedItem = availableModels.find((m) => m.id === model);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-8 w-56 justify-between px-2 font-mono text-xs font-normal"
+        >
+          <span className="truncate">
+            {selectedItem ? (selectedItem.name || selectedItem.id) : (model || placeholder)}
+          </span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0 shadow-lg" align="end">
+        <div className="flex flex-col">
+          {/* Search Header */}
+          <div className="flex items-center border-b px-2.5 py-1.5">
+            <Search className="mr-1.5 h-3.5 w-3.5 shrink-0 opacity-50" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="h-7 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+              autoFocus
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="ml-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable Model List */}
+          <div className="max-h-64 overflow-y-auto p-1 text-xs">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-center text-xs text-muted-foreground">
+                <p>{noModelsText}</p>
+                {search.trim() && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-2 h-7 w-full text-[11px] font-mono"
+                    onClick={() => {
+                      onChangeModel(search.trim());
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                  >
+                    {useCustomText(search.trim())}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filtered.map((m) => {
+                const isSelected = model === m.id;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => {
+                      onChangeModel(m.id);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className={cn(
+                      "flex cursor-pointer items-center justify-between rounded-sm px-2 py-1.5 text-xs font-mono transition-colors hover:bg-accent hover:text-accent-foreground",
+                      isSelected && "bg-accent/70 font-medium text-accent-foreground",
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Check
+                        className={cn(
+                          "h-3.5 w-3.5 shrink-0 text-primary",
+                          isSelected ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <span className="truncate">{m.name || m.id}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-1">
+                      {m.isVision && (
+                        <Badge variant="outline" className="text-[9px] py-0 px-1 font-sans">
+                          Vision
+                        </Badge>
+                      )}
+                      {m.isImageGeneration && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] py-0 px-1 font-sans text-pink-600 dark:text-pink-400"
+                        >
+                          Img
+                        </Badge>
+                      )}
+                      {m.isVideoGeneration && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] py-0 px-1 font-sans text-indigo-600 dark:text-indigo-400"
+                        >
+                          Video
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
