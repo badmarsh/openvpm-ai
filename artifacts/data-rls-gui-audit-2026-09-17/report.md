@@ -40,9 +40,9 @@ Podľa zadania je pritom `openvpm_ai` **lokálna dev databáza**. Artefakt bol t
 
 ## 1. Executive summary
 
-**Skóre pripravenosti: 79 / 100**
+**Skóre pripravenosti: 78 / 100**
 
-> _Revízia po otvorení PR #20:_ oblasť „Auditovateľnosť & nástroje“ je hodnotená 45 → **55** (váha 10 %), pretože v repozitári existuje doložený RLS harness v CI (kap. 2.4), ktorý prvé hodnotenie pominulo. Celkové skóre 78 → 79._
+> _Revízia po otvorení PR #20 — dve protiľahlé zistenia sa krížia, skóre zostáva 78:_ (+) v repozitári existuje doložený RLS harness v CI (kap. 2.4), ktorý prvé hodnotenie pominulo; (−) na `main` je však ten istý job od commitu `057c05a` (2026-09-17 07:29 UTC) červený a padá na gate „Check schema matches committed migrations“ **skôr, než sa 243 RLS kontrol vôbec spustí** → guardrail momentálne nechráni nič (P1-12).
 
 | Oblast | Váha | Skóre | Odôvodnenie |
 |---|---:|---:|---|
@@ -50,7 +50,7 @@ Podľa zadania je pritom `openvpm_ai` **lokálna dev databáza**. Artefakt bol t
 | Dáta pilotnej kliniky | 20 % | **62** | 2 185 klientov / 2 952 pacientov / 6 665 SOAP záznamov sedí. Ale: **0 riadkov v `drug_interactions`** (Clinical Guardian je inertný), 0 v zákonných registroch (besnota, ochranné lehoty), 0 v `ext_ai_audit_log`; 408 termínov bez akéhokoľvek dôkazu o „dnešných“. |
 | tRPC / backend | 20 % | **86** | 0 nedostupných volaní UI→router, tenant GUC v transakcii (pool-safe), dešifrovanie API kľúčov všade ošetrené. Výhrady: duplikované a mŕtve procedúry, reporty s off-by-one o jeden deň, chýbajúci most predpis→omamné látky. |
 | GUI & lokalizácia | 20 % | **84** | i18n 100 % symetria (6 483/6 483), `/clients` pod `/patients`, KPI počítané zo SQL, prázdne stavy aj chybové panely. Výhrady: TZ dupla-filtr na `/encounters`, Guardian widget sa pri chybe schová, skratky dní v kalendári ignorujú EN. |
-| Auditovateľnosť & nástroje | 10 % | **55** | + doložený RLS harness v CI (pozri kap. 2.4). − SQL v zadaní je proti schéme neplatné, verifikačný skript neobsahuje žiadnu kontrolu „dnes“, `check-i18n-symmetry.js` kontroluje len 109 z 6 483 kľúčov a nie je v CI. |
+| Auditovateľnosť & nástroje | 10 % | **45** | + doložený RLS harness v CI (kap. 2.4). − ten istý job je na `main` od `057c05a` červený a RLS testy sa vôbec nespustia (P1-12); − SQL v zadaní je proti schéme neplatné, verifikačný skript neobsahuje žiadnu kontrolu „dnes“, `check-i18n-symmetry.js` kontroluje len 109 z 6 483 kľúčov a nie je v CI. |
 
 **Stav GUI a dátovej integrácie:** dôležité obrazovky (whiteboard, dashboard, karta pacienta, SOAP editor, formulár klienta) sú **napojené na reálne SQL**, nevideli sme žiadne „natvrdo 0“. Hlavné riziko nie je vizuál, ale **kvalita referenčných dát a časové pásmo nastavené klinike**.
 
@@ -75,7 +75,7 @@ Ochranná poistka `apps/web/lib/rls-assertion.ts:16-23` beží len ak `HOSTED_BI
 *Dopad:* pri reálnych medicínskych dátach pilotnej kliniky na verejnom porte = jednovrstvová ochrana (len `practiceId` filtre v kóde).
 *Oprava:* (i) `ALTER TABLE … FORCE ROW LEVEL SECURITY` pre tenant tabuľky (alebo aspoň pre 30 kritických), (ii) `DATABASE_URL` na `openpims_app`, (iii) spustiť `assertHostedRlsRole` **vždy**, nie len pri billing režime.
 *Kontext (férovosť):* projekt nie je bez ochrany — CI job **`RLS tenant isolation`** (`.github/workflows/ci.yml:76-77`, krok „Prove tenant/RLS pool-reuse isolation“ na riadku 280-281) spúšťa `packages/db/test-rls.ts` (4 794 riadkov, **243** volaní `check()`, `process.exit(1)` pri akomkoľvek zlyhaní), ktorý sa pripája ako least-privilege rola `openpims_app` (`test-rls.ts:54-69`) a majiteľskou rolou len **seeduje** (komentár „Arrange (as owner — bypasses RLS)“, riadok 258). Tím teda o owner-bypass vie a testuje proti nemu.
-Zvyšné riziko je **konfiguračné, nie dizajnové**: nič nebráni nasadeniu, aby `DATABASE_URL` ukazovalo na owner rolu (presne taký je default v `.env.example:2` aj DSN v zadaní auditu), a CI to odhalí jedine na role `openpims_app` — teda práve nie na chybnom nasadení.
+Zvyšné riziko je **konfiguračné, nie dizajnové**: nič nebráni nasadeniu, aby `DATABASE_URL` ukazovalo na owner rolu (presne taký je default v `.env.example:2` aj DSN v zadaní auditu), a CI to odhalí jedine na role `openpims_app` — teda práve nie na chybnom nasadení. Navyše tento job je v čase auditu na `main` trvalo červený na drift gate, takže sa RLS testy ani nevykonajú (P1-12).
 
 ### P1 — Critical
 
@@ -150,6 +150,13 @@ const secretSource = process.env.NEXTAUTH_SECRET || "openvpm-dev-ai-settings-def
 **P1-11 · `ext_support_session_audit` je bez RLS**
 Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných relácií** — obsahuje citlivé dáta naprieč tenantmi bez akejkoľvek izolácie. (Ostatné 3: `auth_tokens`, `sessions`, `verification_tokens` — tie sú lookup-by-token, v poriadku.)
 
+**P1-12 · CI na `main` je dlhodobo červená → popísané guardraily dnes neplatia (zistené pri otváraní PR #20)**
+Cez Actions API: 17 najnovších runov `ci.yml` na `main` (2026-09-16 10:40 → 2026-09-17 18:31 UTC) = **16 failures / 1 success**.
+- `RLS tenant isolation` padá na kroku **„Check schema matches committed migrations“** (`.github/workflows/ci.yml:129-133`) — drizzle snapshot a `packages/db/schema` nie sú v syncu. Krok je **pred** `db:rls:test` (`ci.yml:280-281`), takže 243 kontrol izolácie sa nevykoná. Prvý červený run `057c05a` (2026-09-17 07:29 UTC), odvtery každý push — vrátane tohto auditného PR.
+- `build` padá na `Run pnpm test` od `cc3af58` (18:31 UTC): `apps/web/lib/__tests__/settings-ui-states.test.ts:39` tvrdne na source-reťazci `if (session?.user?.role !== "admin")`, ktorý `cc3af58` („allow all staff access to security tab“) nahradil modelom `isAdmin ? tabs : tabs.filter(t => t.id === "security")` (`settings/page.tsx:433-441` v `main`). Prístupový model sa **zmenšil, nie zrušil** — test je krehký, nie oprávnený.
+*Dopad:* každá veta tohto reportu v zmysle „strážené CI“ sa má čítať conditionálne; v praxi dnes nič z toho nebeží. Presne preto zostávajú neodhalené P0-2 (owner role) aj P1-7 (krížové parentovanie).
+*Oprava:* (i) `pnpm db:generate` + commit snapshotu (a zistiť, ktorej schema zmeny chýba migrácia); (ii) `settings-ui-states` prepísať na behaviorálny test (render + prístupnosť panelu) namiesto `toContain(source)`; (iii) branch protection — vyžadovať zelené `RLS tenant isolation` pred merge, inak je guardrail dekorácia.
+
 ### P2 — Minor
 
 | # | Nález | Miesto |
@@ -172,6 +179,8 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 | P2-16 | `GET /clients` neagreguje pacientov — zoznam majiteľov nemá stĺpec „počet zvierat“ (agregácia je len v `getById`) | `server/routers/clients.ts:198-260`, `app/(dashboard)/clients/page.tsx:157-175` |
 | P2-17 | Formátovanie/lint: 25 procedúr v `extensions/marketing.ts` začína na stĺpci 0 (nulové odsadenie); `patients.ts` 1 987 riadkov, `records.ts` 4 932, stránka pacienta **4 287 riadkov**; `db: any` v `lib/ai/ai-crypto`-klientoch a `applySympathyGate(db: Database \| any, …)` | viacero |
 | P2-18 | SK pravopis: „**Pre** zaznamenanie súhlasu zadajte platné číslo mobilu.“ (čechizmus, správne „Na zaznamenanie…“) | `messages/sk.json` → `clients.form.smsValidNumberRequired` |
+| P2-20 | Prístupové testy kontrolujú **text zdrojového súboru** (`readFileSync` + `toContain`), nie správanie → refaktorizácia gate rozbije test, zatiaľ čo skutočné uvoľnenie kontroly by prešlo | `apps/web/lib/__tests__/settings-ui-states.test.ts:35-49` |
+| P2-21 | Na `main` je ne-admin podtitul nastavení slovensky priamo ako *default* volania `t()`, takže EN reťazec v katalógu chýba (porušenie konvencie SK v katalógu / EN default v kóde) | `app/(dashboard)/settings/page.tsx` (main `cc3af58`) |
 | P2-19 | Popisok vs. katalóg: v kóde je label „Klienti“, ale `sk.json/nav.clients` = „**Majitelia**“ → v UI je správne „Majitelia“, ale fallback sa líši (ľahký drift) | `components/layout/sidebar.tsx:103-108` |
 
 ### Čo je naopak v poriadku (overené, nie len prečítané)
@@ -195,6 +204,8 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 | `RLS ownership preflight` | `packages/db/rls-preflight.ts`, kontrakt `test-rls-preflight.ts` (ci.yml:115-116) | read-only inšpekcia, že rola spúšťajúca `apply-rls` vlastní všetky managed objekty → deploy zlyhá skôr, ako niečo pokazí |
 | `db:rls:preflight` / `db:rls` | `packages/db/package.json:28-31` | idempotentné zapnutie politík + granty pre least-privilege rolu |
 
+**Stav v čase auditu:** job `RLS tenant isolation` je na `main` červený a padá skôr, než sa RLS testy spustia (P1-12) — tabuľka vyššie teda opisuje *nástroj*, nie jeho aktuálnu účinnosť.
+
 **Chýbajúci kus:** oba nástroje predpokladajú, že *migračná* rola je správna; **runtime** rola aplikácie kontrolovaná nie je (pozri P0-2). Najlacnejšia doplnková ochrana je rozšíriť preflight o assertion „`current_role` app konekcie nie je ownerom žiadneho managed objektu“ a volať ho pri štarte bez ohľadu na `HOSTED_BILLING_ENABLED`.
 
 ---
@@ -213,6 +224,7 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 | 6 | Pridať `AI_SETTINGS_ENCRYPTION_KEY` do `.env.example` + hard-fail v prod | `lib/ai/ai-crypto.ts:14-29` |
 | 7 | Spustiť `live-checks.sql` na 5434 a priložiť výstup | `artifacts/data-rls-gui-audit-2026-09-17/live-checks.sql` (18/18 validovaných) |
 | 8 | Rozšíriť RLS preflight o kontrolu runtime roly (owner ⇒ fail) a spúšťať ho aj bez billing režimu | `packages/db/rls-preflight.ts`, `apps/web/lib/rls-assertion.ts:16-23` |
+| 9 | Napraviť drift (`pnpm db:generate` + commit snapshotu), obnoviť zelenú a ďalej vyžadovať zelené `RLS tenant isolation` pri merge | `.github/workflows/ci.yml:129-133` |
 
 ### 3.2 Migrácie (2.–3. deň)
 
