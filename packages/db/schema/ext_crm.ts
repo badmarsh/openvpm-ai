@@ -90,9 +90,11 @@ export const extCrmSegments = pgTable(
       .references(() => practices.id),
     name: text("name").notNull(),
     /**
-     * Stable machine key, e.g. "inactive_6mo", "post_surgery",
-     * "vaccine_overdue". Referenced by ext_automation_rules.condition_json
+     * Stable machine key, e.g. "churn_risk", "post_op_recovery",
+     * "unvaccinated_overdue". Referenced by ext_automation_rules.condition_json
      * (segmentKeys / excludeSegmentKeys), so it must never be renamed in place.
+     * The canonical 12 keys live in CRM_SEGMENT_DEFINITIONS
+     * (apps/web/lib/autopilot/segmentation-engine.ts).
      */
     segmentKey: text("segment_key").notNull(),
     description: text("description").notNull().default(""),
@@ -100,7 +102,10 @@ export const extCrmSegments = pgTable(
     isSystem: boolean("is_system").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
     /**
-     * SOURCE OF TRUTH. Whitelist-compiled by the segment engine.
+     * Inert audit shadow of the segment definition (mirrors
+     * CRM_SEGMENT_DEFINITIONS[].condition). Membership is computed by the
+     * hardcoded branches in lib/autopilot/segmentation-engine.ts — this JSON
+     * is never executed, only stored for the audit trail.
      */
     conditionJson: jsonb("condition_json")
       .$type<CrmSegmentCondition>()
@@ -180,8 +185,8 @@ export const extCrmSegmentMemberships = pgTable(
       .notNull()
       .defaultNow(),
     /**
-     * When membership lapses on its own (e.g. "post_surgery" expires 30 days
-     * after discharge). Null = open-ended.
+     * When membership lapses on its own (e.g. "post_op_recovery" expires 30
+     * days after discharge). Null = open-ended.
      */
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     /** Human-readable why, e.g. "visit_closeout 2026-09-10 (surgery)". */
