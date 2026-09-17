@@ -197,7 +197,7 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 | 4 | Fix konca dátumového rozsahu v oboch zákonných výstupoch | `server/routers/reports.ts:415-418`, `522-525` (kód v P1-4) |
 | 5 | Guardian: pri `error` zobraziť varovanie, nie `null` | `components/dashboard/clinical-guardian-widget.tsx:70-72` |
 | 6 | Pridať `AI_SETTINGS_ENCRYPTION_KEY` do `.env.example` + hard-fail v prod | `lib/ai/ai-crypto.ts:14-29` |
-| 7 | Spustiť `live-checks.sql` na 5434 a priložiť výstup | `artefakty/data-rls-gui-audit-2026-09-17/live-checks.sql` (18/18 validovaných) |
+| 7 | Spustiť `live-checks.sql` na 5434 a priložiť výstup | `artifacts/data-rls-gui-audit-2026-09-17/live-checks.sql` (18/18 validovaných) |
 
 ### 3.2 Migrácie (deň 2-3)
 
