@@ -24,7 +24,7 @@ if ($status) {
 
 # 2. i18n symmetry check
 Write-Host "`n[2/5] Kontrola i18n symetrie..." -ForegroundColor Yellow
-node -e "const en=require('./apps/web/messages/en.json'); const sk=require('./apps/web/messages/sk.json'); function keys(o,p=''){return Object.keys(o).flatMap(k=>{const path=p?p+'.'+k:k;return(typeof o[k]==='object'&&o[k]!==null)?keys(o[k],path):[path];});} const kEn=keys(en),kSk=keys(sk),sEn=new Set(kEn),sSk=new Set(kSk); const missing=kEn.filter(k=>!sSk.has(k)),extra=kSk.filter(k=>!sEn.has(k)); if(missing.length||extra.length){console.error('i18n asymmetry detected!',{missing,extra});process.exit(1);}else{console.log('✓ i18n 100% symmetric ('+kEn.length+' keys)');}"
+node -e 'const en=require("./apps/web/messages/en.json"); const sk=require("./apps/web/messages/sk.json"); function keys(o,p=""){return Object.keys(o).flatMap(k=>{const path=p?p+"."+k:k;return(typeof o[k]==="object"&&o[k]!==null)?keys(o[k],path):[path];});} const kEn=keys(en),kSk=keys(sk),sEn=new Set(kEn),sSk=new Set(kSk); const missing=kEn.filter(k=>!sSk.has(k)),extra=kSk.filter(k=>!sEn.has(k)); if(missing.length||extra.length){console.error("i18n asymmetry detected!",{missing,extra});process.exit(1);}else{console.log("✓ i18n 100% symmetric ("+kEn.length+" keys)");}'
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Chyba v i18n symetrii! Deployment zastavený." -ForegroundColor Red
     exit 1
