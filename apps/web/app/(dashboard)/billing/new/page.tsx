@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { Plus, Trash2, ArrowLeft, Loader2, FileText } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { formatSpecies } from "@/lib/patients/species";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
@@ -470,7 +471,7 @@ function NewInvoiceForm() {
               </option>
               {patientOptions.map((patient) => (
                 <option key={patient.id} value={patient.id}>
-                  {patient.name} ({patient.species})
+                  {patient.name} ({formatSpecies(patient.species, t)})
                 </option>
               ))}
             </select>

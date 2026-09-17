@@ -49,6 +49,9 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { formatCurrency } from "@/lib/locale/format";
+import { formatSpecies } from "@/lib/patients/species";
+import { formatUserRole } from "@/lib/users/role";
+import { formatInvoiceStatus } from "@/lib/billing/invoice-status";
 import {
   BILLING_INVOICE_MAX_ITEMS,
   isBillingInvoiceLineTotalValid,
@@ -283,7 +286,7 @@ function PatientAssignmentPanel({
             <div>
               <p className="font-medium">{selectedPatient.name}</p>
               <p className="text-xs text-muted-foreground">
-                {[selectedPatient.species, selectedPatient.breed]
+                {[formatSpecies(selectedPatient.species, t), selectedPatient.breed]
                   .filter(Boolean)
                   .join(" · ") || t("encounters.patientPanel.detailsUnavailable", "Patient details unavailable")}
                 {selectedPatient.clientFirstName
@@ -366,7 +369,7 @@ function PatientAssignmentPanel({
                   <span>
                     <span className="font-medium">{patient.name}</span>
                     <span className="ml-2 text-xs text-muted-foreground">
-                      {[patient.species, patient.breed]
+                      {[formatSpecies(patient.species, t), patient.breed]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -767,8 +770,8 @@ export default function EncounterWorkspacePage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{patient?.name}</p>
-                        <p className="text-sm capitalize text-muted-foreground">
-                          {[patient?.species, patient?.breed]
+                        <p className="text-sm text-muted-foreground">
+                          {[patient?.species ? formatSpecies(patient.species, t) : null, patient?.breed]
                             .filter(Boolean)
                             .join(" · ") || t("encounters.patientPanel.detailsUnavailable", "Patient details unavailable")}
                         </p>
@@ -2198,7 +2201,7 @@ function VisitCloseout({
             label={t("encounters.closeout.billingLabel", "Billing")}
             value={
               activeInvoice
-                ? `${activeInvoice.status} · ${activeInvoice.itemCount} ${
+                ? `${formatInvoiceStatus(activeInvoice.status, t)} · ${activeInvoice.itemCount} ${
                     activeInvoice.itemCount === 1
                       ? t("encounters.closeout.invoiceLineSingular", "line")
                       : t("encounters.closeout.invoiceLinePlural", "lines")
@@ -3366,7 +3369,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
               {props.followUpAssignees.map((assignee) => (
                 <option key={assignee.id} value={assignee.id}>
                   {assignee.name || assignee.email} ·{" "}
-                  {assignee.role.replace("_", " ")}
+                  {formatUserRole(assignee.role, t)}
                 </option>
               ))}
             </select>
@@ -3994,7 +3997,7 @@ function OperationalCloseoutForm({
       {activeInvoice ? (
         <div className="rounded-md border border-border bg-muted/20 p-3 text-sm">
           {t("encounters.operationalForm.invoiceIsPrefix", "Invoice is")}{" "}
-          <strong>{activeInvoice.status}</strong>
+          <strong>{formatInvoiceStatus(activeInvoice.status, t)}</strong>
           {t(
             "encounters.operationalForm.hasLinesAndBalance",
             ", has {lines}, and a balance of {balance}. ",
@@ -4162,7 +4165,7 @@ function EncounterInvoices({
                           invoice.status === "paid" ? "success" : "outline"
                         }
                       >
-                        {invoice.status}
+                        {formatInvoiceStatus(invoice.status, t)}
                       </Badge>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">

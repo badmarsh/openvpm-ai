@@ -55,3 +55,13 @@ export const PATIENT_SPECIES_EMOJI: Record<PatientSpecies, string> = {
   camelid: "🦙",
   other: "🐾",
 };
+
+export function formatSpecies(
+  species: string | null | undefined,
+  t: (key: string, fallback?: string) => string,
+): string {
+  if (!species) return "";
+  const normalized = species.toLowerCase().trim();
+  const labelFallback = PATIENT_SPECIES_LABELS[normalized as PatientSpecies] ?? species;
+  return t(`species.${normalized}`, t(`patients.species_${normalized}`, labelFallback));
+}

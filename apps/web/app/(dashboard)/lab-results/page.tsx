@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { formatUserRole } from "@/lib/users/role";
 import { cn } from "@/lib/utils";
 import { AnalyzerImportPanel } from "@/components/lab/analyzer-import-panel";
 import { AnalyteTrendVisualization } from "@/components/lab/analyte-trend-visualization";
@@ -836,7 +837,7 @@ function LabResultsInboxContent() {
                               )}
                             </option>
                             {assignees.data?.map((person) => (
-                              <option key={person.id} value={person.id}>{person.name} · {person.role.replace("_", " ")}</option>
+                              <option key={person.id} value={person.id}>{person.name} · {formatUserRole(person.role, t)}</option>
                             ))}
                           </select>
                         </label>

@@ -804,8 +804,11 @@ export default function AdminPage() {
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2 capitalize">
-                        {registration.status.replace("_", " ")}
+                      <td className="px-3 py-2">
+                        {t(
+                          `admin.messaging.status_${registration.status}`,
+                          registration.status.replace("_", " "),
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {registration.providerBrandStatus ?? t("admin.messaging.notSubmitted", "Not submitted")}

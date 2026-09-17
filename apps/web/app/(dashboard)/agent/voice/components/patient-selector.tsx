@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
+import { formatSpecies } from "@/lib/patients/species";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +29,7 @@ interface PatientSelectorProps {
 }
 
 export function PatientSelector({ value, onChange }: PatientSelectorProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -95,7 +98,7 @@ export function PatientSelector({ value, onChange }: PatientSelectorProps) {
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {[p.clientFirstName, p.clientLastName].filter(Boolean).join(" ")}
-                    {p.species ? ` · ${p.species}` : ""}
+                    {p.species ? ` · ${formatSpecies(p.species, t)}` : ""}
                   </span>
                 </div>
               </button>

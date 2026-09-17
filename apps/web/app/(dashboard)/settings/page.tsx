@@ -64,6 +64,7 @@ import { cn, isValidEmail } from "@/lib/utils";
 import { toast } from "sonner";
 import { regionDefaults } from "@/lib/locale/format";
 import { useI18n } from "@/lib/i18n";
+import { formatUserRole } from "@/lib/users/role";
 import {
   CLINIC_REGION_OPTIONS,
   isClinicRegionCode,
@@ -2804,11 +2805,11 @@ function StaffTab() {
                           ROLE_BADGE[user.role] ?? ROLE_BADGE.front_desk,
                         )}
                       >
-                        {user.role.replace("_", " ")}
+                        {formatUserRole(user.role, t)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {user.isVeterinarian ? "Veterinarian" : "—"}
+                      {user.isVeterinarian ? t("roles.veterinarian", "Veterinarian") : "—"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {user.phone ?? "-"}

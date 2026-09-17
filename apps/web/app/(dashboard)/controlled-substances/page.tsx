@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { formatUserRole } from "@/lib/users/role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
@@ -394,7 +395,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
             </option>
             {witnessOptions.map((user) => (
               <option key={user.id} value={user.id}>
-                {user.name} ({user.role.replace("_", " ")})
+                {user.name} ({formatUserRole(user.role, t)})
               </option>
             ))}
           </select>

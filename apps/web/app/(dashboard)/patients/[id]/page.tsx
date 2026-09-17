@@ -4262,7 +4262,7 @@ function AllergyForm({
           type="text"
           value={allergyReaction}
           maxLength={2000}
-          placeholder="Facial swelling"
+          placeholder={t("patients.profile.reactionPlaceholder", "e.g. facial swelling, pruritus")}
           onChange={(event) => setAllergyReaction(event.target.value)}
           className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
         />

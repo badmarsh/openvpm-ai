@@ -25,6 +25,7 @@ import {
   isBillingServicePriceInputValid,
 } from "@/lib/billing/policy";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
+import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
 
 type ServiceForm = {
@@ -89,6 +90,7 @@ function expectedServiceSnapshot(service: ServiceRow) {
 type ServiceSnapshot = ReturnType<typeof expectedServiceSnapshot>;
 
 export function ServicesTab() {
+  const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const activeQuery = trpc.billing.listServices.useQuery();
@@ -223,12 +225,13 @@ export function ServicesTab() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <ReceiptText className="h-5 w-5" /> Services &amp; Pricing
+            <ReceiptText className="h-5 w-5" /> {t("settings.services.title", "Services & Pricing")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage the services available in encounter and invoice charge
-            pickers. Mark each service taxable according to your local rules;
-            invoices preserve that choice as a historical snapshot.
+            {t(
+              "settings.services.description",
+              "Manage the services available in encounter and invoice charge pickers. Mark each service taxable according to your local rules; invoices preserve that choice as a historical snapshot.",
+            )}
           </p>
         </div>
         <Button
@@ -237,13 +240,13 @@ export function ServicesTab() {
           onClick={() => setShowCreate((visible) => !visible)}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add service
+          {t("settings.services.addService", "Add service")}
         </Button>
       </div>
 
       {showCreate && (
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold">New service</h3>
+          <h3 className="text-sm font-semibold">{t("settings.services.newService", "New service")}</h3>
           <ServiceFields form={createForm} onChange={setCreateForm} />
           <div className="flex gap-2">
             <Button
@@ -254,7 +257,7 @@ export function ServicesTab() {
               {createMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Create service
+              {t("settings.services.createService", "Create service")}
             </Button>
             <Button
               size="sm"
@@ -265,7 +268,7 @@ export function ServicesTab() {
                 setShowCreate(false);
               }}
             >
-              Cancel
+              {t("settings.services.cancel", "Cancel")}
             </Button>
           </div>
         </div>
@@ -274,9 +277,9 @@ export function ServicesTab() {
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          aria-label="Search services"
+          aria-label={t("settings.services.searchPlaceholder", "Search name, code, or category")}
           className="pl-9"
-          placeholder="Search name, code, or category"
+          placeholder={t("settings.services.searchPlaceholder", "Search name, code, or category")}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -286,12 +289,12 @@ export function ServicesTab() {
         <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Service</th>
-              <th className="px-4 py-3 text-left font-medium">Code</th>
-              <th className="px-4 py-3 text-left font-medium">Category</th>
-              <th className="px-4 py-3 text-right font-medium">Price</th>
-              <th className="px-4 py-3 text-left font-medium">Tax</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.services.colService", "Service")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.services.colCode", "Code")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.services.colCategory", "Category")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.services.colPrice", "Price")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("settings.services.colTax", "Tax")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("settings.services.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -327,7 +330,7 @@ export function ServicesTab() {
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
                           )}
-                          Save
+                          {t("settings.services.saveService", "Save")}
                         </Button>
                         <Button
                           size="sm"
@@ -335,7 +338,7 @@ export function ServicesTab() {
                           disabled={mutationPending}
                           onClick={resetEditState}
                         >
-                          <X className="mr-2 h-4 w-4" /> Cancel
+                          <X className="mr-2 h-4 w-4" /> {t("settings.services.cancel", "Cancel")}
                         </Button>
                       </div>
                     </td>
@@ -359,7 +362,9 @@ export function ServicesTab() {
                     {formatCurrency(service.defaultPrice)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {service.taxable ? "Taxable" : "Not taxable"}
+                    {service.taxable
+                      ? t("settings.services.taxable", "Taxable")
+                      : t("settings.services.notTaxable", "Not taxable")}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
@@ -405,8 +410,11 @@ export function ServicesTab() {
                   <EmptyState
                     className="border-0 bg-transparent p-8"
                     icon={ReceiptText}
-                    title="No services configured"
-                    description="Add your first service so the clinic can capture charges during encounters and invoicing."
+                    title={t("settings.services.emptyTitle", "No services configured")}
+                    description={t(
+                      "settings.services.emptyDescription",
+                      "Add your first service so the clinic can capture charges during encounters and invoicing.",
+                    )}
                   />
                 </td>
               </tr>
@@ -417,7 +425,7 @@ export function ServicesTab() {
                   colSpan={6}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
-                  No services match your search.
+                  {t("settings.services.noMatch", "No services match your search.")}
                 </td>
               </tr>
             )}
@@ -427,12 +435,12 @@ export function ServicesTab() {
 
       <details className="rounded-lg border border-border bg-card">
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-          Archived services ({availableArchivedServices.length})
+          {t("settings.services.archived", "Archived services")} ({availableArchivedServices.length})
         </summary>
         <div className="border-t border-border">
           {availableArchivedServices.length === 0 ? (
             <p className="px-4 py-5 text-sm text-muted-foreground">
-              No archived services.
+              {t("settings.services.noArchived", "No archived services.")}
             </p>
           ) : (
             <div className="divide-y divide-border">
@@ -465,7 +473,7 @@ export function ServicesTab() {
                     ) : (
                       <ArchiveRestore className="mr-2 h-4 w-4" />
                     )}
-                    Restore
+                    {t("settings.services.restore", "Restore")}
                   </Button>
                 </div>
               ))}
@@ -484,38 +492,39 @@ function ServiceFields({
   form: ServiceForm;
   onChange: (form: ServiceForm) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-3 md:grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(10rem,1fr)_9rem_auto] md:items-center">
       <Input
-        aria-label="Service name"
+        aria-label={t("settings.services.namePlaceholder", "Service name")}
         maxLength={BILLING_SERVICE_NAME_MAX_LENGTH}
-        placeholder="Service name"
+        placeholder={t("settings.services.namePlaceholder", "Service name")}
         value={form.name}
         onChange={(event) => onChange({ ...form, name: event.target.value })}
       />
       <Input
-        aria-label="Service code"
+        aria-label={t("settings.services.codePlaceholder", "Code (optional)")}
         maxLength={BILLING_SERVICE_CODE_MAX_LENGTH}
-        placeholder="Code (optional)"
+        placeholder={t("settings.services.codePlaceholder", "Code (optional)")}
         value={form.code}
         onChange={(event) => onChange({ ...form, code: event.target.value })}
       />
       <Input
-        aria-label="Service category"
+        aria-label={t("settings.services.categoryPlaceholder", "Category (optional)")}
         maxLength={BILLING_SERVICE_CATEGORY_MAX_LENGTH}
-        placeholder="Category (optional)"
+        placeholder={t("settings.services.categoryPlaceholder", "Category (optional)")}
         value={form.category}
         onChange={(event) =>
           onChange({ ...form, category: event.target.value })
         }
       />
       <Input
-        aria-label="Default price"
+        aria-label={t("settings.services.colPrice", "Price")}
         type="number"
         min={0}
         max={BILLING_UNIT_PRICE_MAX}
         step="0.01"
-        placeholder="Price"
+        placeholder={t("settings.services.colPrice", "Price")}
         value={form.defaultPrice}
         onChange={(event) =>
           onChange({ ...form, defaultPrice: event.target.value })
@@ -529,7 +538,7 @@ function ServiceFields({
             onChange({ ...form, taxable: event.target.checked })
           }
         />
-        Taxable
+        {t("settings.services.taxable", "Taxable")}
       </label>
     </div>
   );

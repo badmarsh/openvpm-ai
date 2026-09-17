@@ -32,6 +32,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { formatSpecies } from "@/lib/patients/species";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -626,7 +627,7 @@ function DischargeContent() {
                           {item.petName}
                           {item.species && (
                             <span className="text-xs font-normal text-muted-foreground ml-2">
-                              ({item.species})
+                              ({formatSpecies(item.species, t)})
                             </span>
                           )}
                         </CardTitle>
