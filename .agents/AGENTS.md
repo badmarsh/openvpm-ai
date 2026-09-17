@@ -137,10 +137,12 @@ When the user pastes container logs, mentions `compose-parse-online-port-wdunfq-
 - **Server Deployment Logs:** `/etc/dokploy/logs/compose-parse-online-port-wdunfq/`
 - **Server Multi-Container Stack:**
   - `compose-parse-online-port-wdunfq-web-1`: Production Next.js 15 standalone server (port 3000).
-  - `compose-parse-online-port-wdunfq-postgres-1`: PostgreSQL 16 Alpine (`postgres:5432`, volume `postgres_data`).
   - `compose-parse-online-port-wdunfq-minio-1`: MinIO S3 object storage for patient photos/imaging (`minio:9000`, volume `minio_data`).
   - `compose-parse-online-port-wdunfq-minio-bootstrap-1`: Bucket creation job (`mc`).
-  - `compose-parse-online-port-wdunfq-db-init-1`: Initializer running `pnpm db:bootstrap` and `pnpm db:seed:sk`.
+  - `compose-parse-online-port-wdunfq-db-init-1`: Initializer running `pnpm db:bootstrap`, `pnpm db:rls` and `pnpm db:seed:sk`.
+- **Dokploy Standalone Database Services (Docker Swarm on `dokploy-network`):**
+  - **Production DB (`openvpm-postgres-cfoqxx`):** ID `blxZb8obBRSF0J42JjPlL`, PostgreSQL 16 Alpine, volume `openvpm-postgres-cfoqxx-data`. Zero internet exposure, accessible strictly within `dokploy-network` at `openvpm-postgres-cfoqxx:5432`.
+  - **Arena Test Clone DB (`openvpm-arena-postgres-ygh6nf`):** ID `XhgvbElGuBewwa6a3xjpy`, PostgreSQL 16 Alpine, external port `5434` mapped to host (`dev.significa.sk:5434`). Dedicated sandbox clone for external Arena AI agents, populated with Slovak clinic demo data. Connection string: `postgresql://openpims:<PASSWORD>@dev.significa.sk:5434/openpims`.
 
 ### Deployment Mechanism (Git Remote `main` -> Dokploy Webhook)
 - Dokploy builds containers directly from GitHub: `context: https://github.com/badmarsh/openvpm-ai.git#main`.
@@ -163,7 +165,7 @@ When the user pastes container logs, mentions `compose-parse-online-port-wdunfq-
 - **Cause:** The `db-init` container ran `db:bootstrap` and `db:seed:sk` but missed `pnpm db:rls`, or `OPENPIMS_APP_DB_PASSWORD` was absent, leaving PostgreSQL RLS policies disabled (`relrowsecurity = false`).
 - **Immediate Fix:** Pipe `packages/db/rls/enable-rls.sql` into the remote Postgres container:
   ```powershell
-  Get-Content packages/db/rls/enable-rls.sql -Raw | ssh root@dev.significa.sk "docker exec -i compose-parse-online-port-wdunfq-postgres-1 psql -U openpims -d openpims"
+  Get-Content packages/db/rls/enable-rls.sql -Raw | ssh root@dev.significa.sk "docker exec -i \$(docker ps -q -f name=openvpm-postgres-cfoqxx) psql -U openpims -d openpims"
   ```
 - **Permanent Fix:** Ensure `db-init` in Dokploy compose definition executes `pnpm db:setup` (or `db:bootstrap && pnpm db:rls && pnpm db:seed:sk`) and defines `OPENPIMS_APP_DB_PASSWORD: ${POSTGRES_PASSWORD}`.
 
@@ -201,7 +203,8 @@ curl -s -o /dev/null -w "%{http_code}" https://vet.dev.significa.sk/login
 | Host / Access | Local Windows | Local Windows | `dev.significa.sk` (`root@dev.significa.sk`) |
 | Path | `C:\Users\marek\Documents\Vet\openvpm-ai` | `C:\Users\marek\Documents\Vet\OpenVPM` | `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/` |
 | URL / Port | `http://localhost:3001` | `http://localhost:3005` | `https://vet.dev.significa.sk` (port 3000 behind Traefik) |
-| Database | Docker `openvpm-postgres-1`, port 5434, DB `openvpm_ai` | — | Docker `compose-parse-online-port-wdunfq-postgres-1`, port 5432, DB `openpims` |
+| Database | Docker `openvpm-postgres-1`, port 5434, DB `openvpm_ai` | — | Dokploy Database Service `openvpm-postgres-cfoqxx:5432`, DB `openpims` (Arena Clone: port 5434) |
 | Storage | Local MinIO (`localhost:9000`) | — | Server MinIO (`minio:9000`, volume `minio_data`) |
 | Logs | Terminal stdout | Terminal stdout | `/etc/dokploy/logs/compose-parse-online-port-wdunfq/` or `docker logs` |
+
 

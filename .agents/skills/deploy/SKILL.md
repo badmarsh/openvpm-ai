@@ -28,11 +28,12 @@ Aktivuje sa vždy, keď používateľ požiada o nasadenie:
 - **Dokploy Compose App ID:** `pvdhIxlCIhYTKvnmrZ8Mk` (`openvpm-ai`)
 - **Interný appName na disku:** `compose-parse-online-port-wdunfq`
 - **Cesta ku kódu na serveri:** `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/`
-- **Kľúčové kontajnery:**
+- **Kľúčové kontajnery a služby:**
   - `compose-parse-online-port-wdunfq-web-1` (Next.js 15 standalone app, port 3000)
-  - `compose-parse-online-port-wdunfq-postgres-1` (Postgres 16, volume `postgres_data`)
+  - `openvpm-postgres-cfoqxx` (Dokploy Standalone Database Service, PostgreSQL 16 Alpine, interná sieť `dokploy-network:5432`)
+  - `openvpm-arena-postgres-ygh6nf` (Dokploy Standalone Arena Clone DB, verejný port `dev.significa.sk:5434`)
   - `compose-parse-online-port-wdunfq-minio-1` (MinIO S3 storage, volume `minio_data`)
-  - `compose-parse-online-port-wdunfq-db-init-1` (Drizzle bootstrap & Slovak seed)
+  - `compose-parse-online-port-wdunfq-db-init-1` (Drizzle bootstrap, RLS & Slovak seed)
 
 ---
 
