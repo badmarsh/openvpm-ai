@@ -44,7 +44,7 @@ Podľa zadania je pritom `openvpm_ai` **lokálna dev databáza**. Artefakt bol t
 
 | Oblast | Váha | Skóre | Odôvodnenie |
 |---|---:|---:|---|
-| Dátový model & RLS (schéma) | 30 % | **92** | 174/178 tabuliek s RLS, fail-closed, 0 tabuliek s RLS bez politiky, DDL bezchybný. Výhrady: `FORCE ROW LEVEL SECURITY` nigde (0×), 6 tabuliek s NULL practice_id, 6 bez FK na practices. |
+| Dátový model & RLS (schéma) | 30 % | **92** | 174/178 tabuliek s RLS, fail-closed, 0 tabuliek s RLS bez politiky, DDL bezchybný. Výhrady: `FORCE ROW LEVEL SECURITY` nikde (0×), 6 tabuliek s NULL practice_id, 6 bez FK na practices. |
 | Dáta pilotnej kliniky | 20 % | **62** | 2 185 klientov / 2 952 pacientov / 6 665 SOAP záznamov sedí. Ale: **0 riadkov v `drug_interactions`** (Clinical Guardian je inertný), 0 v zákonných registroch (besnota, ochranné lehoty), 0 v `ext_ai_audit_log`; 408 termínov bez akéhokoľvek dôkazu o „dnešných“. |
 | tRPC / backend | 20 % | **86** | 0 nedostupných volaní UI→router, tenant GUC v transakcii (pool-safe), dešifrovanie API kľúčov všade ošetrené. Výhrady: duplikované a mŕtve procedúry, reporty s off-by-one o jeden deň, chýbajúci most predpis→omamné látky. |
 | GUI & lokalizácia | 20 % | **84** | i18n 100 % symetria (6 483/6 483), `/clients` pod `/patients`, KPI počítané zo SQL, prázdne stavy aj chybové panely. Výhrady: TZ dupla-filtr na `/encounters`, Guardian widget sa pri chybe schová, skratky dní v kalendári ignorujú EN. |
@@ -71,7 +71,7 @@ PASS  RLS-8  OWNER role (openpims) sees every tenant — RLS inert on owner conn
 ```
 Ochranná poistka `apps/web/lib/rls-assertion.ts:16-23` beží len ak `HOSTED_BILLING_ENABLED` je zapnutý a `NODE_ENV=production`; inak ticho povolí štart.
 *Dopad:* pri reálnych medicínskych dátach pilotnej kliniky na verejnom porte = jednovrstvová ochrana (len `practiceId` filtre v kóde).
-*Oprava:* (i) `ALTER TABLE … FORCE ROW LEVEL SECURITY` pre tenant tabuľky (alebo aspoň pre 30 kritických), (ii) `DATABASE_URL` na `openpims_app`, (iii) spustiť `assertHostedRlsRole` **vždy**, nie len pri billing.
+*Oprava:* (i) `ALTER TABLE … FORCE ROW LEVEL SECURITY` pre tenant tabuľky (alebo aspoň pre 30 kritických), (ii) `DATABASE_URL` na `openpims_app`, (iii) spustiť `assertHostedRlsRole` **vždy**, nie len pri billing režime.
 
 ### P1 — Critical
 
