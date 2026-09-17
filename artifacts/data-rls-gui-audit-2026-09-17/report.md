@@ -62,7 +62,7 @@ Podľa zadania je pritom `openvpm_ai` **lokálna dev databáza**. Artefakt bol t
 
 **P0-1 · Auditné prostredie nie je overiteľné (uzavretý okruh)**
 Port 5434 aj HTTPS GUI odpovedajú resetom. Kým sandbox nie je na allowliste, žiadny „živý“ audit nie je vykonateľný a artefakty nemožno považovať za dôkaz o testovanej inštancii.
-*Oprava:* (a) povoliť egress IP sandboxu, alebo poslať `pg_dump --schema-only` + `verification-out.txt` priamo z 5434; (b) **rotovať heslo `openpims_secure_pass_2026`** — je verejne v zadaní.
+*Oprava:* (a) povoliť egress IP sandboxu, alebo poslať `pg_dump --schema-only` + `verification-out.txt` priamo z 5434; (b) **rotovať heslo DB role `openpims`** (hodnota je doslova uvedená v zadaní auditu, teda je verejná — nemala by sa objavovať ani v tomto reportu, ani v repozitári).
 
 **P0-2 · RLS je na konekcii z zadania efektívne vypnuté**
 `schema.sql`: `relforcerowsecurity = false` na všetkých 174 tabuľkách → **vlastník tabuliek RLS obchádza**. `packages/db/rls/enable-rls.sql` to dokumentuje („The table OWNER bypasses RLS (we do NOT use FORCE)“) a `.env.example:2` má ako default `DATABASE_URL=…openpims…` — teda **presne tú rolu, ktorá izoláciu nevynucuje**. Exekučne potvrdené:
@@ -191,7 +191,7 @@ Jedna zo 4 tabuliek bez RLS nie je auth-token, ale **audit záznamov podporných
 
 | # | Úkon | Súbor / riadok |
 |---|---|---|
-| 1 | Zmeniť DB connect pilotnej inštancie na `openpims_app` a **rotovať** heslo `openpims…` | deployment env; `packages/db/apply-rls.ts:33-51` |
+| 1 | Zmeniť DB connect pilotnej inštancie na `openpims_app` a **rotovať** heslo DB role `openpims` | deployment env; `packages/db/apply-rls.ts:33-51` |
 | 2 | Spúšťať RLS aserciu aj bez billing režimu | `apps/web/lib/rls-assertion.ts:16-23` → `return !envFlagEnabled("SKIP_RLS_BOOT_ASSERTION") && (NODE_ENV==='production' \|\| !isDev)` |
 | 3 | Odstrániť klientsky dupla-filtr a memo na „dnes“ | `app/(dashboard)/encounters/page.tsx:40,71-77` |
 | 4 | Fix konca dátumového rozsahu v oboch zákonných výstupoch | `server/routers/reports.ts:415-418`, `522-525` (kód v P1-4) |
