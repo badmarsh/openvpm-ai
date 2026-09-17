@@ -1,23 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-openpims}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-openpims}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openpims} -d ${POSTGRES_DB:-openpims}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - internal
-
   minio:
     image: quay.io/minio/minio:latest
     restart: unless-stopped
@@ -28,10 +11,10 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - internal
+      - default
 
   minio-bootstrap:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     depends_on:
       minio:
         condition: service_started
@@ -45,20 +28,17 @@ services:
       exit 0;
       "
     networks:
-      - internal
+      - default
 
   db-init:
     build:
-      context: ..
+      context: https://github.com/badmarsh/openvpm-ai.git#main
       dockerfile: apps/web/Dockerfile
       target: builder
     restart: "no"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: "postgresql://openpims:${POSTGRES_PASSWORD}@openvpm-postgres-cfoqxx:5432/openpims"
       OPENPIMS_APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
-    depends_on:
-      postgres:
-        condition: service_healthy
     command: >
       sh -c "
         echo '==> [1/3] Drizzle database bootstrap & trigger layer...' &&
@@ -70,14 +50,17 @@ services:
         echo '==> Database init completed successfully.'
       "
     networks:
-      - internal
+      - default
+      - dokploy-network
 
   web:
     build:
-      context: ..
+      context: https://github.com/badmarsh/openvpm-ai.git#main
       dockerfile: apps/web/Dockerfile
       target: runner
     restart: unless-stopped
+    expose:
+      - "3000"
     depends_on:
       db-init:
         condition: service_completed_successfully
@@ -87,37 +70,29 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: "0.0.0.0"
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: "postgresql://openpims:${POSTGRES_PASSWORD}@openvpm-postgres-cfoqxx:5432/openpims"
+      OPENPIMS_APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      NEXTAUTH_URL: "https://vet.dev.significa.sk"
+      NEXT_PUBLIC_APP_URL: "https://vet.dev.significa.sk"
       FILE_STORAGE_PROVIDER: s3
-      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_ENDPOINT: "http://minio:9000"
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      AI_BASE_URL: ${AI_BASE_URL}
-      AI_API_KEY: ${AI_API_KEY}
+      S3_REGION: "us-east-1"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      AI_MODEL: ${AI_MODEL:-google/gemini-2.5-flash}
+      AI_BASE_URL: "https://openrouter.ai/api/v1"
+      AI_API_KEY: ${OPENROUTER_API_KEY}
+      AI_MODEL: "google/gemini-2.5-flash"
+      NEXT_TELEMETRY_DISABLED: "1"
     networks:
-      - internal
+      - default
       - dokploy-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.openvpm-web.rule=Host(`vet.dev.significa.sk`)"
-      - "traefik.http.routers.openvpm-web.entrypoints=websecure"
-      - "traefik.http.routers.openvpm-web.tls=true"
-      - "traefik.http.routers.openvpm-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.openvpm-web.loadbalancer.server.port=3000"
 
 networks:
-  internal:
-    driver: bridge
   dokploy-network:
     external: true
 
 volumes:
-  postgres_data:
   minio_data:
