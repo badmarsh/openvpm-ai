@@ -73,6 +73,30 @@
     {
       "path": "/api/cron/automation-worker",
       "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/cron/ekasa-daily-closure",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/ekasa-retry",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/message-queue-drain",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/crm-segment-refresh",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/review-sla-escalation",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/content-publish",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
