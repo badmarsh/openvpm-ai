@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { hash } from "bcryptjs";
+import { hash, compare } from "bcryptjs";
 import { and, eq, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure, protectedProcedure } from "../trpc";
@@ -811,6 +811,45 @@ export const authRouter = createRouter({
           message: "This invite link is invalid or has expired.",
         });
       }
+      return { ok: true };
+    }),
+
+  /** Change password for authenticated logged-in user. */
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: authPasswordInput,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [user] = await ctx.db
+        .select({ id: users.id, passwordHash: users.passwordHash })
+        .from(users)
+        .where(and(eq(users.id, ctx.user.id), isNull(users.deletedAt)))
+        .limit(1);
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found.",
+        });
+      }
+
+      const isValid = await compare(input.currentPassword, user.passwordHash);
+      if (!isValid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Current password is incorrect.",
+        });
+      }
+
+      const passwordHash = await hash(input.newPassword, PASSWORD_HASH_COST);
+      await ctx.db
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, ctx.user.id));
+
       return { ok: true };
     }),
 

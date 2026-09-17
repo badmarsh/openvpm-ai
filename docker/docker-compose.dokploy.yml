@@ -86,6 +86,7 @@ services:
       AI_API_KEY: ${OPENROUTER_API_KEY}
       AI_MODEL: "google/gemini-2.5-flash"
       NEXT_TELEMETRY_DISABLED: "1"
+      PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-martin.sykora@vetsykora.sk,admin@vetsykora.sk}
     networks:
       - default
       - dokploy-network

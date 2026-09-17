@@ -38,6 +38,7 @@ import {
   ReceiptText,
   Palette,
   Bot,
+  KeyRound,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ const ServicesTab = dynamic(() => import("@/components/settings/services-tab").t
 const BrandKitTab = dynamic(() => import("@/components/settings/brand-kit-tab").then(m => ({ default: m.BrandKitTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 const AmbulatoryWorkspaceSettingsCard = dynamic(() => import("@/components/settings/ambulatory-workspace-settings").then(m => ({ default: m.AmbulatoryWorkspaceSettingsCard })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 const AiSettingsTab = dynamic(() => import("@/components/settings/ai-settings-tab").then(m => ({ default: m.AiSettingsTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const SecurityTab = dynamic(() => import("@/components/settings/security-tab").then(m => ({ default: m.SecurityTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 import {
   TemplateCatalogPicker,
   type TemplateCatalogItem,
@@ -164,7 +166,8 @@ type Tab =
   | "messaging"
   | "booking"
   | "billing"
-  | "ai";
+  | "ai"
+  | "security";
 
 const tabs: {
   id: Tab;
@@ -255,6 +258,12 @@ const tabs: {
     label: "AI Settings",
     labelKey: "settings.tabs.ai",
     icon: Bot,
+  },
+  {
+    id: "security",
+    label: "Security & Password",
+    labelKey: "settings.tabs.security",
+    icon: KeyRound,
   },
 ];
 
@@ -519,6 +528,7 @@ function SettingsPageInner() {
           {activeTab === "booking" && <BookingTab />}
           {activeTab === "billing" && <BillingTab />}
           {activeTab === "ai" && <AiSettingsTab />}
+          {activeTab === "security" && <SecurityTab />}
         </div>
       </div>
     </div>
