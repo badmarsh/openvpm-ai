@@ -45,12 +45,12 @@ Podľa zadania je pritom `openvpm_ai` **lokálna dev databáza**. Artefakt bol t
 | Oblast | Váha | Skóre | Odôvodnenie |
 |---|---:|---:|---|
 | Dátový model & RLS (schéma) | 30 % | **92** | 174/178 tabuliek s RLS, fail-closed, 0 tabuliek s RLS bez politiky, DDL bezchybný. Výhrady: `FORCE ROW LEVEL SECURITY` nigde (0×), 6 tabuliek s NULL practice_id, 6 bez FK na practices. |
-| Dáta pilotnej kliniky | 20 % | **62** | 2 185 klientov / 2 952 pacientov / 6 665 SOAP záznamov sedí. Ale: **0 riadkov v `drug_interactions`** (Clinical Guardian je inertný), 0 v zákonných registrhoch (besnota, ochranné lehoty), 0 v `ext_ai_audit_log`; 408 termínov bez akéhokoľvek dôkazu o „dnešných“. |
-| tRPC / backend | 20 % | **86** | 0 nedostupných volaní UI→router, tenant GUC v transakcii (pool-safe), dešifrovanie API kľúčov všade ošetrené. Výhrady: duplikované a mŕtve procedúry, reporty s-off-by-one dátumom, chýbajúci most predpis→omamné látky. |
+| Dáta pilotnej kliniky | 20 % | **62** | 2 185 klientov / 2 952 pacientov / 6 665 SOAP záznamov sedí. Ale: **0 riadkov v `drug_interactions`** (Clinical Guardian je inertný), 0 v zákonných registroch (besnota, ochranné lehoty), 0 v `ext_ai_audit_log`; 408 termínov bez akéhokoľvek dôkazu o „dnešných“. |
+| tRPC / backend | 20 % | **86** | 0 nedostupných volaní UI→router, tenant GUC v transakcii (pool-safe), dešifrovanie API kľúčov všade ošetrené. Výhrady: duplikované a mŕtve procedúry, reporty s off-by-one o jeden deň, chýbajúci most predpis→omamné látky. |
 | GUI & lokalizácia | 20 % | **84** | i18n 100 % symetria (6 483/6 483), `/clients` pod `/patients`, KPI počítané zo SQL, prázdne stavy aj chybové panely. Výhrady: TZ dupla-filtr na `/encounters`, Guardian widget sa pri chybe schová, skratky dní v kalendári ignorujú EN. |
 | Auditovateľnosť & nástroje | 10 % | **45** | SQL v zadaní je proti schéme neplatné, verifikačný skript neobsahuje žiadnu kontrolu „dnes“, `check-i18n-symmetry.js` kontroluje len 109 z 6 483 kľúčov a nie je v CI. |
 
-**Stav GUI a dátovej integrácie:** dôležité obrazovky (biela tabuľa, dashboard, karta pacienta, SOAP editor, formulár klienta) sú **napojené na reálne SQL**, nevideli sme žiadne „natvrdo 0“. Hlavné riziko nie je vizuál, ale **kvalita referenčných dát a časové pásmo praktikanta**.
+**Stav GUI a dátovej integrácie:** dôležité obrazovky (whiteboard, dashboard, karta pacienta, SOAP editor, formulár klienta) sú **napojené na reálne SQL**, nevideli sme žiadne „natvrdo 0“. Hlavné riziko nie je vizuál, ale **kvalita referenčných dát a časové pásmo nastavené klinike**.
 
 **Najvyššie riziko:** nasadenie beží na vlastníckej DB role (`openpims`) → všetky RLS politiky sú na takejto konekcii **nečinné** a kontrola (`assertHostedRlsRoleOnce`) sa spustí len pri `HOSTED_BILLING_ENABLED` + `NODE_ENV=production`.
 
@@ -279,10 +279,10 @@ PASS TZ-1   UTC-cast okno ≠ Bratislava okno                              ← p
 ```bash
 # 1) otvoriť egress pre sandbox (alebo spustiť z prostredia, ktoré má povolené 5434)
 psql "postgresql://openpims_app@dev.significa.sk:5434/openvpm_ai" \
-     -f artefakty/data-rls-gui-audit-2026-09-17/live-checks.sql \
+     -f artifacts/data-rls-gui-audit-2026-09-17/live-checks.sql \
      -o live-checks.out
 
-# 2) porovnať s artifactsom
+# 2) porovnať s artefaktom
 grep -E "^ *[0-9]+ " live-checks.out | head -40   # 2185 / 2952 / 6665 ?
 
 # 3) GUI — 4 obrazovky, ktoré rozhodnú
