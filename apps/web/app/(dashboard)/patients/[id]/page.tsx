@@ -117,6 +117,7 @@ import {
   isVitalsOptionalWeightInputValid,
 } from "@/lib/records/vitals-policy";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
+import { formatAppointmentStatus } from "@/lib/scheduling/appointment-status";
 import {
   celsiusToFahrenheit,
   fahrenheitToCelsius,
@@ -3700,7 +3701,7 @@ function AppointmentsTab({
                           "bg-gray-100 text-gray-600",
                       )}
                     >
-                      {visit.status.replace(/_/g, " ")}
+                      {formatAppointmentStatus(visit.status, t)}
                     </span>
                   </td>
                   <td className="max-w-xs truncate px-4 py-3 text-muted-foreground">

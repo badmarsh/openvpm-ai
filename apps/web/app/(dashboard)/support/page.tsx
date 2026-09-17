@@ -61,10 +61,10 @@ export default function SupportPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Monitor className="w-5 h-5" />
-            {t("title", "Vzdialená podpora")}
+            {t("support.title", "Vzdialená podpora")}
           </CardTitle>
           <CardDescription>
-            {t("description", "Zdieľajte obrazovku s technickou podporou pre rýchlejšie riešenie problémov.")}
+            {t("support.description", "Zdieľajte obrazovku s technickou podporou pre rýchlejšie riešenie problémov.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

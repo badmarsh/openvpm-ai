@@ -23,6 +23,7 @@ import { trpc } from "@/lib/trpc";
 import { formatCurrency } from "@/lib/locale/format";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { useI18n } from "@/lib/i18n";
+import { formatAppointmentStatus } from "@/lib/scheduling/appointment-status";
 
 function DashboardChartsChunkLoading() {
   return (
@@ -507,7 +508,7 @@ export default function DashboardPage() {
                           : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {appt.status.replace("_", " ")}
+                  {formatAppointmentStatus(appt.status, t)}
                 </span>
               </div>
             ))

@@ -37,15 +37,18 @@ function canManagePatientsRole(role?: string | null): boolean {
   );
 }
 
-function formatSex(sex: string | null): string {
-  if (!sex) return "\u2014";
-  const labels: Record<string, string> = {
+function formatSex(
+  sex: string | null,
+  t: (key: string, fallback?: string) => string
+): string {
+  if (!sex) return "—";
+  const defaultLabels: Record<string, string> = {
     male: "M",
     female: "F",
     male_neutered: "MN",
     female_spayed: "FS",
   };
-  return labels[sex] ?? sex;
+  return t(`patients.sex_${sex}`, defaultLabels[sex] ?? sex);
 }
 
 export default function PatientsPage() {
@@ -187,7 +190,12 @@ export default function PatientsPage() {
                   </span>
                   <span className="mt-2 block min-w-0 space-y-1 text-sm text-muted-foreground">
                     <span className="block truncate">
-                      {[patient.breed, patient.species]
+                      {[
+                        patient.breed,
+                        patient.species
+                          ? t(`patients.species_${patient.species}`, patient.species)
+                          : "",
+                      ]
                         .filter(Boolean)
                         .join(" · ") || t("patients.profile.unknownBreed", "Breed and species not listed")}
                     </span>
@@ -195,7 +203,7 @@ export default function PatientsPage() {
                       {t("patients.profile.owner", "Owner")}: {ownerName}
                     </span>
                     <span className="block text-xs">
-                      {t("patients.column_sex", "Sex")}: {formatSex(patient.sex)}
+                      {t("patients.column_sex", "Sex")}: {formatSex(patient.sex, t)}
                     </span>
                   </span>
                 </button>
@@ -255,7 +263,7 @@ export default function PatientsPage() {
                           : t("patients.profile.noOwner", "Owner not listed")}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {formatSex(patient.sex)}
+                        {formatSex(patient.sex, t)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge

@@ -30,3 +30,13 @@ export function canTransitionAppointmentStatus(
   if (current === next) return true;
   return allowedAppointmentStatusTransitions[current].includes(next);
 }
+
+export function formatAppointmentStatus(
+  status: string,
+  t: (key: string, fallback?: string) => string
+): string {
+  if (status === "checked_out") {
+    return t("dashboard.upcoming.status.checked_out", t("dashboard.upcoming.status.completed", "Completed"));
+  }
+  return t(`dashboard.upcoming.status.${status}`, status.replace(/_/g, " "));
+}
