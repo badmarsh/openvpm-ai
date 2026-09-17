@@ -873,7 +873,10 @@
       "badgeSchedule": "Rozpis fakturácie",
       "checkingMemberships": "Kontrolujú sa splatné členstvá...",
       "loadError": "Nepodarilo sa načítať splatné preventívne programy. Skúste to znova.",
-      "dueSummary": "{count} naplánovaných faktúr{suffix} na úhradu, {total} pred zdanením",
+      "dueSummary": "{count} naplánovaných faktúr na úhradu, {total} pred zdanením",
+      "dueSummary_one": "1 naplánovaná faktúra na úhradu, {total} pred zdanením",
+      "dueSummary_few": "{count} naplánované faktúry na úhradu, {total} pred zdanením",
+      "dueSummary_other": "{count} naplánovaných faktúr na úhradu, {total} pred zdanením",
       "hint": "OpenVPM generuje faktúry pre každý fakturačný termín; personál následne zaeviduje úhradu pre každú faktúru.",
       "generateInvoices": "Generovať faktúry",
       "tableClient": "Klient",
@@ -881,7 +884,10 @@
       "tablePlan": "Program",
       "tableDue": "Splatnosť",
       "tableAmount": "Suma",
-      "toastGenerated": "{count} wellness faktúr bolo vygenerovaných"
+      "toastGenerated": "{count} wellness faktúr bolo vygenerovaných",
+      "toastGenerated_one": "Vygenerovaná 1 wellness faktúra",
+      "toastGenerated_few": "Vygenerované {count} wellness faktúry",
+      "toastGenerated_other": "Vygenerovaných {count} wellness faktúr"
     },
     "row": {
       "adjPrefix": "Úprava {amount}",
@@ -1294,6 +1300,9 @@
       "loadingWellness": "Načítavam preventívne programy...",
       "noWellnessPlans": "Nie sú nastavené žiadne aktívne preventívne programy.",
       "activePlansCount": "{count} aktívnych programov",
+      "activePlansCount_one": "{count} aktívny program",
+      "activePlansCount_few": "{count} aktívne programy",
+      "activePlansCount_other": "{count} aktívnych programov",
       "wellnessDisclaimer": "Zápis vytvorí plánované faktúry; z uložených kariet sa platby automaticky nestŕhajú.",
       "selectPlan": "Vyberte program",
       "clientAccount": "Účet klienta",
@@ -2147,7 +2156,10 @@
       "title": "Sklad",
       "subtitle": "Produkty, skladové zásoby a dodávatelia",
       "searchPlaceholder": "Hľadať podľa názvu alebo kódu SKU...",
-      "productCount": "{count} produkt{suffix}",
+      "productCount": "{count} produktov",
+      "plural_one": "{count} produkt",
+      "plural_few": "{count} produkty",
+      "plural_other": "{count} produktov",
       "btnAddProduct": "Pridať produkt",
       "btnImportWholesaler": "Import dodacieho listu",
       "alertAttention": "Vyžaduje pozornosť",
@@ -2192,7 +2204,10 @@
       "addFirstProduct": "Pridať prvý produkt"
     },
     "suppliersTab": {
-      "supplierCount": "{count} dodávateľ{suffix}",
+      "supplierCount": "{count} dodávateľov",
+      "plural_one": "{count} dodávateľ",
+      "plural_few": "{count} dodávatelia",
+      "plural_other": "{count} dodávateľov",
       "btnAddSupplier": "Pridať dodávateľa",
       "loadError": "Nepodarilo sa načítať dodávateľov skladu. Skúste to znova.",
       "loading": "Načítava sa...",
@@ -4604,7 +4619,13 @@
       "usageThisMonth": "Tento mesiac: {sms} z {smsIncluded} zahrnutých SMS · {ai} z {aiIncluded} zahrnutých AI akcií",
       "payoutsEnabled": "Povolené",
       "payoutsPending": "Čaká sa",
-      "payoutsNa": "N/A"
+      "payoutsNa": "N/A",
+      "trialDaysLeft_one": "Zostáva 1 deň skúšobnej verzie",
+      "trialDaysLeft_few": "Zostávajú {count} dni skúšobnej verzie",
+      "trialDaysLeft_other": "Zostáva {count} dní skúšobnej verzie",
+      "requirementsDue_one": "1 nevyriešená položka",
+      "requirementsDue_few": "{count} nevyriešené položky",
+      "requirementsDue_other": "{count} nevyriešených položiek"
     },
     "staff": {
       "updated": "Člen tímu aktualizovaný",

@@ -873,7 +873,10 @@
       "badgeSchedule": "Invoice schedule",
       "checkingMemberships": "Checking due memberships...",
       "loadError": "Unable to load due wellness memberships. Please retry.",
-      "dueSummary": "{count} scheduled invoice{suffix} due, {total} before tax",
+      "dueSummary": "{count} scheduled invoices due, {total} before tax",
+      "dueSummary_one": "{count} scheduled invoice due, {total} before tax",
+      "dueSummary_few": "{count} scheduled invoices due, {total} before tax",
+      "dueSummary_other": "{count} scheduled invoices due, {total} before tax",
       "hint": "OpenVPM generates invoices for each billing date; staff still collect payment on each invoice.",
       "generateInvoices": "Generate invoices",
       "tableClient": "Client",
@@ -881,7 +884,10 @@
       "tablePlan": "Plan",
       "tableDue": "Due",
       "tableAmount": "Amount",
-      "toastGenerated": "{count} wellness {label} generated"
+      "toastGenerated": "{count} wellness invoices generated",
+      "toastGenerated_one": "1 wellness invoice generated",
+      "toastGenerated_few": "{count} wellness invoices generated",
+      "toastGenerated_other": "{count} wellness invoices generated"
     },
     "row": {
       "adjPrefix": "Adj {amount}",
@@ -1294,6 +1300,9 @@
       "loadingWellness": "Loading plans...",
       "noWellnessPlans": "No active wellness plans configured.",
       "activePlansCount": "{count} active plans",
+      "activePlansCount_one": "{count} active plan",
+      "activePlansCount_few": "{count} active plans",
+      "activePlansCount_other": "{count} active plans",
       "wellnessDisclaimer": "Enrollment creates scheduled invoices; saved cards are not auto-charged.",
       "selectPlan": "Select plan",
       "clientAccount": "Client account",
@@ -2147,7 +2156,10 @@
       "title": "Inventory",
       "subtitle": "Products, stock management, and suppliers",
       "searchPlaceholder": "Search by name or SKU...",
-      "productCount": "{count} product{suffix}",
+      "productCount": "{count} products",
+      "plural_one": "{count} product",
+      "plural_few": "{count} products",
+      "plural_other": "{count} products",
       "btnAddProduct": "Add Product",
       "btnImportWholesaler": "Import Delivery Note",
       "alertAttention": "Needs attention",
@@ -2192,7 +2204,10 @@
       "addFirstProduct": "Add first product"
     },
     "suppliersTab": {
-      "supplierCount": "{count} supplier{suffix}",
+      "supplierCount": "{count} suppliers",
+      "plural_one": "{count} supplier",
+      "plural_few": "{count} suppliers",
+      "plural_other": "{count} suppliers",
       "btnAddSupplier": "Add Supplier",
       "loadError": "Unable to load inventory suppliers. Please retry.",
       "loading": "Loading...",
@@ -4604,7 +4619,13 @@
       "usageThisMonth": "This month: {sms} of {smsIncluded} included texts · {ai} of {aiIncluded} included AI actions",
       "payoutsEnabled": "Enabled",
       "payoutsPending": "Pending",
-      "payoutsNa": "N/A"
+      "payoutsNa": "N/A",
+      "trialDaysLeft_one": "{count} trial day left",
+      "trialDaysLeft_few": "{count} trial days left",
+      "trialDaysLeft_other": "{count} trial days left",
+      "requirementsDue_one": "{count} item due",
+      "requirementsDue_few": "{count} items due",
+      "requirementsDue_other": "{count} items due"
     },
     "staff": {
       "updated": "Staff member updated",

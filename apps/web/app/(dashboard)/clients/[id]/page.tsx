@@ -708,9 +708,21 @@ function WellnessEnrollmentPanel({
                     "clients.detail.noWellnessPlans",
                     "No active wellness plans configured.",
                   )
+                : activePlans.length === 1
+                ? t(
+                    "clients.detail.activePlansCount_one",
+                    "1 active plan",
+                    { count: activePlans.length },
+                  )
+                : activePlans.length >= 2 && activePlans.length <= 4
+                ? t(
+                    "clients.detail.activePlansCount_few",
+                    "{count} active plans",
+                    { count: activePlans.length },
+                  )
                 : t(
-                    "clients.detail.activePlansCount",
-                    `${activePlans.length} active plan${activePlans.length === 1 ? "" : "s"}`,
+                    "clients.detail.activePlansCount_other",
+                    "{count} active plans",
                     { count: activePlans.length },
                   )}
             </p>

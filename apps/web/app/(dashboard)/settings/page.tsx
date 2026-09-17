@@ -1744,7 +1744,23 @@ function BillingTab() {
                   variant={data.billingStatus === "active" ? "success" : "info"}
                 >
                   {data.billingStatus === "trialing"
-                    ? `${daysLeft} trial day${daysLeft === 1 ? "" : "s"} left`
+                    ? daysLeft === 1
+                      ? t(
+                          "settings.billing.trialDaysLeft_one",
+                          "1 trial day left",
+                          { count: daysLeft }
+                        )
+                      : daysLeft >= 2 && daysLeft <= 4
+                      ? t(
+                          "settings.billing.trialDaysLeft_few",
+                          "{count} trial days left",
+                          { count: daysLeft }
+                        )
+                      : t(
+                          "settings.billing.trialDaysLeft_other",
+                          "{count} trial days left",
+                          { count: daysLeft }
+                        )
                     : data.billingStatus.replace("_", " ")}
                 </Badge>
               </div>
@@ -2088,8 +2104,24 @@ function ClientPaymentProcessingSection({
             <div className="sm:col-span-3">
               <p className="text-muted-foreground">{t("settings.billing.stripeRequirements", "Stripe requirements")}</p>
               <p className="font-medium">
-                {data.requirementsCurrentlyDue.length} item
-                {data.requirementsCurrentlyDue.length === 1 ? "" : "s"} due
+                {data.requirementsCurrentlyDue.length === 1
+                  ? t(
+                      "settings.billing.requirementsDue_one",
+                      "1 item due",
+                      { count: data.requirementsCurrentlyDue.length }
+                    )
+                  : data.requirementsCurrentlyDue.length >= 2 &&
+                    data.requirementsCurrentlyDue.length <= 4
+                  ? t(
+                      "settings.billing.requirementsDue_few",
+                      "{count} items due",
+                      { count: data.requirementsCurrentlyDue.length }
+                    )
+                  : t(
+                      "settings.billing.requirementsDue_other",
+                      "{count} items due",
+                      { count: data.requirementsCurrentlyDue.length }
+                    )}
               </p>
             </div>
           ) : null}

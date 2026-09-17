@@ -1197,16 +1197,18 @@ export default function InventoryPage() {
             </select>
             {productsQuery.data && (
               <p className="text-sm text-muted-foreground">
-                {t(
-                  "inventory.page.productCount",
-                  `${productsQuery.data.total} product${
-                    productsQuery.data.total !== 1 ? "s" : ""
-                  }`,
-                  {
-                    count: productsQuery.data.total,
-                    suffix: productsQuery.data.total !== 1 ? "s" : "",
-                  }
-                )}
+                {productsQuery.data.total === 1
+                  ? t("inventory.page.plural_one", "{count} product", {
+                      count: productsQuery.data.total,
+                    })
+                  : productsQuery.data.total >= 2 &&
+                    productsQuery.data.total <= 4
+                  ? t("inventory.page.plural_few", "{count} products", {
+                      count: productsQuery.data.total,
+                    })
+                  : t("inventory.page.plural_other", "{count} products", {
+                      count: productsQuery.data.total,
+                    })}
               </p>
             )}
             {canManageInventory && (
@@ -1568,16 +1570,18 @@ export default function InventoryPage() {
           <div className="mt-4 flex items-center justify-between">
             {suppliersQuery.data && (
               <p className="text-sm text-muted-foreground">
-                {t(
-                  "inventory.suppliersTab.supplierCount",
-                  `${suppliersQuery.data.length} supplier${
-                    suppliersQuery.data.length !== 1 ? "s" : ""
-                  }`,
-                  {
-                    count: suppliersQuery.data.length,
-                    suffix: suppliersQuery.data.length !== 1 ? "s" : "",
-                  }
-                )}
+                {suppliersQuery.data.length === 1
+                  ? t("inventory.suppliersTab.plural_one", "{count} supplier", {
+                      count: suppliersQuery.data.length,
+                    })
+                  : suppliersQuery.data.length >= 2 &&
+                    suppliersQuery.data.length <= 4
+                  ? t("inventory.suppliersTab.plural_few", "{count} suppliers", {
+                      count: suppliersQuery.data.length,
+                    })
+                  : t("inventory.suppliersTab.plural_other", "{count} suppliers", {
+                      count: suppliersQuery.data.length,
+                    })}
               </p>
             )}
             {canManageInventory && (

@@ -1008,14 +1008,25 @@ function WellnessBillingPanel({
 
   const generateInvoices = trpc.wellness.generateDueInvoices.useMutation({
     onSuccess: (result) => {
-      const label = result.generated === 1 ? "invoice" : "invoices";
-      toast.success(
-        t(
-          "billing.wellness.toastGenerated",
-          `${result.generated} wellness ${label} generated`,
-          { count: result.generated, label }
-        )
-      );
+      const message =
+        result.generated === 1
+          ? t(
+              "billing.wellness.toastGenerated_one",
+              "1 wellness invoice generated",
+              { count: result.generated }
+            )
+          : result.generated >= 2 && result.generated <= 4
+          ? t(
+              "billing.wellness.toastGenerated_few",
+              `${result.generated} wellness invoices generated`,
+              { count: result.generated }
+            )
+          : t(
+              "billing.wellness.toastGenerated_other",
+              `${result.generated} wellness invoices generated`,
+              { count: result.generated }
+            );
+      toast.success(message);
       utils.wellness.listDue.invalidate();
       utils.billing.listInvoices.invalidate();
     },
@@ -1067,14 +1078,29 @@ function WellnessBillingPanel({
                 ? dueQuery.error.message
                 : dueMembershipsMissing
                 ? t("billing.wellness.loadError", "Unable to load due wellness memberships. Please retry.")
-                : t(
-                    "billing.wellness.dueSummary",
-                    `${dueMemberships.length} scheduled invoice${
-                      dueMemberships.length === 1 ? "" : "s"
-                    } due, ${formatCurrency(totalDue)} before tax`,
+                : dueMemberships.length === 1
+                ? t(
+                    "billing.wellness.dueSummary_one",
+                    `1 scheduled invoice due, ${formatCurrency(totalDue)} before tax`,
                     {
                       count: dueMemberships.length,
-                      suffix: dueMemberships.length === 1 ? "" : "s",
+                      total: formatCurrency(totalDue),
+                    }
+                  )
+                : dueMemberships.length >= 2 && dueMemberships.length <= 4
+                ? t(
+                    "billing.wellness.dueSummary_few",
+                    `${dueMemberships.length} scheduled invoices due, ${formatCurrency(totalDue)} before tax`,
+                    {
+                      count: dueMemberships.length,
+                      total: formatCurrency(totalDue),
+                    }
+                  )
+                : t(
+                    "billing.wellness.dueSummary_other",
+                    `${dueMemberships.length} scheduled invoices due, ${formatCurrency(totalDue)} before tax`,
+                    {
+                      count: dueMemberships.length,
                       total: formatCurrency(totalDue),
                     }
                   )}
