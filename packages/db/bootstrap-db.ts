@@ -168,8 +168,15 @@ async function ensureIndexes(client: postgres.Sql): Promise<number> {
       /^CREATE\s+(UNIQUE\s+)?INDEX\s/i,
       "CREATE $1INDEX IF NOT EXISTS ",
     );
-    await client.unsafe(withIf);
-    created++;
+    try {
+      await client.unsafe(withIf);
+      created++;
+    } catch (err: any) {
+      // If the target table does not exist yet during pre-creation, skip it.
+      // drizzle-kit push will create the table and the repair pass will ensure the index.
+      if (err?.code === "42P01") continue;
+      throw err;
+    }
   }
   log(`indexes ensured (${created} index statements applied IF NOT EXISTS)`);
   return created;
@@ -408,6 +415,13 @@ async function main(): Promise<void> {
   });
 
   try {
+    // Drop triggers on columns whose types may be altered by drizzle-kit push
+    // (e.g. invoice_items.quantity -> numeric(13, 3)). The trigger will be recreated
+    // during step 3 (applyObjectLayer).
+    await client.unsafe(
+      'DROP TRIGGER IF EXISTS "invoice_items_validate_dispense_charge" ON "invoice_items";',
+    );
+
     const push1 = pushSchema();
     if (!push1.ok) {
       // Fresh database: drizzle aborts before the backing unique indexes for

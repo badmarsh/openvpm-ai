@@ -42,6 +42,25 @@ services:
       mc mb --ignore-existing local/openpims;
       "
 
+  db-init:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      target: builder
+    restart: "no"
+    environment:
+      DATABASE_URL: "postgresql://openpims:openpims@postgres:5432/openpims"
+      OPENPIMS_APP_DB_PASSWORD: "local-openpims-app"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pnpm --filter @openpims/db db:bootstrap &&
+        pnpm --filter @openpims/db db:rls &&
+        pnpm --filter @openpims/db db:seed:sk
+      "
+
   web:
     build:
       context: ..
@@ -62,6 +81,8 @@ services:
       postgres:
         condition: service_healthy
       minio-bootstrap:
+        condition: service_completed_successfully
+      db-init:
         condition: service_completed_successfully
 
 volumes:

@@ -61,9 +61,11 @@ services:
         condition: service_healthy
     command: >
       sh -c "
-        echo '==> [1/2] Drizzle database bootstrap & trigger layer...' &&
+        echo '==> [1/3] Drizzle database bootstrap & trigger layer...' &&
         pnpm --filter @openpims/db db:bootstrap &&
-        echo '==> [2/2] Seeding Slovak clinical demo data...' &&
+        echo '==> [2/3] Applying PostgreSQL RLS policies & app roles...' &&
+        pnpm --filter @openpims/db db:rls &&
+        echo '==> [3/3] Seeding Slovak clinical demo data...' &&
         pnpm --filter @openpims/db db:seed:sk &&
         echo '==> Database init completed successfully.'
       "

@@ -31,7 +31,9 @@ try {
   // credential is committed: the password comes from OPENPIMS_APP_DB_PASSWORD.
   const [exists] =
     await sql`select 1 from pg_roles where rolname = 'openpims_app'`;
-  const appPw = nonBlankEnv("OPENPIMS_APP_DB_PASSWORD");
+  const appPw =
+    nonBlankEnv("OPENPIMS_APP_DB_PASSWORD") ||
+    (process.env.NODE_ENV !== "production" ? "local-openpims-app" : undefined);
   if (!exists) {
     if (!appPw) {
       console.error(
