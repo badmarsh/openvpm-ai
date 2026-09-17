@@ -19,6 +19,7 @@ import {
   extMarketingPostopResponses,
   extMarketingStaffTasks,
   extMarketingOperativeScripts,
+  extMarketingMediaAssets,
   extMarketingMediaConsents,
   extMarketingWellnessRedemptions,
   extMarketingReviews,
@@ -157,6 +158,9 @@ async function seedMarketingDemo() {
 
   // 4. Idempotentné vyčistenie marketingových demo dát pre čistý stav
   console.log("🧹 Čistím existujúce demo záznamy pre kliniku...");
+  // Assets first: canonical-seed rows reference consents, and both seeds run
+  // in sequence (demo, then canonical with existing* guards that re-fill).
+  await db.delete(extMarketingMediaAssets).where(eq(extMarketingMediaAssets.practiceId, practiceId));
   await db.delete(extMarketingWellnessRedemptions).where(eq(extMarketingWellnessRedemptions.practiceId, practiceId));
   await db.delete(extMarketingStaffTasks).where(eq(extMarketingStaffTasks.practiceId, practiceId));
   await db.delete(extMarketingPostopResponses).where(eq(extMarketingPostopResponses.practiceId, practiceId));
