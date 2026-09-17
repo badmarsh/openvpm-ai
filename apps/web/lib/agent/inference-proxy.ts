@@ -24,7 +24,13 @@ export function inferenceProxyBaseUrl(): string | undefined {
 
 /** Whether model resolution should go through the OpenAI-compatible proxy. */
 export function hasInferenceProxyConfiguration(): boolean {
-  return Boolean(inferenceProxyBaseUrl());
+  const url = inferenceProxyBaseUrl();
+  if (!url) return false;
+  // If proxy is an external endpoint like openrouter, an API key is mandatory
+  if (url.includes("openrouter.ai") && !nonBlank(process.env.AI_API_KEY)) {
+    return false;
+  }
+  return true;
 }
 
 /** Drop provider prefixes so `google/gemini-x` and `gemini-x` both resolve. */

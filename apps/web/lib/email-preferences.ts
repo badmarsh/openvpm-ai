@@ -69,7 +69,11 @@ function validSecret(value: unknown): string | null {
 }
 
 function identitySecret(explicit?: string): string | null {
-  return validSecret(explicit ?? process.env.EMAIL_PREFERENCE_IDENTITY_SECRET);
+  const env = process.env.EMAIL_PREFERENCE_IDENTITY_SECRET;
+  if (env !== undefined && env !== "") {
+    return validSecret(explicit ?? env);
+  }
+  return validSecret(explicit ?? process.env.NEXTAUTH_SECRET);
 }
 
 function previousIdentitySecret(explicit?: string): string | null {
@@ -79,7 +83,11 @@ function previousIdentitySecret(explicit?: string): string | null {
 }
 
 function signingSecret(explicit?: string): string | null {
-  return validSecret(explicit ?? process.env.EMAIL_PREFERENCE_SIGNING_SECRET);
+  const env = process.env.EMAIL_PREFERENCE_SIGNING_SECRET;
+  if (env !== undefined && env !== "") {
+    return validSecret(explicit ?? env);
+  }
+  return validSecret(explicit ?? process.env.NEXTAUTH_SECRET);
 }
 
 function previousSigningSecretValues(

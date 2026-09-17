@@ -22,7 +22,10 @@ import {
 import { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
 import { billingEnforced } from "@/lib/billing/plans";
 import { readHostedAiAccess } from "@/lib/billing/ai-access";
-import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
+import {
+  resolvePracticeLanguageModel,
+  getPracticeAiConfig,
+} from "@/lib/ai/ai-config-resolver";
 
 export { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
 
@@ -65,8 +68,17 @@ export const agentRouter = createRouter({
     });
     if (!access) throw practiceNotFound();
 
+    const practiceConfig = await getPracticeAiConfig(ctx.db, ctx.practiceId);
+    const hasPracticeAi = Boolean(
+      practiceConfig &&
+        practiceConfig.isActive &&
+        (practiceConfig.geminiIsActive ||
+          practiceConfig.openaiIsActive ||
+          practiceConfig.alibabaIsActive),
+    );
+
     return {
-      configured: isAgentConfigured(),
+      configured: hasPracticeAi || isAgentConfigured(),
       // Hosted users get a friendly "unavailable" message when unconfigured;
       // self-host admins get env-var instructions they can act on.
       hosted,
@@ -111,23 +123,25 @@ export const agentRouter = createRouter({
         );
       }
       try {
-        let modelOverride: string | undefined = undefined;
-        if (input.deepThinking) {
-          try {
-            const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "deepThinking");
-            if (resolved?.modelId) {
-              modelOverride = resolved.modelId;
-            }
-          } catch {
-            // fallback
-          }
+        let practiceLanguageModel: any = undefined;
+        try {
+          practiceLanguageModel = await resolvePracticeLanguageModel(
+            ctx.db,
+            ctx.practiceId,
+            input.deepThinking ? "deepThinking" : "assistant",
+          );
+        } catch (err) {
+          console.warn(
+            "[agent.run] Practice language model resolution fallback:",
+            err instanceof Error ? err.message : err,
+          );
         }
 
         return await runAgent({
           instruction: input.instruction,
           allowWrites: input.allowWrites,
           history: input.history,
-          model: modelOverride,
+          model: practiceLanguageModel,
           context: {
             db: ctx.db,
             practiceId: ctx.practiceId,

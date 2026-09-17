@@ -413,12 +413,19 @@ export async function runAgent(opts: {
   context: AgentToolContext;
   allowWrites?: boolean;
   apiKeyScopes?: string[];
-  model?: string;
+  model?: string | LanguageModel;
   /** Prior conversation turns, oldest first, for multi-turn chat context. */
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 }): Promise<AgentRunResult> {
-  const modelId = activeModelId(opts.model);
-  if (!hasProviderConfiguration(modelId)) throw new AgentNotConfiguredError();
+  const isCustomLanguageModel =
+    typeof opts.model === "object" && opts.model !== null;
+  const modelInstance: LanguageModel = isCustomLanguageModel
+    ? (opts.model as LanguageModel)
+    : (() => {
+        const modelId = activeModelId(opts.model as string | undefined);
+        if (!hasProviderConfiguration(modelId)) throw new AgentNotConfiguredError();
+        return resolveModel(modelId);
+      })();
   if (
     !(await lockPracticeForExternalSideEffects(
       opts.context.db,
@@ -466,7 +473,7 @@ export async function runAgent(opts: {
   let stopReason: string | null = null;
   try {
     result = await generateText({
-      model: resolveModel(modelId),
+      model: modelInstance,
       system: SYSTEM_PROMPT,
       temperature: 0,
       ...messagesInput,
@@ -523,7 +530,7 @@ export async function runAgent(opts: {
     );
     try {
       const fallbackResult = await generateText({
-        model: resolveModel(modelId),
+        model: modelInstance,
         system: directSystemPrompt,
         temperature: 0,
         ...messagesInput,

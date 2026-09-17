@@ -75,16 +75,17 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: "https://vet.dev.significa.sk"
       NEXT_PUBLIC_APP_URL: "https://vet.dev.significa.sk"
+      EMAIL_PREFERENCE_IDENTITY_SECRET: ${EMAIL_PREFERENCE_IDENTITY_SECRET:-${NEXTAUTH_SECRET}}
+      EMAIL_PREFERENCE_SIGNING_SECRET: ${EMAIL_PREFERENCE_SIGNING_SECRET:-${NEXTAUTH_SECRET}}
       FILE_STORAGE_PROVIDER: s3
       S3_ENDPOINT: "http://minio:9000"
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: "us-east-1"
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      AI_BASE_URL: "https://openrouter.ai/api/v1"
-      AI_API_KEY: ${OPENROUTER_API_KEY}
-      AI_MODEL: "google/gemini-2.5-flash"
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-${OPENROUTER_API_KEY:-}}
+      AI_MODEL: ${AI_MODEL:-google/gemini-2.5-flash}
       NEXT_TELEMETRY_DISABLED: "1"
       PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-martin.sykora@vetsykora.sk,admin@vetsykora.sk}
     networks:
