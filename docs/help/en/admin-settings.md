@@ -19,6 +19,7 @@ The settings page is organised into the following sections:
 | **Templates** | SOAP note, discharge, prescription, and email templates |
 | **Reminders** | Vaccine recall rules, care reminder timing |
 | **e-Kasa** | Fiscal cash register hardware, DIČ, IČ DPH, connection test |
+| **AI Settings** | Inference providers (Vertex, OpenRouter, Alibaba), ModelPicker, veterinary mappings (`/settings/ai`) |
 | **Brand Kit** | Practice logo (SVG/PNG), primary/secondary colors, document headers |
 | **Data import** | Migrate records from previous system (`/settings/import-v2`) |
 | **Data export & backup** | CSV exports, database JSON backup |
@@ -78,12 +79,31 @@ step-by-step migration playbook.
 When you are ready for real work, click **Remove sample data** under
 Settings → Data. This removes all demo records. The action is irreversible.
 
-### Practice deletion
+### Delete practice
 
-Practice deletion is permanent and irreversible. Contact
-[jurkemik@significa.sk](mailto:jurkemik@significa.sk) for assistance.
+Deleting a practice permanently is irreversible. Contact
+[jurkemik@significa.sk](mailto:jurkemik@significa.sk).
 
 ---
 
-Need help? Email [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
+## 4. AI Settings & Model Configuration (`/settings/ai`)
+
+In **Settings → AI Settings** (or directly at `/settings/ai`), you configure the clinic's artificial intelligence models and providers:
+
+- **Inference Providers:**
+  - **Google Cloud Vertex AI:** Enterprise-grade security with Zero Data Retention.
+  - **OpenRouter API:** Flexible access to global state-of-the-art models.
+  - **Alibaba Cloud / AliProxy:** High-resolution vision and multimodal analysis.
+  - **Custom OpenAI-compatible endpoint:** For on-premise offline inference within the clinic.
+- **ModelPicker (Dynamic Search):** Interactive combobox with live API model fetching and connection/latency testing in milliseconds.
+- **Veterinary Feature Mapping:**
+  - *Clinical Copilot & SOAP:* Gemini 3.8 Flash for fast, accurate clinical summaries.
+  - *Imaging & X-ray Analysis:* Multimodal vision models (Gemini 3.8 Multimodal, Wan 3.0).
+  - *Voice SOAP:* Dedicated ASR models for veterinary dictation.
+  - *Lab Parser:* Automated parameter extraction from analyzer PDF outputs.
+- **Key Encryption:** All credentials are encrypted at rest with AES-256-GCM in PostgreSQL (`ext_ai_settings`) and masked in the UI.
+
+---
+
+Need help? Contact [jurkemik@significa.sk](mailto:jurkemik@significa.sk) and a real
 person will answer.

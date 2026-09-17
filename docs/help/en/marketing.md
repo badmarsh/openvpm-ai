@@ -51,9 +51,9 @@ The system automatically classifies your pet owner database into 12 real-time CR
 
 ---
 
-## 3. Automations & Suppression Center (`/marketing/automations`)
+## 3. Automations & Suppression Center (`/automations` & `/marketing/automations`)
 
-The automations module is organized into 6 specialized tabs: **Rules** (`rules`), **Journeys** (`journeys`), **Segments** (`segments`), **Channels** (`channels`), **Event Bus** (`events`), and **Suppression** (`suppression`).
+The unified Automations Hub manages both client journeys and clinical safety monitoring. Client automations include 6 specialized tabs: **Rules** (`rules`), **Journeys** (`journeys`), **Segments** (`segments`), **Channels** (`channels`), **Event Bus** (`events`), and **Suppression** (`suppression`). Clinical automations host **Clinical Guardian** and **Deep Thinking Concilium**.
 
 ### Five built-in customer journeys:
 

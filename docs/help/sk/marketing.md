@@ -51,9 +51,9 @@ Systém automaticky klasifikuje databázu do 12 vstavaných CRM segmentov v reá
 
 ---
 
-## 3. Automatizácie & Centrum potlačení (`/marketing/automations`)
+## 3. Automatizácie & Centrum potlačení (`/automations` a `/marketing/automations`)
 
-Modul automatizácií je rozdelený do 6 špecializovaných záložiek: **Pravidlá** (`rules`), **Cesty** (`journeys`), **Segmenty** (`segments`), **Kanály** (`channels`), **Event Bus** (`events`) a **Potlačenia** (`suppression`).
+Centrum automatizácií zjednocuje klientske cesty aj klinický bezpečnostný dohľad. V klientskej sekcii je k dispozícii 6 špecializovaných záložiek: **Pravidlá** (`rules`), **Cesty** (`journeys`), **Segmenty** (`segments`), **Kanály** (`channels`), **Event Bus** (`events`) a **Potlačenia** (`suppression`). V klinickej sekcii nájdete **Clinical Guardian** a **Deep Thinking Concilium**.
 
 ### Päť vstavaných zákazníckych ciest:
 

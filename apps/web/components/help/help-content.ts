@@ -1003,9 +1003,16 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         description:
           "Všetky výstupy a odporúčania AI asistenta vyžadujú pred uložením do záznamu autorizáciu veterinárnym lekárom.",
       },
+      {
+        icon: "🧠",
+        title: "Deep Thinking medicínske konzílium",
+        description:
+          "Pre zložité diferenciálno-diagnostické prípady aktivujte režim hĺbkového uvažovania a viacmodelového konzília, ktorý podrobne zanalyzuje protichodné klinické príznaky.",
+      },
     ],
     tips: [
       "AI asistent podlieha prísnym etickým hraniciam: nikdy sám nevydáva lieky a nemení dáta bez potvrdenia personálom.",
+      "Viacmodelové konzílium Deep Thinking využíva pokročilé modely pre hĺbkovú syntézu zložitých onkologických, endokrinologických a neurologických prípadov.",
       "Využite navrhované otázky (prompt buttons) na rýchly štart klinickej analýzy.",
       "Všetky akcie a odporúčania asistenta sú auditované s časovou pečiatkou pre forenznú bezpečnosť.",
     ],
@@ -1625,6 +1632,51 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
     },
   },
 
+  "/automations": {
+    title: "Centrum automatizácií & Clinical Guardian",
+    intro:
+      "Integrované riadiace centrum klinických a klientskych automatizácií OpenVPM AI. Spája inteligentný bezpečnostný dohľad nad liečivami (Clinical Guardian) a viacmodelové konzílium (Deep Thinking) s klientskymi cestami (Customer Journeys), recall pripomienkami a marketingovými kampaňami.",
+    steps: [
+      {
+        icon: "🛡️",
+        title: "Clinical Guardian dohľad",
+        description:
+          "Sledujte v reálnom čase bezpečnostné upozornenia: detekciu liekových interakcií, nesprávneho dávkovania vzhľadom na hmotnosť/druh a predpis omamných látok (OPL).",
+      },
+      {
+        icon: "🧑‍⚕️",
+        title: "Deep Thinking medicínske konzílium",
+        description:
+          "Využite hĺbkovú syntézu viacerých modelov pre zložité diferenciálne diagnózy, nejednoznačné symptómy a komplexné geriatrické prípady.",
+      },
+      {
+        icon: "🐾",
+        title: "Klientske cesty podľa životného cyklu",
+        description:
+          "Aktivujte automatizované cesty pre šteniatka/mačiatka, dospelé zvieratá, geriatrických pacientov a chronikov s automatickými SMS a e-mail pripomienkami.",
+      },
+      {
+        icon: "🛑",
+        title: "Sympathy Gate & Etická ochrana",
+        description:
+          "Systém pri úhyne pacienta automaticky a okamžite potláča všetku marketingovú komunikáciu a pripomienky, čím chráni emócie majiteľa.",
+      },
+    ],
+    tips: [
+      "Clinical Guardian nikdy neupravuje záznam samostatne — každé odporúčanie musí veterinárny lekár autorizovať podľa Zákona 39/2007 Z. z.",
+      "Záložka 'Klinické automatizácie' vám umožní nastaviť citlivosť výstrah pre interakcie a dávkovanie podľa potrieb vašej praxe.",
+      "Odosielanie správ prebieha v stanovených denných hodinách (Quiet Hours), aby klienti neboli rušení počas noci.",
+    ],
+    practicalExample: {
+      title: "Detekcia kontraindikácie NSAID a kortikosteroidov",
+      badge: "Klinická bezpečnosť",
+      scenario:
+        "Lekár pri akútnej bolesti pohybového aparátu zadáva do receptu meloxikam u psa, ktorý má v karte z predchádzajúceho dňa zaznamenané podanie dexametazónu.",
+      solution:
+        "Clinical Guardian okamžite zobrazí výrazné červené varovanie pred rizikom gastrointestinálnej ulcerácie. Lekár upozornenie zhodnotí, zmení medikáciu na bezpečnú alternatívu a v karte potvrdí revíziu.",
+    },
+  },
+
   "/marketing/consents": {
     title: "Skripty recepcie a informované súhlasy",
     intro:
@@ -2142,6 +2194,57 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
     },
   },
 
+  "/settings/ai": {
+    title: "AI Nastavenia & Model Konfigurácia",
+    intro:
+      "Správa a prispôsobenie veterinárnych AI modelov, inferenčných providerov a mapovania klinických funkcií. Umožňuje pripojenie Google Cloud Vertex AI, OpenRouter API, Alibaba Cloud / AliProxy alebo vlastného lokálneho OpenAI-kompatibilného servera s automatickým testovaním latencie a overením konektivity.",
+    steps: [
+      {
+        icon: "🔌",
+        title: "Konfigurácia AI Providerov",
+        description:
+          "Zvoľte primárneho poskytovateľa modelov (Google Vertex AI, OpenRouter alebo Alibaba). Zadajte API kľúč, ktorý sa na serveri okamžite uloží šifrovaný pomocou AES-256-GCM.",
+      },
+      {
+        icon: "🔍",
+        title: "Vyhľadávanie modelov (ModelPicker)",
+        description:
+          "Použite interaktívny combobox s vyhľadávaním na dynamické načítanie a výber najvhodnejších modelov pre konkrétne veterinárne domény.",
+      },
+      {
+        icon: "🧠",
+        title: "Mapovanie klinických funkcií",
+        description:
+          "Priraďte špecifické modely k úlohám: Gemini 3.8 Flash pre klinický Copilot, SOAP syntézu a lab parser, Alibaba Wan 3.0 pre medicínske vizualizácie a multimodálny RTG rozbor.",
+      },
+      {
+        icon: "⚡",
+        title: "Test spojenia a odozvy",
+        description:
+          "Tlačidlom 'Otestovať spojenie' overíte dostupnosť providera, latenciu v milisekundách a správnosť autorizačného kľúča bez nutnosti opustiť rozhranie.",
+      },
+      {
+        icon: "🛡️",
+        title: "Kryptografická ochrana kľúčov",
+        description:
+          "API kľúče sa nikdy nezobrazujú v čitateľnom texte a sú chránené proti nesúladu tajomstiev po obnove databázy.",
+      },
+    ],
+    tips: [
+      "Pre klinickú analýzu a rýchle SOAP záznamy odporúčame model Gemini 3.8 Flash kvôli nízkej latencii a vysokej presnosti v slovenskej veterinárnej terminológii.",
+      "V prípade výpadku cloudového internetu systém dokáže prepnúť na lokálnu inferenciu nastavením vlastného OpenAI-kompatibilného endpointu.",
+      "Test spojenia poskytne okamžitú spätnú väzbu vrátane zoznamu povolených modelov registrovaných na vašom API účte.",
+    ],
+    practicalExample: {
+      title: "Nastavenie nového modelu pre analýzu RTG a sono snímok",
+      badge: "Klinická AI",
+      scenario:
+        "Klinika chce využívať pokročilý multimodálny model pre diferenciálnu diagnostiku RTG snímok a laboratórnych kriviek s vysokým rozlíšením.",
+      solution:
+        "V /settings/ai prejdite na sekciu 'Mapovanie funkcií', pri položke 'Analýza RTG / Zobrazovacie metódy' otvorte ModelPicker, vyhľadajte multimodálny model (napr. Gemini 3.8 Multimodal alebo Wan 3.0) a uložte zmeny. Klinický modul začne snímky analyzovať novou konfiguráciou.",
+    },
+  },
+
   "/settings/ekasa": {
     title: "Nastavenie e-Kasa tlačiarne & pokladnice",
     intro:
@@ -2503,6 +2606,12 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
     { name: "Recenzie", href: "/marketing/reviews" },
     { name: "Pripomienky", href: "/care-reminders" },
   ],
+  "/automations": [
+    { name: "Klinický AI Asistent", href: "/agent" },
+    { name: "Klinické záznamy", href: "/records" },
+    { name: "Správy", href: "/marketing/messages" },
+    { name: "AI Nastavenia", href: "/settings/ai" },
+  ],
   "/marketing/consents": [
     { name: "Klienti", href: "/clients" },
     { name: "Nastavenia", href: "/settings" },
@@ -2564,8 +2673,15 @@ const RELATED_MODULES: Record<string, RelatedModule[]> = {
   ],
   "/settings": [
     { name: "e-Kasa nastavenie", href: "/settings/ekasa" },
+    { name: "AI nastavenia", href: "/settings/ai" },
     { name: "Import dát", href: "/settings/import-v2" },
     { name: "Fakturácia", href: "/billing" },
+    { name: "Admin", href: "/admin" },
+  ],
+  "/settings/ai": [
+    { name: "Nastavenia", href: "/settings" },
+    { name: "Klinický AI Asistent", href: "/agent" },
+    { name: "Automatizácie", href: "/automations" },
     { name: "Admin", href: "/admin" },
   ],
   "/settings/ekasa": [

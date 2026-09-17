@@ -19,6 +19,7 @@ Stránka nastavení je rozdelená do nasledovných sekcií:
 | **Šablóny** | Šablóny SOAP poznámok, prepúšťacích správ, predpisov a e-mailov |
 | **Upomienky** | Pravidlá predvolania na vakcínu, načasovanie starostlivosti |
 | **e-Kasa** | Hardvér fiškálnej pokladnice, DIČ, IČ DPH, test pripojenia |
+| **AI Nastavenia** | Správa providerov (Vertex, OpenRouter, Alibaba), ModelPicker, veterinárne mapovanie (`/settings/ai`) |
 | **Brand Kit** | Logo ambulancie (SVG/PNG), primárna a sekundárna farba, hlavičky dokumentov |
 | **Import dát** | Migrácia záznamov z predchádzajúceho systému (`/settings/import-v2`) |
 | **Export a záloha dát** | CSV exporty, záloha databázy vo formáte JSON |
@@ -85,4 +86,24 @@ Trvalé odstránenie praxe je nevratné. Kontaktujte
 
 ---
 
+## 4. AI Nastavenia a konfigurácia modelov (`/settings/ai`)
+
+V záložke **Nastavenia → AI Nastavenia** (alebo priamo cez `/settings/ai`) konfigurujete umelú inteligenciu pre vašu kliniku:
+
+- **Poskytovatelia inferencie:**
+  - **Google Cloud Vertex AI:** Enterprise úroveň bez uchovávania dát (Zero Data Retention).
+  - **OpenRouter API:** Flexibilný prístup k popredným svetovým modelom.
+  - **Alibaba Cloud / AliProxy:** Pokročilá analýza obrazu a multimodálna syntéza.
+  - **Vlastný OpenAI-kompatibilný endpoint:** Pre lokálny offline beh na vlastnom serveri kliniky.
+- **ModelPicker (Vyhľadávanie modelov):** Interaktívny výber s okamžitým dynamickým načítaním zoznamu modelov z API a testom spojenia (latencia v ms).
+- **Veterinárne funkčné mapovanie:**
+  - *Klinický Copilot & SOAP:* Gemini 3.8 Flash pre rýchle a presné záznamy.
+  - *Zobrazovacie metódy & RTG:* Multimodálne modely (Gemini 3.8 Multimodal, Wan 3.0).
+  - *Voice SOAP:* Hlasový prepis veterinárnych diktátov.
+  - *Laboratórny parser:* Automatická extrakcia parametrov z PDF nálezov analyzátorov.
+- **Bezpečnosť kľúčov:** Kľúče sú ukladané výhradne šifrované (AES-256-GCM v tabuľke `ext_ai_settings`) a maskované pred bežným personálom.
+
+---
+
 Potrebujete pomoc? Napíšte na [jurkemik@significa.sk](mailto:jurkemik@significa.sk).
+
