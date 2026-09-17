@@ -72,7 +72,12 @@ Deployment je možné spustiť dvoma spôsobmi:
 Tento endpoint zaradí build do fronty Dokployu, zobrazí live logy v UI pod **Deployments** a prebuduje kontajnery:
 
 ```bash
-curl -X POST https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ
+# Webhook URL načítava skript deploy.ps1 z .env (DOKPLOY_DEPLOY_WEBHOOK_URL)
+powershell -File .agents/skills/deploy/scripts/deploy.ps1
+```
+Alebo priamo cez curl:
+```bash
+curl -X POST "${DOKPLOY_DEPLOY_WEBHOOK_URL}"
 ```
 
 #### Metóda B: Manuálny núdzový postup cez SSH
@@ -87,6 +92,7 @@ ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdu
 > ```bash
 > ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose run --rm db-init"
 > ```
+
 
 ---
 
@@ -137,3 +143,25 @@ Pre prebudovanie staršieho commitu stačí zmeniť tag alebo prepnúť context 
 docker compose build web && docker compose up -d web
 ```
 Alebo v Dokploy UI kliknúť na **Deployments** -> **Rollback**.
+
+---
+
+## 5. Riešenie bežných problémov (Troubleshooting)
+
+### A. Schema Drift / Missing RLS Policies (`/api/health` 503)
+Ak `/api/health` hlási chýbajúce RLS politiky (napr. `29 critical controls missing`):
+```powershell
+Get-Content packages/db/rls/enable-rls.sql -Raw | ssh root@dev.significa.sk "docker exec -i compose-parse-online-port-wdunfq-postgres-1 psql -U openpims -d openpims"
+```
+
+### B. Zlyhanie dešifrovania kľúčov (`Failed to decrypt AI API key`)
+Ak po obnovení databázy padá stránka AI nastavení, databáza obsahuje kľúče zašifrované lokálnym tajomstvom. Je potrebné ich nanovo prešifrovať na serveri s použitím produkčného `NEXTAUTH_SECRET` alebo vymazať v `ext_ai_settings`, aby ich používateľ zadal znova.
+
+### C. Zaseknutý build v Dokploy UI
+Overenie aktuálnych logov buildu na serveri:
+```bash
+ssh root@dev.significa.sk "ls -lt /etc/dokploy/logs/compose-parse-online-port-wdunfq/ | head -n 3"
+ssh root@dev.significa.sk "tail -n 50 /etc/dokploy/logs/compose-parse-online-port-wdunfq/<posledny-log>"
+```
+V prípade potreby spustiť manuálny núdzový build podľa Metódy B vyššie.
+

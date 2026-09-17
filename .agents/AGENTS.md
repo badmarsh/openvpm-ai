@@ -147,13 +147,50 @@ When the user pastes container logs, mentions `compose-parse-online-port-wdunfq-
 - Therefore, **any fix for the server must be committed and pushed to `origin/main`** before deployment.
 - Trigger deployment via official Dokploy Webhook:
   ```bash
-  curl -X POST https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ
+  # Webhook URL is configured in .env as DOKPLOY_DEPLOY_WEBHOOK_URL
+  curl -X POST "${DOKPLOY_DEPLOY_WEBHOOK_URL}"
   ```
   Or trigger the `deploy` skill: `powershell -File .agents/skills/deploy/scripts/deploy.ps1`.
-- When diagnosing errors from user-provided server logs:
-  - If from `compose-parse-online-port-wdunfq-web-1`: Check NextAuth, environment variables in Dokploy UI, SSR runtime, or S3 endpoint connectivity.
-  - If from `compose-parse-online-port-wdunfq-db-init-1`: Check Drizzle schema constraints, RLS functions, or Slovak seed integrity.
-  - Never edit server `.env` directly on disk without updating Dokploy UI (Dokploy overwrites on redeploy).
+
+### Dokploy Compose Architecture (`sourceType: raw`)
+- Dokploy manages the `openvpm-ai` stack as `sourceType: raw`. The compose definition is stored in Dokploy's internal database (`compose.composeFile`).
+- On redeploy, Dokploy overwrites `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/docker-compose.yml` with its stored database definition.
+- **Never rely solely on editing `docker-compose.dokploy.yml` in git** for server-side compose changes. Any structural compose change (e.g., environment variables, `db-init` commands) must also be updated in Dokploy UI or synced into Dokploy Postgres (`compose` table).
+
+### Dokploy Deployment Troubleshooting & Common Failures
+
+#### 1. Schema Drift / Missing RLS Policies (`/api/health` HTTP 503 — "29 critical controls missing")
+- **Cause:** The `db-init` container ran `db:bootstrap` and `db:seed:sk` but missed `pnpm db:rls`, or `OPENPIMS_APP_DB_PASSWORD` was absent, leaving PostgreSQL RLS policies disabled (`relrowsecurity = false`).
+- **Immediate Fix:** Pipe `packages/db/rls/enable-rls.sql` into the remote Postgres container:
+  ```powershell
+  Get-Content packages/db/rls/enable-rls.sql -Raw | ssh root@dev.significa.sk "docker exec -i compose-parse-online-port-wdunfq-postgres-1 psql -U openpims -d openpims"
+  ```
+- **Permanent Fix:** Ensure `db-init` in Dokploy compose definition executes `pnpm db:setup` (or `db:bootstrap && pnpm db:rls && pnpm db:seed:sk`) and defines `OPENPIMS_APP_DB_PASSWORD: ${POSTGRES_PASSWORD}`.
+
+#### 2. Secret Decryption Failures (`Failed to decrypt AI API key`)
+- **Cause:** When restoring database dumps from local dev or another environment, encrypted fields in `ext_ai_settings` (`gemini_api_key_encrypted`, `alibaba_api_key_encrypted`) were encrypted with the local `NEXTAUTH_SECRET`, whereas the server uses a different production `NEXTAUTH_SECRET`.
+- **Fix:** Re-encrypt the values using the server's `NEXTAUTH_SECRET` inside the container, or clear the corrupted fields so the user can re-enter them in the UI. Application code in `ai-settings.ts` and `ai-config-resolver.ts` handles decryption errors gracefully without fatal crashes.
+
+#### 3. Build Stuck or Failing in Dokploy UI
+- **Log Inspection:** Check the latest deployment log on the server:
+  ```bash
+  ssh root@dev.significa.sk "ls -lt /etc/dokploy/logs/compose-parse-online-port-wdunfq/ | head -n 3"
+  ssh root@dev.significa.sk "tail -n 50 /etc/dokploy/logs/compose-parse-online-port-wdunfq/<latest-log>"
+  ```
+- **Emergency Manual Build via SSH (Bypasses Dokploy Webhook):**
+  ```bash
+  ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose build --no-cache web && docker compose up -d --remove-orphans web"
+  ```
+
+#### 4. Post-Deploy Smoke Verification
+Always verify health and status after deployment:
+```bash
+curl -s https://vet.dev.significa.sk/api/health
+# Expected: {"ok":true,"checks":{"database":{"ok":true},"schema":{"ok":true}}}
+curl -s -o /dev/null -w "%{http_code}" https://vet.dev.significa.sk/login
+# Expected: 200 (or 307 redirect)
+```
+
 
 ---
 

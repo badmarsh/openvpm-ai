@@ -55,7 +55,16 @@ Write-Host "✓ Nasadzovaný commit: $latestCommit" -ForegroundColor Green
 
 # 5. Trigger Dokploy deployment via official webhook
 Write-Host "`n[5/5] Spúšťam deployment cez Dokploy Webhook..." -ForegroundColor Yellow
-$webhookUrl = "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ"
+$webhookUrl = $env:DOKPLOY_DEPLOY_WEBHOOK_URL
+if (-not $webhookUrl -and (Test-Path ".env")) {
+    $envMatch = Get-Content ".env" | Where-Object { $_ -match '^DOKPLOY_DEPLOY_WEBHOOK_URL\s*=\s*["'']?([^"'']+)["'']?' }
+    if ($envMatch) {
+        $webhookUrl = $Matches[1].Trim()
+    }
+}
+if (-not $webhookUrl) {
+    $webhookUrl = "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ"
+}
 try {
     $res = Invoke-RestMethod -Uri $webhookUrl -Method Post -SkipCertificateCheck
     Write-Host "✓ Dokploy odpoveď: $($res.message)" -ForegroundColor Green
