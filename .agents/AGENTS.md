@@ -125,10 +125,46 @@ For full architectural context, examples, and Slovak legislation references, rea
 
 ---
 
-## Development Environment Quick Reference
+## 8. Dokploy Deployment & Remote Server Environment (`dev.significa.sk`)
 
-| | Primary (Active Development) | Reference (Upstream Vanilla) |
-|---|---|---|
-| Path | `C:\Users\marek\Documents\Vet\openvpm-ai` | `C:\Users\marek\Documents\Vet\OpenVPM` |
-| Port | 3001 | 3005 |
-| Database | Docker `openvpm-postgres-1`, port 5434, DB `openvpm_ai` | — |
+When the user pastes container logs, mentions `compose-parse-online-port-wdunfq-*`, or reports errors on `vet.dev.significa.sk`, **this refers to the remote Dokploy server, NOT local dev**:
+
+- **Server & SSH:** `root@dev.significa.sk`
+- **Public Domain:** `https://vet.dev.significa.sk` (routed via Traefik on external network `dokploy-network` with automatic Let's Encrypt TLS).
+- **Dokploy Project:** `DcWUBuOSe4H0UfF-OpLPb` (*OpenVPM AI*), Environment `dgpMIXk6UxZf_nS2fH3xU` (*production*).
+- **Compose App:** `openvpm-ai` (ID: `pvdhIxlCIhYTKvnmrZ8Mk`, internal disk name: `compose-parse-online-port-wdunfq`).
+- **Server Code Path:** `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/`
+- **Server Deployment Logs:** `/etc/dokploy/logs/compose-parse-online-port-wdunfq/`
+- **Server Multi-Container Stack:**
+  - `compose-parse-online-port-wdunfq-web-1`: Production Next.js 15 standalone server (port 3000).
+  - `compose-parse-online-port-wdunfq-postgres-1`: PostgreSQL 16 Alpine (`postgres:5432`, volume `postgres_data`).
+  - `compose-parse-online-port-wdunfq-minio-1`: MinIO S3 object storage for patient photos/imaging (`minio:9000`, volume `minio_data`).
+  - `compose-parse-online-port-wdunfq-minio-bootstrap-1`: Bucket creation job (`mc`).
+  - `compose-parse-online-port-wdunfq-db-init-1`: Initializer running `pnpm db:bootstrap` and `pnpm db:seed:sk`.
+
+### Deployment Mechanism (Git Remote `main` -> Dokploy Webhook)
+- Dokploy builds containers directly from GitHub: `context: https://github.com/badmarsh/openvpm-ai.git#main`.
+- Therefore, **any fix for the server must be committed and pushed to `origin/main`** before deployment.
+- Trigger deployment via official Dokploy Webhook:
+  ```bash
+  curl -X POST https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ
+  ```
+  Or trigger the `deploy` skill: `powershell -File .agents/skills/deploy/scripts/deploy.ps1`.
+- When diagnosing errors from user-provided server logs:
+  - If from `compose-parse-online-port-wdunfq-web-1`: Check NextAuth, environment variables in Dokploy UI, SSR runtime, or S3 endpoint connectivity.
+  - If from `compose-parse-online-port-wdunfq-db-init-1`: Check Drizzle schema constraints, RLS functions, or Slovak seed integrity.
+  - Never edit server `.env` directly on disk without updating Dokploy UI (Dokploy overwrites on redeploy).
+
+---
+
+## Development & Server Environments Quick Reference
+
+| | Primary (Active Local Dev) | Reference (Upstream Vanilla) | Remote Server / Staging (Dokploy) |
+|---|---|---|---|
+| Host / Access | Local Windows | Local Windows | `dev.significa.sk` (`root@dev.significa.sk`) |
+| Path | `C:\Users\marek\Documents\Vet\openvpm-ai` | `C:\Users\marek\Documents\Vet\OpenVPM` | `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/` |
+| URL / Port | `http://localhost:3001` | `http://localhost:3005` | `https://vet.dev.significa.sk` (port 3000 behind Traefik) |
+| Database | Docker `openvpm-postgres-1`, port 5434, DB `openvpm_ai` | — | Docker `compose-parse-online-port-wdunfq-postgres-1`, port 5432, DB `openpims` |
+| Storage | Local MinIO (`localhost:9000`) | — | Server MinIO (`minio:9000`, volume `minio_data`) |
+| Logs | Terminal stdout | Terminal stdout | `/etc/dokploy/logs/compose-parse-online-port-wdunfq/` or `docker logs` |
+
