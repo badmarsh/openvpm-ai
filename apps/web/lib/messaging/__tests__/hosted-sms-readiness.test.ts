@@ -29,6 +29,23 @@ describe("hosted SMS readiness diagnostics", () => {
     expect(JSON.stringify(status)).not.toContain("legacy-key");
   });
 
+  it("accepts valid Telnyx API keys starting with KEY (including KEY01 and KEY_)", () => {
+    vi.stubEnv("MESSAGING_PROVIDER", "telnyx");
+    vi.stubEnv(
+      "TELNYX_API_KEY",
+      "KEY01_MOCK_TEST_KEY_FOR_UNIT_TEST_ONLY_12345",
+    );
+    vi.stubEnv("TELNYX_PUBLIC_KEY", Buffer.alloc(32, 1).toString("base64"));
+    vi.stubEnv(
+      "MESSAGING_REGISTRATION_ENCRYPTION_KEY",
+      Buffer.alloc(32, 2).toString("base64"),
+    );
+
+    const status = hostedSmsConfigurationDiagnostics();
+    expect(status.apiKeyShapeValid).toBe(true);
+    expect(hostedSmsCredentialIssueCount()).toBe(0);
+  });
+
   it("requires exact one-practice and one-location pilot scopes", () => {
     vi.stubEnv("MESSAGING_PROVISIONING_ENABLED", "true");
     vi.stubEnv(

@@ -49,7 +49,7 @@ export function hostedSmsConfigurationDiagnostics() {
     providerIsTelnyx:
       envValue("MESSAGING_PROVIDER")?.toLowerCase() === "telnyx",
     apiKeyShapeValid:
-      Boolean(envValue("TELNYX_API_KEY")?.startsWith("KEY_")) &&
+      Boolean(envValue("TELNYX_API_KEY")?.startsWith("KEY")) &&
       (envValue("TELNYX_API_KEY")?.length ?? 0) >= 20,
     webhookPublicKeyShapeValid: isBase64EncodedBytes(
       envValue("TELNYX_PUBLIC_KEY"),
