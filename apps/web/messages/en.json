@@ -1235,7 +1235,13 @@
       "consentRevoked": "Consent revoked",
       "phoneChangedNotice": "The phone number changed, so prior SMS consent will be removed unless the client explicitly re-consents.",
       "smsPausedNoConsent": "Text reminders are paused until the client has current SMS consent.",
-      "doNotTextPhonePending": "Save or discard the unsaved phone change before using this action."
+      "doNotTextPhonePending": "Save or discard the unsaved phone change before using this action.",
+      "smsConsentDisclosure": "The client agrees that this veterinary practice may send appointment reminders, vaccination and care updates, and two-way service messages by text, including automated messages, to the mobile number provided. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase. Reply STOP to opt out or HELP for help.",
+      "addressPlaceholder": "Street address",
+      "cityPlaceholder": "City",
+      "statePlaceholder": "State / Province",
+      "zipPlaceholder": "Zip code",
+      "phonePlaceholder": "(555) 123-4567"
     },
     "detail": {
       "contactInfo": "Contact Information",

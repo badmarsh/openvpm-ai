@@ -1235,7 +1235,13 @@
       "consentRevoked": "Súhlas odvolaný",
       "phoneChangedNotice": "Telefónne číslo sa zmenilo, predchádzajúci SMS súhlas bude zrušený, pokiaľ klient opätovne výslovne neudelí súhlas.",
       "smsPausedNoConsent": "SMS pripomienky sú pozastavené, kým klient nemá platný súhlas so SMS.",
-      "doNotTextPhonePending": "Pred použitím tejto akcie uložte alebo zahoďte neuloženú zmenu telefónneho čísla."
+      "doNotTextPhonePending": "Pred použitím tejto akcie uložte alebo zahoďte neuloženú zmenu telefónneho čísla.",
+      "smsConsentDisclosure": "Klient súhlasí s tým, že táto veterinárna prax mu môže zasielať pripomienky termínov, informácie o očkovaní a zdravotnej starostlivosti a obojsmerné servisné správy prostredníctvom SMS, vrátane automatizovaných správ, na poskytnuté mobilné číslo. Frekvencia správ je individuálna. Môžu sa účtovať poplatky za správy a dáta podľa tarify operátora. Súhlas nie je podmienkou nákupu. Pre odhlásenie odpovedzte STOP, pre pomoc HELP.",
+      "addressPlaceholder": "Ulica a orientačné číslo",
+      "cityPlaceholder": "Mesto alebo obec",
+      "statePlaceholder": "Okres / Kraj",
+      "zipPlaceholder": "PSČ",
+      "phonePlaceholder": "+421 900 123 456"
     },
     "detail": {
       "contactInfo": "Kontaktné údaje",

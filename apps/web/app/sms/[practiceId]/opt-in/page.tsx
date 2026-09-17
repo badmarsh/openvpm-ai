@@ -25,7 +25,7 @@ export default async function SmsOptInPage({
 
       <h2>{t("sms.optIn.disclosureTitle", "Disclosure shown or read to clients")}</h2>
       <blockquote className="rounded-lg border border-border bg-card p-5 text-base leading-7 text-foreground shadow-sm">
-        {SMS_CONSENT_DISCLOSURE.snapshot}
+        {t("clients.form.smsConsentDisclosure", SMS_CONSENT_DISCLOSURE.snapshot)}
       </blockquote>
 
       <h2>{t("sms.optIn.evidenceTitle", "Evidence retained")}</h2>

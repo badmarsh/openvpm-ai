@@ -101,6 +101,13 @@ const vanillaSections: NavSection[] = [
         roles: allRoles,
       },
       {
+        href: "/clients",
+        label: "Klienti",
+        i18nKey: "nav.clients",
+        icon: Users,
+        roles: allRoles,
+      },
+      {
         href: "/records",
         label: "Záznamy",
         i18nKey: "nav.records",
@@ -161,13 +168,6 @@ const vanillaSections: NavSection[] = [
         label: "Prevádzková tabuľa",
         i18nKey: "nav.whiteboard",
         icon: ClipboardList,
-        roles: allRoles,
-      },
-      {
-        href: "/clients",
-        label: "Klienti",
-        i18nKey: "nav.clients",
-        icon: Users,
         roles: allRoles,
       },
       {

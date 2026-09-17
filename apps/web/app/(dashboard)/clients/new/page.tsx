@@ -340,7 +340,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
               id="phone"
               value={form.phone}
               onChange={(e) => updateField("phone", e.target.value)}
-              placeholder="(555) 123-4567"
+              placeholder={t("clients.form.phonePlaceholder", "(555) 123-4567")}
               className="mt-1"
               maxLength={CLIENT_PHONE_MAX_LENGTH}
             />
@@ -418,7 +418,10 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
               )}
             </span>
             <span className="block text-xs text-muted-foreground">
-              {SMS_CONSENT_DISCLOSURE.snapshot}
+              {t(
+                "clients.form.smsConsentDisclosure",
+                SMS_CONSENT_DISCLOSURE.snapshot,
+              )}
             </span>
             <span className="mt-1 block text-xs text-muted-foreground">
               {t(
@@ -443,7 +446,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
             id="address"
             value={form.address}
             onChange={(e) => updateField("address", e.target.value)}
-            placeholder="Street address"
+            placeholder={t("clients.form.addressPlaceholder", "Street address")}
             className="mt-1"
             maxLength={CLIENT_ADDRESS_MAX_LENGTH}
           />
@@ -458,7 +461,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
               id="city"
               value={form.city}
               onChange={(e) => updateField("city", e.target.value)}
-              placeholder="City"
+              placeholder={t("clients.form.cityPlaceholder", "City")}
               className="mt-1"
               maxLength={CLIENT_CITY_MAX_LENGTH}
             />
@@ -471,7 +474,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
               id="state"
               value={form.state}
               onChange={(e) => updateField("state", e.target.value)}
-              placeholder="State"
+              placeholder={t("clients.form.statePlaceholder", "State")}
               className="mt-1"
               maxLength={CLIENT_STATE_MAX_LENGTH}
             />
@@ -484,7 +487,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
               id="zip"
               value={form.zip}
               onChange={(e) => updateField("zip", e.target.value)}
-              placeholder="Zip code"
+              placeholder={t("clients.form.zipPlaceholder", "Zip code")}
               className="mt-1"
               maxLength={CLIENT_ZIP_MAX_LENGTH}
             />
