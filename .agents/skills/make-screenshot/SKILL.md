@@ -196,5 +196,6 @@ node scripts/upload_and_sync_all_screenshots.js
    - `> ⚠️ **Dôležité:**`
    - `> 💡 **Tip:**`
    - `> 🚨 **Pozor:**`
+   Pre automatický prevod markdown súborov a synchronizáciu s Outline slúži skript `node scripts/convert-alerts.js` (`--wiki`, `--sync-outline`, `--all`).
 2. **Žiadne dvojité emoji v názvoch:** V `documents.update` odstraňovať úvodné emoji z `title`, pretože Outline ich dopĺňa z atribútu `icon`.
 3. **Rate limiting pri uploade:** Outline API má limit ~25 requestov/minútu. Medzi jednotlivými uploadmi držať pauzu minimálne 1.5–2 sekundy a neuploadovať zbytočne súbory s rovnakou veľkosťou.

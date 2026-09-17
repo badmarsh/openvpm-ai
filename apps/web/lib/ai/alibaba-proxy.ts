@@ -20,9 +20,9 @@ export interface AlibabaProxyConfig {
   apiKey: string;
 }
 
-export function getAlibabaProxyConfig(): AlibabaProxyConfig {
-  const baseUrl = (process.env.ALIPROXY_BASE_URL || "http://127.0.0.1:8080/v1").replace(/\/+$/, "");
-  const apiKey = process.env.ALIPROXY_KEY || process.env.ALIBABA_PROXY_KEY || "aliproxy-local-key";
+export function getAlibabaProxyConfig(custom?: Partial<AlibabaProxyConfig>): AlibabaProxyConfig {
+  const baseUrl = (custom?.baseUrl || process.env.ALIPROXY_BASE_URL || "http://127.0.0.1:8080/v1").replace(/\/+$/, "");
+  const apiKey = custom?.apiKey || process.env.ALIPROXY_KEY || process.env.ALIBABA_PROXY_KEY || "aliproxy-local-key";
   return { baseUrl, apiKey };
 }
 
@@ -31,6 +31,8 @@ export interface ImageGenerationOptions {
   model?: string;
   size?: "1024*1024" | "720*1280" | "1280*720" | string;
   n?: number;
+  baseUrl?: string;
+  apiKey?: string;
 }
 
 export interface ImageGenerationResult {
@@ -43,6 +45,8 @@ export interface VideoSubmitOptions {
   prompt: string;
   model?: string;
   parameters?: Record<string, unknown>;
+  baseUrl?: string;
+  apiKey?: string;
 }
 
 export interface VideoSubmitResult {
@@ -128,7 +132,7 @@ function formatProxyNetworkError(err: unknown, baseUrl: string): Error {
 export async function generateAlibabaImage(
   options: ImageGenerationOptions
 ): Promise<ImageGenerationResult> {
-  const { baseUrl, apiKey } = getAlibabaProxyConfig();
+  const { baseUrl, apiKey } = getAlibabaProxyConfig(options);
   const rawModel = options.model || ALIBABA_DEFAULT_IMAGE_MODEL;
   const model = rawModel.startsWith("wanx") ? rawModel.replace("wanx", "wan") : rawModel;
 
@@ -179,7 +183,7 @@ export async function generateAlibabaImage(
 export async function submitAlibabaVideo(
   options: VideoSubmitOptions
 ): Promise<VideoSubmitResult> {
-  const { baseUrl, apiKey } = getAlibabaProxyConfig();
+  const { baseUrl, apiKey } = getAlibabaProxyConfig(options);
   const model = options.model || ALIBABA_DEFAULT_VIDEO_MODEL;
 
   try {
@@ -225,8 +229,11 @@ export async function submitAlibabaVideo(
  * Poll the status of an asynchronous video generation task
  * GET /v1/videos/generations/:taskId
  */
-export async function pollAlibabaVideo(taskId: string): Promise<VideoPollResult> {
-  const { baseUrl, apiKey } = getAlibabaProxyConfig();
+export async function pollAlibabaVideo(
+  taskId: string,
+  customConfig?: Partial<AlibabaProxyConfig>
+): Promise<VideoPollResult> {
+  const { baseUrl, apiKey } = getAlibabaProxyConfig(customConfig);
 
   try {
     const res = await fetch(`${baseUrl}/videos/generations/${encodeURIComponent(taskId)}`, {

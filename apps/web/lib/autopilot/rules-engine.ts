@@ -121,7 +121,12 @@ async function evaluateCondition(
       const [patient] = await db
         .select({ species: patients.species })
         .from(patients)
-        .where(eq(patients.id, event.patientId))
+        .where(
+          and(
+            eq(patients.id, event.patientId),
+            eq(patients.practiceId, event.practiceId)
+          )
+        )
         .limit(1);
 
       if (!patient || !condition.species.includes(patient.species)) {
@@ -138,7 +143,12 @@ async function evaluateCondition(
       const [patient] = await db
         .select({ dob: patients.dob })
         .from(patients)
-        .where(eq(patients.id, event.patientId))
+        .where(
+          and(
+            eq(patients.id, event.patientId),
+            eq(patients.practiceId, event.practiceId)
+          )
+        )
         .limit(1);
 
       if (patient?.dob) {
@@ -651,7 +661,12 @@ async function renderMessageBody(
             lastName: clients.lastName,
           })
           .from(clients)
-          .where(eq(clients.id, event.clientId))
+          .where(
+            and(
+              eq(clients.id, event.clientId),
+              eq(clients.practiceId, event.practiceId)
+            )
+          )
           .limit(1)
       : [];
     if (client) {
@@ -664,7 +679,12 @@ async function renderMessageBody(
       ? await db
           .select({ name: patients.name, species: patients.species })
           .from(patients)
-          .where(eq(patients.id, event.patientId))
+          .where(
+            and(
+              eq(patients.id, event.patientId),
+              eq(patients.practiceId, event.practiceId)
+            )
+          )
           .limit(1)
       : [];
     if (patient) {

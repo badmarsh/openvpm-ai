@@ -6,6 +6,7 @@ const OUTLINE_API_KEY = 'ol_api_6fdkgz1d7vthENLyIiV1D1sfUay1bdo8M02YVF';
 
 const mapFile = path.resolve(__dirname, '../docs/screenshots/wiki/attachments_map.json');
 const map = JSON.parse(fs.readFileSync(mapFile, 'utf8'));
+const { convertGitHubAlerts } = require('./convert-alerts');
 
 const chapters = [
   {
@@ -205,6 +206,7 @@ async function updateOutlineDoc(id, title, text) {
     let outlineContent = content;
     outlineContent = outlineContent.replace(/^<!-- Outline ID:.*-->\s*/, '');
     outlineContent = outlineContent.replace(/^#\s+[^\n]+\n\s*/, '');
+    outlineContent = convertGitHubAlerts(outlineContent);
 
     // 2. Replace relative image links with Outline attachment redirect URLs
     outlineContent = outlineContent.replace(/!\[(.*?)\]\(\.\.\/\.\.\/screenshots\/wiki\/(.*?)\)/g, (match, alt, filename) => {

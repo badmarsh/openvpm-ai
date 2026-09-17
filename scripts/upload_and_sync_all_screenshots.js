@@ -7,6 +7,7 @@ const OUTLINE_API_KEY = 'ol_api_6fdkgz1d7vthENLyIiV1D1sfUay1bdo8M02YVF';
 const SCREENSHOTS_DIR = path.resolve(__dirname, '../docs/screenshots/wiki');
 const MAP_FILE = path.join(SCREENSHOTS_DIR, 'attachments_map.json');
 const WIKI_DIR = path.resolve(__dirname, '../docs/wiki/01-pouzivatelska-prirucka');
+const { convertGitHubAlerts } = require('./convert-alerts');
 
 async function uploadSingleScreenshot(filename) {
   const filePath = path.join(SCREENSHOTS_DIR, filename);
@@ -152,6 +153,7 @@ async function main() {
     let outlineContent = content;
     outlineContent = outlineContent.replace(/^<!--\s*Outline ID:.*-->\s*/, '');
     outlineContent = outlineContent.replace(/^#\s+[^\n]+\n\s*/, '');
+    outlineContent = convertGitHubAlerts(outlineContent);
 
     // Nahradiť lokálne cesty URL adresami príloh z Outline
     outlineContent = outlineContent.replace(/!\[(.*?)\]\(\.\.\/\.\.\/screenshots\/wiki\/(.*?)\)/g, (match, alt, filename) => {

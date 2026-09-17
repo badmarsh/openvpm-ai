@@ -37,6 +37,7 @@ import {
   Compass,
   ReceiptText,
   Palette,
+  Bot,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ const ProviderHours = dynamic(() => import("@/components/settings/provider-hours
 const ServicesTab = dynamic(() => import("@/components/settings/services-tab").then(m => ({ default: m.ServicesTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 const BrandKitTab = dynamic(() => import("@/components/settings/brand-kit-tab").then(m => ({ default: m.BrandKitTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 const AmbulatoryWorkspaceSettingsCard = dynamic(() => import("@/components/settings/ambulatory-workspace-settings").then(m => ({ default: m.AmbulatoryWorkspaceSettingsCard })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const AiSettingsTab = dynamic(() => import("@/components/settings/ai-settings-tab").then(m => ({ default: m.AiSettingsTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 import {
   TemplateCatalogPicker,
   type TemplateCatalogItem,
@@ -160,7 +162,8 @@ type Tab =
   | "wellness"
   | "messaging"
   | "booking"
-  | "billing";
+  | "billing"
+  | "ai";
 
 const tabs: {
   id: Tab;
@@ -245,6 +248,12 @@ const tabs: {
     label: "Plan & Billing",
     labelKey: "settings.tabs.billing",
     icon: CreditCard,
+  },
+  {
+    id: "ai",
+    label: "AI Settings",
+    labelKey: "settings.tabs.ai",
+    icon: Bot,
   },
 ];
 
@@ -508,6 +517,7 @@ function SettingsPageInner() {
           {activeTab === "messaging" && <MessagingTab />}
           {activeTab === "booking" && <BookingTab />}
           {activeTab === "billing" && <BillingTab />}
+          {activeTab === "ai" && <AiSettingsTab />}
         </div>
       </div>
     </div>
