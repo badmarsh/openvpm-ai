@@ -131,6 +131,9 @@ export const agentRouter = createRouter({
             input.deepThinking ? "deepThinking" : "assistant",
           );
         } catch (err) {
+          if (err instanceof TRPCError) {
+            throw err;
+          }
           console.warn(
             "[agent.run] Practice language model resolution fallback:",
             err instanceof Error ? err.message : err,
