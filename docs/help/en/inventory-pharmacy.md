@@ -66,6 +66,11 @@ witness and sign.
 against the ledger. Run a reconciliation from the Controlled Substances
 page to identify any discrepancies.
 
+**Statutory inspection & official OPK printout**: For official inspections by ŠÚKL
+and ŠVPS SR, physical vault inventory verification, and generating the formatted
+A4 landscape OPK ledger with inspector signatures, navigate to **Statutory → Controlled Substances**
+at `/statutory`. Both modules operate on the exact same real-time database ledger.
+
 > ⚠️ **Zero AI prefill**: The AI assistant has zero ability to prefill
 > any controlled substance fields. All entries are typed manually by a
 > licensed veterinarian. This is a mandatory regulatory requirement under

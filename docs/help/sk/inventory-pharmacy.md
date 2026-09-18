@@ -66,6 +66,11 @@ Veterinárny lekár).
 **Odsúhlasenie**: Pravidelné odsúhlasenie porovná fyzický stav zásob so
 záznamom. Spustite odsúhlasenie zo stránky Omamných látok.
 
+**Štátna inšpekcia a úradná tlač OPK**: Pre potreby úradnej kontroly ŠÚKL a ŠVPS SR,
+overenie inventúrnej bilancie a vytlačenie formátovanej knihy OPK (A4 na šírku s podpismi)
+prejdite do modulu **Legislatíva → Kontrolované látky** na adrese `/statutory`.
+Obidva moduly pracujú s identickým dátovým zdrojom v reálnom čase.
+
 > ⚠️ **Nulové AI predvyplnenie**: AI asistent nemá možnosť predvyplniť
 > žiadne polia OPL. Všetky záznamy zadáva manuálne licencovaný
 > veterinárny lekár. Toto je povinná zákonná požiadavka podľa

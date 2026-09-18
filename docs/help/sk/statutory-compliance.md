@@ -1,4 +1,4 @@
-﻿# Legislatívny súlad
+# Legislatívny súlad
 
 OpenVPM pomáha vašej praxi plniť zákonné povinnosti veterinárneho práva SR.
 Prejdite do sekcie **Legislatíva** (`/statutory`) v bočnom paneli pre
@@ -130,7 +130,21 @@ Zo záznamov sa generujú formuláre hlásení pre Štátnu veterinárnu správu
 
 ---
 
-## 7. Aktuálne obmedzenia
+## 7. Kniha omamných a psychotropných látok (OPK)
+
+Evidencia podľa **Zákona č. 139/1998 Z. z.** podlieha kontrole ŠÚKL a ŠVPS SR. Prejdite do **Legislatíva → Kontrolované látky** (`/statutory`).
+
+**Funkcie modulu:**
+- **Inšpekčná tlač OPK:** Kliknutím na „Tlač OPK" systém vygeneruje formátovanú úradnú zostavu A4 na šírku (landscape) rozdelenú na časť I. Súhrnné zostatky (fyzická inventúra zostatkov voči trezoru) a časť II. Pohybový denník s podpisovými riadkami pre inšpektorov ŠÚKL / ŠVPS SR a garanta pracoviska.
+- **Dátumový filter:** Výber kontrolného obdobia (kvartál, kalendárny rok) pre okamžité overenie pohybov a bilancií.
+- **Prepojenie s prevádzkou:** Modul čerpá v reálnom čase z rovnakého registra ako prevádzkový denník `/controlled-substances`. Nové operatívne zápisy (príjem liekov, podanie pacientovi, likvidácia odpadu so svedkom) sa zadávajú v `/controlled-substances`.
+- **Archivácia:** Záznamy sa povinne uchovávajú 5 rokov podľa § 22 ods. 3 zák. č. 139/1998 Z. z.
+
+> ⚠️ **Nulové AI predvyplnenie (Zero AI Prefill):** AI asistent má systémovo zakázané automaticky dopĺňať alebo navrhovať dávkovanie či výdaj kontrolovaných látok. Každý záznam musí zadať a podpísať licencovaný veterinárny lekár.
+
+---
+
+## 8. Aktuálne obmedzenia
 
 Nasledovné známe obmedzenia platia od verzie v0.6:
 

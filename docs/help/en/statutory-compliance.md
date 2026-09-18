@@ -1,4 +1,4 @@
-﻿# Statutory Compliance
+# Statutory Compliance
 
 OpenVPM helps your practice meet Slovak veterinary law obligations. Navigate
 to **Statutory** (`/statutory`) in the sidebar to access all compliance
@@ -133,7 +133,21 @@ the State Veterinary Authority.
 
 ---
 
-## 7. Current limitations
+## 7. Controlled substances ledger (OPK)
+
+Record-keeping under **Act No. 139/1998 Z. z.** is subject to official inspection by ŠÚKL and ŠVPS SR. Navigate to **Statutory → Controlled Substances** (`/statutory`).
+
+**Module capabilities:**
+- **Official OPK inspection printout:** Clicking "Print OPK" generates a formatted A4 landscape regulatory report featuring Section I (physical vault inventory balance) and Section II (chronological movement ledger with signature blocks for state inspectors and clinic supervisor).
+- **Date range filtering:** Select any inspection audit period (quarterly, annual) for instant balance verification.
+- **Operational synchronization:** The module reads in real time from the shared controlled substance registry used by the daily log at `/controlled-substances`. Day-to-day entries (receipts, administrations, wasted inventory with witness) are recorded at `/controlled-substances`.
+- **Statutory retention:** Records must be archived for a mandatory minimum of 5 years under § 22 para. 3 of Act No. 139/1998 Z. z.
+
+> ⚠️ **Zero AI Prefill:** The AI assistant is strictly prohibited by safety policy from auto-filling or proposing dosages or disbursements of controlled substances. All entries must be manually entered and signed by a licensed veterinarian.
+
+---
+
+## 8. Current limitations
 
 Be aware of the following known limitations as of v0.6:
 
