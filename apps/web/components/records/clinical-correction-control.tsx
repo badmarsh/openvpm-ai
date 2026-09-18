@@ -27,6 +27,7 @@ export function ClinicalCorrectionControl({
   description,
   triggerLabel,
   timeZone,
+  className,
 }: {
   correction?: ExistingCorrection | null;
   canCorrect: boolean;
@@ -35,6 +36,7 @@ export function ClinicalCorrectionControl({
   description?: string;
   triggerLabel?: string;
   timeZone?: string | null;
+  className?: string;
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
@@ -80,7 +82,7 @@ export function ClinicalCorrectionControl({
         }
       }}
     >
-      <div className="mt-3 flex justify-end">
+      <div className={className ?? "mt-3 flex justify-end"}>
         <DialogPrimitive.Trigger asChild>
           <Button
             type="button"

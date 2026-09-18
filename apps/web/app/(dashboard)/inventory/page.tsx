@@ -2,7 +2,7 @@
 
 import { MarkupInput } from "@/components/inventory/markup-input";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
   Search,
@@ -14,6 +14,8 @@ import {
   X,
   Check,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -1101,16 +1103,22 @@ export default function InventoryPage() {
     null
   );
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const searchFilter = search.trim();
   const canManageInventory = canManageInventoryRole(session?.user?.role);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchFilter, category, alertFilter]);
 
   const productsQuery = trpc.inventory.list.useQuery(
     {
       search: searchFilter || undefined,
       category: category || undefined,
       alert: alertFilter,
-      limit: 100,
-      offset: 0,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     },
     { enabled: tab === "products" }
   );
@@ -1339,8 +1347,9 @@ export default function InventoryPage() {
               {t("inventory.page.loading", "Loading...")}
             </div>
           ) : productsQuery.data && productsQuery.data.items.length > 0 ? (
-            <TableScroll className="mt-4 rounded-lg border border-border">
-              <table className="w-full text-sm">
+            <div className="mt-4 rounded-lg border border-border overflow-hidden bg-card">
+              <TableScroll className="border-0">
+                <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -1528,7 +1537,49 @@ export default function InventoryPage() {
                 </tbody>
               </table>
             </TableScroll>
-          ) : (
+
+            {/* Products Pagination */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border px-4 py-3 text-sm text-muted-foreground">
+              <div>
+                {t(
+                  "inventory.pagination.showing",
+                  `Showing ${Math.min((page - 1) * pageSize + 1, productsQuery.data.total)}–${Math.min(page * pageSize, productsQuery.data.total)} of ${productsQuery.data.total}`,
+                  {
+                    start: Math.min((page - 1) * pageSize + 1, productsQuery.data.total),
+                    end: Math.min(page * pageSize, productsQuery.data.total),
+                    total: productsQuery.data.total,
+                  }
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1 || productsQuery.isFetching}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" aria-hidden="true" />
+                  {t("inventory.pagination.previous", "Previous")}
+                </Button>
+                <span className="text-sm tabular-nums font-medium text-foreground">
+                  {page} / {Math.max(1, Math.ceil(productsQuery.data.total / pageSize))}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    page >= Math.max(1, Math.ceil(productsQuery.data.total / pageSize)) ||
+                    productsQuery.isFetching
+                  }
+                  onClick={() => setPage((current) => current + 1)}
+                >
+                  {t("inventory.pagination.next", "Next")}
+                  <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
             <EmptyState
               className="mt-6"
               icon={Package}

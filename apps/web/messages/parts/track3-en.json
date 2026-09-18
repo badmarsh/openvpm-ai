@@ -325,6 +325,11 @@
       "lotPrefix": "Lot {number}",
       "expPrefix": "Exp {date}"
     },
+    "pagination": {
+      "showing": "Showing {start}–{end} of {total}",
+      "previous": "Previous",
+      "next": "Next"
+    },
     "empty": {
       "filterAlertTitle": "No products match this alert filter",
       "filterSearchTitle": "No products match your filters",

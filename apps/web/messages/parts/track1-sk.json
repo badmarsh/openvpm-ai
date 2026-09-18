@@ -257,6 +257,7 @@
   "records.vaccinations.colNextDue": "Ďalšia revakcinácia",
   "records.vaccinations.colAdministeredBy": "Aplikoval",
   "records.vaccinations.colStatus": "Stav",
+  "records.vaccinations.colActions": "Akcie",
   "records.vaccinations.overdue": "Po termíne",
   "records.vaccinations.dueSoon": "Blíži sa termín",
   "records.vaccinations.current": "Platná",

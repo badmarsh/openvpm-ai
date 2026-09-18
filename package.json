@@ -5,6 +5,7 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "dev:turbo": "turbo dev:turbo",
+    "stop": "node scripts/stop.mjs",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "typecheck": "turbo type-check",

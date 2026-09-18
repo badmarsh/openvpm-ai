@@ -17,6 +17,7 @@ import {
   PawPrint,
   Smartphone,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
@@ -135,19 +136,46 @@ export default function HandoutsPage() {
 
       {/* Creation Modal */}
       {isDialogOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="fixed z-50 grid w-full max-w-xl gap-4 border bg-background p-6 shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex flex-col space-y-1.5 text-left border-b pb-3">
+        <div
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => {
+            setIsDialogOpen(false);
+            setShowAiGenerator(false);
+            setAiImageUrl(null);
+          }}
+        >
+          <div
+            className="relative w-full max-w-4xl gap-4 border bg-background p-6 shadow-2xl rounded-2xl max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close X button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDialogOpen(false);
+                setShowAiGenerator(false);
+                setAiImageUrl(null);
+              }}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              aria-label={t("common.close", "Close")}
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex flex-col space-y-1.5 text-left border-b pb-3 pr-8">
               <h2 className="text-lg font-bold leading-none tracking-tight">
                 {t("marketing.handouts.newHandout", "Nový leták")}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Vytvorte nový leták s pokynmi pre majiteľov, ktorý si môžu vytlačiť alebo naskenovať cez QR kód.
+                {t(
+                  "marketing.handouts.modalDesc",
+                  "Vytvorte nový leták s pokynmi pre majiteľov, ktorý si môžu vytlačiť alebo naskenovať cez QR kód."
+                )}
               </p>
             </div>
 
             {/* Toggle AI Generator */}
-            <div className="flex items-center gap-2 pb-2">
+            <div className="flex items-center gap-2 pt-1">
               <Button
                 variant={showAiGenerator ? "default" : "outline"}
                 size="sm"
@@ -155,11 +183,13 @@ export default function HandoutsPage() {
                 onClick={() => setShowAiGenerator(!showAiGenerator)}
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                {showAiGenerator ? "Skryť AI Generátor" : "Otvoriť AI Generátor"}
+                {showAiGenerator
+                  ? t("marketing.handouts.aiToggleHide", "Skryť AI Generátor")
+                  : t("marketing.handouts.aiToggleShow", "Otvoriť AI Generátor")}
               </Button>
               {aiImageUrl && (
                 <Badge variant="secondary" className="text-[10px] bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
-                  ✓ AI obrázok vygenerovaný
+                  {t("marketing.handouts.aiImageBadge", "✓ AI obrázok vygenerovaný")}
                 </Badge>
               )}
             </div>
@@ -172,100 +202,133 @@ export default function HandoutsPage() {
                   handoutTitle={title || undefined}
                   onGenerated={(url) => {
                     setAiImageUrl(url);
-                    toast.success("AI obrázok pripravený — môžete ho použiť ako ilustračnú fotku letáku.");
+                    toast.success(
+                      t(
+                        "marketing.handouts.aiImageReady",
+                        "AI obrázok pripravený — môžete ho použiť ako ilustračnú fotku letáku."
+                      )
+                    );
                   }}
                 />
               </div>
             )}
 
             <div className="space-y-4 pt-1">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold">Názov letáku</label>
-                <Input
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    if (!slug) {
-                      setSlug(
-                        e.target.value
-                          .toLowerCase()
-                          .normalize("NFD")
-                          .replace(/[\u0300-\u036f]/g, "")
-                          .replace(/[^a-z0-9]+/g, "-")
-                          .replace(/^-+|-+$/g, "")
-                      );
-                    }
-                  }}
-                  placeholder="Napr. Starostlivosť po kastrácii"
-                />
-              </div>
+              {/* 2-column grid for Title and Slug */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold">
+                    {t("marketing.handouts.fieldTitle", "Názov letáku")}
+                  </label>
+                  <Input
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      if (!slug) {
+                        setSlug(
+                          e.target.value
+                            .toLowerCase()
+                            .normalize("NFD")
+                            .replace(/[\u0300-\u036f]/g, "")
+                            .replace(/[^a-z0-9]+/g, "-")
+                            .replace(/^-+|-+$/g, "")
+                        );
+                      }
+                    }}
+                    placeholder={t("marketing.handouts.fieldTitlePlaceholder", "Napr. Starostlivosť po kastrácii")}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold">URL Slug letáku (/h/slug)</label>
-                <Input
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="starostlivost-po-kastraci"
-                  pattern="[a-z0-9-]+"
-                />
-                <p className="text-xs text-muted-foreground">Len malé písmená bez diakritiky, čísla a pomlčky.</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold">Obsah letáku (Markdown pokyny pre klienta)</label>
-                <Textarea
-                  rows={6}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder="Sem napíšte obsah letáku: zásady kľudového režimu, kontrola rany, kedy volať lekára..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold">Cieľové zvieratá</label>
-                <div className="flex items-center gap-6">
-                  {["Pes", "Mačka", "Iné"].map((s) => (
-                    <div key={s} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`species-${s}`}
-                        checked={species.includes(s)}
-                        onChange={() => toggleSpecies(s)}
-                      />
-                      <label htmlFor={`species-${s}`} className="text-xs font-medium cursor-pointer">
-                        {s === "Pes" ? "🐶 Pes" : s === "Mačka" ? "🐱 Mačka" : s}
-                      </label>
-                    </div>
-                  ))}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold">
+                    {t("marketing.handouts.fieldSlug", "URL Slug letáku (/h/slug)")}
+                  </label>
+                  <Input
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    placeholder="starostlivost-po-kastraci"
+                    pattern="[a-z0-9-]+"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("marketing.handouts.slugHelp", "Len malé písmená bez diakritiky, čísla a pomlčky.")}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="public-toggle"
-                  checked={isPublic}
-                  onChange={(e) => setIsPublic(e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-                <label htmlFor="public-toggle" className="text-xs font-medium cursor-pointer">
-                  Verejný leták (dostupný pre klientov a online náhľad)
+              {/* Content textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">
+                  {t("marketing.handouts.fieldBody", "Obsah letáku (Markdown pokyny pre klienta)")}
                 </label>
+                <Textarea
+                  rows={4}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder={t("marketing.handouts.fieldBodyPlaceholder", "Sem napíšte obsah letáku: zásady kľudového režimu, kontrola rany, kedy volať lekára...")}
+                />
               </div>
 
+              {/* Target species & Public toggle */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold block">
+                    {t("marketing.handouts.targetSpecies", "Cieľové zvieratá")}
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {[
+                      { key: "Pes", label: t("marketing.handouts.speciesDog", "Pes"), icon: "🐶" },
+                      { key: "Mačka", label: t("marketing.handouts.speciesCat", "Mačka"), icon: "🐱" },
+                      { key: "Iné", label: t("marketing.handouts.speciesOther", "Iné"), icon: "" },
+                    ].map((s) => (
+                      <div key={s.key} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`species-${s.key}`}
+                          checked={species.includes(s.key)}
+                          onChange={() => toggleSpecies(s.key)}
+                        />
+                        <label htmlFor={`species-${s.key}`} className="text-xs font-medium cursor-pointer">
+                          {s.icon ? `${s.icon} ${s.label}` : s.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 sm:pt-4">
+                  <input
+                    type="checkbox"
+                    id="public-toggle"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <label htmlFor="public-toggle" className="text-xs font-medium cursor-pointer">
+                    {t("marketing.handouts.publicToggle", "Verejný leták (dostupný pre klientov a online náhľad)")}
+                  </label>
+                </div>
+              </div>
+
+              {/* Actions */}
               <div className="flex items-center justify-end gap-2 pt-3 border-t">
-                <Button variant="outline" size="sm" onClick={() => {
-                  setIsDialogOpen(false);
-                  setShowAiGenerator(false);
-                  setAiImageUrl(null);
-                }}>
-                  Zrušiť
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    setShowAiGenerator(false);
+                    setAiImageUrl(null);
+                  }}
+                >
+                  {t("common.cancel", "Zrušiť")}
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => createMutation.mutate({ slug, title, body, species, isPublic })}
                   disabled={!slug || !title || !body || createMutation.isPending}
                 >
-                  {createMutation.isPending ? "Ukladám..." : "Vytvoriť leták"}
+                  {createMutation.isPending
+                    ? t("marketing.handouts.saving", "Ukladám...")
+                    : t("marketing.handouts.createBtn", "Vytvoriť leták")}
                 </Button>
               </div>
             </div>

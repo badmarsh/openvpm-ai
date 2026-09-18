@@ -325,6 +325,11 @@
       "lotPrefix": "Šarža {number}",
       "expPrefix": "Exp {date}"
     },
+    "pagination": {
+      "showing": "Zobrazuje sa {start}–{end} z {total}",
+      "previous": "Predchádzajúce",
+      "next": "Ďalšie"
+    },
     "empty": {
       "filterAlertTitle": "Tomuto filtru upozornení nezodpovedajú žiadne produkty",
       "filterSearchTitle": "Žiadne produkty nezodpovedajú zadaným filtrom",

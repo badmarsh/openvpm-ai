@@ -2107,6 +2107,9 @@ function RecordsPageContent() {
                           <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                             {t("records.vaccinations.colStatus", "Status")}
                           </th>
+                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                            {t("records.vaccinations.colActions", "Actions")}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2124,10 +2127,10 @@ function RecordsPageContent() {
                                       "bg-destructive/5 text-muted-foreground",
                                   )}
                                 >
-                                  <td className="px-4 py-3 font-medium">
+                                  <td className="px-4 py-3 font-medium align-middle">
                                     {vax.vaccineName}
                                   </td>
-                                  <td className="px-4 py-3">
+                                  <td className="px-4 py-3 whitespace-nowrap align-middle">
                                     {vax.administeredAt
                                       ? formatClinicalDate(
                                           vax.administeredAt,
@@ -2135,7 +2138,7 @@ function RecordsPageContent() {
                                         )
                                       : "--"}
                                   </td>
-                                  <td className="px-4 py-3">
+                                  <td className="px-4 py-3 whitespace-nowrap align-middle">
                                     {vax.nextDueDate
                                       ? formatClinicalDate(
                                           vax.nextDueDate,
@@ -2143,10 +2146,10 @@ function RecordsPageContent() {
                                         )
                                       : "--"}
                                   </td>
-                                  <td className="px-4 py-3 text-muted-foreground">
+                                  <td className="px-4 py-3 text-muted-foreground align-middle">
                                     {vax.administeredByName ?? "--"}
                                   </td>
-                                  <td className="px-4 py-3">
+                                  <td className="px-4 py-3 whitespace-nowrap align-middle">
                                     {vax.correctionId ? (
                                       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
                                         {t("records.enteredInError", "Entered in error")}
@@ -2167,7 +2170,10 @@ function RecordsPageContent() {
                                               : dueStatus.label}
                                       </span>
                                     )}
+                                  </td>
+                                  <td className="px-4 py-3 text-right align-middle whitespace-nowrap">
                                     <ClinicalCorrectionControl
+                                      className="flex justify-end"
                                       timeZone={recordsTimeZone}
                                       correction={
                                         vax.correctionId &&

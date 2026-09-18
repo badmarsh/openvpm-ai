@@ -257,6 +257,7 @@
   "records.vaccinations.colNextDue": "Next Due",
   "records.vaccinations.colAdministeredBy": "Administered By",
   "records.vaccinations.colStatus": "Status",
+  "records.vaccinations.colActions": "Actions",
   "records.vaccinations.overdue": "Overdue",
   "records.vaccinations.dueSoon": "Due Soon",
   "records.vaccinations.current": "Current",
