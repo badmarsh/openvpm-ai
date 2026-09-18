@@ -704,4 +704,11 @@ describe("controlled substance list scoping", () => {
     expect(source).toContain("await lockControlledSubstanceLedger(txCtx, input)");
     expect(source).toContain("await assertControlledSubstanceBalance(txCtx, input)");
   });
+
+  it("filters controlled-substance log via case-insensitive partial match", () => {
+    expect(source).toContain("ilike(controlledSubstanceLog.drugName, pattern)");
+    expect(source).toContain("ilike(controlledSubstanceLog.lotNumber, pattern)");
+    expect(source).toContain("ilike(patients.name, pattern)");
+  });
 });
+

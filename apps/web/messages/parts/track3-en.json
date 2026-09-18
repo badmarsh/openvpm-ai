@@ -95,6 +95,8 @@
       "colTotal": "Total",
       "taxable": "taxable",
       "notTaxable": "not taxable",
+      "typeService": "service",
+      "typeProduct": "product",
       "subtotal": "Subtotal",
       "tax": "Tax",
       "total": "Total",

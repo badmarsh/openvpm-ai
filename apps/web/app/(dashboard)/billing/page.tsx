@@ -1498,8 +1498,18 @@ function InvoiceRow({
                           className="border-b border-border/50 last:border-0"
                         >
                           <td className="py-2">{item.description}</td>
-                          <td className="py-2 capitalize text-muted-foreground">
-                            {item.itemType} · {item.taxable ? t("billing.row.taxable", "taxable") : t("billing.row.notTaxable", "not taxable")}
+                          <td className="py-2 text-muted-foreground">
+                            <span className="capitalize">
+                              {item.itemType === "service"
+                                ? t("billing.row.typeService", "service")
+                                : item.itemType === "product"
+                                ? t("billing.row.typeProduct", "product")
+                                : item.itemType}
+                            </span>{" "}
+                            ·{" "}
+                            {item.taxable
+                              ? t("billing.row.taxable", "taxable")
+                              : t("billing.row.notTaxable", "not taxable")}
                           </td>
                           <td className="py-2 text-right tabular-nums">
                             {item.quantity}

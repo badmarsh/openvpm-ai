@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull, gte, lte, sql, desc, asc } from "drizzle-orm";
+import { eq, and, isNull, gte, lte, sql, desc, asc, ilike, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
 import {
@@ -356,8 +356,14 @@ export const controlledSubstancesRouter = createRouter({
       ];
 
       if (input.drugName) {
+        const escaped = input.drugName.replace(/[%_\\]/g, "\\$&");
+        const pattern = `%${escaped}%`;
         conditions.push(
-          eq(controlledSubstanceLog.drugName, input.drugName)
+          or(
+            ilike(controlledSubstanceLog.drugName, pattern),
+            ilike(controlledSubstanceLog.lotNumber, pattern),
+            ilike(patients.name, pattern)
+          )!
         );
       }
       if (range.start) {
@@ -421,6 +427,15 @@ export const controlledSubstancesRouter = createRouter({
         ctx.db
           .select({ count: sql<number>`count(*)` })
           .from(controlledSubstanceLog)
+          .leftJoin(
+            patients,
+            and(
+              eq(controlledSubstanceLog.patientId, patients.id),
+              eq(patients.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(patients.deletedAt)
+            )
+          )
           .where(and(...conditions)),
       ]);
 

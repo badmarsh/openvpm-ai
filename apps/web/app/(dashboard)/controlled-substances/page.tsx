@@ -785,9 +785,15 @@ function ControlledSubstancesLogPage() {
           {/* Pagination */}
           <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <p>
-              Showing {offset + 1}&ndash;
-              {Math.min(offset + limit, verifiedLogPayload.log.total)} of{" "}
-              {verifiedLogPayload.log.total}
+              {t(
+                "controlledSubstances.pagination.showing",
+                `Showing ${offset + 1}–${Math.min(offset + limit, verifiedLogPayload.log.total)} of ${verifiedLogPayload.log.total}`,
+                {
+                  start: offset + 1,
+                  end: Math.min(offset + limit, verifiedLogPayload.log.total),
+                  total: verifiedLogPayload.log.total,
+                }
+              )}
             </p>
             <div className="flex gap-2">
               <Button
