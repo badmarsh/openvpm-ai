@@ -8,15 +8,34 @@ as described in `docs/production-readiness/VERSIONING.md`.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-18
+
 ### Added
 
-- **Brand-Kit-Aware Drag-and-Drop Clinic Website Builder:**
-  - Full-width visual editor canvas with accessible `@dnd-kit` drag handles, inline property editing sheets, and live responsive desktop/mobile viewport toggle.
-  - Comprehensive library of 17 shadcn/ui section templates: Hero Banner, About & Story, Services Grid, GDPR-Consent-Gated Team, Reviews & Ratings (Grid/Carousel), FAQ Accordion, Hours & Location with map embed, Online Booking CTA, Media Library Gallery, Educational Care Handouts, Trust & Certification Badges, Statistics Strip, Urgent Care Emergency Banner, Client Contact Form, Responsive Video Player, Social Proof Bar, and Sanitized Custom Rich Text.
-  - Automatic Brand Kit styling injecting `--wb-primary`, `--wb-secondary`, and calculated contrast text colors (`--wb-on-primary`) across all section components.
-  - Dedicated Drizzle schema table `ext_marketing_website_config` with draft vs. published state isolation.
-  - Backward compatibility seed fallback guaranteeing zero disruption for existing published clinic sites.
-  - Playwright E2E and Vitest unit test suites covering section schemas, drag reordering, and public rendering.
+- **Wholesaler Delivery Note Import & Controlled Substances Safety Gate (Zákon č. 139/1998 Z. z.):**
+  - Expanded parsing support for Slovak veterinary wholesalers: BIOPHARM, KOMVET (tab-delimited safe parser), SG-Vet (Slovak XML tags), SANVET, and PHRAMED.
+  - Automatic detection of controlled substances (`isControlledSubstance: true`, including Ketamidor, ketamine, butorphanol, fentanyl, propofol) with default action `skip` requiring explicit manual veterinarian sign-off into Kniha OPL.
+- **Inventory Pagination & Performance:**
+  - 50 items per page with dynamic tRPC offset pagination, page counters, and automatic search/filter resets.
+- **Clinical Records & Vaccination UX:**
+  - Clean 6-column strictly aligned table for patient vaccination records (`Vakcína` | `Dátum aplikácie` | `Ďalšia revakcinácia` | `Aplikoval` | `Stav` | `Akcie`).
+  - Dedicated Actions column for statutory clinical corrections (`ClinicalCorrectionControl` per Zákon č. 39/2007 Z. z.) with vertical cell centering.
+  - Unified European date format (`DD.MM.YYYY`) across patient vitals, encounters, and forms.
+- **Marketing & Educational Handouts:**
+  - Widened 2-column modal (`max-w-4xl`) for creating handouts without vertical scrolling, with backdrop and header close buttons.
+  - Updated clinic contact phone to `0903 949 401`.
+- **Security & User Profile:**
+  - In-app password change accessible to all staff members via `/settings/security` with direct sidebar profile shortcut.
+- **AI Assistant UX & Reliability:**
+  - Rich Markdown rendering in AI assistant message bubbles (lists, bold highlights, tables).
+  - Strict adherence to practice-configured AI provider in `ext_ai_settings` and proper Gemini thought signature handling.
+- **Dokploy & Server Operations:**
+  - Dokploy Swarm Standalone Database Services support (`openvpm-postgres-cfoqxx` production DB, `openvpm-arena-postgres-ygh6nf` external arena clone).
+  - Dual-environment data sync guardrails and automated `deploy.ps1`.
+- **i18n & Localization Quality:**
+  - 100% dictionary symmetry between `en.json` and `sk.json` (6,930+ keys).
+  - Proper Slovak grammatical plurals in inventory, billing, and settings.
+  - Dedicated `prelozit` skill for automated translation hygiene.
 
 ## [0.6.0] - 2026-09-13
 

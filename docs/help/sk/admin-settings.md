@@ -15,6 +15,7 @@ Stránka nastavení je rozdelená do nasledovných sekcií:
 |---|---|
 | **Informácie o praxi** | Názov, adresa, telefón, časové pásmo, logo |
 | **Používatelia a roly** | Pozvanie personálu, priradenie rolí, deaktivácia účtov |
+| **Zabezpečenie** | Zmena hesla priamo v aplikácii, dostupné pre každého člena personálu (`/settings/security`) |
 | **Služby a produkty** | Katalóg služieb, ceny, daňové kódy |
 | **Šablóny** | Šablóny SOAP poznámok, prepúšťacích správ, predpisov a e-mailov |
 | **Upomienky** | Pravidlá predvolania na vakcínu, načasovanie starostlivosti |

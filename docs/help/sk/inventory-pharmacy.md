@@ -1,4 +1,4 @@
-﻿# Sklad a lekáreň
+# Sklad a lekáreň
 
 Spravujte zásoby produktov, omamné a psychotropné látky a dávkovanie liekov
 v sekcii **Sklad** (`/inventory`). Všetky pohyby zásob sú zaznamenávané
@@ -16,12 +16,14 @@ Katalóg produktov je zdrojom pravdy pre všetko, čo dispenzujete alebo
 predávate. Každý produkt obsahuje:
 
 - **Názov, SKU, kategória** — organizujte produkty podľa typu (liek,
-  spotrebný materiál, krmivo atď.)
+  spotrebný materiál, krmivo atď.) s plnou slovenskou lokalizáciou a skloňovaním
 - **Dodávateľ** — prepojenie so záznamom dodávateľa
 - **Jednotková cena** — použitá pri pridaní produktu do faktúry
 - **Číslo šarže a dátum exspirácie** — sledované pre každú dávku
 - **Hladina objednávky** — keď zásoby klesnú na túto úroveň alebo pod ňu,
   produkt sa zobrazí v upozorneniach
+- **Stránkovanie** — zoznam zobrazuje 50 položiek na stranu s rýchlou navigáciou,
+  čítačom stránok a automatickým návratom na stranu 1 pri vyhľadávaní.
 
 **Filter upozornení**: Použite filter v hornej časti stránky skladu:
 
@@ -95,25 +97,33 @@ Formulár obsahuje ochrany pred druhovo špecifickou toxicitou
 
 ---
 
-## 4. Import dodacích listov od veľkoobchodníkov — pripravuje sa (v0.7)
+## 4. Elektronický import dodacích listov od veľkoobchodníkov
 
-> ⚠️ **Táto funkcia nie je v aktuálnej verzii k dispozícii.**
+Systém umožňuje automatické spracovanie a import elektronických dodacích listov
+priamo do skladu:
 
-Systém bude schopný automaticky parsovať elektronické dodacie listy
-od nasledovných veľkoobchodníkov:
-
-| Veľkoobchodník | Formát |
+| Veľkoobchodník | Formát súboru |
 |---|---|
-| Cymedica SK s.r.o. | CSV (oddeľovač bodkočiarka) |
-| Pharmos a.s. | EDI / CSV |
-| Samohýl SK, s.r.o. | CSV s EAN kódmi |
-| Henry Schein SK | CSV / Tab-delimited |
+| **Cymedica SK s.r.o.** | CSV (oddeľovač bodkočiarka) |
+| **Pharmos a.s.** | EDI / CSV s ADC/ŠÚKL kódmi |
+| **Samohýl SK, s.r.o.** | CSV s EAN kódmi |
+| **Henry Schein SK** | CSV / Tab-delimited |
+| **BIOPHARM, s.r.o.** | CSV s kódmi a šaržami liečiv |
+| **KOMVET s.r.o.** | Tab-delimited .txt bezpečný parser |
+| **SG-Vet s.r.o.** | XML s podporou slovenských tagov (`<polozka>`, `<sarza>`, `<expiracia>`) |
+| **SANVET s.r.o. / PHRAMED** | CSV s automatickým rozpoznaním distribútora |
 
-Parsované polia budú zahŕňať: názov produktu, číslo šarže, dátum
-exspirácie, množstvo a nákupnú cenu — automaticky pridané do zásob
-pri príjme.
+Parsované polia zahŕňajú: kód položky (SKU), názov produktu, číslo šarže, dátum
+exspirácie, množstvo a nákupnú cenu bez DPH. Systém automaticky vyhľadá zhodu s existujúcimi
+kartami produktov a navrhne naskladnenie (`update_stock`) alebo založenie nového produktu (`create_product`).
 
-Po vydaní vo verzii v0.7 nájdete import v **Nastavenia → Import**.
+> 🛑 **Bezpečnostná brána pre omamné látky (Zákon č. 139/1998 Z. z.)**:
+> Pri importe systém automaticky identifikuje regulované látky (Ketamidor, ketamín,
+> butorfanol, fentanyl, propofol atď.) a nastavuje predvolenú akciu na **Preskočiť** (`skip`).
+> Omamné látky nie je možné automaticky naskladniť do bežných zásob — vyžadujú manuálny
+> zápis autorizovaným veterinárnym lekárom do Knihy OPL.
+
+Import nájdete v sekcii **Sklad → Import dodacieho listu** (`/inventory/import`).
 
 ---
 

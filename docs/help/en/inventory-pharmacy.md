@@ -1,4 +1,4 @@
-﻿# Inventory & Pharmacy
+# Inventory & Pharmacy
 
 Manage your product stock, controlled substances, and drug dosing at
 **Inventory** (`/inventory`). All stock movements are logged with a
@@ -21,6 +21,8 @@ or sell. Each product has:
 - **Lot number & expiry date** — tracked per batch; multiple lots per product
 - **Reorder level** — when stock falls to or below this number, the product
   appears in the Attention/Low Stock alerts
+- **Pagination** — the product list displays 50 items per page with fast navigation,
+  page counter, and automatic reset to page 1 on search or filter change.
 
 **Alert filter**: Use the filter at the top of the Inventory page to view:
 
@@ -95,24 +97,33 @@ for cats, ivermectin for collies).
 
 ---
 
-## 4. Wholesaler delivery import — coming soon (v0.7)
+## 4. Wholesaler delivery note import
 
-> ⚠️ **This feature is not yet available in the current version.**
-
-The system will be able to automatically parse electronic delivery notes
-from the following wholesalers:
+The system automatically parses and imports electronic delivery notes
+directly into inventory:
 
 | Wholesaler | Format |
 |---|---|
-| Cymedica SK s.r.o. | CSV (semicolon-delimited) |
-| Pharmos a.s. | EDI / CSV |
-| Samohýl SK, s.r.o. | CSV with EAN codes |
-| Henry Schein SK | CSV / Tab-delimited |
+| **Cymedica SK s.r.o.** | CSV (semicolon-delimited) |
+| **Pharmos a.s.** | EDI / CSV with ADC/ŠÚKL drug codes |
+| **Samohýl SK, s.r.o.** | CSV with EAN codes |
+| **Henry Schein SK** | CSV / Tab-delimited |
+| **BIOPHARM, s.r.o.** | Standardised CSV with drug codes, lots, and expiries |
+| **KOMVET s.r.o.** | Tab-delimited .txt safe parser |
+| **SG-Vet s.r.o.** | XML with Slovak tag support (`<polozka>`, `<sarza>`, `<expiracia>`) |
+| **SANVET s.r.o. / PHRAMED** | CSV with distributor auto-detection |
 
-Parsed fields will include: product name, lot number, expiry date, quantity,
-and purchase price — automatically added to your stock on receipt.
+Parsed fields include: product code (SKU), name, batch/lot number, expiry date,
+quantity, and purchase unit price. The system matches incoming items against existing
+products and suggests either updating stock (`update_stock`) or creating a new product (`create_product`).
 
-When released in v0.7, you will find the import under **Settings → Import**.
+> 🛑 **Controlled Substances Safety Gate (Act 139/1998 Coll.)**:
+> During import, any controlled substance (including Ketamidor, ketamine,
+> butorphanol, fentanyl, propofol) is automatically flagged and defaults to
+> **Skip** (`skip`). Controlled drugs cannot be automatically added to general
+> inventory without explicit manual verification and entry into Kniha OPL by a veterinarian.
+
+Access this feature at **Inventory → Import Delivery Note** (`/inventory/import`).
 
 ---
 

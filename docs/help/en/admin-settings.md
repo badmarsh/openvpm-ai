@@ -15,6 +15,7 @@ The settings page is organised into the following sections:
 |---|---|
 | **Practice info** | Name, address, phone, timezone, logo |
 | **Users & roles** | Invite staff, assign roles, deactivate accounts |
+| **Security** | In-app password change, available to all staff members (`/settings/security`) |
 | **Services & products** | Service catalogue, pricing, tax codes |
 | **Templates** | SOAP note, discharge, prescription, and email templates |
 | **Reminders** | Vaccine recall rules, care reminder timing |
