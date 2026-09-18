@@ -9,6 +9,10 @@ describe("agent UI states", () => {
   const source = readFileSync("app/(dashboard)/agent/page.tsx", "utf8");
   const routerSource = readFileSync("server/routers/agent.ts", "utf8");
   const apiRouteSource = readFileSync("app/api/v1/agent/route.ts", "utf8");
+  const bubbleSource = readFileSync(
+    "app/(dashboard)/agent/components/agent-message-bubble.tsx",
+    "utf8"
+  );
 
   it("fails closed until agent status is loaded and configured", () => {
     expect(source).toContain(
@@ -117,5 +121,15 @@ describe("agent UI states", () => {
       source.indexOf("trpc.agent.status.useQuery"),
     );
     expect(routerSource).toContain('requireRole("admin", "veterinarian")');
+  });
+
+  it("renders assistant messages with dynamic MarkdownView and prose typography", () => {
+    expect(bubbleSource).toContain('from "next/dynamic"');
+    expect(bubbleSource).toContain('import("@/components/common/markdown-view")');
+    expect(bubbleSource).toContain("ssr: false");
+    expect(bubbleSource).toContain("<MarkdownView");
+    expect(bubbleSource).toContain("prose");
+    expect(bubbleSource).toContain("prose-strong:font-semibold");
+    expect(bubbleSource).toContain("prose-ul:list-disc");
   });
 });

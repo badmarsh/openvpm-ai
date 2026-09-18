@@ -2,9 +2,26 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Wrench, Copy, Check } from "lucide-react";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import type { PersistedChatMessage } from "./agent-chat-history";
+
+const MarkdownView = dynamic(
+  () =>
+    import("@/components/common/markdown-view").then(
+      (mod) => mod.MarkdownView,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse space-y-1.5 py-1" aria-hidden="true">
+        <div className="h-3 w-3/4 rounded bg-foreground/10" />
+        <div className="h-3 w-full rounded bg-foreground/10" />
+      </div>
+    ),
+  },
+);
 
 function toolCallsCountLabel(
   count: number,
@@ -45,13 +62,19 @@ export function AgentMessageBubble({
         )}
       >
         {!isUser && !message.isError && (
-          <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="flex items-center gap-1.5 mb-1.5 pr-7">
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
               {t("agent.aiGeneratedBadge", "Vygenerované AI Asistentom")}
             </span>
           </div>
         )}
-        <div className="whitespace-pre-wrap">{message.content}</div>
+        {isUser || message.isError ? (
+          <div className="whitespace-pre-wrap">{message.content}</div>
+        ) : (
+          <MarkdownView className="prose prose-sm max-w-none dark:prose-invert text-xs leading-relaxed text-foreground break-words prose-p:my-1.5 prose-p:text-xs prose-p:leading-relaxed first:prose-p:mt-0 last:prose-p:mb-0 prose-headings:my-2 prose-headings:text-sm prose-headings:font-semibold prose-headings:text-foreground prose-ul:my-1.5 prose-ul:list-disc prose-ul:pl-4 prose-ol:my-1.5 prose-ol:list-decimal prose-ol:pl-4 prose-li:my-0.5 prose-li:text-xs prose-strong:font-semibold prose-strong:text-foreground prose-code:before:content-none prose-code:after:content-none prose-code:rounded prose-code:bg-background/60 prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-[11px] prose-pre:my-2 prose-pre:rounded-md prose-pre:bg-background/80 prose-pre:p-2.5">
+            {message.content}
+          </MarkdownView>
+        )}
 
         {!isUser && (
           <button
