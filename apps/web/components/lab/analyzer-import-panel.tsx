@@ -117,7 +117,7 @@ export function AnalyzerImportPanel() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">
-                          {report.patient?.name ? report.patient.name : "Nezaradený pacient"}
+                          {report.patient?.name ? report.patient.name : t("labImport.unassignedPatient", "Nezaradený pacient")}
                         </span>
                         {report.patient?.species && (
                           <span className="text-xs text-muted-foreground">
@@ -130,9 +130,9 @@ export function AnalyzerImportPanel() {
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
                         <span>{new Date(report.createdAt).toLocaleString("sk-SK")}</span>
-                        {report.fileName && <span>• Súbor: {report.fileName}</span>}
+                        {report.fileName && <span>• {t("labImport.fileLabel", "Súbor: {fileName}", { fileName: report.fileName })}</span>}
                         {report.client && (
-                          <span>• Majiteľ: {report.client.firstName} {report.client.lastName}</span>
+                          <span>• {t("labImport.ownerLabel", "Majiteľ: {name}", { name: `${report.client.firstName || ""} ${report.client.lastName || ""}`.trim() })}</span>
                         )}
                       </div>
                     </div>
@@ -142,19 +142,19 @@ export function AnalyzerImportPanel() {
                     {report.criticalCount > 0 && (
                       <Badge variant="destructive" className="gap-1 text-xs">
                         <AlertOctagon className="h-3 w-3" />
-                        <span>{report.criticalCount} kritické</span>
+                        <span>{t("labImport.countCritical", "{count} kritické", { count: report.criticalCount })}</span>
                       </Badge>
                     )}
                     {report.abnormalCount > 0 && (
                       <Badge variant="outline" className="border-amber-500/50 bg-amber-50 text-amber-800 dark:bg-amber-950/40 text-xs gap-1">
                         <AlertTriangle className="h-3 w-3" />
-                        <span>{report.abnormalCount} patologických</span>
+                        <span>{t("labImport.countAbnormal", "{count} patologických", { count: report.abnormalCount })}</span>
                       </Badge>
                     )}
                     {report.abnormalCount === 0 && (
                       <Badge variant="outline" className="border-emerald-500/50 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 text-xs gap-1">
                         <CheckCircle2 className="h-3 w-3" />
-                        <span>Fyziologické</span>
+                        <span>{t("labImport.badgePhysiological", "Fyziologické")}</span>
                       </Badge>
                     )}
 
@@ -169,10 +169,10 @@ export function AnalyzerImportPanel() {
                       }
                     >
                       {report.status === "REVIEWED"
-                        ? "Schválené"
+                        ? t("labImport.badgeReviewed", "Schválené")
                         : report.status === "ATTACHED"
-                        ? "Čaká na schválenie"
-                        : "Nezaradené"}
+                        ? t("labImport.badgeAwaitingReview", "Čaká na schválenie")
+                        : t("labImport.badgeUnassigned", "Nezaradené")}
                     </Badge>
 
                     {isExpanded ? (
@@ -190,12 +190,12 @@ export function AnalyzerImportPanel() {
                       <table className="w-full text-left text-xs">
                         <thead>
                           <tr className="border-b border-border bg-muted/40 font-medium text-muted-foreground">
-                            <th className="px-3 py-2">Parameter</th>
-                            <th className="px-3 py-2">Názov vyšetrenia</th>
-                            <th className="px-3 py-2 text-right">Hodnota</th>
-                            <th className="px-3 py-2">Jednotka</th>
-                            <th className="px-3 py-2">Referenčný rozsah</th>
-                            <th className="px-3 py-2 text-center">Nález</th>
+                            <th className="px-3 py-2">{t("labImport.colParameter", "Parameter")}</th>
+                            <th className="px-3 py-2">{t("labImport.colExamName", "Názov vyšetrenia")}</th>
+                            <th className="px-3 py-2 text-right">{t("labImport.colValue", "Hodnota")}</th>
+                            <th className="px-3 py-2">{t("labImport.colUnit", "Jednotka")}</th>
+                            <th className="px-3 py-2">{t("labImport.colRefRange", "Referenčný rozsah")}</th>
+                            <th className="px-3 py-2 text-center">{t("labImport.colFinding", "Nález")}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -227,19 +227,19 @@ export function AnalyzerImportPanel() {
                                 <td className="px-3 py-2 text-center">
                                   {isCrit ? (
                                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                      KRITICKÁ
+                                      {t("labImport.flagCritical", "KRITICKÁ")}
                                     </Badge>
                                   ) : isHigh ? (
                                     <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50 text-[10px] px-1.5 py-0">
-                                      ZVÝŠENÉ (▲)
+                                      {t("labImport.flagHigh", "ZVÝŠENÉ (▲)")}
                                     </Badge>
                                   ) : isLow ? (
                                     <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50 text-[10px] px-1.5 py-0">
-                                      ZNÍŽENÉ (▼)
+                                      {t("labImport.flagLow", "ZNÍŽENÉ (▼)")}
                                     </Badge>
                                   ) : (
                                     <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50 text-[10px] px-1.5 py-0">
-                                      Norma
+                                      {t("labImport.flagNormal", "Norma")}
                                     </Badge>
                                   )}
                                 </td>
@@ -254,7 +254,7 @@ export function AnalyzerImportPanel() {
                     <div className="flex items-center justify-between pt-2">
                       <div className="text-xs text-muted-foreground">
                         {report.reviewer && (
-                          <span>Schválil: {report.reviewer.name} dňa {new Date(report.reviewedAt!).toLocaleDateString("sk-SK")}</span>
+                          <span>{t("labImport.reviewedBy", "Schválil: {name} dňa {date}", { name: report.reviewer.name || "", date: new Date(report.reviewedAt!).toLocaleDateString("sk-SK") })}</span>
                         )}
                       </div>
                       {report.status !== "REVIEWED" && (
@@ -266,7 +266,7 @@ export function AnalyzerImportPanel() {
                           disabled={reviewMutation.isPending}
                         >
                           <Check className="h-3.5 w-3.5" />
-                          <span>Potvrdiť a schváliť nález</span>
+                          <span>{t("labImport.btnConfirmReview", "Potvrdiť a schváliť nález")}</span>
                         </Button>
                       )}
                     </div>
@@ -353,7 +353,10 @@ function AnalyzerUploadModal({
       });
       setConfidenceScore(data.confidenceScore);
       toast.success(
-        `AI analýza protokolu: ${data.results.length} parametrov (spoľahlivosť ${Math.round(data.confidenceScore * 100)}%)`
+        t("labImport.aiAnalysisSuccess", "AI analýza protokolu: {count} parametrov (spoľahlivosť {score}%)", {
+          count: data.results.length,
+          score: Math.round(data.confidenceScore * 100),
+        })
       );
     },
     onError: (err: any) => {
@@ -448,10 +451,10 @@ function AnalyzerUploadModal({
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">
-                Import z veterinárneho analyzátora
+                {t("labImport.modalTitle", "Import laboratórnych výsledkov z analyzátora")}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Podpora IDEXX Catalyst/ProCyte, Fuji Dri-Chem NX, Mindray BC-Vet
+                {t("labImport.modalSubtitle", "Nahrajte súbor z biochemického, hematologického alebo močového analyzátora")}
               </p>
             </div>
           </div>
@@ -468,22 +471,22 @@ function AnalyzerUploadModal({
           {/* Top Options: Species and File Select */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-medium block mb-1">Druh pacienta (pre referenčné rozsahy)</label>
+              <label className="text-xs font-medium block mb-1">{t("labImport.selectSpecies", "Druh pacienta (pre referenčné rozsahy)")}</label>
               <select
                 value={species}
                 onChange={(e) => setSpecies(e.target.value as any)}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs"
               >
-                <option value="canine">Pes (Canine)</option>
-                <option value="feline">Mačka (Feline)</option>
-                <option value="other">Iné zviera</option>
+                <option value="canine">{t("labImport.speciesCanine", "Pes (Canine)")}</option>
+                <option value="feline">{t("labImport.speciesFeline", "Mačka (Feline)")}</option>
+                <option value="other">{t("labImport.speciesOther", "Iné zviera")}</option>
               </select>
             </div>
 
             <div>
-              <label className="text-xs font-medium block mb-1">Priradiť pacientovi (voliteľné)</label>
+              <label className="text-xs font-medium block mb-1">{t("labImport.assignPatient", "Priradiť pacientovi (voliteľné)")}</label>
               <Input
-                placeholder="Hľadať pacienta podľa mena..."
+                placeholder={t("labImport.searchPatientPlaceholder", "Hľadať pacienta podľa mena...")}
                 value={patientSearch}
                 onChange={(e) => setPatientSearch(e.target.value)}
                 className="text-xs h-9"
@@ -530,26 +533,26 @@ function AnalyzerUploadModal({
               {isPdfLoading ? (
                 <span className="flex items-center justify-center gap-2 text-primary font-semibold">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  AI Copilot analyzuje PDF protokol...
+                  {t("labImport.analyzingPdf", "AI Copilot analyzuje PDF protokol...")}
                 </span>
               ) : fileName ? (
                 fileName
               ) : (
-                "Kliknite pre výber súboru (CSV, TXT, PDF protokol z laboratória)"
+                t("labImport.dragDropNotice", "Kliknite pre výber súboru (CSV, TXT, PDF protokol z laboratória)")
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Podporuje IDEXX Catalyst/ProCyte, Mindray, Fuji Dri-Chem a PDF protokoly (Laboklin, Synlab, Alpha)
+              {t("labImport.supportedFormats", "Podporuje IDEXX Catalyst/ProCyte, Mindray, Fuji Dri-Chem a PDF protokoly (Laboklin, Synlab, Alpha)")}
             </p>
           </div>
 
           {/* Manual paste toggle */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-muted-foreground">Alebo vložte surový text / CSV:</label>
+              <label className="text-xs font-medium text-muted-foreground">{t("labImport.pasteRawText", "Alebo vložte surový text / CSV:")}</label>
               {rawText && !parsedPreview && (
                 <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={handleParseManual}>
-                  Analyzovať text
+                  {t("labImport.btnAnalyze", "Analyzovať text")}
                 </Button>
               )}
             </div>
@@ -570,7 +573,7 @@ function AnalyzerUploadModal({
                     {parsedPreview.analyzerType} {parsedPreview.deviceModel ? "• " + parsedPreview.deviceModel : ""}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    ({parsedPreview.results.length} nájdených parametrov)
+                    {t("labImport.foundParameters", "({count} nájdených parametrov)", { count: parsedPreview.results.length })}
                   </span>
                   <ClinicalStatusBadge
                     status="ai_draft"
@@ -581,12 +584,12 @@ function AnalyzerUploadModal({
                 <div className="flex items-center gap-1.5">
                   {parsedPreview.criticalCount > 0 && (
                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                      {parsedPreview.criticalCount} kritické
+                      {t("labImport.countCritical", "{count} kritické", { count: parsedPreview.criticalCount })}
                     </Badge>
                   )}
                   {parsedPreview.abnormalCount > 0 && (
                     <Badge variant="outline" className="border-amber-500 text-amber-700 text-[10px] px-1.5 py-0">
-                      {parsedPreview.abnormalCount} patologických
+                      {t("labImport.countAbnormal", "{count} patologických", { count: parsedPreview.abnormalCount })}
                     </Badge>
                   )}
                 </div>
@@ -597,12 +600,12 @@ function AnalyzerUploadModal({
                   <table className="w-full text-left text-xs">
                     <thead className="bg-muted/40 sticky top-0">
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="px-3 py-1.5">Kód</th>
-                        <th className="px-3 py-1.5">Názov</th>
-                        <th className="px-3 py-1.5 text-right">Hodnota</th>
-                        <th className="px-3 py-1.5">Jednotka</th>
-                        <th className="px-3 py-1.5">Referenčný rozsah</th>
-                        <th className="px-3 py-1.5 text-center">Nález</th>
+                        <th className="px-3 py-1.5">{t("labImport.colCode", "Kód")}</th>
+                        <th className="px-3 py-1.5">{t("labImport.colName", "Názov")}</th>
+                        <th className="px-3 py-1.5 text-right">{t("labImport.colValue", "Hodnota")}</th>
+                        <th className="px-3 py-1.5">{t("labImport.colUnit", "Jednotka")}</th>
+                        <th className="px-3 py-1.5">{t("labImport.colRefRange", "Referenčný rozsah")}</th>
+                        <th className="px-3 py-1.5 text-center">{t("labImport.colFinding", "Nález")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -617,13 +620,13 @@ function AnalyzerUploadModal({
                           </td>
                           <td className="px-3 py-1 text-center">
                             {r.flag === "CRITICAL" ? (
-                              <Badge variant="destructive" className="text-[9px] px-1 py-0">Kritické</Badge>
+                              <Badge variant="destructive" className="text-[9px] px-1 py-0">{t("labImport.flagCritical", "Kritické")}</Badge>
                             ) : r.flag === "HIGH" ? (
-                              <Badge variant="outline" className="border-amber-500 text-amber-700 text-[9px] px-1 py-0">Zvýšené</Badge>
+                              <Badge variant="outline" className="border-amber-500 text-amber-700 text-[9px] px-1 py-0">{t("labImport.flagHigh", "Zvýšené")}</Badge>
                             ) : r.flag === "LOW" ? (
-                              <Badge variant="outline" className="border-blue-500 text-blue-700 text-[9px] px-1 py-0">Znížené</Badge>
+                              <Badge variant="outline" className="border-blue-500 text-blue-700 text-[9px] px-1 py-0">{t("labImport.flagLow", "Znížené")}</Badge>
                             ) : (
-                              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[9px] px-1 py-0">Norma</Badge>
+                              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[9px] px-1 py-0">{t("labImport.flagNormal", "Norma")}</Badge>
                             )}
                           </td>
                         </tr>
@@ -639,7 +642,7 @@ function AnalyzerUploadModal({
         {/* Modal Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3 bg-muted/20">
           <Button variant="outline" size="sm" onClick={onClose} disabled={saveMutation.isPending || isPdfLoading}>
-            Zrušiť
+            {t("common.cancel", "Zrušiť")}
           </Button>
           <Button
             size="sm"
@@ -652,7 +655,7 @@ function AnalyzerUploadModal({
             ) : (
               <CheckCircle2 className="h-3.5 w-3.5" />
             )}
-            Overiť a schváliť (KVL SR)
+            {t("labImport.btnVerifySign", "Overiť a schváliť (KVL SR)")}
           </Button>
         </div>
       </div>

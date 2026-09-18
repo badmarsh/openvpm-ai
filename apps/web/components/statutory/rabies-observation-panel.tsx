@@ -66,7 +66,12 @@ export function RabiesObservationPanel() {
 
   // Checkpoint Record State
   const [examinedBy, setExaminedBy] = useState("");
-  const [examFindings, setExamFindings] = useState("Zviera afebrilné, bez príznakov zmeny správania, bez hypersalivácie a neurologických porúch.");
+  const [examFindings, setExamFindings] = useState(() =>
+    t(
+      "statutory.rabies.defaultFindings",
+      "Animal afebril, no behavioral changes, no hypersalivation or neurological symptoms."
+    )
+  );
   const [examPassed, setExamPassed] = useState(true);
 
   const { data, isLoading, refetch } = trpc.extensions.statutory.listRabiesObservations.useQuery({
@@ -81,24 +86,42 @@ export function RabiesObservationPanel() {
 
   const createMutation = trpc.extensions.statutory.createRabiesObservation.useMutation({
     onSuccess: () => {
-      toast.success("Nový prípad pohryznutia a 14-dňové pozorovanie bolo úspešne zaevidované.");
+      toast.success(
+        t(
+          "statutory.rabies.toastCreated",
+          "New bite incident and 14-day observation recorded successfully."
+        )
+      );
       setIsNewModalOpen(false);
       resetNewForm();
       refetch();
     },
     onError: (err) => {
-      toast.error(`Chyba pri ukladaní: ${err.message}`);
+      toast.error(
+        t("statutory.rabies.errorSave", "Error saving: {message}", {
+          message: err.message,
+        })
+      );
     },
   });
 
   const checkpointMutation = trpc.extensions.statutory.recordRabiesCheckpoint.useMutation({
     onSuccess: () => {
-      toast.success("Kontrolné vyšetrenie bolo úspešne zapísané.");
+      toast.success(
+        t(
+          "statutory.rabies.toastCheckpointSaved",
+          "Clinical examination recorded successfully."
+        )
+      );
       setCheckpointModalObs(null);
       refetch();
     },
     onError: (err) => {
-      toast.error(`Chyba pri zápise: ${err.message}`);
+      toast.error(
+        t("statutory.rabies.errorRecord", "Error recording: {message}", {
+          message: err.message,
+        })
+      );
     },
   });
 
@@ -233,14 +256,17 @@ export function RabiesObservationPanel() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold text-foreground">
-              14-dňové klinické pozorovanie zvieraťa (Kniha besnoty)
+              {t("statutory.rabies.title", "14-Day Clinical Rabies Observation")}
             </h2>
             <Badge variant="outline" className="border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-950/30 text-xs">
-              § 19 zákona č. 39/2007 Z. z.
+              {t("statutory.rabies.statute", "§ 19 of Act No. 39/2007 Coll.")}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Povinné trojstupňové vyšetrenie (1., 5. a 14. deň) zvieraťa, ktoré poranilo človeka, na vylúčenie besnoty.
+            {t(
+              "statutory.rabies.subtitle",
+              "Mandatory three-stage examination (day 1, 5, and 14) of an animal that injured a human to rule out rabies."
+            )}
           </p>
         </div>
 
@@ -251,7 +277,7 @@ export function RabiesObservationPanel() {
             size="sm"
           >
             <Plus className="h-4 w-4" />
-            Zaevidovať pohryznutie
+            {t("statutory.rabies.btnRecordBite", "Record Animal Bite")}
           </Button>
         </div>
       </div>
@@ -262,7 +288,10 @@ export function RabiesObservationPanel() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Hľadať pacienta, poranenú osobu, čip..."
+              placeholder={t(
+                "statutory.rabies.searchPlaceholder",
+                "Search patient, injured person, microchip..."
+              )}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9 text-xs"
@@ -271,10 +300,19 @@ export function RabiesObservationPanel() {
 
           <div className="flex items-center gap-1.5">
             {[
-              { key: "all", label: "Všetky" },
-              { key: "IN_PROGRESS", label: "V pozorovaní" },
-              { key: "COMPLETED_HEALTHY", label: "Vylúčená besnota" },
-              { key: "SUSPICIOUS", label: "Podozrivé" },
+              { key: "all", label: t("statutory.rabies.filterAll", "All") },
+              {
+                key: "IN_PROGRESS",
+                label: t("statutory.rabies.filterInProgress", "In Observation"),
+              },
+              {
+                key: "COMPLETED_HEALTHY",
+                label: t("statutory.rabies.filterCompleted", "Rabies Ruled Out"),
+              },
+              {
+                key: "SUSPICIOUS",
+                label: t("statutory.rabies.filterSuspicious", "Suspicious"),
+              },
             ].map((st) => (
               <Button
                 key={st.key}
@@ -290,7 +328,9 @@ export function RabiesObservationPanel() {
         </div>
 
         <div className="text-xs text-muted-foreground">
-          Celkom prípadov: {filteredItems.length}
+          {t("statutory.rabies.totalCases", "Total cases: {count}", {
+            count: filteredItems.length,
+          })}
         </div>
       </div>
 
@@ -303,9 +343,17 @@ export function RabiesObservationPanel() {
         ) : !filteredItems.length ? (
           <div className="p-12 text-center text-muted-foreground text-sm space-y-2">
             <ShieldAlert className="h-10 w-10 mx-auto text-muted-foreground/40" />
-            <p className="font-medium">Žiadne aktívne prípady pozorovania na besnotu</p>
+            <p className="font-medium">
+              {t(
+                "statutory.rabies.emptyTitle",
+                "No active rabies observation cases"
+              )}
+            </p>
             <p className="text-xs text-muted-foreground/70">
-              Všetky prípady pohryznutia človeka sa evidujú podľa § 19 zákona č. 39/2007 Z. z.
+              {t(
+                "statutory.rabies.emptySubtitle",
+                "All cases of animal bite injury to humans are recorded pursuant to § 19 of Act No. 39/2007 Coll."
+              )}
             </p>
           </div>
         ) : (
@@ -313,14 +361,14 @@ export function RabiesObservationPanel() {
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold">
                 <tr>
-                  <th className="p-3">Dátum incidentu</th>
-                  <th className="p-3">Zviera & Majiteľ</th>
-                  <th className="p-3">Poranená osoba</th>
-                  <th className="p-3 text-center">1. deň</th>
-                  <th className="p-3 text-center">5. deň</th>
-                  <th className="p-3 text-center">14. deň</th>
-                  <th className="p-3">Stav</th>
-                  <th className="p-3 text-right">Akcie</th>
+                  <th className="p-3">{t("statutory.rabies.colIncidentDate", "Incident Date")}</th>
+                  <th className="p-3">{t("statutory.rabies.colAnimalOwner", "Animal & Owner")}</th>
+                  <th className="p-3">{t("statutory.rabies.colInjuredPerson", "Injured Person")}</th>
+                  <th className="p-3 text-center">{t("statutory.rabies.colDay1", "Day 1")}</th>
+                  <th className="p-3 text-center">{t("statutory.rabies.colDay5", "Day 5")}</th>
+                  <th className="p-3 text-center">{t("statutory.rabies.colDay14", "Day 14")}</th>
+                  <th className="p-3">{t("statutory.rabies.colStatus", "Status")}</th>
+                  <th className="p-3 text-right">{t("statutory.rabies.colActions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -336,10 +384,10 @@ export function RabiesObservationPanel() {
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{obs.patientName}</div>
                         <div className="text-[11px] text-muted-foreground">
-                          {obs.species} • {obs.breed || "kríženec"}
+                          {obs.species} • {obs.breed || t("statutory.rabies.mixedBreed", "Mixed breed")}
                         </div>
                         <div className="text-[10px] font-mono text-muted-foreground/80">
-                          {obs.microchipNumber || "Nečipovaný"}
+                          {obs.microchipNumber || t("statutory.rabies.noChip", "Unchipped")}
                         </div>
                       </td>
                       <td className="p-3">
@@ -357,7 +405,7 @@ export function RabiesObservationPanel() {
                         ) : (
                           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] gap-1">
                             <Clock className="h-3 w-3" />
-                            Čaká
+                            {t("statutory.rabies.badgeWaiting", "Pending")}
                           </Badge>
                         )}
                       </td>
@@ -394,16 +442,16 @@ export function RabiesObservationPanel() {
                       <td className="p-3 whitespace-nowrap">
                         {isCompleted ? (
                           <Badge className="bg-emerald-600 text-white text-[10px] font-semibold">
-                            Vylúčená besnota
+                            {t("statutory.rabies.statusRuledOut", "Rabies Ruled Out")}
                           </Badge>
                         ) : isSuspicious ? (
                           <Badge variant="destructive" className="text-[10px] font-semibold gap-1">
                             <AlertTriangle className="h-3 w-3" />
-                            Podozrivé (RVPS)
+                            {t("statutory.rabies.statusSuspiciousRvps", "Suspicious (RVPS)")}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-[10px] font-semibold">
-                            V pozorovaní
+                            {t("statutory.rabies.statusInObservation", "In Observation")}
                           </Badge>
                         )}
                       </td>
@@ -423,7 +471,7 @@ export function RabiesObservationPanel() {
                                 );
                               }}
                             >
-                              Zapísať kontrolu
+                              {t("statutory.rabies.btnRecordExam", "Record Check")}
                             </Button>
                           )}
 
@@ -432,10 +480,10 @@ export function RabiesObservationPanel() {
                             variant="ghost"
                             className="h-7 text-xs px-2 gap-1"
                             onClick={() => handlePrintCertificate(obs)}
-                            title="Tlačiť veterinárne potvrdenie"
+                            title={t("statutory.rabies.btnPrintTitle", "Print veterinary certificate")}
                           >
                             <Printer className="h-3.5 w-3.5" />
-                            Potvrdenie
+                            {t("statutory.rabies.btnCertificate", "Certificate")}
                           </Button>
                         </div>
                       </td>
@@ -457,7 +505,7 @@ export function RabiesObservationPanel() {
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-rose-600" />
                 <h3 className="font-semibold text-base text-foreground">
-                  Nový prípad pohryznutia človeka zvieraťom
+                  {t("statutory.rabies.modalNewTitle", "New Animal Bite Injury Case")}
                 </h3>
               </div>
               <button onClick={() => setIsNewModalOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -467,16 +515,18 @@ export function RabiesObservationPanel() {
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="font-medium text-foreground">Vyberte pacienta (zviera) *</label>
+                <label className="font-medium text-foreground">
+                  {t("statutory.rabies.fieldSelectPatient", "Select animal (patient) *")}
+                </label>
                 <select
                   value={newPatientId}
                   onChange={(e) => setNewPatientId(e.target.value)}
                   className="w-full mt-1 rounded-md border border-input bg-background p-2 text-xs"
                 >
-                  <option value="">-- Vyberte pacienta --</option>
+                  <option value="">{t("statutory.rabies.optionSelectPatient", "-- Select patient --")}</option>
                   {patientList?.items?.map((p: any) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.species} • {p.microchipNumber || "bez čipu"})
+                      {p.name} ({p.species} • {p.microchipNumber || t("statutory.rabies.noChip", "Unchipped")})
                     </option>
                   ))}
                 </select>
@@ -484,7 +534,9 @@ export function RabiesObservationPanel() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-medium text-foreground">Dátum poranenia / pohryznutia *</label>
+                  <label className="font-medium text-foreground">
+                    {t("statutory.rabies.fieldBiteDate", "Injury / bite date *")}
+                  </label>
                   <DatePicker
                     value={newBiteDate}
                     onChange={(val) => setNewBiteDate(val)}
@@ -492,9 +544,11 @@ export function RabiesObservationPanel() {
                   />
                 </div>
                 <div>
-                  <label className="font-medium text-foreground">Meno poranenej osoby *</label>
+                  <label className="font-medium text-foreground">
+                    {t("statutory.rabies.fieldInjuredName", "Injured person name *")}
+                  </label>
                   <Input
-                    placeholder="Meno a priezvisko"
+                    placeholder={t("statutory.rabies.placeholderInjuredName", "Full name")}
                     value={newInjuredPersonName}
                     onChange={(e) => setNewInjuredPersonName(e.target.value)}
                     className="mt-1 h-8 text-xs"
@@ -504,18 +558,22 @@ export function RabiesObservationPanel() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-medium text-foreground">Telefón / Adresa poranenej osoby</label>
+                  <label className="font-medium text-foreground">
+                    {t("statutory.rabies.fieldInjuredContact", "Phone / address of injured person")}
+                  </label>
                   <Input
-                    placeholder="+421 9..."
+                    placeholder={t("statutory.rabies.placeholderInjuredContact", "+421 9...")}
                     value={newInjuredPersonContact}
                     onChange={(e) => setNewInjuredPersonContact(e.target.value)}
                     className="mt-1 h-8 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="font-medium text-foreground">Miesto incidentu</label>
+                  <label className="font-medium text-foreground">
+                    {t("statutory.rabies.fieldIncidentLocation", "Incident location")}
+                  </label>
                   <Input
-                    placeholder="Napr. Park, ulica, dvor..."
+                    placeholder={t("statutory.rabies.placeholderLocation", "e.g. Park, street, backyard...")}
                     value={newIncidentLocation}
                     onChange={(e) => setNewIncidentLocation(e.target.value)}
                     className="mt-1 h-8 text-xs"
@@ -524,9 +582,14 @@ export function RabiesObservationPanel() {
               </div>
 
               <div>
-                <label className="font-medium text-foreground">Okolnosti pohryznutia</label>
+                <label className="font-medium text-foreground">
+                  {t("statutory.rabies.fieldIncidentDesc", "Bite circumstances")}
+                </label>
                 <Input
-                  placeholder="Provokované / neprovokované, kontakt s iným zvieraťom..."
+                  placeholder={t(
+                    "statutory.rabies.placeholderDesc",
+                    "Provoked / unprovoked, interaction with other animals..."
+                  )}
                   value={newIncidentDescription}
                   onChange={(e) => setNewIncidentDescription(e.target.value)}
                   className="mt-1 h-8 text-xs"
@@ -536,7 +599,7 @@ export function RabiesObservationPanel() {
 
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" size="sm" onClick={() => setIsNewModalOpen(false)}>
-                Zrušiť
+                {t("common.cancel", "Cancel")}
               </Button>
               <Button
                 size="sm"
@@ -554,7 +617,7 @@ export function RabiesObservationPanel() {
                 className="bg-rose-600 hover:bg-rose-700 text-white"
               >
                 {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
-                Zaevidovať a spustiť 14-dňové pozorovanie
+                {t("statutory.rabies.btnStartObservation", "Record & Start 14-Day Observation")}
               </Button>
             </div>
           </div>
@@ -569,7 +632,7 @@ export function RabiesObservationPanel() {
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <h3 className="font-semibold text-base text-foreground">
-                  Zápis klinickej kontroly na besnotu
+                  {t("statutory.rabies.modalCheckpointTitle", "Record Rabies Clinical Examination")}
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Pacient: <strong>{checkpointModalObs.patientName}</strong>
@@ -582,7 +645,9 @@ export function RabiesObservationPanel() {
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="font-medium text-foreground">Vyšetrenie podľa legislatívy</label>
+                <label className="font-medium text-foreground">
+                  {t("statutory.rabies.fieldLegislationExam", "Examination stage by law")}
+                </label>
                 <div className="grid grid-cols-3 gap-1.5 mt-1">
                   <Button
                     type="button"
@@ -591,7 +656,7 @@ export function RabiesObservationPanel() {
                     className="h-8 text-xs"
                     onClick={() => setSelectedCheckpoint("day1")}
                   >
-                    1. deň
+                    {t("statutory.rabies.stageDay1", "Day 1")}
                   </Button>
                   <Button
                     type="button"
@@ -600,7 +665,7 @@ export function RabiesObservationPanel() {
                     className="h-8 text-xs"
                     onClick={() => setSelectedCheckpoint("day5")}
                   >
-                    5. deň
+                    {t("statutory.rabies.stageDay5", "Day 5")}
                   </Button>
                   <Button
                     type="button"
@@ -609,15 +674,17 @@ export function RabiesObservationPanel() {
                     className="h-8 text-xs"
                     onClick={() => setSelectedCheckpoint("day14")}
                   >
-                    14. deň (Záver)
+                    {t("statutory.rabies.stageDay14", "Day 14 (Conclusion)")}
                   </Button>
                 </div>
               </div>
 
               <div>
-                <label className="font-medium text-foreground">Meno vyšetrujúceho veterinárneho lekára *</label>
+                <label className="font-medium text-foreground">
+                  {t("statutory.rabies.fieldVetName", "Examining veterinarian name *")}
+                </label>
                 <Input
-                  placeholder="MVDr. ..."
+                  placeholder={t("statutory.rabies.placeholderVet", "MVDr. ...")}
                   value={examinedBy}
                   onChange={(e) => setExaminedBy(e.target.value)}
                   className="mt-1 h-8 text-xs"
@@ -625,7 +692,9 @@ export function RabiesObservationPanel() {
               </div>
 
               <div>
-                <label className="font-medium text-foreground">Klinický nález *</label>
+                <label className="font-medium text-foreground">
+                  {t("statutory.rabies.fieldFindings", "Clinical findings *")}
+                </label>
                 <textarea
                   value={examFindings}
                   onChange={(e) => setExamFindings(e.target.value)}
@@ -643,14 +712,14 @@ export function RabiesObservationPanel() {
                   className="h-4 w-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
                 />
                 <label htmlFor="examPassed" className="text-xs cursor-pointer font-medium text-foreground">
-                  Zviera je klinicky zdravé bez príznakov besnoty
+                  {t("statutory.rabies.checkboxHealthy", "Animal is clinically healthy without signs of rabies")}
                 </label>
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" size="sm" onClick={() => setCheckpointModalObs(null)}>
-                Zrušiť
+                {t("common.cancel", "Cancel")}
               </Button>
               <Button
                 size="sm"
@@ -668,7 +737,7 @@ export function RabiesObservationPanel() {
                 className="bg-rose-600 hover:bg-rose-700 text-white"
               >
                 {checkpointMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
-                Zapísať vyšetrenie
+                {t("statutory.rabies.btnRecordCheckpoint", "Record Examination")}
               </Button>
             </div>
           </div>

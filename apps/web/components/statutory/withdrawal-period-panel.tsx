@@ -356,10 +356,21 @@ export function WithdrawalPeriodPanel() {
             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
             <div>
               <span className="font-semibold">
-                Aktívne ochranné lehoty: {activeCount} {activeCount === 1 ? "zviera" : activeCount < 5 ? "zvieratá" : "zvierat"}
+                {t("statutory.withdrawal.bannerActive", "Active withdrawal periods: {count} {animals}", {
+                  count: activeCount,
+                  animals:
+                    activeCount === 1
+                      ? t("statutory.withdrawal.animalsOne", "animal")
+                      : activeCount < 5
+                      ? t("statutory.withdrawal.animalsFew", "animals")
+                      : t("statutory.withdrawal.animalsMany", "animals"),
+                })}
               </span>
               <span className="ml-1.5 opacity-90">
-                Platí prísny zákaz dodávky mäsa na porážku alebo mlieka do mliekarní v zmysle § 22 zák. č. 39/2007 Z. z.
+                {t(
+                  "statutory.withdrawal.bannerNotice",
+                  "Strict ban on supplying meat for slaughter or milk to dairies under § 22 of Act No. 39/2007 Coll."
+                )}
               </span>
             </div>
           </div>
@@ -369,7 +380,7 @@ export function WithdrawalPeriodPanel() {
             onClick={() => setActiveFilter("active")}
             className="h-7 text-xs border-amber-400 bg-white/60 dark:bg-transparent hover:bg-amber-100 dark:hover:bg-amber-900/40"
           >
-            Filtrovať aktívne
+            {t("statutory.withdrawal.btnFilterActive", "Filter active")}
           </Button>
         </div>
       )}
@@ -380,7 +391,10 @@ export function WithdrawalPeriodPanel() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Hľadať zviera, liečivo, šaržu, ušné číslo, chovateľa..."
+              placeholder={t(
+                "statutory.withdrawal.searchPlaceholder",
+                "Search animal, medication, batch, ear tag, farmer..."
+              )}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9 text-xs"
@@ -394,7 +408,7 @@ export function WithdrawalPeriodPanel() {
               onClick={() => setActiveFilter("all")}
               className="h-7 text-xs px-2.5"
             >
-              Všetky
+              {t("statutory.withdrawal.filterAll", "All")}
             </Button>
             <Button
               variant={activeFilter === "active" ? "default" : "ghost"}
@@ -403,7 +417,9 @@ export function WithdrawalPeriodPanel() {
               className="h-7 text-xs px-2.5 gap-1 text-amber-700 dark:text-amber-400"
             >
               <Clock className="h-3.5 w-3.5" />
-              Aktívne ({activeCount})
+              {t("statutory.withdrawal.filterActiveCount", "Active ({count})", {
+                count: activeCount,
+              })}
             </Button>
             <Button
               variant={activeFilter === "cleared" ? "default" : "ghost"}
@@ -411,23 +427,23 @@ export function WithdrawalPeriodPanel() {
               onClick={() => setActiveFilter("cleared")}
               className="h-7 text-xs px-2.5"
             >
-              Uplynuté
+              {t("statutory.withdrawal.filterCleared", "Cleared")}
             </Button>
           </div>
 
           <select
             value={animalFilter}
             onChange={(e) => setAnimalFilter(e.target.value)}
-            aria-label="Filtrovať podľa kategórie zvieraťa"
+            aria-label={t("statutory.withdrawal.catAll", "All categories")}
             className="h-9 rounded-md border border-input bg-background px-2.5 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
           >
-            <option value="all">Všetky kategórie</option>
-            <option value="bovine">Hovädzí dobytok</option>
-            <option value="porcine">Ošípané</option>
-            <option value="ovine">Ovce a kozy</option>
-            <option value="equine">Kone</option>
-            <option value="poultry">Hydina</option>
-            <option value="companion">Spoločenské zvieratá</option>
+            <option value="all">{t("statutory.withdrawal.catAll", "All categories")}</option>
+            <option value="bovine">{t("statutory.withdrawal.catBovine", "Cattle (Bovine)")}</option>
+            <option value="porcine">{t("statutory.withdrawal.catPorcine", "Swine (Porcine)")}</option>
+            <option value="ovine">{t("statutory.withdrawal.catOvine", "Sheep and goats")}</option>
+            <option value="equine">{t("statutory.withdrawal.catEquine", "Horses (Equine)")}</option>
+            <option value="poultry">{t("statutory.withdrawal.catPoultry", "Poultry")}</option>
+            <option value="companion">{t("statutory.withdrawal.catCompanion", "Companion animals")}</option>
           </select>
         </div>
 
@@ -438,7 +454,7 @@ export function WithdrawalPeriodPanel() {
             className="h-9 gap-1.5 bg-primary text-primary-foreground font-medium"
           >
             <Plus className="h-4 w-4" />
-            <span>Zaevidovať ochrannú lehotu</span>
+            <span>{t("statutory.withdrawal.btnRecordAdmin", "Record Drug Administration")}</span>
           </Button>
 
           <Button
@@ -449,7 +465,9 @@ export function WithdrawalPeriodPanel() {
             className="h-9 gap-1.5"
           >
             <Printer className="h-4 w-4" />
-            <span className="hidden sm:inline">Úradná zostava</span>
+            <span className="hidden sm:inline">
+              {t("statutory.withdrawal.btnOfficialReport", "Official Report")}
+            </span>
           </Button>
 
           <Button
@@ -460,7 +478,9 @@ export function WithdrawalPeriodPanel() {
             className="h-9 gap-1.5"
           >
             <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">CSV</span>
+            <span className="hidden sm:inline">
+              {t("statutory.withdrawal.exportCsv", "CSV")}
+            </span>
           </Button>
         </div>
       </div>
@@ -473,22 +493,22 @@ export function WithdrawalPeriodPanel() {
           </div>
         ) : !filteredItems.length ? (
           <div className="p-12 text-center text-muted-foreground text-xs">
-            Neboli nájdené žiadne záznamy o ochranných lehotách zodpovedajúce filtru.
+            {t("statutory.withdrawal.emptyTitle", "No withdrawal period records")}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/60 text-muted-foreground">
                 <tr>
-                  <th className="p-3">Dátum aplikácie</th>
-                  <th className="p-3">Zviera & Kategória</th>
-                  <th className="p-3">Ušné číslo / Čip</th>
-                  <th className="p-3">Chovateľ</th>
-                  <th className="p-3">Liečivo & Šarža</th>
-                  <th className="p-3">OL Mäso / Mlieko</th>
-                  <th className="p-3">Koniec lehoty</th>
-                  <th className="p-3">Stav</th>
-                  <th className="p-3 text-right">Potvrdenie</th>
+                  <th className="p-3">{t("statutory.withdrawal.colDateAdmin", "Application Date")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colAnimalCat", "Animal & Category")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colTagChip", "Ear Tag / Chip")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colFarmer", "Farmer / Owner")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colDrugBatch", "Medication & Batch")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colMeatMilk", "OL Meat / Milk")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colSafeUntil", "End of Period")}</th>
+                  <th className="p-3">{t("statutory.withdrawal.colStatus", "Status")}</th>
+                  <th className="p-3 text-right">{t("statutory.withdrawal.colCertificate", "Certificate")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -526,7 +546,7 @@ export function WithdrawalPeriodPanel() {
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{item.medicationName}</div>
                         <div className="text-[11px] font-mono text-muted-foreground">
-                          Šarža: {item.batchNumber || "neuvedená"}
+                          {item.batchNumber || "—"}
                         </div>
                       </td>
                       <td className="p-3 whitespace-nowrap">
@@ -544,7 +564,7 @@ export function WithdrawalPeriodPanel() {
                             className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900 text-[10px] font-semibold"
                           >
                             <Clock className="h-3 w-3 mr-1" />
-                            Aktívna ({diffDays} d)
+                            {t("statutory.withdrawal.statusActive", "In Withdrawal")} ({diffDays} d)
                           </Badge>
                         ) : (
                           <Badge
@@ -552,7 +572,7 @@ export function WithdrawalPeriodPanel() {
                             className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 text-[10px]"
                           >
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Uplynula
+                            {t("statutory.withdrawal.statusCleared", "Cleared")}
                           </Badge>
                         )}
                       </td>
@@ -561,11 +581,11 @@ export function WithdrawalPeriodPanel() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handlePrintCertificate(item)}
-                          title="Vytlačiť úradné potvrdenie pre chovateľa"
+                          title={t("statutory.withdrawal.btnCertificate", "Certificate")}
                           className="h-7 text-xs text-primary hover:bg-primary/10 gap-1 px-2"
                         >
                           <Printer className="h-3.5 w-3.5" />
-                          <span>Pre chovateľa</span>
+                          <span>{t("statutory.withdrawal.forFarmer", "For farmer")}</span>
                         </Button>
                       </td>
                     </tr>
@@ -590,10 +610,13 @@ export function WithdrawalPeriodPanel() {
 
             <div className="mb-5">
               <h2 className="text-base font-bold text-foreground">
-                Zaevidovanie ochrannej lehoty liečiva (§ 22 zákona č. 39/2007 Z. z.)
+                {t("statutory.withdrawal.modalTitle", "Record Veterinary Drug Administration")}
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Aplikácia veterinárneho lieku potravinovému zvieraťu so stanovením ochrannej lehoty na mäso a mlieko.
+                {t(
+                  "statutory.withdrawal.subtitle",
+                  "Statutory tracking of drug withdrawal periods for food-producing and livestock animals."
+                )}
               </p>
             </div>
 
@@ -601,11 +624,14 @@ export function WithdrawalPeriodPanel() {
               {/* Patient search / selection */}
               <div>
                 <label className="font-semibold text-foreground block mb-1">
-                  Pacient / Hospodárske zviera <span className="text-destructive">*</span>
+                  {t("statutory.withdrawal.fieldPatientRequired", "Patient / Food-producing animal *")}
                 </label>
                 <div className="relative">
                   <Input
-                    placeholder="Vyhľadajte zviera (meno, ušné číslo, čip)..."
+                    placeholder={t(
+                      "statutory.withdrawal.fieldPatientSearch",
+                      "Search animal (name, ear tag, microchip)..."
+                    )}
                     value={patientSearch}
                     onChange={(e) => {
                       setPatientSearch(e.target.value);
@@ -639,7 +665,7 @@ export function WithdrawalPeriodPanel() {
                 </div>
                 {selectedPatientId && (
                   <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                    <CheckCircle2 className="h-3 w-3" /> Pacient vybraný
+                    <CheckCircle2 className="h-3 w-3" /> {t("statutory.withdrawal.patientSelected", "Patient selected")}
                   </div>
                 )}
               </div>
@@ -647,14 +673,14 @@ export function WithdrawalPeriodPanel() {
               {/* Drug template selector */}
               <div>
                 <label className="font-semibold text-foreground block mb-1">
-                  Rýchly výber bežného liečiva (ŠVPS SR katalóg)
+                  {t("statutory.withdrawal.fieldQuickSelectDrug", "Quick select from registered drugs (ŠVPS SR catalog)")}
                 </label>
                 <select
                   value={selectedTemplateId}
                   onChange={(e) => handleApplyDrugTemplate(e.target.value)}
                   className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
                 >
-                  <option value="">-- Vyberte registrované liečivo alebo zadajte manuálne --</option>
+                  <option value="">{t("statutory.withdrawal.selectRegisteredDrug", "-- Select registered drug or enter manually --")}</option>
                   {COMMON_VETERINARY_DRUGS.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name} ({d.activeSubstance}) — mäso: {d.meatWithdrawalDays} d | mlieko: {d.milkWithdrawalDays} d
@@ -667,27 +693,27 @@ export function WithdrawalPeriodPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-semibold text-foreground block mb-1">
-                    Kategória zvieraťa
+                    {t("statutory.withdrawal.fieldTargetSpecies", "Target species *")}
                   </label>
                   <select
                     value={targetAnimalType}
                     onChange={(e) => setTargetAnimalType(e.target.value as any)}
                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
                   >
-                    <option value="bovine">Hovädzí dobytok (bovinný)</option>
-                    <option value="porcine">Ošípané (porcínny)</option>
-                    <option value="ovine">Ovce a kozy (ovinný)</option>
-                    <option value="equine">Kone (ekvinný)</option>
-                    <option value="poultry">Hydina</option>
-                    <option value="companion">Spoločenské zviera</option>
+                    <option value="bovine">{t("statutory.withdrawal.catBovine", "Cattle (Bovine)")}</option>
+                    <option value="porcine">{t("statutory.withdrawal.catPorcine", "Swine (Porcine)")}</option>
+                    <option value="ovine">{t("statutory.withdrawal.catOvine", "Sheep and goats")}</option>
+                    <option value="equine">{t("statutory.withdrawal.catEquine", "Horses (Equine)")}</option>
+                    <option value="poultry">{t("statutory.withdrawal.catPoultry", "Poultry")}</option>
+                    <option value="companion">{t("statutory.withdrawal.catCompanion", "Companion animals")}</option>
                   </select>
                 </div>
                 <div>
                   <label className="font-semibold text-foreground block mb-1">
-                    Výrobná šarža liečiva (Lot No.)
+                    {t("statutory.withdrawal.fieldBatchLot", "Drug batch number (Lot No.)")}
                   </label>
                   <Input
-                    placeholder="napr. LOT-2026-44"
+                    placeholder="LOT-2026-..."
                     value={batchNumber}
                     onChange={(e) => setBatchNumber(e.target.value)}
                     className="h-9 text-xs"
@@ -697,10 +723,10 @@ export function WithdrawalPeriodPanel() {
 
               <div>
                 <label className="font-semibold text-foreground block mb-1">
-                  Presný názov podaného liečiva <span className="text-destructive">*</span>
+                  {t("statutory.withdrawal.fieldMedicationRequired", "Exact name of administered medication *")}
                 </label>
                 <Input
-                  placeholder="napr. Draxxin 100 mg/ml inj."
+                  placeholder="Draxxin 100 mg/ml inj."
                   value={medicationName}
                   onChange={(e) => setMedicationName(e.target.value)}
                   className="h-9 text-xs"
@@ -711,7 +737,7 @@ export function WithdrawalPeriodPanel() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="font-semibold text-foreground block mb-1">
-                    OL Mäso (v dňoch)
+                    {t("statutory.withdrawal.fieldMeatDaysInput", "OL Meat (in days)")}
                   </label>
                   <Input
                     type="number"
@@ -723,7 +749,7 @@ export function WithdrawalPeriodPanel() {
                 </div>
                 <div>
                   <label className="font-semibold text-foreground block mb-1">
-                    OL Mlieko (v dňoch)
+                    {t("statutory.withdrawal.fieldMilkDaysInput", "OL Milk (in days)")}
                   </label>
                   <Input
                     type="number"
@@ -735,7 +761,7 @@ export function WithdrawalPeriodPanel() {
                 </div>
                 <div>
                   <label className="font-semibold text-foreground block mb-1">
-                    Dátum aplikácie
+                    {t("statutory.withdrawal.fieldAdminDate", "Application date")}
                   </label>
                   <Input
                     type="datetime-local"
@@ -750,24 +776,29 @@ export function WithdrawalPeriodPanel() {
               <div className="rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/20 p-3 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200">
-                    Vypočítaný koniec ochrannej lehoty (Safe Until):
+                    {t("statutory.withdrawal.calculatedEnd", "Calculated end of withdrawal period (Safe Until):")}
                   </div>
                   <div className="text-sm font-bold text-amber-800 dark:text-amber-300 font-mono mt-0.5">
-                    {calculatedSafeUntil.safeUntilFormatted} ({calculatedSafeUntil.maxDays} dní)
+                    {calculatedSafeUntil.safeUntilFormatted} ({calculatedSafeUntil.maxDays} d)
                   </div>
                 </div>
                 <Badge variant="outline" className="bg-white/80 dark:bg-transparent text-amber-800 border-amber-400">
-                  {calculatedSafeUntil.maxDays > 0 ? "Ochranná lehota platná" : "Bez ochrannej lehoty"}
+                  {calculatedSafeUntil.maxDays > 0
+                    ? t("statutory.withdrawal.validPeriod", "Withdrawal period active")
+                    : t("statutory.withdrawal.noPeriod", "No withdrawal period")}
                 </Badge>
               </div>
 
               {/* Notes */}
               <div>
                 <label className="font-semibold text-foreground block mb-1">
-                  Poznámky / Dávkovanie / Dôvod podania
+                  {t("statutory.withdrawal.fieldNotesDose", "Notes / Dosage / Reason for administration")}
                 </label>
                 <Input
-                  placeholder="napr. Aplikované 15 ml i.m. do krčnej svaloviny"
+                  placeholder={t(
+                    "statutory.withdrawal.placeholderDoseNotes",
+                    "e.g. Administered 15 ml i.m. into cervical muscle"
+                  )}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="h-9 text-xs"
@@ -782,7 +813,7 @@ export function WithdrawalPeriodPanel() {
                 onClick={() => setIsNewDialogOpen(false)}
                 className="h-9 text-xs"
               >
-                Zrušiť
+                {t("common.cancel", "Cancel")}
               </Button>
               <Button
                 size="sm"
@@ -802,7 +833,7 @@ export function WithdrawalPeriodPanel() {
                 className="h-9 text-xs font-semibold gap-1.5"
               >
                 {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>Uložiť a stanoviť lehotu</span>
+                <span>{t("statutory.withdrawal.btnSavePeriod", "Save and set period")}</span>
               </Button>
             </div>
           </div>

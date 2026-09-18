@@ -256,9 +256,13 @@ export function ThermalReceiptDrawer({
             {receipt.receiptType === "STORNO" && (
               <div className="my-2 p-2 text-center rounded border-2 border-dashed border-red-600 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300">
                 <p className="font-bold text-xs uppercase tracking-wider">*** STORNO DOKLADU ***</p>
-                <p className="text-[10px] mt-0.5">Pôvodný doklad UID: {receipt.originalUid ?? "—"}</p>
+                <p className="text-[10px] mt-0.5">
+                  {t("ekasa.drawer.originalDocUid", "Pôvodný doklad UID: {uid}", { uid: receipt.originalUid ?? "—" })}
+                </p>
                 {receipt.stornoReason && (
-                  <p className="text-[10px] italic">Dôvod: {receipt.stornoReason}</p>
+                  <p className="text-[10px] italic">
+                    {t("ekasa.drawer.stornoReason", "Dôvod: {reason}", { reason: receipt.stornoReason })}
+                  </p>
                 )}
               </div>
             )}
@@ -293,7 +297,7 @@ export function ThermalReceiptDrawer({
               ) : (
                 <div className="flex justify-between text-[11px]">
                   <div className="flex-1 pr-2 truncate">
-                    <p className="font-medium">Veterinárne vyšetrenie a starostlivosť</p>
+                    <p className="font-medium">{t("ekasa.drawer.defaultService", "Veterinárne vyšetrenie a starostlivosť")}</p>
                     <p className="text-[10px] text-zinc-500 dark:text-zinc-400 tabular-nums">1.000 ks x {totalNum.toFixed(2)} €</p>
                   </div>
                   <div className="text-right tabular-nums font-semibold">
@@ -369,7 +373,7 @@ export function ThermalReceiptDrawer({
                       className="hover:text-primary transition-colors inline-flex items-center gap-0.5"
                     >
                       {copiedField === "UID" ? <Check className="h-2.5 w-2.5 text-emerald-600" /> : <Copy className="h-2.5 w-2.5" />}
-                      Kopírovať
+                      {t("ekasa.drawer.copy", "Kopírovať")}
                     </button>
                   </div>
                   <p className="font-mono break-all text-[9.5px] select-all bg-zinc-100 dark:bg-zinc-900 p-1 rounded mt-0.5">
@@ -379,7 +383,7 @@ export function ThermalReceiptDrawer({
               ) : (
                 <div className="rounded bg-amber-50 dark:bg-amber-950/30 p-1.5 text-amber-800 dark:text-amber-200 text-[10px] flex items-center gap-1.5">
                   <AlertTriangle className="h-3 w-3 shrink-0" />
-                  <span>Doklad neobsahuje UID z dôvodu offline evidencie.</span>
+                  <span>{t("ekasa.drawer.offlineNoUid", "Doklad neobsahuje UID z dôvodu offline evidencie.")}</span>
                 </div>
               )}
 
@@ -392,7 +396,7 @@ export function ThermalReceiptDrawer({
                       className="hover:text-primary transition-colors inline-flex items-center gap-0.5"
                     >
                       {copiedField === "OKP" ? <Check className="h-2.5 w-2.5 text-emerald-600" /> : <Copy className="h-2.5 w-2.5" />}
-                      Kopírovať
+                      {t("ekasa.drawer.copy", "Kopírovať")}
                     </button>
                   </div>
                   <p className="font-mono break-all text-[9.5px] select-all bg-zinc-100 dark:bg-zinc-900 p-1 rounded mt-0.5">
@@ -408,7 +412,7 @@ export function ThermalReceiptDrawer({
                 <QRCodeSVG value={qrPayload} size={96} level="M" />
               </div>
               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-                Overte doklad pomocou aplikácie Over doklad (FS SR)
+                {t("ekasa.drawer.verifyAppNotice", "Overte doklad pomocou aplikácie Over doklad (FS SR)")}
               </p>
             </div>
           </div>

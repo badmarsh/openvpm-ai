@@ -110,13 +110,13 @@ export function CarcassDisposalPanel() {
 
   const createMutation = trpc.extensions.statutory.recordCarcassDisposal.useMutation({
     onSuccess: () => {
-      toast.success("Záznam o eutanázii a odovzdaní do kafilérie bol úspešne uložený. Pacient bol označený ako uhynutý a bola aktivovaná ochrana Sympathy Gate.");
+      toast.success(t("statutory.carcass.toastCreated", "Záznam o eutanázii a odovzdaní do kafilérie bol úspešne uložený. Pacient bol označený ako uhynutý a bola aktivovaná ochrana Sympathy Gate."));
       setIsNewModalOpen(false);
       resetForm();
       refetch();
     },
     onError: (err) => {
-      toast.error(`Chyba pri ukladaní: ${err.message}`);
+      toast.error(err.message);
     },
   });
 
@@ -275,15 +275,15 @@ export function CarcassDisposalPanel() {
   const handleSubmitNew = (e: React.FormEvent) => {
     e.preventDefault();
     if (!patientId) {
-      toast.error("Prosím vyberte pacienta.");
+      toast.error(t("statutory.carcass.errorSelectPatient", "Prosím vyberte pacienta."));
       return;
     }
     if (!reason.trim()) {
-      toast.error("Prosím uveďte indikáciu/dôvod eutanázie.");
+      toast.error(t("statutory.carcass.errorProvideReason", "Prosím uveďte indikáciu/dôvod eutanázie."));
       return;
     }
     if (!weightKg.trim()) {
-      toast.error("Prosím zadajte hmotnosť v kg.");
+      toast.error(t("statutory.carcass.errorEnterWeight", "Prosím zadajte hmotnosť v kg."));
       return;
     }
 
@@ -310,14 +310,14 @@ export function CarcassDisposalPanel() {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold tracking-tight">
-              Evidencia kadáverov a zber kafilériou (§ 29 zákona č. 39/2007 Z. z.)
+              {t("statutory.carcass.title", "Kniha kadáverov a neškodného odstraňovania (Kafiléria)")}
             </h3>
             <Badge variant="outline" className="text-[10px] border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-              Kafiléria & Asanácia
+              {t("statutory.carcass.badgeCategory", "Kafiléria & Asanácia")}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Zákonná evidencia tiel uhynutých a utratených zvierat (vedľajšie živočíšne produkty Kat. 1) odovzdaných na neškodné odstránenie.
+            {t("statutory.carcass.subtitle", "Zákonná evidencia tiel uhynutých a utratených zvierat (vedľajšie živočíšne produkty Kat. 1) odovzdaných na neškodné odstránenie.")}
           </p>
         </div>
 
@@ -330,7 +330,7 @@ export function CarcassDisposalPanel() {
             className="gap-1.5 text-xs"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Export CSV</span>
+            <span>{t("statutory.carcass.exportCsv", "Export CSV")}</span>
           </Button>
 
           <Button
@@ -339,7 +339,7 @@ export function CarcassDisposalPanel() {
             className="gap-1.5 text-xs bg-rose-700 hover:bg-rose-800 text-white"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>Zaevidovať eutanáziu / kadáver</span>
+            <span>{t("statutory.carcass.btnRecord", "Zaevidovať eutanáziu / kadáver")}</span>
           </Button>
         </div>
       </div>
@@ -349,14 +349,14 @@ export function CarcassDisposalPanel() {
         <div className="relative min-w-[280px] flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Hľadať podľa zvieraťa, čipu, majiteľa, čísla zberného listu..."
+            placeholder={t("statutory.carcass.searchPlaceholder", "Hľadať podľa zvieraťa, čipu, majiteľa, čísla zberného listu...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 text-xs"
           />
         </div>
         <div className="text-xs text-muted-foreground">
-          Celkom záznamov: <strong>{filteredItems.length}</strong>
+          {t("statutory.carcass.totalRecords", "Celkom záznamov: {count}", { count: filteredItems.length })}
         </div>
       </div>
 
@@ -368,23 +368,23 @@ export function CarcassDisposalPanel() {
           </div>
         ) : !filteredItems.length ? (
           <div className="p-8 text-center text-muted-foreground text-xs">
-            Žiadne záznamy o eutanáziách a kadáveroch neboli nájdené.
+            {t("statutory.carcass.emptyDesc", "Žiadne záznamy o eutanáziách a kadáveroch neboli nájdené.")}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/60 text-muted-foreground">
                 <tr>
-                  <th className="p-3">Dátum eutanázie</th>
-                  <th className="p-3">Zviera & Druh</th>
-                  <th className="p-3">Čip</th>
-                  <th className="p-3">Hmotnosť</th>
-                  <th className="p-3">Majiteľ</th>
-                  <th className="p-3">Dôvod / Indikácia</th>
-                  <th className="p-3">Liečivo</th>
-                  <th className="p-3">Kafiléria & Zberný list</th>
-                  <th className="p-3">Skladovanie</th>
-                  <th className="p-3 text-right">Tlač dokladu</th>
+                  <th className="p-3">{t("statutory.carcass.colDate", "Dátum eutanázie")}</th>
+                  <th className="p-3">{t("statutory.carcass.colAnimal", "Zviera & Druh")}</th>
+                  <th className="p-3">{t("statutory.carcass.colChip", "Čip")}</th>
+                  <th className="p-3">{t("statutory.carcass.colWeight", "Hmotnosť")}</th>
+                  <th className="p-3">{t("statutory.carcass.colOwner", "Majiteľ")}</th>
+                  <th className="p-3">{t("statutory.carcass.colReason", "Dôvod / Indikácia")}</th>
+                  <th className="p-3">{t("statutory.carcass.colMedication", "Liečivo")}</th>
+                  <th className="p-3">{t("statutory.carcass.colRenderingPlant", "Kafiléria & Zberný list")}</th>
+                  <th className="p-3">{t("statutory.carcass.colStorage", "Skladovanie")}</th>
+                  <th className="p-3 text-right">{t("statutory.carcass.btnDocument", "Tlač dokladu")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -428,11 +428,11 @@ export function CarcassDisposalPanel() {
                     <td className="p-3">
                       <div className="font-medium text-foreground">{r.renderingPlant}</div>
                       <div className="text-[11px] text-muted-foreground">
-                        {r.disposalDocumentNumber ? `List: ${r.disposalDocumentNumber}` : "Čaká na odvoz"}
+                        {r.disposalDocumentNumber ? `List: ${r.disposalDocumentNumber}` : t("statutory.carcass.waitingPickup", "Čaká na odvoz")}
                       </div>
                     </td>
                     <td className="p-3 whitespace-nowrap text-muted-foreground text-[11px]">
-                      {r.storageLocation || "Mraziaci box"}
+                      {r.storageLocation || t("statutory.carcass.freezerBox", "Mraziaci box")}
                     </td>
                     <td className="p-3 whitespace-nowrap text-right">
                       <Button
@@ -443,7 +443,7 @@ export function CarcassDisposalPanel() {
                         title="Vytlačiť sprievodný doklad pre kafilériu a RVPS"
                       >
                         <Printer className="h-3.5 w-3.5" />
-                        <span>Tlačiť</span>
+                        <span>{t("statutory.carcass.printSlip", "Tlačiť")}</span>
                       </Button>
                     </td>
                   </tr>
@@ -461,7 +461,7 @@ export function CarcassDisposalPanel() {
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <Skull className="h-5 w-5 text-rose-600" />
-                <h3 className="font-semibold text-base">Záznam o eutanázii a odovzdaní kadáveru</h3>
+                <h3 className="font-semibold text-base">{t("statutory.carcass.modalTitle", "Záznam o eutanázii a odovzdaní kadáveru")}</h3>
               </div>
               <Button
                 variant="ghost"
@@ -475,12 +475,12 @@ export function CarcassDisposalPanel() {
 
             <form onSubmit={handleSubmitNew} className="mt-4 space-y-4 max-h-[75vh] overflow-y-auto pr-1">
               <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200">
-                <strong>Upozornenie (Clinical Sympathy Gate):</strong> Uložením tohto záznamu bude pacient trvalo označený ako uhynutý, automaticky sa zrušia všetky preventívne pripomienky a aktivuje sa ochrana pred marketingovou komunikáciou voči majiteľovi.
+                {t("statutory.carcass.sympathyNotice", "Upozornenie (Clinical Sympathy Gate): Uložením tohto záznamu bude pacient trvalo označený ako uhynutý, automaticky sa zrušia všetky preventívne pripomienky a aktivuje sa ochrana pred marketingovou komunikáciou voči majiteľovi.")}
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-foreground">
-                  Výber pacienta *
+                  {t("statutory.carcass.fieldPatient", "Výber pacienta *")}
                 </label>
                 <select
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -488,7 +488,7 @@ export function CarcassDisposalPanel() {
                   onChange={(e) => setPatientId(e.target.value)}
                   required
                 >
-                  <option value="">-- Vyberte pacienta --</option>
+                  <option value="">{t("statutory.carcass.optionSelectPatient", "-- Vyberte pacienta --")}</option>
                   {patientList?.items?.map((p: any) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.species} {p.breed ? `• ${p.breed}` : ""}) {p.microchipNumber ? `• Čip: ${p.microchipNumber}` : ""}
@@ -499,7 +499,7 @@ export function CarcassDisposalPanel() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Dátum eutanázie *</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldDate", "Dátum eutanázie / úhynu *")}</label>
                   <Input
                     type="date"
                     className="mt-1 text-xs"
@@ -509,7 +509,7 @@ export function CarcassDisposalPanel() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Hmotnosť tela (kg) *</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldWeight", "Hmotnosť (kg) *")}</label>
                   <Input
                     type="text"
                     placeholder="napr. 14.50"
@@ -522,9 +522,9 @@ export function CarcassDisposalPanel() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-foreground">Indikácia / Zdravotný dôvod utratenia *</label>
+                <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldReason", "Dôvod eutanázie / úhynu *")}</label>
                 <Input
-                  placeholder="napr. Terminálne zlyhanie obličiek, polytrauma nezlučiteľná so životom"
+                  placeholder={t("statutory.carcass.placeholderReason", "Napr. Nevyliečiteľné onkologické ochorenie, multiorgánové zlyhanie...")}
                   className="mt-1 text-xs"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -534,7 +534,7 @@ export function CarcassDisposalPanel() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Použité letálne liečivo</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldMedication", "Použitý preparát na eutanáziu *")}</label>
                   <Input
                     className="mt-1 text-xs"
                     value={medicationUsed}
@@ -542,7 +542,7 @@ export function CarcassDisposalPanel() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Podaná dávka</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldDose", "Podané množstvo")}</label>
                   <Input
                     placeholder="napr. 12 ml i.v."
                     className="mt-1 text-xs"
@@ -554,7 +554,7 @@ export function CarcassDisposalPanel() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Veterinárny lekár *</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldVeterinarian", "Vykonávajúci veterinárny lekár *")}</label>
                   <Input
                     className="mt-1 text-xs"
                     value={veterinarianName}
@@ -563,7 +563,7 @@ export function CarcassDisposalPanel() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Asanačný podnik (Kafiléria)</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldRenderingPlant", "Spracovateľský závod *")}</label>
                   <Input
                     className="mt-1 text-xs"
                     value={renderingPlant}
@@ -574,16 +574,16 @@ export function CarcassDisposalPanel() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Číslo zberného dokladu</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldDocNumber", "Číslo sprievodného dokladu")}</label>
                   <Input
-                    placeholder="napr. KAF-2026/0412"
+                    placeholder={t("statutory.carcass.placeholderDocNumber", "Napr. VAS-2026-...")}
                     className="mt-1 text-xs"
                     value={disposalDocumentNumber}
                     onChange={(e) => setDisposalDocumentNumber(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-foreground">Miesto uloženia do odvozu</label>
+                  <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldStorage", "Umiestnenie na klinike *")}</label>
                   <Input
                     placeholder="napr. Kafilérny mraziaci box #1"
                     className="mt-1 text-xs"
@@ -602,12 +602,12 @@ export function CarcassDisposalPanel() {
                   className="rounded border-border text-primary focus:ring-primary"
                 />
                 <label htmlFor="clientConsent" className="text-xs text-foreground font-medium">
-                  Majiteľ podpísal informovaný písomný súhlas s eutanáziou a odovzdaním tela
+                  {t("statutory.carcass.fieldConsent", "Majiteľ podpísal písomný súhlas s eutanáziou")}
                 </label>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-foreground">Poznámka / Doplňujúce záznamy</label>
+                <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldNotes", "Klinické poznámky")}</label>
                 <Input
                   placeholder="Voliteľná poznámka..."
                   className="mt-1 text-xs"
@@ -623,7 +623,7 @@ export function CarcassDisposalPanel() {
                   size="sm"
                   onClick={() => setIsNewModalOpen(false)}
                 >
-                  Zrušiť
+                  {t("common.cancel", "Zrušiť")}
                 </Button>
                 <Button
                   type="submit"
@@ -632,7 +632,7 @@ export function CarcassDisposalPanel() {
                   className="gap-1.5 bg-rose-700 hover:bg-rose-800 text-white"
                 >
                   {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Uložiť záznam a aktivovať Sympathy Gate</span>
+                  <span>{t("statutory.carcass.btnSubmitSympathy", "Uložiť záznam a aktivovať Sympathy Gate")}</span>
                 </Button>
               </div>
             </form>

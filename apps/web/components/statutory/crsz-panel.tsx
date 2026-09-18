@@ -165,7 +165,7 @@ export function CrszPanel() {
                 ) : (
                   <Download className="h-3.5 w-3.5" />
                 )}
-                <span>Export KVL SR (XML)</span>
+                <span>{t("statutory.crsz.exportKvlXml", "Export KVL SR (XML)")}</span>
               </Button>
               <Button
                 variant="outline"
@@ -175,7 +175,7 @@ export function CrszPanel() {
                 className="gap-1.5 text-xs"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span>Export CSV</span>
+                <span>{t("statutory.crsz.exportCsv", "Export CSV")}</span>
               </Button>
               <Button size="sm" onClick={() => setIsRegisterOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -206,16 +206,16 @@ export function CrszPanel() {
                 <Globe className="h-4 w-4 text-teal-700 dark:text-teal-400" />
                 <div>
                   <span className="text-xs font-semibold text-teal-950 dark:text-teal-200">
-                    Rýchle overenie transpondéra v CRSZ / Európskych registroch
+                    {t("statutory.crsz.quickVerifyTitle", "Rýchle overenie transpondéra v CRSZ / Európskych registroch")}
                   </span>
                   <p className="text-[11px] text-teal-800/80 dark:text-teal-400/80">
-                    Overenie 15-miestneho ISO kódu, národného kódu SR (703) alebo výrobcu
+                    {t("statutory.crsz.quickVerifySubtitle", "Overenie 15-miestneho ISO kódu, národného kódu SR (703) alebo výrobcu")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Input
-                  placeholder="Zadajte 15-miestny čip..."
+                  placeholder={t("statutory.crsz.inputChipPlaceholder", "Zadajte 15-miestny čip...")}
                   value={lookupChipInput}
                   onChange={(e) => setLookupChipInput(e.target.value)}
                   className="h-8 text-xs font-mono bg-white dark:bg-background min-w-[210px]"
@@ -228,7 +228,7 @@ export function CrszPanel() {
                   className="h-8 gap-1.5 text-xs bg-teal-700 hover:bg-teal-800 text-white"
                 >
                   {isLookingUp ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
-                  <span>Overiť</span>
+                  <span>{t("statutory.crsz.btnVerify", "Overiť")}</span>
                 </Button>
               </div>
             </div>
@@ -247,11 +247,11 @@ export function CrszPanel() {
                         : "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40"
                     }
                   >
-                    {lookupResult.valid ? lookupResult.countryOrManufacturer : "Neplatný formát"}
+                    {lookupResult.valid ? lookupResult.countryOrManufacturer : t("crsz.invalidCode", "Neplatný formát")}
                   </Badge>
                   {lookupResult.isSlovakNationalCode && (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40">
-                      🇸🇰 Národný kód SR (703)
+                      {t("statutory.crsz.nationalCodeSr", "🇸🇰 Národný kód SR (703)")}
                     </Badge>
                   )}
                   <span className="text-[11px] text-muted-foreground">{lookupResult.notes}</span>
@@ -262,7 +262,7 @@ export function CrszPanel() {
                   onClick={() => setLookupResult(null)}
                   className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
                 >
-                  Zavrieť
+                  {t("common.close", "Zavrieť")}
                 </Button>
               </div>
             )}
@@ -727,7 +727,7 @@ function RegisterMicrochipModal({
           <div>
             <label className="text-xs font-medium block mb-1">{t("crsz.microchipLabel")}</label>
             <Input
-              placeholder="Napr. 703098100123456"
+              placeholder={t("statutory.crsz.inputChipExample", "Napr. 703098100123456")}
               value={microchipNumber}
               onChange={(e) => setMicrochipNumber(e.target.value)}
               className="font-mono text-sm"

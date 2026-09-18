@@ -160,7 +160,7 @@ export function KvepisPanel() {
           <Link href="/statutory/kvepis">
             <Button size="sm" className="gap-1.5">
               <ExternalLink className="h-3.5 w-3.5" />
-              KVEPIS Hub
+              {t("statutory.kvepis.hubBtn", "KVEPIS Hub")}
             </Button>
           </Link>
           <Button
@@ -170,7 +170,7 @@ export function KvepisPanel() {
             onClick={() => window.open("https://svps.sk/kvepis/", "_blank")}
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Portál ŠVPS
+            {t("statutory.kvepis.portalBtn", "Portál ŠVPS")}
           </Button>
         </div>
       </div>
@@ -178,22 +178,22 @@ export function KvepisPanel() {
       {/* Stav registračných údajov kliniky */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card p-3.5">
-          <span className="text-xs text-muted-foreground">IČO Ambulancie</span>
-          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.ico || "Nenastavené"}</p>
+          <span className="text-xs text-muted-foreground">{t("statutory.kvepis.clinicIco", "IČO Ambulancie")}</span>
+          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.ico || "—"}</p>
         </div>
         <div className="rounded-lg border bg-card p-3.5">
-          <span className="text-xs text-muted-foreground">ÚPVS Schránka</span>
+          <span className="text-xs text-muted-foreground">{t("statutory.kvepis.upvsMailbox", "ÚPVS Schránka")}</span>
           <p className="mt-1 font-mono text-sm font-semibold">{credentials?.upvsSchranka || "SK-UPVS-DEFAULT"}</p>
         </div>
         <div className="rounded-lg border bg-card p-3.5">
-          <span className="text-xs text-muted-foreground">Číslo KVL SR</span>
-          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.kvlId || "Nenastavené"}</p>
+          <span className="text-xs text-muted-foreground">{t("statutory.kvepis.kvlNumber", "Číslo KVL SR")}</span>
+          <p className="mt-1 font-mono text-sm font-semibold">{credentials?.kvlId || "—"}</p>
         </div>
         <div className="rounded-lg border bg-card p-3.5">
-          <span className="text-xs text-muted-foreground">Režim integrácie</span>
+          <span className="text-xs text-muted-foreground">{t("statutory.kvepis.integrationMode", "Režim integrácie")}</span>
           <div className="mt-1">
             <Badge variant="outline" className={credentials?.isActive ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}>
-              {credentials?.integrationMode === "B2G" ? "Priame B2G / ÚPVS" : "Asistované podanie (GUIDED)"}
+              {credentials?.integrationMode === "B2G" ? t("statutory.kvepis.directB2g", "Priame B2G / ÚPVS") : t("statutory.kvepis.guidedSubmission", "Asistované podanie (GUIDED)")}
             </Badge>
           </div>
         </div>
@@ -203,11 +203,11 @@ export function KvepisPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-muted/40 p-1 text-xs">
           {[
-            { id: undefined, label: "Všetky podania" },
-            { id: "VALIDATED", label: "Pripravené na podpis" },
-            { id: "SIGNED", label: "Podpísané" },
-            { id: "ACKNOWLEDGED", label: "Potvrdené doručenkou" },
-            { id: "DRAFT", label: "Chybné / Rozpracované" },
+            { id: undefined, label: t("statutory.kvepis.filterAll", "Všetky podania") },
+            { id: "VALIDATED", label: t("statutory.kvepis.filterReadyToSign", "Pripravené na podpis") },
+            { id: "SIGNED", label: t("statutory.kvepis.filterSigned", "Podpísané") },
+            { id: "ACKNOWLEDGED", label: t("statutory.kvepis.filterAcknowledged", "Potvrdené doručenkou") },
+            { id: "DRAFT", label: t("statutory.kvepis.filterDraft", "Chybné / Rozpracované") },
           ].map((f) => (
             <button
               key={f.id ?? "all"}
@@ -228,25 +228,25 @@ export function KvepisPanel() {
       {isLoading ? (
         <div className="flex items-center justify-center p-12 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          Načítavam KVEPIS podania...
+          {t("statutory.kvepis.loading", "Načítavam KVEPIS podania...")}
         </div>
       ) : !submissions || submissions.length === 0 ? (
         <EmptyState
           icon={Globe}
-          title="Žiadne KVEPIS podania"
-          description="Neevidujete žiadne čakajúce ani odoslané podania na ŠVPS SR pre zvolený filter."
+          title={t("statutory.kvepis.emptyTitle", "Žiadne KVEPIS podania")}
+          description={t("statutory.kvepis.emptyDesc", "Neevidujete žiadne čakajúce ani odoslané podania na ŠVPS SR pre zvolený filter.")}
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
               <tr>
-                <th className="p-3">Ref. číslo</th>
-                <th className="p-3">Typ podania</th>
-                <th className="p-3">Pacient & Majiteľ</th>
-                <th className="p-3">Stav</th>
-                <th className="p-3">Doručenka / KEP</th>
-                <th className="p-3 text-right">Akcie</th>
+                <th className="p-3">{t("statutory.kvepis.colRef", "Ref. číslo")}</th>
+                <th className="p-3">{t("statutory.kvepis.colType", "Typ podania")}</th>
+                <th className="p-3">{t("statutory.kvepis.colPatient", "Pacient & Majiteľ")}</th>
+                <th className="p-3">{t("statutory.kvepis.colStatus", "Stav")}</th>
+                <th className="p-3">{t("statutory.kvepis.colReceipt", "Doručenka / KEP")}</th>
+                <th className="p-3 text-right">{t("statutory.kvepis.colActions", "Akcie")}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -256,10 +256,10 @@ export function KvepisPanel() {
                   <td className="p-3">
                     <span className="text-xs">
                       {sub.submissionType === "rabies_notification"
-                        ? "Vakcinácia besnota (RVPS)"
+                        ? t("statutory.kvepis.typeRabies", "Vakcinácia besnota (RVPS)")
                         : sub.submissionType === "treatment_diary_batch"
-                          ? "Kniha ošetrení (Farma)"
-                          : "Premiestnenie zvierat"}
+                          ? t("statutory.kvepis.typeTreatment", "Kniha ošetrení (Farma)")
+                          : t("statutory.kvepis.typeMovement", "Premiestnenie zvierat")}
                     </span>
                   </td>
                   <td className="p-3">
@@ -270,7 +270,7 @@ export function KvepisPanel() {
                   <td className="p-3">
                     {sub.receiptReceivedAt ? (
                       <span className="font-mono text-xs text-emerald-600">
-                        Prijaté ({new Date(sub.receiptReceivedAt).toLocaleDateString("sk-SK")})
+                        {new Date(sub.receiptReceivedAt).toLocaleDateString("sk-SK")}
                       </span>
                     ) : sub.payloadHash ? (
                       <span className="font-mono text-xs text-purple-600">
@@ -301,7 +301,7 @@ export function KvepisPanel() {
                         }}
                       >
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        Podpísať
+                        {t("statutory.kvepis.btnSign", "Podpísať")}
                       </Button>
                     )}
                     {sub.status === "SIGNED" && (
@@ -315,7 +315,7 @@ export function KvepisPanel() {
                         }}
                       >
                         <Upload className="h-3.5 w-3.5" />
-                        Doručenka
+                        {t("statutory.kvepis.btnReceipt", "Doručenka")}
                       </Button>
                     )}
                   </td>
@@ -330,23 +330,23 @@ export function KvepisPanel() {
       {showReceiptModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-lg">
-            <h3 className="text-lg font-semibold">Evidencia doručenky z ÚPVS / KVEPIS</h3>
+            <h3 className="text-lg font-semibold">{t("statutory.kvepis.receiptModalTitle", "Evidencia doručenky z ÚPVS / KVEPIS")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Zadajte evidenčné číslo doručenky potvrdzujúcej prevzatie podania ŠVPS SR.
+              {t("statutory.kvepis.receiptModalDesc", "Zadajte evidenčné číslo doručenky potvrdzujúcej prevzatie podania ŠVPS SR.")}
             </p>
             <div className="mt-4">
-              <label className="text-xs font-medium">Číslo potvrdenia / Doručenka *</label>
+              <label className="text-xs font-medium">{t("statutory.kvepis.receiptModalLabel", "Číslo potvrdenia / Doručenka *")}</label>
               <input
                 type="text"
                 value={receiptInput}
                 onChange={(e) => setReceiptInput(e.target.value)}
-                placeholder="napr. UPVS-ACK-2026-98124"
+                placeholder={t("statutory.kvepis.receiptModalPlaceholder", "napr. UPVS-ACK-2026-98124")}
                 className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowReceiptModal(false)}>
-                Zrušiť
+                {t("common.cancel", "Zrušiť")}
               </Button>
               <Button
                 disabled={!receiptInput.trim() || recordReceiptMutation.isPending}
@@ -359,7 +359,7 @@ export function KvepisPanel() {
                   }
                 }}
               >
-                Uložiť doručenku
+                {t("statutory.kvepis.btnSaveReceipt", "Uložiť doručenku")}
               </Button>
             </div>
           </div>
@@ -370,23 +370,23 @@ export function KvepisPanel() {
       {showSignatureModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-lg">
-            <h3 className="text-lg font-semibold">Záznam kvalifikovaného elektronického podpisu (KEP)</h3>
+            <h3 className="text-lg font-semibold">{t("statutory.kvepis.signatureModalTitle", "Záznam kvalifikovaného elektronického podpisu (KEP)")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Po podpise XML v aplikácii D.Signer vložte kontrolný SHA-256 odtlačok podpísaného kontajnera.
+              {t("statutory.kvepis.signatureModalDesc", "Po podpise XML v aplikácii D.Signer vložte kontrolný SHA-256 odtlačok podpísaného kontajnera.")}
             </p>
             <div className="mt-4">
-              <label className="text-xs font-medium">Odtlačok podpisu (Hash) *</label>
+              <label className="text-xs font-medium">{t("statutory.kvepis.signatureModalLabel", "Odtlačok podpisu (Hash) *")}</label>
               <input
                 type="text"
                 value={signatureInput}
                 onChange={(e) => setSignatureInput(e.target.value)}
-                placeholder="napr. 7a8f... (SHA-256 hex digest)"
+                placeholder={t("statutory.kvepis.signatureModalPlaceholder", "napr. 7a8f... (SHA-256 hex digest)")}
                 className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
               />
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowSignatureModal(false)}>
-                Zrušiť
+                {t("common.cancel", "Zrušiť")}
               </Button>
               <Button
                 disabled={signatureInput.trim().length < 16 || recordSignatureMutation.isPending}
@@ -399,7 +399,7 @@ export function KvepisPanel() {
                   }
                 }}
               >
-                Potvrdiť KEP podpis
+                {t("statutory.kvepis.btnConfirmSignature", "Potvrdiť KEP podpis")}
               </Button>
             </div>
           </div>
