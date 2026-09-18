@@ -23,8 +23,65 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
+import type { VaccinationRecallRecipient } from "@/lib/vaccination-recalls";
 
 const MAX_BATCH_SIZE = 100;
+
+function getRecallBlockMessage(
+  recipient: VaccinationRecallRecipient,
+  t: (key: string, fallback: string) => string
+): string {
+  if (recipient.status === "eligible" && recipient.blockMessage) {
+    return t("recalls.channelFallbackEmail", recipient.blockMessage);
+  }
+  if (!recipient.blockReason) {
+    return recipient.blockMessage ?? "";
+  }
+  switch (recipient.blockReason) {
+    case "no_deliverable_channel":
+      return t(
+        "recalls.blocked.noDeliverableChannel",
+        "Add a deliverable email or an opted-in mobile number before sending."
+      );
+    case "email_suppressed":
+      return t(
+        "recalls.blocked.emailSuppressed",
+        "The client's email is suppressed and no safe fallback is available."
+      );
+    case "sms_suppressed":
+      return t(
+        "recalls.blocked.smsSuppressed",
+        "The client has opted out of text messages and has no deliverable email."
+      );
+    case "quiet_hours":
+      return t(
+        "recalls.blocked.quietHours",
+        "Texting is in quiet hours and this client has no email fallback."
+      );
+    case "texting_unavailable":
+      return t(
+        "recalls.blocked.textingUnavailable",
+        "No active clinic texting number is available and this client has no email fallback."
+      );
+    case "test_practice":
+      return t(
+        "recalls.blocked.testPractice",
+        "Automated outreach is disabled for test practices."
+      );
+    case "seeded_demo_data":
+      return t(
+        "recalls.blocked.seededDemoData",
+        "Seeded demo patients cannot receive real reminders."
+      );
+    case "reserved_contact":
+      return t(
+        "recalls.blocked.reservedContact",
+        "Reserved fixture phone numbers cannot receive real reminders."
+      );
+    default:
+      return recipient.blockMessage ?? "";
+  }
+}
 
 function canOperateRecalls(role?: string | null): boolean {
   return (
@@ -376,7 +433,7 @@ export default function VaccinationRecallsPage() {
                           )}
                           {eligible && recipient.blockMessage ? (
                             <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                              {recipient.blockMessage}
+                              {getRecallBlockMessage(recipient, t)}
                             </p>
                           ) : null}
                         </td>
@@ -402,7 +459,7 @@ export default function VaccinationRecallsPage() {
                                 {t("recalls.badgeBlocked", "Blocked")}
                               </Badge>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                {recipient.blockMessage}
+                                {getRecallBlockMessage(recipient, t)}
                               </p>
                             </div>
                           )}

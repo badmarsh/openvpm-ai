@@ -5,6 +5,9 @@ import {
   regulatoryFramework,
   regionDefaults,
   localeForCountry,
+  stripDoctorTitle,
+  formatDoctorName,
+  formatSpecies,
 } from "../format";
 
 describe("formatCurrency", () => {
@@ -74,3 +77,44 @@ describe("localeForCountry", () => {
     expect(localeForCountry(null)).toBe("en-US");
   });
 });
+
+describe("stripDoctorTitle", () => {
+  it("strips single and duplicate doctor titles", () => {
+    expect(stripDoctorTitle("MVDr. Martin Sýkora")).toBe("Martin Sýkora");
+    expect(stripDoctorTitle("MVDr. MVDr. Martin Sýkora")).toBe("Martin Sýkora");
+    expect(stripDoctorTitle("Dr. Sarah Chen")).toBe("Sarah Chen");
+    expect(stripDoctorTitle("Dr Sarah Chen")).toBe("Sarah Chen");
+    expect(stripDoctorTitle("Martin Sýkora")).toBe("Martin Sýkora");
+    expect(stripDoctorTitle("Drew Barrymore")).toBe("Drew Barrymore");
+    expect(stripDoctorTitle(null)).toBe("");
+  });
+});
+
+describe("formatDoctorName", () => {
+  const fakeT = (_key: string, fallback?: string, params?: Record<string, string | number>) => {
+    return (fallback ?? "").replace("{name}", String(params?.name ?? ""));
+  };
+
+  it("formats doctor name without duplicating prefix", () => {
+    expect(formatDoctorName("MVDr. Martin Sýkora", fakeT)).toBe("Dr. Martin Sýkora");
+    expect(formatDoctorName("MVDr. MVDr. Martin Sýkora", fakeT)).toBe("Dr. Martin Sýkora");
+    expect(formatDoctorName("Martin Sýkora", fakeT)).toBe("Dr. Martin Sýkora");
+    expect(formatDoctorName("", fakeT)).toBe("");
+  });
+});
+
+describe("formatSpecies", () => {
+  const fakeT = (key: string, fallback?: string) => {
+    if (key === "species.feline") return "Mačka";
+    if (key === "species.canine") return "Pes";
+    return fallback ?? "";
+  };
+
+  it("translates known species", () => {
+    expect(formatSpecies("feline", fakeT)).toBe("Mačka");
+    expect(formatSpecies("canine", fakeT)).toBe("Pes");
+    expect(formatSpecies("unknown_species", fakeT)).toBe("unknown_species");
+    expect(formatSpecies(null, fakeT)).toBe("");
+  });
+});
+

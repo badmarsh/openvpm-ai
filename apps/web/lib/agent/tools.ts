@@ -161,7 +161,7 @@ const vitalCapillaryRefillInput = clinicalDecimalInput("Capillary refill", {
   scale: 1,
 });
 
-async function practiceTimeZone(
+export async function practiceTimeZone(
   ctx: AgentToolContext
 ): Promise<string | null> {
   const [practice] = await ctx.db

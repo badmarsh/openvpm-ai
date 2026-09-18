@@ -29,6 +29,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { CalendarSubscribe } from "@/components/schedule/calendar-subscribe";
 import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
+import { formatDoctorName, formatSpecies } from "@/lib/locale/format";
 import { dateInputTimeUtcInstant } from "@/lib/date-input";
 import {
   addCalendarDays,
@@ -795,7 +796,7 @@ function PhoneAgenda({
                   .filter(Boolean)
                   .join(" ");
                 const careTeam = appointment.doctorName
-                  ? t("schedule.drPrefix", "Dr. {name}", { name: appointment.doctorName })
+                  ? formatDoctorName(appointment.doctorName, t)
                   : t("schedule.teamLane", "Team");
                 const place = [
                   appointment.locationName,
@@ -837,7 +838,7 @@ function PhoneAgenda({
                         <span className="truncate">
                           {clientName || t("schedule.clientNotListed", "Client not listed")}
                           {appointment.patientSpecies
-                            ? ` · ${appointment.patientSpecies}`
+                            ? ` · ${formatSpecies(appointment.patientSpecies, t)}`
                             : ""}
                         </span>
                       </span>
@@ -1489,7 +1490,7 @@ function AppointmentDetailPopover({
               {appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}
             </h3>
             {appointment.patientSpecies && (
-              <p className="text-xs text-muted-foreground">{appointment.patientSpecies}</p>
+              <p className="text-xs text-muted-foreground">{formatSpecies(appointment.patientSpecies, t)}</p>
             )}
           </div>
 
@@ -1507,7 +1508,7 @@ function AppointmentDetailPopover({
             {appointment.doctorName && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-3.5 w-3.5" />
-                <span>{t("schedule.drPrefix", "Dr. {name}", { name: appointment.doctorName })}</span>
+                <span>{formatDoctorName(appointment.doctorName, t)}</span>
               </div>
             )}
             {appointment.locationName && (
@@ -1660,7 +1661,7 @@ function AppointmentDetailPopover({
                   <option value="">{t("schedule.unassigned", "Unassigned")}</option>
                   {eligibleRescheduleDoctors.map((doctor) => (
                     <option key={doctor.id} value={doctor.id}>
-                      {t("schedule.drPrefix", "Dr. {name}", { name: doctor.name })}
+                      {formatDoctorName(doctor.name, t)}
                     </option>
                   ))}
                 </select>
@@ -1944,7 +1945,7 @@ function AppointmentDetailPopover({
                       <option value="">{t("schedule.selectDoctorToAssign", "Select doctor...")}</option>
                       {eligibleRescheduleDoctors.map((doc) => (
                         <option key={doc.id} value={doc.id}>
-                          {t("schedule.drPrefix", "Dr. {name}", { name: doc.name })}
+                          {formatDoctorName(doc.name, t)}
                         </option>
                       ))}
                     </select>
@@ -2361,7 +2362,7 @@ function BookingForm({
                 <span className="flex-1">
                   {selectedPatient.name}
                   {selectedPatient.species && (
-                    <span className="text-muted-foreground"> ({selectedPatient.species})</span>
+                    <span className="text-muted-foreground"> ({formatSpecies(selectedPatient.species, t)})</span>
                   )}
                 </span>
                 <button
@@ -2423,7 +2424,7 @@ function BookingForm({
                         >
                           <div className="font-medium">{p.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {p.species}
+                            {formatSpecies(p.species, t)}
                             {(p.clientFirstName || p.clientLastName) && (
                               <> &middot; {t("schedule.ownerLabel", "Owner: {name}", { name: [p.clientFirstName, p.clientLastName].filter(Boolean).join(" ") })}</>
                             )}
@@ -2495,7 +2496,7 @@ function BookingForm({
               </option>
               {eligibleDoctors?.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  {t("schedule.drPrefix", "Dr. {name}", { name: doc.name })}
+                  {formatDoctorName(doc.name, t)}
                 </option>
               ))}
             </select>
@@ -3144,7 +3145,7 @@ function SchedulePageContent() {
               <option value="all">{t("schedule.allDoctors", "All Doctors")}</option>
               {doctors?.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  {t("schedule.drPrefix", "Dr. {name}", { name: doc.name })}
+                  {formatDoctorName(doc.name, t)}
                 </option>
               ))}
             </select>

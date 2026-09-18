@@ -72,3 +72,70 @@ export function regionDefaults(country?: string | null): RegionDefaults {
       return { currency: "usd", taxRatePercent: "8.00", timezone: "America/New_York" };
   }
 }
+
+const DOCTOR_TITLE_REGEX = /^((?:mvdr|mudr|dr|doc|prof)\.?\s+)+/i;
+
+/**
+ * Strips duplicate or leading academic/professional medical titles like "MVDr.", "Dr.", "MUDr."
+ * so that localized prefixes can be applied cleanly without duplication (e.g. "MVDr. MVDr. ...").
+ */
+export function stripDoctorTitle(name: string | null | undefined): string {
+  if (!name) return "";
+  return name.trim().replace(DOCTOR_TITLE_REGEX, "").trim();
+}
+
+export type I18nTranslateFn = (
+  key: string,
+  fallback?: string,
+  params?: Record<string, string | number>
+) => string;
+
+/**
+ * Formats a veterinarian/doctor name with the localized title prefix ("MVDr. {name}" in SK,
+ * "Dr. {name}" in EN), automatically deduplicating existing title prefixes.
+ */
+export function formatDoctorName(
+  name: string | null | undefined,
+  t: I18nTranslateFn,
+  prefixKey = "schedule.drPrefix"
+): string {
+  if (!name) return "";
+  const cleaned = stripDoctorTitle(name);
+  if (!cleaned) return name.trim();
+  return t(prefixKey, "Dr. {name}", { name: cleaned });
+}
+
+export const KNOWN_SPECIES = [
+  "canine",
+  "feline",
+  "avian",
+  "rabbit",
+  "reptile",
+  "equine",
+  "bovine",
+  "ovine",
+  "caprine",
+  "porcine",
+  "poultry",
+  "camelid",
+  "other",
+] as const;
+
+export type KnownSpecies = (typeof KNOWN_SPECIES)[number];
+
+/**
+ * Localizes species names (e.g. "feline" -> "Mačka", "canine" -> "Pes") using i18n keys.
+ */
+export function formatSpecies(
+  species: string | null | undefined,
+  t: I18nTranslateFn
+): string {
+  if (!species) return "";
+  const trimmed = species.trim();
+  const lower = trimmed.toLowerCase();
+  if ((KNOWN_SPECIES as readonly string[]).includes(lower)) {
+    return t(`species.${lower}`, trimmed);
+  }
+  return trimmed;
+}
+

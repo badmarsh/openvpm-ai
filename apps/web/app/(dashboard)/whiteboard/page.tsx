@@ -20,6 +20,7 @@ import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatDoctorName } from "@/lib/locale/format";
 import { useI18n } from "@/lib/i18n";
 import { useWhiteboardStream } from "@/lib/whiteboard/use-whiteboard-stream";
 
@@ -350,7 +351,7 @@ function WhiteboardCard({
         {appointment.doctorName && (
           <span className="inline-flex items-center gap-1">
             <User className="h-3 w-3" />
-            {t("whiteboard.doctor", "Dr. {name}", { name: appointment.doctorName })}
+            {formatDoctorName(appointment.doctorName, t, "whiteboard.doctor")}
           </span>
         )}
         {(appointment.locationName || appointment.roomName) && (
@@ -592,7 +593,7 @@ function AppointmentDetailModal({
             {appointment.doctorName && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-3.5 w-3.5" />
-                <span>{t("whiteboard.doctor", "Dr. {name}", { name: appointment.doctorName })}</span>
+                <span>{formatDoctorName(appointment.doctorName, t, "whiteboard.doctor")}</span>
               </div>
             )}
             {appointment.typeName && (
@@ -659,7 +660,7 @@ function AppointmentDetailModal({
                       <option value="">{t("whiteboard.selectDoctorPrompt", "Select doctor...")}</option>
                       {(doctorsQuery.data ?? []).map((doc) => (
                         <option key={doc.id} value={doc.id}>
-                          {t("whiteboard.doctor", "Dr. {name}", { name: doc.name })}
+                          {formatDoctorName(doc.name, t, "whiteboard.doctor")}
                         </option>
                       ))}
                     </select>
