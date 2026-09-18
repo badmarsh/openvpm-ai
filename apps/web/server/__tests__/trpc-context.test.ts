@@ -190,4 +190,44 @@ describe("createTRPCContext session hardening", () => {
       expect.any(Function)
     );
   });
+
+  it("self-heals stale JWT sessions by email when user ID changed after database reseed", async () => {
+    const staleSession = session();
+    staleSession.user.id = "stale-old-uuid";
+    mocks.getServerSession.mockResolvedValueOnce(staleSession);
+
+    // withTenant returns empty (stale user ID)
+    mockActiveUserLookup([]);
+
+    // withSystem by ID returns empty
+    const limitById = vi.fn(async () => []);
+    const whereById = vi.fn((_c: unknown) => ({ limit: limitById }));
+    const innerJoinById = vi.fn((_t: unknown, _c: unknown) => ({ where: whereById }));
+    const fromById = vi.fn((_t: unknown) => ({ innerJoin: innerJoinById }));
+
+    // withSystem by email returns new user row
+    const NEW_USER_ID = "new-reseeded-uuid";
+    const limitByEmail = vi.fn(async () => [
+      {
+        id: NEW_USER_ID,
+        practiceId: PRACTICE_ID,
+        emailVerifiedAt: new Date(),
+        practiceCreatedAt: new Date(),
+        recoveryHold: false,
+      },
+    ]);
+    const whereByEmail = vi.fn((_c: unknown) => ({ limit: limitByEmail }));
+    const innerJoinByEmail = vi.fn((_t: unknown, _c: unknown) => ({ where: whereByEmail }));
+    const fromByEmail = vi.fn((_t: unknown) => ({ innerJoin: innerJoinByEmail }));
+
+    mocks.db.select
+      .mockImplementationOnce((_s: unknown) => ({ from: fromById }))
+      .mockImplementationOnce((_s: unknown) => ({ from: fromByEmail }));
+
+    const ctx = await createTRPCContext();
+
+    expect(ctx.session).not.toBeNull();
+    expect(ctx.session?.user.id).toBe(NEW_USER_ID);
+    expect(ctx.session?.user.practiceId).toBe(PRACTICE_ID);
+  });
 });

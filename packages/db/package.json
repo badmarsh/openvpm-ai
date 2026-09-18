@@ -25,6 +25,7 @@
     "db:seed:schedule": "tsx seed-schedule-demo.ts",
     "db:seed:all": "tsx seed-all-demo.ts",
     "db:seed:missing": "tsx seed-missing-data.ts",
+    "db:seed:comprehensive": "tsx seed-comprehensive-sk.ts",
     "db:reset": "tsx reset.ts",
     "db:rls": "tsx apply-rls.ts",
     "db:rls:preflight": "tsx rls-preflight.ts",

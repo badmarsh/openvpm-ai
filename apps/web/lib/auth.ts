@@ -251,34 +251,49 @@ export const authOptions: NextAuthOptions = {
         }
       } else if (token.id || token.email) {
         try {
-          const [dbUser] = await withSystem(db, (tx) =>
-            tx
-              .select({
-                id: users.id,
-                role: users.role,
-                practiceId: users.practiceId,
-                emailVerifiedAt: users.emailVerifiedAt,
-                practiceCreatedAt: practices.createdAt,
-                recoveryHold: practices.recoveryHold,
-                billingTier: practices.subscriptionTier,
-                billingStatus: practices.billingStatus,
-                trialEndsAt: practices.trialEndsAt,
-              })
-              .from(users)
-              .innerJoin(
-                practices,
-                and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
-              )
-              .where(
-                and(
-                  token.id
-                    ? eq(users.id, token.id)
-                    : eq(users.email, token.email as string),
-                  isNull(users.deletedAt),
-                ),
-              )
-              .limit(1),
-          );
+          const selectFields = {
+            id: users.id,
+            role: users.role,
+            practiceId: users.practiceId,
+            emailVerifiedAt: users.emailVerifiedAt,
+            practiceCreatedAt: practices.createdAt,
+            recoveryHold: practices.recoveryHold,
+            billingTier: practices.subscriptionTier,
+            billingStatus: practices.billingStatus,
+            trialEndsAt: practices.trialEndsAt,
+          };
+
+          let dbUser: any = undefined;
+
+          if (token.id) {
+            const [userById] = await withSystem(db, (tx) =>
+              tx
+                .select(selectFields)
+                .from(users)
+                .innerJoin(
+                  practices,
+                  and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+                )
+                .where(and(eq(users.id, token.id as string), isNull(users.deletedAt)))
+                .limit(1)
+            );
+            dbUser = userById;
+          }
+
+          if (!dbUser && token.email) {
+            const [userByEmail] = await withSystem(db, (tx) =>
+              tx
+                .select(selectFields)
+                .from(users)
+                .innerJoin(
+                  practices,
+                  and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+                )
+                .where(and(eq(users.email, token.email as string), isNull(users.deletedAt)))
+                .limit(1)
+            );
+            dbUser = userByEmail;
+          }
           if (dbUser) {
             token.id = dbUser.id;
             token.role = dbUser.role;

@@ -129,82 +129,115 @@ async function activeSessionOrNull(
   database: Database,
   session: AppSession | null,
 ): Promise<AppSession | null> {
-  if (!session?.user?.id || !session.user.practiceId) {
+  if (!session?.user?.id && !session?.user?.email) {
     return null;
   }
 
-  const cacheKey = `${session.user.id}:${session.user.practiceId}`;
+  const cacheKey = `${session.user.id ?? ""}:${session.user.practiceId ?? ""}`;
   const now = Date.now();
-  const cached = activeSessionCache.get(cacheKey);
+  if (session.user.id && session.user.practiceId) {
+    const cached = activeSessionCache.get(cacheKey);
 
-  if (cached && now - cached.verifiedAt < ACTIVE_SESSION_CACHE_TTL_MS) {
-    return {
-      ...session,
-      user: {
-        ...session.user,
-        emailVerifiedAt: cached.emailVerifiedAt,
-        practiceCreatedAt: cached.practiceCreatedAt,
-        recoveryHold: cached.recoveryHold,
-      },
-    };
+    if (cached && now - cached.verifiedAt < ACTIVE_SESSION_CACHE_TTL_MS) {
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          emailVerifiedAt: cached.emailVerifiedAt,
+          practiceCreatedAt: cached.practiceCreatedAt,
+          recoveryHold: cached.recoveryHold,
+        },
+      };
+    }
   }
 
-  let [activeUser] = await withTenant(
-    database,
-    session.user.practiceId,
-    (tx) =>
-      tx
-        .select({
-          id: users.id,
-          practiceId: users.practiceId,
-          emailVerifiedAt: users.emailVerifiedAt,
-          practiceCreatedAt: practices.createdAt,
-          recoveryHold: practices.recoveryHold,
-        })
-        .from(users)
-        .innerJoin(
-          practices,
-          and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
-        )
-        .where(
-          and(
-            eq(users.id, session.user.id),
-            eq(users.practiceId, session.user.practiceId),
-            isNull(users.deletedAt),
-          ),
-        )
-        .limit(1),
-  );
+  let activeUser: any = undefined;
+
+  if (session.user.id && session.user.practiceId) {
+    try {
+      const [found] = await withTenant(
+        database,
+        session.user.practiceId,
+        (tx) =>
+          tx
+            .select({
+              id: users.id,
+              practiceId: users.practiceId,
+              emailVerifiedAt: users.emailVerifiedAt,
+              practiceCreatedAt: practices.createdAt,
+              recoveryHold: practices.recoveryHold,
+            })
+            .from(users)
+            .innerJoin(
+              practices,
+              and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+            )
+            .where(
+              and(
+                eq(users.id, session.user.id),
+                eq(users.practiceId, session.user.practiceId),
+                isNull(users.deletedAt),
+              ),
+            )
+            .limit(1),
+      );
+      activeUser = found;
+    } catch {
+      // In case practiceId is malformed or withTenant fails, fall through to self-healing
+    }
+  }
 
   // Self-heal stale session claims (e.g. after DB restore or practice reassignment)
   if (!activeUser && (session.user.id || session.user.email)) {
     try {
-      const healedUsers = await withSystem(database, (tx: any) => {
-        const query = tx?.select?.({
-          id: users.id,
-          practiceId: users.practiceId,
-          emailVerifiedAt: users.emailVerifiedAt,
-          practiceCreatedAt: practices.createdAt,
-          recoveryHold: practices.recoveryHold,
+      const selectFields = {
+        id: users.id,
+        practiceId: users.practiceId,
+        emailVerifiedAt: users.emailVerifiedAt,
+        practiceCreatedAt: practices.createdAt,
+        recoveryHold: practices.recoveryHold,
+      };
+
+      let healedUser: any = undefined;
+
+      // 1. Try finding by ID first
+      if (session.user.id) {
+        const byId = await withSystem(database, (tx: any) => {
+          const query = tx?.select?.(selectFields);
+          if (!query?.from) return [];
+          return query
+            .from(users)
+            .innerJoin(
+              practices,
+              and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+            )
+            .where(and(eq(users.id, session.user.id), isNull(users.deletedAt)))
+            .limit(1);
         });
-        if (!query?.from) return [];
-        return query
-          .from(users)
-          .innerJoin(
-            practices,
-            and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
-          )
-          .where(
-            and(
-              session.user.id
-                ? eq(users.id, session.user.id)
-                : eq(users.email, session.user.email),
-              isNull(users.deletedAt),
-            ),
-          )
-          .limit(1);
-      });
-      const healedUser = Array.isArray(healedUsers) ? healedUsers[0] : undefined;
+        if (Array.isArray(byId) && byId.length > 0) {
+          healedUser = byId[0];
+        }
+      }
+
+      // 2. Fallback to lookup by email if not found by ID (e.g. after DB reseed/restore)
+      if (!healedUser && session.user.email) {
+        const byEmail = await withSystem(database, (tx: any) => {
+          const query = tx?.select?.(selectFields);
+          if (!query?.from) return [];
+          return query
+            .from(users)
+            .innerJoin(
+              practices,
+              and(eq(practices.id, users.practiceId), isNull(practices.deletedAt)),
+            )
+            .where(and(eq(users.email, session.user.email), isNull(users.deletedAt)))
+            .limit(1);
+        });
+        if (Array.isArray(byEmail) && byEmail.length > 0) {
+          healedUser = byEmail[0];
+        }
+      }
+
       if (healedUser) {
         session.user.id = healedUser.id;
         session.user.practiceId = healedUser.practiceId;
@@ -216,7 +249,8 @@ async function activeSessionOrNull(
   }
 
   if (activeUser) {
-    activeSessionCache.set(cacheKey, {
+    const freshCacheKey = `${session.user.id}:${session.user.practiceId}`;
+    activeSessionCache.set(freshCacheKey, {
       emailVerifiedAt: activeUser.emailVerifiedAt,
       practiceCreatedAt: activeUser.practiceCreatedAt,
       recoveryHold: activeUser.recoveryHold,

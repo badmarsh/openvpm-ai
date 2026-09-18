@@ -30,6 +30,10 @@ import {
 const PASSWORD_HASH =
   "$2a$10$1Ui3ssO.fTXmUiyu4B7n0.EWb/M9fGHlZ5mjCXaq.Xqf1OdXwLs/K"; // password123
 
+export const CANONICAL_PRACTICE_ID = "5c4ebbbc-90e1-457a-87a7-7895f560317d";
+export const CANONICAL_DR_SYKORA_ID = "b1963bb2-ef34-470e-ab2d-a22a250984bb";
+export const CANONICAL_ADMIN_ID = "72082441-5a9e-4470-a9a2-d9f2202708c0";
+
 async function seedSlovak() {
   console.log("Seeding Slovak clinic data for openvpm_ai...\n");
 
@@ -70,6 +74,7 @@ async function seedSlovak() {
     const [practice] = await db
       .insert(practices)
       .values({
+        id: CANONICAL_PRACTICE_ID,
         name: "Súkromná veterinárna klinika MVDr. Martin Sýkora",
         address: "Kvetná 3, Rimavská Sobota, Slovakia",
         phone: "0903 949 401",
@@ -165,6 +170,7 @@ async function seedSlovak() {
   });
   if (!existingVet) {
     await db.insert(users).values({
+      id: CANONICAL_DR_SYKORA_ID,
       practiceId,
       name: "MVDr. Martin Sýkora",
       email: "martin.sykora@vetsykora.sk",
@@ -183,6 +189,7 @@ async function seedSlovak() {
     });
     if (!existing) {
       await db.insert(users).values({
+        ...(u.email === "admin@vetsykora.sk" ? { id: CANONICAL_ADMIN_ID } : {}),
         practiceId,
         name: u.name,
         email: u.email,
@@ -413,6 +420,13 @@ async function seedSlovak() {
     }
   }
   console.log(`✓ Statutory consent forms: ${STATUTORY_FORMS.length} templates verified`);
+
+  try {
+    const { seedMissingData } = await import("./seed-missing-data");
+    await seedMissingData();
+  } catch (err) {
+    console.warn("Doplnkový seed zlyhal alebo bol preskočený:", err);
+  }
 
   console.log("\nSlovak seed completed successfully in openvpm_ai database!");
 }
