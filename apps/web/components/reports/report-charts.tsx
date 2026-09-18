@@ -12,6 +12,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import { formatDateYmdToDisplay } from "@/lib/date-display";
+
 type RevenueDailyPoint = {
   date: string;
   amount: number;
@@ -37,14 +39,16 @@ export function RevenueLineChart({
           dataKey="date"
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
+          tickFormatter={(val: string) => formatDateYmdToDisplay(val)}
         />
         <YAxis
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
-          tickFormatter={(value) => `$${value}`}
+          tickFormatter={(value) => `${value} €`}
         />
         <Tooltip
-          formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+          formatter={(value: number) => [formatCurrency(value), ""]}
+          labelFormatter={(label) => formatDateYmdToDisplay(String(label))}
           contentStyle={{
             backgroundColor: "hsl(var(--card))",
             border: "1px solid hsl(var(--border))",

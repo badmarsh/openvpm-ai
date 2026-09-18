@@ -108,7 +108,7 @@ export const agentRouter = createRouter({
                 .string()
                 .trim()
                 .min(1)
-                .max(AGENT_INSTRUCTION_MAX_LENGTH),
+                .max(8000),
             }),
           )
           .max(20)
@@ -178,6 +178,7 @@ export const agentRouter = createRouter({
         if (e instanceof AgentPracticeNotFoundError) {
           throw practiceNotFound();
         }
+        console.error("[agent.run] Agent execution error:", e);
         const rawMsg = e instanceof Error ? e.message : "Agent run failed";
         let clientMsg = rawMsg;
         if (

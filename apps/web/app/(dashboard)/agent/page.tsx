@@ -225,9 +225,9 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     const text = instruction.trim();
     // Send a trailing window of the conversation for multi-turn context.
     const history = messages
-      .filter((m) => !m.isError)
+      .filter((m) => !m.isError && Boolean(m.content?.trim()))
       .slice(-12)
-      .map((m) => ({ role: m.role, content: m.content }));
+      .map((m) => ({ role: m.role, content: m.content.trim().slice(0, 4000) }));
     const writes = allowWrites;
     setMessages((prev) => [
       ...prev,

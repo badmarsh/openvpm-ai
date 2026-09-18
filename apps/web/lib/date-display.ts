@@ -18,7 +18,11 @@ export function formatDateTimeLocalToDisplay(value: string | null | undefined): 
 
 /** Parse dd.mm.yyyy back to YYYY-MM-DD if valid, else returns null. */
 export function parseDisplayToDateYmd(display: string): string | null {
-  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(display.trim());
+  const trimmed = display.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const match = /^(\d{1,2})[./\s-](\d{1,2})[./\s-](\d{4})$/.exec(trimmed);
   if (!match) return null;
   const [, day, month, year] = match;
   const d = Number(day);
@@ -27,3 +31,4 @@ export function parseDisplayToDateYmd(display: string): string | null {
   if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > 2100) return null;
   return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
+

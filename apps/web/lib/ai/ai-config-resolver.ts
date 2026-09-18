@@ -167,6 +167,70 @@ export async function resolveFeatureConfig(
   };
 }
 
+// Thought signature cache for multi-turn tool calling with Gemini 3.x models
+const geminiThoughtSignatureCache = new Map<string, string>();
+
+function createGeminiFetch(): typeof fetch {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (init?.body && typeof init.body === "string") {
+      try {
+        const data = JSON.parse(init.body);
+        if (Array.isArray(data.messages)) {
+          for (const m of data.messages) {
+            if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+              for (const tc of m.tool_calls) {
+                const sig =
+                  geminiThoughtSignatureCache.get(tc.id) ||
+                  tc.extra_content?.google?.thought_signature ||
+                  "skip_thought_signature_validator";
+                tc.extra_content = {
+                  ...tc.extra_content,
+                  google: {
+                    ...tc.extra_content?.google,
+                    thought_signature: sig,
+                  },
+                };
+              }
+            }
+          }
+          init.body = JSON.stringify(data);
+        }
+      } catch {
+        // Ignore JSON parse errors and proceed
+      }
+    }
+
+    const response = await fetch(input, init);
+
+    if (response.ok) {
+      try {
+        const clone = response.clone();
+        const json = await clone.json();
+        if (Array.isArray(json.choices)) {
+          for (const choice of json.choices) {
+            if (Array.isArray(choice.message?.tool_calls)) {
+              for (const tc of choice.message.tool_calls) {
+                const sig = tc.extra_content?.google?.thought_signature;
+                if (tc.id && sig) {
+                  geminiThoughtSignatureCache.set(tc.id, sig);
+                  if (geminiThoughtSignatureCache.size > 500) {
+                    const oldest = geminiThoughtSignatureCache.keys().next().value;
+                    if (oldest) geminiThoughtSignatureCache.delete(oldest);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore JSON parse errors on response
+      }
+    }
+
+    return response;
+  };
+}
+
 /**
  * Build an AI SDK LanguageModel instance configured for the practice and feature.
  */
@@ -185,20 +249,28 @@ export async function resolvePracticeLanguageModel(
       // If Vertex/Anthropic is not set, try OpenAI compatible proxy if present
       const baseUrl = process.env.AI_BASE_URL || "http://127.0.0.1:8080/v1";
       const apiKey = process.env.AI_API_KEY || process.env.ALIPROXY_KEY || "aliproxy-local-key";
+      const isGeminiFallback = baseUrl.includes("generativelanguage.googleapis.com");
       const proxy = createOpenAICompatible({
         name: "fallback-provider",
         baseURL: baseUrl,
         apiKey,
+        fetch: isGeminiFallback ? createGeminiFetch() : undefined,
       });
       return proxy(resolved.modelId || DEFAULT_AI_MODEL);
     }
   }
 
+  const isGemini =
+    resolved.provider === "gemini" ||
+    (resolved.baseUrl ? resolved.baseUrl.includes("generativelanguage.googleapis.com") : false);
+
   const proxy = createOpenAICompatible({
     name: `${resolved.provider}-${feature}`,
     baseURL: resolved.baseUrl,
     apiKey: resolved.apiKey,
+    fetch: isGemini ? createGeminiFetch() : undefined,
   });
 
   return proxy(resolved.modelId);
 }
+

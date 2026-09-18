@@ -16,6 +16,8 @@ export interface DatePickerProps {
   required?: boolean;
   min?: string;
   max?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
 }
 
 export function DatePicker({
@@ -29,6 +31,8 @@ export function DatePicker({
   required,
   min,
   max,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: DatePickerProps) {
   const nativeRef = useRef<HTMLInputElement>(null);
   const [display, setDisplay] = useState(() => formatDateYmdToDisplay(value));
@@ -57,18 +61,22 @@ export function DatePicker({
         onChange={(e) => handleSelect(e.target.value)}
         disabled={disabled}
         name={name}
-        id={id}
+        id={id ? `${id}-native` : undefined}
         required={required}
         min={min}
         max={max}
         className="sr-only"
+        tabIndex={-1}
         aria-hidden="true"
       />
       <Input
+        id={id}
         type="text"
         value={display}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-auto text-inherit min-w-0 flex-1"
         onChange={(e) => {
           const text = e.target.value;

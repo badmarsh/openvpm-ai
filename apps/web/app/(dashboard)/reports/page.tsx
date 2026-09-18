@@ -28,6 +28,8 @@ import {
 } from "@/lib/reports/date-range";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateYmdToDisplay } from "@/lib/date-display";
 import { EmptyState } from "@/components/common/empty-state";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { useI18n } from "@/lib/i18n";
@@ -267,26 +269,24 @@ function DateRangeControls({
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-medium text-muted-foreground">
             {t("reports.dateRange.start", "Start")}
-            <Input
-              type="date"
+            <DatePicker
               value={value.startDate}
               aria-invalid={Boolean(validationMessage) || undefined}
               aria-describedby={errorId}
-              onChange={(event) =>
-                onChange({ ...value, startDate: event.target.value })
+              onChange={(next) =>
+                onChange({ ...value, startDate: next })
               }
               className="mt-1"
             />
           </label>
           <label className="text-xs font-medium text-muted-foreground">
             {t("reports.dateRange.end", "End")}
-            <Input
-              type="date"
+            <DatePicker
               value={value.endDate}
               aria-invalid={Boolean(validationMessage) || undefined}
               aria-describedby={errorId}
-              onChange={(event) =>
-                onChange({ ...value, endDate: event.target.value })
+              onChange={(next) =>
+                onChange({ ...value, endDate: next })
               }
               className="mt-1"
             />
@@ -833,7 +833,7 @@ function InventoryTab() {
                     <td className="py-2">{item.name}</td>
                     <td className="py-2 text-muted-foreground">{item.sku ?? "-"}</td>
                     <td className="py-2 text-right">{item.stockQuantity}</td>
-                    <td className="py-2 text-right font-medium">{item.expirationDate}</td>
+                    <td className="py-2 text-right font-medium">{formatDateYmdToDisplay(item.expirationDate)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -870,7 +870,7 @@ function InventoryTab() {
                     <td className="py-2">{item.name}</td>
                     <td className="py-2 text-muted-foreground">{item.sku ?? "-"}</td>
                     <td className="py-2 text-right">{item.stockQuantity}</td>
-                    <td className="py-2 text-right font-medium">{item.expirationDate}</td>
+                    <td className="py-2 text-right font-medium">{formatDateYmdToDisplay(item.expirationDate)}</td>
                   </tr>
                 ))}
               </tbody>
