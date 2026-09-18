@@ -57,11 +57,16 @@ export interface ParseDeliveryNoteOptions {
   filename?: string;
 }
 
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+
 /**
  * Splits a CSV line by appropriate delimiter while preserving decimal commas.
+ * Tab is prioritized when present, or an explicit preferred delimiter can be supplied.
  */
-function splitCsvLine(line: string): string[] {
-  const delimiter = line.includes(";") ? ";" : line.includes("\t") ? "\t" : ",";
+function splitCsvLine(line: string, preferredDelimiter?: string): string[] {
+  const delimiter =
+    preferredDelimiter ||
+    (line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",");
   return line.split(delimiter).map((c) => c.trim().replace(/^"/, "").replace(/"$/, ""));
 }
 
@@ -120,25 +125,58 @@ function detectWholesaler(content: string, filename?: string): WholesalerType {
   if (upper.includes("PHARMOS") || fnUpper.includes("PHARMOS")) {
     return "PHARMOS";
   }
-  if (upper.includes("SAMOHYL") || upper.includes("SAMOHÝL") || fnUpper.includes("SAMOHYL")) {
+  if (upper.includes("SAMOHYL") || upper.includes("SAMOHÝL") || fnUpper.includes("SAMOHYL") || fnUpper.includes("SAMOHÝL")) {
     return "SAMOHYL";
   }
   if (upper.includes("HENRY SCHEIN") || upper.includes("SCHEIN") || fnUpper.includes("SCHEIN")) {
     return "HENRY_SCHEIN";
   }
-  if (upper.includes("BIOPHARM") || upper.includes("BFARM") || fnUpper.includes("BIOPHARM")) {
+  if (
+    upper.includes("BIOPHARM") ||
+    upper.includes("BFARM") ||
+    fnUpper.includes("BIOPHARM") ||
+    fnUpper.includes("BFARM")
+  ) {
     return "BIOPHARM";
   }
-  if (upper.includes("KOMVET") || upper.includes("KOM VET") || fnUpper.includes("KOMVET")) {
+  if (
+    upper.includes("KOMVET") ||
+    upper.includes("KOM VET") ||
+    fnUpper.includes("KOMVET") ||
+    fnUpper.includes("KOM VET") ||
+    fnUpper.includes("KOM_VET") ||
+    fnUpper.includes("KOM-VET")
+  ) {
     return "KOMVET";
   }
-  if (upper.includes("SG-VET") || upper.includes("SGVET") || upper.includes("SG VET") || fnUpper.includes("SGVET")) {
+  if (
+    upper.includes("SG-VET") ||
+    upper.includes("SGVET") ||
+    upper.includes("SG VET") ||
+    upper.includes("SG_VET") ||
+    fnUpper.includes("SG-VET") ||
+    fnUpper.includes("SGVET") ||
+    fnUpper.includes("SG VET") ||
+    fnUpper.includes("SG_VET")
+  ) {
     return "SG_VET";
   }
-  if (upper.includes("SANVET") || upper.includes("SAN-VET") || fnUpper.includes("SANVET")) {
+  if (
+    upper.includes("SANVET") ||
+    upper.includes("SAN-VET") ||
+    upper.includes("SAN_VET") ||
+    fnUpper.includes("SANVET") ||
+    fnUpper.includes("SAN-VET") ||
+    fnUpper.includes("SAN_VET")
+  ) {
     return "SANVET";
   }
-  if (upper.includes("PHRAMED") || upper.includes("PHARMED") || fnUpper.includes("PHRAMED")) {
+  if (
+    upper.includes("PHRAMED") ||
+    upper.includes("PHARMED") ||
+    fnUpper.includes("PHRAMED") ||
+    fnUpper.includes("PHARMED")
+  ) {
     return "PHRAMED";
   }
   return "GENERIC_CSV";
@@ -192,6 +230,7 @@ function parseCymedica(lines: string[]): WholesalerDeliveryNote {
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 
@@ -249,6 +288,7 @@ function parsePharmos(lines: string[]): WholesalerDeliveryNote {
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 
@@ -297,6 +337,7 @@ function parseSamohyl(lines: string[]): WholesalerDeliveryNote {
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 
@@ -345,6 +386,7 @@ function parseHenrySchein(lines: string[]): WholesalerDeliveryNote {
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 
@@ -372,7 +414,8 @@ function parseStandardDeliveryLines(
   lines: string[],
   wholesaler: WholesalerType,
   supplierName: string,
-  docPrefix: string
+  docPrefix: string,
+  preferredDelimiter?: string
 ): WholesalerDeliveryNote {
   const items: WholesalerDeliveryItem[] = [];
   let docNumber = `${docPrefix}-${Date.now().toString().slice(-6)}`;
@@ -385,7 +428,7 @@ function parseStandardDeliveryLines(
     }
     if (line.startsWith("#") || line.startsWith("//")) continue;
 
-    const cols = splitCsvLine(line);
+    const cols = splitCsvLine(line, preferredDelimiter);
     if (cols.length < 5) continue;
     if (cols[0].toLowerCase().includes("kod") || cols[0].toLowerCase().includes("sku") || cols[1]?.toLowerCase().includes("nazov")) continue;
 
@@ -411,6 +454,7 @@ function parseStandardDeliveryLines(
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 
@@ -435,10 +479,8 @@ function parseBiopharm(lines: string[]): WholesalerDeliveryNote {
 }
 
 function parseKomvet(lines: string[]): WholesalerDeliveryNote {
-  // KOMVET exports tab-delimited .txt files WITHOUT a header row. The shared
-  // CSV splitter already prefers the tab delimiter when present, so the same
-  // column layout is reused verbatim.
-  return parseStandardDeliveryLines(lines, "KOMVET", "KOMVET s.r.o.", "KOM");
+  // KOMVET exports tab-delimited .txt files WITHOUT a header row.
+  return parseStandardDeliveryLines(lines, "KOMVET", "KOMVET s.r.o.", "KOM", "\t");
 }
 
 /** Extract a single XML tag's inner text (server-safe regex, no DOM). */
@@ -449,48 +491,74 @@ function extractXmlTag(block: string, tag: string): string | undefined {
 }
 
 function parseSgVet(rawContent: string): WholesalerDeliveryNote {
-  // SG-Vet exports XML (not CSV). Parse every <item> element with regex so the
-  // parser also works server-side where no DOM implementation is available.
+  // SG-Vet exports XML (not CSV). Parse every <item> or <polozka> element with regex
+  // so the parser also works server-side where no DOM implementation is available.
   const items: WholesalerDeliveryItem[] = [];
   const issueDate = new Date().toISOString().slice(0, 10);
 
   let docNumber = `SGV-${Date.now().toString().slice(-6)}`;
   const noteMatch =
-    rawContent.match(/<(?:deliveryNoteNumber|number|cislo)[^>]*>([\s\S]*?)<\/(?:deliveryNoteNumber|number|cislo)>/i);
+    rawContent.match(
+      /<(?:deliveryNoteNumber|number|cislo|cislo_dokladu|cisloDokladu|faktura)[^>]*>([\s\S]*?)<\/(?:deliveryNoteNumber|number|cislo|cislo_dokladu|cisloDokladu|faktura)>/i
+    );
   if (noteMatch?.[1]) {
     const digits = noteMatch[1].match(/\d{7,12}/);
     if (digits) docNumber = digits[0];
     else docNumber = noteMatch[1].trim();
   }
 
-  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+  const itemRegex = /<(?:item|polozka)[^>]*>([\s\S]*?)<\/(?:item|polozka)>/gi;
   let blockMatch: RegExpExecArray | null;
   while ((blockMatch = itemRegex.exec(rawContent)) !== null) {
     const block = blockMatch[1];
 
-    const sku = extractXmlTag(block, "sku") ?? extractXmlTag(block, "kod");
+    const sku =
+      extractXmlTag(block, "sku") ??
+      extractXmlTag(block, "kod") ??
+      extractXmlTag(block, "kod_tovaru") ??
+      extractXmlTag(block, "kodTovaru");
     const name =
       extractXmlTag(block, "name") ??
       extractXmlTag(block, "nazov") ??
+      extractXmlTag(block, "nazov_tovaru") ??
+      extractXmlTag(block, "nazovTovaru") ??
       extractXmlTag(block, "description") ??
       "";
     if (!name) continue;
 
-    const rawBatch = (extractXmlTag(block, "batch") ?? extractXmlTag(block, "sarza"))?.trim();
+    const rawBatch = (
+      extractXmlTag(block, "batch") ??
+      extractXmlTag(block, "sarza") ??
+      extractXmlTag(block, "lot") ??
+      extractXmlTag(block, "cislo_sarze")
+    )?.trim();
     const batch = rawBatch && rawBatch.length > 0 ? rawBatch : "BEZ-SARZE";
     const expRaw =
       extractXmlTag(block, "expiration") ??
+      extractXmlTag(block, "expiracia") ??
       extractXmlTag(block, "expirace") ??
-      extractXmlTag(block, "expiry");
+      extractXmlTag(block, "expiry") ??
+      extractXmlTag(block, "exp");
     const exp = parseDate(expRaw);
     const qty =
-      parseSlovakNumber(extractXmlTag(block, "qty") ?? extractXmlTag(block, "ks")) || 1;
+      parseSlovakNumber(
+        extractXmlTag(block, "qty") ??
+          extractXmlTag(block, "ks") ??
+          extractXmlTag(block, "mnozstvo") ??
+          extractXmlTag(block, "pocet")
+      ) || 1;
     const price = parseSlovakNumber(
-      extractXmlTag(block, "price") ?? extractXmlTag(block, "jcena")
+      extractXmlTag(block, "price") ??
+        extractXmlTag(block, "jcena") ??
+        extractXmlTag(block, "cena") ??
+        extractXmlTag(block, "cena_bez_dph")
     );
     const vatRate =
       parseInt(
-        extractXmlTag(block, "vat") ?? extractXmlTag(block, "dph") ?? "10",
+        extractXmlTag(block, "vat") ??
+          extractXmlTag(block, "dph") ??
+          extractXmlTag(block, "sadzba_dph") ??
+          "10",
         10
       ) || 10;
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
@@ -507,6 +575,7 @@ function parseSgVet(rawContent: string): WholesalerDeliveryNote {
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 
@@ -561,6 +630,7 @@ function parseGenericCsv(lines: string[]): WholesalerDeliveryNote {
       vatRate,
       totalWithoutVat,
       totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
     });
   }
 

@@ -266,6 +266,10 @@ export const wholesalerImportRouter = createRouter({
             );
 
         const matched = matchBySku || matchByName;
+        const isControlled = item.isControlledSubstance ?? false;
+        const suggestedAction = isControlled
+          ? "skip"
+          : ((matched ? "update_stock" : "create_product") as "update_stock" | "create_product" | "skip");
 
         return {
           ...item,
@@ -280,7 +284,7 @@ export const wholesalerImportRouter = createRouter({
                 currentUnitPrice: matched.unitPrice,
               }
             : null,
-          suggestedAction: (matched ? "update_stock" : "create_product") as "update_stock" | "create_product",
+          suggestedAction,
         };
       });
 

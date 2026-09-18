@@ -218,4 +218,86 @@ CYM-999;Parafínový olej 1000ml;;31.12.2028;2;ks;5,00;20;10,00
     expect(parseDate("")).toBeUndefined();
     expect(parseDate(undefined)).toBeUndefined();
   });
+
+  it("should detect all 5 distributors via filename aliases", () => {
+    const emptyContent = "sku;name;batch;exp;qty;price;vat\n1;Item;B1;2027-01-01;1;10;10";
+    expect(parseWholesalerDeliveryNote({ content: emptyContent, filename: "BFARM_export.csv" }).wholesaler).toBe("BIOPHARM");
+    expect(parseWholesalerDeliveryNote({ content: emptyContent, filename: "kom_vet_delivery.txt" }).wholesaler).toBe("KOMVET");
+    expect(parseWholesalerDeliveryNote({ content: "<item><name>Test</name></item>", filename: "sg_vet_inbound.xml" }).wholesaler).toBe("SG_VET");
+    expect(parseWholesalerDeliveryNote({ content: emptyContent, filename: "san-vet-2026.csv" }).wholesaler).toBe("SANVET");
+    expect(parseWholesalerDeliveryNote({ content: emptyContent, filename: "pharmed_invoices.csv" }).wholesaler).toBe("PHRAMED");
+  });
+
+  it("should parse KOMVET tab-delimited file safely even when names contain semicolons", () => {
+    const txt = "KOM-999\tAMOXICILLIN; KYSELINA KLAVULÁNOVÁ 500mg\tBATCH-XYZ\t2027-10-31\t10\t18,50\t10";
+    const note = parseWholesalerDeliveryNote({
+      content: txt,
+      filename: "komvet_order.txt",
+    });
+
+    expect(note.wholesaler).toBe("KOMVET");
+    expect(note.items).toHaveLength(1);
+    expect(note.items[0].sku).toBe("KOM-999");
+    expect(note.items[0].name).toBe("AMOXICILLIN; KYSELINA KLAVULÁNOVÁ 500mg");
+    expect(note.items[0].batchNumber).toBe("BATCH-XYZ");
+    expect(note.items[0].quantity).toBe(10);
+    expect(note.items[0].unitPriceWithoutVat).toBe(18.5);
+  });
+
+  it("should parse SG-Vet XML with Slovak <polozka> and tag aliases", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<doklad>
+  <cislo_dokladu>SGV-889900</cislo_dokladu>
+  <polozka>
+    <kod_tovaru>SGV-3301</kod_tovaru>
+    <nazov_tovaru>Ketamidor 100mg/ml 10ml</nazov_tovaru>
+    <sarza>LOT-KET-1</sarza>
+    <expiracia>2027-08-31</expiracia>
+    <mnozstvo>5</mnozstvo>
+    <cena_bez_dph>16,40</cena_bez_dph>
+    <sadzba_dph>10</sadzba_dph>
+  </polozka>
+  <polozka>
+    <kod_tovaru>SGV-3302</kod_tovaru>
+    <nazov_tovaru>Marbocyl 2% inj 20ml</nazov_tovaru>
+    <sarza>LOT-MAR-2</sarza>
+    <expiracia>2026-11-30</expiracia>
+    <mnozstvo>2</mnozstvo>
+    <cena_bez_dph>24,00</cena_bez_dph>
+    <sadzba_dph>10</sadzba_dph>
+  </polozka>
+</doklad>`;
+
+    const note = parseWholesalerDeliveryNote({
+      content: xml,
+      filename: "sgvet_slovak_export.xml",
+    });
+
+    expect(note.wholesaler).toBe("SG_VET");
+    expect(note.deliveryNoteNumber).toBe("SGV-889900");
+    expect(note.items).toHaveLength(2);
+    expect(note.items[0].sku).toBe("SGV-3301");
+    expect(note.items[0].name).toBe("Ketamidor 100mg/ml 10ml");
+    expect(note.items[0].isControlledSubstance).toBe(true);
+    expect(note.items[1].name).toBe("Marbocyl 2% inj 20ml");
+    expect(note.items[1].isControlledSubstance).toBe(false);
+  });
+
+  it("should correctly flag controlled substances (Act 139/1998 Coll.) across wholesalers", () => {
+    const csv = [
+      "Kod;Nazov;Sarza;Expiracia;Ks;JCena;DPH",
+      "BIO-K1;Narkamon 100mg/ml inj 50ml;SAR-1;2027-12-31;2;15,00;10",
+      "BIO-B1;Torbugesic 10mg/ml 10ml;SAR-2;2027-11-30;1;45,00;10",
+      "BIO-A1;Synulox RTU 100ml;SAR-3;2027-09-30;5;22,00;10",
+    ].join("\n");
+
+    const note = parseWholesalerDeliveryNote({
+      content: csv,
+      wholesaler: "BIOPHARM",
+    });
+
+    expect(note.items[0].isControlledSubstance).toBe(true); // Narkamon (ketamine)
+    expect(note.items[1].isControlledSubstance).toBe(true); // Torbugesic (butorphanol)
+    expect(note.items[2].isControlledSubstance).toBe(false); // Synulox (amoxicillin)
+  });
 });
