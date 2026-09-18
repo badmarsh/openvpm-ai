@@ -40,4 +40,16 @@ describe("clinical date helpers", () => {
     );
     expect(formatClinicalDate("not-a-date", "America/Los_Angeles")).toBe("--");
   });
+
+  it("formats dates and date-times in Slovak locale when specified", () => {
+    const label = formatClinicalDateTime(
+      "2025-11-03T00:00:00.000Z",
+      "UTC",
+      "--",
+      "sk"
+    );
+    expect(label).toContain("3.");
+    expect(label).toContain("11.");
+    expect(label).toContain("2025");
+  });
 });

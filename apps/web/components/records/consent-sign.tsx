@@ -139,7 +139,7 @@ export function ConsentSign({
                 <button
                   type="button"
                   onClick={handleClose}
-                  aria-label="Close"
+                  aria-label={t("common.close", "Close")}
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
@@ -153,12 +153,12 @@ export function ConsentSign({
                       htmlFor="consent-form"
                       className="mb-1 block text-sm font-medium"
                     >
-                      Form
+                      {t("records.consentSign.formLabel", "Form")}
                     </label>
                     {forms.isLoading || !forms.data ? (
                       <div className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm text-muted-foreground">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Loading forms...
+                        {t("records.consentSign.loadingForms", "Loading forms...")}
                       </div>
                     ) : (
                       <select
@@ -175,8 +175,10 @@ export function ConsentSign({
                       </select>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Starter templates. Have your attorney look them over,
-                      and fill in any blanks before you send.
+                      {t(
+                        "records.consentSign.templateNotice",
+                        "Starter templates. Have your attorney look them over, and fill in any blanks before you send."
+                      )}
                     </p>
                   </div>
                   <div>
@@ -184,7 +186,7 @@ export function ConsentSign({
                       htmlFor="consent-title"
                       className="mb-1 block text-sm font-medium"
                     >
-                      Title
+                      {t("records.consentSign.titleLabel", "Title")}
                     </label>
                     <input
                       id="consent-title"
@@ -200,7 +202,7 @@ export function ConsentSign({
                       htmlFor="consent-body"
                       className="mb-1 block text-sm font-medium"
                     >
-                      Consent text
+                      {t("records.consentSign.consentTextLabel", "Consent text")}
                     </label>
                     <textarea
                       id="consent-body"
@@ -255,7 +257,7 @@ export function ConsentSign({
                         }
                       >
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Try again
+                        {t("common.tryAgain", "Try again")}
                       </Button>
                     </div>
                   )}
@@ -292,7 +294,10 @@ export function ConsentSign({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={qrDataUrl}
-                          alt="QR code for the consent signing link"
+                          alt={t(
+                            "records.consentSign.qrAlt",
+                            "QR code for the consent signing link"
+                          )}
                           className="h-60 w-60 rounded-lg border border-border bg-white p-2"
                         />
                       ) : (
@@ -304,7 +309,10 @@ export function ConsentSign({
                         {request.url}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Waiting for a signature…
+                        {t(
+                          "records.consentSign.waitingForSignature",
+                          "Waiting for a signature…"
+                        )}
                       </p>
                     </>
                   )}
@@ -313,7 +321,7 @@ export function ConsentSign({
 
               <div className="mt-5 flex justify-end">
                 <Button variant="outline" size="sm" onClick={handleClose}>
-                  {t("common.done", "Hotovo")}
+                  {t("common.done", "Done")}
                 </Button>
               </div>
             </div>

@@ -1354,6 +1354,11 @@
     "closeNavigation": "Close navigation",
     "saveChanges": "Save changes",
     "edit": "Edit",
+    "close": "Close",
+    "tryAgain": "Try again",
+    "updating": "Updating...",
+    "unknownUser": "Unknown user",
+    "done": "Done",
     "error": {
       "title": "Something went wrong",
       "description": "We logged the error. Try again, or return to the dashboard if it keeps happening.",
@@ -3595,7 +3600,14 @@
       "makeCode": "Make the code",
       "signedBy": "Signed by {name}",
       "openSignedPdf": "Open the signed PDF",
-      "savedUnderDocs": "Saved on this patient under Documents."
+      "savedUnderDocs": "Saved on this patient under Documents.",
+      "formLabel": "Form",
+      "loadingForms": "Loading forms...",
+      "templateNotice": "Starter templates. Have your attorney look them over, and fill in any blanks before you send.",
+      "titleLabel": "Title",
+      "consentTextLabel": "Consent text",
+      "qrAlt": "QR code for the consent signing link",
+      "waitingForSignature": "Waiting for a signature…"
     },
     "title": "Medical Records",
     "subtitle": "Clinical notes, SOAPE entries, and history",
@@ -3721,7 +3733,9 @@
       "plan": "Plan (P)",
       "loadingEditor": "Loading editor...",
       "legalTamperProof": "Legal clinical record",
-      "draftNotice": "This record is in draft stage."
+      "draftNotice": "This record is in draft stage.",
+      "resumeDraft": "Resume draft",
+      "sealedAndVerified": "SEALED & VERIFIED"
     },
     "tabs": {
       "dental": "Dental Chart"
@@ -3730,6 +3744,16 @@
       "modeFlash": "Flash",
       "modePro": "Concilium (Pro)",
       "draftConsilium": "Clinical Concilium Draft (Pro)"
+    },
+    "correction": {
+      "triggerLabel": "Mark entered in error",
+      "dialogTitle": "Mark record entered in error?",
+      "dialogDescription": "The original record will remain visible in staff chart history, but it will no longer be used for current clinical summaries, client portal records, reminders, or certificates.",
+      "reasonLabel": "Why is this record incorrect?",
+      "reasonPlaceholder": "Required. Be specific; this reason becomes permanent chart history.",
+      "confirmCorrection": "Confirm correction",
+      "retainedBanner": "Entered in error — retained in chart history",
+      "correctedBy": "Corrected by {name} · {date}"
     }
   },
   "records.backToVisit": "Back to visit",
@@ -4322,7 +4346,25 @@
     "noAppointmentsWeekTitle": "No appointments this week",
     "noAppointmentsWeekDesc": "The selected schedule is clear for this week.",
     "noAppointmentsMonthTitle": "No appointments in this month",
-    "noAppointmentsMonthDesc": "The selected schedule is clear for this month."
+    "noAppointmentsMonthDesc": "The selected schedule is clear for this month.",
+    "calendarSubscribe": {
+      "button": "Add to your calendar",
+      "title": "Your schedule, in your calendar",
+      "description": "Subscribe once and the clinic schedule stays up to date in Google, Apple, or Outlook on its own. The link shows patient names and visit types only, so share it with staff, not clients.",
+      "checkingFeed": "Checking the feed...",
+      "loadError": "Could not load the feed.",
+      "retry": "Retry",
+      "instructions": "In your calendar app, look for \"subscribe by URL\" or \"from internet\" and paste the link.",
+      "copyLink": "Copy link",
+      "confirmNewLink": "Confirm new link",
+      "getNewLink": "Get a new link",
+      "rotateWarning": "A new link stops the old one for everyone who subscribed.",
+      "turningOn": "Turning on...",
+      "turnOn": "Turn on the calendar link",
+      "toastRotated": "New calendar link created. The old one stopped working.",
+      "toastCopied": "Calendar link copied",
+      "toastCopyFailed": "Could not copy the link"
+    }
   },
   "settings": {
     "header": {

@@ -35,62 +35,79 @@ function parseClinicalInstant(
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function resolveLocale(locale?: string | null): string {
+  if (locale) {
+    return locale === "sk" ? "sk-SK" : locale;
+  }
+  if (typeof document !== "undefined" && document.documentElement.lang) {
+    return document.documentElement.lang === "sk"
+      ? "sk-SK"
+      : document.documentElement.lang;
+  }
+  return "en-US";
+}
+
 function formatWithTimeZone(
   date: Date,
   options: Intl.DateTimeFormatOptions,
-  timeZone?: string | null
+  timeZone?: string | null,
+  locale?: string | null
 ): string {
+  const loc = resolveLocale(locale);
   try {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(loc, {
       ...options,
       timeZone: timeZone ?? undefined,
     });
   } catch {
-    return date.toLocaleDateString("en-US", options);
+    return date.toLocaleDateString(loc, options);
   }
 }
 
 export function formatClinicalDate(
   value: Date | string | null | undefined,
   timeZone?: string | null,
-  fallback = "--"
+  fallback = "--",
+  locale?: string | null
 ): string {
   if (!value) return fallback;
 
   if (typeof value === "string") {
     const dateOnly = dateOnlyToUtcDate(value.trim());
     if (dateOnly) {
-      return formatWithTimeZone(dateOnly, CLINICAL_DATE_FORMAT, "UTC");
+      return formatWithTimeZone(dateOnly, CLINICAL_DATE_FORMAT, "UTC", locale);
     }
   }
 
   const date = parseClinicalInstant(value);
   if (!date) return fallback;
-  return formatWithTimeZone(date, CLINICAL_DATE_FORMAT, timeZone);
+  return formatWithTimeZone(date, CLINICAL_DATE_FORMAT, timeZone, locale);
 }
 
 export function formatClinicalDateTime(
   value: Date | string | null | undefined,
   timeZone?: string | null,
-  fallback = "--"
+  fallback = "--",
+  locale?: string | null
 ): string {
   if (!value) return fallback;
 
   if (typeof value === "string") {
     const dateOnly = dateOnlyToUtcDate(value.trim());
-    if (dateOnly) return formatClinicalDate(value, timeZone, fallback);
+    if (dateOnly) return formatClinicalDate(value, timeZone, fallback, locale);
   }
 
   const date = parseClinicalInstant(value);
   if (!date) return fallback;
 
+  const loc = resolveLocale(locale);
   try {
-    return date.toLocaleString("en-US", {
+    return date.toLocaleString(loc, {
       ...CLINICAL_DATE_TIME_FORMAT,
       timeZone: timeZone ?? undefined,
     });
   } catch {
-    return date.toLocaleString("en-US", CLINICAL_DATE_TIME_FORMAT);
+    return date.toLocaleString(loc, CLINICAL_DATE_TIME_FORMAT);
   }
 }
 

@@ -1354,6 +1354,11 @@
     "closeNavigation": "Zavrieť navigáciu",
     "saveChanges": "Uložiť zmeny",
     "edit": "Upraviť",
+    "close": "Zatvoriť",
+    "tryAgain": "Skúsiť znova",
+    "updating": "Aktualizuje sa...",
+    "unknownUser": "Neznámy používateľ",
+    "done": "Hotovo",
     "error": {
       "title": "Niečo sa pokazilo",
       "description": "Chybu sme zaznamenali. Skúste to znova alebo sa vráťte na prehľad, ak problém pretrváva.",
@@ -3595,7 +3600,14 @@
       "makeCode": "Vytvoriť kód",
       "signedBy": "Podpísal/a {name}",
       "openSignedPdf": "Otvoriť podpísané PDF",
-      "savedUnderDocs": "Uložené v karte tohto pacienta v sekcii Dokumenty."
+      "savedUnderDocs": "Uložené v karte tohto pacienta v sekcii Dokumenty.",
+      "formLabel": "Formulár",
+      "loadingForms": "Načítavajú sa formuláre...",
+      "templateNotice": "Predvolené vzory súhlasov. Pred odoslaním na podpis skontrolujte a doplňte všetky potrebné údaje.",
+      "titleLabel": "Názov formulára",
+      "consentTextLabel": "Text súhlasu",
+      "qrAlt": "QR kód pre odkaz na podpis súhlasu",
+      "waitingForSignature": "Čaká sa na podpis klienta…"
     },
     "title": "Záznamy",
     "subtitle": "Klinické poznámky, SOAPE záznamy a história",
@@ -3721,7 +3733,9 @@
       "plan": "Plán (P)",
       "loadingEditor": "Načítavam editor...",
       "legalTamperProof": "Zákonný klinický záznam",
-      "draftNotice": "Tento záznam je v štádiu konceptu."
+      "draftNotice": "Tento záznam je v štádiu konceptu.",
+      "resumeDraft": "Pokračovať v koncepte",
+      "sealedAndVerified": "UZAMKNUTÉ A OVERENÉ"
     },
     "tabs": {
       "dental": "Zubný záznam"
@@ -3730,6 +3744,16 @@
       "modeFlash": "Flash",
       "modePro": "Konzílium (Pro)",
       "draftConsilium": "Konziliárny rozbor (Pro)"
+    },
+    "correction": {
+      "triggerLabel": "Označiť za chybný zápis",
+      "dialogTitle": "Označiť záznam ako vložený omylom?",
+      "dialogDescription": "Pôvodný záznam zostane viditeľný v histórii karty pre personál, ale viac sa nebude používať v aktuálnych klinických súhrnoch, klientskom portáli, pripomienkach ani potvrdeniach.",
+      "reasonLabel": "Prečo je tento záznam nesprávny?",
+      "reasonPlaceholder": "Povinné. Buďte konkrétni; tento dôvod sa stáva trvalou súčasťou histórie karty.",
+      "confirmCorrection": "Potvrdiť opravu",
+      "retainedBanner": "Zadané omylom — ponechané v histórii karty",
+      "correctedBy": "Opravil/a {name} · {date}"
     }
   },
   "records.backToVisit": "Späť na návštevu",
@@ -4322,7 +4346,25 @@
     "noAppointmentsWeekTitle": "Tento týždeň žiadne termíny",
     "noAppointmentsWeekDesc": "Vybraný rozvrh je na tento týždeň prázdny.",
     "noAppointmentsMonthTitle": "Tento mesiac žiadne termíny",
-    "noAppointmentsMonthDesc": "Vybraný rozvrh je na tento mesiac prázdny."
+    "noAppointmentsMonthDesc": "Vybraný rozvrh je na tento mesiac prázdny.",
+    "calendarSubscribe": {
+      "button": "Pridať do kalendára",
+      "title": "Váš rozvrh vo vašom kalendári",
+      "description": "Prihláste sa na odber raz a rozvrh kliniky sa bude automaticky aktualizovať v Google, Apple alebo Outlook kalendári. Odkaz zobrazuje iba mená pacientov a typy návštev, preto ho zdieľajte s personálom, nie s klientmi.",
+      "checkingFeed": "Overuje sa kalendárny kanál...",
+      "loadError": "Nepodarilo sa načítať kanál.",
+      "retry": "Skúsiť znova",
+      "instructions": "Vo svojej kalendárovej aplikácii zvoľte možnosť „Prihlásiť sa na odber z URL adresy“ alebo „Z internetu“ a vložte tento odkaz.",
+      "copyLink": "Kopírovať odkaz",
+      "confirmNewLink": "Potvrdiť nový odkaz",
+      "getNewLink": "Vygenerovať nový odkaz",
+      "rotateWarning": "Nový odkaz zneplatní pôvodný odkaz pre všetkých, ktorí ho doteraz odoberali.",
+      "turningOn": "Aktivuje sa...",
+      "turnOn": "Aktivovať prepojenie s kalendárom",
+      "toastRotated": "Bol vytvorený nový odkaz na kalendár. Pôvodný odkaz bol zneplatnený.",
+      "toastCopied": "Odkaz na kalendár bol skopírovaný",
+      "toastCopyFailed": "Odkaz sa nepodarilo skopírovať"
+    }
   },
   "settings": {
     "header": {

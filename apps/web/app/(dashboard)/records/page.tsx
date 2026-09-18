@@ -180,6 +180,15 @@ function dateInputDayNumber(value: string): number | null {
   return Math.floor(date.getTime() / (1000 * 60 * 60 * 24));
 }
 
+function getClientDateLocale(): string {
+  if (typeof document !== "undefined" && document.documentElement.lang) {
+    return document.documentElement.lang === "sk"
+      ? "sk-SK"
+      : document.documentElement.lang;
+  }
+  return "en-US";
+}
+
 function formatClinicalDate(
   value: Date | string | null | undefined,
   timeZone?: string | null,
@@ -187,10 +196,12 @@ function formatClinicalDate(
 ): string {
   if (!value) return fallback;
 
+  const loc = getClientDateLocale();
+
   if (typeof value === "string") {
     const dateOnly = clinicalDateInputToUtcDate(value);
     if (dateOnly) {
-      return dateOnly.toLocaleDateString("en-US", {
+      return dateOnly.toLocaleDateString(loc, {
         ...CLINICAL_DATE_FORMAT,
         timeZone: "UTC",
       });
@@ -204,9 +215,9 @@ function formatClinicalDate(
   };
 
   try {
-    return date.toLocaleDateString("en-US", options);
+    return date.toLocaleDateString(loc, options);
   } catch {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(loc, {
       ...options,
       timeZone: undefined,
     });
@@ -1647,7 +1658,7 @@ function RecordsPageContent() {
                                         </div>
                                       </div>
                                       <span className="rounded-full bg-emerald-600/20 border border-emerald-500/30 px-2.5 py-1 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
-                                        SEALED & VERIFIED
+                                        {t("records.soap.sealedAndVerified", "SEALED & VERIFIED")}
                                       </span>
                                     </div>
                                   ) : note.appointmentId &&
