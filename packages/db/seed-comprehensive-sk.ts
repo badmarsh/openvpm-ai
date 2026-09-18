@@ -405,12 +405,12 @@ async function main() {
   const contactsData = [
     { first: "Ing. Peter", last: "Kováč", phone: "+421 905 112 233", email: "peter.kovac@gmail.com", kind: "co_owner" },
     { first: "Mgr. Lucia", last: "Vargová", phone: "+421 911 445 566", email: "lucia.vargova@azet.sk", kind: "co_owner" },
-    { first: "Zuzana", last: "Tóthová", phone: "+421 908 778 899", email: "z.tothova@centrum.sk", kind: "emergency" },
-    { first: "Tomáš", last: "Molnár", phone: "+421 903 223 344", email: "tomas.molnar@post.sk", kind: "caregiver" },
+    { first: "Zuzana", last: "Tóthová", phone: "+421 908 778 899", email: "z.tothova@centrum.sk", kind: "emergency_contact" },
+    { first: "Tomáš", last: "Molnár", phone: "+421 903 223 344", email: "tomas.molnar@post.sk", kind: "authorized_contact" },
     { first: "Katarína", last: "Balážová", phone: "+421 915 667 788", email: "katarina.b@gmail.com", kind: "co_owner" },
     { first: "Martin", last: "Horváth", phone: "+421 907 990 011", email: "m.horvath@zoznam.sk", kind: "co_owner" },
-    { first: "Eva", last: "Nagyová", phone: "+421 918 334 455", email: "eva.nagyova@chello.sk", kind: "emergency" },
-    { first: "Marek", last: "Sloboda", phone: "+421 902 556 677", email: "sloboda.marek@gmail.com", kind: "caregiver" },
+    { first: "Eva", last: "Nagyová", phone: "+421 918 334 455", email: "eva.nagyova@chello.sk", kind: "emergency_contact" },
+    { first: "Marek", last: "Sloboda", phone: "+421 902 556 677", email: "sloboda.marek@gmail.com", kind: "authorized_contact" },
   ];
 
   for (let i = 0; i < contactsData.length; i++) {
@@ -481,7 +481,7 @@ async function main() {
       status: "active",
       patient: regularPatients[1] ?? chippedPatients[1],
       items: [
-        { desc: "Prechod na striktnú renálnu diétu (Royal Canin Renal / Hill's k/d)", inst: "Postupný prechod počas 7 dní", order: 1 },
+        { desc: "Prechod na striktnú renálnu diétu (Royal Canin Renal / Hill''s k/d)", inst: "Postupný prechod počas 7 dní", order: 1 },
         { desc: "Podávanie viazača fosfátov (Pronefra perorálne)", inst: "1 ml na 4 kg ž.hm. dvakrát denne s jedlom", order: 2 },
         { desc: "Kontrolný odber krvi a moču (SDMA, kreatinín, UPC)", inst: "O 30 dní nalačno", order: 3 },
       ],
