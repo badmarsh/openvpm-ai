@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config({ path: "../../.env" });
 import { db } from "./client";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import {
   practices,
   locations,
@@ -35,7 +35,7 @@ async function seedSlovak() {
 
   // Check if clinic already exists
   const existingPractice = await db.query.practices.findFirst({
-    where: eq(practices.name, "Súkromná veterinárna klinika MVDr. Martin Sýkora"),
+    where: ilike(practices.name, "%Martin Sýkora%"),
   });
 
   let practiceId: string;

@@ -19,23 +19,21 @@ export const DEFAULT_ALIBABA_PRESETS: CachedAiModel[] = [
 ];
 
 export const DEFAULT_GEMINI_PRESETS: CachedAiModel[] = [
-  { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro (Deep Thinking & Clinical Consilium)", isVision: true },
-  { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash (Multimodal & Fast)", isVision: true },
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Fast Multimodal)", isVision: true },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Clinical Reasoning)", isVision: true },
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", isVision: true },
+  { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash (Odporúčaný / Rýchly a multimodálny)", isVision: true },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview (Klinické usudzovanie)", isVision: true },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", isVision: true },
   { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", isVision: true },
   { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", isVision: true },
   { id: "imagen-3.0-generate-002", name: "Imagen 3 (Image Generation)", isImageGeneration: true },
 ];
 
 export const DEFAULT_PRACTICE_FEATURE_MAPPINGS: PracticeAiFeatureMappings = {
-  assistant: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0.2 },
-  imagingRtg: { provider: "gemini", model: "gemini-3.1-pro", temperature: 0.1 },
-  voiceSoap: { provider: "gemini", model: "gemini-3.8-flash" },
-  labParser: { provider: "gemini", model: "gemini-3.8-flash" },
+  assistant: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.2 },
+  imagingRtg: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.1 },
+  voiceSoap: { provider: "gemini", model: "gemini-3.6-flash" },
+  labParser: { provider: "gemini", model: "gemini-3.6-flash" },
   imageGeneration: { provider: "alibaba", model: "qwen-image-3.0", size: "1024*1024" },
   videoGeneration: { provider: "alibaba", model: "wan3.0-video", duration: 5 },
-  marketingCopy: { provider: "gemini", model: "gemini-3.8-flash" },
-  deepThinking: { provider: "gemini", model: "gemini-3.1-pro", temperature: 0.1 },
+  marketingCopy: { provider: "gemini", model: "gemini-3.6-flash" },
+  deepThinking: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.1 },
 };

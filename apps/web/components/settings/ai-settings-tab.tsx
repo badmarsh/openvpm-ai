@@ -167,6 +167,9 @@ export function AiSettingsTab() {
       const res = await testMutation.mutateAsync({ provider, baseUrl, apiKey });
       setTestResult({ provider, ok: res.ok, message: res.message });
       if (res.ok) {
+        if (provider === "openai" && !openaiIsActive) setOpenaiIsActive(true);
+        if (provider === "gemini" && !geminiIsActive) setGeminiIsActive(true);
+        if (provider === "alibaba" && !alibabaIsActive) setAlibabaIsActive(true);
         toast.success(t("settings.ai.testSuccess", `Spojenie úspešné: ${res.message}`, { message: res.message }));
       } else {
         toast.error(t("settings.ai.testError", `Spojenie zlyhalo: ${res.message}`, { message: res.message }));
@@ -198,9 +201,18 @@ export function AiSettingsTab() {
 
     try {
       const res = await fetchModelsMutation.mutateAsync({ provider, baseUrl, apiKey });
-      if (provider === "openai") setOpenaiModels(res.models);
-      if (provider === "gemini") setGeminiModels(res.models);
-      if (provider === "alibaba") setAlibabaModels(res.models);
+      if (provider === "openai") {
+        setOpenaiModels(res.models);
+        if (!openaiIsActive) setOpenaiIsActive(true);
+      }
+      if (provider === "gemini") {
+        setGeminiModels(res.models);
+        if (!geminiIsActive) setGeminiIsActive(true);
+      }
+      if (provider === "alibaba") {
+        setAlibabaModels(res.models);
+        if (!alibabaIsActive) setAlibabaIsActive(true);
+      }
 
       toast.success(
         t("settings.ai.fetchSuccess", `Úspešne načítaných ${res.count} modelov.`, { count: res.count }),
@@ -339,11 +351,22 @@ export function AiSettingsTab() {
                   {t("settings.ai.providers.openaiTitle", "OpenAI Kompatibilný Gateway")}
                 </CardTitle>
               </div>
-              <Switch
-                checked={openaiIsActive}
-                onCheckedChange={setOpenaiIsActive}
-                aria-label={t("settings.ai.providers.activeLabel", "Povoliť tohto poskytovateľa")}
-              />
+              <div className="flex items-center gap-2">
+                {openaiIsActive ? (
+                  <Badge variant="default" className="bg-emerald-600 text-[10px] py-0 px-1.5 h-5">
+                    {t("settings.ai.providers.activeBadge", "Aktívny")}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-muted-foreground text-[10px] py-0 px-1.5 h-5">
+                    {t("settings.ai.providers.inactiveBadge", "Neaktívny")}
+                  </Badge>
+                )}
+                <Switch
+                  checked={openaiIsActive}
+                  onCheckedChange={setOpenaiIsActive}
+                  aria-label={t("settings.ai.providers.activeLabel", "Povoliť tohto poskytovateľa")}
+                />
+              </div>
             </div>
             <CardDescription className="text-xs">
               {t(
@@ -441,11 +464,22 @@ export function AiSettingsTab() {
                   {t("settings.ai.providers.geminiTitle", "Google Gemini")}
                 </CardTitle>
               </div>
-              <Switch
-                checked={geminiIsActive}
-                onCheckedChange={setGeminiIsActive}
-                aria-label={t("settings.ai.providers.activeLabel", "Povoliť tohto poskytovateľa")}
-              />
+              <div className="flex items-center gap-2">
+                {geminiIsActive ? (
+                  <Badge variant="default" className="bg-emerald-600 text-[10px] py-0 px-1.5 h-5">
+                    {t("settings.ai.providers.activeBadge", "Aktívny")}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-muted-foreground text-[10px] py-0 px-1.5 h-5">
+                    {t("settings.ai.providers.inactiveBadge", "Neaktívny")}
+                  </Badge>
+                )}
+                <Switch
+                  checked={geminiIsActive}
+                  onCheckedChange={setGeminiIsActive}
+                  aria-label={t("settings.ai.providers.activeLabel", "Povoliť tohto poskytovateľa")}
+                />
+              </div>
             </div>
             <CardDescription className="text-xs">
               {t(
@@ -543,11 +577,22 @@ export function AiSettingsTab() {
                   {t("settings.ai.providers.alibabaTitle", "Alibaba Cloud & AliProxy")}
                 </CardTitle>
               </div>
-              <Switch
-                checked={alibabaIsActive}
-                onCheckedChange={setAlibabaIsActive}
-                aria-label={t("settings.ai.providers.activeLabel", "Povoliť tohto poskytovateľa")}
-              />
+              <div className="flex items-center gap-2">
+                {alibabaIsActive ? (
+                  <Badge variant="default" className="bg-emerald-600 text-[10px] py-0 px-1.5 h-5">
+                    {t("settings.ai.providers.activeBadge", "Aktívny")}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-muted-foreground text-[10px] py-0 px-1.5 h-5">
+                    {t("settings.ai.providers.inactiveBadge", "Neaktívny")}
+                  </Badge>
+                )}
+                <Switch
+                  checked={alibabaIsActive}
+                  onCheckedChange={setAlibabaIsActive}
+                  aria-label={t("settings.ai.providers.activeLabel", "Povoliť tohto poskytovateľa")}
+                />
+              </div>
             </div>
             <CardDescription className="text-xs">
               {t(
@@ -720,6 +765,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 t={t}
               />
 
@@ -737,6 +785,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 filterVisionOnly
                 t={t}
               />
@@ -755,6 +806,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 t={t}
               />
 
@@ -772,6 +826,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 t={t}
               />
 
@@ -789,6 +846,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 filterImageOnly
                 t={t}
               />
@@ -807,6 +867,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 filterVideoOnly
                 t={t}
               />
@@ -825,6 +888,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 t={t}
               />
 
@@ -842,6 +908,9 @@ export function AiSettingsTab() {
                 openaiModels={openaiModels}
                 geminiModels={geminiModels}
                 alibabaModels={alibabaModels}
+                openaiIsActive={openaiIsActive}
+                geminiIsActive={geminiIsActive}
+                alibabaIsActive={alibabaIsActive}
                 t={t}
               />
             </div>
@@ -893,6 +962,9 @@ interface FeatureRowProps {
   openaiModels: CachedAiModel[];
   geminiModels: CachedAiModel[];
   alibabaModels: CachedAiModel[];
+  openaiIsActive?: boolean;
+  geminiIsActive?: boolean;
+  alibabaIsActive?: boolean;
   filterVisionOnly?: boolean;
   filterImageOnly?: boolean;
   filterVideoOnly?: boolean;
@@ -909,6 +981,9 @@ function FeatureRow({
   openaiModels,
   geminiModels,
   alibabaModels,
+  openaiIsActive = false,
+  geminiIsActive = false,
+  alibabaIsActive = false,
   filterVisionOnly,
   filterImageOnly,
   filterVideoOnly,
@@ -917,11 +992,17 @@ function FeatureRow({
   const provider = mapping?.provider || "default";
   const model = mapping?.model || "";
 
+  const isProviderActive =
+    provider === "default" ||
+    (provider === "openai" && openaiIsActive) ||
+    (provider === "gemini" && geminiIsActive) ||
+    (provider === "alibaba" && alibabaIsActive);
+
   const handleProviderChange = (newProvider: string) => {
     onChangeProvider(newProvider);
     if (newProvider === "gemini") {
       if (filterImageOnly) onChangeModel("imagen-3.0-generate-002");
-      else onChangeModel("gemini-3.8-flash");
+      else onChangeModel("gemini-3.6-flash");
     } else if (newProvider === "alibaba") {
       if (filterVideoOnly) onChangeModel("wan3.0-video");
       else if (filterImageOnly) onChangeModel("qwen-image-3.0");
@@ -964,7 +1045,14 @@ function FeatureRow({
       <div className="flex items-start gap-3 sm:max-w-md">
         <div className="mt-0.5 shrink-0">{icon}</div>
         <div>
-          <p className="text-sm font-medium">{title}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">{title}</p>
+            {!isProviderActive && (
+              <Badge variant="destructive" className="h-4.5 text-[9px] px-1.5 py-0 font-normal">
+                {t("settings.ai.features.providerInactive", "Poskytovateľ je neaktívny")}
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>

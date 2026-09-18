@@ -1,4 +1,5 @@
 import { eq, and, isNull } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 import { extAiSettings, type CachedAiModel, type PracticeAiFeatureMappings } from "@openpims/db";
@@ -116,44 +117,99 @@ export async function resolveFeatureConfig(
     }
   }
 
+  // 1. Primary path: Use the designated provider if active and has a decryptable API key
   if (provider === "openai" && config.openaiIsActive) {
     const apiKey = tryDecrypt(config.openaiApiKeyEncrypted);
-    return {
-      provider: "openai",
-      modelId: model,
-      baseUrl: config.openaiBaseUrl || undefined,
-      apiKey,
-      temperature,
-      maxTokens,
-      size,
-    };
+    if (apiKey) {
+      return {
+        provider: "openai",
+        modelId: model,
+        baseUrl: config.openaiBaseUrl || undefined,
+        apiKey,
+        temperature,
+        maxTokens,
+        size,
+      };
+    }
   }
 
   if (provider === "gemini" && config.geminiIsActive) {
     const apiKey = tryDecrypt(config.geminiApiKeyEncrypted);
-    const baseUrl = config.geminiBaseUrl || "https://generativelanguage.googleapis.com/v1beta/openai/";
-    return {
-      provider: "gemini",
-      modelId: model,
-      baseUrl,
-      apiKey,
-      temperature,
-      maxTokens,
-    };
+    if (apiKey) {
+      const baseUrl = config.geminiBaseUrl || "https://generativelanguage.googleapis.com/v1beta/openai/";
+      return {
+        provider: "gemini",
+        modelId: model || "gemini-3.6-flash",
+        baseUrl,
+        apiKey,
+        temperature,
+        maxTokens,
+      };
+    }
   }
 
   if (provider === "alibaba" && config.alibabaIsActive) {
     const apiKey = tryDecrypt(config.alibabaApiKeyEncrypted);
-    return {
-      provider: "alibaba",
-      modelId: model,
-      baseUrl: config.alibabaBaseUrl || "http://127.0.0.1:8080/v1",
-      apiKey,
-      temperature,
-      maxTokens,
-      size,
-      duration,
-    };
+    if (apiKey) {
+      return {
+        provider: "alibaba",
+        modelId: model,
+        baseUrl: config.alibabaBaseUrl || "http://127.0.0.1:8080/v1",
+        apiKey,
+        temperature,
+        maxTokens,
+        size,
+        duration,
+      };
+    }
+  }
+
+  // 2. Intelligent Auto-Fallback: If the designated provider is inactive or keyless,
+  // automatically check if another provider IS active and has a valid API key.
+  if (config.geminiIsActive) {
+    const apiKey = tryDecrypt(config.geminiApiKeyEncrypted);
+    if (apiKey) {
+      const baseUrl = config.geminiBaseUrl || "https://generativelanguage.googleapis.com/v1beta/openai/";
+      return {
+        provider: "gemini",
+        modelId: "gemini-3.6-flash",
+        baseUrl,
+        apiKey,
+        temperature,
+        maxTokens,
+      };
+    }
+  }
+
+  if (config.openaiIsActive) {
+    const apiKey = tryDecrypt(config.openaiApiKeyEncrypted);
+    if (apiKey) {
+      return {
+        provider: "openai",
+        modelId: model || DEFAULT_AI_MODEL,
+        baseUrl: config.openaiBaseUrl || undefined,
+        apiKey,
+        temperature,
+        maxTokens,
+        size,
+      };
+    }
+  }
+
+  if (config.alibabaIsActive) {
+    const apiKey = tryDecrypt(config.alibabaApiKeyEncrypted);
+    if (apiKey) {
+      return {
+        provider: "alibaba",
+        modelId: "qwen-plus",
+        baseUrl: config.alibabaBaseUrl || "http://127.0.0.1:8080/v1",
+        apiKey,
+        temperature,
+        maxTokens,
+        size,
+        duration,
+      };
+    }
   }
 
   // Fallback to system default
@@ -246,17 +302,28 @@ export async function resolvePracticeLanguageModel(
     try {
       return configuredModel();
     } catch {
-      // If Vertex/Anthropic is not set, try OpenAI compatible proxy if present
-      const baseUrl = process.env.AI_BASE_URL || "http://127.0.0.1:8080/v1";
-      const apiKey = process.env.AI_API_KEY || process.env.ALIPROXY_KEY || "aliproxy-local-key";
-      const isGeminiFallback = baseUrl.includes("generativelanguage.googleapis.com");
-      const proxy = createOpenAICompatible({
-        name: "fallback-provider",
-        baseURL: baseUrl,
-        apiKey,
-        fetch: isGeminiFallback ? createGeminiFetch() : undefined,
+      // If Vertex/Anthropic is not set, check if a valid system API key is configured or local proxy
+      const baseUrl = process.env.AI_BASE_URL || "";
+      const apiKey = process.env.AI_API_KEY || process.env.OPENROUTER_API_KEY || "";
+      const isLocalHost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
+
+      if (baseUrl && (apiKey || isLocalHost)) {
+        const isGeminiFallback = baseUrl.includes("generativelanguage.googleapis.com");
+        const proxy = createOpenAICompatible({
+          name: "fallback-provider",
+          baseURL: baseUrl,
+          apiKey: apiKey || "aliproxy-local-key",
+          fetch: isGeminiFallback ? createGeminiFetch() : undefined,
+        });
+        return proxy(resolved.modelId || DEFAULT_AI_MODEL);
+      }
+
+      // No active practice AI provider and no system fallback available!
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message:
+          "Žiadny AI poskytovateľ nie je aktívny alebo chýba platný API kľúč. Prejdite do Nastavenia -> AI a povoľte poskytovateľa (Google Gemini alebo OpenAI gateway) so zadaným kľúčom.",
       });
-      return proxy(resolved.modelId || DEFAULT_AI_MODEL);
     }
   }
 

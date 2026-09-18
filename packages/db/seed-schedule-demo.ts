@@ -76,6 +76,11 @@ async function main() {
         .from(appointmentTypes)
         .where(eq(appointmentTypes.practiceId, practiceId));
 
+      if (types.length === 0) {
+        console.warn(`⚠️ Žiadne typy termínov pre ${practice.name}, preskakujem.`);
+        continue;
+      }
+
       const surgeryType = types.find((t) => t.name.toLowerCase().includes("chirurg") || t.name.toLowerCase().includes("surg")) ?? types[0];
       const checkupType = types.find((t) => t.name.toLowerCase().includes("kontrol") || t.name.toLowerCase().includes("recheck")) ?? types[0];
       const wellnessType = types.find((t) => t.name.toLowerCase().includes("prevent") || t.name.toLowerCase().includes("well")) ?? types[0];
@@ -101,15 +106,16 @@ async function main() {
       console.log(`  ✓ Pacienti: ${patientList.length} dostupných`);
 
       // Pomocná funkcia na vytvorenie dátumu v stredoeurópskom čase (UTC+2 v lete)
-      // Reference date: Saturday September 5, 2026
-      const refYear = 2026;
-      const refMonth = 8; // September (0-indexed)
-      const refDay = 5;
+      // Reference date: dynamicky — dnešný deň, aby whiteboard vždy zobrazoval aktuálne termíny
+      const today = new Date();
+      const refYear = today.getUTCFullYear();
+      const refMonth = today.getUTCMonth(); // 0-indexed
+      const refDay = today.getUTCDate();
 
       const makeInstant = (dayOffset: number, hour: number, minute: number): Date => {
-        // dayOffset 0 = 2026-09-05 (Today)
-        // dayOffset -1 = 2026-09-04 (Yesterday)
-        // dayOffset +2 = 2026-09-07 (Next Monday)
+        // dayOffset 0 = dnes
+        // dayOffset -1 = včera
+        // dayOffset +2 = pozajtra
         const d = new Date(Date.UTC(refYear, refMonth, refDay + dayOffset, hour - 2, minute, 0)); // UTC+2 local time conversion
         return d;
       };
@@ -239,6 +245,7 @@ async function main() {
       ];
 
       for (const slot of todaySlots) {
+        if (!slot.type) continue;
         const start = makeInstant(0, slot.startH, slot.startM);
         const end = new Date(start.getTime() + slot.durM * 60 * 1000);
         const pat = nextPatient();

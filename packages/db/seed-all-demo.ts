@@ -1,7 +1,12 @@
 import { config } from "dotenv";
-config({ path: "../../.env" });
+import { resolve } from "path";
+config({ path: resolve(process.cwd(), ".env") });
+config({ path: resolve(process.cwd(), "../../.env") });
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgresql://openpims:openpims@127.0.0.1:5434/openvpm_ai";
+}
 import { db } from "./client";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import {
   practices,
   users,
@@ -28,7 +33,7 @@ export async function seedAllDemoData() {
 
   // 1. Practice & Users & Patients
   const practice = await db.query.practices.findFirst({
-    where: eq(practices.name, "Súkromná veterinárna klinika MVDr. Martin Sýkora"),
+    where: ilike(practices.name, "%Martin Sýkora%"),
   });
 
   if (!practice) {
@@ -92,41 +97,53 @@ export async function seedAllDemoData() {
           practiceId,
           uploadedBy: adminUser.id,
           fileName: "rtg_hrudnik_blesk_ll.jpg",
-          fileKey: `imaging/${practiceId}/rtg_hrudnik_blesk_ll.jpg`,
-          fileUrl: "/images/demo/rtg_thorax.jpg",
+          fileKey: `${practiceId}/imaging/rtg_hrudnik_blesk_ll.jpg`,
+          fileUrl: `/api/files/${practiceId}/imaging/rtg_hrudnik_blesk_ll.jpg`,
           mimeType: "image/jpeg",
           fileSizeBytes: 1428500,
+          checksumSha256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
           storageStatus: "available",
+          storageVerifiedAt: dAgo(2),
+          category: "imaging",
         },
         {
           practiceId,
           uploadedBy: adminUser.id,
           fileName: "rtg_abdomen_felix_vd.jpg",
-          fileKey: `imaging/${practiceId}/rtg_abdomen_felix_vd.jpg`,
-          fileUrl: "/images/demo/rtg_abdomen.jpg",
+          fileKey: `${practiceId}/imaging/rtg_abdomen_felix_vd.jpg`,
+          fileUrl: `/api/files/${practiceId}/imaging/rtg_abdomen_felix_vd.jpg`,
           mimeType: "image/jpeg",
           fileSizeBytes: 1890200,
+          checksumSha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
           storageStatus: "available",
+          storageVerifiedAt: dAgo(5),
+          category: "imaging",
         },
         {
           practiceId,
           uploadedBy: adminUser.id,
           fileName: "rtg_tibia_bella_fraktura.jpg",
-          fileKey: `imaging/${practiceId}/rtg_tibia_bella_fraktura.jpg`,
-          fileUrl: "/images/demo/rtg_fracture.jpg",
+          fileKey: `${practiceId}/imaging/rtg_tibia_bella_fraktura.jpg`,
+          fileUrl: `/api/files/${practiceId}/imaging/rtg_tibia_bella_fraktura.jpg`,
           mimeType: "image/jpeg",
           fileSizeBytes: 1650300,
+          checksumSha256: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
           storageStatus: "available",
+          storageVerifiedAt: dAgo(8),
+          category: "imaging",
         },
         {
           practiceId,
           uploadedBy: adminUser.id,
           fileName: "klinicka_foto_bruno_pyodermia.jpg",
-          fileKey: `imaging/${practiceId}/klinicka_foto_bruno_pyodermia.jpg`,
-          fileUrl: "/images/demo/skin_pyoderma.jpg",
+          fileKey: `${practiceId}/imaging/klinicka_foto_bruno_pyodermia.jpg`,
+          fileUrl: `/api/files/${practiceId}/imaging/klinicka_foto_bruno_pyodermia.jpg`,
           mimeType: "image/jpeg",
           fileSizeBytes: 954000,
+          checksumSha256: "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
           storageStatus: "available",
+          storageVerifiedAt: dAgo(10),
+          category: "imaging",
         },
       ])
       .returning();
