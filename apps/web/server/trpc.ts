@@ -665,6 +665,129 @@ export const protectedProcedure = t.procedure.use(
 );
 
 /**
+ * For procedures that perform long-running external tasks (e.g. AI image analysis,
+ * LLM multimodal inference, remote API calls).
+ *
+ * Unlike protectedProcedure, this does NOT wrap the procedure's entire async lifetime
+ * in a continuous SQL transaction. This prevents holding database connections idle
+ * during 30+ second external calls and avoids PostgreSQL idle-in-transaction timeouts.
+ * Database operations within autonomous procedures should use withTenant() per step.
+ */
+export const autonomousProcedure = t.procedure.use(
+  async ({ ctx, next, type, path, getRawInput }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (type === "mutation" && ctx.session.user.role === "viewer") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Your account has read-only (viewer) access.",
+      });
+    }
+    if (type === "mutation" && ctx.session.user.recoveryHold === true) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message:
+          "This clinic is in protected data review mode. Changes remain paused until the recovery hold is released through the audited recovery process.",
+      });
+    }
+    const user = ctx.session.user;
+
+    if (
+      type === "mutation" &&
+      billingEnforced() &&
+      !HOSTED_READ_ONLY_MUTATION_ALLOWLIST.has(path)
+    ) {
+      const now = Date.now();
+      const cached = practiceBillingCache.get(user.practiceId);
+      let tier: string | null;
+      let billingStatus: string | null;
+      let trialEndsAt: Date | null;
+
+      if (cached && now - cached.cachedAt < PRACTICE_BILLING_CACHE_TTL_MS) {
+        tier = cached.tier;
+        billingStatus = cached.billingStatus;
+        trialEndsAt = cached.trialEndsAt;
+      } else {
+        const [practice] = await withTenant(
+          ctx.db,
+          user.practiceId,
+          (tx) =>
+            tx
+              .select({
+                tier: practices.subscriptionTier,
+                billingStatus: practices.billingStatus,
+                trialEndsAt: practices.trialEndsAt,
+              })
+              .from(practices)
+              .where(
+                and(
+                  eq(practices.id, user.practiceId),
+                  isNull(practices.deletedAt),
+                ),
+              )
+              .limit(1),
+        );
+        if (!practice) {
+          throw practiceNotFound();
+        }
+        tier = practice.tier;
+        billingStatus = practice.billingStatus;
+        trialEndsAt = practice.trialEndsAt;
+        practiceBillingCache.set(user.practiceId, {
+          tier,
+          billingStatus,
+          trialEndsAt,
+          cachedAt: now,
+        });
+      }
+
+      if (
+        !hasHostedFullAccess(
+          tier,
+          billingStatus,
+          trialEndsAt,
+        )
+      ) {
+        const appName = process.env.NEXT_PUBLIC_APP_NAME || "OpenVPM";
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            `${appName} is read-only until your trial or subscription is active. You can still manage billing and export your data.`,
+        });
+      }
+    }
+
+    const result = await next({
+      ctx: {
+        session: ctx.session,
+        user,
+        practiceId: user.practiceId,
+        ip: ctx.ip,
+        db: ctx.db,
+        isAutonomous: true,
+      },
+    });
+
+    if (type === "mutation" && result.ok) {
+      const rawInput = await getRawInput().catch(() => undefined);
+      void withSystem(ctx.db, (sysTx) =>
+        recordAuditLog(sysTx, {
+          practiceId: user.practiceId,
+          userId: user.id,
+          ip: ctx.ip,
+          path,
+          rawInput,
+          resultData: (result as { data?: unknown }).data,
+        }),
+      ).catch(() => {});
+    }
+
+    return result;
+  },
+);
+
+/**
  * Requires the practice's plan to include a premium feature.
  *
  * No-op on self-host: when HOSTED_BILLING_ENABLED is unset, billingEnforced()
@@ -678,11 +801,15 @@ export function requireFeature(feature: Feature) {
     }
     if (billingEnforced()) {
       if (feature === "agent") {
-        const access = await readHostedAiAccess(
-          ctx.db,
-          ctx.session.user.practiceId,
-          { enforced: true },
-        );
+        const access = (ctx as any).isAutonomous
+          ? await withTenant(ctx.db, ctx.session.user.practiceId, (tx) =>
+              readHostedAiAccess(tx, ctx.session!.user.practiceId, { enforced: true }),
+            )
+          : await readHostedAiAccess(
+              ctx.db,
+              ctx.session.user.practiceId,
+              { enforced: true },
+            );
         if (!access) {
           throw practiceNotFound();
         }
@@ -702,20 +829,37 @@ export function requireFeature(feature: Feature) {
         });
       }
 
-      const [practice] = await ctx.db
-        .select({
-          tier: practices.subscriptionTier,
-          billingStatus: practices.billingStatus,
-          trialEndsAt: practices.trialEndsAt,
-        })
-        .from(practices)
-        .where(
-          and(
-            eq(practices.id, ctx.session.user.practiceId),
-            isNull(practices.deletedAt),
-          ),
-        )
-        .limit(1);
+      const [practice] = (ctx as any).isAutonomous
+        ? await withTenant(ctx.db, ctx.session.user.practiceId, (tx) =>
+            tx
+              .select({
+                tier: practices.subscriptionTier,
+                billingStatus: practices.billingStatus,
+                trialEndsAt: practices.trialEndsAt,
+              })
+              .from(practices)
+              .where(
+                and(
+                  eq(practices.id, ctx.session!.user.practiceId),
+                  isNull(practices.deletedAt),
+                ),
+              )
+              .limit(1),
+          )
+        : await ctx.db
+            .select({
+              tier: practices.subscriptionTier,
+              billingStatus: practices.billingStatus,
+              trialEndsAt: practices.trialEndsAt,
+            })
+            .from(practices)
+            .where(
+              and(
+                eq(practices.id, ctx.session.user.practiceId),
+                isNull(practices.deletedAt),
+              ),
+            )
+            .limit(1);
       if (!practice) {
         throw practiceNotFound();
       }

@@ -6,9 +6,11 @@ import { generateText } from "ai";
 import {
   createRouter,
   protectedProcedure,
+  autonomousProcedure,
   requireRole,
   requireFeature,
 } from "../../trpc";
+import { withTenant } from "@/lib/tenant-db";
 import {
   aiImagingAnalyses,
   files,
@@ -139,61 +141,72 @@ const imagingProcedure = protectedProcedure
   .use(requireRole("admin", "veterinarian"))
   .use(requireFeature("agent"));
 
+const autonomousImagingProcedure = autonomousProcedure
+  .use(requireRole("admin", "veterinarian"))
+  .use(requireFeature("agent"));
+
 export const imagingRouter = createRouter({
   /** Spustí AI analýzu medicínskeho obrazu */
-  analyze: imagingProcedure
+  analyze: autonomousImagingProcedure
     .input(analyzeInput)
     .mutation(async ({ ctx, input }) => {
-      // 1. Načíta file z DB
-      const [file] = await ctx.db
-        .select({
-          id: files.id,
-          fileKey: files.fileKey,
-          mimeType: files.mimeType,
-          fileName: files.fileName,
-        })
-        .from(files)
-        .where(
-          and(
-            eq(files.id, input.fileId),
-            eq(files.practiceId, ctx.practiceId),
-            isNull(files.deletedAt),
-          ),
-        )
-        .limit(1);
+      // 1. Načíta file z DB a vytvorí záznam analýzy so statusom PENDING v krátkej tenant transakcii (~5ms)
+      const { file, analysis } = await withTenant(
+        ctx.db,
+        ctx.practiceId,
+        async (tx) => {
+          const [fileRecord] = await tx
+            .select({
+              id: files.id,
+              fileKey: files.fileKey,
+              mimeType: files.mimeType,
+              fileName: files.fileName,
+            })
+            .from(files)
+            .where(
+              and(
+                eq(files.id, input.fileId),
+                eq(files.practiceId, ctx.practiceId),
+                isNull(files.deletedAt),
+              ),
+            )
+            .limit(1);
 
-      if (!file) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "File not found",
-        });
-      }
+          if (!fileRecord) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "File not found",
+            });
+          }
 
-      // 2. Vytvorí záznam analýzy so statusom PENDING
-      const [analysis] = await ctx.db
-        .insert(aiImagingAnalyses)
-        .values({
-          practiceId: ctx.practiceId,
-          patientId: input.patientId,
-          fileId: input.fileId,
-          appointmentId: input.appointmentId ?? null,
-          requestedBy: ctx.user.id,
-          modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
-          imageType: input.imageType,
-          userPrompt: input.userPrompt ?? null,
-          status: "PENDING",
-        })
-        .returning();
+          const [analysisRecord] = await tx
+            .insert(aiImagingAnalyses)
+            .values({
+              practiceId: ctx.practiceId,
+              patientId: input.patientId,
+              fileId: input.fileId,
+              appointmentId: input.appointmentId ?? null,
+              requestedBy: ctx.user.id,
+              modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
+              imageType: input.imageType,
+              userPrompt: input.userPrompt ?? null,
+              status: "PENDING",
+            })
+            .returning();
 
-      if (!analysis) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create analysis record",
-        });
-      }
+          if (!analysisRecord) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create analysis record",
+            });
+          }
+
+          return { file: fileRecord, analysis: analysisRecord };
+        },
+      );
 
       try {
-        // 3. Načíta obraz z objektového úložiska (priamo, bez HTTP round-trip)
+        // 2. Načíta obraz z objektového úložiska (priamo, bez DB transakcie)
         const object = await readPrimaryObject(file.fileKey, {
           maxBytes: 16 * 1024 * 1024,
         });
@@ -209,14 +222,16 @@ export const imagingRouter = createRouter({
         const mimeType = file.mimeType ?? object.contentType ?? "image/jpeg";
         const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-        // 4. Zavolá AI model
+        // 3. Zavolá AI model (môže trvať 10–60 sekúnd, žiadna DB transakcia nie je otvorená!)
         const promptText = input.userPrompt
           ? `Analyzuj tento medicínsky obraz (${input.imageType}). Otázka lekára: ${input.userPrompt}`
           : `Analyzuj tento medicínsky obraz (${input.imageType}). Poskytni štruktúrovaný popis nálezov.`;
 
         let model: LanguageModel;
         try {
-          model = await resolvePracticeLanguageModel(ctx.db, ctx.practiceId, "imagingRtg");
+          model = await withTenant(ctx.db, ctx.practiceId, (tx) =>
+            resolvePracticeLanguageModel(tx, ctx.practiceId, "imagingRtg"),
+          );
         } catch {
           model = configuredModel();
         }
@@ -248,32 +263,36 @@ export const imagingRouter = createRouter({
 
         const resultText = result.text.trim();
 
-        // 5. Uloží výsledok
-        const [updated] = await ctx.db
-          .update(aiImagingAnalyses)
-          .set({
-            status: "COMPLETED",
-            result: resultText,
-            rawResponse: { text: resultText, finishReason: result.finishReason },
-            completedAt: new Date(),
-          })
-          .where(eq(aiImagingAnalyses.id, analysis.id))
-          .returning();
+        // 4. Uloží výsledok v krátkej transakcii (~5ms)
+        const [updated] = await withTenant(ctx.db, ctx.practiceId, (tx) =>
+          tx
+            .update(aiImagingAnalyses)
+            .set({
+              status: "COMPLETED",
+              result: resultText,
+              rawResponse: { text: resultText, finishReason: result.finishReason },
+              completedAt: new Date(),
+            })
+            .where(eq(aiImagingAnalyses.id, analysis.id))
+            .returning(),
+        );
 
         return updated;
       } catch (error) {
-        // 6. Označí ako FAILED
+        // 5. Označí ako FAILED v čistej transakcii
         const errorMessage =
           error instanceof Error ? error.message : "Neznáma chyba";
 
-        await ctx.db
-          .update(aiImagingAnalyses)
-          .set({
-            status: "FAILED",
-            errorMessage,
-            completedAt: new Date(),
-          })
-          .where(eq(aiImagingAnalyses.id, analysis.id));
+        await withTenant(ctx.db, ctx.practiceId, (tx) =>
+          tx
+            .update(aiImagingAnalyses)
+            .set({
+              status: "FAILED",
+              errorMessage,
+              completedAt: new Date(),
+            })
+            .where(eq(aiImagingAnalyses.id, analysis.id)),
+        ).catch(() => {});
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
