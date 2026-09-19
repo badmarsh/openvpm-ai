@@ -48,6 +48,7 @@ const ekasaConfigInput = z.object({
 
 const createReceiptInput = z.object({
   invoiceId: z.string().uuid().optional(),
+  idempotencyKey: z.string().uuid().optional(),
   amountBase: z.string().regex(/^\d+(\.\d{1,2})?$/, "Neplatná suma"),
   amountVat: z.string().regex(/^\d+(\.\d{1,2})?$/, "Neplatná suma"),
   amountTotal: z.string().regex(/^\d+(\.\d{1,2})?$/, "Neplatná suma"),
@@ -181,6 +182,7 @@ export const ekasaRouter = createRouter({
         {
           practiceId: ctx.practiceId,
           invoiceId: input.invoiceId,
+          idempotencyKey: input.idempotencyKey,
           amountBase: input.amountBase,
           amountVat: input.amountVat,
           amountTotal: input.amountTotal,

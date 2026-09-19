@@ -95,6 +95,7 @@ export const supportRouter = createRouter({
 
       // Audit log
       await ctx.db.insert(extSupportSessionAudit).values({
+        practiceId: ctx.practiceId,
         sessionId: input.sessionId,
         userId: ctx.user.id,
         role: "customer",
@@ -124,6 +125,7 @@ export const supportRouter = createRouter({
 
       // Audit log
       await ctx.db.insert(extSupportSessionAudit).values({
+        practiceId: ctx.practiceId,
         sessionId: input.sessionId,
         userId: ctx.user.id,
         role: "customer",

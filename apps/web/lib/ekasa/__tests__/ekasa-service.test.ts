@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   calculateVatAmounts,
   calculateMultiVatReceipt,
   normalizeVatRate,
   generateOkp,
   generateQrCodeData,
+  processEkasaReceipt,
 } from "../service";
 import { generateReceiptHtml } from "../receipt-template";
 
@@ -205,5 +206,93 @@ describe("e-Kasa Service & Calculations", () => {
       expect(result.message).toContain("Mock driver");
     });
   });
-});
+  describe("processEkasaReceipt double-fiscalization guard", () => {
+    it("returns existing receipt when idempotencyKey has already been fiscalized", async () => {
+      const mockFind = vi.fn().mockResolvedValue({
+        id: "existing-receipt-uuid",
+        status: "CONFIRMED",
+        uid: "O-EXISTING-UID",
+      });
+      const db = {
+        query: {
+          ekasaReceipts: {
+            findFirst: mockFind,
+          },
+        },
+        insert: vi.fn(),
+      };
 
+      const result = await processEkasaReceipt(
+        db as any,
+        {
+          practiceId: "00000000-0000-0000-0000-000000000001",
+          idempotencyKey: "11111111-1111-1111-1111-111111111111",
+          amountBase: "100.00",
+          amountVat: "23.00",
+          amountTotal: "123.00",
+          vatRate: "STANDARD_23",
+          paymentMethod: "CARD",
+          items: [{ name: "Konzultácia", qty: 1, unitPrice: "123.00", vatRate: "23" }],
+        },
+        {
+          dic: "2020293057",
+          pokladnicaId: "88812345678900001",
+          ekasaApiUrl: "https://ekasa.financnasprava.sk/oto/api",
+          offlineModeEnabled: true,
+        }
+      );
+
+      expect(result).toEqual({
+        receiptId: "existing-receipt-uuid",
+        status: "CONFIRMED",
+        uid: "O-EXISTING-UID",
+      });
+      expect(mockFind).toHaveBeenCalled();
+      expect(db.insert).not.toHaveBeenCalled();
+    });
+
+    it("returns existing receipt when paymentId has already been fiscalized", async () => {
+      const mockFind = vi.fn().mockResolvedValue({
+        id: "payment-receipt-uuid",
+        status: "CONFIRMED",
+        uid: "O-PAYMENT-UID",
+      });
+      const db = {
+        query: {
+          ekasaReceipts: {
+            findFirst: mockFind,
+          },
+        },
+        insert: vi.fn(),
+      };
+
+      const result = await processEkasaReceipt(
+        db as any,
+        {
+          practiceId: "00000000-0000-0000-0000-000000000001",
+          paymentId: "22222222-2222-2222-2222-222222222222",
+          amountBase: "50.00",
+          amountVat: "11.50",
+          amountTotal: "61.50",
+          vatRate: "STANDARD_23",
+          paymentMethod: "CARD",
+          items: [{ name: "Konzultácia", qty: 1, unitPrice: "61.50", vatRate: "23" }],
+        },
+        {
+          dic: "2020293057",
+          pokladnicaId: "88812345678900001",
+          ekasaApiUrl: "https://ekasa.financnasprava.sk/oto/api",
+          offlineModeEnabled: true,
+        }
+      );
+
+      expect(result).toEqual({
+        receiptId: "payment-receipt-uuid",
+        status: "CONFIRMED",
+        uid: "O-PAYMENT-UID",
+      });
+      expect(mockFind).toHaveBeenCalled();
+      expect(db.insert).not.toHaveBeenCalled();
+    });
+  });
+});

@@ -181,6 +181,7 @@ export interface EkasaReceiptInput {
   practiceId: string;
   invoiceId?: string;
   paymentId?: string;
+  idempotencyKey?: string;
   receiptType?: EkasaReceiptType;
   originalReceiptId?: string;
   originalUid?: string;
@@ -481,6 +482,41 @@ export async function processEkasaReceipt(
     offlineModeEnabled: boolean;
   }
 ): Promise<{ receiptId: string; status: string; uid?: string }> {
+  // ── Double-Fiscalization Guard (Idempotency Key & Payment ID) ────────────
+  if (input.idempotencyKey) {
+    const existing = await db.query.ekasaReceipts.findFirst({
+      where: and(
+        eq(ekasaReceipts.practiceId, input.practiceId),
+        eq(ekasaReceipts.idempotencyKey, input.idempotencyKey),
+        isNull(ekasaReceipts.deletedAt)
+      ),
+    });
+    if (existing) {
+      return {
+        receiptId: existing.id,
+        status: existing.status,
+        uid: existing.uid ?? undefined,
+      };
+    }
+  }
+
+  if (input.paymentId) {
+    const existing = await db.query.ekasaReceipts.findFirst({
+      where: and(
+        eq(ekasaReceipts.practiceId, input.practiceId),
+        eq(ekasaReceipts.paymentId, input.paymentId),
+        isNull(ekasaReceipts.deletedAt)
+      ),
+    });
+    if (existing) {
+      return {
+        receiptId: existing.id,
+        status: existing.status,
+        uid: existing.uid ?? undefined,
+      };
+    }
+  }
+
   const issuedAt = input.issuedAt ?? new Date();
   const receiptNumber = await generateReceiptNumber(db, input.practiceId);
 
@@ -508,6 +544,7 @@ export async function processEkasaReceipt(
     .insert(ekasaReceipts)
     .values({
       practiceId: input.practiceId,
+      idempotencyKey: input.idempotencyKey ?? undefined,
       invoiceId: input.invoiceId ?? null,
       paymentId: input.paymentId ?? null,
       receiptNumber,

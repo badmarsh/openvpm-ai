@@ -146,7 +146,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       Boolean(patientsQuery.error) ||
       patientsMissing);
   const witnessLookupUnavailable =
-    form.action === "wasted" &&
+    (form.action === "wasted" || form.action === "administered") &&
     (witnessesQuery.isLoading ||
       Boolean(witnessesQuery.error) ||
       witnessesMissing);
@@ -169,6 +169,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       CONTROLLED_SUBSTANCE_NOTES_MAX_LENGTH
     ) &&
     (form.action !== "administered" || Boolean(form.patientId)) &&
+    (form.action !== "administered" || Boolean(form.witnessedBy)) &&
     (form.action !== "wasted" || Boolean(form.witnessedBy)) &&
     !patientLookupUnavailable &&
     !witnessLookupUnavailable &&
@@ -210,7 +211,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       );
       return;
     }
-    if (form.action === "wasted" && !form.witnessedBy) {
+    if ((form.action === "wasted" || form.action === "administered") && !form.witnessedBy) {
       toast.error(
         t(
           "controlledSubstances.errors.witnessRequired",
@@ -370,12 +371,13 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">
-            {t("controlledSubstances.witness", "Witness")} {form.action === "wasted" && "*"}
+            {t("controlledSubstances.witness", "Witness")}{" "}
+            {(form.action === "wasted" || form.action === "administered") && "*"}
           </label>
           <select
             value={form.witnessedBy}
             onChange={(e) => setForm({ ...form, witnessedBy: e.target.value })}
-            required={form.action === "wasted"}
+            required={form.action === "wasted" || form.action === "administered"}
             disabled={
               witnessesQuery.isLoading ||
               Boolean(witnessesQuery.error) ||

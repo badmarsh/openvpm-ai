@@ -109,6 +109,8 @@ export const ekasaReceipts = pgTable(
     // Väzba na faktúru a platbu
     invoiceId: uuid("invoice_id").references(() => invoices.id),
     paymentId: uuid("payment_id").references(() => payments.id),
+    // Idempotencia dokladu pre zamedzenie dvojitej fiskalizacie pri retry
+    idempotencyKey: uuid("idempotency_key").notNull().defaultRandom(),
     // Číslo dokladu — formát YYYYMMDD-SEQ (napr. 20260904-0042)
     receiptNumber: text("receipt_number").notNull(),
     // Kryptografické kontrolné kódy (FR SR)
@@ -146,6 +148,10 @@ export const ekasaReceipts = pgTable(
     practiceIdx: index("ekasa_receipts_practice_idx").on(
       table.practiceId,
       table.deletedAt
+    ),
+    idempotencyKeyIdx: uniqueIndex("ekasa_receipts_idempotency_uq").on(
+      table.practiceId,
+      table.idempotencyKey
     ),
     invoiceIdx: index("ekasa_receipts_invoice_idx").on(table.invoiceId),
     paymentIdx: index("ekasa_receipts_payment_idx").on(table.paymentId),

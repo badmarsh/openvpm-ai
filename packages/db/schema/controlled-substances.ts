@@ -7,8 +7,9 @@ import {
   numeric,
   timestamp,
   index,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
 import { practices } from "./practices";
 import { patients } from "./patients";
@@ -52,6 +53,10 @@ export const controlledSubstanceLog = pgTable(
       table.practiceId,
       table.deletedAt,
       table.performedAt
+    ),
+    witnessRequiredCheck: check(
+      "cs_log_witness_required_check",
+      sql`${table.action} NOT IN ('administered', 'wasted') OR ${table.witnessedBy} IS NOT NULL`
     ),
   })
 );

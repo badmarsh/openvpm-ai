@@ -122,8 +122,26 @@ describe("controlled substance log safety", () => {
         action: "administered",
         quantity: "1.5",
         unit: "ml",
+        witnessedBy: WITNESS_ID,
       })
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "A patient must be specified when administering a controlled substance." });
+
+    expect(insertValues).not.toHaveBeenCalled();
+  });
+
+  it("requires a witness when administering a controlled substance", async () => {
+    const { db, insertValues } = createDb();
+
+    await expect(
+      callerWithDb(db).create({
+        drugName: "Ketamine",
+        deaSchedule: "III",
+        action: "administered",
+        quantity: "1.5",
+        unit: "ml",
+        patientId: PATIENT_ID,
+      })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "Controlled substance administration requires a witness." });
 
     expect(insertValues).not.toHaveBeenCalled();
   });
@@ -412,7 +430,7 @@ describe("controlled substance log safety", () => {
 
   it("requires administered patients to belong to the practice", async () => {
     const { db, insertValues } = createDb({
-      selectResults: [[{ id: PRACTICE_ID }], []],
+      selectResults: [[{ id: PRACTICE_ID }], [], [{ id: WITNESS_ID }]],
     });
 
     await expect(
@@ -423,6 +441,7 @@ describe("controlled substance log safety", () => {
         quantity: "1.5",
         unit: "ml",
         patientId: PATIENT_ID,
+        witnessedBy: WITNESS_ID,
       })
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
@@ -460,6 +479,7 @@ describe("controlled substance log safety", () => {
       selectResults: [
         [{ id: PRACTICE_ID }],
         [{ id: PATIENT_ID }],
+        [{ id: WITNESS_ID }],
         [balance],
         [{ id: PRACTICE_ID }],
         [{ id: WITNESS_ID }],
@@ -477,6 +497,7 @@ describe("controlled substance log safety", () => {
         quantity: "0.251",
         unit: "ml",
         patientId: PATIENT_ID,
+        witnessedBy: WITNESS_ID,
       })
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
@@ -514,6 +535,7 @@ describe("controlled substance log safety", () => {
       selectResults: [
         [{ id: PRACTICE_ID }],
         [{ id: PATIENT_ID }],
+        [{ id: WITNESS_ID }],
         [
           {
             totalReceived: "10.000",
@@ -523,7 +545,7 @@ describe("controlled substance log safety", () => {
           },
         ],
       ],
-      insertedRows: [{ id: ENTRY_ID, patientId: PATIENT_ID }],
+      insertedRows: [{ id: ENTRY_ID, patientId: PATIENT_ID, witnessedBy: WITNESS_ID }],
     });
 
     await expect(
@@ -534,8 +556,9 @@ describe("controlled substance log safety", () => {
         quantity: "1.5",
         unit: "ml",
         patientId: PATIENT_ID,
+        witnessedBy: WITNESS_ID,
       })
-    ).resolves.toMatchObject({ id: ENTRY_ID, patientId: PATIENT_ID });
+    ).resolves.toMatchObject({ id: ENTRY_ID, patientId: PATIENT_ID, witnessedBy: WITNESS_ID });
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({

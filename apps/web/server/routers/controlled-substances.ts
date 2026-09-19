@@ -482,11 +482,17 @@ export const controlledSubstancesRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Waste requires a witness
+      // Waste and administration require a witness (Zákon 139/1998 Z. z.)
       if (input.action === "wasted" && !input.witnessedBy) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Controlled substance waste requires a witness.",
+        });
+      }
+      if (input.action === "administered" && !input.witnessedBy) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Controlled substance administration requires a witness.",
         });
       }
 

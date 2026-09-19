@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, timestamp, varchar, index } from "drizzle-orm/pg-core";
+import { practices } from "./practices";
 
 /**
  * Support session tracking for remote screen sharing.
@@ -31,6 +32,9 @@ export const extSupportSessionAudit = pgTable(
   "ext_support_session_audit",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
     sessionId: uuid("session_id").notNull().references(() => extSupportSessions.id),
     userId: varchar("user_id", { length: 255 }).notNull(),
     role: varchar("role", { length: 20 }).notNull(), // customer | agent
@@ -38,6 +42,7 @@ export const extSupportSessionAudit = pgTable(
     timestamp: timestamp("timestamp").defaultNow().notNull(),
   },
   (table) => ({
+    practiceIdx: index("ext_support_audit_practice_idx").on(table.practiceId),
     sessionIdx: index("ext_support_audit_session_idx").on(table.sessionId),
     userIdx: index("ext_support_audit_user_idx").on(table.userId),
   })
