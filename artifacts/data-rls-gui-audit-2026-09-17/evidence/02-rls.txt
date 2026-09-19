@@ -1,0 +1,47 @@
+# roles: openpims = table OWNER (RLS bypassed), openpims_app = least-privilege (RLS enforced)
+# seed: 2 practices × (client, patient, appointment, soap note, invoice)
+
+PASS  INT-0  appointments cannot be scheduled for a practice with 0 locations (hard trigger error)
+        REJECTED: Choose a clinic location before scheduling this appointment.
+--- RLS / tenant isolation (as openpims_app) ---
+PASS  RLS-1  deny-by-default when app.current_practice_id is unset
+        patients visible = 0
+PASS  RLS-2  tenant sees exactly its own rows
+        n=1
+PASS  RLS-3  tenant join patients↔clients intact
+        n=1
+PASS  RLS-4  other tenant cannot read clinical notes
+        n=0
+PASS  RLS-5  cross-tenant UPDATE silently matches 0 rows (no leak)
+        blocked
+PASS  RLS-6  cross-tenant INSERT rejected by WITH CHECK
+        new row violates row-level security policy for table "patients"
+PASS  RLS-7  app.rls_bypass=on exposes ALL tenants (pool-leak blast radius)
+        n=2
+PASS  RLS-8  OWNER role (openpims) sees every tenant — RLS inert on owner connections
+        n=2
+PASS  RLS-9  users table under tenant RLS: readable rows for tenant ctx = 1 (0 = login/user lookups must use withSystem)
+PASS  RLS-10  practices policy = self only
+        n=1
+
+--- Referential integrity (what the brief asked to SELECT) ---
+PASS  INT-1  patients.client_id IS NULL impossible (NOT NULL)
+        null value in column "client_id" of relation "patients" violates not-null constraint
+PASS  INT-2  patients → missing client rejected by FK
+        insert or update on table "patients" violates foreign key constraint "patients_client_id_clients_id_fk"
+PASS  INT-3  soap_notes → missing patient rejected by FK
+        insert or update on table "soap_notes" violates foreign key constraint "soap_notes_patient_id_patients_id_fk"
+PASS  INT-4  appointments → missing patient rejected by FK
+        insert or update on table "appointments" violates foreign key constraint "appointments_patient_id_patients_id_fk"
+PASS  INT-5  appointments WITHOUT patient_id allowed (patient_id NULLABLE — walk-in/no-show rows)
+        NULL patient accepted
+FAIL  INT-6  cross-practice FK (patient of P2 owned by P1 client) rejected
+        ACCEPTED — no composite (id, client_id, practice_id) FK ⇒ cross-tenant mis-parenting possible
+  hard DELETE of a patient with clinical history -> REJECTED: update or delete on table "patients" violates foreign key constraint "appointments_patient_id_patients_id_fk" on table "appointments"
+  after that: appointments rows=1, soap_notes rows=1
+PASS  INT-7  patient hard-delete outcome recorded (appointments=1, soap_notes=1)
+
+--- getToday date-window semantics (Europe/Bratislava vs UTC) ---
+  naive "start_time::date = CURRENT_DATE" → 3 rows | +02 window → 4 rows | at time zone Europe/Bratislava → 4 rows
+PASS  TZ-1  UTC-cast date window differs from Bratislava local day window (skew exists in schema semantics)
+        utc=3 local=4

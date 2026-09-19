@@ -1,0 +1,25 @@
+PASS  SK summer day window start                     got=2026-09-16T22:00:00.000Z want=2026-09-16T22:00:00.000Z
+PASS  SK summer day window end                       got=2026-09-17T22:00:00.000Z want=2026-09-17T22:00:00.000Z
+PASS  SK summer day label                            got=2026-09-17 want=2026-09-17
+PASS  US-default TZ shifts the clinic day (start)    got=2026-09-17T04:00:00.000Z want=2026-09-17T04:00:00.000Z  (a Bratislava morning appointment is silently outside this window)
+PASS  NULL tz -> UTC day boundary (start)            got=2026-09-17T00:00:00.000Z want=2026-09-17T00:00:00.000Z
+PASS  NULL tz -> UTC day boundary (end)              got=2026-09-18T00:00:00.000Z want=2026-09-18T00:00:00.000Z
+PASS  invalid tz does not throw                      got=no-throw want=no-throw
+PASS  invalid tz falls back to UTC day               got=2026-09-17T00:00:00.000Z want=2026-09-17T00:00:00.000Z  (silent server-local fallback = the exact bug class the brief asks about)
+PASS  17.9. 00:30 SK, formatted with SK tz           got=2026-09-17 want=2026-09-17
+PASS  17.9. 00:30 SK, formatted with UTC tz          got=2026-09-16 want=2026-09-16
+PASS  DST spring day length (h)                      got=23 want=23
+PASS  DST spring window start                        got=2026-03-28T23:00:00.000Z want=2026-03-28T23:00:00.000Z
+PASS  DST autumn day length (h)                      got=25 want=25
+PASS  DST autumn window start                        got=2026-10-24T22:00:00.000Z want=2026-10-24T22:00:00.000Z
+PASS  clinic wall time 08:00 -> UTC                  got=2026-09-17T06:00:00.000Z want=2026-09-17T06:00:00.000Z
+PASS  no tz -> browser/runtime local (UTC)           got=2026-09-17T08:00:00.000Z want=2026-09-17T08:00:00.000Z
+PASS  29.3.2026 02:30 SK (gap) rejected              got=null want=null
+PASS  format back from UTC instant                   got=2026-09-17T08:00 want=2026-09-17T08:00
+PASS  format back w/o tz returns ""                  got= want=
+
+19 passed, 0 failed
+(node:2644) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/user/audit/pg/out/date-input.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/user/audit/pg/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)

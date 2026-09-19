@@ -1,0 +1,24 @@
+live-checks.sql — validácia všetkých inštrukcií voči reálnej schéme
+metóda: schema.sql (pg_dump 16.15, dev DB) nahraný do PostgreSQL 16 (PGlite/WASM),
+každý statement spustený samostatne; empty-DB => expected rows=0, cieľom je syntaktická+referenčná platnosť.
+
+OK   [ 1] rows=  1  select
+OK   [ 2] rows=  7  select 'clients'      as tbl, count(*) from clients      union all
+OK   [ 3] rows=  0  with day as (
+OK   [ 4] rows=  1  select
+OK   [ 5] rows=  8  select 'patients.client_id IS NULL (vždy 0 — NOT NULL)' as check_name,
+OK   [ 6] rows= 25  select c.relname as table_name,
+OK   [ 7] rows=  4  select c.relname as table_without_rls
+OK   [ 8] rows=  6  select 'audit_log' as tbl, count(*) as null_practice from audit_log wher
+OK   [ 9] rows=  6  with cand as (
+OK   [10] rows=  0  select p.id, p.name, p.timezone, p.country, p.currency, p.tax_rate_perce
+OK   [11] rows=  0  select id, name, timezone, country, currency, tax_rate_percent,
+OK   [12] rows=  9  select 'drug_interactions (interakčný checker Clinical Guardian)' as fea
+OK   [13] rows=  1  select count(*)                                                         
+OK   [14] rows=  0  select distinct vaccine_name, count(*) as n
+OK   [15] rows=  1  select count(*) as deceased_with_active_reminders
+OK   [16] rows=  0  select p.id, p.name,
+OK   [17] rows=  1  with fkcols as (
+OK   [18] rows=  1  select count(*) as non_empty_tables
+
+18 statements OK, 0 failed

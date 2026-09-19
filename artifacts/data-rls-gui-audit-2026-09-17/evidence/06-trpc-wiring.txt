@@ -1,0 +1,30 @@
+routers: 36  namespaces: 64  procedures: 618  UNRESOLVED: ['treatmentEstimates->treatmentEstimatesRouter', 'visitTreatmentPlans->treatmentEstimatesRouter']
+
+### BROKEN UI -> tRPC references (procedure not found in router): 1
+  !! UNKNOWN ROUTER "visitTreatmentPlans"
+        <- components/encounters/treatment-plan-composer.tsx
+
+### router procedures never called from UI code: 58
+  admin (2): authEmailRecoveryQueue, isPlatformAdmin
+  ai (4): createSoapFromAI, dailySummary, patientsNeedingFollowUp, patientsOverdueVaccinations
+  apiKeys (3): create, list, revoke
+  appointments (1): availableSlots
+  careReminders (1): runVaccineSweep
+  clients (1): delete
+  communications (1): list
+  dashboard (2): getCharts, getStats
+  data (4): importCareRemindersCsv, importClients, importPatients, importServicesCsv
+  dosing (2): calculate, formulary
+  insurance (3): checkEligibility, createClaim, listClaims
+  messaging (2): checkEligibility, searchNumbers
+  notifications (3): getOverdueVaccinations, getUpcomingReminders, sendBulkReminders
+  patients (1): delete
+  portal (2): getInvoicePayment, getVaccinationCertificateData
+  records (6): appointmentId, createSoapNote, id, name, patientId, performedBy
+  reports (1): legacyFinancialSummary
+  settings (1): restoreUser
+  templates (4): addItem, applyToInvoice, delete, removeItem
+  treatmentPlans (4): create, listByPatient, updateItemStatus, updateStatus
+  waitlist (3): add, matchesForSlot, setStatus
+  webhooks (5): create, delete, events, list, toggle
+  wellness (2): cancel, markBilled

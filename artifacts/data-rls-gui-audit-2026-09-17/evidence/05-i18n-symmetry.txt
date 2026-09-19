@@ -1,0 +1,85 @@
+sk.json nested keys: 6483   en.json nested keys: 6483
+
+### keys in en but NOT in sk: 0
+
+### keys in sk but NOT in en: 0
+
+### keys where sk == en (untranslated, incl. legit brand/tech terms): 92
+    (after filtering brand/tech/acronyms: 70 candidates)
+   - admin.pilotConsole.workflow = Workflow
+   - ai.voiceInput.offline = Offline
+   - ai.voiceInput.online = Online
+   - billing.payments.autoEkasaLabel = Automaticky zaevidovať v e-Kasa (Finančná správa SR)
+   - brandKit.disclaimer = Disclaimer
+   - brandKit.toneFearFree = Fear-Free
+   - canvas.aiModeDiagram = Mermaid / SVG
+   - canvas.docTypes.SOP = SOP
+   - canvas.editorTab = Editor
+   - clinicalGuardian.widget.auditButton = Audit
+   - commandSearch.spotlightLabel = Cmd+K Spotlight
+   - imaging.types.mri = MRI
+   - inventory.table.colSku = SKU
+   - inventory.table.expPrefix = Exp {date}
+   - inventory.wholesalerImport.expiryShort = Exp
+   - inventory.wholesalerImport.wholesalers.BIOPHARM = Biopharm
+   - inventory.wholesalerImport.wholesalers.CYMEDICA = Cymedica
+   - inventory.wholesalerImport.wholesalers.HENRY_SCHEIN = Henry Schein
+   - inventory.wholesalerImport.wholesalers.KOMVET = Komvet
+   - inventory.wholesalerImport.wholesalers.PHARMOS = Pharmos a.s.
+   - inventory.wholesalerImport.wholesalers.PHRAMED = Phramed
+   - inventory.wholesalerImport.wholesalers.SAMOHYL = Samohýl SK
+   - inventory.wholesalerImport.wholesalers.SANVET = Sanvet
+   - inventory.wholesalerImport.wholesalers.SG_VET = SG-Vet
+   - locale.en = English
+   - marketing.automations.dedupeKey = Dedupe Key
+   - marketing.automations.smsRateLimit = SMS Rate Limit
+   - marketing.automations.sympathyGate = Sympathy Gate
+   - marketing.automations.syncReviewsShort = Sync
+   - marketing.automations.tabEvents = Event Bus
+   - marketing.automations.trigger = Trigger
+   - marketing.planner.platformLabels.FB = Facebook
+   - marketing.planner.platformLabels.GBP = Google
+   - marketing.planner.platformLabels.IG = Instagram
+   - marketing.planner.platformLabels.TikTok = TikTok
+   - marketing.reviews.platformFacebook = Facebook
+   - marketing.reviews.platformGoogle = Google
+   - marketing.website.deviceDesktop = Desktop
+   - nav.marketing = Marketing Studio
+   - nav.marketingBrandKit = Brand Kit
+   - nav.marketingCanvas = AI Canvas / SOPs
+   - nav.vetIntel = Vet Intelligence
+   - patients.historySearch.types.soap_note = SOAP
+   - patients.vitals.colBcs = BCS
+   - records.newSoap.modeFlash = Flash
+   - records.procedures.minutesValue = {minutes} min
+   - reports.inventory.colSku = SKU
+   - schedule.durationMin = {minutes} min
+   - settings.ai.features.model = Model
+   - settings.ai.providers.alibabaTitle = Alibaba Cloud & AliProxy
+   - settings.ai.providers.geminiTitle = Google Gemini
+   - settings.billing.featureAgent = OpenVPM Agent (AI)
+   - settings.billing.payoutsNa = N/A
+   - settings.billing.stripeApi = Stripe API
+   - settings.booking.types.duration = ({minutes} min)
+   - settings.branding.logo = Logo
+   - settings.branding.title = Branding
+   - settings.tabs.brandKit = Brand Kit
+   - settings.wellness.colInterval = Interval
+   - sms.terms.program = Program
+
+### t("key") literals found in code: 4943
+    referenced but MISSING from sk.json: 7
+   - marketing.calendar.dayNamesShort.0
+   - marketing.calendar.dayNamesShort.1
+   - marketing.calendar.dayNamesShort.2
+   - marketing.calendar.dayNamesShort.3
+   - marketing.calendar.dayNamesShort.4
+   - marketing.calendar.dayNamesShort.5
+   - marketing.calendar.dayNamesShort.6
+
+### sk.json values containing typical English UI words: 2
+   - agent.composer.placeholder = Opýtajte sa asistenta na čokoľvek… (Enter odošle, Shift+Enter nový riadok)
+   - marketing.consents.title = Súhlasy (Consent Registry)
+
+### sk.json top-level keys: 2398  (nested objects: 56, flat string keys: 2342)
+### en.json top-level keys: 2398  (nested objects: 56, flat string keys: 2342)

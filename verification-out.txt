@@ -1,0 +1,240 @@
+============================================================================
+OPENVPM AI — DATABASE VERIFICATION REPORT
+============================================================================
+
+--- 1. DATABASE ENVIRONMENT & METADATA ---
+ database_name | connected_user |                                     postgres_version                                     | server_encoding |    audit_timestamp_utc     
+---------------+----------------+------------------------------------------------------------------------------------------+-----------------+----------------------------
+ openvpm_ai    | openpims       | PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit | UTF8            | 2026-09-17 18:00:39.276189
+(1 row)
+
+
+--- 2. SCHEMA OBJECT COUNTS ---
+ total_public_tables | extension_tables_count | vanilla_tables_count | custom_enum_types_count | total_public_indexes 
+---------------------+------------------------+----------------------+-------------------------+----------------------
+                 178 |                     47 |                  131 |                     145 |                  801
+(1 row)
+
+
+--- 3. ROW LEVEL SECURITY (RLS) AUDIT ---
+ rls_enabled_tables | rls_disabled_tables |                                  rls_compliance_status                                  
+--------------------+---------------------+-----------------------------------------------------------------------------------------
+                174 |                   4 | PASS: 174/178 public tables protected by RLS (4 un-tenanted auth token tables excluded)
+(1 row)
+
+
+--- 4. CORE CLINICAL & PRACTICE ROW COUNTS ---
+ practices_count | locations_count | users_count | clients_count | patients_count | appointments_count | clinical_notes_count | soap_notes_count | prescriptions_count | controlled_substances_count | invoices_count | invoice_items_count | payments_count | products_count | suppliers_count | care_reminders_count | vaccination_records_count | lab_results_count | services_count 
+-----------------+-----------------+-------------+---------------+----------------+--------------------+----------------------+------------------+---------------------+-----------------------------+----------------+---------------------+----------------+----------------+-----------------+----------------------+---------------------------+-------------------+----------------
+               7 |               9 |          25 |          2185 |           2952 |                408 |                    0 |             6665 |                  19 |                          13 |             25 |                  47 |              7 |           1445 |              15 |                    6 |                      1375 |                92 |             60
+(1 row)
+
+
+--- 5. USER ROLES DISTRIBUTION ---
+     role     | count 
+--------------+-------
+ admin        |     7
+ veterinarian |     7
+ front_desk   |     5
+ technician   |     5
+ viewer       |     1
+(5 rows)
+
+
+--- 6. PATIENT SPECIES & STATUS DISTRIBUTION ---
+ species |  status  | count 
+---------+----------+-------
+ canine  | active   |  1977
+ feline  | active   |   754
+ other   | active   |   119
+ canine  | deceased |    40
+ rabbit  | active   |    38
+ avian   | active   |     9
+ feline  | deceased |     5
+ reptile | active   |     5
+ bovine  | active   |     3
+ other   | deceased |     1
+ rabbit  | deceased |     1
+(11 rows)
+
+
+--- 7. APPOINTMENT STATUS DISTRIBUTION ---
+   status    | count 
+-------------+-------
+ checked_out |   207
+ scheduled   |   102
+ confirmed   |    32
+ no_show     |    22
+ cancelled   |    21
+ in_exam     |    16
+ checked_in  |     8
+(7 rows)
+
+
+--- 8. INVOICE STATUS & FINANCIAL TOTALS ---
+ status  | invoice_count | total_sum_eur | paid_sum_eur 
+---------+---------------+---------------+--------------
+ draft   |            10 |        964.15 |         0.00
+ paid    |             9 |       2175.32 |      2175.32
+ sent    |             4 |        573.68 |         0.00
+ overdue |             2 |        720.36 |         0.00
+(4 rows)
+
+
+--- 9. RELATIONAL INVARIANTS & INTEGRITY AUDIT ---
+ invoice_appointment_mismatch_count | invoices_without_client_count | patients_without_client_count | appointments_without_client_count | appointments_without_practice_count | invoices_without_practice_count | deceased_patients_active_reminders_count 
+------------------------------------+-------------------------------+-------------------------------+-----------------------------------+-------------------------------------+---------------------------------+------------------------------------------
+                                  0 |                             0 |                             0 |                                 0 |                                   0 |                               0 |                                        0
+(1 row)
+
+
+--- 10. AUTOPILOT & MARKETING AUTOMATION STATUS ---
+ automation_events_count | automation_journeys_count | automation_rules_count | automation_enrollments_count | automation_step_executions_count | automation_suppressions_count | crm_segments_count | crm_segment_memberships_count 
+-------------------------+---------------------------+------------------------+------------------------------+----------------------------------+-------------------------------+--------------------+-------------------------------
+                       0 |                         5 |                      3 |                            0 |                                0 |                             0 |                 22 |                             0
+(1 row)
+
+
+--- 11. STATUTORY & E-KASA STATUS ---
+ rabies_notifications_count | rabies_observations_count | withdrawal_periods_count | carcass_disposals_count | ekasa_configs_count | ekasa_receipts_count | ekasa_daily_closures_count 
+----------------------------+---------------------------+--------------------------+-------------------------+---------------------+----------------------+----------------------------
+                          0 |                         0 |                        0 |                       0 |                   2 |                    2 |                          1
+(1 row)
+
+
+--- 12. CLINICAL GUARDIAN & AI AUDIT LEDGER STATUS ---
+ guardian_alerts_count | clinician_confirmations_count | ai_audit_log_count | ai_settings_count 
+-----------------------+-------------------------------+--------------------+-------------------
+                     0 |                             0 |                  0 |                 1
+(1 row)
+
+
+--- 13. ALL NON-EMPTY TABLES SUMMARY ---
+DROP TABLE
+CREATE TABLE
+DO
+               table_name               |   type    | row_count 
+----------------------------------------+-----------+-----------
+ legacy_financial_documents             | vanilla   |     10492
+ soap_notes                             | vanilla   |      6665
+ external_prescriptions                 | extension |      3743
+ patients                               | vanilla   |      2952
+ clients                                | vanilla   |      2185
+ products                               | vanilla   |      1445
+ purchase_orders                        | vanilla   |      1393
+ vaccination_records                    | vanilla   |      1375
+ legacy_financial_line_items            | vanilla   |      1151
+ appointments                           | vanilla   |       408
+ audit_log                              | vanilla   |       346
+ treatment_templates                    | vanilla   |       199
+ funnel_events                          | vanilla   |       151
+ legacy_financial_payments              | vanilla   |        95
+ lab_results                            | vanilla   |        92
+ services                               | vanilla   |        60
+ files                                  | vanilla   |        57
+ legacy_financial_allocations           | vanilla   |        49
+ historical_documents                   | vanilla   |        47
+ invoice_items                          | vanilla   |        47
+ ext_marketing_reviews                  | extension |        46
+ patient_weights                        | vanilla   |        43
+ lab_result_events                      | vanilla   |        33
+ communications                         | vanilla   |        29
+ invoices                               | vanilla   |        25
+ users                                  | vanilla   |        25
+ ext_crm_segments                       | extension |        22
+ prescriptions                          | vanilla   |        19
+ appointment_types                      | vanilla   |        18
+ clinical_record_corrections            | vanilla   |        17
+ file_storage_events                    | vanilla   |        16
+ ext_marketing_content_items            | extension |        15
+ suppliers                              | vanilla   |        15
+ ext_marketing_media_assets             | extension |        14
+ treatment_template_items               | vanilla   |        14
+ controlled_substance_log               | vanilla   |        13
+ rooms                                  | vanilla   |        13
+ ext_support_sessions                   | extension |        11
+ file_object_replicas                   | vanilla   |        11
+ ext_marketing_message_logs             | extension |        10
+ patient_allergies                      | vanilla   |        10
+ ai_imaging_analyses                    | vanilla   |         9
+ external_lab_observations              | extension |         9
+ locations                              | vanilla   |         9
+ staff_schedules                        | vanilla   |         9
+ voice_dictations                       | vanilla   |         9
+ auth_email_attempts                    | vanilla   |         8
+ lab_analyzer_reports                   | vanilla   |         8
+ sms_delivery_event_history             | vanilla   |         8
+ sms_provider_events                    | vanilla   |         8
+ consent_forms                          | vanilla   |         7
+ ext_marketing_tv_slides                | extension |         7
+ payments                               | vanilla   |         7
+ portal_sessions                        | vanilla   |         7
+ practices                              | vanilla   |         7
+ procedures                             | vanilla   |         7
+ wellness_plans                         | vanilla   |         7
+ care_reminders                         | vanilla   |         6
+ ext_marketing_competitor_snapshots     | extension |         6
+ ext_marketing_media_consents           | extension |         6
+ ext_marketing_message_templates        | extension |         6
+ ext_sms_delivery_log                   | extension |         6
+ historical_appointments                | vanilla   |         6
+ sms_consent_events                     | vanilla   |         6
+ sms_delivery_events                    | vanilla   |         6
+ sms_provider_event_resolutions         | vanilla   |         6
+ sms_send_attempt_events                | vanilla   |         6
+ sms_send_attempts                      | vanilla   |         6
+ soap_note_addenda                      | vanilla   |         6
+ soap_note_replacements                 | vanilla   |         6
+ visit_closeouts                        | vanilla   |         6
+ ext_automation_journeys                | extension |         5
+ ext_content_briefs                     | extension |         5
+ ext_content_pillars                    | extension |         5
+ ext_marketing_automation_rules         | extension |         5
+ ext_marketing_operative_scripts        | extension |         5
+ ext_support_session_audit              | extension |         5
+ external_lab_reports                   | extension |         5
+ lab_result_replacements                | vanilla   |         5
+ dispense_charge_queue                  | vanilla   |         4
+ ext_marketing_content_batches          | extension |         4
+ ext_marketing_handouts                 | extension |         4
+ ext_marketing_postop_responses         | extension |         4
+ invoice_adjustments                    | vanilla   |         4
+ migration_runs                         | vanilla   |         4
+ patient_merge_events                   | vanilla   |         4
+ practice_conversion_milestones         | vanilla   |         4
+ prescription_events                    | vanilla   |         4
+ rate_limit_buckets                     | vanilla   |         4
+ recent_clinical_items                  | vanilla   |         4
+ sms_provider_event_conflicts           | vanilla   |         4
+ ext_automation_rules                   | extension |         3
+ ext_channel_accounts                   | extension |         3
+ ext_marketing_staff_tasks              | extension |         3
+ vital_signs                            | vanilla   |         3
+ wellness_enrollments                   | vanilla   |         3
+ auth_email_delivery_events             | vanilla   |         2
+ auth_email_provider_identity_conflicts | vanilla   |         2
+ auth_email_webhook_conflicts           | vanilla   |         2
+ clinic_pilot_events                    | vanilla   |         2
+ clinic_pilots                          | vanilla   |         2
+ discharge_reports                      | vanilla   |         2
+ ekasa_config                           | vanilla   |         2
+ ekasa_receipts                         | vanilla   |         2
+ ext_marketing_wellness_redemptions     | extension |         2
+ sms_provider_event_conflict_reviews    | vanilla   |         2
+ sms_suppressions                       | vanilla   |         2
+ booking_pages                          | vanilla   |         1
+ demo_accesses                          | vanilla   |         1
+ ekasa_daily_closures                   | vanilla   |         1
+ ext_ai_settings                        | extension |         1
+ ext_marketing_website_config           | extension |         1
+ platform_email_identity                | vanilla   |         1
+ platform_email_preference_events       | vanilla   |         1
+ platform_email_preferences             | vanilla   |         1
+ problem_list                           | vanilla   |         1
+(116 rows)
+
+DROP TABLE
+
+============================================================================
+VERIFICATION SCRIPT COMPLETED SUCCESSFULLY
+============================================================================
