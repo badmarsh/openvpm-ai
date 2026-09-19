@@ -397,6 +397,58 @@ async function verify(
   return { functionsMissing, roleExists, drift, driftDetail };
 }
 
+async function ensureCompatibilityColumns(client: postgres.Sql): Promise<void> {
+  // ekasa_receipts.idempotency_key
+  await client.unsafe(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ekasa_receipts') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'ekasa_receipts' AND column_name = 'idempotency_key') THEN
+          ALTER TABLE ekasa_receipts ADD COLUMN idempotency_key uuid DEFAULT gen_random_uuid() NOT NULL;
+        END IF;
+      END IF;
+    END $$;
+  `);
+
+  // ext_support_session_audit.practice_id
+  await client.unsafe(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ext_support_session_audit') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'ext_support_session_audit' AND column_name = 'practice_id') THEN
+          ALTER TABLE ext_support_session_audit ADD COLUMN practice_id uuid;
+          UPDATE ext_support_session_audit a
+          SET practice_id = s.practice_id
+          FROM ext_support_sessions s
+          WHERE a.session_id = s.id AND a.practice_id IS NULL;
+          UPDATE ext_support_session_audit
+          SET practice_id = (SELECT id FROM practices LIMIT 1)
+          WHERE practice_id IS NULL;
+          ALTER TABLE ext_support_session_audit ALTER COLUMN practice_id SET NOT NULL;
+        END IF;
+      END IF;
+    END $$;
+  `);
+
+  // controlled_substance_log.cs_log_witness_required_check
+  await client.unsafe(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'controlled_substance_log') THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'cs_log_witness_required_check'
+            AND conrelid = 'controlled_substance_log'::regclass
+        ) THEN
+          ALTER TABLE controlled_substance_log
+            ADD CONSTRAINT cs_log_witness_required_check
+            CHECK (action NOT IN ('administered', 'wasted') OR witnessed_by IS NOT NULL);
+        END IF;
+      END IF;
+    END $$;
+  `);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -421,6 +473,8 @@ async function main(): Promise<void> {
     await client.unsafe(
       'DROP TRIGGER IF EXISTS "invoice_items_validate_dispense_charge" ON "invoice_items";',
     );
+
+    await ensureCompatibilityColumns(client);
 
     const push1 = pushSchema();
     if (!push1.ok) {
