@@ -149,7 +149,7 @@ export function AnalyteTrendVisualization({
       ) : trends.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground space-y-2">
           <FileText className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-          <p className="text-xs">Pre tohto pacienta zatiaľ nie sú zaznamenané laboratórne výsledky.</p>
+          <p className="text-xs">{t("lab.trends.noResults", "Pre tohto pacienta zatiaľ nie sú zaznamenané laboratórne výsledky.")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -260,14 +260,14 @@ export function AnalyteTrendVisualization({
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-muted-foreground">Prvé meranie</span>
+                          <span className="text-[11px] text-muted-foreground">{t("lab.trends.firstMeasurement", "Prvé meranie")}</span>
                         )}
                       </div>
 
                       {/* Reference range info */}
                       {tItem.refLow !== null && tItem.refHigh !== null && (
                         <div className="text-[11px] text-muted-foreground flex items-center justify-between border-t pt-1.5 border-border/50">
-                          <span>Referenčný rozsah:</span>
+                          <span>{t("lab.trends.refRange", "Referenčný rozsah:")}</span>
                           <span className="font-mono font-medium">
                             {tItem.refLow} – {tItem.refHigh} {tItem.unit}
                           </span>

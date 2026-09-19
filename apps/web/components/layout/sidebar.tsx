@@ -236,13 +236,6 @@ const vanillaSections: NavSection[] = [
         exact: true,
       },
       {
-        href: "/statutory",
-        label: "Zákonné registre",
-        i18nKey: "nav.statutory",
-        icon: BookOpen,
-        roles: ["admin", "veterinarian"],
-      },
-      {
         href: "/reports",
         label: "Prehľady",
         i18nKey: "nav.reports",
@@ -371,7 +364,7 @@ export function Sidebar({
           href="/"
           prefetch={false}
           className="flex items-center gap-2.5 min-w-0"
-          title="MVDr. Martin Sýkora - Súkromná veterinárna ambulancia"
+          title={branding?.name ? `${branding.name} - ${t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}` : t("common.defaultClinicName", "MVDr. Martin Sýkora - Súkromná veterinárna ambulancia")}
         >
           {branding?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -388,13 +381,13 @@ export function Sidebar({
           {!isCollapsed && (
             <div className="min-w-0">
               <span className="font-heading text-sm font-bold tracking-tight block truncate leading-tight text-foreground">
-                MVDr. Martin Sýkora
+                {branding?.name ?? t("common.defaultClinicNameShort", "MVDr. Martin Sýkora")}
               </span>
               <span
                 className="text-[10px] text-muted-foreground block font-medium truncate leading-tight mt-0.5"
-                title="Súkromná veterinárna ambulancia"
+                title={t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
               >
-                Súkromná veterinárna ambulancia
+                {t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
               </span>
             </div>
           )}

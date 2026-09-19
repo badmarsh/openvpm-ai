@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { X, BookOpen, ListChecks, Link2, Lightbulb, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { type HelpContent } from "./help-content";
+import { useI18n } from "@/lib/i18n";
 
 interface HelpModalProps {
   content: HelpContent;
@@ -11,6 +12,7 @@ interface HelpModalProps {
 }
 
 export function HelpModal({ content, onClose }: HelpModalProps) {
+  const { t } = useI18n();
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -149,10 +151,10 @@ export function HelpModal({ content, onClose }: HelpModalProps) {
                   </p>
                   <div className="text-xs text-muted-foreground space-y-1.5 leading-relaxed bg-background/60 rounded-lg p-3 border border-border/50">
                     <p>
-                      <strong className="text-foreground">Scenár:</strong> {content.practicalExample.scenario}
+                      <strong className="text-foreground">{t("help.scenario", "Scenár:")}</strong> {content.practicalExample.scenario}
                     </p>
                     <p>
-                      <strong className="text-emerald-700 dark:text-emerald-400">Riešenie v OpenVPM:</strong> {content.practicalExample.solution}
+                      <strong className="text-emerald-700 dark:text-emerald-400">{t("help.solution", "Riešenie v OpenVPM:")}</strong> {content.practicalExample.solution}
                     </p>
                   </div>
                 </section>

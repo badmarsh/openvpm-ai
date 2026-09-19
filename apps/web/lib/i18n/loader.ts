@@ -58,3 +58,45 @@ export function loadDictionary(locale: Locale): Promise<Dictionary> {
   }
   return Promise.resolve(dictionaries[DEFAULT_LOCALE]!);
 }
+
+function getNestedValue(
+  obj: Record<string, any>,
+  path: string
+): string | undefined {
+  if (obj && typeof obj[path] === "string") return obj[path];
+  const parts = path.split(".");
+  let current: any = obj;
+  for (const part of parts) {
+    if (current === null || typeof current !== "object") return undefined;
+    current = current[part];
+  }
+  return typeof current === "string" ? current : undefined;
+}
+
+function interpolate(
+  template: string,
+  params?: Record<string, string | number>
+): string {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (match, key) => {
+    return params[key] !== undefined ? String(params[key]) : match;
+  });
+}
+
+/** Synchronous server-side i18n resolver safe for async Server Components. */
+export function getServerI18n(locale: Locale = DEFAULT_LOCALE) {
+  const dict = getDictionary(locale);
+  return {
+    locale,
+    t: (
+      key: string,
+      fallback?: string,
+      params?: Record<string, string | number>
+    ): string => {
+      const value = getNestedValue(dict, key);
+      if (value !== undefined) return interpolate(value, params);
+      if (fallback !== undefined) return interpolate(fallback, params);
+      return key;
+    },
+  };
+}

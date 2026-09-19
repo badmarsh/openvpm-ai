@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPublicMessagingProgram } from "@/lib/messaging/public-program";
-import { useI18n } from "@/lib/i18n";
+import { getServerI18n } from "@/lib/i18n";
 
 export default async function SmsPrivacyPage({
   params,
@@ -10,7 +10,7 @@ export default async function SmsPrivacyPage({
   const { practiceId } = await params;
   const program = await getPublicMessagingProgram(practiceId);
   if (!program) notFound();
-  const { t } = useI18n();
+  const { t } = getServerI18n();
 
   return (
     <>

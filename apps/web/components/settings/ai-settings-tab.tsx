@@ -1085,7 +1085,7 @@ function FeatureRow({
               placeholder={t("settings.ai.features.model", "Model")}
               searchPlaceholder={t("settings.ai.features.searchModel", "Hľadať model...")}
               noModelsText={t("settings.ai.features.noModelsFound", "Žiadne modely sa nenašli")}
-              useCustomText={(custom) =>
+              renderCustomText={(custom) =>
                 t("settings.ai.features.useCustomModel", `Použiť model "${custom}"`, { model: custom })
               }
             />
@@ -1111,7 +1111,7 @@ interface ModelPickerProps {
   placeholder: string;
   searchPlaceholder: string;
   noModelsText: string;
-  useCustomText: (custom: string) => string;
+  renderCustomText: (custom: string) => string;
 }
 
 function ModelPicker({
@@ -1121,7 +1121,7 @@ function ModelPicker({
   placeholder,
   searchPlaceholder,
   noModelsText,
-  useCustomText,
+  renderCustomText,
 }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -1192,7 +1192,7 @@ function ModelPicker({
                       setSearch("");
                     }}
                   >
-                    {useCustomText(search.trim())}
+                    {renderCustomText(search.trim())}
                   </Button>
                 )}
               </div>

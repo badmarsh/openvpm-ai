@@ -15,7 +15,7 @@ import {
   buildClinicFitDemoUrl,
   buildClinicFitSignupUrl,
 } from "@/lib/funnel-analytics";
-import { useI18n } from "@/lib/i18n";
+import { getServerI18n } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Clinic fit and pilot readiness | OpenVPM",
@@ -68,7 +68,7 @@ export default async function ClinicFitPage({
   const inboundAttribution = toUrlSearchParams(await searchParams);
   const clinicFitSignupUrl = buildClinicFitSignupUrl(inboundAttribution);
   const clinicFitDemoUrl = buildClinicFitDemoUrl(inboundAttribution);
-  const { t } = useI18n();
+  const { t } = getServerI18n();
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PawMark } from "@/components/brand/paw-mark";
-import { useI18n } from "@/lib/i18n";
+import { getServerI18n } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export default async function SmsProgramLayout({
 }) {
   const { practiceId } = await params;
   const root = "/sms/" + encodeURIComponent(practiceId);
-  const { t } = useI18n();
+  const { t } = getServerI18n();
 
   return (
     <div className="min-h-screen bg-surface">

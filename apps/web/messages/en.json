@@ -1365,7 +1365,10 @@
       "title": "Something went wrong",
       "description": "We logged the error. Try again, or return to the dashboard if it keeps happening.",
       "retry": "Try Again"
-    }
+    },
+    "defaultClinicName": "MVDr. Martin Sýkora - Private Veterinary Clinic",
+    "defaultClinicNameShort": "MVDr. Martin Sýkora",
+    "clinicSubtitle": "Private Veterinary Clinic"
   },
   "common.cancel": "Cancel",
   "common.save": "Save",
@@ -2778,7 +2781,14 @@
       "noServicesToImport": "No services found in clinic price list.",
       "servicesImported": "Imported {count} services from clinic price list.",
       "noWellnessToImport": "No active wellness plans found in clinic.",
-      "wellnessImported": "Imported {count} wellness plans."
+      "wellnessImported": "Imported {count} wellness plans.",
+      "moveSectionTooltip": "Click and drag to reorder section",
+      "moveSection": "Move",
+      "hiddenSection": "Hidden section",
+      "duplicateSectionTooltip": "Duplicate section",
+      "hideSection": "Hide section",
+      "showSection": "Show section",
+      "deleteSectionTooltip": "Delete section"
     },
     "suppression": {
       "title": "Suppression Center & GDPR Audit",
@@ -6757,7 +6767,8 @@
       "noPatient": "No patient selected.",
       "createInvoice": "Create draft invoice",
       "goToEkasa": "Go to the e-Kasa register"
-    }
+    },
+    "sourceTitle": "Voice Consultation Dictation (Voice SOAP)"
   },
   "imaging": {
     "title": "Image Analysis",
@@ -7992,5 +8003,16 @@
   "ekasa.drawer.verifyAppNotice": "Verify receipt using Over doklad app (FS SR)",
   "ekasa.drawer.defaultService": "Veterinary examination and care",
   "ekasa.drawer.stornoReason": "Reason: {reason}",
-  "ekasa.drawer.originalDocUid": "Original receipt UID: {uid}"
+  "ekasa.drawer.originalDocUid": "Original receipt UID: {uid}",
+  "help": {
+    "scenario": "Scenario:",
+    "solution": "Solution in OpenVPM:"
+  },
+  "lab": {
+    "trends": {
+      "noResults": "No laboratory results recorded for this patient yet.",
+      "firstMeasurement": "First measurement",
+      "refRange": "Reference range:"
+    }
+  }
 }

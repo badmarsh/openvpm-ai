@@ -42,9 +42,9 @@ export function oklchToHslString(L: number, C: number, H: number): string {
   const l = l_ * l_ * l_;
   const m = m_ * m_ * m_;
   const s = s_ * s_ * s_;
-  let r = +4.076743409 * l - 3.3077115913 * m + 0.2309699292 * s;
-  let g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
-  let b_ = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+  const r = +4.076743409 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const b_ = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
   const gamma = (x: number) =>
     x <= 0.0031308
       ? 12.92 * x

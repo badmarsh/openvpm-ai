@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SECTION_COMPONENTS } from "./website-sections";
+import { useI18n } from "@/lib/i18n";
 import type {
   WebsiteSection,
   BrandKitData,
@@ -47,6 +48,7 @@ interface SortableSectionCardProps {
 }
 
 function SortableSectionCard({
+  // component
   section,
   brandKit,
   contextData,
@@ -55,6 +57,7 @@ function SortableSectionCard({
   onToggleVisibility,
   onDelete,
 }: SortableSectionCardProps) {
+  const { t } = useI18n();
   const {
     attributes,
     listeners,
@@ -94,10 +97,10 @@ function SortableSectionCard({
             {...attributes}
             {...listeners}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background cursor-grab active:cursor-grabbing transition-colors text-xs font-semibold select-none border border-transparent hover:border-border"
-            title="Kliknite a potiahnite pre presun sekcie"
+            title={t("marketing.website.moveSectionTooltip", "Kliknite a potiahnite pre presun sekcie")}
           >
             <GripVertical className="h-4 w-4 text-primary" />
-            <span>Presunúť</span>
+            <span>{t("marketing.website.moveSection", "Presunúť")}</span>
           </div>
 
           <Badge variant="outline" className="text-xs font-bold bg-background text-foreground">
@@ -107,7 +110,7 @@ function SortableSectionCard({
           {!section.visible && (
             <Badge variant="secondary" className="gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20 text-[11px]">
               <EyeOff className="h-3 w-3" />
-              Skrytá sekcia
+              {t("marketing.website.hiddenSection", "Skrytá sekcia")}
             </Badge>
           )}
         </div>
@@ -121,7 +124,7 @@ function SortableSectionCard({
             className="h-7 gap-1 text-xs text-foreground hover:text-primary hover:bg-primary/10"
           >
             <Pencil className="h-3.5 w-3.5 text-primary" />
-            Upraviť
+            {t("common.edit", "Upraviť")}
           </Button>
 
           <Button
@@ -129,7 +132,7 @@ function SortableSectionCard({
             variant="ghost"
             onClick={() => onDuplicate(section.id)}
             className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-            title="Duplikovať sekciu"
+            title={t("marketing.website.duplicateSectionTooltip", "Duplikovať sekciu")}
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
@@ -139,7 +142,7 @@ function SortableSectionCard({
             variant="ghost"
             onClick={() => onToggleVisibility(section.id)}
             className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-            title={section.visible ? "Skryť sekciu" : "Zobraziť sekciu"}
+            title={section.visible ? t("marketing.website.hideSection", "Skryť sekciu") : t("marketing.website.showSection", "Zobraziť sekciu")}
           >
             {section.visible ? (
               <Eye className="h-3.5 w-3.5" />
@@ -153,7 +156,7 @@ function SortableSectionCard({
             variant="ghost"
             onClick={() => onDelete(section.id)}
             className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            title="Odstrániť sekciu"
+            title={t("marketing.website.deleteSectionTooltip", "Odstrániť sekciu")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

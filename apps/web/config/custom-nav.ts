@@ -1,6 +1,7 @@
 import type { ElementType } from "react";
 import {
   ReceiptText,
+  BookOpen,
   Megaphone,
   Image as ImageIcon,
   Mic,
@@ -114,6 +115,14 @@ export const customNavItems: CustomNavItem[] = [
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
     section: "clinical",
     badge: "AI",
+  },
+    {
+    href: "/statutory",
+    label: "Zákonné registre",
+    i18nKey: "nav.statutory",
+    icon: BookOpen,
+    roles: ["admin", "veterinarian"],
+    section: "billing",
   },
   // Finance / admin
   {

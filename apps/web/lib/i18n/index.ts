@@ -4,6 +4,7 @@ export {
   DEFAULT_LOCALE,
   getDictionary,
   loadDictionary,
+  getServerI18n,
   type Dictionary,
   type Locale,
   type LocaleOption,

@@ -233,10 +233,10 @@ export function evaluateResultFlag(
   const normCode = code.trim().toUpperCase();
   const ref = REFERENCE_RANGES[normCode];
 
-  let low = customLow ?? (ref ? (species === "feline" ? ref.feline.low : ref.canine.low) : null);
-  let high = customHigh ?? (ref ? (species === "feline" ? ref.feline.high : ref.canine.high) : null);
-  let critLow = ref ? (species === "feline" ? ref.feline.criticalLow : ref.canine.criticalLow) : undefined;
-  let critHigh = ref ? (species === "feline" ? ref.feline.criticalHigh : ref.canine.criticalHigh) : undefined;
+  const low = customLow ?? (ref ? (species === "feline" ? ref.feline.low : ref.canine.low) : null);
+  const high = customHigh ?? (ref ? (species === "feline" ? ref.feline.high : ref.canine.high) : null);
+  const critLow = ref ? (species === "feline" ? ref.feline.criticalLow : ref.canine.criticalLow) : undefined;
+  const critHigh = ref ? (species === "feline" ? ref.feline.criticalHigh : ref.canine.criticalHigh) : undefined;
 
   if (critLow != null && value <= critLow) return "CRITICAL";
   if (critHigh != null && value >= critHigh) return "CRITICAL";
@@ -273,7 +273,7 @@ export function parseIdexx(rawText: string, species: SpeciesType = "canine"): La
     if (isNaN(val)) continue;
 
     const ref = REFERENCE_RANGES[code];
-    let unit = parts[2]?.trim().replace(/['"]/g, "") || ref?.unit || "";
+    const unit = parts[2]?.trim().replace(/['"]/g, "") || ref?.unit || "";
     let customLow: number | null = null;
     let customHigh: number | null = null;
 
@@ -380,7 +380,7 @@ export function parseMindray(rawText: string, species: SpeciesType = "canine"): 
     if (isNaN(val)) continue;
 
     const ref = REFERENCE_RANGES[code];
-    let unit = ref?.unit || "";
+    const unit = ref?.unit || "";
     let customLow: number | null = null;
     let customHigh: number | null = null;
 

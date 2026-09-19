@@ -1365,7 +1365,10 @@
       "title": "Niečo sa pokazilo",
       "description": "Chybu sme zaznamenali. Skúste to znova alebo sa vráťte na prehľad, ak problém pretrváva.",
       "retry": "Skúsiť znova"
-    }
+    },
+    "defaultClinicName": "MVDr. Martin Sýkora - Súkromná veterinárna ambulancia",
+    "defaultClinicNameShort": "MVDr. Martin Sýkora",
+    "clinicSubtitle": "Súkromná veterinárna ambulancia"
   },
   "common.cancel": "Zrušiť",
   "common.save": "Uložiť",
@@ -2778,7 +2781,14 @@
       "noServicesToImport": "V cenníku kliniky sa nenašli žiadne služby.",
       "servicesImported": "Importovaných {count} služieb z cenníka kliniky.",
       "noWellnessToImport": "V praxi nie sú evidované žiadne aktívne wellness programy.",
-      "wellnessImported": "Importovaných {count} wellness programov."
+      "wellnessImported": "Importovaných {count} wellness programov.",
+      "moveSectionTooltip": "Kliknite a potiahnite pre presun sekcie",
+      "moveSection": "Presunúť",
+      "hiddenSection": "Skrytá sekcia",
+      "duplicateSectionTooltip": "Duplikovať sekciu",
+      "hideSection": "Skryť sekciu",
+      "showSection": "Zobraziť sekciu",
+      "deleteSectionTooltip": "Odstrániť sekciu"
     },
     "suppression": {
       "title": "Centrum potlačení & GDPR Audit",
@@ -6757,7 +6767,8 @@
       "noPatient": "Nie je vybraný pacient.",
       "createInvoice": "Vytvoriť koncept faktúry",
       "goToEkasa": "Prejsť do e-Kasa pokladne"
-    }
+    },
+    "sourceTitle": "Hlasový záznam vyšetrenia (Voice SOAP)"
   },
   "imaging": {
     "title": "Analýza snímkov",
@@ -7992,5 +8003,16 @@
   "ekasa.drawer.verifyAppNotice": "Overte doklad pomocou aplikácie Over doklad (FS SR)",
   "ekasa.drawer.defaultService": "Veterinárne vyšetrenie a starostlivosť",
   "ekasa.drawer.stornoReason": "Dôvod: {reason}",
-  "ekasa.drawer.originalDocUid": "Pôvodný doklad UID: {uid}"
+  "ekasa.drawer.originalDocUid": "Pôvodný doklad UID: {uid}",
+  "help": {
+    "scenario": "Scenár:",
+    "solution": "Riešenie v OpenVPM:"
+  },
+  "lab": {
+    "trends": {
+      "noResults": "Pre tohto pacienta zatiaľ nie sú zaznamenané laboratórne výsledky.",
+      "firstMeasurement": "Prvé meranie",
+      "refRange": "Referenčný rozsah:"
+    }
+  }
 }
