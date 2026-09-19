@@ -1,4 +1,5 @@
 // Deterministické doručovanie správ (M4) – transakčné správy a automatizácie.
+import crypto from "node:crypto";
 import { and, desc, eq, gt, isNull, lte } from "drizzle-orm";
 import type { Database } from "@openpims/db/client";
 import {
@@ -374,7 +375,7 @@ async function templateVars(
 
   const clientName = `${cl.firstName ?? ""} ${cl.lastName ?? ""}`.trim();
   const appt = input.appointmentAt ?? new Date();
-  const token = Buffer.from(`${cl.id}:${practiceId}`).toString("base64");
+  const token = generateUnsubscribeToken(cl.id, practiceId);
 
   return {
     client_name: clientName,
@@ -877,3 +878,44 @@ export async function checkAndTriggerSeniorMilestone(
   return count > 0;
 }
 
+
+function getMarketingHmacSecret(): string {
+  return (
+    process.env.PORTAL_SESSION_SECRET?.trim() ||
+    process.env.NEXTAUTH_SECRET?.trim() ||
+    "openvpm-marketing-secret-fallback"
+  );
+}
+
+export function generateUnsubscribeToken(clientId: string, practiceId: string): string {
+  const secret = getMarketingHmacSecret();
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(`${clientId}:${practiceId}`)
+    .digest("hex");
+  return Buffer.from(`${clientId}:${practiceId}:${signature}`).toString("base64");
+}
+
+export function verifyUnsubscribeToken(token: string): { clientId: string; practiceId: string } | null {
+  try {
+    const decoded = Buffer.from(token, "base64").toString("utf-8");
+    const [clientId, practiceId, signature] = decoded.split(":");
+    if (!clientId || !practiceId || !signature) return null;
+
+    const secret = getMarketingHmacSecret();
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(`${clientId}:${practiceId}`)
+      .digest("hex");
+
+    if (
+      signature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+    ) {
+      return null;
+    }
+    return { clientId, practiceId };
+  } catch {
+    return null;
+  }
+}

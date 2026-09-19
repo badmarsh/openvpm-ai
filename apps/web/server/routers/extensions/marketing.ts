@@ -43,6 +43,7 @@ import {
 import { enrollInJourney } from "@/lib/autopilot/journey-engine";
 import { appBaseUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email";
+import { verifyUnsubscribeToken } from "@/lib/marketing/messaging";
 import { sendSms } from "@/lib/sms";
 import { websiteSectionSchema, type WebsiteSection } from '@/lib/marketing/website-builder-types';
 import { getSeedWebsiteSections } from '@/lib/marketing/website-seed';
@@ -2943,23 +2944,16 @@ listStaffTasks: protectedProcedure
       })
     )
     .query(async ({ ctx, input }) => {
-      let resolvedClientId: string | undefined = input.clientId;
-      let resolvedPracticeId: string | undefined;
-
-      if (input.token) {
-        try {
-          const decoded = Buffer.from(input.token, "base64").toString("utf-8");
-          const [cId, pId] = decoded.split(":");
-          if (cId) resolvedClientId = cId;
-          if (pId) resolvedPracticeId = pId;
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!resolvedClientId) {
+      if (!input.token) {
         return { found: false, message: "Neplatný odkaz na odhlásenie." };
       }
+
+      const verified = verifyUnsubscribeToken(input.token);
+      if (!verified) {
+        return { found: false, message: "Neplatný alebo pozmenený odkaz na odhlásenie." };
+      }
+
+      const { clientId, practiceId } = verified;
 
       const [client] = await ctx.db
         .select({
@@ -2971,9 +2965,7 @@ listStaffTasks: protectedProcedure
         })
         .from(clients)
         .where(
-          resolvedPracticeId
-            ? and(eq(clients.id, resolvedClientId), eq(clients.practiceId, resolvedPracticeId))
-            : eq(clients.id, resolvedClientId)
+          and(eq(clients.id, clientId), eq(clients.practiceId, practiceId))
         )
         .limit(1);
 
@@ -3009,42 +3001,22 @@ listStaffTasks: protectedProcedure
       })
     )
     .mutation(async ({ ctx, input }) => {
-      let resolvedClientId: string | undefined = input.clientId;
-      let resolvedPracticeId: string | undefined;
-
-      if (input.token) {
-        try {
-          const decoded = Buffer.from(input.token, "base64").toString("utf-8");
-          const [cId, pId] = decoded.split(":");
-          if (cId) resolvedClientId = cId;
-          if (pId) resolvedPracticeId = pId;
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!resolvedClientId) {
+      if (!input.token) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Neplatný identifikátor klienta.",
+          message: "Token je povinný.",
         });
       }
 
-      if (!resolvedPracticeId) {
-        const [c] = await ctx.db
-          .select({ practiceId: clients.practiceId })
-          .from(clients)
-          .where(eq(clients.id, resolvedClientId))
-          .limit(1);
-        resolvedPracticeId = c?.practiceId;
-      }
-
-      if (!resolvedPracticeId) {
+      const verified = verifyUnsubscribeToken(input.token);
+      if (!verified) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Klient nebol nájdený.",
+          code: "BAD_REQUEST",
+          message: "Neplatný alebo pozmenený odkaz na odhlásenie.",
         });
       }
+
+      const { clientId: resolvedClientId, practiceId: resolvedPracticeId } = verified;
 
       // 1. Reset client smsConsent
       await ctx.db
