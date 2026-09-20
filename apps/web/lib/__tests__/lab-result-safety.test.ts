@@ -84,7 +84,11 @@ describe("lab result clinical safety contract", () => {
     expect(router).toContain('eq(labResults.followUpAssignedTo, ctx.user.id)');
     expect(router).toContain('resultFlag: "unknown" as const');
     expect(inbox).toContain("Clinical values are restricted; follow the instructions below.");
-    expect(inbox).toMatch(/!isFrontDesk \? <div>\s*<dt[^>]*>Clinical review<\/dt>/);
+    expect(inbox).toMatch(
+      // The clinical review label must remain the first <dt> rendered for
+      // non-front-desk users (i18n'd via labResults.colClinicalReview).
+      /!isFrontDesk \? <div>\s*<dt[^>]*>\s*\{t\("labResults\.colClinicalReview", "Clinical review"\)\}\s*<\/dt>/,
+    );
     expect(inbox).toContain("Your 100 highest-priority assigned items are shown.");
     expect(rls).toContain("'lab_result_events'");
     expect(rlsTest).toContain("application role cannot rewrite lab result evidence");

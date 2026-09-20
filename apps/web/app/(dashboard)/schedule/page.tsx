@@ -541,12 +541,12 @@ function AppointmentBlock({
         borderLeft: `3.5px solid ${bgColor}`,
       }}
     >
-      <div className="flex items-center gap-1.5 font-medium text-foreground truncate">
+      <div className="flex min-w-0 items-center gap-1.5 font-medium text-foreground overflow-hidden">
         <StatusDot status={appointment.status} />
-        <span className="truncate font-semibold tracking-tight">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
+        <span className="min-w-0 truncate font-semibold tracking-tight">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
       </div>
       {height >= 36 && (
-        <div className="text-muted-foreground truncate mt-0.5 font-mono tabular-nums text-[11px]">
+        <div className="min-w-0 text-muted-foreground overflow-hidden text-ellipsis truncate mt-0.5 font-mono tabular-nums text-[11px]">
           <span className="font-sans font-medium text-foreground/80">{appointment.typeName || t("schedule.appointmentFallback", "Appointment")}</span> &middot;{" "}
           <span>{formatTime(start, timeZone)} - {formatTime(end, timeZone)}</span>
           {appointment.locationName ? ` · ${appointment.locationName}` : ""}
@@ -906,9 +906,9 @@ function WeekCalendar({
                       isToday && "bg-primary/5"
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-medium uppercase text-muted-foreground">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium uppercase text-muted-foreground">
                           {day.toLocaleDateString("en-US", { weekday: "short" })}
                         </p>
                         <p
@@ -920,7 +920,7 @@ function WeekCalendar({
                           {day.getDate()}
                         </p>
                       </div>
-                      <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
+                      <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
                         {dayAppointments.length}
                       </span>
                     </div>
@@ -1004,7 +1004,7 @@ function AppointmentChip({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-6 w-full items-center gap-1.5 rounded-md border px-2 py-1 text-left text-[11px] leading-tight transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+      className="flex min-h-6 w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-2 py-1 text-left text-[11px] leading-tight transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
       style={{
         backgroundColor: `${color}18`,
         borderColor: `${color}55`,
@@ -1306,6 +1306,11 @@ function AppointmentDetailPopover({
   }, []);
 
   useEffect(() => {
+    // Derive start/end locally from the appointment times that are already in
+    // the dependency array — `start`/`end` from the render scope are recreated
+    // on every render and would re-run (and reset) this form each time.
+    const start = new Date(appointment.startTime);
+    const end = new Date(appointment.endTime);
     setShowRescheduleForm(false);
     setShowConfirmationForm(false);
     setConfirmationContactMethod("");

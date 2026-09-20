@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -540,7 +540,7 @@ function SettingsPageInner() {
             className="min-w-0 max-w-full overflow-hidden lg:w-56 lg:shrink-0"
             aria-label={t("settings.header.sectionsAria", "Sekcie nastavení")}
           >
-            <div className="flex w-full max-w-full gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+            <div className="custom-scrollbar -mb-px flex w-full max-w-full gap-1 overflow-x-auto pb-1 lg:mb-0 lg:flex-col lg:overflow-visible lg:pb-0">
               {visibleTabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -3845,7 +3845,7 @@ function DataTab() {
       };
       reader.readAsText(file);
     },
-    [restoreBackup],
+    [restoreBackup, t],
   );
 
   const handleBackupRestore = useCallback(() => {
@@ -3910,6 +3910,7 @@ function DataTab() {
       importSoapNotesCsv,
       importVaccinationsCsv,
       migrationSource,
+      t,
     ],
   );
 
@@ -3965,7 +3966,7 @@ function DataTab() {
       };
       reader.readAsText(file);
     },
-    [importMode, migrationSource, runImportPreview],
+    [importMode, migrationSource, runImportPreview, t],
   );
 
   const handleDrop = useCallback(
@@ -4039,6 +4040,7 @@ function DataTab() {
     importPatientsCsv,
     importVaccinationsCsv,
     importSoapNotesCsv,
+    t,
   ]);
 
   const isImportPending =
@@ -4931,7 +4933,10 @@ function RoomsTab() {
   const isRoomNameValid = (name: string) =>
     name.trim().length > 0 && name.trim().length <= ROOM_NAME_MAX_LENGTH;
   const roomsMissing = !isLoading && !roomsError && !roomList;
-  const roomLocations = locationsQuery.data ?? [];
+  const roomLocations = useMemo(
+    () => locationsQuery.data ?? [],
+    [locationsQuery.data]
+  );
 
   useEffect(() => {
     if (!addForm.locationId && roomLocations.length > 0) {

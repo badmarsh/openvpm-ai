@@ -165,7 +165,7 @@ export function ServicesTab() {
 
   const services = activeQuery.data as ServiceRow[] | undefined;
   const archivedServices = archivedQuery.data as ServiceRow[] | undefined;
-  const availableServices = services ?? [];
+  const availableServices = useMemo(() => services ?? [], [services]);
   const availableArchivedServices = archivedServices ?? [];
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filteredServices = useMemo(() => {

@@ -63,8 +63,11 @@ export default function EncountersPage() {
 
   const doctorsQuery = trpc.appointments.listDoctors.useQuery();
 
-  const appointments = appointmentsQuery.data ?? [];
-  const followUps = followUpsQuery.data ?? [];
+  const appointments = useMemo(
+    () => appointmentsQuery.data ?? [],
+    [appointmentsQuery.data]
+  );
+  const followUps = useMemo(() => followUpsQuery.data ?? [], [followUpsQuery.data]);
   const doctors = doctorsQuery.data ?? [];
 
   // KPI Calculations
@@ -178,25 +181,23 @@ export default function EncountersPage() {
           />
         );
       case "checked_out":
+        // Terminal statuses use the static Badge pattern — no live pulse.
         return (
-          <StatusPulseBadge
-            variant="finished"
-            label={t("dashboard.upcoming.status.completed", "Dokončené")}
-          />
+          <Badge variant="success" className="text-xs">
+            {t("dashboard.upcoming.status.completed", "Dokončené")}
+          </Badge>
         );
       case "cancelled":
         return (
-          <StatusPulseBadge
-            variant="failed"
-            label={t("dashboard.upcoming.status.cancelled", "Zrušené")}
-          />
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            {t("dashboard.upcoming.status.cancelled", "Zrušené")}
+          </Badge>
         );
       case "no_show":
         return (
-          <StatusPulseBadge
-            variant="offline"
-            label={t("dashboard.upcoming.status.no_show", "Nedostavil sa")}
-          />
+          <Badge variant="warning" className="text-xs">
+            {t("dashboard.upcoming.status.no_show", "Nedostavil sa")}
+          </Badge>
         );
       default:
         return (

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/common/empty-state";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,7 @@ export default function MediaPage() {
     };
   }, [brandQuery.data]);
 
-  const rawAssets = mediaQuery.data ?? [];
+  const rawAssets = useMemo(() => mediaQuery.data ?? [], [mediaQuery.data]);
 
   const shown = useMemo(() => {
     return rawAssets.filter(({ asset, consent }) => {
@@ -102,7 +103,7 @@ export default function MediaPage() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Knižnica médií
+            {t("marketing.media.tabLibrary", "Knižnica médií")}
           </button>
           <button
             onClick={() => setTab("canvas")}
@@ -125,10 +126,10 @@ export default function MediaPage() {
           <div className="flex flex-wrap items-center gap-2">
             {(
               [
-                ["all", "Všetky"],
-                ["valid", "Súhlas platný"],
-                ["expiring", "Vyprší / problém"],
-                ["illustration", "Ilustrácie"],
+                ["all", t("marketing.media.filterAll", "Všetky")],
+                ["valid", t("marketing.media.filterConsentValid", "Súhlas platný")],
+                ["expiring", t("marketing.media.filterExpiring", "Vyprší / problém")],
+                ["illustration", t("marketing.media.filterIllustrations", "Ilustrácie")],
               ] as [Filter, string][]
             ).map(([k, l]) => (
               <button
@@ -149,7 +150,7 @@ export default function MediaPage() {
             <Link href="/marketing/consents">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                GDPR Súhlasy
+                {t("marketing.media.gdprConsents", "GDPR Súhlasy")}
               </Button>
             </Link>
 
@@ -158,7 +159,7 @@ export default function MediaPage() {
               className="gap-1.5 text-xs h-9 bg-teal-800 hover:bg-teal-900 text-white"
               onClick={() => setUploading(true)}
             >
-              <Camera size={14} /> Fotka na sociálne siete
+              <Camera size={14} /> {t("marketing.media.uploadSocialPhoto", "Fotka na sociálne siete")}
             </Button>
           </div>
 
@@ -190,21 +191,19 @@ export default function MediaPage() {
               ))}
             </div>
           ) : shown.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-12 text-center flex flex-col items-center justify-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
-                <ImagePlus className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold">Žiadne médiá podľa vybraného filtra</h3>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                  Nahrajte novú fotografiu pacienta so súhlasom alebo vygenerujte ilustráciu cez AI Canvas.
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setUploading(true)} className="gap-1.5">
-                <Camera className="w-3.5 h-3.5" />
-                Nahrať fotku
-              </Button>
-            </div>
+            <EmptyState
+              icon={ImagePlus}
+              title={t("marketing.media.emptyTitle", "Žiadne médiá podľa vybraného filtra")}
+              description={t(
+                "marketing.media.emptyDescription",
+                "Nahrajte novú fotografiu pacienta so súhlasom alebo vygenerujte ilustráciu cez AI Canvas."
+              )}
+              action={{
+                label: t("marketing.media.uploadPhoto", "Nahrať fotku"),
+                onClick: () => setUploading(true),
+                icon: Camera,
+              }}
+            />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {shown.map(({ asset, consent }) => {
@@ -379,7 +378,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
               }
             }}
             className="rounded-lg border border-border px-2 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-red-600 hover:border-red-300 transition cursor-pointer"
-            title="Zmazať médium"
+            title={t("marketing.media.deleteMedia", "Zmazať médium")}
           >
             <Trash2 size={11} />
           </button>
@@ -389,7 +388,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
           href={`/marketing/plan?mediaId=${asset.id}`}
           className="w-full inline-flex items-center justify-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-primary py-0.5"
         >
-          <span>Použiť v príspevku</span>
+          <span>{t("marketing.media.useInPost", "Použiť v príspevku")}</span>
           <ExternalLink size={10} />
         </Link>
       </div>
@@ -451,7 +450,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
         <input
           value={overlay}
           onChange={(e) => setOverlay(e.target.value)}
-          placeholder="Text do grafiky…"
+          placeholder={t("marketing.media.overlayPlaceholder", "Text do grafiky…")}
           maxLength={60}
           className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-[11px] outline-none focus:border-teal-600"
         />
@@ -491,6 +490,7 @@ function UploadPanel({
   onClose: (msg?: string) => void;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const [ownerId, setOwnerId] = useState(owners[0]?.id ?? "");
   const [patientName, setPatientName] = useState("");
@@ -602,7 +602,7 @@ function UploadPanel({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
         <div>
-          <label className="text-xs font-semibold block mb-1">Súbor (foto / video)</label>
+          <label className="text-xs font-semibold block mb-1">{t("marketing.media.fieldFile", "Súbor (foto / video)")}</label>
           <input
             ref={fileRef}
             type="file"
@@ -613,7 +613,7 @@ function UploadPanel({
         </div>
 
         <div>
-          <label className="text-xs font-semibold block mb-1">Majiteľ / Klient kliniky</label>
+          <label className="text-xs font-semibold block mb-1">{t("marketing.media.fieldOwner", "Majiteľ / Klient kliniky")}</label>
           <select
             value={ownerId}
             onChange={(e) => {
@@ -624,18 +624,18 @@ function UploadPanel({
           >
             {owners.map((o) => (
               <option key={o.id} value={o.id}>
-                {o.name} {o.validConsentId ? "✓ (má súhlas)" : "⚠ (bez súhlasu)"}
+                {o.name} {o.validConsentId ? t("marketing.media.ownerHasConsent", "✓ (má súhlas)") : t("marketing.media.ownerNoConsent", "⚠ (bez súhlasu)")}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="text-xs font-semibold block mb-1">Meno pacienta (nepovinné)</label>
+          <label className="text-xs font-semibold block mb-1">{t("marketing.media.fieldPatientName", "Meno pacienta (nepovinné)")}</label>
           <Input
             value={patientName}
             onChange={(e) => setPatientName(e.target.value)}
-            placeholder="Napr. Blesk, Rexo, Luna"
+            placeholder={t("marketing.media.patientNamePlaceholder", "Napr. Blesk, Rexo, Luna")}
             className="h-9 text-xs rounded-xl"
           />
         </div>
@@ -654,11 +654,11 @@ function UploadPanel({
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={dataUrl} alt="Náhľad" className="h-20 w-20 rounded-lg object-cover border" />
+            <img src={dataUrl} alt={t("marketing.media.previewAlt", "Náhľad")} className="h-20 w-20 rounded-lg object-cover border" />
           )}
           <div className="text-xs text-muted-foreground">
-            <p className="font-semibold text-foreground">Náhľad pripravený</p>
-            <p>Formát: {fileKind === "video" ? "Krátky klip (Reel)" : "Fotografia pacienta"}</p>
+            <p className="font-semibold text-foreground">{t("marketing.media.previewReady", "Náhľad pripravený")}</p>
+            <p>{t("marketing.media.formatLabel", "Formát")}: {fileKind === "video" ? t("marketing.media.formatVideo", "Krátky klip (Reel)") : t("marketing.media.formatPhoto", "Fotografia pacienta")}</p>
           </div>
         </div>
       )}
@@ -668,7 +668,7 @@ function UploadPanel({
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 p-3 text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <ShieldAlert size={16} className="text-amber-600 shrink-0" />
-            <span>Pre tohto klienta zatiaľ neexistuje aktívny súhlas <strong>photo_social</strong>.</span>
+            <span>{t("marketing.media.noActiveConsent", "Pre tohto klienta zatiaľ neexistuje aktívny súhlas {consent}.", { consent: "photo_social" })}</span>
           </div>
 
           <Button
@@ -677,7 +677,7 @@ function UploadPanel({
             className="text-xs h-8 bg-amber-700 hover:bg-amber-800 text-white"
             onClick={() => grantMutation.mutate({ clientId: ownerId, scope: "photo_social" })}
           >
-            {grantMutation.isPending ? "Ukladám súhlas..." : "Získať súhlas na recepcii (podpis)"}
+            {grantMutation.isPending ? t("marketing.media.grantingConsent", "Ukladám súhlas...") : t("marketing.media.grantConsentAtReception", "Získať súhlas na recepcii (podpis)")}
           </Button>
         </div>
       )}

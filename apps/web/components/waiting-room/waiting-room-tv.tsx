@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -203,7 +204,8 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
     { refetchInterval: 30000 },
   );
 
-  // Fetch custom marketing TV slides
+  // Fetch custom marketing TV slides.
+  // TV display: server-filtered to active slides only.
   const { data: tvSlides } = trpc.extensions.marketing.listTvSlides.useQuery();
 
   const utils = trpc.useUtils();
@@ -214,6 +216,12 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
   const [isSlideManagerOpen, setIsSlideManagerOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<TvSlide | null>(null);
+
+  // Slide manager: all slides (incl. inactive) — fetched only when the manager is open.
+  const { data: allTvSlides } = trpc.extensions.marketing.listAllTvSlides.useQuery(
+    undefined,
+    { enabled: isSlideManagerOpen }
+  );
 
   const [slideTitle, setSlideTitle] = useState("");
   const [slideBody, setSlideBody] = useState("");
@@ -233,7 +241,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
   const openCreateSlide = () => {
     resetSlideForm();
     const maxOrder =
-      (tvSlides as any[])?.reduce(
+      (allTvSlides as any[])?.reduce(
         (max: number, item: any) => Math.max(max, item.sortOrder ?? 0),
         0
       ) ?? 0;
@@ -256,6 +264,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
       setIsCreateDialogOpen(false);
       resetSlideForm();
       utils.extensions.marketing.listTvSlides.invalidate();
+      utils.extensions.marketing.listAllTvSlides.invalidate();
     },
   });
 
@@ -264,12 +273,14 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
       setIsCreateDialogOpen(false);
       resetSlideForm();
       utils.extensions.marketing.listTvSlides.invalidate();
+      utils.extensions.marketing.listAllTvSlides.invalidate();
     },
   });
 
   const deleteSlideMutation = trpc.extensions.marketing.deleteTvSlide.useMutation({
     onSuccess: () => {
       utils.extensions.marketing.listTvSlides.invalidate();
+      utils.extensions.marketing.listAllTvSlides.invalidate();
     },
   });
 
@@ -788,6 +799,30 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                 </>
               )}
 
+              {hasCustomSlides && activeSlides.length > 0 && (
+                // Slide position indicator — one dot per custom slide
+                <div
+                  className="flex items-center justify-center gap-1.5 py-1"
+                  role="tablist"
+                  aria-label={t("marketing.tv.slideIndicator", "Indikátor slajdov")}
+                >
+                  {activeSlides.map((slide, i) => (
+                    <span
+                      key={slide.id ?? i}
+                      role="tab"
+                      aria-selected={i === firstIdx}
+                      aria-label={`${i + 1} / ${activeSlides.length}`}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-300",
+                        i === firstIdx
+                          ? "w-5 bg-primary"
+                          : "w-1.5 bg-muted-foreground/30"
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-primary">
                 <p className="font-semibold">
                   {t("waitingRoom.urgentCareBooking", "Urgent care & booking:")}
@@ -925,10 +960,10 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
 
             {/* Slides table */}
             <div className="rounded-lg border overflow-hidden">
-              {(!tvSlides || tvSlides.length === 0) ? (
+              {(!allTvSlides || allTvSlides.length === 0) ? (
                 <div className="p-8 text-center border-dashed">
                   <Tv className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
-                  <h4 className="text-sm font-semibold">Žiadne vlastné slajdy</h4>
+                  <h4 className="text-sm font-semibold">{t("marketing.tv.noSlidesTitle", "Žiadne vlastné slajdy")}</h4>
                   <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
                     {t(
                       "marketing.tv.noSlides",
@@ -953,7 +988,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {(tvSlides as any[]).map((slide) => (
+                      {(allTvSlides as any[]).map((slide) => (
                         <tr key={slide.id} className="hover:bg-muted/30 transition-colors">
                           <td className="px-3 py-2.5 text-center font-mono text-muted-foreground">
                             {slide.sortOrder}

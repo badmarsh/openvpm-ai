@@ -32,6 +32,8 @@
  *   3. Apply the journal object layer (CREATE [OR REPLACE] FUNCTION,
  *      CREATE TRIGGER, DO blocks) in journal order. The journal files are
  *      only read, never modified — zero-conflict upstream sync is preserved.
+ *   3b. Apply bootstrap extension indexes from drizzle/bootstrap/*.sql
+ *      (hot-path composite/partial indexes, trigram search support).
  *   4. Verify the database: all journal functions present, schema drift
  *      clean (when the openpims_app RLS role exists), and treat the known
  *      benign drizzle churn signature as success only when the database is
@@ -319,6 +321,108 @@ async function applyObjectLayer(
 }
 
 // ---------------------------------------------------------------------------
+// Step 3b — bootstrap extension indexes (drizzle/bootstrap/*.sql)
+// ---------------------------------------------------------------------------
+
+/**
+ * Split a bootstrap SQL file into individual statements. Respects line
+ * comments (`--`, which may contain semicolons), single-quoted strings, and
+ * dollar-quoted bodies (DO $$ ... $$ blocks).
+ */
+function splitSqlStatements(sqlText: string): string[] {
+  const statements: string[] = [];
+  let current = "";
+  let i = 0;
+  const n = sqlText.length;
+  while (i < n) {
+    const ch = sqlText[i];
+    const next = sqlText[i + 1];
+    // Line comment — semicolons inside are not statement terminators.
+    if (ch === "-" && next === "-") {
+      while (i < n && sqlText[i] !== "\n") {
+        current += sqlText[i];
+        i++;
+      }
+      continue;
+    }
+    // Dollar quote ($$ or $tag$) — consume the entire quoted body.
+    if (ch === "$") {
+      const match = /^\$[A-Za-z_]*\$/.exec(sqlText.slice(i));
+      if (match) {
+        const tag = match[0];
+        const end = sqlText.indexOf(tag, i + tag.length);
+        const stop = end === -1 ? n : end + tag.length;
+        current += sqlText.slice(i, stop);
+        i = stop;
+        continue;
+      }
+    }
+    // Single-quoted string (with '' escapes) — semicolons inside are literal.
+    if (ch === "'") {
+      let j = i + 1;
+      while (j < n) {
+        if (sqlText[j] === "'") {
+          if (sqlText[j + 1] === "'") {
+            j += 2;
+            continue;
+          }
+          break;
+        }
+        j++;
+      }
+      current += sqlText.slice(i, Math.min(j + 1, n));
+      i = j + 1;
+      continue;
+    }
+    if (ch === ";") {
+      const stmt = current.trim();
+      if (stmt) statements.push(stmt);
+      current = "";
+      i++;
+      continue;
+    }
+    current += ch;
+    i++;
+  }
+  const tail = current.trim();
+  if (tail) statements.push(tail);
+  return statements;
+}
+
+async function applyBootstrapIndexes(client: postgres.Sql): Promise<number> {
+  const bootstrapDir = path.join(DRIZZLE_DIR, "bootstrap");
+  if (!existsSync(bootstrapDir)) {
+    warn("no drizzle/bootstrap directory — extension indexes skipped");
+    return 0;
+  }
+  const files = readdirSync(bootstrapDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  let applied = 0;
+  for (const file of files) {
+    const sqlText = readFileSync(path.join(bootstrapDir, file), "utf8");
+    const statements = splitSqlStatements(sqlText);
+    for (const stmt of statements) {
+      try {
+        await client.unsafe(stmt);
+        applied++;
+      } catch (err: any) {
+        // Missing tables (fresh DB before push) and duplicate objects on
+        // re-runs are expected — anything else is worth a warning.
+        if (err?.code === "42P01" || err?.code === "42710") continue;
+        warn(
+          `skipped statement in drizzle/bootstrap/${file}: ${
+            err?.message?.split("\n")[0] ?? "unknown error"
+          }`,
+        );
+      }
+    }
+    log(`bootstrap indexes applied from ${file} (${applied} statements total)`);
+  }
+  return applied;
+}
+
+// ---------------------------------------------------------------------------
 // Step 4 — verification
 // ---------------------------------------------------------------------------
 interface Verification {
@@ -506,6 +610,7 @@ async function main(): Promise<void> {
     }
 
     const stats = await applyObjectLayer(client);
+    await applyBootstrapIndexes(client);
 
     const report = await verify(client, stats.functions);
     if (report.functionsMissing.length > 0) {

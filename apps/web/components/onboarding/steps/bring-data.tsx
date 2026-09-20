@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -308,27 +308,33 @@ export function BringDataStep({ register, state, setState }: StepProps) {
     }
   }
 
-  async function runImport(
-    mode: MigrationImportMode,
-    input: {
-      csv: string;
-      dryRun: boolean;
-      source: typeof migrationSource;
-      previewToken?: string;
-      migrationProtocol: "reviewed-v1";
+  const runImport = useCallback(
+    async (
+      mode: MigrationImportMode,
+      input: {
+        csv: string;
+        dryRun: boolean;
+        source: typeof migrationSource;
+        previewToken?: string;
+        migrationProtocol: "reviewed-v1";
+      },
+    ): Promise<ImportResponse> => {
+      if (mode === "clients") return importClientsCsv.mutateAsync(input);
+      if (mode === "patients") return importPatientsCsv.mutateAsync(input);
+      if (mode === "vaccinations")
+        return importVaccinationsCsv.mutateAsync(input);
+      return importSoapNotesCsv.mutateAsync(input);
     },
-  ): Promise<ImportResponse> {
-    if (mode === "clients") return importClientsCsv.mutateAsync(input);
-    if (mode === "patients") return importPatientsCsv.mutateAsync(input);
-    if (mode === "vaccinations")
-      return importVaccinationsCsv.mutateAsync(input);
-    return importSoapNotesCsv.mutateAsync(input);
-  }
+    [
+      importClientsCsv,
+      importPatientsCsv,
+      importVaccinationsCsv,
+      importSoapNotesCsv,
+    ],
+  );
 
-  async function finishStage(
-    mode: MigrationImportMode,
-    committed: OnboardingImportCommit,
-  ) {
+  const finishStage = useCallback(
+    async (mode: MigrationImportMode, committed: OnboardingImportCommit) => {
     const completedChanges = committed.imported + committed.reconciled;
     const committedAt = new Date().toISOString();
     const nextKnownCompletedModes = MIGRATION_STEPS.flatMap(
@@ -395,7 +401,16 @@ export function BringDataStep({ register, state, setState }: StepProps) {
         ? `${changeCount.toLocaleString()} clinic record changes completed`
         : "Import review complete",
     );
-  }
+    },
+    [
+      committedByMode,
+      csvMetaByMode,
+      knownCompletedModes,
+      migrationSource,
+      setState,
+      utils,
+    ],
+  );
 
   const csvSizeErrors = MIGRATION_STEPS.flatMap(({ mode, label }) =>
     csvMetaByMode[mode].sizeValid ? [] : [`${label} CSV must be 5 MB or less.`],
@@ -572,6 +587,8 @@ export function BringDataStep({ register, state, setState }: StepProps) {
     importSoapNotesCsv,
     setState,
     utils,
+    finishStage,
+    runImport,
   ]);
 
   const selectedMigrationSourceName = migrationSourceName(migrationSource);

@@ -280,7 +280,7 @@ export default function ReviewsPage() {
     setExpanded(newSet);
   };
 
-  const rawReviews = listQuery.data ?? [];
+  const rawReviews = useMemo(() => listQuery.data ?? [], [listQuery.data]);
 
   // Filter in-memory by rating, status, and search query
   const reviews = useMemo(() => {

@@ -2492,13 +2492,13 @@
       "filterPillar": "Filtrovať pilier",
       "viewMonth": "Mesačný náhľad",
       "viewWeek": "Týždenný náhľad",
+      "emptyTitle": "Žiadne príspevky v tomto období",
+      "emptyDescription": "Vytvorte nový návrh príspevku a naplánujte ho na konkrétny dátum.",
       "claimsBadge": "Klinické tvrdenia",
       "statusScheduled": "Naplánované",
       "statusReview": "Čaká na lekára",
       "statusApproved": "Schválené",
       "statusRejected": "Vrátené",
-      "emptyTitle": "Žiadne príspevky v tomto období",
-      "emptyDescription": "Vytvorte nový návrh príspevku a naplánujte ho na konkrétny dátum.",
       "exportCalendar": "Exportovať kalendár",
       "pillarsTitle": "Strategické piliere kliniky",
       "postsCount": "{count} príspevkov",
@@ -2661,7 +2661,34 @@
     },
     "media": {
       "editPrefix": "úprava",
-      "aiEdit": "AI úprava"
+      "aiEdit": "AI úprava",
+      "tabLibrary": "Knižnica médií",
+      "filterAll": "Všetky",
+      "filterConsentValid": "Súhlas platný",
+      "filterExpiring": "Vyprší / problém",
+      "filterIllustrations": "Ilustrácie",
+      "gdprConsents": "GDPR Súhlasy",
+      "uploadSocialPhoto": "Fotka na sociálne siete",
+      "uploadPhoto": "Nahrať fotku",
+      "emptyTitle": "Žiadne médiá podľa vybraného filtra",
+      "emptyDescription": "Nahrajte novú fotografiu pacienta so súhlasom alebo vygenerujte ilustráciu cez AI Canvas.",
+      "deleteMedia": "Zmazať médium",
+      "useInPost": "Použiť v príspevku",
+      "overlayPlaceholder": "Text do grafiky…",
+      "fieldFile": "Súbor (foto / video)",
+      "fieldOwner": "Majiteľ / Klient kliniky",
+      "ownerHasConsent": "✓ (má súhlas)",
+      "ownerNoConsent": "⚠ (bez súhlasu)",
+      "fieldPatientName": "Meno pacienta (nepovinné)",
+      "patientNamePlaceholder": "Napr. Blesk, Rexo, Luna",
+      "previewAlt": "Náhľad",
+      "previewReady": "Náhľad pripravený",
+      "formatLabel": "Formát",
+      "formatVideo": "Krátky klip (Reel)",
+      "formatPhoto": "Fotografia pacienta",
+      "noActiveConsent": "Pre tohto klienta zatiaľ neexistuje aktívny súhlas {consent}.",
+      "grantingConsent": "Ukladám súhlas...",
+      "grantConsentAtReception": "Získať súhlas na recepcii (podpis)"
     },
     "consents": {
       "createSuccess": "Súhlas bol úspešne zaznamenaný.",
@@ -2681,7 +2708,9 @@
       "editSlideTitle": "Upraviť slajd",
       "newSlideTitle": "Pridať nový slajd",
       "fieldActive": "Aktívny na TV obrazovke",
-      "colActions": "Akcie"
+      "colActions": "Akcie",
+      "slideIndicator": "Pozícia slajdu",
+      "noSlidesTitle": "Žiadne vlastné slajdy"
     },
     "website": {
       "title": "Webstránka kliniky",
@@ -2932,7 +2961,18 @@
     "competitors": {
       "title": "Konkurencia & Intel",
       "subtitle": "Monitorovanie konkurenčných aktivít a trhový výskum",
-      "startMonitoring": "Spustiť monitorovanie"
+      "startMonitoring": "Spustiť monitorovanie",
+      "posts30d": "Publikácie (30 dní)",
+      "engagement": "Zapojenie",
+      "followerGrowth": "Rast sledujúcich",
+      "recentDiscoveries": "Nedávne objavy",
+      "newCampaign": "Nová akcia konkurencie",
+      "teamChange": "Zmena v tíme",
+      "typeClinic": "Veterinárna klinika",
+      "typeAmbulance": "Veterinárna ambulancia",
+      "typePractice": "Veterinárna prax",
+      "discoveryCampaignDetail": "{name} spustila výhodnú ponuku preventívnych prehliadok",
+      "discoveryTeamDetail": "{name} zamestnali nového veterinára so špecializáciou na ortopédiu"
     }
   },
   "nav": {

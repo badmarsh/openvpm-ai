@@ -2492,13 +2492,13 @@
       "filterPillar": "Filter Pillar",
       "viewMonth": "Month View",
       "viewWeek": "Week View",
+      "emptyTitle": "No posts for this period",
+      "emptyDescription": "Create a new content brief and schedule it for a specific date.",
       "claimsBadge": "Clinical Claims",
       "statusScheduled": "Scheduled",
       "statusReview": "Awaiting Doctor",
       "statusApproved": "Approved",
       "statusRejected": "Returned",
-      "emptyTitle": "No posts for this period",
-      "emptyDescription": "Create a new content brief and schedule it for a specific date.",
       "exportCalendar": "Export calendar",
       "pillarsTitle": "Practice Strategy Pillars",
       "postsCount": "{count} posts",
@@ -2661,7 +2661,34 @@
     },
     "media": {
       "editPrefix": "edit",
-      "aiEdit": "AI edit"
+      "aiEdit": "AI edit",
+      "tabLibrary": "Media library",
+      "filterAll": "All",
+      "filterConsentValid": "Consent valid",
+      "filterExpiring": "Expiring / issue",
+      "filterIllustrations": "Illustrations",
+      "gdprConsents": "GDPR consents",
+      "uploadSocialPhoto": "Social media photo",
+      "uploadPhoto": "Upload photo",
+      "emptyTitle": "No media matching the selected filter",
+      "emptyDescription": "Upload a new patient photo with consent or generate an illustration via AI Canvas.",
+      "deleteMedia": "Delete media",
+      "useInPost": "Use in post",
+      "overlayPlaceholder": "Text for graphic…",
+      "fieldFile": "File (photo / video)",
+      "fieldOwner": "Owner / clinic client",
+      "ownerHasConsent": "✓ (has consent)",
+      "ownerNoConsent": "⚠ (no consent)",
+      "fieldPatientName": "Patient name (optional)",
+      "patientNamePlaceholder": "e.g. Blesk, Rexo, Luna",
+      "previewAlt": "Preview",
+      "previewReady": "Preview ready",
+      "formatLabel": "Format",
+      "formatVideo": "Short clip (Reel)",
+      "formatPhoto": "Patient photo",
+      "noActiveConsent": "This client has no active {consent} consent yet.",
+      "grantingConsent": "Saving consent...",
+      "grantConsentAtReception": "Obtain consent at reception (signature)"
     },
     "consents": {
       "createSuccess": "Consent recorded successfully.",
@@ -2681,7 +2708,9 @@
       "editSlideTitle": "Edit slide",
       "newSlideTitle": "Add new slide",
       "fieldActive": "Active on TV screen",
-      "colActions": "Actions"
+      "colActions": "Actions",
+      "slideIndicator": "Slide position",
+      "noSlidesTitle": "No custom slides"
     },
     "website": {
       "title": "Clinic website",
@@ -2932,7 +2961,18 @@
     "competitors": {
       "title": "Competitors & Intel",
       "subtitle": "Monitor competitor activity and conduct market research",
-      "startMonitoring": "Start monitoring"
+      "startMonitoring": "Start monitoring",
+      "posts30d": "Posts (30 days)",
+      "engagement": "Engagement",
+      "followerGrowth": "Follower growth",
+      "recentDiscoveries": "Recent discoveries",
+      "newCampaign": "New competitor campaign",
+      "teamChange": "Team change",
+      "typeClinic": "Veterinary clinic",
+      "typeAmbulance": "Veterinary outpatient clinic",
+      "typePractice": "Veterinary practice",
+      "discoveryCampaignDetail": "{name} launched a special offer on preventive check-ups",
+      "discoveryTeamDetail": "{name} hired a new veterinarian specialising in orthopaedics"
     }
   },
   "nav": {

@@ -25,6 +25,17 @@ export function ScreenShareButton({
   const [peerConn, setPeerConn] = useState<RTCPeerConnection | null>(null);
   const [signaling, setSignaling] = useState<SignalingClient | null>(null);
 
+  const stopSharing = useCallback(() => {
+    if (peerConn) {
+      peerConn.close();
+      setPeerConn(null);
+    }
+    signaling?.sendLeave(sessionId, role);
+    setSharing(false);
+    onSessionEnd?.();
+    toast.info("Zdieľanie obrazovky ukončené");
+  }, [peerConn, signaling, sessionId, role, onSessionEnd]);
+
   const startSharing = useCallback(async () => {
     try {
       // Request screen share permission
@@ -60,18 +71,7 @@ export function ScreenShareButton({
       setError(msg);
       toast.error("Nepodarilo sa spustiť zdieľanie obrazovky");
     }
-  }, [sessionId, role, signaling, onSessionStart]);
-
-  const stopSharing = useCallback(() => {
-    if (peerConn) {
-      peerConn.close();
-      setPeerConn(null);
-    }
-    signaling?.sendLeave(sessionId, role);
-    setSharing(false);
-    onSessionEnd?.();
-    toast.info("Zdieľanie obrazovky ukončené");
-  }, [peerConn, signaling, sessionId, role, onSessionEnd]);
+  }, [sessionId, role, signaling, onSessionStart, stopSharing]);
 
   if (error) {
     return (

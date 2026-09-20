@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { NewBriefModal, type PillarOption } from "./new-brief-modal";
+import { EmptyState } from "@/components/common/empty-state";
 import {
   VeterinarianReviewModal,
   type ReviewBriefData,
@@ -82,7 +83,10 @@ export function ContentCalendarTab() {
   const [selectedBrief, setSelectedBrief] = useState<ReviewBriefData | null>(null);
 
   const pillars = (pillarsQuery.data || []) as PillarOption[];
-  const briefs = (briefsQuery.data || []) as ReviewBriefData[];
+  const briefs = useMemo(
+    () => (briefsQuery.data || []) as ReviewBriefData[],
+    [briefsQuery.data]
+  );
 
   // Week days calculation (Monday to Sunday)
   const currentWeekDays = useMemo(() => {
@@ -312,6 +316,21 @@ export function ContentCalendarTab() {
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
           </div>
+        ) : filteredBriefs.length === 0 ? (
+          /* Empty state — no briefs in the selected view */
+          <EmptyState
+            icon={CalendarIcon}
+            title={t("marketing.calendar.emptyTitle", "Žiadne príspevky v tomto období")}
+            description={t(
+              "marketing.calendar.emptyDescription",
+              "Vytvorte nový návrh príspevku a naplánujte ho na konkrétny dátum."
+            )}
+            action={{
+              label: t("marketing.calendar.newBriefButton", "Nový návrh obsahu"),
+              onClick: () => setNewBriefModalOpen(true),
+              icon: Plus,
+            }}
+          />
         ) : (
           /* Week Grid (7 columns) */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">

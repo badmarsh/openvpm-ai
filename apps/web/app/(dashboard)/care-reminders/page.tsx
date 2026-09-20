@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { formatDateYmdToDisplay } from "@/lib/date-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,12 +52,7 @@ function canManage(role?: string | null): boolean {
 }
 
 function displayDate(value: string): string {
-  return new Date(`${value}T12:00:00Z`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatDateYmdToDisplay(value);
 }
 
 export default function CareRemindersPage() {

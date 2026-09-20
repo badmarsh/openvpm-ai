@@ -924,7 +924,26 @@ pollVideo: protectedProcedure
 
 // ── TV Slides ─────────────────────────────────────────────────────────────────
 
+// TV display endpoint — only active slides are served to the rotator.
 listTvSlides: protectedProcedure.query(async ({ ctx }) => {
+  return ctx.db
+    .select()
+    .from(extMarketingTvSlides)
+    .where(
+      and(
+        eq(extMarketingTvSlides.practiceId, ctx.practiceId),
+        isNull(extMarketingTvSlides.deletedAt),
+        // Only active slides are shown on the TV display; the slide manager
+        // UI uses listAllTvSlides (no isActive filter) instead.
+        eq(extMarketingTvSlides.isActive, true),
+      )
+    )
+    .orderBy(extMarketingTvSlides.sortOrder);
+}),
+
+// Admin/slide-manager endpoint — returns every slide for the practice,
+// including inactive ones, so the manager can re-enable them.
+listAllTvSlides: protectedProcedure.query(async ({ ctx }) => {
   return ctx.db
     .select()
     .from(extMarketingTvSlides)
