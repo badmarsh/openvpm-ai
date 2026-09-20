@@ -891,6 +891,7 @@ export const patientsRouter = createRouter({
             clientId: patients.clientId,
             clientFirstName: clients.firstName,
             clientLastName: clients.lastName,
+            clientPhone: clients.phone,
             createdAt: patients.createdAt,
           })
           .from(patients)

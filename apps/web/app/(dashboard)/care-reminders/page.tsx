@@ -55,6 +55,17 @@ function displayDate(value: string): string {
   return formatDateYmdToDisplay(value);
 }
 
+function relativeDay(dueDate: string, today: string, t: (key: string, fallback?: string, params?: Record<string, string | number>) => string): string {
+  const due = new Date(dueDate + "T12:00:00Z");
+  const now = new Date(today + "T12:00:00Z");
+  const diffDays = Math.round((due.getTime() - now.getTime()) / 86400000);
+  if (diffDays === 0) return t("careReminders.relativeToday", "Today");
+  if (diffDays === 1) return t("careReminders.relativeTomorrow", "Tomorrow");
+  if (diffDays === -1) return t("careReminders.relativeYesterday", "Yesterday");
+  if (diffDays > 1) return t("careReminders.relativeInDays", "in {count} d.", { count: diffDays });
+  return t("careReminders.relativeOverdueDays", "{count} d. ago", { count: Math.abs(diffDays) });
+}
+
 export default function CareRemindersPage() {
   const { t } = useI18n();
   const { data: session } = useSession();
@@ -939,6 +950,9 @@ export default function CareRemindersPage() {
                           >
                             {displayDate(item.dueDate)}
                           </span>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {relativeDay(item.dueDate, today, t)}
+                          </p>
                           {overdue ? (
                             <p className="mt-1 text-xs text-destructive">
                               {t(

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Search, Plus, Users } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
@@ -177,14 +178,39 @@ export default function ClientsPage() {
                     onClick={() => router.push(`/clients/${client.id}`)}
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium">
-                      {client.firstName} {client.lastName}
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-foreground">{client.firstName} {client.lastName}</div>
+                      {(client.patientCount > 0 || client.city) && (
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {[
+                            client.patientCount > 0
+                              ? t(
+                                  client.patientCount === 1
+                                    ? "patients.plural_one"
+                                    : client.patientCount >= 2 && client.patientCount <= 4
+                                    ? "patients.plural_few"
+                                    : "patients.plural_other",
+                                  client.patientCount === 1 ? "{count} patient" : "{count} patients",
+                                  { count: client.patientCount },
+                                )
+                              : null,
+                            client.city || null,
+                          ].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {client.email || "\u2014"}
+                      {client.email ? <a href={`mailto:${client.email}`} className="hover:underline">{client.email}</a> : "\u2014"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {client.phone || "\u2014"}
+                      {client.phone ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <a href={`tel:${client.phone}`} className="hover:underline">{client.phone}</a>
+                          {client.smsConsent && (
+                            <Badge variant="success" className="text-[10px] px-1 py-0">SMS</Badge>
+                          )}
+                        </span>
+                      ) : "\u2014"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {client.city || "\u2014"}

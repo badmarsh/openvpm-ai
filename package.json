@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
+    "start": "pnpm --filter @openpims/web start",
     "dev": "turbo dev",
     "dev:turbo": "turbo dev:turbo",
     "stop": "node scripts/stop.mjs",

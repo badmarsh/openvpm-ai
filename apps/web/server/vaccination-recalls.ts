@@ -140,6 +140,7 @@ async function activeReminderSmsSender(ctx: {
 type VaccinationRecallRow = {
   vaccinationRecordId: string;
   patientId: string;
+  patientSpecies: string | null;
   patientName: string;
   clientId: string;
   clientFirstName: string;
@@ -169,6 +170,7 @@ function groupRows(rows: VaccinationRecallRow[]): VaccinationRecallCandidate[] {
     }
     grouped.set(row.patientId, {
       patientId: row.patientId,
+      patientSpecies: row.patientSpecies,
       patientName: row.patientName,
       clientId: row.clientId,
       clientName: `${row.clientFirstName} ${row.clientLastName}`.trim(),
@@ -214,6 +216,7 @@ async function loadVaccinationRecallRecipients(
     .select({
       vaccinationRecordId: vaccinationRecords.id,
       patientId: patients.id,
+      patientSpecies: patients.species,
       patientName: patients.name,
       clientId: clients.id,
       clientFirstName: clients.firstName,

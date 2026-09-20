@@ -12,6 +12,7 @@ const PATIENT_ID = "00000000-0000-0000-0000-000000000003";
 
 const candidate: VaccinationRecallCandidate = {
   patientId: PATIENT_ID,
+  patientSpecies: "canine",
   patientName: "Miso",
   clientId: CLIENT_ID,
   clientName: "Ada Lovelace",

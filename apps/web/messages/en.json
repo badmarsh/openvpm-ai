@@ -1159,7 +1159,12 @@
     "btnComplete": "Complete",
     "btnReopen": "Reopen",
     "btnContactClient": "Contact client",
-    "readOnly": "Read only"
+    "readOnly": "Read only",
+    "relativeToday": "Today",
+    "relativeTomorrow": "Tomorrow",
+    "relativeYesterday": "Yesterday",
+    "relativeInDays": "in {count} d.",
+    "relativeOverdueDays": "{count} d. ago"
   },
   "chrome": {
     "searchPlaceholder": "Search...",
@@ -3572,7 +3577,9 @@
     },
     "list": {
       "openPatientAria": "Open patient {name}"
-    }
+    },
+    "age_months": "{count} mo.",
+    "age_years": "{count} yr."
   },
   "recalls": {
     "checkingAccess": "Checking recall access...",

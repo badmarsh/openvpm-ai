@@ -1159,7 +1159,12 @@
     "btnComplete": "Dokončiť",
     "btnReopen": "Znovu otvoriť",
     "btnContactClient": "Kontaktovať klienta",
-    "readOnly": "Iba na čítanie"
+    "readOnly": "Iba na čítanie",
+    "relativeToday": "Dnes",
+    "relativeTomorrow": "Zajtra",
+    "relativeYesterday": "Včera",
+    "relativeInDays": "o {count} d.",
+    "relativeOverdueDays": "pred {count} d."
   },
   "chrome": {
     "searchPlaceholder": "Hľadať…",
@@ -3572,7 +3577,9 @@
     },
     "list": {
       "openPatientAria": "Otvoriť pacienta {name}"
-    }
+    },
+    "age_months": "{count} mes.",
+    "age_years": "{count} r."
   },
   "recalls": {
     "checkingAccess": "Overuje sa prístup k pripomienkam...",

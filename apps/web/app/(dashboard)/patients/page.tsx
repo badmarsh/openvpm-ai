@@ -51,6 +51,21 @@ function formatSex(
   return t(`patients.sex_${sex}`, defaultLabels[sex] ?? sex);
 }
 
+function calcAge(
+  dob: string | null,
+  t: (key: string, fallback?: string, params?: Record<string, string | number>) => string,
+): string {
+  if (!dob) return "";
+  const birth = new Date(dob);
+  const now = new Date();
+  const totalMonths =
+    (now.getFullYear() - birth.getFullYear()) * 12 +
+    (now.getMonth() - birth.getMonth());
+  if (totalMonths < 24)
+    return t("patients.age_months", "{count} mo.", { count: Math.max(1, totalMonths) });
+  return t("patients.age_years", "{count} yr.", { count: Math.floor(totalMonths / 12) });
+}
+
 export default function PatientsPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -253,14 +268,27 @@ export default function PatientsPage() {
                             "\uD83D\uDC3E"}
                         </span>
                         {patient.name}
+                        {patient.dob && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {calcAge(patient.dob, t)}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {patient.breed || "\u2014"}
+                        {patient.species && (
+                          <p className="mt-0.5 text-xs">
+                            {t("patients.species_" + patient.species, patient.species)}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {patient.clientFirstName && patient.clientLastName
                           ? `${patient.clientFirstName} ${patient.clientLastName}`
                           : t("patients.profile.noOwner", "Owner not listed")}
+                        {patient.clientPhone && (
+                          <p className="mt-0.5 text-xs">{patient.clientPhone}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatSex(patient.sex, t)}

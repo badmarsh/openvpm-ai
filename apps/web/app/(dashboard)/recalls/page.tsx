@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import type { VaccinationRecallRecipient } from "@/lib/vaccination-recalls";
+import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 
 const MAX_BATCH_SIZE = 100;
 
@@ -401,7 +402,7 @@ export default function VaccinationRecallsPage() {
                             href={`/patients/${recipient.patientId}`}
                             className="font-bold text-foreground hover:underline"
                           >
-                            {recipient.patientName}
+                            {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
                           </Link>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {recipient.clientName}

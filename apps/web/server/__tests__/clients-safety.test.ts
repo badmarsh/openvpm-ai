@@ -21,7 +21,7 @@ const { pickReminderChannel } = await import("@/lib/messaging/reminders");
 const CLIENTS_SOURCE = readFileSync(
   new URL("../routers/clients.ts", import.meta.url),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const USER_ID = "00000000-0000-0000-0000-000000000001";

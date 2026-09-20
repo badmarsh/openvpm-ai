@@ -227,7 +227,23 @@ export const clientsRouter = createRouter({
 
       const [items, countResult, practiceResult] = await Promise.all([
         ctx.db
-          .select()
+          .select({
+            id: clients.id,
+            firstName: clients.firstName,
+            lastName: clients.lastName,
+            email: clients.email,
+            phone: clients.phone,
+            city: clients.city,
+            smsConsent: clients.smsConsent,
+            createdAt: clients.createdAt,
+            accessToken: clients.accessToken,
+            patientCount: sql<number>`(
+              SELECT count(*)::int FROM patients
+              WHERE patients.client_id = clients.id
+              AND patients.deleted_at IS NULL
+              AND patients.status = 'active'
+            )`,
+          })
           .from(clients)
           .where(and(...conditions))
           .orderBy(desc(clients.createdAt))

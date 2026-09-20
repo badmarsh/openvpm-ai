@@ -26,6 +26,7 @@ export type VaccinationRecallVaccine = {
 
 export type VaccinationRecallCandidate = {
   patientId: string;
+  patientSpecies?: string | null;
   patientName: string;
   clientId: string;
   clientName: string;
