@@ -69,7 +69,7 @@ END
 $$;
 
 CREATE INDEX IF NOT EXISTS clients_search_trgm_idx
-  ON clients USING gin (concat_ws(' ', first_name, last_name) gin_trgm_ops)
+  ON clients USING gin ((first_name || ' ' || last_name) gin_trgm_ops)
   WHERE deleted_at IS NULL;
 
 -- ── 3H: ext_automation_events — pending/processing work queue ---------------
