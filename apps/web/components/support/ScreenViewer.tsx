@@ -15,6 +15,7 @@ interface ScreenViewerProps {
 
 export function ScreenViewer({ sessionId, role, onEnd }: ScreenViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const peerConnRef = useRef<RTCPeerConnection | null>(null);
   const [status, setStatus] = useState<"connecting" | "waiting" | "viewing" | "ended">("connecting");
   const [peerConn, setPeerConn] = useState<RTCPeerConnection | null>(null);
   const [signaling, setSignaling] = useState<SignalingClient | null>(null);
@@ -24,20 +25,23 @@ export function ScreenViewer({ sessionId, role, onEnd }: ScreenViewerProps) {
     // Create signaling client
     const sig = new SignalingClient({
       onMessage: async (msg) => {
-        if (!peerConn) return;
+        // Read the live peer connection from the ref — the state captured by
+        // this closure is always the initial (null) value.
+        const pc = peerConnRef.current;
+        if (!pc) return;
 
         switch (msg.type) {
           case "offer":
-            await handleOffer(peerConn, msg.data as RTCSessionDescriptionInit);
-            if (peerConn.localDescription) {
-              sig.sendAnswer(sessionId, role, peerConn.localDescription);
+            await handleOffer(pc, msg.data as RTCSessionDescriptionInit);
+            if (pc.localDescription) {
+              sig.sendAnswer(sessionId, role, pc.localDescription);
             }
             break;
           case "answer":
-            await handleAnswer(peerConn, msg.data as RTCSessionDescriptionInit);
+            await handleAnswer(pc, msg.data as RTCSessionDescriptionInit);
             break;
           case "ice-candidate":
-            await handleIceCandidate(peerConn, msg.data as RTCIceCandidateInit);
+            await handleIceCandidate(pc, msg.data as RTCIceCandidateInit);
             break;
           case "leave":
             setStatus("ended");
@@ -75,11 +79,15 @@ export function ScreenViewer({ sessionId, role, onEnd }: ScreenViewerProps) {
       },
     });
 
+    peerConnRef.current = pc;
     setPeerConn(pc);
 
     return () => {
       sig.disconnect();
       pc.close();
+      if (peerConnRef.current === pc) {
+        peerConnRef.current = null;
+      }
     };
   }, [sessionId, role, onEnd]);
 

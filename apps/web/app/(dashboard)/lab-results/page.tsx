@@ -324,7 +324,7 @@ function LabResultsInboxContent() {
     onError: (error) => toast.error(error.message),
   });
 
-  const rows = inbox.data?.items ?? [];
+  const rows = useMemo(() => inbox.data?.items ?? [], [inbox.data]);
   const actionCount = useMemo(
     () => isFrontDesk
       ? rows.length
@@ -507,7 +507,7 @@ function LabResultsInboxContent() {
                   !isCritical && isAbnormal && "border-amber-400/70",
                 )}
               >
-                <CardHeader className="pb-3">
+                <CardHeader className="sticky top-0 z-10 rounded-t-lg bg-background pb-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -590,7 +590,6 @@ function LabResultsInboxContent() {
                       </dd>
                     </div> : null}
                     {!isFrontDesk ? <div>
-                      <dt className="hidden">Clinical review</dt>
                       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t("labResults.colClinicalReview", "Clinical review")}
                       </dt>
