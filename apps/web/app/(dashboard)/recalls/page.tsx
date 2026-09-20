@@ -28,6 +28,10 @@ import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import type { VaccinationRecallRecipient } from "@/lib/vaccination-recalls";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
+import {
+  formatDateTimeToDisplay,
+  formatDateYmdToDisplay,
+} from "@/lib/date-display";
 
 const MAX_BATCH_SIZE = 100;
 
@@ -93,16 +97,16 @@ function canOperateRecalls(role?: string | null): boolean {
   );
 }
 
+/** Overdue vaccine due dates arrive as YYYY-MM-DD; render as dd.mm.yyyy. */
 function clinicalDate(value: string): string {
-  const date = new Date(`${value}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatDateYmdToDisplay(value) || value;
 }
+
+/** Dense-dashboard table tokens shared with /clients and /patients. */
+const TH =
+  "h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80";
+const TD = "px-4 py-2.5 align-middle";
+const BADGE = "px-2 py-0.5 text-[11px]";
 
 export default function VaccinationRecallsPage() {
   const { t } = useI18n();
@@ -326,11 +330,11 @@ export default function VaccinationRecallsPage() {
               )}
             />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[860px] text-sm">
                 <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="w-10 py-3 pr-3 font-medium">
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className={`${TH} w-10`}>
                       <Checkbox
                         aria-label={t(
                           "recalls.selectAllAria",
@@ -353,19 +357,19 @@ export default function VaccinationRecallsPage() {
                         }}
                       />
                     </th>
-                    <th className="py-3 pr-4 font-medium">
+                    <th className={TH}>
                       {t("recalls.colPatientClient", "Patient / client")}
                     </th>
-                    <th className="py-3 pr-4 font-medium">
+                    <th className={TH}>
                       {t("recalls.colOverdueVaccines", "Overdue vaccines")}
                     </th>
-                    <th className="py-3 pr-4 font-medium">
+                    <th className={TH}>
                       {t("recalls.colDelivery", "Delivery")}
                     </th>
-                    <th className="py-3 pr-4 font-medium">
+                    <th className={TH}>
                       {t("recalls.colEligibility", "Eligibility")}
                     </th>
-                    <th className="py-3 text-right font-medium">
+                    <th className={`${TH} text-right`}>
                       {t("recalls.colAction", "Action")}
                     </th>
                   </tr>
@@ -376,9 +380,9 @@ export default function VaccinationRecallsPage() {
                     return (
                       <tr
                         key={recipient.patientId}
-                        className="border-b border-border align-top last:border-0"
+                        className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors"
                       >
-                        <td className="py-4 pr-3">
+                        <td className={`${TD} w-10`}>
                           <Checkbox
                             aria-label={t(
                               "recalls.selectPatientAria",
@@ -397,25 +401,31 @@ export default function VaccinationRecallsPage() {
                             }
                           />
                         </td>
-                        <td className="py-4 pr-4">
-                          <Link
-                            href={`/patients/${recipient.patientId}`}
-                            className="font-bold text-foreground hover:underline"
-                          >
-                            {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
-                          </Link>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {recipient.clientName}
-                          </p>
+                        <td className={`${TD} max-w-[220px]`}>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/patients/${recipient.patientId}`}
+                              className="block truncate text-sm font-medium text-foreground hover:underline"
+                              title={recipient.patientName}
+                            >
+                              {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
+                            </Link>
+                            <p
+                              className="mt-0.5 truncate text-xs text-muted-foreground"
+                              title={recipient.clientName}
+                            >
+                              {recipient.clientName}
+                            </p>
+                          </div>
                         </td>
-                        <td className="py-4 pr-4">
-                          <ul className="space-y-1">
+                        <td className={TD}>
+                          <ul className="space-y-0.5">
                             {recipient.vaccines.map((vaccine) => (
-                              <li key={vaccine.recordId}>
-                                <span className="font-medium">
+                              <li key={vaccine.recordId} className="flex min-w-0 items-baseline gap-1.5">
+                                <span className="truncate text-xs font-medium text-foreground">
                                   {vaccine.vaccineName}
-                                </span>{" "}
-                                <span className="text-xs text-muted-foreground">
+                                </span>
+                                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                                   {t("recalls.duePrefix", "due {date}", {
                                     date: clinicalDate(vaccine.nextDueDate),
                                   })}
@@ -424,14 +434,14 @@ export default function VaccinationRecallsPage() {
                             ))}
                           </ul>
                         </td>
-                        <td className="py-4 pr-4">
+                        <td className={TD}>
                           {recipient.channel === "sms" ? (
-                            <Badge variant="info" className="gap-1">
+                            <Badge variant="info" className={`${BADGE} gap-1`}>
                               <MessageSquare className="h-3 w-3" />{" "}
                               {t("recalls.channelSms", "SMS")}
                             </Badge>
                           ) : recipient.channel === "email" ? (
-                            <Badge variant="secondary" className="gap-1">
+                            <Badge variant="secondary" className={`${BADGE} gap-1`}>
                               <Mail className="h-3 w-3" />{" "}
                               {t("recalls.channelEmail", "Email")}
                             </Badge>
@@ -439,42 +449,43 @@ export default function VaccinationRecallsPage() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                           {eligible && recipient.blockMessage ? (
-                            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                            <p className="mt-1 max-w-xs text-xs leading-snug text-muted-foreground">
                               {getRecallBlockMessage(recipient, t)}
                             </p>
                           ) : null}
                         </td>
-                        <td className="py-4 pr-4">
+                        <td className={TD}>
                           {eligible ? (
-                            <Badge variant="success">
+                            <Badge variant="success" className={BADGE}>
                               {t("recalls.badgeReady", "Ready")}
                             </Badge>
                           ) : recipient.status === "already_sent" ? (
                             <div>
-                              <Badge variant="outline">
+                              <Badge variant="outline" className={BADGE}>
                                 {t("recalls.badgeAlreadyReminded", "Already reminded")}
                               </Badge>
                               {recipient.lastSentAt ? (
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {new Date(recipient.lastSentAt).toLocaleString()}
+                                <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                                  {formatDateTimeToDisplay(recipient.lastSentAt)}
                                 </p>
                               ) : null}
                             </div>
                           ) : (
                             <div className="max-w-xs">
-                              <Badge variant="warning">
+                              <Badge variant="warning" className={BADGE}>
                                 {t("recalls.badgeBlocked", "Blocked")}
                               </Badge>
-                              <p className="mt-1 text-xs text-muted-foreground">
+                              <p className="mt-1 text-xs leading-snug text-muted-foreground">
                                 {getRecallBlockMessage(recipient, t)}
                               </p>
                             </div>
                           )}
                         </td>
-                        <td className="py-4 text-right">
+                        <td className={`${TD} text-right`}>
                           <Button
                             variant="outline"
                             size="sm"
+                            className="text-xs"
                             disabled={!eligible || sendReminders.isPending}
                             onClick={() => sendPatients([recipient.patientId])}
                           >
