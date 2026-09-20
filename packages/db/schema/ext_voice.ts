@@ -1,6 +1,7 @@
 import {
   pgTable,
   pgEnum,
+  pgView,
   uuid,
   text,
   jsonb,
@@ -8,7 +9,7 @@ import {
   index,
   integer,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { baseColumns } from "./common";
 import { practices } from "./practices";
 import { patients } from "./patients";
@@ -87,6 +88,26 @@ export const voiceDictations = pgTable(
       table.deletedAt,
     ),
   }),
+);
+
+/**
+ * `voice_dictations.audio_duration_seconds` is an upstream `text` column (e.g.
+ * "45.3"). This extension view exposes it as `numeric` so dashboards can run
+ * AVG/SUM without repeating the cast at every call site. The upstream column
+ * is never mutated — the view lives only in the extension schema.
+ */
+export const voiceDictationDurationNumeric = pgView(
+  "voice_dictation_duration_view",
+).as((qb) =>
+  qb
+    .select({
+      id: voiceDictations.id,
+      durationSeconds:
+        sql<number>`(${voiceDictations.audioDurationSeconds}::numeric)`.as(
+          "duration_seconds",
+        ),
+    })
+    .from(voiceDictations),
 );
 
 export const voiceDictationsRelations = relations(
