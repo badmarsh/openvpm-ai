@@ -39,7 +39,7 @@ describe("client and patient form UI states", () => {
     expect(clientsPage).toContain(
       "const canManageClients = canManageClientsRole(session?.user?.role)"
     );
-    expect(clientsPage).toContain("{canManageClients && (");
+    expect(clientsPage).toContain("canManageClients ? (");
     expect(clientsPage).toContain("!hasSearch && canManageClients");
 
     expect(patientsPage).toContain('import { useSession } from "next-auth/react"');

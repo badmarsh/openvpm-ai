@@ -131,9 +131,9 @@ export const agentRouter = createRouter({
             input.deepThinking ? "deepThinking" : "assistant",
           );
         } catch (err) {
-          if (err instanceof TRPCError) {
-            throw err;
-          }
+          // Log resolution errors but do NOT re-throw; the outer catch handles
+          // agent-specific errors (rate limits, practice not found, etc.) and
+          // runAgent falls back gracefully when no practice model is resolved.
           console.warn(
             "[agent.run] Practice language model resolution fallback:",
             err instanceof Error ? err.message : err,

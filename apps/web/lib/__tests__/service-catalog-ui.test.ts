@@ -51,7 +51,7 @@ describe("service catalog settings UX", () => {
     expect(source).toContain("!services || !archivedServices");
     expect(source).toContain("Unable to load services");
     expect(source).toContain("No services configured");
-    expect(source).toContain("window.confirm(");
+    expect(source).toContain("useConfirmDialog");
     expect(source).toContain("Existing invoices stay unchanged");
     expect(source).toContain("trpc.billing.createService.useMutation");
     expect(source).toContain("trpc.billing.updateService.useMutation");

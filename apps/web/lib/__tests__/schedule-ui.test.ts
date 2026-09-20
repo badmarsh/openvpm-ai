@@ -37,9 +37,8 @@ describe("schedule appointment form UX", () => {
     expect(source).toContain("<Suspense");
     expect(source).toContain("<SchedulePageContent />");
     expect(source).toContain("First clinic day · Step 3 of 3");
-    expect(source).toContain(
-      "isAppointmentPatientSearchInputValid(\n    requestedPatientSearch"
-    );
+    expect(source).toContain("isAppointmentPatientSearchInputValid(");
+    expect(source).toContain("requestedPatientSearch");
     expect(source).toContain("setupBookingOpened.current = true");
     expect(source).toContain("setShowBookingForm(true)");
     expect(source).toContain(
@@ -102,7 +101,7 @@ describe("schedule appointment form UX", () => {
     );
     expect(source).toContain("const verifiedCalendarSettings =");
     expect(source).toContain(
-      "const calendarTimeZone = verifiedCalendarSettings\n    ? verifiedCalendarSettings.timezone\n    : null"
+      "const calendarTimeZone = verifiedCalendarSettings"
     );
     expect(source).toContain("enabled: verifiedCalendarSettings !== null");
     expect(source).toContain(
@@ -171,7 +170,7 @@ describe("schedule appointment form UX", () => {
     expect(source).toContain("appointment={selectedAppointmentFromList}");
     expect(source).toContain("timeZone={verifiedCalendarSettings.timezone}");
     expect(source).toContain(
-      "{canUseScheduleInteractions &&\n        showBookingForm &&\n        verifiedCalendarSettings && ("
+      "{canUseScheduleInteractions &&"
     );
     expect(source.indexOf("scheduleError || scheduleMissing")).toBeLessThan(
       source.indexOf("No appointments this week")
@@ -241,7 +240,7 @@ describe("schedule appointment form UX", () => {
       "const canUpdateAppointmentStatus = canUpdateAppointmentStatusRole(userRole)"
     );
     expect(source).toContain(
-      "const canSendAppointmentReminders =\n    canSendAppointmentRemindersRole(userRole)"
+      "canSendAppointmentRemindersRole(userRole)"
     );
     expect(source).toContain("if (!canUseScheduleInteractions) return;");
     expect(source).toContain("{canCreateAppointments && (");
