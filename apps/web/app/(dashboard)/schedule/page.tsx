@@ -1,5 +1,6 @@
 "use client";
 
+import { useDebounce } from "@/lib/hooks/use-debounce";
 import { Suspense, useState, useRef, useEffect, useId, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -22,6 +23,8 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -157,7 +160,7 @@ function formatTime(date: Date, timeZone?: string | null): string {
   return date.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
     timeZone: timeZone ?? undefined,
   });
 }
@@ -2041,14 +2044,7 @@ function generateTimeSlots(): { label: string; value: string }[] {
 
 const TIME_SLOTS = generateTimeSlots();
 
-function useDebounce(value: string, delay: number): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
+
 
 function BookingForm({
   onClose,
@@ -2724,6 +2720,7 @@ export default function SchedulePage() {
 
 function SchedulePageContent() {
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const userRole = session?.user?.role;
@@ -2939,15 +2936,17 @@ function SchedulePageContent() {
     rescheduleAppointment.mutate(input);
   };
 
-  const handleCancelRecurringSeries = (seriesId: string) => {
-    if (
-      !window.confirm(
-        t(
-          "schedule.confirmCancelSeries",
-          "Cancel future appointments in this recurring series? Past, completed, and in-progress appointments will stay unchanged."
-        )
-      )
-    ) {
+  const handleCancelRecurringSeries = async (seriesId: string) => {
+    const confirmed = await confirm({
+      title: t("schedule.cancelSeriesTitle", "Cancel recurring series"),
+      description: t(
+        "schedule.confirmCancelSeries",
+        "Cancel future appointments in this recurring series? Past, completed, and in-progress appointments will stay unchanged."
+      ),
+      confirmVariant: "destructive",
+      confirmLabel: t("schedule.cancelSeriesConfirm", "Cancel series"),
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -3334,7 +3333,9 @@ function SchedulePageContent() {
             defaultPatientSearch={setupPatientSearch || undefined}
             timeZone={verifiedCalendarSettings.timezone}
           />
-        )}
+        )
+      }
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

@@ -17,6 +17,8 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/common/empty-state";
 import { toast } from "sonner";
 
 export default function WellnessPage() {
@@ -70,21 +72,18 @@ export default function WellnessPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
             <Heart className="w-7 h-7 text-primary" />
             {t("marketing.wellness.title", "Wellness plány & programy")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "marketing.wellness.subtitle",
-              "Preventívne programy kliniky a evidencia čerpania benefitov počas návštevy pacienta. Rešpektuje Sympathy Flow (blokované pre zosnulých pacientov)."
-            )}
-          </p>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={t(
+          "marketing.wellness.subtitle",
+          "Preventívne programy kliniky a evidencia čerpania benefitov počas návštevy pacienta. Rešpektuje Sympathy Flow (blokované pre zosnulých pacientov)."
+        )}
+      />
 
       {/* Available Plans Summary */}
       <div className="space-y-3">
@@ -259,13 +258,14 @@ export default function WellnessPage() {
               </div>
             </div>
           ) : (
-            <div className="p-8 rounded-xl border border-dashed bg-muted/20 text-center space-y-2">
-              <Gift className="w-8 h-8 text-muted-foreground/50 mx-auto" />
-              <p className="text-xs font-medium text-foreground">Nevybrali ste žiadneho pacienta</p>
-              <p className="text-[11px] text-muted-foreground">
-                Kliknite na pacienta v zozname vľavo pre zobrazenie histórie a uplatnenie benefitu.
-              </p>
-            </div>
+            <EmptyState
+              icon={Gift}
+              title={t("wellness.noPatientSelected", "Nevybrali ste žiadneho pacienta")}
+              description={t(
+                "wellness.selectPatientDesc",
+                "Kliknite na pacienta v zozname vľavo pre zobrazenie histórie a uplatnenie benefitu."
+              )}
+            />
           )}
         </div>
       </div>

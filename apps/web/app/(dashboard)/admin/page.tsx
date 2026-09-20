@@ -15,9 +15,12 @@ import {
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { PageLoading } from "@/components/common/loading";
 import { SmsRecoveryConsole } from "@/components/admin/sms-recovery-console";
 import { ClinicPilotConsole } from "@/components/admin/clinic-pilot-console";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 const EMPTY_UUID = "00000000-0000-4000-8000-000000000000";
 const MESSAGING_HISTORY_LIMIT = 50;
@@ -86,6 +89,7 @@ function recoveryLabel(value: string) {
 
 export default function AdminPage() {
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const utils = trpc.useUtils();
   const [messagingHistorySelection, setMessagingHistorySelection] = useState<{
     practiceId: string;
@@ -290,12 +294,10 @@ export default function AdminPage() {
 
   return (
     <div>
-      <div>
-        <h2 className="font-heading text-xl font-semibold">{t("admin.header.title", "Platform Admin")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("admin.header.subtitle", "Cross-tenant operations overview")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("admin.header.title", "Platform Admin")}
+        subtitle={t("admin.header.subtitle", "Cross-tenant operations overview")}
+      />
 
       {/* KPIs */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -857,14 +859,18 @@ export default function AdminPage() {
                               type="button"
                               disabled={busy || anyMutationPending}
                               className="rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    registration.lastError
-                                      ? `Retry ${registration.practiceName}'s brand only after confirming in the Telnyx portal that no brand was created. This can incur another non-refundable charge. Continue?`
-                                      : `Submit ${registration.practiceName}'s legal brand to Telnyx? This incurs a non-refundable provider charge.`,
-                                  )
-                                ) {
+                              onClick={async () => {
+                                const confirmed = await confirm({
+                                  title: registration.lastError
+                                    ? "Retry messaging brand"
+                                    : "Submit messaging brand",
+                                  description: registration.lastError
+                                    ? `Retry ${registration.practiceName}'s brand only after confirming in the Telnyx portal that no brand was created. This can incur another non-refundable charge. Continue?`
+                                    : `Submit ${registration.practiceName}'s legal brand to Telnyx? This incurs a non-refundable provider charge.`,
+                                  confirmVariant: "destructive",
+                                  confirmLabel: registration.lastError ? "Retry brand" : "Submit brand",
+                                });
+                                if (confirmed) {
                                   submitMessagingBrand.mutate({
                                     practiceId: registration.practiceId,
                                     confirmProviderCharges: true,
@@ -886,14 +892,18 @@ export default function AdminPage() {
                               type="button"
                               disabled={busy || anyMutationPending}
                               className="rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    registration.lastError
-                                      ? `Retry ${registration.practiceName}'s campaign only after confirming in the Telnyx portal that no matching campaign exists. This can incur another non-refundable charge. Continue?`
-                                      : `Submit ${registration.practiceName}'s campaign to Telnyx? This incurs non-refundable provider charges.`,
-                                  )
-                                ) {
+                              onClick={async () => {
+                                const confirmed = await confirm({
+                                  title: registration.lastError
+                                    ? "Retry messaging campaign"
+                                    : "Submit messaging campaign",
+                                  description: registration.lastError
+                                    ? `Retry ${registration.practiceName}'s campaign only after confirming in the Telnyx portal that no matching campaign exists. This can incur another non-refundable charge. Continue?`
+                                    : `Submit ${registration.practiceName}'s campaign to Telnyx? This incurs non-refundable provider charges.`,
+                                  confirmVariant: "destructive",
+                                  confirmLabel: registration.lastError ? "Retry campaign" : "Submit campaign",
+                                });
+                                if (confirmed) {
                                   submitMessagingCampaign.mutate({
                                     practiceId: registration.practiceId,
                                     confirmProviderCharges: true,
@@ -914,12 +924,13 @@ export default function AdminPage() {
                               type="button"
                               disabled={busy || anyMutationPending}
                               className="rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Assign ${registration.practiceName}'s texting numbers to its approved campaign? Sending will remain disabled.`,
-                                  )
-                                ) {
+                              onClick={async () => {
+                                const confirmed = await confirm({
+                                  title: "Assign texting numbers",
+                                  description: `Assign ${registration.practiceName}'s texting numbers to its approved campaign? Sending will remain disabled.`,
+                                  confirmLabel: "Assign numbers",
+                                });
+                                if (confirmed) {
                                   assignMessagingNumbers.mutate({
                                     practiceId: registration.practiceId,
                                     confirmProviderMutation: true,
@@ -956,12 +967,13 @@ export default function AdminPage() {
                                     type="button"
                                     disabled={anyMutationPending}
                                     className="rounded border border-green-300 bg-green-50 px-2 py-1 text-xs font-medium text-green-900 hover:bg-green-100 disabled:opacity-50"
-                                    onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `Install ${registration.practiceName}'s exact clinic-branded START, STOP, and HELP rules, then enable its Telnyx profile only after OpenVPM verifies the webhook, US-only destination list, $10 daily cap, active campaign, and assigned number? Clinic sending will remain off.`,
-                                        )
-                                      ) {
+                                    onClick={async () => {
+                                      const confirmed = await confirm({
+                                        title: "Enable provider profile",
+                                        description: `Install ${registration.practiceName}'s exact clinic-branded START, STOP, and HELP rules, then enable its Telnyx profile only after OpenVPM verifies the webhook, US-only destination list, $10 daily cap, active campaign, and assigned number? Clinic sending will remain off.`,
+                                        confirmLabel: "Enable profile",
+                                      });
+                                      if (confirmed) {
                                         setMessagingProfileEnabled.mutate({
                                           practiceId: registration.practiceId,
                                           locationId: sender.locationId,
@@ -978,12 +990,14 @@ export default function AdminPage() {
                                   type="button"
                                   disabled={anyMutationPending}
                                   className="rounded border border-destructive/40 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50"
-                                  onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        `Disable ${registration.practiceName}'s Telnyx profile and keep clinic sending off?`,
-                                      )
-                                    ) {
+                                  onClick={async () => {
+                                    const confirmed = await confirm({
+                                      title: "Disable provider profile",
+                                      description: `Disable ${registration.practiceName}'s Telnyx profile and keep clinic sending off?`,
+                                      confirmVariant: "destructive",
+                                      confirmLabel: "Disable profile",
+                                    });
+                                    if (confirmed) {
                                       setMessagingProfileEnabled.mutate({
                                         practiceId: registration.practiceId,
                                         locationId: sender.locationId,
@@ -1047,16 +1061,18 @@ export default function AdminPage() {
                                     : "Available after the 15-minute safety window"
                                 }
                                 className="rounded border border-destructive/40 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50"
-                                onClick={() => {
+                                onClick={async () => {
                                   const providerObject =
                                     registration.providerBrandId
                                       ? "campaign"
                                       : "brand";
-                                  if (
-                                    window.confirm(
-                                      `I reviewed the Telnyx portal and confirmed NO matching ${providerObject} exists. Clear the stale lock and keep all sending disabled?`,
-                                    )
-                                  ) {
+                                  const confirmed = await confirm({
+                                    title: "Clear stale submission lock",
+                                    description: `I reviewed the Telnyx portal and confirmed NO matching ${providerObject} exists. Clear the stale lock and keep all sending disabled?`,
+                                    confirmVariant: "destructive",
+                                    confirmLabel: "Clear stale lock",
+                                  });
+                                  if (confirmed) {
                                     clearStaleMessagingSubmissionLock.mutate({
                                       practiceId: registration.practiceId,
                                       providerObject,
@@ -1743,6 +1759,7 @@ export default function AdminPage() {
           </tbody>
         </table>
       </div>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

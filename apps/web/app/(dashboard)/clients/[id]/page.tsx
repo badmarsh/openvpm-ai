@@ -39,6 +39,8 @@ import {
 } from "@/lib/records/clinical-dates";
 import { communicationStatusLabel } from "@/lib/communications/status";
 import { useI18n } from "@/lib/i18n";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
 
@@ -587,6 +589,7 @@ function WellnessEnrollmentPanel({
   canManageWellnessMemberships: boolean;
 }) {
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const { data: plans, isLoading, error } = trpc.wellness.listPlans.useQuery();
@@ -658,16 +661,17 @@ function WellnessEnrollmentPanel({
     },
   });
 
-  const handleCancelEnrollment = (enrollmentId: string) => {
-    if (
-      !window.confirm(
-        t(
-          "clients.detail.confirmCancelWellness",
-          "Cancel this wellness enrollment?",
-        ),
-      )
-    )
-      return;
+  const handleCancelEnrollment = async (enrollmentId: string) => {
+    const confirmed = await confirm({
+      title: t("clients.detail.confirmCancelWellnessTitle", "Cancel wellness enrollment"),
+      description: t(
+        "clients.detail.confirmCancelWellness",
+        "Cancel this wellness enrollment?",
+      ),
+      confirmVariant: "destructive",
+      confirmLabel: t("clients.detail.cancelEnrollmentTitle", "Cancel enrollment"),
+    });
+    if (!confirmed) return;
     cancelEnrollment.mutate({ enrollmentId });
   };
   const canCreateEnrollment =
@@ -887,6 +891,7 @@ function WellnessEnrollmentPanel({
           </table>
         </div>
       ) : null}
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

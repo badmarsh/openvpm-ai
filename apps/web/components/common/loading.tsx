@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
@@ -31,30 +32,37 @@ export function TableSkeleton({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border animate-pulse", className)}>
-      <div className="border-b border-border bg-muted/50 px-4 py-3">
-        <div className="flex gap-8">
+    <div
+      className={cn(
+        "w-full overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs",
+        className
+      )}
+    >
+      <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
+        <div className="flex items-center gap-4">
           {Array.from({ length: cols }).map((_, i) => (
-            <div key={i} className="h-4 w-24 rounded bg-muted" />
-          ))}
-        </div>
-      </div>
-      {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          className="flex gap-8 border-b border-border last:border-0 px-4 py-3"
-        >
-          {Array.from({ length: cols }).map((_, j) => (
-            <div
-              key={j}
-              className={cn(
-                "h-4 rounded bg-muted",
-                TABLE_SKELETON_WIDTHS[(i + j) % TABLE_SKELETON_WIDTHS.length]
-              )}
+            <Skeleton
+              key={`th-${i}`}
+              className={cn("h-3.5", i === 0 ? "w-24" : i === 1 ? "w-20" : "w-16")}
             />
           ))}
         </div>
-      ))}
+      </div>
+      <div className="divide-y divide-border/40">
+        {Array.from({ length: rows }).map((_, r) => (
+          <div key={`tr-${r}`} className="flex items-center gap-4 px-4 py-3.5">
+            {Array.from({ length: cols }).map((_, c) => (
+              <Skeleton
+                key={`td-${r}-${c}`}
+                className={cn(
+                  "h-4",
+                  c === 0 ? "w-28" : c === 1 ? "w-24" : c === cols - 1 ? "w-20" : "w-16"
+                )}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

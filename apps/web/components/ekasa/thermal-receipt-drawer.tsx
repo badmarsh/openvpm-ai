@@ -453,3 +453,4 @@ export function ThermalReceiptDrawer({
     </div>
   );
 }
+

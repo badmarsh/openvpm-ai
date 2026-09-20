@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   Settings2,
   CheckCircle2,
@@ -107,18 +108,17 @@ export default function EkasaSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-          <Settings2 className="h-5 w-5 text-blue-600" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">e-Kasa Nastavenia</h1>
-          <p className="text-sm text-muted-foreground">
-            Konfigurácia elektronickej registračnej pokladnice (Zákon č. 289/2008 Z. z.)
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/40 shrink-0">
+              <Settings2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </span>
+            <span>e-Kasa Nastavenia</span>
+          </span>
+        }
+        subtitle="Konfigurácia elektronickej registračnej pokladnice (Zákon č. 289/2008 Z. z.)"
+      />
 
       {/* Compliance Checklist */}
       <div className={`rounded-xl border p-5 shadow-sm ${requiredPassed ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50"}`}>

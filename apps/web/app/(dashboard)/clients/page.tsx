@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { TableSkeleton } from "@/components/common/loading";
+import { PageHeader } from "@/components/layout/page-header";
 import { CLIENT_SEARCH_MAX_LENGTH } from "@/lib/clients/policy";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
 import { useI18n } from "@/lib/i18n";
@@ -44,25 +45,21 @@ export default function ClientsPage() {
 
   return (
     <div>
-      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("clients.title", "Clients")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("clients.subtitle", "Manage client information")}
-          </p>
-        </div>
-        {canManageClients && (
-          <Button
-            onClick={() => router.push("/clients/new")}
-            className="h-11 w-full sm:h-10 sm:w-auto"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {t("clients.new_client", "New Client")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("clients.title", "Clients")}
+        subtitle={t("clients.subtitle", "Manage client information")}
+        actions={
+          canManageClients ? (
+            <Button
+              onClick={() => router.push("/clients/new")}
+              className="h-11 w-full sm:h-10 sm:w-auto"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t("clients.new_client", "New Client")}
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">

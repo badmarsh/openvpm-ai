@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Rozpracované", className: "bg-muted text-muted-foreground border-border" },
@@ -213,22 +214,15 @@ export default function KvepisPage() {
         <Landmark className="h-6 w-6 text-muted-foreground" />
       </div>
 
-      <div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold tracking-tight">KVEPIS Submission Hub</h1>
-          <IntegrationModeBanner module="kvepis" size="sm" />
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Riadená príprava zákonných hlásení pre ŠVPS SR cez ÚPVS. Validácia schém,
-          generovanie podpisového XML/JSON balíčka a párovanie doručenky so záznamom
-          pacienta.
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Právny rámec: Zákon č. 39/2007 Z. z. (veterinárna starostlivosť) · Zákon
-          č. 139/1998 Z. z. (omamné látky) · portál{" "}
-          <span className="font-mono">svps.sk/kvepis</span>
-        </p>
-      </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3 flex-wrap">
+            <span>KVEPIS Submission Hub</span>
+            <IntegrationModeBanner module="kvepis" size="sm" />
+          </span>
+        }
+        subtitle="Riadená príprava zákonných hlásení pre ŠVPS SR cez ÚPVS. Validácia schém, generovanie podpisového XML/JSON balíčka a párovanie doručenky so záznamom pacienta."
+      />
 
       {/* ── Prístup kliniky ─────────────────────────────────────────── */}
       <Card>

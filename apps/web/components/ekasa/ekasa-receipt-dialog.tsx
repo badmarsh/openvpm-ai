@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { formatCurrency } from "@/lib/locale/format";
 
 export interface EkasaReceiptModalData {
   receiptId?: string;
@@ -151,7 +152,7 @@ export function EkasaReceiptDialog({
           <div className="flex items-center justify-between border-b border-border/60 pb-2">
             <span className="text-muted-foreground">{t("ekasa.totalAmount", "Total amount:")}</span>
             <span className="text-base font-bold text-foreground">
-              {Number(receipt.amountTotal).toFixed(2)} €
+              {formatCurrency(receipt.amountTotal)}
             </span>
           </div>
 

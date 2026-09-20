@@ -27,10 +27,12 @@ import {
   type ReportDatePreset,
 } from "@/lib/reports/date-range";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateYmdToDisplay } from "@/lib/date-display";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { useI18n } from "@/lib/i18n";
 
@@ -950,14 +952,10 @@ function ReportsDashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">{t("reports.header.title", "Reports")}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t("reports.header.subtitle", "Practice analytics and insights")}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={t("reports.header.title", "Reports")}
+        subtitle={t("reports.header.subtitle", "Practice analytics and insights")}
+      />
 
       {canRenderDateRangeControls ? (
         <DateRangeControls
@@ -969,36 +967,35 @@ function ReportsDashboard() {
       ) : null}
 
       {/* Tabs */}
-      <div className="mt-6 flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <Button
-              key={tab.key}
-              variant={activeTab === tab.key ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "flex-1 gap-2",
-                activeTab === tab.key
-                  ? ""
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                {tab.key === "revenue"
-                  ? t("reports.tabs.revenue", "Revenue")
-                  : tab.key === "appointments"
-                    ? t("reports.tabs.appointments", "Appointments")
-                    : tab.key === "services"
-                      ? t("reports.tabs.services", "Services")
-                      : t("reports.tabs.inventory", "Inventory")}
-              </span>
-            </Button>
-          );
-        })}
-      </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as Tab)}
+        className="mt-6"
+      >
+        <TabsList className="w-full flex">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className="flex-1 gap-2"
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {tab.key === "revenue"
+                    ? t("reports.tabs.revenue", "Revenue")
+                    : tab.key === "appointments"
+                      ? t("reports.tabs.appointments", "Appointments")
+                      : tab.key === "services"
+                        ? t("reports.tabs.services", "Services")
+                        : t("reports.tabs.inventory", "Inventory")}
+                </span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
 
       {/* Tab content */}
       <div className="mt-6">

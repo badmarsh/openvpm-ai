@@ -35,6 +35,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { useI18n } from "@/lib/i18n";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 // ---------------------------------------------------------------------------
 // Audio chime — plays a short notification tone when a patient checks in
@@ -153,6 +155,7 @@ interface WaitingRoomTvProps {
 // ---------------------------------------------------------------------------
 export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
   const { t, locale } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -298,18 +301,19 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
     });
   };
 
-  const handleDeleteSlide = (slide: any) => {
-    if (
-      window.confirm(
-        t(
-          "marketing.tv.deleteConfirm",
-          `Naozaj chcete vymazať slajd "${slide.title}"?`,
-          { title: slide.title }
-        )
-      )
-    ) {
-      deleteSlideMutation.mutate({ id: slide.id });
-    }
+  const handleDeleteSlide = async (slide: any) => {
+    const confirmed = await confirm({
+      title: t("marketing.tv.deleteSlideTitle", "Vymazať slajd"),
+      description: t(
+        "marketing.tv.deleteConfirm",
+        `Naozaj chcete vymazať slajd "${slide.title}"?`,
+        { title: slide.title }
+      ),
+      confirmVariant: "destructive",
+      confirmLabel: t("common.delete", "Vymazať"),
+    });
+    if (!confirmed) return;
+    deleteSlideMutation.mutate({ id: slide.id });
   };
 
   const waitlistEntries = waitlistData ?? [];
@@ -1172,6 +1176,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
           </div>
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

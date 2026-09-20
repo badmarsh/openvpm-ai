@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -255,37 +256,33 @@ export default function CareRemindersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("careReminders.title", "Care reminders")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            {t(
-              "careReminders.subtitle",
-              "Internal follow-up work for each patient. This queue never sends an email or text automatically; client outreach remains a separate, deliberate action with its own consent checks.",
-            )}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/recalls">
-              {t("careReminders.navVaccinationRecalls", "Vaccination recalls")}
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/schedule">
-              {t("careReminders.navAppointmentReminders", "Appointment reminders")}
-            </Link>
-          </Button>
-          {manageable ? (
-            <Button className="gap-2" onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4" />{" "}
-              {t("careReminders.addReminder", "Add reminder")}
+      <PageHeader
+        title={t("careReminders.title", "Care reminders")}
+        subtitle={t(
+          "careReminders.subtitle",
+          "Internal follow-up work for each patient. This queue never sends an email or text automatically; client outreach remains a separate, deliberate action with its own consent checks.",
+        )}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/recalls">
+                {t("careReminders.navVaccinationRecalls", "Vaccination recalls")}
+              </Link>
             </Button>
-          ) : null}
-        </div>
-      </div>
+            <Button variant="outline" asChild>
+              <Link href="/schedule">
+                {t("careReminders.navAppointmentReminders", "Appointment reminders")}
+              </Link>
+            </Button>
+            {manageable ? (
+              <Button className="gap-2" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4" />{" "}
+                {t("careReminders.addReminder", "Add reminder")}
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
 
       {showCreate ? (
         <Card>

@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { TableSkeleton } from "@/components/common/loading";
 import { useI18n } from "@/lib/i18n";
 
@@ -337,31 +338,29 @@ export default function PatientDuplicatesPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Button
-            variant="ghost"
-            className="-ml-3 mb-2"
-            onClick={() => router.push("/patients")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t("patients.actions.backToPatients", "Back to patients")}
-          </Button>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("patients.duplicates.title", "Review duplicate patient identities")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            {t(
-              "patients.duplicates.subtitle",
-              "OpenVPM only suggests same-owner matches. A merge is permitted when the retiring chart has no clinical, medication, controlled, financial, or other retained history.",
-            )}
-          </p>
-        </div>
-        <Badge variant="outline" className="gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          {t("roles.admin", "Admin-only")}
-        </Badge>
+      <div className="mb-2">
+        <Button
+          variant="ghost"
+          className="-ml-3 mb-2"
+          onClick={() => router.push("/patients")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {t("patients.actions.backToPatients", "Back to patients")}
+        </Button>
       </div>
+      <PageHeader
+        title={t("patients.duplicates.title", "Review duplicate patient identities")}
+        subtitle={t(
+          "patients.duplicates.subtitle",
+          "OpenVPM only suggests same-owner matches. A merge is permitted when the retiring chart has no clinical, medication, controlled, financial, or other retained history.",
+        )}
+        actions={
+          <Badge variant="outline" className="gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            {t("roles.admin", "Admin-only")}
+          </Badge>
+        }
+      />
 
       <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
         <div className="flex items-start gap-3">

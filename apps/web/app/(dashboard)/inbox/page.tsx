@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
 import {
   CLIENT_SEARCH_MAX_LENGTH,
@@ -606,24 +607,19 @@ function InboxContent() {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("inbox.title", "Inbox")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("inbox.subtitle", "Client communications")}
-          </p>
-        </div>
-        {canMutateInbox ? (
-          activeTab === "inbox" ? (
+      <PageHeader
+        title={t("inbox.title", "Inbox")}
+        subtitle={t("inbox.subtitle", "Client communications")}
+        actions={
+          canMutateInbox && activeTab === "inbox" ? (
             <Button onClick={handleNewMessage} className="gap-2 shrink-0">
               <Plus className="h-4 w-4" />
               {t("inbox.newMessage", "New Message")}
             </Button>
           ) : null
-        ) : null}
-      </div>
+        }
+        className="mb-2"
+      />
 
       {/* Tabs directly below title, aligned left */}
       <div className="mb-4">

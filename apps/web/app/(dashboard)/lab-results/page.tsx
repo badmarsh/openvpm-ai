@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/common/empty-state";
 
 type InboxFilter =
   | "action_required"
@@ -440,10 +441,10 @@ function LabResultsInboxContent() {
       ) : inbox.isLoading ? (
         <LabResultsLoading />
       ) : rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
-          <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" aria-hidden="true" />
-          <h2 className="mt-3 font-medium">
-            {isFrontDesk
+        <EmptyState
+          icon={CheckCircle2}
+          title={
+            isFrontDesk
               ? t(
                   "labResults.emptyFrontDeskTitle",
                   "No assigned lab follow-up",
@@ -451,10 +452,10 @@ function LabResultsInboxContent() {
               : t(
                   "labResults.emptyClinicalTitle",
                   "No lab results in this view",
-                )}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isFrontDesk
+                )
+          }
+          description={
+            isFrontDesk
               ? t(
                   "labResults.emptyFrontDeskDesc",
                   "Your assigned queue is clear.",
@@ -462,9 +463,9 @@ function LabResultsInboxContent() {
               : t(
                   "labResults.emptyClinicalDesc",
                   "The selected queue is clear.",
-                )}
-          </p>
-        </div>
+                )
+          }
+        />
       ) : (
         <div className="space-y-4" aria-live="polite">
           {inbox.data?.truncated ? (

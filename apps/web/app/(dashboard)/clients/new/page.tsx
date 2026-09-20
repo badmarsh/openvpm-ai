@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import {
   CLIENT_ADDRESS_MAX_LENGTH,
@@ -230,20 +231,20 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
         {t("clients.actions.backToClients", "Back to Clients")}
       </Button>
 
-      <h2 className="font-heading text-xl font-semibold">
-        {t("clients.form.titleNew", "New Client")}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {firstClinicDay
-          ? t(
-              "clients.form.stepOneSubtitle",
-              "First clinic day, step 1 of 3: add one real owner. Their pet is next.",
-            )
-          : t(
-              "clients.form.addNewSubtitle",
-              "Add a new client to your practice",
-            )}
-      </p>
+      <PageHeader
+        title={t("clients.form.titleNew", "New Client")}
+        subtitle={
+          firstClinicDay
+            ? t(
+                "clients.form.stepOneSubtitle",
+                "First clinic day, step 1 of 3: add one real owner. Their pet is next.",
+              )
+            : t(
+                "clients.form.addNewSubtitle",
+                "Add a new client to your practice",
+              )
+        }
+      />
 
       {error && (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">

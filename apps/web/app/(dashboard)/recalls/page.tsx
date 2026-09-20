@@ -23,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import type { VaccinationRecallRecipient } from "@/lib/vaccination-recalls";
 
 const MAX_BATCH_SIZE = 100;
@@ -102,6 +105,7 @@ function clinicalDate(value: string): string {
 
 export default function VaccinationRecallsPage() {
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const { data: session, status: sessionStatus } = useSession();
   const canOperate = canOperateRecalls(session?.user?.role);
   const utils = trpc.useUtils();
@@ -158,7 +162,7 @@ export default function VaccinationRecallsPage() {
     onError: (error) => toast.error(error.message),
   });
 
-  const sendPatients = (patientIds: string[]) => {
+  const sendPatients = async (patientIds: string[]) => {
     if (patientIds.length === 0 || sendReminders.isPending) return;
     const count = patientIds.length;
     const confirmMessage =
@@ -172,7 +176,13 @@ export default function VaccinationRecallsPage() {
             "Send vaccination reminders to {count} patients now? Delivery will use each client's eligible channel and will be logged in Communications.",
             { count }
           );
-    if (!window.confirm(confirmMessage)) {
+    // Accessible modal replacement for legacy window.confirm(...)
+    const confirmed = await confirm({
+      title: t("recalls.confirmSendTitle", "Send Reminders"),
+      description: confirmMessage,
+      confirmLabel: t("recalls.sendNow", "Send Now"),
+    });
+    if (!confirmed) {
       return;
     }
     sendReminders.mutate({ patientIds });
@@ -229,31 +239,27 @@ export default function VaccinationRecallsPage() {
   const data = preview.data;
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("recalls.title", "Vaccination recalls")}
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            {t(
-              "recalls.subtitle",
-              "Review overdue patients before anything sends. Sample records, reserved contacts, opt-outs, suppressions, and repeat sends are blocked automatically."
-            )}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => preview.refetch()}
-          disabled={preview.isFetching || sendReminders.isPending}
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${preview.isFetching ? "animate-spin" : ""}`}
-          />
-          {t("recalls.refreshPreview", "Refresh preview")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("recalls.title", "Vaccination recalls")}
+        subtitle={t(
+          "recalls.subtitle",
+          "Review overdue patients before anything sends. Sample records, reserved contacts, opt-outs, suppressions, and repeat sends are blocked automatically."
+        )}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => preview.refetch()}
+            disabled={preview.isFetching || sendReminders.isPending}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${preview.isFetching ? "animate-spin" : ""}`}
+            />
+            {t("recalls.refreshPreview", "Refresh preview")}
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <RecallMetric
@@ -483,6 +489,7 @@ export default function VaccinationRecallsPage() {
           )}
         </CardContent>
       </Card>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

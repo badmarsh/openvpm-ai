@@ -28,6 +28,7 @@ import { useBarcodeScanner } from "@/lib/billing/use-barcode-scanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import {
   EkasaReceiptDialog,
@@ -284,57 +285,55 @@ export default function PosCheckoutPage() {
 
   return (
     <div className="space-y-4">
-      {/* Top Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
-        <div className="flex items-center gap-3">
-          <Link href="/billing">
-            <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Späť na fakturáciu</span>
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-              <span>Pultový predaj (Rýchla pokladňa)</span>
-              <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
-                e-Kasa Zero-Touch
-              </Badge>
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Okamžitý predaj antiparazitík, krmív a liečiv s automatickým bločkom a odpisom zo skladu
-            </p>
-          </div>
-        </div>
-
-        {/* Paper width selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Tlačiareň:</span>
-          <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setPaperWidth("80mm")}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                paperWidth === "80mm"
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              80 mm
-            </button>
-            <button
-              type="button"
-              onClick={() => setPaperWidth("58mm")}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                paperWidth === "58mm"
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              58 mm
-            </button>
-          </div>
-        </div>
+      <div className="mb-1">
+        <Link href="/billing">
+          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground -ml-2 mb-1">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Späť na fakturáciu</span>
+          </Button>
+        </Link>
       </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <span>Pultový predaj (Rýchla pokladňa)</span>
+            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
+              e-Kasa Zero-Touch
+            </Badge>
+          </span>
+        }
+        subtitle="Okamžitý predaj antiparazitík, krmív a liečiv s automatickým bločkom a odpisom zo skladu"
+        actions={
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Tlačiareň:</span>
+            <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setPaperWidth("80mm")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  paperWidth === "80mm"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                80 mm
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaperWidth("58mm")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  paperWidth === "58mm"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                58 mm
+              </button>
+            </div>
+          </div>
+        }
+        className="border-b border-border pb-4"
+      />
 
       {/* Main Grid: Catalog on left, Cart & Payment on right */}
       <div className="grid gap-6 lg:grid-cols-12">

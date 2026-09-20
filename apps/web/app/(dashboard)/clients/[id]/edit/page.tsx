@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import {
   CLIENT_ADDRESS_MAX_LENGTH,
@@ -28,6 +29,8 @@ import {
   SMS_CONSENT_DISCLOSURE,
 } from "@/lib/messaging/consent";
 import { useI18n } from "@/lib/i18n";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 function EditClientLoadingPanel() {
   const { t } = useI18n();
@@ -101,6 +104,7 @@ function EditClientForm() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -300,12 +304,10 @@ function EditClientForm() {
         {t("clients.actions.backToClient", "Back to Client")}
       </Button>
 
-      <h2 className="font-heading text-xl font-semibold">
-        {t("clients.form.titleEdit", "Edit Client")}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("clients.form.subtitleEdit", "Update client information")}
-      </p>
+      <PageHeader
+        title={t("clients.form.titleEdit", "Edit Client")}
+        subtitle={t("clients.form.subtitleEdit", "Update client information")}
+      />
 
       {error && (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -493,13 +495,15 @@ function EditClientForm() {
             size="sm"
             className="mt-3"
             disabled={!persistedSmsPhone || phoneChanged || revokeSms.isPending}
-            onClick={() => {
+            onClick={async () => {
               setError(null);
-              if (
-                window.confirm(
-                  "Stop all SMS to this phone number across the practice?",
-                )
-              ) {
+              const confirmed = await confirm({
+                title: t("clients.form.doNotTextButton", "Do not text this number"),
+                description: "Stop all SMS to this phone number across the practice?",
+                confirmVariant: "destructive",
+                confirmLabel: t("clients.form.doNotTextButton", "Do not text this number"),
+              });
+              if (confirmed) {
                 revokeSms.mutate({
                   id: params.id,
                   expectedPhone: persistedSmsPhone!,
@@ -635,6 +639,7 @@ function EditClientForm() {
           </Button>
         </div>
       </form>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

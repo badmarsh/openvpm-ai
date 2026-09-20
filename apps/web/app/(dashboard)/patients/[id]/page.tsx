@@ -1389,7 +1389,11 @@ export default function PatientDetailPage() {
                 <dd className="mt-1">
                   {activePrescriptions.length
                     ? activePrescriptions
-                        .map((prescription) => prescription.medicationName)
+                        .map((prescription) =>
+                          prescription.dosage
+                            ? `${prescription.medicationName} (${prescription.dosage}${prescription.frequency ? ` · ${prescription.frequency}` : ""})`
+                            : prescription.medicationName,
+                        )
                         .join(", ")
                     : t("patients.profile.noneRecorded", "None recorded")}
                 </dd>

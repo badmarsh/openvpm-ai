@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateToDisplay } from "@/lib/date-display";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -32,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 
 const MAX_BATCH_SIZE = 100;
 
@@ -39,16 +41,7 @@ function canOperateRecalls(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "front_desk";
 }
 
-function formatDate(val: string | Date | null | undefined): string {
-  if (!val) return "—";
-  const d = val instanceof Date ? val : new Date(val);
-  if (Number.isNaN(d.getTime())) return String(val);
-  return d.toLocaleDateString("sk-SK", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
+
 
 export default function VaccinationsPage() {
   const { t } = useI18n();
@@ -158,35 +151,34 @@ export default function VaccinationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
             <Syringe className="w-7 h-7 text-primary" />
             {t("nav.vaccinations", "Očkovania & Imunizácia")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "vaccinations.subtitle",
-              "Kompletný register očkovaní, automatický výpočet revakcinácií, zákaznícke SMS pripomienky a zákonná evidencia besnoty (Zákon č. 39/2007 Z. z.).",
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="gap-2">
-            <Link href="/statutory?tab=rabies">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <span>{t("vaccinations.statutoryRabies", "Kniha besnoty (ŠVPS)")}</span>
-            </Link>
-          </Button>
-          <Button asChild size="sm" className="gap-2">
-            <Link href="/records?tab=vaccinations&new=1">
-              <Plus className="h-4 w-4" />
-              <span>{t("vaccinations.recordNew", "Nové očkovanie")}</span>
-            </Link>
-          </Button>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={t(
+          "vaccinations.subtitle",
+          "Kompletný register očkovaní, automatický výpočet revakcinácií, zákaznícke SMS pripomienky a zákonná evidencia besnoty (Zákon č. 39/2007 Z. z.).",
+        )}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link href="/statutory?tab=rabies">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                <span>{t("vaccinations.statutoryRabies", "Kniha besnoty (ŠVPS)")}</span>
+              </Link>
+            </Button>
+            <Button asChild size="sm" className="gap-2">
+              <Link href="/records?tab=vaccinations&new=1">
+                <Plus className="h-4 w-4" />
+                <span>{t("vaccinations.recordNew", "Nové očkovanie")}</span>
+              </Link>
+            </Button>
+          </div>
+        }
+      />
 
       {/* Tabs */}
       <Tabs
@@ -336,7 +328,7 @@ export default function VaccinationsPage() {
                                   {firstVaccine?.vaccineName ?? "Vakcína"}
                                 </span>
                                 <span className="block text-[10px] text-muted-foreground">
-                                  Expirácia: {firstVaccine?.nextDueDate ? formatDate(firstVaccine.nextDueDate) : "—"}
+                                  Expirácia: {formatDateToDisplay(firstVaccine?.nextDueDate)}
                                 </span>
                               </td>
                               <td className="p-2.5">
@@ -445,7 +437,7 @@ export default function VaccinationsPage() {
                       {rabiesQuery.data.items.map((r) => (
                         <tr key={r.id} className="hover:bg-accent/40 transition-colors">
                           <td className="p-2.5 whitespace-nowrap text-muted-foreground">
-                            {formatDate(r.administeredAt)}
+                            {formatDateToDisplay(r.administeredAt)}
                           </td>
                           <td className="p-2.5 font-medium text-foreground">
                             <Link href={`/patients/${r.patientId}`} className="hover:underline">
@@ -467,7 +459,7 @@ export default function VaccinationsPage() {
                             )}
                           </td>
                           <td className="p-2.5 whitespace-nowrap text-foreground font-medium">
-                            {formatDate(r.nextDueDate)}
+                            {formatDateToDisplay(r.nextDueDate)}
                           </td>
                           <td className="p-2.5 text-muted-foreground">
                             {`${r.clientFirstName || ""} ${r.clientLastName}`.trim()}

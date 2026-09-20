@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/common/empty-state";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
@@ -705,29 +706,20 @@ export default function ReviewsPage() {
           <div className="h-44 w-full animate-pulse rounded-xl bg-muted/60" />
         </div>
       ) : reviews.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center text-muted-foreground space-y-3 bg-card/50">
-          <Star className="w-10 h-10 text-muted-foreground/40 mx-auto" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
-              {t("marketing.reviews.noReviews", "Žiadne recenzie.")}
-            </p>
-            <p className="text-xs">
-              {platformFilter !== "all"
-                ? `V kategórii ${platformFilter === "google" ? "Google" : "Facebook"} zatiaľ nemáte žiadne recenzie.`
-                : "Kliknite na tlačidlo 'Vzorové recenzie' vyššie pre okamžité nahratie reálnych recenzií."}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => seedMutation.mutate({ force: true })}
-            disabled={seedMutation.isPending}
-            className="text-xs gap-1.5 mt-2"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Načítať vzorové recenzie (Google & Facebook)
-          </Button>
-        </div>
+        <EmptyState
+          icon={Star}
+          title={t("marketing.reviews.noReviews", "Žiadne recenzie.")}
+          description={
+            platformFilter !== "all"
+              ? `V kategórii ${platformFilter === "google" ? "Google" : "Facebook"} zatiaľ nemáte žiadne recenzie.`
+              : "Kliknite na tlačidlo 'Vzorové recenzie' vyššie pre okamžité nahratie reálnych recenzií."
+          }
+          action={{
+            label: "Načítať vzorové recenzie (Google & Facebook)",
+            onClick: () => seedMutation.mutate({ force: true }),
+            icon: RefreshCw,
+          }}
+        />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {reviews.map((review) => {

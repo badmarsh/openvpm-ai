@@ -32,6 +32,7 @@ import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
 import { EkasaReceiptsSkeleton } from "@/components/ui/content-skeletons";
 import { ThermalReceiptDrawer } from "@/components/ekasa/thermal-receipt-drawer";
 import { IntegrationModeBanner } from "@/components/common/integration-mode-banner";
+import { PageHeader } from "@/components/layout/page-header";
 
 type ReceiptStatus = "PENDING" | "SENT" | "CONFIRMED" | "FAILED" | "OFFLINE_STORED";
 type ActiveTab = "receipts" | "closures" | "accountant";
@@ -225,60 +226,57 @@ function EkasaReceiptsContent() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
-            <ReceiptEuro className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">e-Kasa Pokladňa</h1>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+              <ReceiptEuro className="h-5 w-5" />
+            </span>
+            <span className="flex items-center gap-2.5 flex-wrap">
+              <span>e-Kasa Pokladňa</span>
               <IntegrationModeBanner module="ekasa" size="sm" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Elektronická evidencia tržieb Finančnej správy SR (Zákon č. 289/2008 Z. z.)
-            </p>
+            </span>
+          </span>
+        }
+        subtitle="Elektronická evidencia tržieb Finančnej správy SR (Zákon č. 289/2008 Z. z.)"
+        actions={
+          <div className="flex rounded-lg border border-border bg-muted/30 p-1">
+            <button
+              onClick={() => setActiveTab("receipts")}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                activeTab === "receipts"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <ReceiptEuro className="h-3.5 w-3.5" />
+              Doklady
+            </button>
+            <button
+              onClick={() => setActiveTab("closures")}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                activeTab === "closures"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Lock className="h-3.5 w-3.5" />
+              Uzávierky
+            </button>
+            <button
+              onClick={() => setActiveTab("accountant")}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                activeTab === "accountant"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Pre účtovníka
+            </button>
           </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex rounded-lg border border-border bg-muted/30 p-1">
-          <button
-            onClick={() => setActiveTab("receipts")}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              activeTab === "receipts"
-                ? "bg-background text-foreground shadow-xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <ReceiptEuro className="h-3.5 w-3.5" />
-            Doklady
-          </button>
-          <button
-            onClick={() => setActiveTab("closures")}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              activeTab === "closures"
-                ? "bg-background text-foreground shadow-xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Lock className="h-3.5 w-3.5" />
-            Denné uzávierky (Z-report)
-          </button>
-          <button
-            onClick={() => setActiveTab("accountant")}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              activeTab === "accountant"
-                ? "bg-background text-foreground shadow-xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            Export pre účtovníctvo
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Pre-certification / Emulation Notice Banner */}
       <div className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 sm:flex-row sm:items-center sm:justify-between">

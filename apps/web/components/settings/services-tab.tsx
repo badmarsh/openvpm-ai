@@ -27,6 +27,8 @@ import {
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
 type ServiceForm = {
   name: string;
@@ -91,6 +93,7 @@ type ServiceSnapshot = ReturnType<typeof expectedServiceSnapshot>;
 
 export function ServicesTab() {
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const formatCurrency = useCurrencyFormatter();
   const utils = trpc.useUtils();
   const activeQuery = trpc.billing.listServices.useQuery();
@@ -386,10 +389,13 @@ export function ServicesTab() {
                         size="icon"
                         variant="ghost"
                         disabled={mutationPending}
-                        onClick={() => {
-                          const confirmed = window.confirm(
-                            `Archive ${service.name}? It will be removed from future charge pickers. Existing invoices stay unchanged, and treatment templates that reference it must be updated before use.`
-                          );
+                        onClick={async () => {
+                          const confirmed = await confirm({
+                            title: t("settings.services.archiveTitle", "Archive Service"),
+                            description: `Archive ${service.name}? It will be removed from future charge pickers. Existing invoices stay unchanged, and treatment templates that reference it must be updated before use.`,
+                            confirmVariant: "destructive",
+                            confirmLabel: t("settings.services.archiveConfirm", "Archive"),
+                          });
                           if (!confirmed) return;
                           archiveMutation.mutate({
                             id: service.id,
@@ -481,6 +487,7 @@ export function ServicesTab() {
           )}
         </div>
       </details>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

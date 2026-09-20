@@ -1,3 +1,34 @@
+/** Format a Date or date string for display as dd.mm.yyyy. */
+export function formatDateToDisplay(value: Date | string | null | undefined): string {
+  if (!value) return "—";
+  if (typeof value === "string") {
+    const ymdMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (ymdMatch) {
+      const [, year, month, day] = ymdMatch;
+      return `${day}.${month}.${year}`;
+    }
+  }
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+/** Format a Date or date string for display as dd.mm.yyyy HH:mm. */
+export function formatDateTimeToDisplay(value: Date | string | null | undefined): string {
+  if (!value) return "—";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${day}.${month}.${year} ${hours}:${minutes}`;
+}
+
 /** Format a YYYY-MM-DD date string for display as dd.mm.yyyy. */
 export function formatDateYmdToDisplay(value: string | null | undefined): string {
   if (!value) return "";

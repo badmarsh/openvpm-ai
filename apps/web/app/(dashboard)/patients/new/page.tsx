@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import {
   CLIENT_SEARCH_MAX_LENGTH,
@@ -264,14 +265,14 @@ function NewPatientForm() {
         {t("patients.actions.backToPatients", "Back to Patients")}
       </Button>
 
-      <h2 className="font-heading text-xl font-semibold">
-        {t("patients.form.titleNew", "New Patient")}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {firstClinicDay
-          ? t("patients.form.firstClinicDayStep2", "Prvý deň kliniky, krok 2 z 3: pridajte zviera tohto majiteľa. Nasleduje rezervácia.")
-          : t("patients.form.subtitleNew", "Add a new patient record")}
-      </p>
+      <PageHeader
+        title={t("patients.form.titleNew", "New Patient")}
+        subtitle={
+          firstClinicDay
+            ? t("patients.form.firstClinicDayStep2", "Prvý deň kliniky, krok 2 z 3: pridajte zviera tohto majiteľa. Nasleduje rezervácia.")
+            : t("patients.form.subtitleNew", "Add a new patient record")
+        }
+      />
 
       {error && (
         <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">

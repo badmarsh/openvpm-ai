@@ -30,6 +30,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/common/empty-state";
 import { WebsiteEditorPalette } from "@/components/marketing/website-editor-palette";
 import { WebsiteEditorCanvas } from "@/components/marketing/website-editor-canvas";
 import { WebsiteEditorSheet } from "@/components/marketing/website-editor-sheet";
@@ -719,18 +720,14 @@ export default function MarketingWebsitePage() {
               <p className="text-xs">Načítavam dopyty...</p>
             </div>
           ) : !inquiriesQuery.data || inquiriesQuery.data.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-xl bg-muted/10">
-              <Inbox className="h-10 w-10 text-muted-foreground mb-3 opacity-60" />
-              <h3 className="text-sm font-semibold text-foreground">
-                {t("marketing.website.inquiries.emptyTitle", "Žiadne dopyty z webu")}
-              </h3>
-              <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                {t(
-                  "marketing.website.inquiries.emptyDesc",
-                  "Keď návštevníci vyplnia kontaktný formulár na vašej stránke, správy sa zobrazia tu."
-                )}
-              </p>
-            </div>
+            <EmptyState
+              icon={Inbox}
+              title={t("marketing.website.inquiries.emptyTitle", "Žiadne dopyty z webu")}
+              description={t(
+                "marketing.website.inquiries.emptyDesc",
+                "Keď návštevníci vyplnia kontaktný formulár na vašej stránke, správy sa zobrazia tu."
+              )}
+            />
           ) : (
             <div className="space-y-3">
               {inquiriesQuery.data.map((inq) => {

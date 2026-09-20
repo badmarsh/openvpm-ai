@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { getHandoutThematicImage } from "@/lib/marketing/handout-themes";
 import { FlyerPreviewModal } from "@/components/marketing/flyer-preview-modal";
 import { AiFlyerGenerator } from "@/components/marketing/ai-flyer-generator";
+import { EmptyState } from "@/components/common/empty-state";
 
 export default function HandoutsPage() {
   const { t } = useI18n();
@@ -344,9 +345,16 @@ export default function HandoutsPage() {
           <div className="h-[520px] w-full animate-pulse rounded-2xl bg-muted/30 border" />
         </div>
       ) : listQuery.data?.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-12 text-center text-muted-foreground">
-          {t("marketing.handouts.noHandouts", "Žiadne letáky.")}
-        </div>
+        <EmptyState
+          icon={FileText}
+          title={t("marketing.handouts.noHandouts", "Žiadne letáky.")}
+          description={t("marketing.handouts.emptyDesc", "Zatiaľ neboli vytvorené žiadne edukačné letáky pre klientov.")}
+          action={{
+            label: t("marketing.handouts.create", "Nový leták"),
+            onClick: () => setIsDialogOpen(true),
+            icon: Plus,
+          }}
+        />
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {listQuery.data?.map((handout: any) => {

@@ -19,6 +19,7 @@ import { formatUserRole } from "@/lib/users/role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { TableScroll } from "@/components/common/table-scroll";
 import {
   CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH,
@@ -632,26 +633,22 @@ function ControlledSubstancesLogPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("controlledSubstances.title", "Controlled Substance Log")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("controlledSubstances.subtitle", "DEA-required tracking for scheduled drugs")}
-          </p>
-        </div>
-        <Button
-          disabled={!canRecordControlledSubstance}
-          onClick={() => {
-            if (!canRecordControlledSubstance) return;
-            setShowForm(true);
-          }}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          {t("controlledSubstances.logEntry", "Log Entry")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("controlledSubstances.title", "Controlled Substance Log")}
+        subtitle={t("controlledSubstances.subtitle", "DEA-required tracking for scheduled drugs")}
+        actions={
+          <Button
+            disabled={!canRecordControlledSubstance}
+            onClick={() => {
+              if (!canRecordControlledSubstance) return;
+              setShowForm(true);
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            {t("controlledSubstances.logEntry", "Log Entry")}
+          </Button>
+        }
+      />
 
       {canRecordControlledSubstance && showForm && (
         <LogEntryForm onClose={() => setShowForm(false)} />

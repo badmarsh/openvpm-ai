@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { formatStatutoryDate, formatStatutoryDateTime } from "@/lib/date-helpers";
 import {
   BookOpen,
   Syringe,
@@ -25,10 +26,12 @@ import {
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { CrszPanel } from "@/components/statutory/crsz-panel";
 import { RabiesObservationPanel } from "@/components/statutory/rabies-observation-panel";
 import { CarcassDisposalPanel } from "@/components/statutory/carcass-disposal-panel";
@@ -63,33 +66,7 @@ function downloadStatutoryCsv(
   URL.revokeObjectURL(url);
 }
 
-function formatDate(val: Date | string | null | undefined): string {
-  if (!val) return "—";
-  try {
-    return new Date(val).toLocaleDateString("sk-SK", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return String(val);
-  }
-}
 
-function formatDateTime(val: Date | string | null | undefined): string {
-  if (!val) return "—";
-  try {
-    return new Date(val).toLocaleString("sk-SK", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(val);
-  }
-}
 
 function getRabiesComplianceStatus(
   administeredAt: Date | string | null | undefined,
@@ -267,7 +244,7 @@ function printRabiesBiteInspectionReport(opts?: {
     year: "numeric",
   });
 
-  const lastVax = opts?.administeredAt ? formatDate(opts.administeredAt) : "________________";
+  const lastVax = opts?.administeredAt ? formatStatutoryDate(opts.administeredAt) : "________________";
   const patientDesc = [opts?.species, opts?.breed].filter(Boolean).join(" • ") || "Pes / Mačka";
 
   printWindow.document.write(`<!DOCTYPE html>
@@ -423,101 +400,62 @@ export default function StatutoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t("statutory.title", "Zákonné knihy a registre")}
-            </h1>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <span>{t("statutory.title", "Zákonné knihy a registre")}</span>
             <Badge variant="outline" className="text-xs font-normal border-primary/40 text-primary">
               {t("statutory.badgeKvlSvps")}
             </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t(
-              "statutory.subtitle",
-              "Evidencia v zmysle zákona č. 39/2007 Z. z. o veterinárnej starostlivosti a zákona č. 139/1998 Z. z."
-            )}
-          </p>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={t(
+          "statutory.subtitle",
+          "Evidencia v zmysle zákona č. 39/2007 Z. z. o veterinárnej starostlivosti a zákona č. 139/1998 Z. z."
+        )}
+      />
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/50 p-1">
-        <Button
-          variant={activeTab === "rabies" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("rabies")}
-          className="gap-2"
-        >
-          <Syringe className="h-4 w-4" />
-          <span>{t("statutory.tabs.rabies", "Kniha besnoty")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "treatment" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("treatment")}
-          className="gap-2"
-        >
-          <BookOpen className="h-4 w-4" />
-          <span>{t("statutory.tabs.treatment", "Kniha ošetrení")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "withdrawals" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("withdrawals")}
-          className="gap-2"
-        >
-          <Clock className="h-4 w-4" />
-          <span>{t("statutory.tabs.withdrawals", "Ochranné lehoty")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "euthanasia" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("euthanasia")}
-          className="gap-2"
-        >
-          <Skull className="h-4 w-4" />
-          <span>{t("statutory.tabs.euthanasia", "Register eutanázií")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "narcotics" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("narcotics")}
-          className="gap-2"
-        >
-          <ShieldAlert className="h-4 w-4" />
-          <span>{t("statutory.tabs.narcotics", "Kontrolované látky")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "protocols" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("protocols")}
-          className="gap-2"
-        >
-          <FileSignature className="h-4 w-4" />
-          <span>{t("statutory.tabs.protocols", "Zákonné protokoly & formuláre")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "crsz" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("crsz")}
-          className="gap-2"
-        >
-          <ShieldCheck className="h-4 w-4" />
-          <span>{t("statutory.tabs.crsz", "CRSZ & Mikročipy / PetPass")}</span>
-        </Button>
-        <Button
-          variant={activeTab === "kvepis" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveTab("kvepis")}
-          className="gap-2"
-        >
-          <Globe className="h-4 w-4" />
-          <span>{t("statutory.tabs.kvepis", "KVEPIS & ÚPVS (ŠVPS)")}</span>
-        </Button>
-      </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as StatutoryTab)}
+        className="w-full"
+      >
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="rabies" className="gap-2">
+            <Syringe className="h-4 w-4" />
+            <span>{t("statutory.tabs.rabies", "Kniha besnoty")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="treatment" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            <span>{t("statutory.tabs.treatment", "Kniha ošetrení")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="withdrawals" className="gap-2">
+            <Clock className="h-4 w-4" />
+            <span>{t("statutory.tabs.withdrawals", "Ochranné lehoty")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="euthanasia" className="gap-2">
+            <Skull className="h-4 w-4" />
+            <span>{t("statutory.tabs.euthanasia", "Register eutanázií")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="narcotics" className="gap-2">
+            <ShieldAlert className="h-4 w-4" />
+            <span>{t("statutory.tabs.narcotics", "Kontrolované látky")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="protocols" className="gap-2">
+            <FileSignature className="h-4 w-4" />
+            <span>{t("statutory.tabs.protocols", "Zákonné protokoly & formuláre")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="crsz" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            <span>{t("statutory.tabs.crsz", "CRSZ & Mikročipy / PetPass")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="kvepis" className="gap-2">
+            <Globe className="h-4 w-4" />
+            <span>{t("statutory.tabs.kvepis", "KVEPIS & ÚPVS (ŠVPS)")}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Tab Panels */}
       <div>
@@ -582,15 +520,15 @@ function RabiesRegisterTab() {
     const rows = filteredItems.map((item) => {
       const comp = getRabiesComplianceStatus(item.administeredAt, item.createdAt);
       return [
-        formatDate(item.administeredAt),
+        formatStatutoryDate(item.administeredAt),
         item.patientName,
         item.species,
         item.breed || "—",
         item.microchipNumber || "Nečipovaný",
         item.vaccineName,
         item.lotNumber || "—",
-        formatDate(item.productExpirationDate),
-        formatDate(item.nextDueDate),
+        formatStatutoryDate(item.productExpirationDate),
+        formatStatutoryDate(item.nextDueDate),
         item.rabiesTagNumber || "—",
         `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
         `${item.clientAddress || ""}, ${item.clientCity || ""}`.trim(),
@@ -621,12 +559,12 @@ function RabiesRegisterTab() {
     const rows = filteredItems.map((item) => {
       const comp = getRabiesComplianceStatus(item.administeredAt, item.createdAt);
       return [
-        formatDate(item.administeredAt),
+        formatStatutoryDate(item.administeredAt),
         item.patientName,
         `${item.species}${item.breed ? ` • ${item.breed}` : ""}`,
         item.microchipNumber || "Nečipovaný",
         `${item.vaccineName}${item.lotNumber ? ` (šarža: ${item.lotNumber})` : ""}`,
-        formatDate(item.nextDueDate),
+        formatStatutoryDate(item.nextDueDate),
         `${item.clientFirstName || ""} ${item.clientLastName}`.trim(),
         `${item.clientAddress || ""}, ${item.clientCity || ""} (${item.clientPhone || "—"})`.trim(),
         t(comp.labelKey, comp.labelKey, comp.labelParams ?? {}),
@@ -817,7 +755,7 @@ function RabiesRegisterTab() {
                   return (
                     <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                       <td className="p-3 font-medium whitespace-nowrap">
-                        {formatDate(r.administeredAt)}
+                        {formatStatutoryDate(r.administeredAt)}
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{r.patientName}</div>
@@ -843,7 +781,7 @@ function RabiesRegisterTab() {
                       <td className="p-3 whitespace-nowrap">
                         {r.nextDueDate ? (
                           <span className="font-medium text-foreground">
-                            {formatDate(r.nextDueDate)}
+                            {formatStatutoryDate(r.nextDueDate)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -941,7 +879,7 @@ function TreatmentDiaryTab() {
       "Terapia a použité lieky (Plan)",
     ];
     const rows = data.items.map((i) => [
-      formatDateTime(i.createdAt),
+      formatStatutoryDateTime(i.createdAt),
       i.patientName,
       i.species,
       i.breed || "—",
@@ -971,7 +909,7 @@ function TreatmentDiaryTab() {
       "Terapia, liečivá & Ochranná lehota",
     ];
     const rows = data.items.map((i) => [
-      formatDateTime(i.createdAt),
+      formatStatutoryDateTime(i.createdAt),
       i.patientName,
       `${i.species} (čip: ${i.microchipNumber || "—"})`,
       `${i.clientFirstName || ""} ${i.clientLastName} (${i.clientPhone || "—"})`.trim(),
@@ -1067,7 +1005,7 @@ function TreatmentDiaryTab() {
                 {data.items.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="p-3 font-medium whitespace-nowrap">
-                      {formatDateTime(item.createdAt)}
+                      {formatStatutoryDateTime(item.createdAt)}
                     </td>
                     <td className="p-3">
                       <div className="font-semibold text-foreground">{item.patientName}</div>
@@ -1124,7 +1062,7 @@ function EuthanasiaRegisterTab() {
       "Telefón",
     ];
     const rows = data.items.map((i) => [
-      formatDate(i.updatedAt),
+      formatStatutoryDate(i.updatedAt),
       i.name,
       i.species,
       i.breed || "—",
@@ -1152,7 +1090,7 @@ function EuthanasiaRegisterTab() {
       "Evidencia CRSZ / Asanácia",
     ];
     const rows = data.items.map((i) => [
-      formatDate(i.updatedAt),
+      formatStatutoryDate(i.updatedAt),
       i.name,
       `${i.species}${i.breed ? ` • ${i.breed}` : ""}`,
       i.microchipNumber || "Nečipovaný",
@@ -1255,7 +1193,7 @@ function EuthanasiaRegisterTab() {
                 {data.items.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="p-3 font-medium whitespace-nowrap">
-                      {formatDate(item.updatedAt)}
+                      {formatStatutoryDate(item.updatedAt)}
                     </td>
                     <td className="p-3">
                       <div className="font-semibold text-foreground">{item.name}</div>
@@ -1345,7 +1283,7 @@ function NarcoticsTab() {
     const ledgerRows = data?.items
       ?.map((item, idx) => `<tr>
         <td style="text-align:center">${idx + 1}</td>
-        <td>${formatDate(item.performedAt)}</td>
+        <td>${formatStatutoryDate(item.performedAt)}</td>
         <td><strong>${item.drugName}</strong> (Zoz. ${item.deaSchedule})</td>
         <td>${ACTION_LABEL_SK[item.action] ?? item.action}</td>
         <td style="text-align:right;font-family:monospace">${item.quantity} ${item.unit}</td>
@@ -1508,7 +1446,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
               <tbody className="divide-y divide-border">
                 {data.items.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 whitespace-nowrap font-medium">{formatDate(item.performedAt)}</td>
+                    <td className="p-3 whitespace-nowrap font-medium">{formatStatutoryDate(item.performedAt)}</td>
                     <td className="p-3">
                       <span className="font-semibold">{item.drugName}</span>
                       <span className="ml-1 text-muted-foreground">({t("statutory.narcotics.scheduleLabel")} {item.deaSchedule})</span>

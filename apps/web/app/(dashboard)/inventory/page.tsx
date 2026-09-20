@@ -22,7 +22,9 @@ import { useI18n } from "@/lib/i18n";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { TableScroll } from "@/components/common/table-scroll";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -1139,47 +1141,31 @@ export default function InventoryPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {t("inventory.page.title", "Inventory")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t(
-              "inventory.page.subtitle",
-              "Products, stock management, and suppliers"
-            )}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={t("inventory.page.title", "Inventory")}
+        subtitle={t(
+          "inventory.page.subtitle",
+          "Products, stock management, and suppliers"
+        )}
+      />
 
       {/* Tabs */}
-      <div className="mt-4 flex gap-1 border-b border-border">
-        <button
-          onClick={() => setTab("products")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-            tab === "products"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Package className="h-4 w-4" />
-          {t("inventory.tabs.products", "Products")}
-        </button>
-        <button
-          onClick={() => setTab("suppliers")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-            tab === "suppliers"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Truck className="h-4 w-4" />
-          {t("inventory.tabs.suppliers", "Suppliers")}
-        </button>
-      </div>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as "products" | "suppliers")}
+        className="mt-4"
+      >
+        <TabsList>
+          <TabsTrigger value="products" className="gap-2">
+            <Package className="h-4 w-4" />
+            {t("inventory.tabs.products", "Products")}
+          </TabsTrigger>
+          <TabsTrigger value="suppliers" className="gap-2">
+            <Truck className="h-4 w-4" />
+            {t("inventory.tabs.suppliers", "Suppliers")}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Products Tab */}
       {tab === "products" && (

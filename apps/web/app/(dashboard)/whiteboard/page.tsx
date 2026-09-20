@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDoctorName } from "@/lib/locale/format";
@@ -172,7 +173,7 @@ function formatCurrentTime(date: Date, timeZone?: string | null): string {
     hour: "numeric",
     minute: "2-digit",
     second: "2-digit",
-    hour12: true,
+    hour12: false,
     timeZone: timeZone ?? undefined,
   };
   try {
@@ -207,7 +208,7 @@ function formatAppointmentTime(date: Date, timeZone?: string | null): string {
   const options: Intl.DateTimeFormatOptions = {
     hour: "numeric",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
     timeZone: timeZone ?? undefined,
   };
   try {
@@ -849,13 +850,10 @@ export default function WhiteboardPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="font-heading text-xl font-semibold">
-              {t("whiteboard.title", "Practice Whiteboard")}
-            </h2>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            {t("whiteboard.title", "Practice Whiteboard")}
             <SyncStatusIndicator
               isFetching={isFetching}
               lastSyncedAt={dataUpdatedAt}
@@ -863,24 +861,24 @@ export default function WhiteboardPage() {
               timeZone={verifiedPracticeSettings?.timezone}
               isLive={isLive}
             />
+          </span>
+        }
+        subtitle={t("whiteboard.subtitle", "Live patient status board")}
+        actions={
+          <div className="text-right">
+            <p className="text-sm font-medium">
+              {practiceClockReady && currentTime && verifiedPracticeSettings
+                ? formatCurrentTime(currentTime, verifiedPracticeSettings.timezone)
+                : "\u00A0"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {practiceClockReady && currentTime && verifiedPracticeSettings
+                ? formatCurrentDate(currentTime, verifiedPracticeSettings.timezone)
+                : "\u00A0"}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {t("whiteboard.subtitle", "Live patient status board")}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium">
-            {practiceClockReady && currentTime && verifiedPracticeSettings
-              ? formatCurrentTime(currentTime, verifiedPracticeSettings.timezone)
-              : "\u00A0"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {practiceClockReady && currentTime && verifiedPracticeSettings
-              ? formatCurrentDate(currentTime, verifiedPracticeSettings.timezone)
-              : "\u00A0"}
-          </p>
-        </div>
-      </div>
+        }
+      />
 
       {/* Board area (the "your day" guide spotlights this region) */}
       <div data-tour="whiteboard-board">

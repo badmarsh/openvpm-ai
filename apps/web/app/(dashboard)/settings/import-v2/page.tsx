@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PageHeader } from "@/components/layout/page-header";
 import { useI18n } from "@/lib/i18n";
 
 export default function V2ImportPage() {
@@ -66,41 +67,38 @@ export default function V2ImportPage() {
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4 space-y-8">
-      {/* Hlavička */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              1-Click V2 Data Migrácia
-            </h1>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span>1-Click V2 Data Migrácia</span>
             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1.5 py-1 px-2.5">
               <Sparkles className="w-3.5 h-3.5" />
               AI Peer-Reviewed
             </Badge>
-          </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Automatizovaný prevod celej 15-ročnej histórie praxe (MVDr. Sýkora / MVDr. Drotár, Rimavská Sobota) z VetSoftware V2 do OpenVPM AI.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetchStats()}
-            disabled={isStatsLoading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${isStatsLoading ? "animate-spin" : ""}`} />
-            Obnoviť stav
-          </Button>
-          <Link href="/settings">
-            <Button variant="ghost" size="sm">
-              Späť do nastavení
+          </span>
+        }
+        subtitle="Automatizovaný prevod celej 15-ročnej histórie praxe (MVDr. Sýkora / MVDr. Drotár, Rimavská Sobota) z VetSoftware V2 do OpenVPM AI."
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchStats()}
+              disabled={isStatsLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isStatsLoading ? "animate-spin" : ""}`} />
+              Obnoviť stav
             </Button>
-          </Link>
-        </div>
-      </div>
+            <Link href="/settings">
+              <Button variant="ghost" size="sm">
+                Späť do nastavení
+              </Button>
+            </Link>
+          </div>
+        }
+        className="border-b pb-6"
+      />
 
       {/* Stav spojenia s databázou */}
       <div className="rounded-xl border bg-card p-6 shadow-sm">

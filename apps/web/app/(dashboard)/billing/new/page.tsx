@@ -12,6 +12,7 @@ import { formatSpecies } from "@/lib/patients/species";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import { ServicePicker } from "@/components/billing/service-picker";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
@@ -334,37 +335,37 @@ function NewInvoiceForm() {
         {t("billing.new.backToBilling", "Back to Billing")}
       </Button>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {isEstimate
-              ? t("billing.new.titleEstimate", "New Estimate")
-              : t("billing.new.titleInvoice", "New Invoice")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {isEstimate
-              ? t(
-                  "billing.new.descEstimate",
-                  "Create an estimate that can be converted to an invoice later."
-                )
-              : t(
-                  "billing.new.descInvoice",
-                  "Create a new invoice for a client."
-                )}
-          </p>
-        </div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isEstimate}
-            onChange={(e) => setIsEstimate(e.target.checked)}
-            className="rounded border-gray-300"
-          />
-          <span className="font-medium">
-            {t("billing.new.estimateCheckbox", "Estimate")}
-          </span>
-        </label>
-      </div>
+      <PageHeader
+        title={
+          isEstimate
+            ? t("billing.new.titleEstimate", "New Estimate")
+            : t("billing.new.titleInvoice", "New Invoice")
+        }
+        subtitle={
+          isEstimate
+            ? t(
+                "billing.new.descEstimate",
+                "Create an estimate that can be converted to an invoice later."
+              )
+            : t(
+                "billing.new.descInvoice",
+                "Create a new invoice for a client."
+              )
+        }
+        actions={
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isEstimate}
+              onChange={(e) => setIsEstimate(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="font-medium">
+              {t("billing.new.estimateCheckbox", "Estimate")}
+            </span>
+          </label>
+        }
+      />
 
       {/* Client Search */}
       <div className="mt-6 space-y-4">
