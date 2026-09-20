@@ -322,7 +322,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
     if (dataUpdatedAt) setLastRefreshed(new Date(dataUpdatedAt));
   }, [dataUpdatedAt]);
 
-  const appointments = activeAppointments ?? [];
+  const appointments = useMemo(() => activeAppointments ?? [], [activeAppointments]);
 
   // Dynamic context-aware announcement list (Seasonal + Live patient mix)
   const dynamicAnnouncements = useMemo(() => {
@@ -368,9 +368,10 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
   }, [appointments]);
 
   // Build rotation items: custom slides if any, otherwise fallback announcements
-  const activeSlides = (tvSlides as TvSlide[] | undefined)?.filter(
-    (s) => s.isActive,
-  ) ?? [];
+  const activeSlides = useMemo(
+    () => (tvSlides as TvSlide[] | undefined)?.filter((s) => s.isActive) ?? [],
+    [tvSlides],
+  );
   const hasCustomSlides = activeSlides.length > 0;
 
   // Rotation interval — use each slide's durationSeconds, or 12s for fallback

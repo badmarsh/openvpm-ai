@@ -39,6 +39,7 @@ function TabLoadingFallback() {
 }
 
 function CompetitorsTab() {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
       <PageSectionHeader

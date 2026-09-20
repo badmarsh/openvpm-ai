@@ -100,7 +100,7 @@ export function I18nProvider({
     if (typeof document !== "undefined") {
       document.documentElement.lang = detected;
     }
-  }, []);
+  }, [locale]);
 
   // Load the code-split dictionary whenever a non-default locale is active.
   // Until it arrives, `t()` falls back to the default-locale strings below.
