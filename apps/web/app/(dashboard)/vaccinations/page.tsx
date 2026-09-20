@@ -37,6 +37,10 @@ import { PageHeader } from "@/components/layout/page-header";
 
 const MAX_BATCH_SIZE = 100;
 
+/** Dense registry table header — same token grid as /clients and /patients (px-3 for 12px content). */
+const TH =
+  "h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80";
+
 function canOperateRecalls(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "front_desk";
 }
@@ -281,16 +285,16 @@ export default function VaccinationsPage() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
+                    <table className="w-full border-collapse text-left text-xs">
                       <thead>
-                        <tr className="border-b text-muted-foreground bg-muted/30">
-                          <th className="p-2.5 w-8"></th>
-                          <th className="p-2.5 font-semibold">Pacient</th>
-                          <th className="p-2.5 font-semibold">Majiteľ</th>
-                          <th className="p-2.5 font-semibold">Vakcína & Dátum</th>
-                          <th className="p-2.5 font-semibold">Kanál</th>
-                          <th className="p-2.5 font-semibold">Stav</th>
-                          <th className="p-2.5 text-right font-semibold">Akcia</th>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className={`${TH} w-10`} />
+                          <th className={TH}>{t("vaccinations.colPatient", "Pacient")}</th>
+                          <th className={TH}>{t("vaccinations.colOwner", "Majiteľ")}</th>
+                          <th className={TH}>{t("vaccinations.colVaccineDate", "Vakcína & Dátum")}</th>
+                          <th className={TH}>{t("vaccinations.colChannel", "Kanál")}</th>
+                          <th className={TH}>{t("vaccinations.colStatus", "Stav")}</th>
+                          <th className={`${TH} text-right`}>{t("vaccinations.colAction", "Akcia")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
@@ -302,16 +306,16 @@ export default function VaccinationsPage() {
                           return (
                             <tr
                               key={r.patientId}
-                              className="hover:bg-accent/40 transition-colors"
+                              className="hover:bg-muted/40 transition-colors"
                             >
-                              <td className="p-2.5">
+                              <td className="w-10 px-3 py-2 align-middle">
                                 <Checkbox
                                   checked={isChecked}
                                   disabled={!isEligible}
                                   onChange={() => handleToggleOne(r.patientId)}
                                 />
                               </td>
-                              <td className="p-2.5 font-medium text-foreground">
+                              <td className="px-3 py-2 font-medium text-foreground">
                                 <Link
                                   href={`/patients/${r.patientId}`}
                                   className="hover:underline flex items-center gap-1.5"
@@ -320,18 +324,19 @@ export default function VaccinationsPage() {
                                   <span>{r.patientName}</span>
                                 </Link>
                               </td>
-                              <td className="p-2.5 text-muted-foreground">
-                                {r.clientName}
+                              <td className="max-w-[180px] px-3 py-2 text-muted-foreground">
+                                <span className="block truncate" title={r.clientName}>{r.clientName}</span>
                               </td>
-                              <td className="p-2.5">
+                              <td className="px-3 py-2">
                                 <span className="font-medium text-foreground">
                                   {firstVaccine?.vaccineName ?? "Vakcína"}
                                 </span>
                                 <span className="block text-[10px] text-muted-foreground">
-                                  Expirácia: {formatDateToDisplay(firstVaccine?.nextDueDate)}
+                                  {t("vaccinations.expiryPrefix", "Expirácia:")}{" "}
+                                  <span className="tabular-nums">{formatDateToDisplay(firstVaccine?.nextDueDate)}</span>
                                 </span>
                               </td>
-                              <td className="p-2.5">
+                              <td className="px-3 py-2">
                                 <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                                   {r.channel === "sms" ? (
                                     <MessageSquare className="h-3 w-3 text-emerald-600" />
@@ -343,7 +348,7 @@ export default function VaccinationsPage() {
                                   </span>
                                 </span>
                               </td>
-                              <td className="p-2.5">
+                              <td className="px-3 py-2">
                                 <Badge
                                   variant={
                                     r.status === "eligible"
@@ -361,7 +366,7 @@ export default function VaccinationsPage() {
                                       : "Blokované"}
                                 </Badge>
                               </td>
-                              <td className="p-2.5 text-right">
+                              <td className="px-3 py-2 text-right">
                                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs px-2">
                                   <Link href={`/records?patientId=${r.patientId}&tab=vaccinations`}>
                                     <span>Záznam</span>
@@ -421,25 +426,25 @@ export default function VaccinationsPage() {
                 />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full border-collapse text-left text-xs">
                     <thead>
-                      <tr className="border-b text-muted-foreground bg-muted/30">
-                        <th className="p-2.5 font-semibold">Dátum</th>
-                        <th className="p-2.5 font-semibold">Pacient</th>
-                        <th className="p-2.5 font-semibold">Číslo mikročipu</th>
-                        <th className="p-2.5 font-semibold">Vakcína & Šarža</th>
-                        <th className="p-2.5 font-semibold">Revakcinácia</th>
-                        <th className="p-2.5 font-semibold">Majiteľ</th>
-                        <th className="p-2.5 text-right font-semibold">Záznam</th>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className={TH}>{t("vaccinations.colDate", "Dátum")}</th>
+                        <th className={TH}>{t("vaccinations.colPatient", "Pacient")}</th>
+                        <th className={TH}>{t("vaccinations.colMicrochipNumber", "Číslo mikročipu")}</th>
+                        <th className={TH}>{t("vaccinations.colVaccineLot", "Vakcína & Šarža")}</th>
+                        <th className={TH}>{t("vaccinations.colRevaccination", "Revakcinácia")}</th>
+                        <th className={TH}>{t("vaccinations.colOwner", "Majiteľ")}</th>
+                        <th className={`${TH} text-right`}>{t("vaccinations.colRecord", "Záznam")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {rabiesQuery.data.items.map((r) => (
-                        <tr key={r.id} className="hover:bg-accent/40 transition-colors">
-                          <td className="p-2.5 whitespace-nowrap text-muted-foreground">
+                        <tr key={r.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="whitespace-nowrap px-3 py-2 tabular-nums text-muted-foreground">
                             {formatDateToDisplay(r.administeredAt)}
                           </td>
-                          <td className="p-2.5 font-medium text-foreground">
+                          <td className="px-3 py-2 font-medium text-foreground">
                             <Link href={`/patients/${r.patientId}`} className="hover:underline">
                               {r.patientName}
                             </Link>
@@ -447,24 +452,25 @@ export default function VaccinationsPage() {
                               {r.species} {r.breed ? `· ${r.breed}` : ""}
                             </span>
                           </td>
-                          <td className="p-2.5 font-mono text-[11px] text-foreground">
+                          <td className="px-3 py-2 font-mono text-[11px] tabular-nums text-foreground">
                             {r.microchipNumber || "Nečipovaný"}
                           </td>
-                          <td className="p-2.5">
+                          <td className="px-3 py-2">
                             <span className="font-medium text-foreground">{r.vaccineName}</span>
                             {r.lotNumber && (
                               <span className="block text-[10px] text-muted-foreground">
-                                Šarža: {r.lotNumber}
+                                {t("vaccinations.lotPrefix", "Šarža:")}{" "}
+                                <span className="font-mono text-[11px] tabular-nums">{r.lotNumber}</span>
                               </span>
                             )}
                           </td>
-                          <td className="p-2.5 whitespace-nowrap text-foreground font-medium">
+                          <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums text-foreground">
                             {formatDateToDisplay(r.nextDueDate)}
                           </td>
-                          <td className="p-2.5 text-muted-foreground">
+                          <td className="px-3 py-2 text-muted-foreground">
                             {`${r.clientFirstName || ""} ${r.clientLastName}`.trim()}
                           </td>
-                          <td className="p-2.5 text-right">
+                          <td className="px-3 py-2 text-right">
                             <Button asChild variant="ghost" size="sm" className="h-7 text-xs px-2">
                               <Link href={`/records?patientId=${r.patientId}&tab=vaccinations`}>
                                 <ExternalLink className="h-3.5 w-3.5" />
@@ -518,34 +524,34 @@ export default function VaccinationsPage() {
                 />
               ) : patientSearch.data && patientSearch.data.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full border-collapse text-left text-xs">
                     <thead>
-                      <tr className="border-b text-muted-foreground bg-muted/30">
-                        <th className="p-2.5 font-semibold">Pacient</th>
-                        <th className="p-2.5 font-semibold">Druh & Plemeno</th>
-                        <th className="p-2.5 font-semibold">Mikročip</th>
-                        <th className="p-2.5 font-semibold">Majiteľ</th>
-                        <th className="p-2.5 text-right font-semibold">Akcia</th>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className={TH}>{t("vaccinations.colPatient", "Pacient")}</th>
+                        <th className={TH}>{t("vaccinations.colSpeciesBreed", "Druh & Plemeno")}</th>
+                        <th className={TH}>{t("vaccinations.colMicrochip", "Mikročip")}</th>
+                        <th className={TH}>{t("vaccinations.colOwner", "Majiteľ")}</th>
+                        <th className={`${TH} text-right`}>{t("vaccinations.colAction", "Akcia")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {patientSearch.data.map((p) => (
-                        <tr key={p.id} className="hover:bg-accent/40 transition-colors">
-                          <td className="p-2.5 font-semibold text-foreground">
+                        <tr key={p.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="px-3 py-2 font-semibold text-foreground">
                             <Link href={`/patients/${p.id}`} className="hover:underline">
                               {p.name}
                             </Link>
                           </td>
-                          <td className="p-2.5 text-muted-foreground capitalize">
+                          <td className="px-3 py-2 text-muted-foreground capitalize">
                             {p.species} {p.breed ? `· ${p.breed}` : ""}
                           </td>
-                          <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
+                          <td className="px-3 py-2 font-mono text-[11px] tabular-nums text-muted-foreground">
                             {p.microchipNumber || "—"}
                           </td>
-                          <td className="p-2.5 text-muted-foreground">
+                          <td className="px-3 py-2 text-muted-foreground">
                             {[p.clientFirstName, p.clientLastName].filter(Boolean).join(" ")}
                           </td>
-                          <td className="p-2.5 text-right">
+                          <td className="px-3 py-2 text-right">
                             <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1">
                               <Link href={`/records?patientId=${p.id}&tab=vaccinations`}>
                                 <Syringe className="h-3 w-3 text-primary" />
