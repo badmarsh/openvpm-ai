@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,38 +103,34 @@ export default function HandoutsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <FileText className="w-7 h-7 text-primary" />
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <FileText className="w-6 h-6 text-primary" />
             {t("marketing.handouts.title", "Edukačné letáky")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "marketing.handouts.description",
-              "Knižnica opakovateľných letákov s QR kódmi pre klientov – pripravené na tlač (A5) aj do mobilu."
-            )}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button className="gap-2" onClick={() => setIsDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            {t("marketing.handouts.newHandout", "Nový leták")}
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2 bg-violet-50/50 dark:bg-violet-950/20 border-violet-300 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/30"
-            onClick={() => {
-              setShowAiGenerator(true);
-              setIsDialogOpen(true);
-            }}
-          >
-            <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-            {t("marketing.handouts.aiGenerate", "AI Generátor")}
-          </Button>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={t("marketing.handouts.description", "Knižnica opakovateľných letákov s QR kódmi pre klientov – pripravené na tlač (A5) aj do mobilu.")}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button className="gap-2" onClick={() => setIsDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t("marketing.handouts.newHandout", "Nový leták")}
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 bg-violet-50/50 dark:bg-violet-950/20 border-violet-300 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/30"
+              onClick={() => {
+                setShowAiGenerator(true);
+                setIsDialogOpen(true);
+              }}
+            >
+              <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              {t("marketing.handouts.aiGenerate", "AI Generátor")}
+            </Button>
+          </div>
+        }
+      />
 
       {/* Creation Modal */}
       {isDialogOpen && (

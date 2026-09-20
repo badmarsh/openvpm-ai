@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -576,35 +577,36 @@ function VoiceDictationContent() {
   return (
     <div className="flex flex-col gap-6 p-2 sm:p-4 w-full max-w-[1800px] mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">
+      <div className="border-b border-border pb-4">
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
               {t("voice.page.title", "Hlasové diktovanie")}
-            </h1>
-            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
-              <Sparkles className="h-3 w-3" />
-              {t("voice.page.badge", "Klinický AI prepis")}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t("voice.page.subtitle", "Presná transkripcia hovoreného slova s veterinárnou terminológiou a automatickým štruktúrovaním do SOAP.")}
-          </p>
-        </div>
-
-        {/* Mode / Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid grid-cols-2 w-[280px]">
+              <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="h-3 w-3" />
+                {t("voice.page.badge", "Klinický AI prepis")}
+              </Badge>
+            </span>
+          }
+          subtitle={t(
+            "voice.page.subtitle",
+            "Diktujte záznamy hlasom — AI prepíše a štrukturuje SOAP poznámku.",
+          )}
+          actions={
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+            <TabsList className="grid grid-cols-2 w-[280px]">
             <TabsTrigger value="editor" className="gap-1.5">
-              <Mic className="h-4 w-4" />
-              {t("voice.page.tabEditor", "Diktovanie")}
+            <Mic className="h-4 w-4" />
+            {t("voice.page.tabEditor", "Diktovanie")}
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
-              <History className="h-4 w-4" />
-              {t("voice.page.tabHistory", "História diktátov")}
+            <History className="h-4 w-4" />
+            {t("voice.page.tabHistory", "História diktátov")}
             </TabsTrigger>
-          </TabsList>
-        </Tabs>
+            </TabsList>
+            </Tabs>
+          }
+        />
       </div>
 
       {activeTab === "history" ? (

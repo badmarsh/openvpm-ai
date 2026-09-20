@@ -26,6 +26,7 @@ import {
 import { hasUnresolvedSoapTemplatePrompts } from "@/lib/records/soap-templates";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 
 const SoapNoteEditor = dynamic(
   () =>
@@ -238,16 +239,12 @@ export default function ReplaceSoapNotePage() {
         <ArrowLeft className="mr-2 h-4 w-4" /> {t("records.replaceSoap.backToChart", "Back to chart")}
       </Button>
 
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">
-          {t("records.replaceSoap.title", "Replace finalized SOAP")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("records.replaceSoap.patientLabel", "Patient: {name}", {
-            name: patient.data?.name ?? t("records.replaceSoap.unknownPatient", "Unknown patient"),
-          })}
-        </p>
-      </div>
+      <PageHeader
+        title={t("records.replaceSoap.title", "Replace finalized SOAP")}
+        subtitle={t("records.replaceSoap.patientLabel", "Patient: {name}", {
+          name: patient.data?.name ?? t("records.replaceSoap.unknownPatient", "Unknown patient"),
+        })}
+      />
 
       <div role="alert" className="rounded-lg border border-amber-400/60 bg-amber-50 p-4 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
         <p className="font-semibold">{t("records.replaceSoap.warningTitle", "This creates a new signed clinical record.")}</p>

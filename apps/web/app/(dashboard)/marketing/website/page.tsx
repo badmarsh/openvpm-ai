@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -284,45 +285,40 @@ export default function MarketingWebsitePage() {
   return (
     <div className="w-full px-4 sm:px-6 py-4 flex flex-col gap-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+      <div className="border-b border-border pb-2">
+        <PageHeader
+          title={
+            <span className="flex flex-wrap items-center gap-2">
+              <Globe className="h-6 w-6 text-primary shrink-0" />
               {t("marketing.website.title", "Webstránka kliniky")}
-            </h1>
-            <Badge variant={config?.published ? "default" : "secondary"}>
-              {config?.published
-                ? t("marketing.website.statusPublished", "Online / Publikovaná")
-                : t("marketing.website.statusDraft", "Príprava (Koncept)")}
-            </Badge>
-
-            {/* Autosave Status Indicator */}
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground ml-3 border-l border-border pl-3">
-              {saveStatus === "saving" ? (
-                <>
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
-                  <span>Ukladám zmeny...</span>
-                </>
-              ) : saveStatus === "saved" ? (
-                <>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span>Všetky zmeny uložené v koncepte</span>
-                </>
-              ) : (
-                <span className="text-amber-500">Neuložené zmeny</span>
-              )}
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t(
-              "marketing.website.subtitle",
-              "Interaktívny drag-and-drop editor reprezentatívnej webstránky prepojenej s Brand Kitom a údajmi kliniky."
-            )}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant={config?.published ? "default" : "secondary"}>
+                {config?.published
+                  ? t("marketing.website.statusPublished", "Online / Publikovaná")
+                  : t("marketing.website.statusDraft", "Príprava (Koncept)")}
+              </Badge>
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground ml-3 border-l border-border pl-3">
+                {saveStatus === "saving" ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                    <span>Ukladám zmeny...</span>
+                  </>
+                ) : saveStatus === "saved" ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    <span>Všetky zmeny uložené v koncepte</span>
+                  </>
+                ) : (
+                  <span className="text-amber-500">Neuložené zmeny</span>
+                )}
+              </div>
+            </span>
+          }
+          subtitle={t(
+            "marketing.website.subtitle",
+            "Interaktívny drag-and-drop editor reprezentatívnej webstránky prepojenej s Brand Kitom a údajmi kliniky."
+          )}
+          actions={
+            <div className="flex items-center gap-2 flex-wrap">
           {config?.published && (
             <>
               <Button
@@ -407,6 +403,8 @@ export default function MarketingWebsitePage() {
             </Button>
           )}
         </div>
+          }
+        />
       </div>
 
       {/* KPI Cards */}

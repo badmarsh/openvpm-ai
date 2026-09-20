@@ -204,9 +204,9 @@ export default function ClientDetailPage() {
       <div className="rounded-lg border border-border bg-card p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-heading text-xl font-semibold">
+            <h1 className="font-heading text-2xl font-bold tracking-tight">
               {client.firstName} {client.lastName}
-            </h2>
+            </h1>
             <div className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
               {client.email && (
                 <span className="flex items-center gap-2">

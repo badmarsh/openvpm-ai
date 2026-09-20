@@ -2928,6 +2928,11 @@
           "description": "Clients without a completed visit for over 12 months and no upcoming booking. Reactivation (recall) campaigns."
         }
       }
+    },
+    "competitors": {
+      "title": "Competitors & Intel",
+      "subtitle": "Monitor competitor activity and conduct market research",
+      "startMonitoring": "Start monitoring"
     }
   },
   "nav": {
@@ -6959,7 +6964,10 @@
     "openInPlan": "Open in content plan",
     "confirmPrepareFailed": "Could not prepare clinician confirmation. Please review and retry.",
     "saveConflict": "The record changed concurrently. Reload and retry.",
-    "confirmationExpired": "The confirmation expired or is invalid. Review the content and confirm again."
+    "confirmationExpired": "The confirmation expired or is invalid. Review the content and confirm again.",
+    "title": "Discharge Report Generator",
+    "badge": "Clinical AI Assistant",
+    "subtitle": "AI assistant for generating clear, empathetic home care instructions for pet owners."
   },
   "vetIntel": {
     "badge": "AI Market & Legislation",

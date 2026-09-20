@@ -43,6 +43,7 @@ import {
 } from "@/lib/records/soap-navigation";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 
 function SoapEditorLoading() {
   const { t } = useI18n();
@@ -972,9 +973,9 @@ export default function NewSoapNotePage() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-heading text-xl font-semibold">
+          <h1 className="font-heading text-2xl font-bold tracking-tight">
             {t("records.newSoap.title", "SOAP Documentation")}
-          </h2>
+          </h1>
           {patient && (
             <p className="text-sm text-muted-foreground">
               {t("records.newSoap.patient", "Patient: {name}", { name: patient.name })}

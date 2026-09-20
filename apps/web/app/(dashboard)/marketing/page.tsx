@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { PageSectionHeader } from "@/components/layout/page-header";
 import { MarketingStudioContent } from "./_marketing-studio";
 import { ContentCalendarTab } from "@/components/marketing/content-calendar-tab";
 import { SocialApprovalQueueTab } from "@/components/marketing/social-approval-queue-tab";
@@ -40,16 +41,16 @@ function TabLoadingFallback() {
 function CompetitorsTab() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Konkurencia & Intel</h1>
-          <p className="text-xs text-muted-foreground">Monitorovanie konkurenčných aktivít a trhový výskum</p>
-        </div>
-        <Button className="text-xs gap-1.5" variant="outline" size="sm">
-          <Globe className="h-3.5 w-3.5" />
-          <span>Spustiť monitorovanie</span>
-        </Button>
-      </div>
+      <PageSectionHeader
+        title={t("marketing.competitors.title", "Konkurencia & Intel")}
+        subtitle={t("marketing.competitors.subtitle", "Monitorovanie konkurenčných aktivít a trhový výskum")}
+        actions={
+          <Button className="text-xs gap-1.5" variant="outline" size="sm">
+            <Globe className="h-3.5 w-3.5" />
+            <span>{t("marketing.competitors.startMonitoring", "Spustiť monitorovanie")}</span>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[

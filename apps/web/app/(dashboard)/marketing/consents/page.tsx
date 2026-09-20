@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -130,20 +131,18 @@ export default function MarketingCompliancePage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <ShieldCheck className="w-7 h-7 text-primary" />
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <ShieldCheck className="w-6 h-6 text-primary" />
             {t("marketing.compliance.title", "GDPR, súhlasy a skripty")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "marketing.compliance.subtitle",
-              "Evidencia GDPR a mediálnych súhlasov spolu s operačnými skriptami pre personál."
-            )}
-          </p>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={t(
+          "marketing.compliance.subtitle",
+          "Evidencia GDPR a mediálnych súhlasov spolu s operačnými skriptami pre personál."
+        )}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">

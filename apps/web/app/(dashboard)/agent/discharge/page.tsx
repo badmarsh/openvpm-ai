@@ -32,6 +32,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { formatSpecies } from "@/lib/patients/species";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -561,38 +562,36 @@ function DischargeContent() {
   return (
     <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">
+      <div className="border-b border-border pb-4">
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
               {t("discharge.title", "Discharge Report Generator")}
-            </h1>
-            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
-              <Sparkles className="h-3 w-3" />
-              {t("discharge.badge", "Clinical AI Assistant")}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t(
-              "discharge.subtitle",
-              "AI assistant for generating clear, empathetic home care instructions for pet owners."
-            )}
-          </p>
-        </div>
-
-        {/* Mode / Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "editor" | "history")}>
-          <TabsList className="grid grid-cols-2 w-[280px]">
+              <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="h-3 w-3" />
+                {t("discharge.badge", "Clinical AI Assistant")}
+              </Badge>
+            </span>
+          }
+          subtitle={t(
+            "discharge.subtitle",
+            "AI assistant for generating clear, empathetic home care instructions for pet owners.",
+          )}
+          actions={
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "editor" | "history")}>
+            <TabsList className="grid grid-cols-2 w-[280px]">
             <TabsTrigger value="editor" className="gap-1.5">
-              <FileText className="h-4 w-4" />
-              {t("discharge.editorTab", "Report Editor")}
+            <FileText className="h-4 w-4" />
+            {t("discharge.editorTab", "Report Editor")}
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
-              <History className="h-4 w-4" />
-              {t("discharge.historyTab", "Report History")}
+            <History className="h-4 w-4" />
+            {t("discharge.historyTab", "Report History")}
             </TabsTrigger>
-          </TabsList>
-        </Tabs>
+            </TabsList>
+            </Tabs>
+          }
+        />
       </div>
 
       {activeTab === "history" ? (

@@ -1051,9 +1051,9 @@ export default function PatientDetailPage() {
             </div>
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+                <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
                   {patient.name}
-                </h2>
+                </h1>
                 <StatusPulseBadge
                   variant={
                     patient.status === "deceased"

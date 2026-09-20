@@ -602,7 +602,7 @@ export default function EncounterWorkspacePage() {
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-heading text-2xl font-semibold">
+              <h1 className="font-heading text-2xl font-bold tracking-tight">
                 {appointment.patientName ?? t("encounters.workspace.unassignedVisit", "Unassigned visit")}
               </h1>
               <Badge variant="outline">

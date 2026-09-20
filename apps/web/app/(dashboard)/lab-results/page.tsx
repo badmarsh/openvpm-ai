@@ -23,6 +23,7 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { formatUserRole } from "@/lib/users/role";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
 import { AnalyzerImportPanel } from "@/components/lab/analyzer-import-panel";
 import { AnalyteTrendVisualization } from "@/components/lab/analyte-trend-visualization";
 import {
@@ -336,31 +337,29 @@ function LabResultsInboxContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">
-            {t("labResults.title", "Laboratórne výsledky")}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isFrontDesk
-              ? t(
-                  "labResults.subtitleFrontDesk",
-                  "Vaša priradená následná laboratórna starostlivosť s pokynmi od klinického tímu.",
-                )
-              : t(
-                  "labResults.subtitleClinical",
-                  "Jeden celoklinický front pre čakajúce hodnoty, klinickú kontrolu a pridelenú následnú starostlivosť.",
-                )}
-          </p>
-        </div>
-        <Badge variant={actionCount > 0 ? "destructive" : "secondary"} className="w-fit">
-          {actionCount === 1
-            ? t("labResults.actionItemsShownOne", "1 action item shown")
-            : t("labResults.actionItemsShownMany", "{count} action items shown", {
-                count: actionCount,
-              })}
-        </Badge>
-      </div>
+      <PageHeader
+        title={t("labResults.title", "Laboratórne výsledky")}
+        subtitle={
+          isFrontDesk
+            ? t(
+                "labResults.subtitleFrontDesk",
+                "Vaša priradená následná laboratórna starostlivosť s pokynmi od klinického tímu.",
+              )
+            : t(
+                "labResults.subtitleClinical",
+                "Jeden celoklinický front pre čakajúce hodnoty, klinickú kontrolu a pridelenú následnú starostlivosť.",
+              )
+        }
+        actions={
+          <Badge variant={actionCount > 0 ? "destructive" : "secondary"} className="w-fit">
+            {actionCount === 1
+              ? t("labResults.actionItemsShownOne", "1 action item shown")
+              : t("labResults.actionItemsShownMany", "{count} action items shown", {
+                  count: actionCount,
+                })}
+          </Badge>
+        }
+      />
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-3">
         <Button

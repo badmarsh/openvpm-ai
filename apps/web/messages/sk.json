@@ -2928,6 +2928,11 @@
           "description": "Klienti bez dokončenej návštevy viac ako 12 mesiacov a bez budúcej rezervácie. Reaktivačné (recall) kampane."
         }
       }
+    },
+    "competitors": {
+      "title": "Konkurencia & Intel",
+      "subtitle": "Monitorovanie konkurenčných aktivít a trhový výskum",
+      "startMonitoring": "Spustiť monitorovanie"
     }
   },
   "nav": {
@@ -6959,7 +6964,10 @@
     "openInPlan": "Otvoriť v pláne obsahu",
     "confirmPrepareFailed": "Nepodarilo sa pripraviť potvrdenie klinika. Skontrolujte obsah a skúste znova.",
     "saveConflict": "Záznam bol medzičasom zmenený. Obnovte dáta a skúste znova.",
-    "confirmationExpired": "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova."
+    "confirmationExpired": "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova.",
+    "title": "Generátor prepúšťacích správ",
+    "badge": "Klinický AI asistent",
+    "subtitle": "AI asistent pre tvorbu jasných a empatických inštrukcií domácej starostlivosti pre majiteľov."
   },
   "vetIntel": {
     "badge": "AI Trh & Legislatíva",

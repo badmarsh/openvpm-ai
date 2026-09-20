@@ -22,6 +22,7 @@ import {
   Globe,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -365,146 +366,18 @@ export default function ReviewsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
             {t("marketing.reviews.title", "Recenzie (Google & Facebook)")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "marketing.reviews.description",
-              "Správa, štatistiky a odpovedanie na Google a Facebook recenzie kliniky. Žiadosti o recenziu sa po úmrtí pacienta automaticky blokujú (Sympathy Gate)."
-            )}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => seedMutation.mutate({ force: rawReviews.length === 0 ? false : true })}
-            disabled={seedMutation.isPending}
-            className="text-xs gap-1.5"
-            title="Načítať slovenské vzorové recenzie pre Google a Facebook"
-          >
-            {seedMutation.isPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
-            )}
-            {t("marketing.reviews.seedDemo", "Vzorové recenzie")}
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setIsAddDialogOpen(true)}
-            className="text-xs gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            {t("marketing.reviews.addReview", "Pridať recenziu")}
-          </Button>
-        </div>
-      </div>
-
-      {/* Metrics Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Celkové hodnotenie */}
-        <div className="p-5 rounded-xl border bg-card shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t("marketing.reviews.averageRating", "Celkové hodnotenie")}
-              </span>
-              <Badge variant="secondary" className="text-xs font-medium">
-                {stats.total} recenzií
-              </Badge>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-4xl font-extrabold text-foreground">{stats.avg}</span>
-              <span className="text-sm text-muted-foreground font-medium">/ 5.0</span>
-            </div>
-            <div className="mt-1">
-              <StarRating rating={Math.round(Number(stats.avg))} />
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-            <span>Čaká na odpoveď:</span>
-            <span
-              className={`font-semibold ${
-                stats.unanswered > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"
-              }`}
-            >
-              {stats.unanswered}
-            </span>
-          </div>
-        </div>
-
-        {/* Google Recenzie */}
-        <div
-          onClick={() => setPlatformFilter(platformFilter === "google" ? "all" : "google")}
-          className={`p-5 rounded-xl border bg-card shadow-sm cursor-pointer transition-all hover:border-blue-400 ${
-            platformFilter === "google" ? "ring-2 ring-blue-500/50 border-blue-500" : ""
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 font-semibold text-sm">
-              <GoogleIcon className="w-4 h-4" />
-              <span>Google Business</span>
-            </div>
-            <Badge
-              variant="outline"
-              className="text-[11px] bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
-            >
-              {stats.googleTotal} hodnotení
-            </Badge>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold text-foreground">{stats.googleAvg}</span>
-            <span className="text-sm text-muted-foreground font-medium">/ 5.0</span>
-          </div>
-          <div className="mt-1">
-            <StarRating rating={Math.round(Number(stats.googleAvg))} />
-          </div>
-          <p className="mt-4 pt-3 border-t text-xs text-muted-foreground">
-            Overené recenzie priamo z profilu Google Moja Firma
-          </p>
-        </div>
-
-        {/* Facebook Odporúčania */}
-        <div
-          onClick={() => setPlatformFilter(platformFilter === "facebook" ? "all" : "facebook")}
-          className={`p-5 rounded-xl border bg-card shadow-sm cursor-pointer transition-all hover:border-blue-600 ${
-            platformFilter === "facebook" ? "ring-2 ring-blue-600/50 border-blue-600" : ""
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 font-semibold text-sm">
-              <FacebookIcon className="w-4 h-4" />
-              <span>Facebook Stránka</span>
-            </div>
-            <Badge
-              variant="outline"
-              className="text-[11px] bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
-            >
-              {stats.facebookTotal} odporúčaní
-            </Badge>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold text-foreground">{stats.facebookAvg}</span>
-            <span className="text-sm text-muted-foreground font-medium">/ 5.0</span>
-          </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            <StarRating rating={Math.round(Number(stats.facebookAvg))} />
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-0.5 ml-1">
-              <ThumbsUp className="w-3 h-3" /> 100% odporúča
-            </span>
-          </div>
-          <p className="mt-4 pt-3 border-t text-xs text-muted-foreground">
-            Odporúčania a spätná väzba z komunitnej FB stránky
-          </p>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={t(
+          "marketing.reviews.description",
+          "Správa, štatistiky a odpovedanie na Google a Facebook recenzie kliniky. Žiadosti o recenziu sa po úmrtí pacienta automaticky blokujú (Sympathy Gate)."
+        )}
+      />
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-3">

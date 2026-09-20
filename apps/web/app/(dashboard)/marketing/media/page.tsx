@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,18 +84,13 @@ export default function MediaPage() {
   return (
     <div className="space-y-6">
       {/* Header & Tabs */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            {t("marketing.media.title", "Knižnica médií a grafiky")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "marketing.media.description",
-              "Deterministický render vizuálu, brandové rámiky a AI Canvas s kontrolou GDPR súhlasov."
-            )}
-          </p>
-        </div>
+      <PageHeader
+        title={t("marketing.media.title", "Knižnica médií a grafiky")}
+        subtitle={t(
+          "marketing.media.description",
+          "Deterministický render vizuálu, brandové rámiky a AI Canvas s kontrolou GDPR súhlasov."
+        )}
+      />
 
         {/* Tab switch */}
         <div className="flex rounded-full border border-border bg-muted/40 p-1 w-fit">
@@ -120,7 +116,6 @@ export default function MediaPage() {
             AI Canvas
           </button>
         </div>
-      </div>
 
       {tab === "canvas" ? (
         <AiCanvas onGenerated={() => setTab("library")} />

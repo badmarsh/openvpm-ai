@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/lib/i18n";
 import { ClientAutomationsView } from "@/components/automations/client-automations-view";
 import { ClinicalAutomationsView } from "@/components/automations/clinical-automations-view";
+import { PageHeader } from "@/components/layout/page-header";
 
 function AutomationsContent() {
   const { t } = useI18n();
@@ -17,17 +18,13 @@ function AutomationsContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {t("automations.pageTitle", "Automatizácie a pravidlá kliniky")}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t(
-            "automations.pageSubtitle",
-            "Manažment klientskych marketingových automatizácií, interného Klinického strážcu a zákonných lehôt.",
-          )}
-        </p>
-      </div>
+      <PageHeader
+        title={t("automations.pageTitle", "Automatizácie a pravidlá kliniky")}
+        subtitle={t(
+          "automations.pageSubtitle",
+          "Manažment klientskych marketingových automatizácií, interného Klinického strážcu a zákonných lehôt.",
+        )}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 max-w-md">

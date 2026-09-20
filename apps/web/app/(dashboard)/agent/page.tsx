@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -409,38 +410,36 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">
+      <div className="border-b border-border pb-4">
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
               {t("agent.title", "AI Asistent")}
-            </h1>
-            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
-              <Sparkles className="h-3 w-3" />
-              {t("agent.badge", "Klinický AI Copilot")}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t(
-              "agent.subtitle",
-              "Ask about your clinic. It can look things up and, with your okay, do the work.",
-            )}
-          </p>
-        </div>
-
-        {/* Mode / Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "chat" | "capabilities")}>
-          <TabsList className="grid grid-cols-2 w-[280px]">
-            <TabsTrigger value="chat" className="gap-1.5">
-              <Bot className="h-4 w-4" />
-              {t("agent.tabs.chat", "Asistent")}
-            </TabsTrigger>
-            <TabsTrigger value="capabilities" className="gap-1.5">
-              <Sparkles className="h-4 w-4" />
-              {t("agent.tabs.capabilities", "Schopnosti")}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="h-3 w-3" />
+                {t("agent.badge", "Klinický AI Copilot")}
+              </Badge>
+            </span>
+          }
+          subtitle={t(
+            "agent.subtitle",
+            "Ask about your clinic. It can look things up and, with your okay, do the work.",
+          )}
+          actions={
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "chat" | "capabilities")}>
+              <TabsList className="grid grid-cols-2 w-[280px]">
+                <TabsTrigger value="chat" className="gap-1.5">
+                  <Bot className="h-4 w-4" />
+                  {t("agent.tabs.chat", "Asistent")}
+                </TabsTrigger>
+                <TabsTrigger value="capabilities" className="gap-1.5">
+                  <Sparkles className="h-4 w-4" />
+                  {t("agent.tabs.capabilities", "Schopnosti")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          }
+        />
       </div>
 
       {activeTab === "capabilities" ? (
