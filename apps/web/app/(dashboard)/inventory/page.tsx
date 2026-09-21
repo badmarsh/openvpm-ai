@@ -1147,6 +1147,27 @@ export default function InventoryPage() {
           "inventory.page.subtitle",
           "Products, stock management, and suppliers"
         )}
+        actions={
+          canManageInventory ? (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowImportDialog(true)}
+              >
+                <Truck className="h-4 w-4 mr-1.5" />
+                {t("inventory.page.btnImportWholesaler", "Import dodacieho listu")}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowAddProduct(true)}
+              >
+                <Plus className="h-4 w-4 mr-1.5" />{" "}
+                {t("inventory.page.btnAddProduct", "Add Product")}
+              </Button>
+            </div>
+          ) : undefined
+        }
       />
 
       {/* Tabs */}
@@ -1221,25 +1242,6 @@ export default function InventoryPage() {
                       count: productsQuery.data.total,
                     })}
               </p>
-            )}
-            {canManageInventory && (
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowImportDialog(true)}
-                >
-                  <Truck className="h-4 w-4 mr-1" />
-                  {t("inventory.page.btnImportWholesaler", "Import dodacieho listu")}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setShowAddProduct(true)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />{" "}
-                  {t("inventory.page.btnAddProduct", "Add Product")}
-                </Button>
-              </div>
             )}
           </div>
 

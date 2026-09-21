@@ -421,7 +421,7 @@ export default function StatutoryPage() {
         onValueChange={(v) => setActiveTab(v as StatutoryTab)}
         className="w-full"
       >
-        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1 justify-start">
           <TabsTrigger value="rabies" className="gap-2">
             <Syringe className="h-4 w-4" />
             <span>{t("statutory.tabs.rabies", "Kniha besnoty")}</span>

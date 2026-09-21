@@ -27,6 +27,7 @@ import { reconciliationRouter } from "./reconciliation";
 import { duplicateShieldRouter } from "./duplicate-shield";
 import { aiSettingsRouter } from "./ai-settings";
 import { clinicalGuardianRouter } from "./clinical-guardian";
+import { fieldVisitsRouter } from "./field-visits";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -61,6 +62,7 @@ export const extensionsRouter = createRouter({
   duplicateShield: duplicateShieldRouter,
   aiSettings: aiSettingsRouter,
   clinicalGuardian: clinicalGuardianRouter,
+  fieldVisits: fieldVisitsRouter,
 });
 
 export {
@@ -90,6 +92,5 @@ export {
   duplicateShieldRouter,
   aiSettingsRouter,
   clinicalGuardianRouter,
+  fieldVisitsRouter,
 };
-
-

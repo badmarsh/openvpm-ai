@@ -19,6 +19,13 @@ import {
   Repeat2,
   Stethoscope,
   MapPin,
+  Trash2,
+  Pencil,
+  Check,
+  UserCheck,
+  UserX,
+  CalendarX,
+  ArrowUpRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -1464,103 +1471,223 @@ function AppointmentDetailPopover({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150">
       <div
         ref={popoverRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={dialogTitleId}
         tabIndex={-1}
-        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-lg border border-border bg-card shadow-lg sm:max-h-[calc(100dvh-2rem)]"
+        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xl sm:max-h-[calc(100dvh-2rem)] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/30 px-4 py-2.5">
           <div className="flex items-center gap-2">
-            <StatusDot status={appointment.status} />
-            <span className="text-sm font-medium">
-              {appointmentStatusLabel(appointment, t)}
+            <span className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border shadow-2xs",
+              current === "scheduled" && "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800",
+              current === "confirmed" && "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800",
+              current === "checked_in" && "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800",
+              current === "in_exam" && "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800",
+              current === "checked_out" && "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800",
+              current === "no_show" && "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800",
+              current === "cancelled" && "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/60 dark:text-gray-400 dark:border-gray-800"
+            )}>
+              <StatusDot status={appointment.status} />
+              <span>{appointmentStatusLabel(appointment, t)}</span>
             </span>
           </div>
-          <button
-            type="button"
-            aria-label={t("schedule.closeDetailsAria", "Close appointment details")}
-            onClick={onClose}
-            className="rounded-md p-1 hover:bg-muted transition-colors"
-          >
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
+
+          <div className="flex items-center gap-1">
+            {canManageSchedule && canMoveAppointment && (
+              <button
+                type="button"
+                title={t("schedule.btnEditAppointment", "Edit appointment")}
+                aria-label={t("schedule.btnEditAppointment", "Edit appointment")}
+                onClick={() => {
+                  setShowConfirmationForm(false);
+                  setShowRescheduleForm((show) => !show);
+                }}
+                className={cn(
+                  "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  showRescheduleForm && "bg-muted text-foreground"
+                )}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+            {canManageSchedule && ["scheduled", "confirmed", "cancelled", "no_show"].includes(current) && (
+              <button
+                type="button"
+                title={t("schedule.deleteAppointment.button", "Delete appointment")}
+                aria-label={t("schedule.deleteAppointment.button", "Delete appointment")}
+                disabled={isDeleting}
+                onClick={() => setConfirmDelete(true)}
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label={t("schedule.closeDetailsAria", "Close appointment details")}
+              onClick={onClose}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ml-0.5"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Body */}
-        <div className="px-4 py-3 space-y-3">
-          <div>
-            <h3 id={dialogTitleId} className="font-semibold text-base">
-              {appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}
-            </h3>
-            {appointment.patientSpecies && (
-              <p className="text-xs text-muted-foreground">{formatSpecies(appointment.patientSpecies, t)}</p>
+        {/* Scrollable Body */}
+        <div className="px-5 py-4 space-y-3.5 overflow-y-auto">
+          {/* Patient Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 id={dialogTitleId} className="font-semibold text-lg text-foreground tracking-tight">
+                  {appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}
+                </h3>
+                {appointment.patientSpecies && (
+                  <span className="inline-flex items-center rounded-full bg-secondary/80 px-2.5 py-0.5 text-xs font-medium text-secondary-foreground border border-border/50">
+                    {formatSpecies(appointment.patientSpecies, t)}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                <User className="h-3 w-3 shrink-0" />
+                <span>{t("schedule.clientLabel", "Client: {name}", { name: clientName })}</span>
+              </p>
+            </div>
+
+            {appointment.patientId && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs gap-1 text-muted-foreground hover:text-foreground shrink-0 border-border/80"
+                asChild
+              >
+                <Link
+                  href={`/patients/${appointment.patientId}`}
+                  onNavigate={() => {
+                    restoreFocusRef.current = false;
+                  }}
+                >
+                  <span>{t("schedule.btnViewChart", "View chart")}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </Button>
             )}
           </div>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <User className="h-3.5 w-3.5" />
-              <span>{t("schedule.clientLabel", "Client: {name}", { name: clientName })}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
+          {/* Appointment Meta Details Card */}
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3 space-y-2 text-xs">
+            <div className="flex items-center gap-2 text-foreground font-medium">
+              <Clock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>
-                {formatTime(start, timeZone)} - {formatTime(end, timeZone)}
+                {formatTime(start, timeZone)} – {formatTime(end, timeZone)}
               </span>
+              {appointment.typeName && (
+                <span className="text-muted-foreground font-normal">
+                  · {appointment.typeName}
+                </span>
+              )}
             </div>
-            {appointment.doctorName && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <User className="h-3.5 w-3.5" />
-                <span>{formatDoctorName(appointment.doctorName, t)}</span>
+
+            {(appointment.doctorName || appointment.roomName) && (
+              <div className="flex items-center gap-3 text-muted-foreground flex-wrap">
+                {appointment.doctorName && (
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-3 w-3 shrink-0" />
+                    <span>{formatDoctorName(appointment.doctorName, t)}</span>
+                  </div>
+                )}
+                {appointment.roomName && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-[11px] text-muted-foreground">#</span>
+                    <span>{appointment.roomName}</span>
+                  </div>
+                )}
               </div>
             )}
+
             {appointment.locationName && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <MapPin className="h-3 w-3 shrink-0" />
                 <span>{appointment.locationName}</span>
               </div>
             )}
-            {appointment.typeName && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
-                <span>{appointment.typeName}</span>
-              </div>
-            )}
+
             {appointment.recurringSeriesId && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Repeat2 className="h-3.5 w-3.5" />
-                <span>{t("schedule.recurringSeriesLabel", "Recurring series")}</span>
+              <div className="flex items-center gap-1.5 text-primary">
+                <Repeat2 className="h-3 w-3 shrink-0" />
+                <span className="font-medium">{t("schedule.recurringSeriesLabel", "Recurring series")}</span>
               </div>
             )}
-            {appointment.roomName && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="ml-0.5 h-3.5 w-3.5 text-center text-xs font-bold">#</span>
-                <span>{appointment.roomName}</span>
-              </div>
-            )}
+
             {appointment.notes && (
-              <p className="text-muted-foreground text-xs mt-1 bg-muted/50 rounded p-2">
+              <p className="text-muted-foreground text-xs pt-1.5 mt-1 border-t border-border/50 italic leading-relaxed">
                 {appointment.notes}
               </p>
             )}
-            {doctorRequiredForAdvance && (
-              <p className="rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900">
+          </div>
+
+          {doctorRequiredForAdvance && (
+            <p className="rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-900 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-900">
+              {t(
+                "schedule.assignDoctorAdvance",
+                "Assign a doctor before confirming or checking in this appointment request."
+              )}
+            </p>
+          )}
+
+          {/* Delete Confirmation Inline Card */}
+          {confirmDelete && (
+            <div className="space-y-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs animate-in fade-in duration-150">
+              <p className="text-xs text-foreground/90 leading-relaxed font-medium">
                 {t(
-                  "schedule.assignDoctorAdvance",
-                  "Assign a doctor before confirming or checking in this appointment request."
+                  "schedule.deleteAppointment.confirmPrompt",
+                  "Remove this appointment from the schedule? Appointments with clinical or billing records must be corrected in the visit workspace."
                 )}
               </p>
-            )}
-          </div>
+              <Input
+                aria-label={t("schedule.deleteAppointment.reasonAriaLabel", "Reason for deleting appointment")}
+                placeholder={t("schedule.deleteAppointment.reasonPlaceholder", "Reason for deleting (required)")}
+                value={deleteReason}
+                maxLength={500}
+                onChange={(event) => setDeleteReason(event.target.value)}
+                className="h-8 text-xs bg-background"
+              />
+              <div className="flex items-center justify-end gap-2 pt-0.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    setDeleteReason("");
+                  }}
+                >
+                  {t("schedule.deleteAppointment.cancelButton", "Keep appointment")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 text-xs"
+                  disabled={isDeleting || deleteReason.trim().length < 3}
+                  onClick={() => onDelete(appointment.id, deleteReason.trim())}
+                >
+                  {isDeleting ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : null}
+                  {t("schedule.deleteAppointment.confirmButton", "Confirm deletion")}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Reschedule Form */}
         {showRescheduleForm && (
-          <div className="border-t border-border px-4 py-3">
+          <div className="border-t border-border px-4 py-3 bg-muted/20">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div>
                 <label
@@ -1636,6 +1763,7 @@ function AppointmentDetailPopover({
               <select
                 id={rescheduleLocationFieldId}
                 value={rescheduleLocationId}
+                aria-label="Filter schedule by clinic location"
                 onChange={(event) => {
                   setRescheduleLocationId(event.target.value);
                   setRescheduleRoomId("");
@@ -1743,8 +1871,9 @@ function AppointmentDetailPopover({
           </div>
         )}
 
+        {/* Confirmation Form */}
         {showConfirmationForm && (
-          <div className="border-t border-border px-4 py-3">
+          <div className="border-t border-border px-4 py-3 bg-muted/20">
             <fieldset>
               <legend className="text-sm font-semibold">
                 {t("schedule.recordConfirmationTitle", "Record client confirmation")}
@@ -1838,16 +1967,15 @@ function AppointmentDetailPopover({
           </div>
         )}
 
-        {/* Actions */}
-        {(appointment.id ||
-          appointment.patientId ||
-          visibleStatusActions.length > 0 ||
-          (canManageSchedule && canMoveAppointment) ||
-          (canManageSchedule && appointment.recurringSeriesId) ||
-          (canSendReminders &&
-            (current === "scheduled" || current === "confirmed"))) && (
-          <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3">
-            <Button size="sm" asChild>
+        {/* Actions Footer */}
+        {(appointment.id || visibleStatusActions.length > 0) && (
+          <div className="border-t border-border/70 bg-muted/10 p-4 space-y-2.5 mt-auto">
+            {/* 1. Primary Action: Open visit */}
+            <Button
+              size="default"
+              className="w-full justify-center font-medium shadow-xs h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all hover:shadow"
+              asChild
+            >
               <Link
                 href={
                   current === "in_exam"
@@ -1861,146 +1989,133 @@ function AppointmentDetailPopover({
                   }
                 }}
               >
-                <Stethoscope className="mr-1.5 h-3 w-3" />
+                <Stethoscope className="mr-2 h-4 w-4" />
                 {current === "in_exam"
                   ? t("schedule.btnReviewCloseout", "Review closeout")
                   : t("schedule.btnOpenVisit", "Open visit")}
               </Link>
             </Button>
-            {appointment.patientId && (
-              <Button size="sm" variant="outline" asChild>
-                <Link
-                  href={`/patients/${appointment.patientId}`}
-                  onNavigate={() => {
-                    restoreFocusRef.current = false;
-                  }}
-                >
-                  {t("schedule.btnViewChart", "View chart")}
-                </Link>
-              </Button>
-            )}
-            {canManageSchedule && canMoveAppointment && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isRescheduling}
-                onClick={() => setShowRescheduleForm((show) => !show)}
-              >
-                <Clock className="mr-1.5 h-3 w-3" />
-                {t("schedule.btnEditAppointment", "Edit appointment")}
-              </Button>
-            )}
-            {canSendReminders && current === "confirmed" && (
-              <SendReminderButton appointmentId={appointment.id} />
-            )}
-            {canManageSchedule && appointment.recurringSeriesId && (
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={isCancellingSeries}
-                onClick={() => onCancelRecurringSeries(appointment.recurringSeriesId!)}
-              >
-                {isCancellingSeries ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                ) : (
-                  <Repeat2 className="mr-1.5 h-3 w-3" />
-                )}
-                {t("schedule.btnCancelFutureSeries", "Cancel Future Series")}
-              </Button>
-            )}
-            {canManageSchedule && ["scheduled", "confirmed", "cancelled", "no_show"].includes(current) && (
-              <div className="w-full space-y-2">
-                <Button size="sm" variant="destructive" disabled={isDeleting} onClick={() => setConfirmDelete(true)}>
-                  {t("schedule.deleteAppointment.button", "Delete appointment")}
-                </Button>
-                {confirmDelete && (
-                  <div className="space-y-2 rounded-md border p-3">
-                    <p className="text-sm">
-                      {t("schedule.deleteAppointment.confirmPrompt", "Remove this appointment from the schedule? Appointments with clinical or billing records must be corrected in the visit workspace.")}
-                    </p>
-                    <Input
-                      aria-label={t("schedule.deleteAppointment.reasonAriaLabel", "Reason for deleting appointment")}
-                      placeholder={t("schedule.deleteAppointment.reasonPlaceholder", "Reason for deleting (required)")}
-                      value={deleteReason}
-                      maxLength={500}
-                      onChange={(event) => setDeleteReason(event.target.value)}
-                    />
+
+            {/* 2. Status Actions Grid */}
+            {visibleStatusActions.length > 0 && (
+              <div className={cn(
+                "grid gap-2",
+                visibleStatusActions.length === 4 ? "grid-cols-2" :
+                visibleStatusActions.length === 3 ? "grid-cols-3" :
+                visibleStatusActions.length === 2 ? "grid-cols-2" :
+                "grid-cols-1"
+              )}>
+                {visibleStatusActions.map((action) => {
+                  if (action.status === "checked_in" && needsDoctorAssignment) {
+                    return (
+                      <div key="inline-doctor-checkin" className="col-span-full flex items-center gap-1.5">
+                        <select
+                          aria-label={t("schedule.selectDoctorToAssign", "Select doctor to assign")}
+                          value={inlineDoctorId}
+                          onChange={(e) => setInlineDoctorId(e.target.value)}
+                          className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">{t("schedule.selectDoctorToAssign", "Select doctor...")}</option>
+                          {eligibleRescheduleDoctors.map((doc) => (
+                            <option key={doc.id} value={doc.id}>
+                              {formatDoctorName(doc.name, t)}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs shrink-0 h-8"
+                          disabled={isUpdating || !inlineDoctorId}
+                          title={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}
+                          onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                          ) : null}
+                          {action.label}
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  const isCancel = action.status === "cancelled";
+                  const isConfirm = action.status === "confirmed";
+                  const isCheckIn = action.status === "checked_in";
+                  const isNoShow = action.status === "no_show";
+
+                  return (
                     <Button
+                      key={action.status}
                       size="sm"
-                      variant="destructive"
-                      disabled={isDeleting || deleteReason.trim().length < 3}
-                      onClick={() => onDelete(appointment.id, deleteReason.trim())}
-                    >
-                      {t("schedule.deleteAppointment.confirmButton", "Confirm deletion")}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
-                      {t("schedule.deleteAppointment.cancelButton", "Keep appointment")}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-            {visibleStatusActions.map((action) => {
-              if (action.status === "checked_in" && needsDoctorAssignment) {
-                return (
-                  <div key="inline-doctor-checkin" className="flex items-center gap-1.5">
-                    <select
-                      aria-label={t("schedule.selectDoctorToAssign", "Select doctor to assign")}
-                      value={inlineDoctorId}
-                      onChange={(e) => setInlineDoctorId(e.target.value)}
-                      className="h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">{t("schedule.selectDoctorToAssign", "Select doctor...")}</option>
-                      {eligibleRescheduleDoctors.map((doc) => (
-                        <option key={doc.id} value={doc.id}>
-                          {formatDoctorName(doc.name, t)}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      variant={action.variant}
-                      disabled={isUpdating || !inlineDoctorId}
-                      title={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}
-                      onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
+                      variant="outline"
+                      disabled={isUpdating || action.disabled}
+                      title={action.disabledReason}
+                      className={cn(
+                        "h-8 text-xs font-medium justify-center transition-colors shadow-2xs",
+                        isConfirm && "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
+                        isCheckIn && "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300",
+                        isNoShow && "border-border text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                        isCancel && "border-rose-200 bg-rose-50/40 text-rose-700 hover:bg-rose-100 hover:text-rose-800 hover:border-rose-300 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
+                      )}
+                      onClick={() => {
+                        if (action.status === "confirmed") {
+                          setShowRescheduleForm(false);
+                          setShowConfirmationForm(true);
+                          return;
+                        }
+                        onStatusChange(appointment.id, action.status);
+                      }}
                     >
                       {isUpdating ? (
                         <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                      ) : isConfirm ? (
+                        <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : isCheckIn ? (
+                        <UserCheck className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      ) : isNoShow ? (
+                        <UserX className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                      ) : isCancel ? (
+                        <CalendarX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                       ) : null}
                       {action.label}
                     </Button>
-                  </div>
-                );
-              }
-              return (
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Send reminder (if confirmed) */}
+            {canSendReminders && current === "confirmed" && (
+              <SendReminderButton appointmentId={appointment.id} />
+            )}
+
+            {/* Cancel recurring series */}
+            {canManageSchedule && appointment.recurringSeriesId && (
+              <div className="pt-1">
                 <Button
-                  key={action.status}
                   size="sm"
-                  variant={action.variant}
-                  disabled={isUpdating || action.disabled}
-                  title={action.disabledReason}
-                  onClick={() => {
-                    if (action.status === "confirmed") {
-                      setShowRescheduleForm(false);
-                      setShowConfirmationForm(true);
-                      return;
-                    }
-                    onStatusChange(appointment.id, action.status);
-                  }}
+                  variant="ghost"
+                  className="h-7 w-full text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 justify-center"
+                  disabled={isCancellingSeries}
+                  onClick={() => onCancelRecurringSeries(appointment.recurringSeriesId!)}
                 >
-                  {isUpdating ? (
+                  {isCancellingSeries ? (
                     <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                  ) : null}
-                  {action.label}
+                  ) : (
+                    <Repeat2 className="mr-1.5 h-3 w-3" />
+                  )}
+                  {t("schedule.btnCancelFutureSeries", "Cancel Future Series")}
                 </Button>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 }
+
 
 function SendReminderButton({ appointmentId }: { appointmentId: string }) {
   const { t } = useI18n();

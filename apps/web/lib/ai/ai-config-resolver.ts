@@ -69,14 +69,14 @@ export async function resolveFeatureConfig(
 
   if (!config || !featureMapping || featureMapping.provider === "default") {
     // Default system fallbacks per feature
-    if (feature === "imageGeneration") {
-      const ali = getAlibabaProxyConfig();
-      return {
-        provider: "alibaba",
-        modelId: "qwen-image-3.0",
-        baseUrl: ali.baseUrl,
-        apiKey: ali.apiKey,
-        size: "1024*1024",
+      if (feature === "imageGeneration") {
+        const ali = getAlibabaProxyConfig();
+        return {
+          provider: "alibaba",
+          modelId: ALIBABA_DEFAULT_IMAGE_MODEL,
+          baseUrl: ali.baseUrl,
+          apiKey: ali.apiKey,
+          size: "1024*1024",
       };
     }
     if (feature === "videoGeneration") {
@@ -340,4 +340,3 @@ export async function resolvePracticeLanguageModel(
 
   return proxy(resolved.modelId);
 }
-

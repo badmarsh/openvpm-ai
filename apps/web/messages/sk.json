@@ -27,7 +27,8 @@
       "activationRecovery": "Obnova aktivácie kliník",
       "journeyCohorts": "Kohorty produkčnej cesty (30 dní)",
       "messagingCarrier": "Registrácia operátora správ",
-      "practices": "Veterinárne praxe"
+      "practices": "Veterinárne praxe",
+      "simulation": "Klinická simulácia & Journey Discovery"
     },
     "table": {
       "practice": "Prax",
@@ -361,6 +362,21 @@
       "manualOnly": "Iba manuálne preverenie",
       "close": "Zavrieť",
       "applyResolution": "Aplikovať auditované riešenie"
+    },
+    "simulation": {
+      "title": "Klinická simulácia & Journey Discovery",
+      "subtitle": "Interaktívna end-to-end simulácia 30 veterinárnych workflowov (J1–J30), 5 reálnych klinických prípadov, časovej osi dňa (08:00–17:30), slovenskej legislatívy, Clinical Guardianu a gap analýzy.",
+      "badgePilot": "PILOT-READY (v0.6)",
+      "badgeWorkflows": "30 tokov (J1–J30)",
+      "badgeCases": "5 klinických prípadov",
+      "badgeTests": "4 858 testov · 100% Pass",
+      "badgeEvals": "114 AI evalov",
+      "launch": "Spustiť simuláciu",
+      "openInSettings": "Otvoriť v Nastaveniach",
+      "openNewTab": "Otvoriť v novom okne",
+      "viewDocs": "Product Discovery dokumentácia",
+      "statusActive": "Aktívny simulačný engine",
+      "lastUpdated": "Aktualizované: 21.09.2026"
     }
   },
   "agent": {
@@ -487,6 +503,9 @@
       "downloadTitle": "Stiahnuť .md súbor",
       "downloaded": "Záznam konverzácie stiahnutý",
       "printTitle": "Tlačiť konverzáciu"
+    },
+    "morningBrief": {
+      "simulation": "Klinická simulácia (Hermes)"
     }
   },
   "agent.accessRestricted": "Prístup k agentovi je obmedzený",
@@ -2002,7 +2021,7 @@
   "encounters.hub.tableDueDate": "Termín kontroly",
   "encounters.hub.tableNotes": "Poznámky",
   "encounters.hub.tableAssignee": "Zodpovedný riešiteľ",
-  "encounters.hub.searchPlaceholder": "Hľadať podľa mena pacienta, majiteľa, čipu alebo lekára...",
+  "encounters.hub.searchPlaceholder": "Hľadať pacienta, majiteľa, čip...",
   "encounters.hub.dateLabel": "Dátum",
   "encounters.hub.allStatuses": "Všetky stavy",
   "encounters.hub.allDoctors": "Všetci lekári",
@@ -3066,7 +3085,9 @@
     "wellness": "Wellness plány",
     "badgeNew": "Nové",
     "receptionScripts": "Skripty recepcie",
-    "pilotReconciliation": "Denná kontrola (Pilot)"
+    "pilotReconciliation": "Denná kontrola (Pilot)",
+    "simulation": "Klinická simulácia",
+    "fieldVisits": "Terénna prax & Farmy"
   },
   "newSoap": {
     "loadingEditor": "Načítavam editor...",
@@ -4334,7 +4355,7 @@
     "statusConfirm": "Potvrdiť",
     "statusCheckIn": "Nahlásiť príchod",
     "statusNoShowAction": "Neprišiel",
-    "statusCancelAction": "Zrušiť",
+    "statusCancelAction": "Zrušiť termín",
     "statusInExamAction": "Začať vyšetrenie",
     "statusReopen": "Znovu otvoriť",
     "closeDetailsAria": "Zavrieť detail termínu",
@@ -4480,7 +4501,8 @@
       "messaging": "Správy a SMS",
       "booking": "Online rezervácie",
       "billing": "Predplatné a fakturácia",
-      "ai": "Nastavenia AI"
+      "ai": "Nastavenia AI",
+      "simulation": "Klinická simulácia"
     },
     "common": {
       "loadError": "Nepodarilo sa načítať nastavenia",
@@ -4912,6 +4934,32 @@
       "importTitle": "Import dát",
       "importDescription": "Prechádzate z iného systému? Najprv importujte klientov, potom pacientov, históriu očkovaní a nakoniec zdravotnú históriu (návštevy). Každý súbor sa najprv skontroluje nanečisto, takže duplicity a chýbajúce záznamy uvidíte skôr, než sa čokoľvek uloží. Bežné názvy stĺpcov z AVImark, Cornerstone a ezyVet sú rozpoznávané. Migrácie zo Shepherd sú sprevádzané overením presného formátu exportu kliniky. ID majiteľov a pacientov zostávajú prepojené naprieč súbormi, aj keď majiteľ nemá e-mail.",
       "importSourceLabel": "Zdroj dát:"
+    },
+    "simulation": {
+      "title": "Klinická simulácia & Journey Discovery",
+      "subtitle": "Interaktívna simulácia 30 veterinárnych workflowov (J1–J30), 5 klinických prípadov, časovej osi dňa (08:00–17:30), slovenskej legislatívnej konformity, AI asistenta, Clinical Guardianu, e-Kasy a gap analýzy.",
+      "fullscreen": "Celá obrazovka",
+      "exitFullscreen": "Ukončiť celú obrazovku",
+      "openNewTab": "Otvoriť samostatne",
+      "reload": "Znovu načítať",
+      "sound": "Zvuk",
+      "soundOn": "Zvuk: ZAP",
+      "soundOff": "Zvuk: VYP",
+      "scenarios": {
+        "title": "Výber klinického scenára (12 prípadov)",
+        "bork": "🐕 Bork (Zlatý retriever, 4r) — Kašeľ & očkovanie",
+        "luna": "🐱 Luna (Mačka, 2r) — 🚨 Kritická interakcia (Meloxicam + Prednizolón)",
+        "max": "🐶 Max (Kavalier, 7r) — Šelest srdca & AI RTG VHS analýza",
+        "daisy": "🐕 Daisy (Nemecký ovčiak, 9r) — Operácia pyometry & anestézia Gap C-01",
+        "rocky": "🐶 Rocky (Francúzsky buldoček, 1r) — Urgentná otrava & triáž Gap C-04",
+        "bella": "🐱 Bella (Perzská mačka, 5r) — Chronické zlyhávanie obličiek (CKD IRIS 3)",
+        "bruno": "🐕 Bruno (Rotvajler, 8r) — GDV Torzia žalúdka & šokový stav",
+        "milo": "🐰 Milo (Králik baranček, 2r) — GI stáza & 🚨 Kontraindikácia Penicilínov",
+        "zara": "🐕 Zara (Border Kólia, 3r) — MDR1 génový deficit & Ivermektín neurotoxicita",
+        "hugo": "🐶 Hugo (Mops, 4r) — BOAS obštrukcia dýchacích ciest & plastika podnebia",
+        "nela": "🐕 Nela (Labrador, 6r) — Diabetes Mellitus & inzulínový protokol",
+        "simba": "🐱 Simba (Kocúr, 3r) — FLUTD obštrukcia močovodu & hyperkaliémia"
+      }
     }
   },
   "website": {

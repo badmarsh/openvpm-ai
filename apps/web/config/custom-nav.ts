@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Heart,
   MessageSquare,
+  FlaskConical,
+  Tractor,
 } from "lucide-react";
 
 export type UserRole =
@@ -47,6 +49,16 @@ export interface CustomNavItem {
  * Merged into the sidebar sections without modifying vanilla navItems.
  */
 export const customNavItems: CustomNavItem[] = [
+  // Field visits & large animal farm care
+  {
+    href: "/field-visits",
+    label: "Terénna prax & Farmy",
+    i18nKey: "nav.fieldVisits",
+    icon: Tractor,
+    roles: ["admin", "veterinarian"],
+    section: "billing",
+    badge: "FARMA",
+  },
 
   // Marketing
   {
@@ -83,6 +95,16 @@ export const customNavItems: CustomNavItem[] = [
     section: 'marketing',
   },
   {
+    href: "/settings?tab=simulation",
+    label: "Klinická simulácia",
+    i18nKey: "nav.simulation",
+    icon: FlaskConical,
+    roles: ["admin", "veterinarian"],
+    section: "admin",
+    badge: "SIM",
+  },
+
+  {
     href: '/automations',
     label: 'Automatizácie',
     i18nKey: 'nav.automations',
@@ -116,7 +138,7 @@ export const customNavItems: CustomNavItem[] = [
     section: "clinical",
     badge: "AI",
   },
-    {
+  {
     href: "/statutory",
     label: "Zákonné registre",
     i18nKey: "nav.statutory",

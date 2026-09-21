@@ -229,8 +229,8 @@ describe("AGENT_TOOLS complete security matrix verification", async () => {
     userRole: role,
   });
 
-  it("verifies inventory has all 26 registered tools", () => {
-    expect(AGENT_TOOLS.length).toBe(26);
+  it("verifies inventory has all 28 registered tools", () => {
+    expect(AGENT_TOOLS.length).toBe(28);
   });
 
   it("fail-closed: EVERY tool denies undefined role before any DB access", async () => {

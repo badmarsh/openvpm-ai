@@ -328,6 +328,26 @@ export function MarketingStudioContent() {
                     AliProxy (Wanx 2.1 & Wan 2.1): {aliStatusQuery.data.online ? "Online" : "Offline"}
                   </Badge>
                 )}
+                {aliStatusQuery.data?.gemini && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-mono gap-1",
+                      aliStatusQuery.data.gemini.online
+                        ? "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20"
+                        : "border-slate-300 text-slate-500 dark:border-slate-700"
+                    )}
+                    title={aliStatusQuery.data.gemini.description}
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        aliStatusQuery.data.gemini.online ? "bg-blue-500 animate-pulse" : "bg-slate-400"
+                      )}
+                    />
+                    Gemini Imagen 3 / Veo 2: {aliStatusQuery.data.gemini.online ? "Online" : "Nekonfig."}
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Tvorba edukačných a sezónnych príspevkov na sociálne siete, SMS a newslettery pre majiteľov zvierat.

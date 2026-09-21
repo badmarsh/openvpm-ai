@@ -318,7 +318,7 @@
     "statusConfirm": "Confirm",
     "statusCheckIn": "Check In",
     "statusNoShowAction": "No Show",
-    "statusCancelAction": "Cancel",
+    "statusCancelAction": "Cancel appointment",
     "statusInExamAction": "In Exam",
     "statusReopen": "Reopen",
     "closeDetailsAria": "Close appointment details",

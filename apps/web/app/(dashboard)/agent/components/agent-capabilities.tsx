@@ -1,6 +1,6 @@
 "use client";
 
-import { Stethoscope, Calendar, Pill, ShieldAlert, Sparkles } from "lucide-react";
+import { Stethoscope, Calendar, Pill, ShieldAlert, Sparkles, FlaskConical, Bot } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,39 @@ export function AgentCapabilitiesView({
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2">
+          <Card className="border hover:border-primary/40 transition-colors bg-gradient-to-br from-card to-primary/5">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-base font-semibold">
+                    Klinická simulácia & Hermes Copilot
+                  </CardTitle>
+                </div>
+                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                  Live Telemetria
+                </Badge>
+              </div>
+              <CardDescription className="text-xs mt-1">
+                Autonómny prehľad 12 klinických prípadov, 30 používateľských tokov (J1–J30) a gap analýzy kliniky.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() =>
+                  onPickQuery(
+                    "Hermes, zhrň mi aktuálny stav a zistenia klinickej simulácie, 12 pacientov a gap analýzy.",
+                  )
+                }
+              >
+                Vyskúšať dopyt
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="border hover:border-primary/40 transition-colors">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">

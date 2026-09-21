@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PageLoading } from "@/components/common/loading";
 import { SmsRecoveryConsole } from "@/components/admin/sms-recovery-console";
 import { ClinicPilotConsole } from "@/components/admin/clinic-pilot-console";
+import { ClinicalSimulationAdminCard } from "@/components/admin/clinical-simulation-card";
 import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 
@@ -319,6 +320,9 @@ export default function AdminPage() {
       </div>
 
       <ClinicPilotConsole practices={data.practices} />
+
+      {/* Clinical Simulation & Discovery */}
+      <ClinicalSimulationAdminCard />
 
       {/* SMS operations health */}
       <div className="mt-6 rounded-lg border border-border bg-card p-5">

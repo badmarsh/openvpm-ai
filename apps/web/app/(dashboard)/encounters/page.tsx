@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
 import { StatusPulseBadge, type StatusPulseVariant } from "@/components/ui/status-pulse-badge";
+import { TableSkeleton } from "@/components/common/loading";
 import { cn } from "@/lib/utils";
 
 type TabKey = "today" | "active" | "followUps" | "all";
@@ -280,7 +281,10 @@ export default function EncountersPage() {
               </span>
               <Activity className="h-4 w-4 text-emerald-500" />
             </div>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+            <p className={cn(
+              "mt-2 text-2xl font-bold tracking-tight",
+              inClinicCount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/60"
+            )}>
               {inClinicCount}
             </p>
           </CardContent>
@@ -294,7 +298,10 @@ export default function EncountersPage() {
               </span>
               <HeartHandshake className="h-4 w-4 text-amber-500" />
             </div>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+            <p className={cn(
+              "mt-2 text-2xl font-bold tracking-tight",
+              followUps.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground/60"
+            )}>
               {followUps.length}
             </p>
           </CardContent>
@@ -308,7 +315,10 @@ export default function EncountersPage() {
               </span>
               <CheckCircle2 className="h-4 w-4 text-primary/70" />
             </div>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+            <p className={cn(
+              "mt-2 text-2xl font-bold tracking-tight",
+              completedTodayCount > 0 ? "text-foreground" : "text-muted-foreground/60"
+            )}>
               {completedTodayCount}
             </p>
           </CardContent>
@@ -483,8 +493,8 @@ export default function EncountersPage() {
         /* Follow-ups Queue View */
         <div className="rounded-xl border border-border bg-card shadow-xs">
           {followUpsQuery.isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="p-4">
+              <TableSkeleton rows={4} cols={5} />
             </div>
           ) : filteredFollowUps.length === 0 ? (
             <div className="p-8">
@@ -598,8 +608,8 @@ export default function EncountersPage() {
         /* Encounters & Visits Table View */
         <div className="rounded-xl border border-border bg-card shadow-xs">
           {appointmentsQuery.isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="p-4">
+              <TableSkeleton rows={5} cols={6} />
             </div>
           ) : filteredAppointments.length === 0 ? (
             <div className="p-8">

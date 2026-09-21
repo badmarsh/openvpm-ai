@@ -73,6 +73,12 @@ import {
   ALIBABA_DEFAULT_VIDEO_MODEL,
 } from "@/lib/ai/alibaba-proxy";
 import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
+import {
+  generateGeminiImage,
+  submitGeminiVideo,
+  pollGeminiVideo,
+  isGeminiMediaConfigured,
+} from "@/lib/ai/gemini-media";
 import { proceduralIllustration } from "@/lib/marketing/illustration";
 import { assertPatientNotDeceased } from "./_safety";
 
@@ -810,7 +816,21 @@ validateContent: protectedProcedure
 // ── Media Library & Alibaba AI Generation ──────────────────────────────────────
 
 getAlibabaProxyStatus: protectedProcedure.query(async () => {
-  return checkAlibabaProxyHealth();
+  const alibabaHealth = await checkAlibabaProxyHealth();
+  const geminiConfigured = isGeminiMediaConfigured();
+  return {
+    ...alibabaHealth,
+    gemini: {
+      isConfigured: geminiConfigured,
+      /** Gemini AI Studio is always "online" if configured (no local process needed) */
+      online: geminiConfigured,
+      description: geminiConfigured
+        ? "Google AI Studio (Imagen 3 / Veo 2) — nakonfigurované"
+        : "Google AI Studio nie je nakonfigurované (chýba GEMINI_API_KEY)",
+    },
+    /** True when at least one image/video generation provider is ready */
+    anyMediaProviderOnline: alibabaHealth.online || geminiConfigured,
+  };
 }),
 
 generateImage: protectedProcedure
@@ -863,6 +883,26 @@ generateImage: protectedProcedure
       console.warn(
         `[generateImage] Alibaba Proxy unavailable (${err?.message || "fetch failed"}), using curated clinical fallback visual: ${fallbackUrl}`
       );
+      if (isGeminiMediaConfigured()) {
+        try {
+          const geminiResult = await generateGeminiImage({
+            prompt: input.prompt,
+            aspectRatio: "1:1",
+            sampleCount: 1,
+          });
+          await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
+          return {
+            url: geminiResult.url ?? undefined,
+            b64_json: geminiResult.b64_json,
+            created: Math.floor(Date.now() / 1000),
+          };
+        } catch (geminiErr: any) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: "Generovanie obrazka zlyhalo (AliProxy aj Gemini Imagen 3): " + (geminiErr?.message ?? ""),
+          });
+        }
+      }
       return {
         url: fallbackUrl,
         created: Math.floor(Date.now() / 1000),
@@ -894,21 +934,44 @@ submitVideo: protectedProcedure
       });
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
       return result;
-    } catch (err: any) {
+    } catch (aliErr: any) {
+      if (isGeminiMediaConfigured()) {
+        try {
+          const geminiResult = await submitGeminiVideo({
+            prompt: input.prompt,
+            aspectRatio: "16:9",
+            durationSeconds: 5,
+          });
+          await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
+          return {
+            taskId: geminiResult.operationName,
+            status: geminiResult.status,
+            requestId: geminiResult.operationName,
+            provider: "gemini",
+          };
+        } catch (geminiErr: any) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: "Video: AliProxy aj Google Veo 2 zlyhali: " + (geminiErr?.message ?? "neznama chyba"),
+          });
+        }
+      }
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message:
-          err instanceof Error && !err.message.toLowerCase().includes("fetch failed")
-            ? err.message
-            : "Alibaba Proxy video engine nie je dostupný na porte 8080. Spustite AliProxy pred generovaním videa.",
+        message: aliErr instanceof Error ? aliErr.message : "Video engine nie je dostupny. Nastavte GEMINI_API_KEY.",
       });
     }
   }),
+  // NOTE: Gemini Veo 2 fallback handled above via catch block
 
 pollVideo: protectedProcedure
   .input(z.object({ taskId: z.string().min(1) }))
   .query(async ({ ctx, input }) => {
     try {
+      // Route Gemini Veo or local cinematic video polling
+      if (input.taskId.startsWith("operations/") || input.taskId.includes("/operations/") || input.taskId.startsWith("cinematic-")) {
+        return await pollGeminiVideo(input.taskId);
+      }
       const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "videoGeneration");
       return await pollAlibabaVideo(input.taskId, {
         baseUrl: resolved.baseUrl,

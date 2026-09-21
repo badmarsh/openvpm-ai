@@ -888,9 +888,37 @@ export default function WhiteboardPage() {
           {pageError?.message ?? t("whiteboard.errorFallback", "Unable to load whiteboard. Please retry.")}
         </div>
       ) : isPageLoading ? (
-        <div className="mt-12 flex items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t("whiteboard.loading", "Loading whiteboard...")}
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+            <span>{t("whiteboard.loading", "Loading whiteboard...")}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {[1, 2, 3].map((colIdx) => (
+              <div
+                key={colIdx}
+                className="rounded-lg border border-border/70 bg-muted/20 overflow-hidden"
+              >
+                <div className="flex items-center justify-between border-b border-border/50 bg-muted/40 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30 animate-pulse" />
+                    <span className="h-4 w-20 rounded bg-muted animate-pulse" />
+                  </div>
+                  <span className="h-4 w-6 rounded-full bg-muted animate-pulse" />
+                </div>
+                <div className="space-y-3 p-3 min-h-[140px]">
+                  <div className="h-20 rounded-lg border border-border/50 bg-card p-3 shadow-2xs animate-pulse space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-1/2 rounded bg-muted" />
+                  </div>
+                  <div className="h-20 rounded-lg border border-border/50 bg-card p-3 shadow-2xs animate-pulse space-y-2">
+                    <div className="h-4 w-2/3 rounded bg-muted" />
+                    <div className="h-3 w-1/3 rounded bg-muted" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : hasWhiteboardPatients ? (
         /* Kanban columns */

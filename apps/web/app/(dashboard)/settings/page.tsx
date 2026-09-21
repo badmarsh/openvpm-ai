@@ -39,6 +39,7 @@ import {
   Palette,
   Bot,
   KeyRound,
+  FlaskConical,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const BrandKitTab = dynamic(() => import("@/components/settings/brand-kit-tab").
 const AmbulatoryWorkspaceSettingsCard = dynamic(() => import("@/components/settings/ambulatory-workspace-settings").then(m => ({ default: m.AmbulatoryWorkspaceSettingsCard })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 const AiSettingsTab = dynamic(() => import("@/components/settings/ai-settings-tab").then(m => ({ default: m.AiSettingsTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 const SecurityTab = dynamic(() => import("@/components/settings/security-tab").then(m => ({ default: m.SecurityTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
+const SimulationTab = dynamic(() => import("@/components/settings/simulation-tab").then(m => ({ default: m.SimulationTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
 import {
   TemplateCatalogPicker,
   type TemplateCatalogItem,
@@ -167,6 +169,7 @@ type Tab =
   | "booking"
   | "billing"
   | "ai"
+  | "simulation"
   | "security";
 
 const tabs: {
@@ -259,6 +262,12 @@ const tabs: {
     labelKey: "settings.tabs.ai",
     icon: Bot,
   },
+    {
+      id: "simulation",
+      label: "Clinical Simulation",
+      labelKey: "settings.tabs.simulation",
+      icon: FlaskConical,
+    },
   {
     id: "security",
     label: "Security & Password",
@@ -579,6 +588,7 @@ function SettingsPageInner() {
           {activeTab === "booking" && <BookingTab />}
           {activeTab === "billing" && <BillingTab />}
           {activeTab === "ai" && <AiSettingsTab />}
+          {activeTab === "simulation" && <SimulationTab />}
           {activeTab === "security" && <SecurityTab />}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+﻿import { generateText } from "ai";
 import { configuredModel } from "@/lib/agent/runner";
 import {
   hasInferenceProxyConfiguration,
@@ -132,6 +132,108 @@ export async function transcribeAudio(fileKey: string): Promise<string> {
           content: [
             { type: "text", text: "Transkribuj toto audio." },
             { type: "file", data: base64Audio, mediaType: mimeType },
+          ],
+        },
+      ],
+      abortSignal: ac.signal,
+    });
+
+    return result.text.trim();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Transkribuje audio priamo z base64 reťazca bez S3 (pre terénny modul).
+ */
+export async function transcribeAudioDirect(
+  base64Audio: string,
+  mimeType = "audio/webm"
+): Promise<string> {
+  let base64Clean = base64Audio.trim();
+  if (base64Clean.includes(",")) {
+    base64Clean = base64Clean.split(",")[1] ?? base64Clean;
+  }
+
+  const ac = new AbortController();
+  const timeout = setTimeout(
+    () => ac.abort(new Error("Audio transcription timed out after 60s")),
+    60_000
+  );
+
+  try {
+    if (hasInferenceProxyConfiguration()) {
+      const baseURL = inferenceProxyBaseUrl()!;
+      const apiKey = process.env.AI_API_KEY || "";
+      const modelCandidates = [
+        process.env.AI_MODEL?.replace(/^(google\/|models\/)/, ""),
+        "gemini-2.5-flash",
+        "gemini-3-flash",
+      ].filter((m): m is string => Boolean(m && m.trim()));
+
+      let lastError: Error | null = null;
+      for (const model of modelCandidates) {
+        try {
+          const res = await fetch(`${baseURL}/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: STT_SYSTEM_PROMPT },
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: "Transkribuj toto veterinárne audio slovo po slove. Vráť výhradne čistý prepísaný text:",
+                    },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: `data:${mimeType};base64,${base64Clean}`,
+                      },
+                    },
+                  ],
+                },
+              ],
+            }),
+            signal: ac.signal,
+          });
+
+          if (res.ok) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const data = (await res.json()) as any;
+            const content = data?.choices?.[0]?.message?.content;
+            if (typeof content === "string" && content.trim()) {
+              return content.trim();
+            }
+          } else {
+            const errText = await res.text().catch(() => "");
+            lastError = new Error(
+              `Model ${model} failed (${res.status}): ${errText}`
+            );
+          }
+        } catch (err: unknown) {
+          lastError = err as Error;
+        }
+      }
+      throw lastError ?? new Error("Inference proxy failed to transcribe audio");
+    }
+
+    const result = await generateText({
+      model: configuredModel(),
+      system: STT_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Transkribuj toto audio." },
+            { type: "file", data: base64Clean, mediaType: mimeType },
           ],
         },
       ],

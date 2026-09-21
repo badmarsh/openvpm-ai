@@ -409,12 +409,12 @@ export default function BillingPage() {
           <p className="text-sm text-muted-foreground">
             {t("billing.page.kpiOutstanding", "Outstanding")}
           </p>
-          <p className="mt-1 font-heading text-2xl font-semibold">
+          <p className="mt-1 font-heading text-2xl font-semibold flex items-center min-h-[32px]">
             {arSummary.isError
               ? "—"
               : arSummary.data
                 ? formatCurrency(arSummary.data.outstanding)
-                : "…"}
+                : <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />}
           </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
@@ -422,7 +422,7 @@ export default function BillingPage() {
             {t("billing.page.kpiOverdue", "Overdue")}
           </p>
           <p
-            className={`mt-1 font-heading text-2xl font-semibold ${
+            className={`mt-1 font-heading text-2xl font-semibold flex items-center min-h-[32px] ${
               arSummary.data && Number(arSummary.data.overdue) > 0
                 ? "text-destructive"
                 : ""
@@ -432,19 +432,19 @@ export default function BillingPage() {
               ? "—"
               : arSummary.data
                 ? formatCurrency(arSummary.data.overdue)
-                : "…"}
+                : <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />}
           </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-muted-foreground">
             {t("billing.page.kpiCollectedMtd", "Collected this month")}
           </p>
-          <p className="mt-1 font-heading text-2xl font-semibold">
+          <p className="mt-1 font-heading text-2xl font-semibold flex items-center min-h-[32px]">
             {arSummary.isError
               ? "—"
               : arSummary.data
                 ? formatCurrency(arSummary.data.collectedThisMonth)
-                : "…"}
+                : <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />}
           </p>
         </div>
       </div>

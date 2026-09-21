@@ -24,6 +24,7 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/": { label: "Dashboard", i18nKey: "nav.dashboard" },
   "/patients": { label: "Patients", i18nKey: "nav.patients" },
   "/clients": { label: "Clients", i18nKey: "nav.clients" },
+  "/encounters": { label: "Encounters", i18nKey: "nav.encounters" },
   "/schedule": { label: "Schedule", i18nKey: "nav.schedule" },
   "/records": { label: "Records", i18nKey: "nav.records" },
   "/lab-results": { label: "Lab Inbox", i18nKey: "nav.labResults" },
@@ -33,6 +34,9 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/recalls": { label: "Vaccination Recalls", i18nKey: "nav.recalls" },
   "/care-reminders": { label: "Care Reminders", i18nKey: "nav.careReminders" }, // "/care-reminders": "Care Reminders"
   "/migration-archive": { label: "Imported History", i18nKey: "nav.migrationArchive" },
+  "/statutory": { label: "Statutory Registers", i18nKey: "nav.statutory" },
+  "/wellness": { label: "Wellness Plans", i18nKey: "nav.wellness" },
+  "/vaccinations": { label: "Vaccinations", i18nKey: "nav.vaccinations" },
   "/whiteboard": { label: "Whiteboard", i18nKey: "nav.whiteboard" },
   "/agent": { label: "Agent", i18nKey: "nav.agent" }, // "/agent": "Agent"
   "/controlled-substances": { label: "Controlled Substances", i18nKey: "nav.controlledSubstances" }, // "/controlled-substances": "Controlled Substances"
@@ -164,7 +168,8 @@ export function TopBar({
           <div className="relative" ref={newMenuRef}>
             <Button
               size="sm"
-              className="gap-1"
+              variant="outline"
+              className="gap-1 border-border/80 text-foreground hover:bg-muted font-medium shadow-2xs"
               onClick={() => setNewMenuOpen((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={newMenuOpen}

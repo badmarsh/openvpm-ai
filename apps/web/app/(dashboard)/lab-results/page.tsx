@@ -351,7 +351,15 @@ function LabResultsInboxContent() {
               )
         }
         actions={
-          <Badge variant={actionCount > 0 ? "destructive" : "secondary"} className="w-fit">
+          <Badge
+            variant="outline"
+            className={cn(
+              "w-fit font-medium text-xs shadow-2xs",
+              actionCount > 0
+                ? "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-200"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
             {actionCount === 1
               ? t("labResults.actionItemsShownOne", "1 action item shown")
               : t("labResults.actionItemsShownMany", "{count} action items shown", {
@@ -529,7 +537,11 @@ function LabResultsInboxContent() {
                               )
                             : row.resultFlag === "unknown"
                               ? row.status.replace("_", " ")
-                              : row.resultFlag}
+                              : row.resultFlag === "critical"
+                                ? t("labResults.flagCritical", "Critical")
+                                : row.resultFlag === "abnormal"
+                                  ? t("labResults.flagAbnormal", "Abnormal")
+                                  : row.resultFlag}
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -705,7 +717,6 @@ function LabResultsInboxContent() {
                       {canCompleteAssignedFollowUp ? (
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => {
                             setFollowUpOutcome("");
                             setActionPanel({

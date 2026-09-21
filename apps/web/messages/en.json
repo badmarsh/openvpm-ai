@@ -27,7 +27,8 @@
       "activationRecovery": "Clinic activation recovery",
       "journeyCohorts": "Production journey cohorts (30 days)",
       "messagingCarrier": "Messaging carrier registration",
-      "practices": "Practices"
+      "practices": "Practices",
+      "simulation": "Clinical Simulation & Journey Discovery"
     },
     "table": {
       "practice": "Practice",
@@ -361,6 +362,21 @@
       "manualOnly": "Manual investigation only",
       "close": "Close",
       "applyResolution": "Apply audited resolution"
+    },
+    "simulation": {
+      "title": "Clinical Simulation & Journey Discovery",
+      "subtitle": "Interactive end-to-end simulation of 30 clinical workflows (J1–J30), 5 real patient scenarios, Day timeline (08:00–17:30), Slovak compliance, Clinical Guardian, and Gap analysis.",
+      "badgePilot": "PILOT-READY (v0.6)",
+      "badgeWorkflows": "30 Journeys (J1–J30)",
+      "badgeCases": "5 Clinical Scenarios",
+      "badgeTests": "4,858 Tests · 100% Pass",
+      "badgeEvals": "114 AI Evals",
+      "launch": "Launch Simulation",
+      "openInSettings": "Open in Settings",
+      "openNewTab": "Open in new window",
+      "viewDocs": "Product Discovery Docs",
+      "statusActive": "Active simulation engine",
+      "lastUpdated": "Updated: 2026-09-21"
     }
   },
   "agent": {
@@ -487,6 +503,9 @@
       "downloadTitle": "Download .md transcript",
       "downloaded": "Conversation transcript downloaded",
       "printTitle": "Print conversation"
+    },
+    "morningBrief": {
+      "simulation": "Clinical Simulation (Hermes)"
     }
   },
   "agent.accessRestricted": "Agent access is restricted",
@@ -2002,7 +2021,7 @@
   "encounters.hub.tableDueDate": "Due Date",
   "encounters.hub.tableNotes": "Notes",
   "encounters.hub.tableAssignee": "Assignee",
-  "encounters.hub.searchPlaceholder": "Search by patient name, client, microchip, or doctor...",
+  "encounters.hub.searchPlaceholder": "Search patient, client, chip...",
   "encounters.hub.dateLabel": "Date",
   "encounters.hub.allStatuses": "All statuses",
   "encounters.hub.allDoctors": "All doctors",
@@ -3066,7 +3085,9 @@
     "wellness": "Wellness Plans",
     "badgeNew": "New",
     "receptionScripts": "Reception Scripts",
-    "pilotReconciliation": "Daily Audit (Pilot)"
+    "pilotReconciliation": "Daily Audit (Pilot)",
+    "simulation": "Clinical Simulation",
+    "fieldVisits": "Field Visits & Farms"
   },
   "newSoap": {
     "loadingEditor": "Loading editor...",
@@ -4334,7 +4355,7 @@
     "statusConfirm": "Confirm",
     "statusCheckIn": "Check In",
     "statusNoShowAction": "No Show",
-    "statusCancelAction": "Cancel",
+    "statusCancelAction": "Cancel appointment",
     "statusInExamAction": "In Exam",
     "statusReopen": "Reopen",
     "closeDetailsAria": "Close appointment details",
@@ -4480,7 +4501,8 @@
       "messaging": "Messaging",
       "booking": "Online Booking",
       "billing": "Plan & Billing",
-      "ai": "AI Settings"
+      "ai": "AI Settings",
+      "simulation": "Clinical Simulation"
     },
     "common": {
       "loadError": "Could not load settings",
@@ -4912,6 +4934,32 @@
       "importTitle": "Data Import",
       "importDescription": "Transitioning from another system? Import clients first, then patients, vaccination history, and finally medical history (visits). Each file is checked in a dry run first so you can see duplicates and missing records before anything is saved. Common column names from AVImark, Cornerstone, and ezyVet are recognized. Shepherd migrations are accompanied to verify the exact clinic export format. Owner and patient IDs stay linked across files, even when an owner has no email.",
       "importSourceLabel": "Data source:"
+    },
+    "simulation": {
+      "title": "Clinical Simulation & Journey Discovery",
+      "subtitle": "Interactive simulation of 30 clinical workflows (J1–J30), 5 patient scenarios, day timeline (08:00–17:30), Slovak veterinary compliance, AI Scribe, Clinical Guardian, e-Kasa, and gap highlights.",
+      "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit Fullscreen",
+      "openNewTab": "Open in new window",
+      "reload": "Reload",
+      "sound": "Sound",
+      "soundOn": "Sound: ON",
+      "soundOff": "Sound: OFF",
+      "scenarios": {
+        "title": "Select Clinical Scenario (12 Cases)",
+        "bork": "🐕 Bork (Golden Retriever, 4y) — Cough & Vaccination",
+        "luna": "🐱 Luna (Cat, 2y) — 🚨 Critical Contraindication (Meloxicam + Prednisolone)",
+        "max": "🐶 Max (Cavalier, 7y) — Heart Murmur & AI X-ray VHS Analysis",
+        "daisy": "🐕 Daisy (German Shepherd, 9y) — Pyometra Surgery & Anesthesia Gap C-01",
+        "rocky": "🐶 Rocky (French Bulldog, 1y) — Urgent Poisoning & Triage Gap C-04",
+        "bella": "🐱 Bella (Persian Cat, 5y) — Chronic Kidney Disease (CKD IRIS Stage 3)",
+        "bruno": "🐕 Bruno (Rottweiler, 8y) — GDV Gastric Dilatation Volvulus & Shock",
+        "milo": "🐰 Milo (Lop Rabbit, 2y) — GI Stasis & 🚨 Penicillin Contraindication",
+        "zara": "🐕 Zara (Border Collie, 3y) — MDR1 Gene Deficit & Ivermectin Neurotoxicity",
+        "hugo": "🐶 Hugo (Pug, 4y) — BOAS Airway Obstruction & Palatoplasty",
+        "nela": "🐕 Nela (Labrador, 6y) — Diabetes Mellitus & Insulin Protocol",
+        "simba": "🐱 Simba (Cat, 3y) — FLUTD Urethral Obstruction & Hyperkalemia"
+      }
     }
   },
   "website": {

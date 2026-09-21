@@ -10,6 +10,8 @@ import { nextAuthSecret } from "./lib/auth-secret";
 const CAPABILITY_PATH_PREFIXES = [
   "/capture",
   "/sign",
+  "/simulation",
+  "/simulation.html",
   "/treatment-plan",
   "/api/capture",
   "/api/sign",
@@ -43,7 +45,7 @@ const PUBLIC_PATH_PREFIXES = [
 ];
 
 const PUBLIC_FILE_PATTERN =
-  /\.(?:avif|css|gif|ico|jpg|jpeg|js|json|map|png|svg|txt|webp|xml)$/i;
+  /\.(?:avif|css|gif|html|ico|jpg|jpeg|js|json|map|png|svg|txt|webp|xml)$/i;
 
 function isPublicPath(pathname: string): boolean {
   return (
