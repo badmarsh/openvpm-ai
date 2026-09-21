@@ -332,7 +332,7 @@ export const imagingRouter = createRouter({
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Analýza zlyhala: ${errorMessage}`,
+          message: errorMessage,
         });
       }
     }),
