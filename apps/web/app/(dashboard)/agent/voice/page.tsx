@@ -505,6 +505,7 @@ function VoiceDictationContent() {
   );
 
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
+  const [isSimulatedMicMode, setIsSimulatedMicMode] = useState(isSimulateMicRequested);
 
   const handleStartSimulatedRecording = useCallback(async () => {
     setIsStartingSimulation(true);
@@ -844,23 +845,26 @@ function VoiceDictationContent() {
                   disabled={!canRecord}
                   size="large"
                   initialSimulated={isSimulateMicRequested}
+                  onSimulationModeChange={(simulated) => setIsSimulatedMicMode(simulated)}
                 />
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleStartSimulatedRecording}
-                  disabled={isStartingSimulation || isProcessing}
-                  className="text-xs gap-1.5 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/5"
-                >
-                  {isStartingSimulation ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  )}
-                  {t("voice.demo.startSimulation", "Spustiť simuláciu mikrofónu")}
-                </Button>
+                {!isSimulatedMicMode && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStartSimulatedRecording}
+                    disabled={isStartingSimulation || isProcessing}
+                    className="text-xs gap-1.5 border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/5"
+                  >
+                    {isStartingSimulation ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    )}
+                    {t("voice.demo.startSimulation", "Spustiť simuláciu mikrofónu")}
+                  </Button>
+                )}
 
                 {/* Recorded Audio Preview */}
                 {hasRecording && audioUrl && (
@@ -927,12 +931,12 @@ function VoiceDictationContent() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <textarea
-                    value={rawTranscript}
-                    onChange={(e) => setRawTranscript(e.target.value)}
-                    rows={4}
-                    placeholder={t("voice.transcript.placeholder", "Sem môžete vložiť alebo upraviť surový text...")}
-                    className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-y min-h-[90px] leading-relaxed"
-                  />
+                   value={rawTranscript}
+                   onChange={(e) => setRawTranscript(e.target.value)}
+                   rows={4}
+                   placeholder={t("voice.transcript.placeholder", "Sem môžete vložiť alebo upraviť surový text...")}
+                    className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[90px] leading-relaxed custom-scrollbar"
+                 />
                   <div className="flex justify-end">
                     <Button
                       type="button"

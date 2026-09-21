@@ -304,12 +304,12 @@ export function SoapPreview({
               </div>
 
               {editable ? (
-                <Textarea
-                  value={sections[key]}
-                  onChange={(e) => update(key, e.target.value)}
-                  rows={compact ? 2 : viewLayout === "list" ? 4 : 5}
-                  className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[110px] p-3 leading-relaxed"
-                  placeholder={t(
+               <Textarea
+                 value={sections[key]}
+                 onChange={(e) => update(key, e.target.value)}
+                 rows={compact ? 2 : viewLayout === "list" ? 4 : 5}
+                  className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-[110px] p-3 leading-relaxed custom-scrollbar"
+                 placeholder={t(
                     "voice.soap.sectionPlaceholder",
                     "Doplňte {section}...",
                     { section: label.replace(/\s*\([A-Z]\)\s*$/, "").toLowerCase() },
