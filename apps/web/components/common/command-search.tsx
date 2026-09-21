@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Command } from "cmdk";
 import {
@@ -26,11 +26,15 @@ import {
   Shield,
   Sun,
   Moon,
+  Mic,
+  ChevronDown,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { useGuiTheme } from "@/lib/theme/theme-context";
 import { useI18n } from "@/lib/i18n";
+import skMessages from "@/messages/sk.json";
+import enMessages from "@/messages/en.json";
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
 
@@ -47,6 +51,16 @@ type CommandItemConfig = {
   href: string;
   Icon: React.ElementType;
   roles: UserRole[];
+  searchAliases?: string[];
+};
+
+type ContextActionItem = {
+  id: string;
+  labelKey: string;
+  fallbackLabel: string;
+  href: string;
+  Icon: React.ElementType;
+  roles: UserRole[];
 };
 
 const allRoles: UserRole[] = [
@@ -57,35 +71,112 @@ const allRoles: UserRole[] = [
   "viewer",
 ];
 
+const PRIMARY_NAV_KEYS = new Set([
+  "commandSearch.navSchedule",
+  "commandSearch.navPatients",
+  "commandSearch.navClients",
+  "commandSearch.navWhiteboard",
+  "commandSearch.navBilling",
+  "commandSearch.navRecords",
+]);
+
+const PRIMARY_NAV_ORDER = [
+  "commandSearch.navSchedule",
+  "commandSearch.navPatients",
+  "commandSearch.navClients",
+  "commandSearch.navWhiteboard",
+  "commandSearch.navBilling",
+  "commandSearch.navRecords",
+];
+
 const navigationItems: CommandItemConfig[] = [
-  { labelKey: "commandSearch.navDashboard", fallbackLabel: "Dashboard", href: "/", Icon: BarChart3, roles: allRoles },
-  { labelKey: "commandSearch.navPatients", fallbackLabel: "Patients", href: "/patients", Icon: PawPrint, roles: allRoles },
-  { labelKey: "commandSearch.navClients", fallbackLabel: "Clients", href: "/clients", Icon: Users, roles: allRoles },
-  { labelKey: "commandSearch.navSchedule", fallbackLabel: "Schedule", href: "/schedule", Icon: Calendar, roles: allRoles },
+  {
+    labelKey: "commandSearch.navDashboard",
+    fallbackLabel: "Dashboard",
+    href: "/",
+    Icon: BarChart3,
+    roles: allRoles,
+    searchAliases: ["prehlad", "statistika", "dashboard", "home", "stats"],
+  },
+  {
+    labelKey: "commandSearch.navPatients",
+    fallbackLabel: "Patients",
+    href: "/patients",
+    Icon: PawPrint,
+    roles: allRoles,
+    searchAliases: ["pacienti", "zvierata", "pets"],
+  },
+  {
+    labelKey: "commandSearch.navClients",
+    fallbackLabel: "Clients",
+    href: "/clients",
+    Icon: Users,
+    roles: allRoles,
+    searchAliases: ["klienti", "majitelia", "owners", "customers"],
+  },
+  {
+    labelKey: "commandSearch.navSchedule",
+    fallbackLabel: "Schedule",
+    href: "/schedule",
+    Icon: Calendar,
+    roles: allRoles,
+    searchAliases: ["rozvrh", "kalendar", "diar", "calendar", "schedule"],
+  },
   {
     labelKey: "commandSearch.navWhiteboard",
     fallbackLabel: "Whiteboard",
     href: "/whiteboard",
     Icon: Clipboard,
     roles: allRoles,
+    searchAliases: ["tabula", "hospitalizacia", "whiteboard", "hospital"],
   },
-  { labelKey: "commandSearch.navRecords", fallbackLabel: "Records", href: "/records", Icon: FileText, roles: allRoles },
+  {
+    labelKey: "commandSearch.navRecords",
+    fallbackLabel: "Records",
+    href: "/records",
+    Icon: FileText,
+    roles: allRoles,
+    searchAliases: ["zaznamy", "karty", "zdravotna dokumentacia", "records", "medical records"],
+  },
   {
     labelKey: "commandSearch.navLabInbox",
     fallbackLabel: "Lab Inbox",
     href: "/lab-results",
     Icon: FlaskConical,
     roles: ["admin", "veterinarian", "technician", "front_desk", "viewer"],
+    searchAliases: ["laboratorium", "vysledky", "lab", "tests"],
   },
-  { labelKey: "commandSearch.navBilling", fallbackLabel: "Billing", href: "/billing", Icon: ReceiptEuro, roles: allRoles },
-  { labelKey: "commandSearch.navInventory", fallbackLabel: "Inventory", href: "/inventory", Icon: Package, roles: allRoles },
-  { labelKey: "commandSearch.navInbox", fallbackLabel: "Inbox", href: "/inbox", Icon: Mail, roles: allRoles },
+  {
+    labelKey: "commandSearch.navBilling",
+    fallbackLabel: "Billing",
+    href: "/billing",
+    Icon: ReceiptEuro,
+    roles: allRoles,
+    searchAliases: ["fakturacia", "faktury", "financie", "uctovnictvo", "billing", "invoices"],
+  },
+  {
+    labelKey: "commandSearch.navInventory",
+    fallbackLabel: "Inventory",
+    href: "/inventory",
+    Icon: Package,
+    roles: allRoles,
+    searchAliases: ["sklad", "zasoby", "lieky", "tovar", "inventory", "stock", "meds"],
+  },
+  {
+    labelKey: "commandSearch.navInbox",
+    fallbackLabel: "Inbox",
+    href: "/inbox",
+    Icon: Mail,
+    roles: allRoles,
+    searchAliases: ["schranka", "spravy", "inbox", "messages"],
+  },
   {
     labelKey: "commandSearch.navRecalls",
     fallbackLabel: "Vaccination Recalls",
     href: "/recalls",
     Icon: Syringe,
     roles: ["admin", "veterinarian", "front_desk"],
+    searchAliases: ["ockovanie", "vakcinacia", "odvolania", "recalls", "vaccines"],
   },
   {
     labelKey: "commandSearch.navCareReminders",
@@ -93,6 +184,7 @@ const navigationItems: CommandItemConfig[] = [
     href: "/care-reminders",
     Icon: BellRing,
     roles: allRoles,
+    searchAliases: ["pripomienky", "prevencia", "reminders", "care"],
   },
   {
     labelKey: "commandSearch.navImportedHistory",
@@ -100,6 +192,7 @@ const navigationItems: CommandItemConfig[] = [
     href: "/migration-archive",
     Icon: Archive,
     roles: allRoles,
+    searchAliases: ["archiv", "migracia", "historia", "archive", "history"],
   },
   {
     labelKey: "commandSearch.navEkasaTerminal",
@@ -107,6 +200,7 @@ const navigationItems: CommandItemConfig[] = [
     href: "/billing/ekasa",
     Icon: ReceiptEuro,
     roles: allRoles,
+    searchAliases: ["ekasa", "pokladna", "terminal", "cash"],
   },
   {
     labelKey: "commandSearch.navControlledSubstances",
@@ -114,6 +208,7 @@ const navigationItems: CommandItemConfig[] = [
     href: "/controlled-substances",
     Icon: Shield,
     roles: ["admin", "veterinarian"],
+    searchAliases: ["kontrolovane latky", "opiaty", "omamne", "trezor", "narcotics", "controlled substances"],
   },
   { labelKey: "commandSearch.navSettings", fallbackLabel: "Settings", href: "/settings", Icon: Settings, roles: ["admin"] },
 ];
@@ -125,6 +220,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/clients/new",
     Icon: Users,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
+    searchAliases: ["majitel", "zakaznik", "owner", "customer"],
   },
   {
     labelKey: "commandSearch.newPatient",
@@ -132,6 +228,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/patients/new",
     Icon: PawPrint,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
+    searchAliases: ["zviera", "pes", "macka", "pet", "animal"],
   },
   {
     labelKey: "commandSearch.newAppointment",
@@ -139,6 +236,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/schedule?new=1",
     Icon: Calendar,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
+    searchAliases: ["termin", "objednavka", "kalendar", "appointment", "booking", "visit"],
   },
   {
     labelKey: "commandSearch.newSoapNote",
@@ -146,6 +244,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/records?tab=soap&new=1",
     Icon: FileText,
     roles: ["admin", "veterinarian", "technician"],
+    searchAliases: ["vysetrenie", "zaznam", "dekurz", "anamneza", "soap", "exam", "clinical", "note"],
   },
   {
     labelKey: "commandSearch.newInvoice",
@@ -153,6 +252,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/billing/new",
     Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
+    searchAliases: ["faktura", "platba", "doklad", "uctenka", "bill", "invoice", "payment"],
   },
   {
     labelKey: "commandSearch.issueReceipt",
@@ -160,6 +260,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/billing/new",
     Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
+    searchAliases: ["blocek", "paragon", "pokladna", "receipt"],
   },
   {
     labelKey: "commandSearch.openEkasa",
@@ -167,11 +268,27 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/billing/ekasa",
     Icon: ReceiptEuro,
     roles: ["admin", "veterinarian", "front_desk"],
+    searchAliases: ["ekasa", "pokladna", "terminal", "blocek", "cash register"],
   },
 ];
 
 function isUserRole(role?: string | null): role is UserRole {
   return allRoles.includes(role as UserRole);
+}
+
+function normalizeSearchText(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function resolveI18nLabels(labelKey: string, fallbackLabel: string) {
+  const shortKey = labelKey.replace(/^commandSearch\./, "");
+  const sk = (skMessages.commandSearch as Record<string, string>)[shortKey] ?? "";
+  const en = (enMessages.commandSearch as Record<string, string>)[shortKey] ?? fallbackLabel;
+  return { sk, en };
 }
 
 export function CommandSearch({
@@ -182,12 +299,14 @@ export function CommandSearch({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname() || "";
   const { data: session, status } = useSession();
   const { setMode } = useGuiTheme();
   const { t } = useI18n();
   const role = isUserRole(session?.user?.role) ? session.user.role : undefined;
   const canUseCommandSearch = status === "authenticated" && role !== undefined;
   const [search, setSearch] = useState("");
+  const [showMoreNav, setShowMoreNav] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Ensure the input is focused as soon as the palette mounts (covers the
@@ -202,7 +321,6 @@ export function CommandSearch({
       return () => cancelAnimationFrame(raf);
     }
   }, [open]);
-
 
   const debouncedSearch = useDebounce(search, 200);
   const hasQuery = debouncedSearch.trim().length >= 1;
@@ -232,6 +350,7 @@ export function CommandSearch({
       Boolean(clients.error) ||
       !patients.data ||
       !clients.data);
+
   const visibleNavigationItems =
     status === "authenticated" && role !== undefined
       ? navigationItems.filter((item) => item.roles.includes(role))
@@ -246,7 +365,10 @@ export function CommandSearch({
   }
 
   useEffect(() => {
-    if (!open) setSearch("");
+    if (!open) {
+      setSearch("");
+      setShowMoreNav(false);
+    }
   }, [open]);
 
   function navigate(path: string) {
@@ -254,12 +376,152 @@ export function CommandSearch({
     router.push(path);
   }
 
+  // Section 1: Matching quick actions & navigation when typing (limit 5)
+  const matchingActions = useMemo(() => {
+    if (!hasQuery) return [];
+    const queryNorm = normalizeSearchText(debouncedSearch);
+    if (!queryNorm) return [];
+
+    const searchableItems: CommandItemConfig[] = [
+      ...visibleQuickActionItems.map((item) => item),
+      ...visibleNavigationItems.map((item) => item),
+    ];
+
+    const results: CommandItemConfig[] = [];
+    const seenHrefs = new Set<string>();
+
+    for (const item of searchableItems) {
+      if (seenHrefs.has(item.href + item.labelKey)) continue;
+
+      const { sk, en } = resolveI18nLabels(item.labelKey, item.fallbackLabel);
+      const activeLabel = itemLabel(item);
+      const candidates = [sk, en, activeLabel, item.fallbackLabel, ...(item.searchAliases ?? [])];
+
+      const isMatch = candidates.some((candidate) => {
+        if (!candidate) return false;
+        const norm = normalizeSearchText(candidate);
+        return norm.includes(queryNorm);
+      });
+
+      if (isMatch) {
+        seenHrefs.add(item.href + item.labelKey);
+        results.push(item);
+        if (results.length >= 5) break;
+      }
+    }
+
+    return results;
+  }, [hasQuery, debouncedSearch, visibleQuickActionItems, visibleNavigationItems, t]);
+
+  // Section 2: Context-aware no-query ordering
+  const clientMatch = pathname.match(/^\/clients\/([^/]+)$/);
+  const clientId = clientMatch && clientMatch[1] !== "new" ? clientMatch[1] : null;
+
+  const patientMatch = pathname.match(/^\/patients\/([^/]+)$/);
+  const patientId =
+    patientMatch && patientMatch[1] !== "new" && patientMatch[1] !== "duplicates"
+      ? patientMatch[1]
+      : null;
+
+  const encounterMatch = pathname.match(/^\/encounters\/([^/]+)$/);
+  const encounterId = encounterMatch ? encounterMatch[1] : null;
+
+  const isSchedulePage = pathname === "/schedule" || pathname.startsWith("/schedule/");
+
+  const contextItems: ContextActionItem[] = useMemo(() => {
+    const items: ContextActionItem[] = [];
+
+    if (clientId) {
+      items.push({
+        id: "ctx-new-patient",
+        labelKey: "commandSearch.ctxNewPatientForClient",
+        fallbackLabel: "New Patient for this Client",
+        href: `/patients/new?clientId=${encodeURIComponent(clientId)}`,
+        Icon: PawPrint,
+        roles: ["admin", "veterinarian", "technician", "front_desk"],
+      });
+    }
+
+    if (patientId) {
+      items.push({
+        id: "ctx-voice-dictation",
+        labelKey: "commandSearch.ctxVoiceDictation",
+        fallbackLabel: "Voice Dictation",
+        href: `/agent/voice?patientId=${encodeURIComponent(patientId)}`,
+        Icon: Mic,
+        roles: ["admin", "veterinarian", "technician", "front_desk"],
+      });
+      items.push({
+        id: "ctx-new-soap",
+        labelKey: "commandSearch.ctxNewSoapNote",
+        fallbackLabel: "New SOAP Note",
+        href: `/records?tab=soap&new=1&patientId=${encodeURIComponent(patientId)}`,
+        Icon: FileText,
+        roles: ["admin", "veterinarian", "technician"],
+      });
+    }
+
+    if (encounterId) {
+      items.push({
+        id: "ctx-voice-dictation",
+        labelKey: "commandSearch.ctxVoiceDictation",
+        fallbackLabel: "Voice Dictation",
+        href: "/agent/voice",
+        Icon: Mic,
+        roles: ["admin", "veterinarian", "technician", "front_desk"],
+      });
+      items.push({
+        id: "ctx-new-invoice",
+        labelKey: "commandSearch.ctxNewInvoice",
+        fallbackLabel: "New Invoice",
+        href: "/billing/new",
+        Icon: ReceiptEuro,
+        roles: ["admin", "front_desk"],
+      });
+    }
+
+    return items;
+  }, [clientId, patientId, encounterId]);
+
+  const visibleContextItems = useMemo(() => {
+    if (!role) return [];
+    return contextItems.filter((item) => item.roles.includes(role));
+  }, [contextItems, role]);
+
+  // Quick actions boosting when on /clients/:uuid or /schedule
+  const orderedQuickActionItems = useMemo(() => {
+    const items = [...visibleQuickActionItems];
+    if (clientId || isSchedulePage) {
+      const apptIdx = items.findIndex((i) => i.labelKey === "commandSearch.newAppointment");
+      if (apptIdx > 0) {
+        const [appt] = items.splice(apptIdx, 1);
+        items.unshift(appt);
+      }
+    }
+    return items;
+  }, [visibleQuickActionItems, clientId, isSchedulePage]);
+
+  // Section 3: Navigation tiering (Primary always, Secondary behind toggle)
+  const primaryNavigationItems = useMemo(() => {
+    const list: CommandItemConfig[] = [];
+    for (const key of PRIMARY_NAV_ORDER) {
+      const found = visibleNavigationItems.find((item) => item.labelKey === key);
+      if (found) list.push(found);
+    }
+    return list;
+  }, [visibleNavigationItems]);
+
+  const secondaryNavigationItems = useMemo(() => {
+    return visibleNavigationItems.filter((item) => !PRIMARY_NAV_KEYS.has(item.labelKey));
+  }, [visibleNavigationItems]);
+
   if (!open) return null;
 
   const patientResults =
     searchUnavailable || !patients.data ? [] : patients.data;
   const clientResults = searchUnavailable || !clients.data ? [] : clients.data;
   const hasResults = patientResults.length > 0 || clientResults.length > 0;
+  const hasAnyMatches = hasResults || matchingActions.length > 0;
 
   return (
     <div
@@ -331,13 +593,33 @@ export function CommandSearch({
               !isSearching &&
               !searchAccessUnavailable &&
               !searchUnavailable &&
-              !hasResults && (
+              !hasAnyMatches && (
                 <Command.Empty className="px-3 py-6 text-center text-sm text-muted-foreground">
                   {t("commandSearch.noResults", "No patients or clients found.")}
                 </Command.Empty>
               )}
 
-            {/* Live search results */}
+            {/* Section 1: Matching quick actions & navigation ABOVE DB results when typing */}
+            {hasQuery && matchingActions.length > 0 && (
+              <Command.Group
+                heading={t("commandSearch.headingMatchedActions", "Actions")}
+                className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+              >
+                {matchingActions.map((item) => (
+                  <Command.Item
+                    key={"match-" + item.href + item.labelKey}
+                    value={`action-${item.labelKey}-${item.href}`}
+                    onSelect={() => navigate(item.href)}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                  >
+                    <item.Icon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-medium">{itemLabel(item)}</span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
+
+            {/* Live search results: Patients */}
             {hasQuery && !searchUnavailable && patientResults.length > 0 && (
               <Command.Group
                 heading={t("commandSearch.headingPatients", "Patients")}
@@ -387,6 +669,7 @@ export function CommandSearch({
               </Command.Group>
             )}
 
+            {/* Live search results: Clients */}
             {hasQuery && !searchUnavailable && clientResults.length > 0 && (
               <Command.Group
                 heading={t("commandSearch.headingClients", "Clients")}
@@ -422,15 +705,36 @@ export function CommandSearch({
               </Command.Group>
             )}
 
+            {/* Section 2: Contextual items (shown when no search query, above Quick Actions) */}
+            {!hasQuery && visibleContextItems.length > 0 && (
+              <Command.Group
+                heading={t("commandSearch.headingContextActions", "In Context")}
+                className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+              >
+                {visibleContextItems.map((item) => (
+                  <Command.Item
+                    key={item.id}
+                    value={`ctx-${item.id}-${item.href}`}
+                    onSelect={() => navigate(item.href)}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                  >
+                    <item.Icon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-medium">{t(item.labelKey, item.fallbackLabel)}</span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
+
             {/* Quick Actions (shown when no search query) */}
             {!hasQuery && visibleQuickActionItems.length > 0 && (
               <Command.Group
                 heading={t("commandSearch.headingQuickActions", "Quick Actions")}
                 className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
               >
-                {visibleQuickActionItems.map((item) => (
+                {orderedQuickActionItems.map((item) => (
                   <Command.Item
                     key={item.href + item.labelKey}
+                    value={`quick-${item.labelKey}`}
                     onSelect={() => navigate(item.href)}
                     className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
                   >
@@ -441,13 +745,68 @@ export function CommandSearch({
               </Command.Group>
             )}
 
-            {/* Theme Actions */}
+            {/* Section 3: Navigation tiering (Primary always, Secondary behind toggle) */}
+            {!hasQuery && visibleNavigationItems.length > 0 && (
+              <Command.Group
+                heading={t("commandSearch.headingNavigation", "Navigation")}
+                className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+              >
+                {primaryNavigationItems.map((item) => (
+                  <Command.Item
+                    key={item.href}
+                    value={`nav-${item.labelKey}`}
+                    onSelect={() => navigate(item.href)}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                  >
+                    <item.Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{itemLabel(item)}</span>
+                  </Command.Item>
+                ))}
+
+                {showMoreNav &&
+                  secondaryNavigationItems.map((item) => (
+                    <Command.Item
+                      key={item.href}
+                      value={`nav-${item.labelKey}`}
+                      onSelect={() => navigate(item.href)}
+                      className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
+                    >
+                      <item.Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span>{itemLabel(item)}</span>
+                    </Command.Item>
+                  ))}
+
+                {secondaryNavigationItems.length > 0 && (
+                  <Command.Item
+                    value={showMoreNav ? "nav-toggle-show-less" : "nav-toggle-show-more"}
+                    onSelect={() => setShowMoreNav((prev) => !prev)}
+                    className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-accent transition-colors"
+                  >
+                    <ChevronDown
+                      className={
+                        showMoreNav
+                          ? "h-3.5 w-3.5 rotate-180 transition-transform"
+                          : "h-3.5 w-3.5 transition-transform"
+                      }
+                    />
+                    <span>
+                      {showMoreNav
+                        ? t("commandSearch.navShowLess", "Show less")
+                        : t("commandSearch.navShowMore", "Show more...")}
+                    </span>
+                  </Command.Item>
+                )}
+              </Command.Group>
+            )}
+
+            {/* Section 3: Theme Actions (moved to the very end) */}
             {!hasQuery && (
               <Command.Group
                 heading={t("commandSearch.headingAppearance", "Appearance & Theme")}
                 className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 <Command.Item
+                  value="theme-light"
                   onSelect={() => {
                     setMode("light");
                     onClose();
@@ -458,6 +817,7 @@ export function CommandSearch({
                   <span>{t("commandSearch.lightTheme", "Switch to Light Theme")}</span>
                 </Command.Item>
                 <Command.Item
+                  value="theme-dark"
                   onSelect={() => {
                     setMode("dark");
                     onClose();
@@ -467,25 +827,6 @@ export function CommandSearch({
                   <Moon className="h-4 w-4 text-primary shrink-0" />
                   <span>{t("commandSearch.darkTheme", "Switch to Dark Theme")}</span>
                 </Command.Item>
-              </Command.Group>
-            )}
-
-            {/* Navigation (shown when no search query) */}
-            {!hasQuery && visibleNavigationItems.length > 0 && (
-              <Command.Group
-                heading={t("commandSearch.headingNavigation", "Navigation")}
-                className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
-              >
-                {visibleNavigationItems.map((item) => (
-                  <Command.Item
-                    key={item.href}
-                    onSelect={() => navigate(item.href)}
-                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm aria-selected:bg-accent transition-colors"
-                  >
-                    <item.Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{itemLabel(item)}</span>
-                  </Command.Item>
-                ))}
               </Command.Group>
             )}
           </Command.List>

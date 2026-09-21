@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 describe("command search UI", () => {
   const source = readFileSync("components/common/command-search.tsx", "utf8");
+  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
+  const sk = JSON.parse(readFileSync("messages/sk.json", "utf8"));
 
   it("keeps navigation and quick actions role-aware", () => {
     expect(source).toContain('import { useSession } from "next-auth/react"');
@@ -66,5 +68,65 @@ describe("command search UI", () => {
     expect(source).toContain("Owner:");
     expect(source).not.toContain("const patientResults = patients.data ?? []");
     expect(source).not.toContain("const clientResults = clients.data ?? []");
+  });
+
+  it("renders matching actions above DB results when typing and assigns value props", () => {
+    expect(source).toContain("const matchingActions = useMemo");
+    expect(source).toContain('t("commandSearch.headingMatchedActions", "Actions")');
+    expect(source).toContain("searchAliases");
+    expect(source.indexOf("headingMatchedActions")).toBeLessThan(
+      source.indexOf("headingPatients")
+    );
+    expect(source).toContain('value={`action-${item.labelKey}-${item.href}`}');
+  });
+
+  it("provides context-aware ordering for clients, patients, encounters, and schedule", () => {
+    expect(source).toContain("usePathname()");
+    expect(source).toContain("ctxNewPatientForClient");
+    expect(source).toContain("ctxVoiceDictation");
+    expect(source).toContain("ctxNewSoapNote");
+    expect(source).toContain("ctxNewInvoice");
+    expect(source).toContain('t("commandSearch.headingContextActions", "In Context")');
+    expect(source).toContain("/patients/new?clientId=");
+    expect(source).toContain("/agent/voice?patientId=");
+    expect(source).toContain("/records?tab=soap&new=1&patientId=");
+    expect(source).toContain("/billing/new");
+    expect(source.indexOf("headingContextActions")).toBeLessThan(
+      source.indexOf("headingQuickActions")
+    );
+  });
+
+  it("implements navigation tiering and places appearance at the end", () => {
+    expect(source).toContain("PRIMARY_NAV_KEYS");
+    expect(source).toContain("showMoreNav");
+    expect(source).toContain("navShowMore");
+    expect(source).toContain("navShowLess");
+    expect(source.indexOf("headingNavigation")).toBeLessThan(
+      source.indexOf("headingAppearance")
+    );
+  });
+
+  it("maintains 100% key symmetry for all commandSearch keys including new additions", () => {
+    const requiredKeys = [
+      "headingMatchedActions",
+      "headingContextActions",
+      "ctxNewPatientForClient",
+      "ctxVoiceDictation",
+      "ctxNewSoapNote",
+      "ctxNewInvoice",
+      "navShowMore",
+      "navShowLess",
+    ];
+
+    for (const key of requiredKeys) {
+      expect(en.commandSearch[key], `en.commandSearch.${key}`).toBeDefined();
+      expect(sk.commandSearch[key], `sk.commandSearch.${key}`).toBeDefined();
+      expect(typeof en.commandSearch[key]).toBe("string");
+      expect(typeof sk.commandSearch[key]).toBe("string");
+    }
+
+    const enKeys = Object.keys(en.commandSearch).sort();
+    const skKeys = Object.keys(sk.commandSearch).sort();
+    expect(enKeys).toEqual(skKeys);
   });
 });

@@ -7363,7 +7363,15 @@
     "navImportedHistory": "Imported History",
     "navEkasaTerminal": "e-Kasa Terminal",
     "navControlledSubstances": "Controlled Substances",
-    "navSettings": "Settings"
+    "navSettings": "Settings",
+    "headingMatchedActions": "Actions",
+    "headingContextActions": "In Context",
+    "ctxNewPatientForClient": "New Patient for this Client",
+    "ctxVoiceDictation": "Voice Dictation",
+    "ctxNewSoapNote": "New SOAP Note",
+    "ctxNewInvoice": "New Invoice",
+    "navShowMore": "Show more...",
+    "navShowLess": "Show less"
   },
   "odhlasenie": {
     "invalidLinkTitle": "Invalid link",

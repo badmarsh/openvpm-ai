@@ -7363,7 +7363,15 @@
     "navImportedHistory": "Importovaná história",
     "navEkasaTerminal": "e-Kasa terminál",
     "navControlledSubstances": "Kontrolované látky",
-    "navSettings": "Nastavenia"
+    "navSettings": "Nastavenia",
+    "headingMatchedActions": "Akcie",
+    "headingContextActions": "V kontexte",
+    "ctxNewPatientForClient": "Nový pacient pre tohto klienta",
+    "ctxVoiceDictation": "Hlasové diktovanie",
+    "ctxNewSoapNote": "Nový SOAP",
+    "ctxNewInvoice": "Nová faktúra",
+    "navShowMore": "Zobraziť viac...",
+    "navShowLess": "Zobraziť menej"
   },
   "odhlasenie": {
     "invalidLinkTitle": "Neplatný odkaz",
