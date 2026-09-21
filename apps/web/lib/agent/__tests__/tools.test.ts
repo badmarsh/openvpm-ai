@@ -1161,22 +1161,21 @@ describe("new clinical agent tools", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it("create_prescription inserts for a properly identified veterinarian actor", async () => {
+  it("create_prescription only prepares a proposal — it never writes to prescriptions", async () => {
     const tool = getTool("create_prescription")!;
-    const { ctx, insertValues } = toolDb(
+    const { ctx, insert, insertValues } = toolDb(
       [
         // activePatient lookup
         [{ id: PATIENT_ID, clientId: CLIENT_ID }],
         // practice timezone lookup
         [{ timezone: null }],
+        // preparePrescriptionProposal -> assertActivePatient
+        [{ id: PATIENT_ID }],
       ],
       {
-        id: "rx-new",
-        patientId: PATIENT_ID,
-        medicationName: "Meloxicam",
-        dosage: "0.1mg/kg",
-        frequency: "1x daily",
-        status: "active",
+        // Row returned by the confirmation-envelope insert (extClinicianConfirmations).
+        id: "5d5d2c3a-1111-4a2b-9c3d-8f1e2a4b6c8d",
+        expiresAt: new Date("2026-09-21T12:15:00.000Z"),
       },
     );
     (ctx as unknown as { userId: string }).userId = DOCTOR_ID;
@@ -1189,15 +1188,56 @@ describe("new clinical agent tools", () => {
         frequency: "1x daily",
       },
       ctx,
-    )) as { id: string; status: string };
+    )) as {
+      status: string;
+      prescriptionId: string;
+      confirmationId: string;
+      requiresClinicianReview: boolean;
+    };
 
-    expect(result.id).toBe("rx-new");
+    // The agent may only prepare: a veterinarian must confirm in the UI.
+    expect(result.status).toBe("pending_confirmation");
+    expect(result.requiresClinicianReview).toBe(true);
+    expect(result.confirmationId).toBe("5d5d2c3a-1111-4a2b-9c3d-8f1e2a4b6c8d");
+    expect(result.prescriptionId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+
+    // Exactly one insert happens — the PENDING confirmation envelope. The
+    // clinical `prescriptions` row is written later by agent.savePrescription.
+    expect(insert).toHaveBeenCalledTimes(1);
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        patientId: PATIENT_ID,
-        prescribedBy: DOCTOR_ID,
+        actionType: "prescription_create",
+        entityType: "prescription",
+        entityId: result.prescriptionId,
+        status: "PENDING",
+        actorId: DOCTOR_ID,
       }),
     );
+    expect(insertValues).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active" }),
+    );
+  });
+
+  it("create_prescription refuses controlled substances (zero AI prefill)", async () => {
+    const tool = getTool("create_prescription")!;
+    const { ctx, insert } = toolDb([[{ id: PATIENT_ID, clientId: CLIENT_ID }]], {});
+    (ctx as unknown as { userId: string }).userId = DOCTOR_ID;
+
+    await expect(
+      tool.execute(
+        {
+          patientId: PATIENT_ID,
+          medicationName: "Ketamín 10%",
+          dosage: "2mg/kg",
+          frequency: "1x",
+        },
+        ctx,
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("get_invoice_summary accepts optional patientId or clientId", () => {

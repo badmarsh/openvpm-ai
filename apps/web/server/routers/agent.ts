@@ -20,6 +20,10 @@ import {
   AgentRecoveryHoldError,
 } from "@/lib/agent";
 import { AGENT_INSTRUCTION_MAX_LENGTH } from "@/lib/agent/policy";
+import {
+  PrescriptionProposalError,
+  createConfirmedPrescription,
+} from "@/lib/records/prescription-proposal";
 import { billingEnforced } from "@/lib/billing/plans";
 import { readHostedAiAccess } from "@/lib/billing/ai-access";
 import {
@@ -205,6 +209,62 @@ export const agentRouter = createRouter({
           code: "INTERNAL_SERVER_ERROR",
           message: clientMsg,
         });
+      }
+    }),
+
+  /**
+   * Writes the prescription proposed by the `create_prescription` agent tool,
+   * after a veterinarian confirmed it in the UI. The one-time confirmation
+   * envelope issued during preparation is consumed here, in the same
+   * transaction as the INSERT, so a proposal can only ever be materialised
+   * once and only by the clinician it was issued to. Controlled substances are
+   * refused (zero AI prefill).
+   */
+  savePrescription: agentProcedure
+    .input(
+      z.object({
+        confirmationId: z.string().uuid(),
+        prescriptionId: z.string().uuid(),
+        patientId: z.string().uuid(),
+        medicationName: z.string().trim().min(1).max(255),
+        dosage: z.string().trim().min(1).max(128),
+        frequency: z.string().trim().min(1).max(128),
+        instructions: z.string().max(2000).optional(),
+        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertActivePractice(ctx);
+      try {
+        return await createConfirmedPrescription(ctx.db, {
+          practiceId: ctx.practiceId,
+          actorId: ctx.user.id,
+          actorName: ctx.user.name ?? ctx.user.email ?? "Clinician",
+          actorRole: ctx.session.user.role,
+          confirmationId: input.confirmationId,
+          prescriptionId: input.prescriptionId,
+          draft: {
+            patientId: input.patientId,
+            medicationName: input.medicationName,
+            dosage: input.dosage,
+            frequency: input.frequency,
+            instructions: input.instructions ?? null,
+            startDate: input.startDate,
+          },
+        });
+      } catch (error) {
+        if (error instanceof PrescriptionProposalError) {
+          const code =
+            error.code === "FORBIDDEN"
+              ? "FORBIDDEN"
+              : error.code === "NOT_FOUND"
+                ? "NOT_FOUND"
+                : error.code === "CONFLICT"
+                  ? "CONFLICT"
+                  : "PRECONDITION_FAILED";
+          throw new TRPCError({ code, message: error.message });
+        }
+        throw error;
       }
     }),
 });

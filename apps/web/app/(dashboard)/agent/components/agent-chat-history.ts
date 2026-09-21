@@ -2,7 +2,12 @@ export interface PersistedChatMessage {
   id: number;
   role: "user" | "assistant";
   content: string;
-  toolCalls?: Array<{ name: string; input: unknown; error?: string | null }>;
+  toolCalls?: Array<{
+    name: string;
+    input: unknown;
+    result?: unknown;
+    error?: string | null;
+  }>;
   isError?: boolean;
 }
 

@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import type { PersistedChatMessage } from "./agent-chat-history";
+import { PrescriptionProposalCard } from "./prescription-proposal-card";
 
 const MarkdownView = dynamic(
   () =>
@@ -126,6 +127,12 @@ export function AgentMessageBubble({
                     </div>
                     {call.error ? (
                       <div className="mt-1 text-destructive">⚠ {call.error}</div>
+                    ) : null}
+                    {!call.error ? (
+                      <PrescriptionProposalCard
+                        toolName={call.name}
+                        result={call.result}
+                      />
                     ) : null}
                   </li>
                 ))}

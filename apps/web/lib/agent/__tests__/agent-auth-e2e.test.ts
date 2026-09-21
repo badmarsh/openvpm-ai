@@ -251,7 +251,7 @@ describe("Service Agent Authorization Boundaries & Tool Access (F1 & F3)", () =>
   });
 
   describe("Clinician privileges preservation", () => {
-    it("allows 'veterinarian' to execute create_prescription", async () => {
+    it("allows 'veterinarian' to PREPARE a prescription proposal (never a direct write)", async () => {
       const tool = getTool("create_prescription")!;
       const ctx = createMockToolCtx("veterinarian", DOCTOR_ID);
 
@@ -263,9 +263,15 @@ describe("Service Agent Authorization Boundaries & Tool Access (F1 & F3)", () =>
           frequency: "1x daily",
         },
         ctx,
-      )) as { id: string };
+      )) as { status: string; confirmationId: string; requiresClinicianReview: boolean };
 
-      expect(result).toBeDefined();
+      // Clinical safety: the tool returns a pending proposal bound to a
+      // one-time envelope; the prescription row is only created by
+      // agent.savePrescription after the veterinarian confirms it.
+      expect(result.status).toBe("pending_confirmation");
+      expect(result.requiresClinicianReview).toBe(true);
+      expect(typeof result.confirmationId).toBe("string");
+      expect(result.confirmationId.length).toBeGreaterThan(0);
     });
 
     it("allows 'veterinarian' to execute get_controlled_substances_log", async () => {
