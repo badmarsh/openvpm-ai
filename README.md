@@ -136,6 +136,12 @@ Projekt prechádza prísnym kontinuálnym testovaním v GitHub Actions:
 
 ---
 
+## Product Discovery & User Journeys
+
+Hĺbková analýza používateľských ciest, use cases a business case-ov pre slovenskú veterinárnu kliniku je v dokumente **[docs/product/journeys/README.md](docs/product/journeys/README.md)** — 33 user journeys (J1–J30 + onboarding/migrácia/prvý mesiac), 33 formálnych use cases (UC-101…UC-133) a 9 business case-ov (BC-1…BC-9) s ROI pre všetky pricing tiery, s legislatívnymi pravidlami (Zákon 39/2007, 139/1998, 289/2008 Z. z., GDPR) a s registrom rizík R-01…R-11 pre ďalší rozvoj produktu.
+
+---
+
 ## Slovenské integrácie a partneri
 
 Detailné technické špecifikácie nájdete v dokumente [docs/slovak-integration-catalog.md](docs/slovak-integration-catalog.md).

@@ -8,6 +8,15 @@ as described in `docs/production-readiness/VERSIONING.md`.
 
 ## [Unreleased]
 
+### Added
+
+- **Product Discovery: User Journeys, Use Cases & Business Cases (`docs/product/journeys/`):**
+  - 33 user journeys (J1–J30 + J-NEW-1…3): 19 mapped journeys across clinical work, reception, pharmacy/billing, preventive care, lab/imaging and marketing, plus 14 new journeys (hospitalization, surgery & anesthesia, emergency triage, telemedicine, inventory & supply chain, reporting, administration/multi-clinic, client portal, statutory compliance cycle, euthanasia & sympathy gate, ŠVPS audit evidence, onboarding, migration and first-month adoption).
+  - 33 formal use cases (UC-101…UC-133) with preconditions, main/alternate/exception flows, postconditions, statutory business rules, data entities and external integrations — each mapped to existing routers and DB schema (`packages/db/schema/`, `apps/web/server/routers/**`).
+  - 9 business cases (BC-1…BC-9) with status quo, quantified value, ROI per pricing tier (Self-hosted / Cloud Solo / Cloud Klinika / Cloud Nemocnica), competitive moat, adoption barriers and KPIs, based on a single reference clinic model (3 vets, 42 patients/day, ~900 visits/month).
+  - Cross-cutting analysis: AI value chain per surface (voice, Clinical Guardian, imaging, recalls, marketing), AI failure scenarios (false positive/negative/unavailability), trust-building curve, compliance maturity model (Z0–Z3), multi-actor handoff maps and a KPI/instrumentation register.
+  - Product discovery risk register R-01…R-11 (pricing vs. code mismatch, missing AI provenance on the most-used AI surface, fabricated lab confidence scores, data residency panel, missing hospitalization/surgery/urgent/telemedicine modules, multi-location UI status and agent prescription bypass) with explicit recommendations for roadmap prioritization.
+
 ## [0.6.1] - 2026-09-18
 
 ### Added
