@@ -39,9 +39,14 @@ export const labImportRouter = createRouter({
     }),
 
   /**
-   * PDF & Image Lab Report AI Parser (Pilier 3 Copilot).
-   * Extracts structured analytes from PDF/image lab protocols with confidence scoring.
-   * Generates a draft lab report requiring veterinarian approval (Act 39/2007).
+   * Lab report import (text/PDF/image bytes).
+   *
+   * HONESTY CONTRACT: this is a DETERMINISTIC text parser (regex over the
+   * decoded content) — it is NOT an AI/OCR model and must never be labelled as
+   * one. It reports no numeric "confidence": a fabricated score inside the
+   * clinician confirmation gate destroys the value of that gate. The returned
+   * `parseMethod`/`aiGenerated` fields exist so the UI can state the real
+   * provenance. Every imported value requires veterinarian review (Act 39/2007).
    */
   parsePdfOrImageReport: staffProcedure
     .input(
@@ -76,18 +81,10 @@ export const labImportRouter = createRouter({
         species: input.species,
       });
 
-      // 3. Compute Confidence Score (Pilier 3 UX)
-      // > 0.92: High confidence (verified vendor protocol + reference ranges match)
-      // 0.75 - 0.92: Moderate confidence (some parameters flagged for manual review)
-      // < 0.75: Low confidence (fallback generic parser)
-      let confidenceScore = 0.65;
-      if (parsed.results.length >= 6 && parsed.analyzerType !== "GENERIC_CSV") {
-        confidenceScore = 0.94;
-      } else if (parsed.results.length >= 3) {
-        confidenceScore = 0.84;
-      } else if (parsed.results.length > 0) {
-        confidenceScore = 0.72;
-      }
+      // 3. Provenance (no fabricated score): a row count is not a probability.
+      // The parser either recognised rows or it did not; anything recognised is
+      // still transcribed text that the veterinarian must verify.
+      const requiresManualReview = true;
 
       let draftReportId: string | undefined;
 
@@ -118,7 +115,8 @@ export const labImportRouter = createRouter({
             patientId: input.patientId ?? null,
             clientId: resolvedClientId ?? null,
             analyzerType: parsed.analyzerType,
-            deviceModel: parsed.deviceModel ?? "PDF Laboklin/IDEXX AI OCR",
+            deviceModel:
+              parsed.deviceModel ?? "Automatické čítanie textu reportu (bez AI)",
             species: input.species,
             fileName: input.fileName,
             rawContent: textContent.slice(0, 10000),
@@ -126,7 +124,8 @@ export const labImportRouter = createRouter({
             abnormalCount: parsed.abnormalCount,
             criticalCount: parsed.criticalCount,
             status,
-            notes: `AI Copilot PDF import (confidence: ${(confidenceScore * 100).toFixed(0)}%). Vyžaduje kontrolu a potvrdenie lekárom pred finalizáciou (Zákon 39/2007 Z. z.).`,
+            notes:
+              "Automatické prepísanie hodnôt z textu reportu (deterministický parser, bez AI modelu). Vyžaduje kontrolu a potvrdenie lekárom pred finalizáciou (Zákon 39/2007 Z. z.).",
           })
           .returning();
 
@@ -135,7 +134,11 @@ export const labImportRouter = createRouter({
 
       return {
         ...parsed,
-        confidenceScore,
+        /** Provenance: deterministic parser, no model involved. */
+        parseMethod: "deterministic_text_parser" as const,
+        aiGenerated: false,
+        parsedRowCount: parsed.results.length,
+        requiresManualReview,
         draftReportId,
         requiresVetApproval: true,
       };

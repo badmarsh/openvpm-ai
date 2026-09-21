@@ -15,6 +15,7 @@ import { ConfidenceScoreBadge } from "@/components/copilot/confidence-score-badg
 export type ClinicalRecordTier =
   | "ai_draft" // AI Koncept (Čaká na autorizáciu)
   | "administrative_draft" // Administratívny koncept
+  | "imported_draft" // Automaticky prepísané z dokumentu / prístroja (bez AI modelu)
   | "authorized"; // Autorizované lekárom (Podpísané)
 
 export interface ClinicalStatusBadgeProps {
@@ -72,6 +73,28 @@ export function ClinicalStatusBadge({
               {formattedScore}%
             </span>
           )}
+        </Badge>
+      </div>
+    );
+  }
+
+  if (status === "imported_draft") {
+    return (
+      <div className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
+        <Badge
+          variant="outline"
+          className={`bg-slate-50 text-slate-800 border-slate-300 dark:bg-slate-900/40 dark:text-slate-200 ${
+            isSm
+              ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
+              : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
+          }`}
+          title={t(
+            "clinical.status.importedTooltip",
+            "Hodnoty boli automaticky prepísané z dokumentu alebo prístroja (deterministický parser, žiadny AI model). Vyžadujú kontrolu a potvrdenie veterinárnym lekárom (Zákon č. 39/2007 Z. z. §3)."
+          )}
+        >
+          <FileEdit className={isSm ? "h-3 w-3 text-slate-600" : "h-3.5 w-3.5 text-slate-600"} />
+          <span>{t("clinical.status.imported", "Importované (nepotvrdené lekárom)")}</span>
         </Badge>
       </div>
     );

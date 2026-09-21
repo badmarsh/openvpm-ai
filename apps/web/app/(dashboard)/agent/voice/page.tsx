@@ -44,7 +44,6 @@ import { ClinicalTemplatesModal } from "./components/clinical-templates";
 import { VoiceCommandsModal } from "./components/voice-commands";
 import { PatientSelector } from "./components/patient-selector";
 import { SoapPreview, type SoapSectionsData } from "./components/soap-preview";
-import { ClinicalDiffConfirmModal } from "@/components/copilot/clinical-diff-confirm-modal";
 import type { SoapStyle } from "@/lib/voice/soap-formatter";
 
 type DictationStatus =
@@ -151,7 +150,6 @@ function VoiceDictationContent() {
   // Human-in-the-loop: AI transcription is saved as a draft unless the
   // clinician explicitly confirms the content for finalization.
   const [clinicianConfirmed, setClinicianConfirmed] = useState(false);
-  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
 
   // tRPC mutations
   const uploadAndProcessMutation = trpc.extensions.voice.uploadAndProcess.useMutation();

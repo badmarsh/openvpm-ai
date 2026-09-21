@@ -464,6 +464,21 @@
     "copyReply": "Kopírovať odpoveď",
     "aiGeneratedBadge": "Vygenerované AI Asistentom",
     "newSessionStarted": "Nová relácia asistenta spustená",
+    "prescription": {
+      "pendingTitle": "Návrh receptu — vyžaduje potvrdenie lekára",
+      "medication": "Liek",
+      "dosage": "Dávka",
+      "frequency": "Frekvencia",
+      "startDate": "Od",
+      "instructions": "Poznámka",
+      "consentNotice": "Vystavením potvrdzujete, že ste recept skontrolovali a preberáte za neho klinickú zodpovednosť.",
+      "confirm": "Potvrdiť a vystaviť recept",
+      "saved": "Recept bol vystavený a zapísaný do karty pacienta.",
+      "savedShort": "Recept vystavený po potvrdení lekárom",
+      "expired": "Platnosť potvrdenia vypršala alebo už bol recept vystavený. Spustite asistenta znova.",
+      "controlledBlocked": "Kontrolované látky nie je možné vystaviť cez AI asistenta. Použite predpisový formulár.",
+      "saveFailed": "Recept sa nepodarilo vystaviť."
+    },
     "export": {
       "copy": "Kopírovať",
       "copyTitle": "Kopírovať ako Markdown",
@@ -7274,7 +7289,8 @@
       "emptyValue": "— prázdne —",
       "controlledInputPlaceholder": "Zadajte dávku a aplikáciu manuálne...",
       "statutoryConfirmation": "Potvrdzujem správnosť a odbornosť tohto klinického záznamu ako ošetrujúci veterinárny lekár v súlade so Zákonom 39/2007 Z. z. o veterinárnej starostlivosti.",
-      "signAndRecord": "Podpísať & Zapísať do karty pacienta"
+      "signAndRecord": "Podpísať & Zapísať do karty pacienta",
+      "noConfidence": "Bez skóre istoty — skontrolujte každú hodnotu"
     }
   },
   "ambulatory": {
@@ -8075,8 +8091,10 @@
     "colCode": "Kód",
     "colName": "Názov",
     "btnVerifySign": "Overiť a schváliť (KVL SR)",
-    "analyzingPdf": "AI Copilot analyzuje PDF protokol...",
-    "aiAnalysisSuccess": "AI analýza protokolu: {count} parametrov (spoľahlivosť {score}%)"
+    "analyzingPdf": "Čítam text protokolu…",
+    "importSuccess": "Z dokumentu bolo prepísaných {count} parametrov. Skontrolujte ich a potvrďte ako lekár.",
+    "parseError": "Chyba pri čítaní protokolu",
+    "proposedColumn": "Hodnota prepísaná z dokumentu"
   },
   "ekasa.drawer.copy": "Kopírovať",
   "ekasa.drawer.offlineNoUid": "Doklad neobsahuje UID z dôvodu offline evidencie.",
@@ -8093,6 +8111,12 @@
       "noResults": "Pre tohto pacienta zatiaľ nie sú zaznamenané laboratórne výsledky.",
       "firstMeasurement": "Prvé meranie",
       "refRange": "Referenčný rozsah:"
+    }
+  },
+  "clinical": {
+    "status": {
+      "imported": "Importované (nepotvrdené lekárom)",
+      "importedTooltip": "Hodnoty boli automaticky prepísané z dokumentu alebo prístroja (deterministický parser, žiadny AI model). Vyžadujú kontrolu a potvrdenie veterinárnym lekárom (Zákon č. 39/2007 Z. z. §3)."
     }
   }
 }

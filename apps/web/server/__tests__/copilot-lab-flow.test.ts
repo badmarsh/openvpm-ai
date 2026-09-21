@@ -55,7 +55,7 @@ ALP,85,U/L,14,111`;
   });
 
   describe("parsePdfOrImageReport Router Procedure", () => {
-    it("computes high confidence (>=0.92) for rich structured protocols", async () => {
+    it("parses rich structured protocols without fabricating a confidence score", async () => {
       const { labImportRouter } = await import("../routers/extensions/lab-import");
 
       const mockDb: any = {
@@ -104,7 +104,12 @@ GLU,5.2,mmol/L,3.8,7.9`;
       });
 
       expect(res.results.length).toBe(6);
-      expect(res.confidenceScore).toBeGreaterThanOrEqual(0.75);
+      // Honesty contract: a deterministic text parser must not invent a
+      // confidence score, and must declare that no model was involved.
+      expect(res.parseMethod).toBe("deterministic_text_parser");
+      expect(res.aiGenerated).toBe(false);
+      expect(res.requiresManualReview).toBe(true);
+      expect("confidenceScore" in res).toBe(false);
       expect(res.requiresVetApproval).toBe(true);
     });
 

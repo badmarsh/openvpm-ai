@@ -311,7 +311,6 @@ function AnalyzerUploadModal({
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [selectedPatientName, setSelectedPatientName] = useState("");
-  const [confidenceScore, setConfidenceScore] = useState<number | null>(null);
   const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
 
@@ -331,7 +330,6 @@ function AnalyzerUploadModal({
   const parseMutation = trpc.extensions.labImport.parseFile.useMutation({
     onSuccess: (data) => {
       setParsedPreview(data);
-      setConfidenceScore(null);
       toast.success(
         "Analyzované: " + data.results.length + " parametrov (" + data.analyzerType + (data.deviceModel ? " - " + data.deviceModel : "") + ")"
       );
@@ -351,17 +349,17 @@ function AnalyzerUploadModal({
         abnormalCount: data.abnormalCount,
         criticalCount: data.criticalCount,
       });
-      setConfidenceScore(data.confidenceScore);
       toast.success(
-        t("labImport.aiAnalysisSuccess", "AI analýza protokolu: {count} parametrov (spoľahlivosť {score}%)", {
-          count: data.results.length,
-          score: Math.round(data.confidenceScore * 100),
-        })
+        t(
+          "labImport.importSuccess",
+          "Z dokumentu bolo prepísaných {count} parametrov. Skontrolujte ich a potvrďte ako lekár.",
+          { count: data.results.length }
+        )
       );
     },
     onError: (err: any) => {
       setIsPdfLoading(false);
-      toast.error(err.message || "Chyba pri AI analýze PDF protokolu");
+      toast.error(err.message || t("labImport.parseError", "Chyba pri čítaní protokolu"));
     },
   });
 
@@ -405,7 +403,6 @@ function AnalyzerUploadModal({
         const content = event.target?.result as string;
         if (content) {
           setRawText(content);
-          setConfidenceScore(null);
           parseMutation.mutate({
             content,
             fileName: file.name,
@@ -422,7 +419,6 @@ function AnalyzerUploadModal({
       toast.error("Vložte text alebo vyberte súbor");
       return;
     }
-    setConfidenceScore(null);
     parseMutation.mutate({
       content: rawText,
       fileName: fileName || "manual_export.csv",
@@ -533,7 +529,7 @@ function AnalyzerUploadModal({
               {isPdfLoading ? (
                 <span className="flex items-center justify-center gap-2 text-primary font-semibold">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("labImport.analyzingPdf", "AI Copilot analyzuje PDF protokol...")}
+                  {t("labImport.analyzingPdf", "Čítam text protokolu…")}
                 </span>
               ) : fileName ? (
                 fileName
@@ -575,11 +571,7 @@ function AnalyzerUploadModal({
                   <span className="text-xs text-muted-foreground">
                     {t("labImport.foundParameters", "({count} nájdených parametrov)", { count: parsedPreview.results.length })}
                   </span>
-                  <ClinicalStatusBadge
-                    status="ai_draft"
-                    confidenceScore={confidenceScore ?? 92}
-                    size="sm"
-                  />
+                  <ClinicalStatusBadge status="imported_draft" size="sm" />
                 </div>
                 <div className="flex items-center gap-1.5">
                   {parsedPreview.criticalCount > 0 && (
@@ -680,11 +672,13 @@ function AnalyzerUploadModal({
           patientName={selectedPatientName || "Nepriradený pacient"}
           species={species}
           sourceTitle={`${parsedPreview.analyzerType} Laboratórny protokol (${fileName || "Analyzátor"})`}
-          overallConfidence={confidenceScore ?? 0.95}
+          proposedColumnLabel={t(
+            "labImport.proposedColumn",
+            "Hodnota prepísaná z dokumentu"
+          )}
           fields={parsedPreview.results.map((r) => ({
             label: `${r.name} (${r.code})`,
             proposedValue: `${r.value} ${r.unit || ""}`.trim(),
-            confidence: confidenceScore ?? 0.95,
           }))}
         />
       )}
