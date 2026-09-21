@@ -211,6 +211,9 @@ export function TopBar({
           <kbd className="ml-auto hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium md:inline">
             ⌘K
           </kbd>
+          <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium md:inline">
+            F1
+          </kbd>
         </button>
 
         <div className="flex items-center gap-[6.8px]">

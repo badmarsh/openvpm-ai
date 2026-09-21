@@ -485,6 +485,8 @@ export function CommandSearch({
               <span>{t("commandSearch.navToClose", "to close")}</span>
             </div>
             <span className="font-mono text-[10px] opacity-70">{t("commandSearch.spotlightLabel", "Cmd+K Spotlight")}</span>
+            <span className="font-mono text-[10px] opacity-50">·</span>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">F1</kbd>
           </div>
         </Command>
       </div>

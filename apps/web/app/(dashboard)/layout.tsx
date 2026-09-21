@@ -42,6 +42,10 @@ export default function DashboardLayout({
       e.preventDefault();
       setSearchOpen((prev) => !prev);
     }
+    if (e.key === "F1") {
+      e.preventDefault();
+      setSearchOpen((prev) => !prev);
+    }
     if (e.key === "Escape") {
       setSearchOpen(false);
       setMobileNavOpen(false);

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Search, Plus, Users } from "lucide-react";
+import { Search, Plus, Users, Phone, Mail } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -200,12 +200,28 @@ export default function ClientsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {client.email ? <a href={`mailto:${client.email}`} className="hover:underline">{client.email}</a> : "\u2014"}
+                      {client.email ? (
+                        <a
+                          href={`mailto:${client.email}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5 text-muted-foreground hover:text-primary transition-colors group"
+                        >
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                          <span className="text-xs group-hover:underline truncate max-w-[160px]">{client.email}</span>
+                        </a>
+                      ) : "\u2014"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {client.phone ? (
                         <span className="inline-flex items-center gap-1.5">
-                          <a href={`tel:${client.phone}`} className="hover:underline">{client.phone}</a>
+                          <a
+                            href={`tel:${client.phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5 text-muted-foreground hover:text-primary transition-colors group"
+                          >
+                            <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                            <span className="font-mono tabular-nums text-xs group-hover:underline">{client.phone}</span>
+                          </a>
                           {client.smsConsent && (
                             <Badge variant="success" className="text-[10px] px-1 py-0">SMS</Badge>
                           )}
