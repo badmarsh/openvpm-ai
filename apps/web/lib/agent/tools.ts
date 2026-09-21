@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { createHash } from "node:crypto";
 import { assertAgentRole } from "@/lib/authorization";
-import { issueClinicianConfirmation } from "@/lib/ai/clinician-confirmation";
+import {
+  assertMedicationAllowedThroughAgent,
+  preparePrescriptionProposal,
+} from "@/lib/records/prescription-proposal";
 import { checkStatutoryWithdrawalFloor } from "@/lib/statutory/withdrawal";
 
 import {
@@ -2893,7 +2895,7 @@ const USER_UUID_RE =
 const createPrescriptionTool: AgentTool = {
   name: "create_prescription",
   description:
-    "Create a medical prescription for a patient. Requires write mode. Drug name, dosage, and frequency are mandatory.",
+    "Prepare a medical prescription for a patient. Requires write mode. Drug name, dosage, and frequency are mandatory. This tool does NOT write the prescription: it returns a pending proposal that the veterinarian must confirm in the OpenVPM UI (agent.savePrescription). Controlled substances are always refused.",
   inputSchema: {
     type: "object",
     properties: {
@@ -2948,62 +2950,48 @@ const createPrescriptionTool: AgentTool = {
       startDate?: string;
     };
 
+    // Fail fast before any database work: controlled substances (OPL) are
+    // never prescribable through the AI agent — zero AI prefill is absolute.
+    assertMedicationAllowedThroughAgent(input.medicationName);
+
     if (!(await activePatient(ctx, input.patientId))) {
       return { error: "Patient not found" };
     }
 
     const startDate = input.startDate || (await practiceDateInput(ctx));
 
-    const [created] = await ctx.db
-      .insert(prescriptions)
-      .values({
-        practiceId: ctx.practiceId,
+    // Clinical safety: the agent only PREPARES the prescription. It never
+    // inserts into `prescriptions`. A veterinarian must confirm the proposal
+    // through `agent.savePrescription`, which consumes the one-time envelope
+    // issued here. Controlled substances are refused outright (zero AI prefill).
+    const proposal = await preparePrescriptionProposal(ctx.db, {
+      practiceId: ctx.practiceId,
+      actorId: ctx.userId,
+      actorRole: ctx.userRole || "",
+      draft: {
         patientId: input.patientId,
-        prescribedBy: ctx.userId,
         medicationName: input.medicationName,
         dosage: input.dosage,
         frequency: input.frequency,
         instructions: input.instructions ?? null,
         startDate,
-        status: "active",
-      })
-      .returning();
-
-    let confirmationId: string | undefined;
-    try {
-      const draftPayload = JSON.stringify({
-        patientId: created!.patientId,
-        medicationName: created!.medicationName,
-        dosage: created!.dosage,
-        frequency: created!.frequency,
-        instructions: created!.instructions,
-        startDate: created!.startDate,
-      });
-      const draftHash = createHash("sha256").update(draftPayload).digest("hex");
-      const envelope = await issueClinicianConfirmation(ctx.db, {
-        practiceId: ctx.practiceId,
-        actorId: ctx.userId,
-        actorRole: ctx.userRole || "veterinarian",
-        actionType: "prescription_create",
-        entityType: "prescription",
-        entityId: created!.id,
-        originalDraftHash: draftHash,
-        confirmedContentHash: draftHash,
-      });
-      confirmationId = envelope.id;
-    } catch {
-      // In-memory or mocked DB in tests without extClinicianConfirmations
-    }
+      },
+    });
 
     return {
-      id: created!.id,
-      patientId: created!.patientId,
-      medicationName: created!.medicationName,
-      dosage: created!.dosage,
-      frequency: created!.frequency,
-      status: created!.status,
-      confirmationId,
+      status: proposal.status,
+      prescriptionId: proposal.prescriptionId,
+      confirmationId: proposal.confirmationId,
+      expiresAt: proposal.expiresAt,
       requiresClinicianReview: true,
+      patientId: input.patientId,
+      medicationName: input.medicationName,
+      dosage: input.dosage,
+      frequency: input.frequency,
+      instructions: input.instructions ?? null,
+      startDate,
+      message:
+        "Návrh receptu čaká na potvrdenie veterinárnym lekárom v rozhraní OpenVPM. / Prescription proposal awaits veterinarian confirmation in the OpenVPM UI.",
     };
   },
 };

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { generateText } from "ai";
 import { configuredModel } from "@/lib/agent/runner";
+import {
+  UNTRUSTED_DATA_PROMPT_RULE,
+  wrapUntrustedRecord,
+} from "@/lib/ai/untrusted-data";
 
 export interface ExtractedBillItem {
   id: string;
@@ -187,10 +191,16 @@ export async function extractBillableItemsFromSoap(params: {
   transcript?: string;
   assessment?: string;
 }): Promise<ExtractedBillItem[]> {
+  // Clinical free text is data, not instructions: keep it inside a boundary so
+  // a dictated sentence cannot smuggle billing instructions into the extractor.
   const combinedText = [
-    params.plan ? `PLÁN A TERAPIA:\n${params.plan}` : "",
-    params.assessment ? `DIAGNÓZA:\n${params.assessment}` : "",
-    params.transcript ? `TRANSKRIPCIA DIKTOVANIA:\n${params.transcript}` : "",
+    params.plan ? `PLÁN A TERAPIA:\n${wrapUntrustedRecord(params.plan)}` : "",
+    params.assessment
+      ? `DIAGNÓZA:\n${wrapUntrustedRecord(params.assessment)}`
+      : "",
+    params.transcript
+      ? `TRANSKRIPCIA DIKTOVANIA:\n${wrapUntrustedRecord(params.transcript)}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -216,6 +226,8 @@ Pravidlá:
 - "dosageOrRoute": napr. "1 ml s.c.", "2x denne 1 tbl"
 - "isAppliedOnSite": true ak bolo podané na klinike, false ak vydané na domáce použitie
 - "OPL pravidlo (Zákon č. 139/1998 Z. z.)": NIKDY NEZAHŔŇAJ omamné, psychotropné látky ani eutanastiká (napr. ketamín, butorfanol, fentanyl, morfín, metadón, buprenorfín, T61, pentobarbital, diazepam, midazolam, propofol) do položiek. Tieto látky vyžadujú manuálny protokol a zápis lekárom do Knihy OPL.
+
+${UNTRUSTED_DATA_PROMPT_RULE}
 
 Odpovedz VÝHRADNE JSON objektom v tvare:
 {

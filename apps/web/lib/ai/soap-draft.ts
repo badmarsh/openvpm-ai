@@ -1,6 +1,10 @@
 import { generateText, type LanguageModel } from "ai";
 import { configuredModel } from "@/lib/agent/runner";
 import { SOAP_SECTION_MAX_LENGTH } from "@/lib/records/soap-content";
+import {
+  UNTRUSTED_DATA_PROMPT_RULE,
+  wrapUntrustedRecord,
+} from "@/lib/ai/untrusted-data";
 
 /**
  * One-shot AI draft of a SOAP visit note. Unlike ai.createSoapFromAI (the
@@ -17,7 +21,8 @@ Rules:
 - Return ONLY a JSON object with the string keys "subjective", "objective", "assessment", and "plan". No markdown fences, no commentary.
 - Ground every statement in the provided chart context. NEVER invent exam findings, vitals, doses, or owner reports.
 - Where information is missing, write a short prompt for the clinician instead (for example "Owner reports: [add]").
-- Keep each section short, factual, and clinical.`;
+- Keep each section short, factual, and clinical.
+- ${UNTRUSTED_DATA_PROMPT_RULE}`;
 
 export interface SoapDraft {
   subjective: string;
@@ -53,41 +58,55 @@ function line(label: string, value: string | number | null | undefined): string 
 
 export function buildSoapDraftPrompt(context: SoapDraftContext): string {
   const { patient, allergies, activeProblems, latestVitals } = context;
-  let prompt = "Draft a SOAP note for this veterinary visit.\n\nPatient:\n";
-  prompt += line("Name", patient.name);
-  prompt += line("Species", patient.species);
-  prompt += line("Breed", patient.breed);
-  prompt += line("Sex", patient.sex);
-  prompt += line("Date of birth", patient.dob);
+
+  // Every block below is untrusted input (patient/owner text may originate from
+  // the public booking form, the rest from free-form staff entry). It is
+  // wrapped in a <db_record> boundary so the model can never mistake it for an
+  // instruction — see lib/ai/untrusted-data.ts.
+  let patientBlock = "";
+  patientBlock += line("Name", patient.name);
+  patientBlock += line("Species", patient.species);
+  patientBlock += line("Breed", patient.breed);
+  patientBlock += line("Sex", patient.sex);
+  patientBlock += line("Date of birth", patient.dob);
+
+  let prompt =
+    "Draft a SOAP note for this veterinary visit.\n\n" +
+    `Patient (untrusted chart data):\n${wrapUntrustedRecord(patientBlock.trimEnd())}\n`;
 
   if (allergies.length > 0) {
-    prompt += "\nKnown allergies:\n";
+    let allergiesBlock = "";
     for (const allergy of allergies) {
-      prompt += `- ${allergy.allergen}${allergy.severity ? ` (${allergy.severity})` : ""}\n`;
+      allergiesBlock += `- ${allergy.allergen}${allergy.severity ? ` (${allergy.severity})` : ""}\n`;
     }
+    prompt += `\nKnown allergies:\n${wrapUntrustedRecord(allergiesBlock.trimEnd())}\n`;
   }
 
   if (activeProblems.length > 0) {
-    prompt += "\nProblem list:\n";
+    let problemsBlock = "";
     for (const problem of activeProblems) {
-      prompt += `- ${problem.description}${problem.status ? ` [${problem.status}]` : ""}\n`;
+      problemsBlock += `- ${problem.description}${problem.status ? ` [${problem.status}]` : ""}\n`;
     }
+    prompt += `\nProblem list:\n${wrapUntrustedRecord(problemsBlock.trimEnd())}\n`;
   }
 
   if (latestVitals) {
-    prompt += "\nMost recent vitals:\n";
-    prompt += line("Temperature (C)", latestVitals.temperatureC);
-    prompt += line("Heart rate (bpm)", latestVitals.heartRateBpm);
-    prompt += line("Respiratory rate (bpm)", latestVitals.respiratoryRateBpm);
-    prompt += line("Weight (kg)", latestVitals.weightKg);
+    let vitalsBlock = "";
+    vitalsBlock += line("Temperature (C)", latestVitals.temperatureC);
+    vitalsBlock += line("Heart rate (bpm)", latestVitals.heartRateBpm);
+    vitalsBlock += line("Respiratory rate (bpm)", latestVitals.respiratoryRateBpm);
+    vitalsBlock += line("Weight (kg)", latestVitals.weightKg);
+    prompt += `\nMost recent vitals:\n${wrapUntrustedRecord(vitalsBlock.trimEnd())}\n`;
   }
 
   if (context.visitContext) {
     // Fail-closed bound: visitContext is free-form staff input (prompt-injection
     // and token-cost vector). Truncate to the documented limit so an oversized
     // paste can neither smuggle in trailing instructions nor blow up cost.
-    const bounded = context.visitContext.slice(0, SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH);
-    prompt += `\nVisit context from staff:\n${bounded}\n`;
+    prompt += `\nVisit context from staff:\n${wrapUntrustedRecord(
+      context.visitContext,
+      SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
+    )}\n`;
   }
 
   prompt +=

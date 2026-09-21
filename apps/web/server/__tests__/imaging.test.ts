@@ -346,13 +346,19 @@ describe("Imaging router", () => {
         }),
       ).rejects.toMatchObject({
         code: "INTERNAL_SERVER_ERROR",
-        message: expect.stringContaining("Image not found in object storage"),
+        message: "AI analýza zlyhala.",
       });
 
       expect(updateSet).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "FAILED",
-          errorMessage: "Image not found in object storage",
+          // The clinician sees a short, translatable sentence; the raw cause is
+          // kept out of the user-facing column and stored for support instead.
+          errorMessage: "AI analýza zlyhala.",
+          rawResponse: expect.objectContaining({
+            error: "Image not found in object storage",
+            timedOut: false,
+          }),
         }),
       );
     });
@@ -394,13 +400,17 @@ describe("Imaging router", () => {
         }),
       ).rejects.toMatchObject({
         code: "INTERNAL_SERVER_ERROR",
-        message: expect.stringContaining("AI service unavailable"),
+        message: "AI analýza zlyhala.",
       });
 
       expect(updateSet).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "FAILED",
-          errorMessage: "AI service unavailable",
+          errorMessage: "AI analýza zlyhala.",
+          rawResponse: expect.objectContaining({
+            error: "AI service unavailable",
+            timedOut: false,
+          }),
         }),
       );
     });

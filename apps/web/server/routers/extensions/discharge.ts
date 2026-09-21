@@ -17,6 +17,10 @@ import {
   requireExpectedRevision,
 } from "./_safety";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+import {
+  UNTRUSTED_DATA_PROMPT_RULE,
+  wrapUntrustedRecord,
+} from "@/lib/ai/untrusted-data";
 import { recordUsage } from "@/lib/billing/usage";
 import { dispatchWebhookEvent } from "@/lib/webhook-dispatcher";
 import { validateMarketingText } from "@/lib/marketing/validator";
@@ -60,7 +64,9 @@ Pravidlá a štruktúra správy:
 7. Plánovaná kontrola: Dátum, čas alebo podmienky pre kontrolu.
 8. Profesionálny a empatický záver s podpisom veterinárneho tímu kliniky.
 
-Formátujte text v prehľadnom a úhľadnom Markdown formáte s odrážkami a tučným písmom pre dôležité upozornenia.`;
+Formátujte text v prehľadnom a úhľadnom Markdown formáte s odrážkami a tučným písmom pre dôležité upozornenia.
+
+${UNTRUSTED_DATA_PROMPT_RULE}`;
 
 // Sympathy-flow safety gate (Skill §3) — shared implementation in _safety.ts
 
@@ -76,7 +82,9 @@ Structure:
 6. Scheduled follow-up visit.
 7. Empathetic closing from the veterinary team.
 
-Format the response in clean Markdown with clear headings and bullet points.`;
+Format the response in clean Markdown with clear headings and bullet points.
+
+${UNTRUSTED_DATA_PROMPT_RULE}`;
 
 export const dischargeRouter = createRouter({
   /** Generuje prepúšťaciu správu pomocou AI alebo šablóny */
@@ -142,10 +150,24 @@ export const dischargeRouter = createRouter({
             ? DISCHARGE_SYSTEM_PROMPT_SK
             : DISCHARGE_SYSTEM_PROMPT_EN;
 
+        // Free-text fields are clinician-entered records, not instructions:
+        // wrap them so an injected sentence in a diagnosis cannot steer the model.
+        const clinicalRecord = wrapUntrustedRecord({
+          petName: input.petName,
+          species: input.species || null,
+          diagnosis: input.diagnosis,
+          treatment: input.treatment || null,
+          followUp: input.followUp || null,
+        });
+        const deathNote = isDeceased
+          ? input.language === "sk"
+            ? "\nUPOZORNENIE: Pacient uhynul / bol eutanazovaný. Správa musí vyjadrovať úprimnú sústrasť a empatiu rodine."
+            : "\nNOTE: Patient is deceased. The letter must be a compassionate condolence note."
+          : "";
         const userPrompt =
           input.language === "sk"
-            ? `Klinika: ${clinicName}\nKontakt: ${clinicContact}\nMeno pacienta: ${input.petName}\nDruh/Plemeno: ${input.species || "neuvedené"}\nDiagnóza: ${input.diagnosis}\nAplikovaná a predpísaná liečba: ${input.treatment || "neuvedené"}\nPokyny pre následnú starostlivosť a kontrolu: ${input.followUp || "neuvedené"}${isDeceased ? "\nUPOZORNENIE: Pacient uhynul / bol eutanazovaný. Správa musí vyjadrovať úprimnú sústrasť a empatiu rodine." : ""}`
-            : `Clinic: ${clinicName}\nContact: ${clinicContact}\nPet Name: ${input.petName}\nSpecies/Breed: ${input.species || "Not specified"}\nDiagnosis: ${input.diagnosis}\nTreatment / Medications: ${input.treatment || "Not specified"}\nFollow-up & Home Care Instructions: ${input.followUp || "Not specified"}${isDeceased ? "\nNOTE: Patient is deceased. The letter must be a compassionate condolence note." : ""}`;
+            ? `Klinika: ${clinicName}\nKontakt: ${clinicContact}\n${clinicalRecord}${deathNote}`
+            : `Clinic: ${clinicName}\nContact: ${clinicContact}\n${clinicalRecord}${deathNote}`;
 
         const result = await generateText({
           model,

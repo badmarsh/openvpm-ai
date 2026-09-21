@@ -7,6 +7,7 @@ import {
   XCircle,
   FileCheck,
   ShieldAlert,
+  ShieldCheck,
   Edit3,
   X,
 } from "lucide-react";
@@ -32,8 +33,16 @@ export interface ClinicalDiffConfirmModalProps {
   species?: string;
   sourceTitle: string; // e.g. "Hlasový záznam vyšetrenia (Voice SOAP)" or "PDF Laboratórna správa"
   fields: ClinicalDiffField[];
+  /** Only pass when a real model produced the content. */
   modelName?: string;
-  overallConfidence?: number;
+  /**
+   * Only pass when a real model reported a calibrated score. Callers with
+   * deterministic extraction must omit it: the gate shows "no score" rather
+   * than inventing a number.
+   */
+  overallConfidence?: number | null;
+  /** Overrides the "proposed value" column label (e.g. non-AI extraction). */
+  proposedColumnLabel?: string;
 }
 
 /**
@@ -53,8 +62,9 @@ export function ClinicalDiffConfirmModal({
   species,
   sourceTitle,
   fields,
-  modelName = "OpenVPM Copilot AI",
-  overallConfidence = 0.88,
+  modelName,
+  overallConfidence,
+  proposedColumnLabel,
 }: ClinicalDiffConfirmModalProps) {
   const { t } = useI18n();
   const [confirmedCheck, setConfirmedCheck] = useState(false);
@@ -126,7 +136,20 @@ export function ClinicalDiffConfirmModal({
             <span className="text-muted-foreground">
               {t("copilot.diffModal.reliability", "Spoľahlivosť extrakcie:")}
             </span>
-            <ConfidenceScoreBadge score={overallConfidence} model={modelName} size="sm" />
+            {typeof overallConfidence === "number" ? (
+              <ConfidenceScoreBadge score={overallConfidence} model={modelName} size="sm" />
+            ) : (
+              <Badge
+                variant="outline"
+                className="bg-slate-50 text-slate-700 border-slate-300 text-[10px] px-1.5 py-0 gap-1 dark:bg-slate-900/40 dark:text-slate-300"
+              >
+                <ShieldCheck className="w-3 h-3" />
+                {t(
+                  "copilot.diffModal.noConfidence",
+                  "Bez skóre istoty — skontrolujte každú hodnotu"
+                )}
+              </Badge>
+            )}
           </div>
           <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-[10px]">
             {t("copilot.diffModal.statutoryBadge", "Zákon 39/2007 Z. z. autorizácia")}
@@ -168,7 +191,8 @@ export function ClinicalDiffConfirmModal({
                       {t("copilot.diffModal.colOriginal", "Pôvodná hodnota")}
                     </th>
                     <th className="py-2.5 px-3">
-                      {t("copilot.diffModal.colProposed", "Navrhovaná hodnota (AI)")}
+                      {proposedColumnLabel ??
+                        t("copilot.diffModal.colProposed", "Navrhovaná hodnota (AI)")}
                     </th>
                   </tr>
                 </thead>

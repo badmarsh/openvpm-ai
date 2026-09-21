@@ -343,10 +343,23 @@ describe("Deterministic Synthetic Pilot Clinical Flow — Service Simulation", (
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Step 6: Authorized Prescription Creation
+  // Step 6: Authorized Prescription Proposal (clinician confirmation required)
   // ──────────────────────────────────────────────────────────────────────────
-  it("Step 6: Veterinarian successfully creates prescription (authorized role)", async () => {
+  it("Step 6: Veterinarian prepares a prescription proposal that only becomes a prescription after confirmation", async () => {
     const createPrescriptionTool = AGENT_TOOLS.find((t) => t.name === "create_prescription")!;
+
+    const insertValues = vi.fn(() => ({
+      returning: vi.fn(async () => [
+        {
+          id: "conf-rx-1",
+          status: "PENDING",
+          actionType: "prescription_create",
+          entityType: "prescription",
+          expiresAt: new Date("2026-09-21T10:15:00.000Z"),
+        },
+      ]),
+    }));
+    const insert = vi.fn(() => ({ values: insertValues }));
 
     const vetCtx = {
       db: {
@@ -357,20 +370,7 @@ describe("Deterministic Synthetic Pilot Clinical Flow — Service Simulation", (
             })),
           })),
         })),
-        insert: vi.fn(() => ({
-          values: vi.fn(() => ({
-            returning: vi.fn(async () => [
-              {
-                id: "rx-1",
-                patientId: PATIENT_ID,
-                medicationName: "Amoxicillin 250mg",
-                dosage: "1 tableta",
-                frequency: "2x denne",
-                status: "active",
-              },
-            ]),
-          })),
-        })),
+        insert,
       } as never,
       practiceId: PRACTICE_ID,
       userId: VET_USER_ID,
@@ -387,10 +387,33 @@ describe("Deterministic Synthetic Pilot Clinical Flow — Service Simulation", (
       vetCtx,
     );
 
+    // The agent no longer creates the prescription itself: it returns a
+    // proposal that the veterinarian confirms through agent.savePrescription.
     expect(rxResult).toMatchObject({
+      status: "pending_confirmation",
       medicationName: "Amoxicillin 250mg",
-      status: "active",
+      requiresClinicianReview: true,
+      confirmationId: "conf-rx-1",
     });
+    expect(rxResult).toHaveProperty("prescriptionId");
+    expect(rxResult).toHaveProperty("expiresAt");
+
+    // Exactly one row is written, and it is the one-time confirmation envelope
+    // bound to the proposed prescription — never a prescription with
+    // status "active".
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insertValues).toHaveBeenCalledTimes(1);
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        practiceId: PRACTICE_ID,
+        actorId: VET_USER_ID,
+        actorRole: "veterinarian",
+        actionType: "prescription_create",
+        entityType: "prescription",
+        entityId: (rxResult as { prescriptionId: string }).prescriptionId,
+        status: "PENDING",
+      }),
+    );
   });
 
   // ──────────────────────────────────────────────────────────────────────────
