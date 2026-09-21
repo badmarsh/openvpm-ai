@@ -36,6 +36,7 @@ import {
  * directly, and the SDK runs the tool-use loop for us up to MAX_ITERATIONS.
  */
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+import { wrapUntrustedRecord } from "@/lib/ai/untrusted-data";
 
 const DEFAULT_MODEL = DEFAULT_AI_MODEL;
 export const MAX_ITERATIONS = 12;
@@ -364,14 +365,7 @@ async function enforceAgentRunRateLimit(ctx: AgentToolContext): Promise<void> {
  * Encapsulates raw database values inside XML boundary tags to defend
  * against prompt injection from uncurated database strings.
  */
-export function wrapUntrustedData(data: unknown): string {
-  if (data === undefined || data === null) {
-    return `<db_record>\nnull\n</db_record>`;
-  }
-  const serialized = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-  const safeData = serialized.replace(/<\/db_record>/gi, "<\\/db_record>");
-  return `<db_record>\n${safeData}\n</db_record>`;
-}
+export const wrapUntrustedData = wrapUntrustedRecord;
 
 /**
  * Build the AI SDK tool set from AGENT_TOOLS. Write tools are gated behind

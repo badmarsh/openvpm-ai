@@ -4,6 +4,10 @@ import { createHash } from "node:crypto";
 import { createRouter, protectedProcedure, publicProcedure, requireRole } from "../../trpc";
 import { TRPCError } from "@trpc/server";
 import { configuredModel } from "@/lib/agent/runner";
+import {
+  UNTRUSTED_DATA_PROMPT_RULE,
+  wrapUntrustedRecord,
+} from "@/lib/ai/untrusted-data";
 import { assertHostedAiGate } from "@/lib/billing/ai-gate";
 import { recordUsage } from "@/lib/billing/usage";
 import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
@@ -1525,12 +1529,16 @@ Pravidlá v súlade s etickým kódexom Komory veterinárnych lekárov SR (KVL S
 5. Prísne dodržuj veterinárne tajomstvo a GDPR: NIKDY verejne nerozoberaj konkrétne diagnózy, liečebné postupy ani citlivé informácie.
 6. Rozsah: 2 až 4 kultivované vety.
 7. Zakončenie: 'S úctou, tím veterinárnej kliniky'.
-Vráť iba samotný text odpovede bez úvodzoviek a vysvetlení.`;
+Vráť iba samotný text odpovede bez úvodzoviek a vysvetlení.
 
-      const prompt = `Recenzent / Klient: ${name}
-Hodnotenie: ${input.rating}/5 hviezdičiek
-Platforma: ${input.platform}
-Text recenzie: "${input.reviewText}"`;
+${UNTRUSTED_DATA_PROMPT_RULE}`;
+
+      // Review text and reviewer name come from a public platform: wrap them so
+      // an injected sentence cannot rewrite the clinic's official reply rules.
+      const prompt = `Hodnotenie: ${input.rating}/5 hviezdičiek\nPlatforma: ${input.platform}\n${wrapUntrustedRecord(
+        { reviewerName: name, reviewText: input.reviewText },
+        4000,
+      )}`;
 
       const result = await generateText({
         model,
