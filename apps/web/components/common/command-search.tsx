@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Command } from "cmdk";
@@ -188,6 +188,21 @@ export function CommandSearch({
   const role = isUserRole(session?.user?.role) ? session.user.role : undefined;
   const canUseCommandSearch = status === "authenticated" && role !== undefined;
   const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Ensure the input is focused as soon as the palette mounts (covers the
+  // dynamic-import delay when opened via F1 or Cmd+K).
+  useEffect(() => {
+    if (open) {
+      // requestAnimationFrame lets the DOM finish painting before we focus,
+      // which is necessary after a lazy chunk load.
+      const raf = requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [open]);
+
 
   const debouncedSearch = useDebounce(search, 200);
   const hasQuery = debouncedSearch.trim().length >= 1;
@@ -263,6 +278,7 @@ export function CommandSearch({
               <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
             )}
             <Command.Input
+              ref={inputRef}
               value={search}
               onValueChange={setSearch}
               placeholder={t("commandSearch.placeholder", "Search patients by name, chip, owner phone, or navigate...")}
