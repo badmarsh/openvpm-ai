@@ -20,6 +20,7 @@ export type WholesalerType =
   | "SANVET"
   | "PHRAMED"
   | "PHARMACOPOLA"
+  | "TOPVET"
   | "GENERIC_CSV";
 
 export interface WholesalerDeliveryItem {
@@ -112,6 +113,8 @@ export function parseWholesalerDeliveryNote(options: ParseDeliveryNoteOptions): 
       return parsePhramed(lines);
     case "PHARMACOPOLA":
       return parsePharmacopolaText(lines);
+    case "TOPVET":
+      return parseTopvet(lines);
     case "GENERIC_CSV":
     default:
       return parseGenericCsv(lines);
@@ -189,10 +192,92 @@ export function detectWholesaler(content: string, filename?: string): Wholesaler
   ) {
     return "PHARMACOPOLA";
   }
+  if (upper.includes("TOPVET") || fnUpper.includes("TOPVET")) {
+    return "TOPVET";
+  }
   return "GENERIC_CSV";
 }
 
 function parseCymedica(lines: string[]): WholesalerDeliveryNote {
+  // If text contains EUR and tab-separated prices, it's a Cymedica PDF invoice layout
+  const isPdfLayout = lines.some((l) => l.includes("EUR") && l.includes("\t"));
+  if (isPdfLayout) {
+    return parseCymedicaPdf(lines);
+  }
+  return parseCymedicaCsv(lines);
+}
+
+function parseCymedicaPdf(lines: string[]): WholesalerDeliveryNote {
+  const items: WholesalerDeliveryItem[] = [];
+  let docNumber = `CYM-${Date.now().toString().slice(-6)}`;
+  let issueDate = new Date().toISOString().slice(0, 10);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes("Dodací list") || line.includes("Faktúra")) {
+      const match = line.match(/\d{7,12}/);
+      if (match) {
+        docNumber = match[0];
+      } else if (i + 1 < lines.length) {
+        const nextMatch = lines[i + 1].match(/\d{7,12}/);
+        if (nextMatch) docNumber = nextMatch[0];
+      }
+    }
+
+    const dtMatch = line.match(/Dátum vystavenia:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})/i);
+    if (dtMatch) {
+      issueDate = `${dtMatch[3]}-${dtMatch[2].padStart(2, "0")}-${dtMatch[1].padStart(2, "0")}`;
+    }
+
+    if (!line.includes("EUR")) continue;
+    const cols = line.split("\t");
+    if (cols.length < 4) continue;
+    const totalWithVat = parseSlovakNumber(cols[0]);
+    const bezDphParts = cols[1].trim().split(/\s+/);
+    const totalWithoutVat = parseSlovakNumber(bezDphParts[0]);
+    const qty = parseSlovakNumber(cols[2].replace("EUR", ""));
+
+    const rawName = cols[3].trim();
+    let vatRate = 5;
+    const nameMatch = rawName.match(/(.*?)\s+(\d{1,2})$/);
+    let name = rawName;
+    if (nameMatch) {
+      name = nameMatch[1].trim();
+      vatRate = parseInt(nameMatch[2], 10);
+    }
+
+    if (!name || name.toLowerCase().includes("dopravné")) continue;
+
+    const unitPriceWithoutVat = qty ? Math.round((totalWithoutVat / qty) * 100) / 100 : 0;
+    items.push({
+      name,
+      quantity: qty,
+      unit: "ks",
+      unitPriceWithoutVat,
+      vatRate,
+      totalWithoutVat,
+      totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
+    });
+  }
+
+  const sumWithoutVat = items.reduce((acc, it) => acc + it.totalWithoutVat, 0);
+  const sumWithVat = items.reduce((acc, it) => acc + it.totalWithVat, 0);
+
+  return {
+    wholesaler: "CYMEDICA",
+    deliveryNoteNumber: docNumber,
+    issueDate,
+    supplierName: "CYMEDICA SK s.r.o.",
+    supplierIco: "36031780",
+    items,
+    totalWithoutVat: Math.round(sumWithoutVat * 100) / 100,
+    totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,
+    totalWithVat: Math.round(sumWithVat * 100) / 100,
+  };
+}
+
+function parseCymedicaCsv(lines: string[]): WholesalerDeliveryNote {
   const items: WholesalerDeliveryItem[] = [];
   let docNumber = `CYM-${Date.now().toString().slice(-6)}`;
   const issueDate = new Date().toISOString().slice(0, 10);
@@ -598,6 +683,89 @@ function parseSgVet(rawContent: string): WholesalerDeliveryNote {
     issueDate,
     supplierName: "SG-VET s.r.o.",
     supplierIco: "",
+    items,
+    totalWithoutVat: Math.round(sumWithoutVat * 100) / 100,
+    totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,
+    totalWithVat: Math.round(sumWithVat * 100) / 100,
+  };
+}
+
+
+function parseTopvet(lines: string[]): WholesalerDeliveryNote {
+  const items: WholesalerDeliveryItem[] = [];
+  let docNumber = `TOP-${Date.now().toString().slice(-6)}`;
+  let issueDate = new Date().toISOString().slice(0, 10);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const invMatch = line.match(/FAKTÚRA\s+č\.?:\s*(\d+)/i);
+    if (invMatch) docNumber = invMatch[1];
+    const dateMatch = line.match(/Dátum vystavenia:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})/i);
+    if (dateMatch) {
+      issueDate = `${dateMatch[3]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
+    }
+
+    const codeMatch = line.match(/^(T\d+)\s+(.+)/);
+    if (!codeMatch) continue;
+
+    const sku = codeMatch[1];
+    const name = codeMatch[2].trim();
+    let batchNumber = "BEZ-SARZE";
+    let expirationDate: string | undefined;
+
+    if (i + 1 < lines.length) {
+      const nextLineParts = lines[i + 1].trim().split(/\s+/);
+      if (nextLineParts.length >= 2 && /^\d{2}\/\d{2}$/.test(nextLineParts[0])) {
+        expirationDate = parseDate(nextLineParts[0]);
+        batchNumber = nextLineParts[1];
+      }
+    }
+
+    let qty = 1;
+    let unit = "ks";
+    let unitPriceWithoutVat = 0;
+    let vatRate = 5;
+    let totalWithoutVat = 0;
+    let totalWithVat = 0;
+
+    for (let j = i + 1; j <= Math.min(i + 3, lines.length - 1); j++) {
+      const parts = lines[j].trim().split(/\s+/);
+      const unitIdx = parts.findIndex((p) => /^(ks|bal|ml|g|l|kg)$/i.test(p));
+      if (unitIdx !== -1) {
+        qty = parseSlovakNumber(parts[0]) || 1;
+        unit = parts[unitIdx];
+        unitPriceWithoutVat = parseSlovakNumber(parts[2]) || parseSlovakNumber(parts[1]);
+        vatRate = parseInt(parts[3], 10) || 5;
+        totalWithoutVat = Math.round(qty * unitPriceWithoutVat * 100) / 100;
+        totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
+        break;
+      }
+    }
+
+    items.push({
+      sku,
+      name,
+      batchNumber,
+      expirationDate,
+      quantity: qty,
+      unit,
+      unitPriceWithoutVat,
+      vatRate,
+      totalWithoutVat,
+      totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
+    });
+  }
+
+  const sumWithoutVat = items.reduce((acc, it) => acc + it.totalWithoutVat, 0);
+  const sumWithVat = items.reduce((acc, it) => acc + it.totalWithVat, 0);
+
+  return {
+    wholesaler: "TOPVET",
+    deliveryNoteNumber: docNumber,
+    issueDate,
+    supplierName: "TOPVET BB, spol. s.r.o.",
+    supplierIco: "46277129",
     items,
     totalWithoutVat: Math.round(sumWithoutVat * 100) / 100,
     totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,

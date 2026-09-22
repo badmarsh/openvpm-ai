@@ -51,9 +51,23 @@ export async function GET(
       );
     }
 
-    const blob = await attRes.blob();
-    const filename = attachment.filename || "attachment";
-    const contentType = attachment.content_type || "application/octet-stream";
+    const attData = (await attRes.json());
+    const downloadUrl = attData.download_url;
+    if (!downloadUrl) {
+      return NextResponse.json({ error: "Attachment download URL not found" }, { status: 404 });
+    }
+
+    const fileRes = await fetch(downloadUrl);
+    if (!fileRes.ok) {
+      return NextResponse.json(
+        { error: "Failed to download attachment binary from storage" },
+        { status: fileRes.status }
+      );
+    }
+
+    const blob = await fileRes.blob();
+    const filename = attachment.filename || attData.filename || "attachment";
+    const contentType = attachment.content_type || attData.content_type || "application/octet-stream";
 
     return new NextResponse(blob, {
       headers: {

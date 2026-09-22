@@ -221,12 +221,21 @@ export async function POST(request: Request) {
       const fullEmail = await resendClient.emails.receiving.get(providerMessageId);
       if (fullEmail?.data) {
         emailBody = fullEmail.data.text || "";
-        if (fullEmail.data.attachments && fullEmail.data.attachments.length > 0) {
-          emailAttachmentsMeta = "\n\n<!--INBOX_ATTACHMENTS:" + JSON.stringify(fullEmail.data.attachments) + "-->";
-        }
+      }
+      const attachments =
+        fullEmail?.data?.attachments && fullEmail.data.attachments.length > 0
+          ? fullEmail.data.attachments
+          : Array.isArray(event.data.attachments) && event.data.attachments.length > 0
+          ? event.data.attachments
+          : [];
+      if (attachments.length > 0) {
+        emailAttachmentsMeta = "\n\n<!--INBOX_ATTACHMENTS:" + JSON.stringify(attachments) + "-->";
       }
     } catch (err) {
       console.warn("[resend-webhook] Could not fetch full email body:", err);
+      if (Array.isArray(event.data.attachments) && event.data.attachments.length > 0) {
+        emailAttachmentsMeta = "\n\n<!--INBOX_ATTACHMENTS:" + JSON.stringify(event.data.attachments) + "-->";
+      }
     }
 
     const finalContent = ("From: " + event.data.from + "\n\n" + emailBody + emailAttachmentsMeta).trim();

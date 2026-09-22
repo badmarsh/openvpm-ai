@@ -1675,7 +1675,24 @@ export const communicationsRouter = createRouter({
         });
       }
 
-      const pdfBuffer = Buffer.from(await attRes.arrayBuffer());
+      const attData = (await attRes.json()) as { download_url?: string };
+      const downloadUrl = attData.download_url;
+      if (!downloadUrl) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Resend attachment download URL not found",
+        });
+      }
+
+      const fileRes = await fetch(downloadUrl);
+      if (!fileRes.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to download PDF binary from Resend CDN: ${fileRes.status}`,
+        });
+      }
+
+      const pdfBuffer = Buffer.from(await fileRes.arrayBuffer());
 
       // 3. Parse via AI + rule-based fallback
       const extraction = await parsePdfInvoice(pdfBuffer);

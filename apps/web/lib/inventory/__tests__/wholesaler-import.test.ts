@@ -300,4 +300,50 @@ CYM-999;Parafínový olej 1000ml;;31.12.2028;2;ks;5,00;20;10,00
     expect(note.items[1].isControlledSubstance).toBe(true); // Torbugesic (butorphanol)
     expect(note.items[2].isControlledSubstance).toBe(false); // Synulox (amoxicillin)
   });
+  it("should parse TOPVET delivery notes from PDF text correctly", () => {
+    const text = [
+      "TOPVET BB, spol. s.r.o. Nemčianska cesta 284 974 01 Nemce",
+      "Dodávateľ: IČO: 46277129",
+      "FAKTÚRA č.: 202609420",
+      "Dátum vystavenia: 22.09.2026",
+      "T23071 KELAPROFEN INJ 100MG/ML 250ML",
+      "12/26\t4019064",
+      "2.0000 0.0600\t0.0300 5 0.0600\tks 0.0300 85.1300",
+      "T24817 LEXYLAN 180MG/ML 250ML",
+      "04/29\t0130426",
+      "1.0000 101.2200\t96.4000 5 96.4000\tks 101.2200 117.4200",
+    ].join("\n");
+
+    const note = parseWholesalerDeliveryNote({ content: text });
+    expect(note.wholesaler).toBe("TOPVET");
+    expect(note.deliveryNoteNumber).toBe("202609420");
+    expect(note.issueDate).toBe("2026-09-22");
+    expect(note.items).toHaveLength(2);
+    expect(note.items[0].sku).toBe("T23071");
+    expect(note.items[0].name).toBe("KELAPROFEN INJ 100MG/ML 250ML");
+    expect(note.items[0].quantity).toBe(2);
+    expect(note.items[0].unit).toBe("ks");
+  });
+
+  it("should parse Cymedica PDF invoice layout when CSV produces 0 items", () => {
+    const text = [
+      "Faktúra",
+      "31267071",
+      "Cymedica SK, spol. s r.o.",
+      "Dátum vystavenia: 24.07.2026",
+      "55,71\t53,05 2,65\t2,00 EUR\tENZAPROST T 5mg/ml injekčný roztok 5\t30 ml 30,49 26,53\t13,00",
+      "-48,35\t-46,05 -2,30\t-1,00 EUR\tHemosilate 125 mg/ml, injekčný roztok 5\t5 x 20 ml 46,05 46,05\t0,00",
+    ].join("\n");
+
+    const note = parseWholesalerDeliveryNote({ content: text });
+    expect(note.wholesaler).toBe("CYMEDICA");
+    expect(note.deliveryNoteNumber).toBe("31267071");
+    expect(note.issueDate).toBe("2026-07-24");
+    expect(note.items).toHaveLength(2);
+    expect(note.items[0].name).toBe("ENZAPROST T 5mg/ml injekčný roztok");
+    expect(note.items[0].quantity).toBe(2);
+    expect(note.items[0].vatRate).toBe(5);
+    expect(note.items[1].name).toBe("Hemosilate 125 mg/ml, injekčný roztok");
+    expect(note.items[1].quantity).toBe(-1);
+  });
 });

@@ -4,7 +4,7 @@
  * Falls back to rule-based wholesaler-import.ts parser when AI is unavailable.
  */
 
-import { spawnSync } from "child_process";
+import { PDFParse } from "pdf-parse";
 import {
   parseWholesalerDeliveryNote,
   detectWholesaler,
@@ -44,37 +44,24 @@ export interface PdfInvoiceExtraction {
   parseMethod: "ai" | "rule-based" | "fallback";
 }
 
-export function extractPdfText(pdfBuffer: Buffer): string {
-  const pyLines = [
-    "import pdfplumber, sys, io, base64, tempfile, os",
-    "sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')",
-    "data = base64.b64decode(sys.argv[1])",
-    "with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:",
-    "    f.write(data); tmp = f.name",
-    "try:",
-    "    with pdfplumber.open(tmp) as pdf:",
-    "        text = '\\n'.join(p.extract_text() or '' for p in pdf.pages)",
-    "    print(text)",
-    "finally:",
-    "    os.unlink(tmp)",
-  ];
-
-  const result = spawnSync(
-    PYTHON_BIN,
-    ["-c", pyLines.join("\n"), pdfBuffer.toString("base64")],
-    { encoding: "utf8", timeout: 30_000 }
-  );
-
-  if (result.error) throw new Error("PDF extraction failed: " + result.error.message);
-  if (result.status !== 0) throw new Error("pdfplumber error: " + result.stderr);
-  return result.stdout || "";
+export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
+  const parser = new PDFParse({ data: pdfBuffer });
+  try {
+    const result = await parser.getText();
+    return result.text || "";
+  } catch (err) {
+    console.error("[pdf-invoice-parser] PDFParse extraction failed:", err);
+    throw err;
+  } finally {
+    await parser.destroy();
+  }
 }
 
 export async function parsePdfInvoice(pdfBuffer: Buffer): Promise<PdfInvoiceExtraction> {
   let rawText = "";
 
   try {
-    rawText = extractPdfText(pdfBuffer);
+    rawText = await extractPdfText(pdfBuffer);
   } catch (err) {
     console.error("[pdf-invoice-parser] PDF text extraction failed:", err);
     return buildFallbackResult(rawText);
