@@ -4,37 +4,6 @@
  * Falls back to rule-based wholesaler-import.ts parser when AI is unavailable.
  */
 
-// Polyfill DOMMatrix for pdfjs-dist 5.x which requires it in Node.js environments.
-// pdfjs-dist uses DOMMatrix only for canvas transform operations; text extraction
-// works correctly with this minimal stub.
-if (typeof DOMMatrix === "undefined") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).DOMMatrix = class DOMMatrix {
-    m11 = 1; m12 = 0; m13 = 0; m14 = 0;
-    m21 = 0; m22 = 1; m23 = 0; m24 = 0;
-    m31 = 0; m32 = 0; m33 = 1; m34 = 0;
-    m41 = 0; m42 = 0; m43 = 0; m44 = 1;
-    isIdentity = true;
-    is2D = true;
-    constructor(_init?: string | number[]) {}
-    scale() { return this; }
-    translate() { return this; }
-    rotate() { return this; }
-    multiply() { return this; }
-    inverse() { return this; }
-    toFloat32Array() { return new Float32Array(16); }
-    toFloat64Array() { return new Float64Array(16); }
-    toString() { return "matrix(1,0,0,1,0,0)"; }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    static fromMatrix() { return new (globalThis as any).DOMMatrix(); }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    static fromFloat32Array() { return new (globalThis as any).DOMMatrix(); }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    static fromFloat64Array() { return new (globalThis as any).DOMMatrix(); }
-  };
-}
-
-import { PDFParse } from "pdf-parse";
 import {
   parseWholesalerDeliveryNote,
   detectWholesaler,
@@ -75,16 +44,26 @@ export interface PdfInvoiceExtraction {
 }
 
 export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
-  const parser = new PDFParse({ data: pdfBuffer });
-  try {
-    const result = await parser.getText();
-    return result.text || "";
-  } catch (err) {
-    console.error("[pdf-invoice-parser] PDFParse extraction failed:", err);
-    throw err;
-  } finally {
-    await parser.destroy();
+  // Import pdfjs-dist directly. Setting workerSrc to "" disables the fake-worker
+  // mechanism that tries to load pdf.worker.mjs, absent in Next.js standalone builds.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) });
+  const doc = await loadingTask.promise;
+  const textParts: string[] = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const textContent = await page.getTextContent();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageText = (textContent.items as Array<{ str?: string }>)
+      .map((item) => item.str ?? "")
+      .join(" ");
+    textParts.push(pageText);
+    page.cleanup();
   }
+  await doc.destroy();
+  return textParts.join("\n");
 }
 
 export async function parsePdfInvoice(pdfBuffer: Buffer): Promise<PdfInvoiceExtraction> {
