@@ -1,6 +1,8 @@
 param (
     [switch]$SkipTypeCheck = $false,
-    [switch]$RunDbInit = $false
+    [switch]$RunDbInit = $false,
+    [switch]$SkipEnvCheck = $false,
+    [string]$EnvFile = ".env.production.local"
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,52 +11,112 @@ Write-Host "==================================================" -ForegroundColor
 Write-Host "  OPENVPM AI — DEPLOY TO dev.significa.sk (Dokploy)" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
-# 1. Check git status
-Write-Host "`n[1/5] Kontrola lokálneho gitu..." -ForegroundColor Yellow
+# --- Load DOKPLOY_TOKEN from .env if not already in environment ---
+if (-not $env:DOKPLOY_TOKEN -and (Test-Path ".env")) {
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match "^DOKPLOY_TOKEN\s*=\s*(.*)") { $env:DOKPLOY_TOKEN = $Matches[1].Trim().Trim('"') }
+    }
+}
+
+# =============================================
+# [0/6] ENV PREMENNE — kontrola a sync
+# =============================================
+if (-not $SkipEnvCheck) {
+    Write-Host "
+[0/6] Kontrola env premennych (.env.production.local)..." -ForegroundColor Yellow
+
+    if (-not (Test-Path $EnvFile)) {
+        Write-Host "CHYBA: Subor '$EnvFile' neexistuje!" -ForegroundColor Red
+        Write-Host "Moznosti obnovy:" -ForegroundColor Cyan
+        Write-Host "  1. Stiahni aktualne premenne z Dokploy:" -ForegroundColor Cyan
+        Write-Host "     dokploy auth -u https://dev.significa.sk -t $DOKPLOY_TOKEN" -ForegroundColor Gray
+        Write-Host "     dokploy env pull $EnvFile" -ForegroundColor Gray
+        Write-Host "  2. Alebo vytvor rucne z .env.example a naplnaj hodnoty." -ForegroundColor Cyan
+        exit 1
+    }
+
+    # Kontrola pritomnosti krit. klucov
+    powershell -File ".agents/skills/deploy/scripts/env-check.ps1" -EnvFile $EnvFile
+    $envCheckCode = $LASTEXITCODE
+
+    if ($envCheckCode -eq 1) {
+        Write-Host "Deployment zastaveny — env subor nenajdeny." -ForegroundColor Red
+        exit 1
+    }
+    if ($envCheckCode -eq 2) {
+        Write-Host "VAROVANIE: Niektore kluce chybaju. Pokracujem (deploy moze zlyhaf v produkcii)." -ForegroundColor Yellow
+    }
+
+    # Pripomenuti — pushni env do Dokploy ak sa nieco zmenilo
+    Write-Host "  Ak si upravil $EnvFile, pushni zmeny do Dokploy:" -ForegroundColor DarkGray
+    Write-Host "  dokploy env push $EnvFile" -ForegroundColor DarkGray
+} else {
+    Write-Host "
+[0/6] Kontrola env preskocena (-SkipEnvCheck)." -ForegroundColor DarkGray
+}
+
+# =============================================
+# [1/6] GIT STATUS
+# =============================================
+Write-Host "
+[1/6] Kontrola lokalneho gitu..." -ForegroundColor Yellow
 $status = git status --porcelain
 if ($status) {
-    Write-Host "VAROVANIE: Lokálny repozitár obsahuje necommitnuté zmeny:" -ForegroundColor Yellow
+    Write-Host "VAROVANIE: Lokalny repozitar obsahuje necommitute zmeny:" -ForegroundColor Yellow
     git status -s
-    $confirm = Read-Host "Chceš pokračovať bez týchto zmien? (a/n)"
+    $confirm = Read-Host "Chces pokracovat bez tychto zmien? (a/n)"
     if ($confirm -ne "a" -and $confirm -ne "y") {
-        Write-Host "Deployment prerušený." -ForegroundColor Red
+        Write-Host "Deployment preruseny." -ForegroundColor Red
         exit 1
     }
 }
 
-# 2. i18n symmetry check
-Write-Host "`n[2/5] Kontrola i18n symetrie..." -ForegroundColor Yellow
+# =============================================
+# [2/6] i18n SYMETRIA
+# =============================================
+Write-Host "
+[2/6] Kontrola i18n symetrie..." -ForegroundColor Yellow
 node .agents/skills/deploy/scripts/check-i18n.js
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Chyba v i18n symetrii! Deployment zastavený." -ForegroundColor Red
+    Write-Host "Chyba v i18n symetrii! Deployment zastaveny." -ForegroundColor Red
     exit 1
 }
 
-# 3. Type check
+# =============================================
+# [3/6] TYPESCRIPT TYPE-CHECK
+# =============================================
 if (-not $SkipTypeCheck) {
-    Write-Host "`n[3/5] Spúšťam TypeScript type-check..." -ForegroundColor Yellow
+    Write-Host "
+[3/6] Spustam TypeScript type-check..." -ForegroundColor Yellow
     pnpm --filter @openpims/web type-check
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Type-check zlyhal! Deployment zastavený." -ForegroundColor Red
+        Write-Host "Type-check zlyhal! Deployment zastaveny." -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ Type-check úspešný." -ForegroundColor Green
+    Write-Host "OK Type-check uspesny." -ForegroundColor Green
 } else {
-    Write-Host "`n[3/5] Type-check preskočený (-SkipTypeCheck)." -ForegroundColor DarkGray
+    Write-Host "
+[3/6] Type-check preskoceny (-SkipTypeCheck)." -ForegroundColor DarkGray
 }
 
-# 4. Git push to origin/main
-Write-Host "`n[4/5] Odosielam zmeny na remote GitHub origin/main..." -ForegroundColor Yellow
+# =============================================
+# [4/6] GIT PUSH
+# =============================================
+Write-Host "
+[4/6] Odosielam zmeny na remote GitHub origin/main..." -ForegroundColor Yellow
 git push origin main
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Chyba pri git push! Deployment zastavený." -ForegroundColor Red
+    Write-Host "Chyba pri git push! Deployment zastaveny." -ForegroundColor Red
     exit 1
 }
 $latestCommit = git log -1 --oneline
-Write-Host "✓ Nasadzovaný commit: $latestCommit" -ForegroundColor Green
+Write-Host "OK Nasadzovany commit: $latestCommit" -ForegroundColor Green
 
-# 5. Trigger Dokploy deployment via official webhook
-Write-Host "`n[5/5] Spúšťam deployment cez Dokploy Webhook..." -ForegroundColor Yellow
+# =============================================
+# [5/6] DOKPLOY WEBHOOK
+# =============================================
+Write-Host "
+[5/6] Spustam deployment cez Dokploy Webhook..." -ForegroundColor Yellow
 $webhookUrl = $env:DOKPLOY_DEPLOY_WEBHOOK_URL
 if (-not $webhookUrl -and (Test-Path ".env")) {
     Get-Content ".env" | ForEach-Object { if ($_ -match "^DOKPLOY_DEPLOY_WEBHOOK_URL\s*=\s*(.*)") { $webhookUrl = $Matches[1].Trim().Trim('"') } }
@@ -62,23 +124,27 @@ if (-not $webhookUrl -and (Test-Path ".env")) {
 if (-not $webhookUrl) {
     $webhookUrl = "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ"
 }
+
 try {
     $res = Invoke-RestMethod -Uri $webhookUrl -Method Post -SkipCertificateCheck
-    Write-Host "✓ Dokploy odpoveď: $($res.message)" -ForegroundColor Green
-    Write-Host "Build je aktívny a viditeľný priamo v Dokploy UI pod Deployments!" -ForegroundColor Cyan
+    Write-Host "OK Dokploy odpoved: $($res.message)" -ForegroundColor Green
+    Write-Host "Build je aktivny a viditelny v Dokploy UI pod Deployments!" -ForegroundColor Cyan
 } catch {
-    Write-Host "Webhook zlyhal ($($_.Exception.Message)), spúšťam manuálny SSH fallback..." -ForegroundColor Yellow
+    Write-Host "Webhook zlyhal ($($_.Exception.Message)), spustam manuálny SSH fallback..." -ForegroundColor Yellow
     $remoteCommands = "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && "
     if ($RunDbInit) {
-        $remoteCommands += "echo '==> Spúšťam db-init...' && docker compose run --rm db-init && "
+        $remoteCommands += "echo '==> Spustam db-init...' && docker compose run --rm db-init && "
     }
-    $remoteCommands += "echo '==> Prebudovávam web z GitHub main...' && docker compose build --no-cache web && echo '==> Reštartujem web službu...' && docker compose up -d --remove-orphans web"
+    $remoteCommands += "echo '==> Prebudovavam web...' && docker compose build --no-cache web && docker compose up -d --remove-orphans web"
     ssh root@dev.significa.sk $remoteCommands
 }
 
-# Smoke test
-Write-Host "`nOverujem dostupnosť https://vet.dev.significa.sk..." -ForegroundColor Yellow
-Start-Sleep -Seconds 3
+# =============================================
+# [6/6] SMOKE TEST
+# =============================================
+Write-Host "
+[6/6] Overujem dostupnost https://vet.dev.significa.sk..." -ForegroundColor Yellow
+Start-Sleep -Seconds 5
 try {
     $response = Invoke-WebRequest -Uri "https://vet.dev.significa.sk" -Method Head -SkipCertificateCheck -ErrorAction SilentlyContinue
     $statusCode = $response.StatusCode
@@ -86,8 +152,22 @@ try {
     $statusCode = $_.Exception.Response.StatusCode.value__
 }
 
-Write-Host "HTTP status: $statusCode" -ForegroundColor Green
-Write-Host "`n==================================================" -ForegroundColor Green
-Write-Host "  DEPLOYMENT ÚSPEŠNE DOKONČENÝ!" -ForegroundColor Green
+try {
+    $health = Invoke-RestMethod -Uri "https://vet.dev.significa.sk/api/health" -SkipCertificateCheck
+    $healthOk = $health.ok
+    $dbOk = $health.checks.database.ok
+} catch {
+    $healthOk = $false
+    $dbOk = $false
+}
+
+Write-Host "HTTP status: $statusCode | Health: ok=$healthOk | DB: ok=$dbOk" -ForegroundColor $(if ($healthOk) { "Green" } else { "Red" })
+
+Write-Host "
+==================================================" -ForegroundColor Green
+Write-Host "  DEPLOYMENT USPESNE DOKONCENY!" -ForegroundColor Green
 Write-Host "  URL: https://vet.dev.significa.sk" -ForegroundColor Green
+Write-Host "  Commit: $latestCommit" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green
+
+

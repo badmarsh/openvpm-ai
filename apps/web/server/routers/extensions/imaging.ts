@@ -28,7 +28,7 @@ import {
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
-import { resolvePracticeLanguageModel } from "@/lib/ai/ai-config-resolver";
+import { resolvePracticeLanguageModel, resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
 import { wrapUntrustedRecord } from "@/lib/ai/untrusted-data";
 import type { LanguageModel } from "ai";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
@@ -237,7 +237,12 @@ export const imagingRouter = createRouter({
           : `Analyzuj tento medicínsky obraz (${input.imageType}). Poskytni štruktúrovaný popis nálezov.`;
 
         let model: LanguageModel;
+        let resolvedModelId: string = DEFAULT_AI_MODEL;
         try {
+          const featureConfig = await withTenant(ctx.db, ctx.practiceId, (tx) =>
+            resolveFeatureConfig(tx, ctx.practiceId, "imagingRtg"),
+          );
+          resolvedModelId = featureConfig.modelId;
           model = await withTenant(ctx.db, ctx.practiceId, (tx) =>
             resolvePracticeLanguageModel(tx, ctx.practiceId, "imagingRtg"),
           );
@@ -249,7 +254,7 @@ export const imagingRouter = createRouter({
         await withTenant(ctx.db, ctx.practiceId, (tx) =>
           tx
             .update(aiImagingAnalyses)
-            .set({ modelId: model.modelId })
+            .set({ modelId: resolvedModelId })
             .where(eq(aiImagingAnalyses.id, analysis.id)),
         );
 

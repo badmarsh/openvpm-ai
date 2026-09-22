@@ -1,17 +1,17 @@
 ---
 name: deploy
-description: Safe, one-click deployment of the latest remote main branch to Dokploy on dev.significa.sk for OpenVPM AI. Triggers on "deploy", "deployni", "nasad", "deploy main", "dokploy deploy", "nasad na dev.significa.sk". Runs pre-flight checks (git status, i18n symmetry, type-check), verifies git push to origin/main, triggers build & rollout on dev.significa.sk, and runs smoke tests.
+description: Safe, one-click deployment of the latest remote main branch to Dokploy on dev.significa.sk for OpenVPM AI. Triggers on "deploy", "deployni", "nasad", "deploy main", "dokploy deploy", "nasad na dev.significa.sk". Runs pre-flight checks (env-sync, git status, i18n symmetry, type-check), verifies git push to origin/main, triggers build & rollout on dev.significa.sk, and runs smoke tests.
 ---
 
 # Deploy Skill — OpenVPM AI na server dev.significa.sk
 
-Tento skill riadi bezpečný, reprodukovateľný a overený deployment najnovšej vetvy `main` aplikácie **OpenVPM AI** z lokálneho prostredia na server **`dev.significa.sk`** do existujúcej Dokploy Compose aplikácie **`openvpm-ai`**.
+Tento skill riadi bezpecny, reprodukovatelny a overeny deployment najnovsej vetvy `main` aplikacie **OpenVPM AI** z lokalneho prostredia na server **`dev.significa.sk`** do existujucej Dokploy Compose aplikacie **`openvpm-ai`**.
 
 ---
 
 ## 1. Kedy sa tento skill aktivuje
 
-Aktivuje sa vždy, keď používateľ požiada o nasadenie:
+Aktivuje sa vzdy, ked pouzivatel poziada o nasadenie:
 - `deploy` / `deployni to`
 - `nasad na server` / `nasad na dev.significa.sk`
 - `deploy main` / `deploy latest remote main`
@@ -22,147 +22,190 @@ Aktivuje sa vždy, keď používateľ požiada o nasadenie:
 ## 2. Architektúra a serverové parametre
 
 - **Server & SSH:** `root@dev.significa.sk`
-- **Verejná doména:** `https://vet.dev.significa.sk`
+- **Verejna domena:** `https://vet.dev.significa.sk`
 - **Dokploy Project ID:** `DcWUBuOSe4H0UfF-OpLPb` (OpenVPM AI)
 - **Dokploy Environment ID:** `dgpMIXk6UxZf_nS2fH3xU` (production)
 - **Dokploy Compose App ID:** `pvdhIxlCIhYTKvnmrZ8Mk` (`openvpm-ai`)
-- **Interný appName na disku:** `compose-parse-online-port-wdunfq`
-- **Cesta ku kódu na serveri:** `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/`
-- **Kľúčové kontajnery a služby:**
-  - `compose-parse-online-port-wdunfq-web-1` (Next.js 15 standalone app, port 3000)
-  - `openvpm-postgres-cfoqxx` (Dokploy Standalone Database Service, PostgreSQL 16 Alpine, interná sieť `dokploy-network:5432`)
-  - `openvpm-arena-postgres-ygh6nf` (Dokploy Standalone Arena Clone DB, verejný port `dev.significa.sk:5434`)
-  - `compose-parse-online-port-wdunfq-minio-1` (MinIO S3 storage, volume `minio_data`)
-  - `compose-parse-online-port-wdunfq-db-init-1` (Drizzle bootstrap, RLS & Slovak seed)
+- **Interni appName na disku:** `compose-parse-online-port-wdunfq`
+- **Cesta ku kodu na serveri:** `/etc/dokploy/compose/compose-parse-online-port-wdunfq/code/`
+- **Klucove kontajnery:**
+  - `compose-parse-online-port-wdunfq-web-1` (Next.js 15 standalone, port 3000)
+  - `openvpm-postgres-cfoqxx` (PostgreSQL 16 Alpine, interna siet `dokploy-network:5432`)
+  - `openvpm-arena-postgres-ygh6nf` (Arena Clone DB, verejny port `5434`)
+  - `compose-parse-online-port-wdunfq-minio-1` (MinIO S3 storage)
+  - `compose-parse-online-port-wdunfq-db-init-1` (Drizzle bootstrap + RLS + Slovak seed)
 
 ---
 
-## 3. Automatizovaný postup agenta (Execution Workflow)
+## 3. Spravna praca s ENV premennymi (KRITICKE)
 
-Keď používateľ zadá požiadavku na deploy, agent postupuje cez nasledujúce 4 fázy:
+### Preco sa env premenne strácajú pri redeploy
 
-### Fáza 1: Lokálne Pre-flight kontroly (Pred odoslaním na server)
+Dokploy spravuje `.env` na serveri **zo svojej vlastnej databazy**. Pri kazdom deploy webhookU Dokploy prepise `.env` hodnotami, ktore ma ulozene vo svojej DB. Premenne, ktore neboli pridane cez Dokploy UI alebo CLI, sa stratia.
 
-1. **Kontrola čistoty gitu a secretov:**
-   ```bash
-   git status
+**Jediny spravny sposob spravy env premennych: `dokploy env push`.**
+
+### Ground truth: `.env.production.local`
+
+Lokalne uloz vsetky produkčné premenne do suboru `.env.production.local` (je v `.gitignore`, nikdy ho necommit).
+
+Tento subor je **jediny zdroj pravdy** pre produkčné env premenne. Vzdy ho udrzuj aktualizovany.
+
+### Dokploy API token — kde ho najst a ako ho ulozit
+
+1. **Vytvorenie tokenu:** Otvor `https://dev.significa.sk/dashboard/settings/profile` → sekcia **Access Tokens** → klikni **Generate**.
+2. **Ulozenie tokenu:** Pridaj do lokalneho `.env` (nie `.env.production.local`):
    ```
-   - Ak existujú nezastagované zmeny, agent ich zanalyzuje.
-   - Uistí sa, že sa necommituje žiadny `.env`, API kľúče (`sk_`, `pk_`), heslá ani privátne kľúče.
-   - Ak sú pripravené zmeny v kóde, commitne ich a pushne:
-     ```bash
-     git push origin main
-     ```
-2. **Kontrola symetrie lokalizácie (i18n 100% Symmetry):**
-   ```bash
-   node -e "const en=require('./apps/web/messages/en.json'); const sk=require('./apps/web/messages/sk.json'); function keys(o,p=''){return Object.keys(o).flatMap(k=>{const path=p?p+'.'+k:k;return(typeof o[k]==='object'&&o[k]!==null)?keys(o[k],path):[path];});} const kEn=keys(en),kSk=keys(sk),sEn=new Set(kEn),sSk=new Set(kSk); const missing=kEn.filter(k=>!sSk.has(k)),extra=kSk.filter(k=>!sEn.has(k)); if(missing.length||extra.length){console.error('i18n asymmetry detected!',{missing,extra});process.exit(1);}else{console.log('✓ i18n 100% symmetric ('+kEn.length+' keys)');}"
+   DOKPLOY_TOKEN=tvoj_token_tu
    ```
-3. **Overenie kompilácie (TypeScript check):**
+3. **Autentifikácia CLI:**
    ```bash
-   pnpm --filter @openpims/web type-check
+   dokploy auth -u https://dev.significa.sk -t $DOKPLOY_TOKEN
    ```
-   *Ak type-check zlyhá, deploy sa ZASTAVÍ a chyby sa nahlásia.*
+4. **REST API:** pouzij header `x-api-key: $DOKPLOY_TOKEN` v kazdom API volani.
 
----
+### Workflow: Pridanie novej env premennej
 
-### Fáza 2: Spustenie deploymentu na dev.significa.sk
+```
+1. Pridaj kluc a hodnotu do .env.production.local
+2. Pushni do Dokploy: dokploy env push .env.production.local
+3. Commitni kod (bez .env.production.local!) a spusti deploy
+```
 
-Deployment je možné spustiť dvoma spôsobmi:
-
-#### Metóda A: Cez oficiálny Dokploy Webhook (Odporúčaná — zobrazí build v Dokploy UI)
-Tento endpoint zaradí build do fronty Dokployu, zobrazí live logy v UI pod **Deployments** a prebuduje kontajnery:
+### Uzitoné CLI prikazy
 
 ```bash
-# Webhook URL načítava skript deploy.ps1 z .env (DOKPLOY_DEPLOY_WEBHOOK_URL)
+# Inštalacia CLI (ak este nemas)
+npm install -g @dokploy/cli
+
+# Autentifikacia
+dokploy auth -u https://dev.significa.sk -t $DOKPLOY_TOKEN
+
+# Stiahni aktualne premenne z Dokploy (napr. po strate lokalneho suboru)
+dokploy env pull .env.production.local
+
+# Pushni lokalne premenne do Dokploy (toto prezi kazdy redeploy)
+dokploy env push .env.production.local
+
+# Overenie
+dokploy verify
+```
+
+### REST API ekvivalent k `dokploy env push`
+
+```bash
+# Precitaj .env.production.local a posli cez API
+$envContent = Get-Content .env.production.local -Raw
+Invoke-RestMethod -Uri "https://dev.significa.sk/api/compose.update" `
+    -Method Post `
+    -Headers @{"x-api-key" = $env:DOKPLOY_TOKEN; "Content-Type" = "application/json"} `
+    -Body (ConvertTo-Json @{composeId = "pvdhIxlCIhYTKvnmrZ8Mk"; env = $envContent})
+```
+
+---
+
+## 4. Automatizovany postup agenta (Execution Workflow)
+
+Skript: `.agents/skills/deploy/scripts/deploy.ps1`
+
+```powershell
+# Standardny deploy
 powershell -File .agents/skills/deploy/scripts/deploy.ps1
-```
-Alebo priamo cez curl:
-```bash
-curl -X POST "${DOKPLOY_DEPLOY_WEBHOOK_URL}"
-```
 
-#### Metóda B: Manuálny núdzový postup cez SSH
-Ak je potrebné vykonať build priamo bez Dokploy UI:
-```bash
-ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose build --no-cache web && docker compose up -d --remove-orphans web"
+# So schema zmenami (spusti db-init kontajner)
+powershell -File .agents/skills/deploy/scripts/deploy.ps1 -RunDbInit
+
+# Preskoc typcheck (rychly hotfix)
+powershell -File .agents/skills/deploy/scripts/deploy.ps1 -SkipTypeCheck
 ```
 
-> [!NOTE]
-> **Zmena schémy / migrácií databázy:**  
-> Ak nasadzovaný commit obsahuje zmeny v schéme databázy (`packages/db/schema/` alebo `seed-sk.ts`), pred reštartom webu sa spustí inicializačný kontajner:
-> ```bash
-> ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose run --rm db-init"
-> ```
+### Faza 0: ENV premenne (NOVA FAZA)
 
+1. Overenie existencie `.env.production.local`
+2. Kontrola kriticke klucov (DATABASE_URL, NEXTAUTH_SECRET, RESEND_API_KEY, ...)
+3. Pripomenutie: ak boli env premenne zmenene, treba najprv spustit `dokploy env push`
+
+### Faza 1: Lokalne Pre-flight kontroly
+
+1. Git status — ziadne necommitute zmeny
+2. i18n symetria — `node .agents/skills/deploy/scripts/check-i18n.js`
+3. TypeScript type-check — `pnpm --filter @openpims/web type-check`
+
+### Faza 2: Git Push & Dokploy Deploy
+
+1. `git push origin main`
+2. POST na Dokploy Webhook `$DOKPLOY_DEPLOY_WEBHOOK_URL`
+3. SSH fallback ak webhook zlyha
+
+> **Zmena schematu / migracii:** Ak commit obsahuje zmeny v `packages/db/schema/`, pridaj `-RunDbInit` flag.
+
+### Faza 3: Post-Deploy Smoke Testy
+
+1. HTTP dostupnost — `curl -kIv https://vet.dev.significa.sk`
+2. Health check — `curl -s https://vet.dev.significa.sk/api/health` (ocakava `{"ok":true,"checks":{"database":{"ok":true}}}`)
+3. Container logy — `ssh root@dev.significa.sk "docker logs compose-parse-online-port-wdunfq-web-1 --tail=40"`
+
+### Faza 4: Sprava pre pouzivatela
+
+Agent oznamı: commit hash, stav kontajnerov, vysledok smoke testov.
 
 ---
 
-### Fáza 3: Post-Deploy Verifikácia (Smoke Testy)
+## 5. Okamzita oprava stratených env premennych (Incident Recovery)
 
-Hneď po reštarte kontajnera agent automaticky overí funkčnosť:
-
-1. **HTTP dostupnosť domény a TLS:**
-   ```bash
-   curl -kIv https://vet.dev.significa.sk
-   ```
-   *Očakávaný stav:* HTTP `307 Temporary Redirect` (na `/login`) alebo HTTP `200 OK`.
-
-2. **Systémový Health Check:**
-   ```bash
-   curl -s https://vet.dev.significa.sk/api/health
-   ```
-   *Overenie:* Databázový ping v poriadku, schémy v stave bez nežiaduceho driftu.
-
-3. **Kontrola logov nového kontajnera:**
-   ```bash
-   ssh root@dev.significa.sk "docker logs compose-parse-online-port-wdunfq-web-1 --tail=40"
-   ```
-   *Overenie:* Žiadne `UnhandledPromiseRejection`, žiadne fatálne chyby pri štarte Next.js.
-
----
-
-### Fáza 4: Správa pre používateľa
-
-Agent používateľovi oznámi:
-- Commit hash a správu commitu, ktorý bol nasadený z vetvy `main`.
-- Stav kontajnerov (`web`, `postgres`, `minio`).
-- Výsledok smoke testu na doméne `https://vet.dev.significa.sk`.
-- Čas trvania buildu a pripravenosť systému na testovanie.
-
----
-
-## 4. Núdzový Rollback
-
-V prípade fatálnej chyby po deployi agent okamžite ponúkne alebo vykoná návrat na predchádzajúci stabilný stav:
+Ak sa env premenne stratili pri redeploy:
 
 ```bash
-# Návrat na predchádzajúci git commit na serveri
+# Krok 1: Autentifikuj sa (ak este nie si)
+dokploy auth -u https://dev.significa.sk -t $DOKPLOY_TOKEN
+
+# Krok 2: Pushni lokalne premenne do Dokploy
+dokploy env push .env.production.local
+
+# Krok 3: Triggeruj redeploy (teraz Dokploy pouzije spravne premenne)
+curl -X POST "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ"
+
+# Alebo cez powershell
+Invoke-RestMethod -Uri "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ" -Method Post
+```
+
+Ak nemas `.env.production.local`, stiahni to co Dokploy aktualne ma:
+```bash
+dokploy env pull .env.production.local
+# Potom manualne doplnenie chybajucich premennych
+```
+
+---
+
+## 6. Rollback
+
+```bash
+# Aktualne logy a git historia na serveri
 ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && git log -n 3 --oneline"
 ```
-Pre prebudovanie staršieho commitu stačí zmeniť tag alebo prepnúť context na konkrétny commit hash a spustiť:
-```bash
-docker compose build web && docker compose up -d web
-```
-Alebo v Dokploy UI kliknúť na **Deployments** -> **Rollback**.
+
+Alebo v Dokploy UI: **Deployments → Rollback** na predchadzajuci build.
 
 ---
 
-## 5. Riešenie bežných problémov (Troubleshooting)
+## 7. Troubleshooting
 
-### A. Schema Drift / Missing RLS Policies (`/api/health` 503)
-Ak `/api/health` hlási chýbajúce RLS politiky (napr. `29 critical controls missing`):
+### A. Schema Drift / Missing RLS (`/api/health` 503)
 ```powershell
 Get-Content packages/db/rls/enable-rls.sql -Raw | ssh root@dev.significa.sk "docker exec -i compose-parse-online-port-wdunfq-postgres-1 psql -U openpims -d openpims"
 ```
 
-### B. Zlyhanie dešifrovania kľúčov (`Failed to decrypt AI API key`)
-Ak po obnovení databázy padá stránka AI nastavení, databáza obsahuje kľúče zašifrované lokálnym tajomstvom. Je potrebné ich nanovo prešifrovať na serveri s použitím produkčného `NEXTAUTH_SECRET` alebo vymazať v `ext_ai_settings`, aby ich používateľ zadal znova.
+### B. Zlyhanie desifrovania klucov (`Failed to decrypt AI API key`)
+Kluce boli zasifrovane lokalnym tajomstvom. Treba ich nanovo zasifrovaf s produkčnym `NEXTAUTH_SECRET` alebo vymazat v `ext_ai_settings`.
 
-### C. Zaseknutý build v Dokploy UI
-Overenie aktuálnych logov buildu na serveri:
+### C. Zaseknuty build v Dokploy UI
 ```bash
 ssh root@dev.significa.sk "ls -lt /etc/dokploy/logs/compose-parse-online-port-wdunfq/ | head -n 3"
 ssh root@dev.significa.sk "tail -n 50 /etc/dokploy/logs/compose-parse-online-port-wdunfq/<posledny-log>"
 ```
-V prípade potreby spustiť manuálny núdzový build podľa Metódy B vyššie.
+
+### D. Manuálny emergency SSH build (bez Dokploy UI)
+```bash
+ssh root@dev.significa.sk "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && docker compose build --no-cache web && docker compose up -d --remove-orphans web"
+```
 
