@@ -36,4 +36,5 @@ export const DEFAULT_PRACTICE_FEATURE_MAPPINGS: PracticeAiFeatureMappings = {
   videoGeneration: { provider: "alibaba", model: "wan3.0-video", duration: 5 },
   marketingCopy: { provider: "gemini", model: "gemini-3.6-flash" },
   deepThinking: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.1 },
+  invoiceParser: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0 },
 };

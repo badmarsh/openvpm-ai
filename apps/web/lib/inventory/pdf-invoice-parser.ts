@@ -1,7 +1,8 @@
 /**
  * AI-powered PDF invoice text parser for Slovak veterinary suppliers.
- * Uses OpenCodex Gemini proxy to extract structured invoice data from PDF text.
- * Falls back to rule-based wholesaler-import.ts parser when AI is unavailable.
+ * AI endpoint is resolved from practice AI settings (Nastavenia → AI),
+ * not from .env. Falls back to rule-based wholesaler-import.ts parser
+ * when AI is unavailable.
  */
 
 import {
@@ -10,14 +11,12 @@ import {
   type WholesalerDeliveryNote,
 } from "@/lib/inventory/wholesaler-import";
 
-const PYTHON_BIN =
-  process.env.PYTHON_BIN ||
-  "C:\\Users\\marek\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe";
-
-const AI_BASE_URL =
-  process.env.OPENAI_BASE_URL || "http://127.0.0.1:10100/v1";
-const AI_MODEL =
-  process.env.INVOICE_PARSE_MODEL || "google-antigravity/gemini-3.1-flash-image";
+/** AI connection config resolved from practice settings by the caller. */
+export interface InvoiceParserAiConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
 
 export interface PdfInvoiceItem {
   sku?: string;
@@ -96,7 +95,10 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   return textParts.join("\n");
 }
 
-export async function parsePdfInvoice(pdfBuffer: Buffer): Promise<PdfInvoiceExtraction> {
+export async function parsePdfInvoice(
+  pdfBuffer: Buffer,
+  aiConfig?: InvoiceParserAiConfig,
+): Promise<PdfInvoiceExtraction> {
   let rawText = "";
 
   try {
@@ -107,7 +109,7 @@ export async function parsePdfInvoice(pdfBuffer: Buffer): Promise<PdfInvoiceExtr
   }
 
   try {
-    const aiResult = await parseWithGemini(rawText);
+    const aiResult = aiConfig ? await parseWithAi(rawText, aiConfig) : null;
     if (aiResult && aiResult.items.length > 0) {
       return { ...aiResult, rawText, parseMethod: "ai" };
     }
@@ -125,7 +127,10 @@ export async function parsePdfInvoice(pdfBuffer: Buffer): Promise<PdfInvoiceExtr
   }
 }
 
-async function parseWithGemini(text: string): Promise<PdfInvoiceExtraction | null> {
+async function parseWithAi(
+  text: string,
+  config: InvoiceParserAiConfig,
+): Promise<PdfInvoiceExtraction | null> {
   const prompt = [
     "Extrahujes data z faktury slovenskeho veterinarneho dodavatela.",
     "Vrat VYLUCNE validny JSON bez markdown, bez vysvetlenia.",
@@ -163,11 +168,16 @@ async function parseWithGemini(text: string): Promise<PdfInvoiceExtraction | nul
     text.substring(0, 8000),
   ].join("\n");
 
-  const response = await fetch(AI_BASE_URL + "/chat/completions", {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (config.apiKey) {
+    headers["Authorization"] = "Bearer " + config.apiKey;
+  }
+  const cleanBase = config.baseUrl.replace(/\/+$/, "");
+  const response = await fetch(cleanBase + "/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
-      model: AI_MODEL,
+      model: config.model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
       max_tokens: 2048,

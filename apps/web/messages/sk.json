@@ -2149,7 +2149,7 @@
     "noticeEmail": "Email je odoslaný na registrovanú adresu klienta. Odpovede dorazí do tejto schránky automaticky.",
     "channelWhatsapp": "WhatsApp",
     "optionWhatsapp": "WhatsApp",
-   "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky.",
+    "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky.",
     "goToInventory": "Otvoriť Sklad & Lieky →",
     "aiAssistantTitle": "AI Asistent",
     "badgeNewSender": "Nový odosielateľ",
@@ -2178,7 +2178,25 @@
     "importInvoiceTitle": "Import faktúry do skladu",
     "importInvoiceSuccess": "Faktúra naparsovaná",
     "importInvoiceHint": "Pokračuj cez Sklad → Import dodacieho listu pre finálne potvrdenie.",
-    "importInvoiceError": "Parsovanie faktúry zlyhalo"
+    "importInvoiceError": "Parsovanie faktúry zlyhalo",
+    "errorFreeFormEmailDisabled": "Priame odosielanie e-mailov z doručenej pošty je z bezpečnostných dôvodov účtu zakázané.",
+    "errorVerifyEmailBeforeSending": "Pred odoslaním externého e-mailu si overte svoju e-mailovú adresu.",
+    "errorEmailTemporarilyUnavailable": "Odosielanie e-mailov je dočasne nedostupné.",
+    "errorEmailTemporarilyLimited": "Odosielanie e-mailov je z bezpečnostných dôvodov dočasne obmedzené. Skúste to znova po obnovení limitu alebo kontaktujte podporu OpenVPM.",
+    "errorNoEmailOnFile": "Klient nemá v systéme zaevidovanú žiadnu e-mailovú adresu.",
+    "errorEmailSuppressedSpam": "E-mail klienta je zablokovaný po nahlásení spamu. Pred odoslaním aktualizujte e-mailovú adresu klienta.",
+    "errorEmailSuppressedProvider": "E-mail klienta je zablokovaný poskytovateľom. Pred odoslaním aktualizujte e-mailovú adresu klienta.",
+    "errorEmailSuppressedManual": "E-mail klienta je manuálne zablokovaný. Pred odoslaním aktualizujte e-mailovú adresu klienta.",
+    "errorEmailSuppressedBounce": "E-mail klienta je zablokovaný po zlyhaní doručenia. Pred odoslaním aktualizujte e-mailovú adresu klienta.",
+    "errorEmailSuppressedGeneric": "E-mail klienta je zablokovaný. Pred odoslaním aktualizujte e-mailovú adresu klienta.",
+    "errorOnlyEmailAttachments": "Podporované sú iba e-mailové prílohy.",
+    "errorNoProviderEmailId": "Pre túto komunikáciu neexistuje ID správy poskytovateľa.",
+    "errorNoPhoneOnFile": "Klient nemá v systéme zaevidované telefónne číslo.",
+    "errorNoSmsConsent": "Klient neudelil súhlas so zasielaním SMS správ.",
+    "errorQuietHours": "Odosielanie SMS je počas nočného pokoja zablokované.",
+    "errorSympathyGate": "Ochranná brána súcitu: Správy pre uhynutého pacienta nie je možné odosielať.",
+    "errorContentRequired": "Obsah správy je povinný.",
+    "errorDeliveryFailed": "Doručenie správy zlyhalo."
   },
   "inventory": {
     "categories": {
@@ -4600,6 +4618,24 @@
       "toastRotated": "Bol vytvorený nový odkaz na kalendár. Pôvodný odkaz bol zneplatnený.",
       "toastCopied": "Odkaz na kalendár bol skopírovaný",
       "toastCopyFailed": "Odkaz sa nepodarilo skopírovať"
+    },
+    "daysShort": {
+      "sun": "Ne",
+      "mon": "Po",
+      "tue": "Ut",
+      "wed": "St",
+      "thu": "Št",
+      "fri": "Pi",
+      "sat": "So"
+    },
+    "daysFull": {
+      "sun": "Nedeľa",
+      "mon": "Pondelok",
+      "tue": "Utorok",
+      "wed": "Streda",
+      "thu": "Štvrtok",
+      "fri": "Piatok",
+      "sat": "Sobota"
     }
   },
   "settings": {

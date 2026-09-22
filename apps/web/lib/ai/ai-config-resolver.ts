@@ -22,7 +22,8 @@ export type AiFeatureKey =
   | "imageGeneration"
   | "videoGeneration"
   | "marketingCopy"
-  | "deepThinking";
+  | "deepThinking"
+  | "invoiceParser";
 
 export interface ResolvedModelConfig {
   provider: "openai" | "gemini" | "alibaba" | "default";

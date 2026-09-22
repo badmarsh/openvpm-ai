@@ -36,7 +36,8 @@ import {
   RECOVERY_HOLD_BLOCK_MESSAGE,
 } from "@/lib/recovery-hold";
 import { assertOutboundEmailAllowed } from "@/lib/outbound-email-security";
-import { parsePdfInvoice, extractPdfText, type PdfInvoiceExtraction } from "@/lib/inventory/pdf-invoice-parser";
+import { parsePdfInvoice, extractPdfText, type PdfInvoiceExtraction, type InvoiceParserAiConfig } from "@/lib/inventory/pdf-invoice-parser";
+import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
 
 
 export {
@@ -1695,7 +1696,22 @@ export const communicationsRouter = createRouter({
       const pdfBuffer = Buffer.from(await fileRes.arrayBuffer());
 
       // 3. Parse via AI + rule-based fallback
-      const extraction = await parsePdfInvoice(pdfBuffer);
+      // Resolve AI config from practice settings (Nastavenia → AI)
+      let aiConfig: InvoiceParserAiConfig | undefined;
+      try {
+        const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "invoiceParser");
+        if (resolved.baseUrl && resolved.apiKey) {
+          aiConfig = {
+            baseUrl: resolved.baseUrl,
+            apiKey: resolved.apiKey,
+            model: resolved.modelId,
+          };
+        }
+      } catch (err) {
+        console.warn("[parseAttachmentAsInvoice] Could not resolve AI config, using rule-based only:", err);
+      }
+
+      const extraction = await parsePdfInvoice(pdfBuffer, aiConfig);
 
       return extraction;
     }),

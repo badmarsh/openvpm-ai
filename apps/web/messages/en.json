@@ -2149,7 +2149,7 @@
     "noticeEmail": "Email is sent to the client's registered address. Replies arrive in this inbox automatically.",
     "channelWhatsapp": "WhatsApp",
     "optionWhatsapp": "WhatsApp",
-   "noticeWhatsapp": "WhatsApp message sent via the clinic's connected number.",
+    "noticeWhatsapp": "WhatsApp message sent via the clinic's connected number.",
     "goToInventory": "Open Pharmacy & Inventory →",
     "aiAssistantTitle": "AI Assistant: Action proposal",
     "badgeNewSender": "New sender",
@@ -2178,7 +2178,25 @@
     "importInvoiceTitle": "Import invoice to stock",
     "importInvoiceSuccess": "Invoice parsed",
     "importInvoiceHint": "Continue via Stock → Import delivery note to confirm.",
-    "importInvoiceError": "Invoice parsing failed"
+    "importInvoiceError": "Invoice parsing failed",
+    "errorFreeFormEmailDisabled": "Free-form email sending from the inbox is disabled for account safety.",
+    "errorVerifyEmailBeforeSending": "Verify your email address before sending external email.",
+    "errorEmailTemporarilyUnavailable": "Email sending is temporarily unavailable.",
+    "errorEmailTemporarilyLimited": "Email sending is temporarily limited for account safety. Try again after the limit resets or contact OpenVPM support.",
+    "errorNoEmailOnFile": "Client does not have an email address on file.",
+    "errorEmailSuppressedSpam": "Client email is suppressed after a spam complaint. Update the client email before sending.",
+    "errorEmailSuppressedProvider": "Client email is suppressed after provider suppression. Update the client email before sending.",
+    "errorEmailSuppressedManual": "Client email is suppressed after manual suppression. Update the client email before sending.",
+    "errorEmailSuppressedBounce": "Client email is suppressed after a delivery bounce. Update the client email before sending.",
+    "errorEmailSuppressedGeneric": "Client email is suppressed. Update the client email before sending.",
+    "errorOnlyEmailAttachments": "Only email attachments are supported.",
+    "errorNoProviderEmailId": "No provider email ID for this communication.",
+    "errorNoPhoneOnFile": "Client does not have a phone number on file.",
+    "errorNoSmsConsent": "Client has not consented to SMS messages.",
+    "errorQuietHours": "SMS sending is blocked during quiet hours.",
+    "errorSympathyGate": "Sympathy Gate: Cannot send messages for a deceased patient.",
+    "errorContentRequired": "Message content is required.",
+    "errorDeliveryFailed": "Message delivery failed."
   },
   "inventory": {
     "categories": {
@@ -4600,6 +4618,24 @@
       "toastRotated": "New calendar link created. The old one stopped working.",
       "toastCopied": "Calendar link copied",
       "toastCopyFailed": "Could not copy the link"
+    },
+    "daysShort": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "daysFull": {
+      "sun": "Sunday",
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday"
     }
   },
   "settings": {

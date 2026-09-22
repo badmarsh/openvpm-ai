@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { translateOutboundEmailError } from "@/lib/outbound-email-errors";
 import { useI18n } from "@/lib/i18n";
 import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -154,17 +155,41 @@ function canSendAppointmentRemindersRole(role?: string | null): boolean {
 
 // --- Helpers ---
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
+const SCHEDULE_DAY_KEYS = [
+  "sun",
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+] as const;
+
+function formatDayShort(
+  date: Date,
+  t: (key: string, fallback?: string) => string,
+  locale = "sk"
+
+): string {
+  const key = SCHEDULE_DAY_KEYS[date.getDay()]!;
+  const dateLocale = locale === "sk" ? "sk-SK" : "en-US";
+  const defaultShort = date.toLocaleDateString(dateLocale, { weekday: "short" });
+  return t("schedule.daysShort." + key, defaultShort);
+}
+
+function formatDate(date: Date, locale = "sk-SK"): string {
+  const formatted = date.toLocaleDateString(locale, {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 function formatTime(date: Date, timeZone?: string | null): string {
-  return date.toLocaleTimeString("en-US", {
+  const loc = typeof document !== "undefined" && document.documentElement.lang === "sk" ? "sk-SK" : "en-US";
+  return date.toLocaleTimeString(loc, {
     hour: "numeric",
     minute: "2-digit",
     hour12: false,
@@ -360,12 +385,13 @@ function buildDayLanes(
   return lanes;
 }
 
-function formatToolbarDate(date: Date, view: CalendarView): string {
+function formatToolbarDate(date: Date, view: CalendarView, locale = "sk-SK"): string {
   if (view === "month") {
-    return date.toLocaleDateString("en-US", {
+    const formatted = date.toLocaleDateString(locale, {
       month: "long",
       year: "numeric",
     });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   }
 
   if (view === "week") {
@@ -377,22 +403,26 @@ function formatToolbarDate(date: Date, view: CalendarView): string {
       start.getFullYear() === end.getFullYear();
 
     if (sameMonth) {
-      return `${start.toLocaleDateString("en-US", {
+      const monthStr = start.toLocaleDateString(locale, {
         month: "short",
-      })} ${start.getDate()}-${end.getDate()}, ${end.getFullYear()}`;
+      });
+      const capMonth = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
+      return capMonth + " " + start.getDate() + "-" + end.getDate() + ", " + end.getFullYear();
     }
 
-    return `${start.toLocaleDateString("en-US", {
+    const startMonth = start.toLocaleDateString(locale, {
       month: "short",
       day: "numeric",
-    })} - ${end.toLocaleDateString("en-US", {
+    });
+    const endMonth = end.toLocaleDateString(locale, {
       month: "short",
       day: "numeric",
       year: "numeric",
-    })}`;
+    });
+    return startMonth + " - " + endMonth;
   }
 
-  return formatDate(date);
+  return formatDate(date, locale);
 }
 
 function getSnappedTimeFromY(y: number): string {
@@ -732,7 +762,8 @@ function PhoneAgenda({
   view: CalendarView;
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const dateLocale = locale === "sk" ? "sk-SK" : "en-US";
   const appointmentsByDay = new Map<string, Appointment[]>();
 
   for (const appointment of appointments) {
@@ -786,7 +817,7 @@ function PhoneAgenda({
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {new Date(
                     dayAppointments[0]!.startTime
-                  ).toLocaleDateString("en-US", {
+                  ).toLocaleDateString(dateLocale, {
                     weekday: "long",
                     month: "short",
                     day: "numeric",
@@ -893,6 +924,7 @@ function WeekCalendar({
   onSlotClick?: (date: Date, y: number) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
+  const { t, locale } = useI18n();
   return (
     <div className="mt-4 overflow-hidden rounded-lg border border-border bg-card">
       <div className="overflow-auto">
@@ -916,7 +948,7 @@ function WeekCalendar({
                     <div className="flex min-w-0 items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium uppercase text-muted-foreground">
-                          {day.toLocaleDateString("en-US", { weekday: "short" })}
+                          {formatDayShort(day, t, locale)}
                         </p>
                         <p
                           className={cn(
@@ -1050,9 +1082,10 @@ function MonthCalendar({
   onDayOpen: (date: Date) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const dateLocale = locale === "sk" ? "sk-SK" : "en-US";
   const weekLabels = buildWeekDays(currentDate).map((day) =>
-    day.toLocaleDateString("en-US", { weekday: "short" })
+    formatDayShort(day, t, locale)
   );
 
   return (
@@ -1106,7 +1139,7 @@ function MonthCalendar({
                     aria-label={t(
                       "schedule.createAppointmentOnAria",
                       "Create appointment on {date}",
-                      { date: day.date.toLocaleDateString("en-US") }
+                      { date: day.date.toLocaleDateString(dateLocale) }
                     )}
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -2124,7 +2157,7 @@ function SendReminderButton({ appointmentId }: { appointmentId: string }) {
       toast.success(t("schedule.toastReminderSent", "Reminder sent"));
     },
     onError: (err) => {
-      toast.error(err.message);
+      toast.error(translateOutboundEmailError(err.message, t));
     },
   });
 
@@ -2839,7 +2872,7 @@ export default function SchedulePage() {
 }
 
 function SchedulePageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { confirm, dialogProps } = useConfirmDialog();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -3204,7 +3237,7 @@ function SchedulePageContent() {
           </div>
 
           <h3 className="min-w-0 truncate text-right text-sm font-medium sm:text-left">
-            {formatToolbarDate(currentDate, view)}
+            {formatToolbarDate(currentDate, view, locale === "sk" ? "sk-SK" : "en-US")}
           </h3>
         </div>
 

@@ -13,6 +13,15 @@ export const OUTBOUND_EMAIL_LIMITS = {
   practicePerDay: 200,
 } as const;
 
+export const OUTBOUND_EMAIL_ERROR_MESSAGES = {
+  FREE_FORM_DISABLED:
+    "Free-form email sending from the inbox is disabled for account safety.",
+  VERIFY_EMAIL: "Verify your email address before sending external email.",
+  TEMPORARILY_UNAVAILABLE: "Email sending is temporarily unavailable.",
+  RATE_LIMITED:
+    "Email sending is temporarily limited for account safety. Try again after the limit resets or contact OpenVPM support.",
+} as const;
+
 type OutboundEmailOperation =
   | "inbox"
   | "staff_invite"

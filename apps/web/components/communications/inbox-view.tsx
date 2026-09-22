@@ -53,6 +53,7 @@ import {
 } from "@/lib/communications/policy";
 import { communicationStatusLabel } from "@/lib/communications/status";
 import { toast } from "sonner";
+import { translateOutboundEmailError } from "@/lib/outbound-email-errors";
 
 type FilterTab = "all" | "unread" | "sent";
 type Channel = "phone" | "sms" | "email" | "portal" | "whatsapp";
@@ -127,6 +128,7 @@ function MessageContentBubble({
   communicationId?: string;
 }) {
   const [showHistory, setShowHistory] = useState(false);
+  const { t } = useI18n();
   const [importingAttId, setImportingAttId] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<null | { items: { name: string; quantity: number; unit: string; totalWithVat: number }[]; supplierName: string; invoiceNumber: string }>(null);
 
@@ -224,9 +226,8 @@ function MessageContentBubble({
                 <span className="shrink-0 ml-2 font-mono">{it.quantity} {it.unit} — {it.totalWithVat.toFixed(2)} €</span>
               </div>
             ))}
-          </div>
-         <p className="text-[10px] text-emerald-600">Pokračuj cez <strong>Sklad → Import dodacieho listu</strong> pre finálne potvrdenie.</p>
-          <Link href="/inventory" className="flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors">
+         </div>
+         <Link href="/inventory" className="flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors">
             <Package className="h-3 w-3" />
             {t("inbox.goToInventory", "Otvoriť Sklad & Lieky →")}
           </Link>
@@ -279,15 +280,16 @@ function dateInputDayNumber(value: string): number | null {
 }
 
 function formatInboxDate(date: Date, timeZone?: string | null): string {
+  const loc = typeof document !== "undefined" && document.documentElement.lang === "sk" ? "sk-SK" : "en-US";
   const options: Intl.DateTimeFormatOptions = {
     dateStyle: "short",
     timeZone: timeZone ?? undefined,
   };
 
   try {
-    return date.toLocaleDateString("en-US", options);
+    return date.toLocaleDateString(loc, options);
   } catch {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(loc, {
       ...options,
       timeZone: undefined,
     });
@@ -521,7 +523,7 @@ export function InboxView() {
       if (err.data?.code === "BAD_REQUEST") {
         externalComposeRequest.current = null;
       }
-      toast.error(err.message);
+      toast.error(translateOutboundEmailError(err.message, t));
       utils.communications.listConversations.invalidate();
       if (selectedClientId) {
         utils.communications.getByClient.invalidate({
@@ -570,7 +572,7 @@ export function InboxView() {
       });
     },
     onError: (err, variables) => {
-      toast.error(err.message);
+      toast.error(translateOutboundEmailError(err.message, t));
       utils.communications.listConversations.invalidate();
       utils.communications.getByClient.invalidate({
         clientId: variables.clientId,
@@ -583,7 +585,7 @@ export function InboxView() {
       utils.communications.listConversations.invalidate();
     },
     onError: (err) => {
-      toast.error(err.message);
+      toast.error(translateOutboundEmailError(err.message, t));
     },
   });
 
@@ -608,7 +610,7 @@ export function InboxView() {
         setSelectedClientName(data.client.firstName + " " + data.client.lastName);
       },
       onError: (err) => {
-        toast.error(err.message);
+        toast.error(translateOutboundEmailError(err.message, t));
       },
     });
 
@@ -621,7 +623,7 @@ export function InboxView() {
         });
       },
       onError: (err) => {
-        toast.error(err.message);
+        toast.error(translateOutboundEmailError(err.message, t));
       },
     });
 
@@ -634,7 +636,7 @@ export function InboxView() {
         replyUnmatchedRequestRef.current = null;
         utils.communications.listConversations.invalidate();
       },
-      onError: (err) => { toast.error(err.message); },
+      onError: (err) => { toast.error(translateOutboundEmailError(err.message, t)); },
     });
 
   const conversationGroups = useMemo((): ConversationGroup[] => {
