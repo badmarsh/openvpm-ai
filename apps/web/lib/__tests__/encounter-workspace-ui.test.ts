@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readPatientCardSource } from "./patient-card-source";
 import { describe, expect, it } from "vitest";
 
 const workspaceSource = readFileSync(
@@ -21,10 +22,7 @@ const ambulatorySoapSource = readFileSync(
   "components/records/ambulatory-soap-card.tsx",
   "utf8",
 );
-const patientChartSource = readFileSync(
-  "app/(dashboard)/patients/[id]/page.tsx",
-  "utf8",
-);
+const patientChartSource = readPatientCardSource();
 const recordsSource = readFileSync("app/(dashboard)/records/page.tsx", "utf8");
 
 describe("clinic encounter workspace", () => {

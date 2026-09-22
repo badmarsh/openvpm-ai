@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readPatientCardSource } from "./patient-card-source";
 import { describe, expect, it } from "vitest";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
@@ -397,9 +398,7 @@ describe("clinical correction consumers", () => {
     );
     const encounters = readRepoFile("apps/web/server/routers/encounters.ts");
     const ai = readRepoFile("apps/web/server/routers/ai.ts");
-    const patient = readRepoFile(
-      "apps/web/app/(dashboard)/patients/[id]/page.tsx",
-    );
+    const patient = readPatientCardSource();
 
     expect(records).toContain(
       "correctionReason: clinicalRecordCorrections.reason",
@@ -418,9 +417,7 @@ describe("clinical correction consumers", () => {
   });
 
   it("excludes corrected vitals from current trends and AI/agent context", () => {
-    const patient = readRepoFile(
-      "apps/web/app/(dashboard)/patients/[id]/page.tsx",
-    );
+    const patient = readPatientCardSource();
     const ai = readRepoFile("apps/web/server/routers/ai.ts");
     const agent = readRepoFile("apps/web/lib/agent/tools.ts");
 
@@ -460,9 +457,7 @@ describe("clinical correction consumers", () => {
     const recordsPage = readRepoFile(
       "apps/web/app/(dashboard)/records/page.tsx",
     );
-    const patient = readRepoFile(
-      "apps/web/app/(dashboard)/patients/[id]/page.tsx",
-    );
+    const patient = readPatientCardSource();
     const portal = readRepoFile("apps/web/server/routers/portal.ts");
     const recalls = readRepoFile("apps/web/server/vaccination-recalls.ts");
     const notifications = readRepoFile(
@@ -498,9 +493,7 @@ describe("clinical correction consumers", () => {
     const records = readRepoFile("apps/web/server/routers/records.ts");
     const ai = readRepoFile("apps/web/server/routers/ai.ts");
     const portal = readRepoFile("apps/web/server/routers/portal.ts");
-    const patientPage = readRepoFile(
-      "apps/web/app/(dashboard)/patients/[id]/page.tsx",
-    );
+    const patientPage = readPatientCardSource();
     const encounterPage = readRepoFile(
       "apps/web/app/(dashboard)/encounters/[appointmentId]/page.tsx",
     );

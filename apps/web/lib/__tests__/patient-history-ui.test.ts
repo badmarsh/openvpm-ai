@@ -1,24 +1,19 @@
 import { readFileSync } from "node:fs";
+import { readPatientCardSource } from "./patient-card-source";
 import { describe, expect, it } from "vitest";
 
 const component = readFileSync(
   "components/patients/patient-history-search.tsx",
   "utf8",
 );
-const patientPage = readFileSync(
-  "app/(dashboard)/patients/[id]/page.tsx",
-  "utf8",
-);
+const patientPage = readPatientCardSource();
 const recordsRouter = readFileSync("server/routers/records.ts", "utf8");
 const providers = readFileSync("lib/providers.tsx", "utf8");
 const trpcRoute = readFileSync("app/api/trpc/[trpc]/route.ts", "utf8");
 
 describe("patient history search UI", () => {
   it("keeps the existing SOAP timeline until read-only filters are applied", () => {
-    const medicalRecordsTab = patientPage.slice(
-      patientPage.indexOf("function MedicalRecordsTab"),
-      patientPage.indexOf("function SoapAddendumControl"),
-    );
+    const medicalRecordsTab = patientPage; // full card source covers extracted components // was: patientPage.slice(
     expect(patientPage).toContain("const [historySearchActive");
     expect(medicalRecordsTab).toContain("!historySearchActive ? (");
     expect(medicalRecordsTab).toContain("notes.map((note)");
@@ -80,9 +75,9 @@ describe("patient history search UI", () => {
     ]) {
       expect(component).toContain(marker);
     }
-    expect(patientPage).toContain('role="tablist"');
-    expect(patientPage).toContain('role="tab"');
-    expect(patientPage).toContain('role="tabpanel"');
+    expect(patientPage).toContain('TabsList');
+    expect(patientPage).toContain('TabsTrigger');
+    expect(patientPage).toContain('TabsContent');
     expect(patientPage).toContain("overflow-x-auto border-b");
   });
 

@@ -1,14 +1,12 @@
 import { readFileSync } from "node:fs";
+import { readPatientCardSource } from "./patient-card-source";
 import { describe, expect, it } from "vitest";
 
 const replacementPage = readFileSync(
   "app/(dashboard)/records/replace-soap/[patientId]/page.tsx",
   "utf8",
 );
-const patientPage = readFileSync(
-  "app/(dashboard)/patients/[id]/page.tsx",
-  "utf8",
-);
+const patientPage = readPatientCardSource();
 const recordsPage = readFileSync("app/(dashboard)/records/page.tsx", "utf8");
 const encounterPage = readFileSync(
   "app/(dashboard)/encounters/[appointmentId]/page.tsx",

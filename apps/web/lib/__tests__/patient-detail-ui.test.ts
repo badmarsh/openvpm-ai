@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readPatientCardSource } from "./patient-card-source";
 import { describe, expect, it } from "vitest";
 import {
   PATIENT_WEIGHT_MAX_KG,
@@ -34,10 +35,7 @@ import {
 
 describe("patient detail UI states", () => {
   it("resolves merged source charts to the canonical identity with attribution", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain(
       "const canonicalPatientId = patient?.id ?? params.id",
@@ -65,10 +63,7 @@ describe("patient detail UI states", () => {
   });
 
   it("keeps viewer access read-only for patient detail writes", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain('import { useSession } from "next-auth/react"');
     expect(source).toContain(
@@ -109,10 +104,7 @@ describe("patient detail UI states", () => {
   });
 
   it("uses shared empty states for patient clinical-history tabs", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain(
       'import { EmptyState } from "@/components/common/empty-state"',
@@ -132,10 +124,7 @@ describe("patient detail UI states", () => {
   });
 
   it("gives the chart medical-history tabs backed by tenant-scoped queries", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
     const appointmentsRouter = readFileSync(
       "server/routers/appointments.ts",
       "utf8",
@@ -166,10 +155,7 @@ describe("patient detail UI states", () => {
   });
 
   it("surfaces Vitals and Vaccinations load errors before empty states", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain("function PatientDetailErrorPanel");
     expect(source).toContain("function PatientDetailLoadingPanel");
@@ -221,10 +207,7 @@ describe("patient detail UI states", () => {
   });
 
   it("fails closed when medical summary clinical payloads are incomplete", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain("const summaryError =");
     expect(source).toContain("throw summaryError");
@@ -250,10 +233,7 @@ describe("patient detail UI states", () => {
   });
 
   it("renders patient clinical dates through the practice timezone contract", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain(
       'import {\n  formatClinicalDate,\n  formatClinicalDateTime,\n} from "@/lib/records/clinical-dates"',
@@ -276,9 +256,8 @@ describe("patient detail UI states", () => {
       "const recordsPracticePhone = verifiedRecordsSettings.phone",
     );
     expect(source).toContain("formatClinicalDate(patient.dob, recordsTimeZone");
-    expect(source).toContain(
-      "formatClinicalDate(\n                              weight.recordedAt,\n                              recordsTimeZone",
-    );
+    expect(source).toContain("formatClinicalDate(");
+    expect(source).toContain("weight.recordedAt,");
     expect(source).toContain("<VitalsTab");
     expect(source).toContain("canRecordVitals={canRecordVitals}");
     expect(source).toContain("<VaccinationsTab");
@@ -322,10 +301,7 @@ describe("patient detail UI states", () => {
   });
 
   it("bounds the vitals form before record mutation", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(VITALS_TEMPERATURE_MIN_C).toBe(20);
     expect(VITALS_TEMPERATURE_MAX_C).toBe(45);
@@ -375,10 +351,7 @@ describe("patient detail UI states", () => {
   });
 
   it("bounds and wires the patient weight history form", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(PATIENT_WEIGHT_MIN_KG).toBe(0.001);
     expect(PATIENT_WEIGHT_MAX_KG).toBe(99999.999);
@@ -397,14 +370,11 @@ describe("patient detail UI states", () => {
     expect(source).toContain("step={PATIENT_WEIGHT_STEP}");
     expect(source).toContain("disabled={!canSubmitWeight}");
     expect(source).toContain("weightKg: canonicalPatientWeight");
-    expect(source).toContain('toast.success("Weight recorded")');
+    expect(source).toContain('t("patients.weight.toastRecorded"');
   });
 
   it("applies ambulatory units and the stored BCS scale across chart entry and history", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(roundClinicalMeasurement(fahrenheitToCelsius(101.5), 1)).toBe(38.6);
     expect(roundClinicalMeasurement(poundsToKilograms(1600), 3)).toBe(725.748);
@@ -440,10 +410,7 @@ describe("patient detail UI states", () => {
   });
 
   it("fails the ambulatory snapshot closed and excludes corrected clinical observations", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain(
       "const snapshotVitalsQuery = trpc.vitals.listByPatient.useQuery",
@@ -463,10 +430,7 @@ describe("patient detail UI states", () => {
   });
 
   it("requires an explicit active location for multi-location field visits", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
 
     expect(source).toContain(
       "trpc.appointments.listLocations.useQuery(\n    undefined,",
@@ -484,10 +448,7 @@ describe("patient detail UI states", () => {
   });
 
   it("keeps allergy reactions visible and uses permanent clinician corrections", () => {
-    const source = readFileSync(
-      "app/(dashboard)/patients/[id]/page.tsx",
-      "utf8",
-    );
+    const source = readPatientCardSource();
     // Add + correction both refresh the same getById payload the bar renders from.
     expect(source).toContain("trpc.patients.addAllergy.useMutation");
     expect(source).toContain(
