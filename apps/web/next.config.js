@@ -14,6 +14,11 @@ const nextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
   serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  eslint: {
+    // lib/pdf/fonts/roboto-regular.ts is auto-generated (227 KB) and causes
+    // ESLint to exceed its call-stack limit. ESLint is run separately in CI.
+    ignoreDuringBuilds: true,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
