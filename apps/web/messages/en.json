@@ -2103,8 +2103,8 @@
     "typeToSearchClient": "Type to search for a client",
     "unmatchedInboundTitle": "Unmatched inbound message",
     "needsClientBadge": "Needs client",
-
-"searchOtherClient": "Assign to another client...",    "linkToClientTitle": "Link to client",
+    "searchOtherClient": "Assign to another client...",
+    "linkToClientTitle": "Link to client",
     "linkToClientDesc": "Search by name, email, or phone.",
     "viewerCannotLink": "Viewer access cannot link inbox messages.",
     "btnUnassign": "Unassign",
@@ -2135,9 +2135,6 @@
     "aiCreateClientTitle": "Create new client profile:",
     "btnCreateAndLink": "Create & Link",
     "aiMatchedCandidateTitle": "Or link to matched client:",
-<<<<<<< HEAD
-    "toastClientCreatedAndLinked": "Client created and messages linked"
-=======
     "aiSuggestionMatch": "Matched client found",
     "aiSuggestionNew": "Create client",
     "toastClientCreatedAndLinked": "Client created and messages linked",
@@ -2161,7 +2158,6 @@
     "importInvoiceSuccess": "Invoice parsed",
     "importInvoiceHint": "Continue via Stock → Import delivery note to confirm.",
     "importInvoiceError": "Invoice parsing failed"
->>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
   },
   "inventory": {
     "categories": {
@@ -3207,12 +3203,62 @@
     "tabs": {
       "overview": "Overview",
       "records": "Medical Records",
+      "prescriptions": "Prescriptions",
+      "labResults": "Lab Results",
+      "procedures": "Procedures",
       "documents": "Documents",
       "appointments": "Appointments",
       "weight": "Weight History",
       "vitals": "Vitals",
       "vaccinations": "Vaccinations",
       "invoices": "Invoices"
+    },
+    "prescriptionsTab": {
+      "loadError": "Unable to load prescriptions.",
+      "empty": "No prescriptions yet",
+      "emptyDesc": "Prescriptions written in Records will show up here.",
+      "readonlyNotice": "Viewing prescription history. Open Records to create or manage prescriptions.",
+      "openInRecords": "Open in Records",
+      "colMedication": "Medication",
+      "colDosage": "Dosage",
+      "colFrequency": "Frequency",
+      "colStatus": "Status",
+      "colRefills": "Refills",
+      "colDate": "Date",
+      "statusActive": "active",
+      "statusCancelled": "cancelled",
+      "statusExpired": "expired"
+    },
+    "labResultsTab": {
+      "loadError": "Unable to load lab results.",
+      "empty": "No lab results yet",
+      "emptyDesc": "Lab results entered in Records will show up here.",
+      "readonlyNotice": "Viewing lab result history. Open Records to enter or correct results.",
+      "openInRecords": "Open in Records",
+      "colTest": "Test",
+      "colResult": "Result",
+      "colFlag": "Flag",
+      "colRange": "Ref. Range",
+      "colOrderedBy": "Ordered By",
+      "colDate": "Date",
+      "flagCritical": "Critical",
+      "flagAbnormal": "Abnormal",
+      "flagNormal": "Normal",
+      "voided": "(voided)",
+      "pending": "Pending"
+    },
+    "proceduresTab": {
+      "loadError": "Unable to load procedures.",
+      "empty": "No procedures recorded",
+      "emptyDesc": "Procedures recorded in Records will show up here.",
+      "readonlyNotice": "Viewing procedure history. Open Records to add or manage procedures.",
+      "openInRecords": "Open in Records",
+      "colName": "Name",
+      "colPerformedBy": "Performed By",
+      "colDuration": "Duration",
+      "colAnesthesia": "Anesthesia",
+      "colDate": "Date",
+      "minutesValue": "{minutes} min"
     },
     "actions": {
       "backToPatients": "Back to Patients",
@@ -3402,9 +3448,6 @@
       "saving": "Saving…",
       "saveCorrection": "Save correction",
       "cancel": "Cancel",
-<<<<<<< HEAD
-      "toastSuccess": "Weight corrected; original preserved in the audit log"
-=======
       "toastSuccess": "Weight corrected; original preserved in the audit log",
       "reviewVitals": "Review vitals",
       "toastRecorded": "Weight recorded"
@@ -3412,7 +3455,6 @@
     "stickyRail": {
       "allergies": "Allergies",
       "weight": "Weight"
->>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
     },
     "vaccinations": {
       "title": "Vaccinations",

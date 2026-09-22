@@ -2103,6 +2103,7 @@
     "typeToSearchClient": "Píšte pre vyhľadanie klienta",
     "unmatchedInboundTitle": "Nepriradená prichodzíca správa",
     "needsClientBadge": "Chýba klient",
+    "searchOtherClient": "Priradit inému klientovi...",
     "linkToClientTitle": "Prepojiť s klientom",
     "linkToClientDesc": "Hľadajte podľa mena, emailu alebo telefónu.",
     "viewerCannotLink": "S rolou prehliadača nie je možné prepájať správy.",
@@ -2131,12 +2132,6 @@
     "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky.",
     "aiAssistantTitle": "AI Asistent",
     "badgeNewSender": "Nový odosielateľ",
-<<<<<<< HEAD
-    "aiCreateClientTitle": "Založiť nový profil klienta:",
-    "btnCreateAndLink": "Založiť & Prepojiť",
-    "aiMatchedCandidateTitle": "Alebo priradiť k nájdenému klientovi:",
-    "toastClientCreatedAndLinked": "Klient bol vytvorený a správy prepojené"
-=======
     "aiCreateClientTitle": "Vytvorit nový profil",
     "btnCreateAndLink": "Vytvorit a prepojiť",
     "aiMatchedCandidateTitle": "Priradiť k nájdenému klientovi",
@@ -2163,7 +2158,6 @@
     "importInvoiceSuccess": "Faktúra naparsovaná",
     "importInvoiceHint": "Pokračuj cez Sklad → Import dodacieho listu pre finálne potvrdenie.",
     "importInvoiceError": "Parsovanie faktúry zlyhalo"
->>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
   },
   "inventory": {
     "categories": {
@@ -3209,12 +3203,62 @@
     "tabs": {
       "overview": "Prehľad",
       "records": "Zdravotné záznamy",
+      "prescriptions": "Predpisy",
+      "labResults": "Laboratórne výsledky",
+      "procedures": "Zákroky",
       "documents": "Dokumenty",
       "appointments": "Termíny",
       "weight": "História hmotnosti",
       "vitals": "Vitálne funkcie",
       "vaccinations": "Vakcinácie a odčervenia",
       "invoices": "Faktúry"
+    },
+    "prescriptionsTab": {
+      "loadError": "Nepodarilo sa načítať predpisy.",
+      "empty": "Zatiaľ žiadne predpisy",
+      "emptyDesc": "Predpisy vytvorené v Záznamoch sa zobrazia tu.",
+      "readonlyNotice": "Prezeranie histórie predpisov. Otvorte Záznamy pre vytvorenie alebo správu predpisov.",
+      "openInRecords": "Otvoriť v Záznamoch",
+      "colMedication": "Liek",
+      "colDosage": "Dávkovanie",
+      "colFrequency": "Frekvencia",
+      "colStatus": "Stav",
+      "colRefills": "Doplnenia",
+      "colDate": "Dátum",
+      "statusActive": "aktívny",
+      "statusCancelled": "zrušený",
+      "statusExpired": "expirovaný"
+    },
+    "labResultsTab": {
+      "loadError": "Nepodarilo sa načítať laboratórne výsledky.",
+      "empty": "Zatiaľ žiadne laboratórne výsledky",
+      "emptyDesc": "Laboratórne výsledky zadané v Záznamoch sa zobrazia tu.",
+      "readonlyNotice": "Prezeranie histórie lab. výsledkov. Otvorte Záznamy pre zadanie alebo opravu výsledkov.",
+      "openInRecords": "Otvoriť v Záznamoch",
+      "colTest": "Test",
+      "colResult": "Výsledok",
+      "colFlag": "Príznak",
+      "colRange": "Ref. rozsah",
+      "colOrderedBy": "Objednal",
+      "colDate": "Dátum",
+      "flagCritical": "Kritický",
+      "flagAbnormal": "Abnormálny",
+      "flagNormal": "Normálny",
+      "voided": "(anulovaný)",
+      "pending": "Čaká sa"
+    },
+    "proceduresTab": {
+      "loadError": "Nepodarilo sa načítať zákroky.",
+      "empty": "Zatiaľ žiadne zákroky",
+      "emptyDesc": "Zákroky zaznamenané v Záznamoch sa zobrazia tu.",
+      "readonlyNotice": "Prezeranie histórie zákrokov. Otvorte Záznamy pre pridanie alebo správu zákrokov.",
+      "openInRecords": "Otvoriť v Záznamoch",
+      "colName": "Názov",
+      "colPerformedBy": "Vykonal",
+      "colDuration": "Trvanie",
+      "colAnesthesia": "Anestézia",
+      "colDate": "Dátum",
+      "minutesValue": "{minutes} min"
     },
     "actions": {
       "backToPatients": "Späť na zoznam pacientov",
@@ -3404,9 +3448,6 @@
       "saving": "Ukladá sa…",
       "saveCorrection": "Uložiť opravu",
       "cancel": "Zrušiť",
-<<<<<<< HEAD
-      "toastSuccess": "Hmotnosť bola opravená; originál je zachovaný v auditnom zázname"
-=======
       "toastSuccess": "Hmotnosť bola opravená; originál je zachovaný v auditnom zázname",
       "reviewVitals": "Zobraziť vitálne funkcie",
       "toastRecorded": "Hmotnosť zaznamenaná"
@@ -3414,7 +3455,6 @@
     "stickyRail": {
       "allergies": "Alergie",
       "weight": "Hmotnosť"
->>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
     },
     "vaccinations": {
       "title": "Vakcinácie a odčervenia",
@@ -5173,7 +5213,7 @@
   "nav.patients": "Pacienti",
   "nav.clients": "Majitelia",
   "nav.schedule": "Rozvrh",
-  "nav.records": "Klinická karta",
+  "nav.records": "Záznamy",
   "nav.labResults": "Laboratórium",
   "nav.billing": "Fakturácia & Pokladňa",
   "nav.inventory": "Sklad & Lieky",
