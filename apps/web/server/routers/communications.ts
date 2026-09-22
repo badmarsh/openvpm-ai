@@ -382,15 +382,34 @@ export const communicationsRouter = createRouter({
             c.created_at as "createdAt",
             cl.first_name as "clientFirstName",
             cl.last_name as "clientLastName",
+            coalesce(
+              case when cl.id is not null then concat(cl.first_name, ' ', cl.last_name) end,
+              substring(c.content from 'From:[ \t]*([^\r\n]+)'),
+              c.subject,
+              'Neznámy odosielateľ'
+            ) as "senderDisplay",
+            coalesce(
+              c.client_id::text,
+              substring(c.content from 'From:[ \t]*([^\r\n]+)'),
+              c.id::text
+            ) as "senderGroupKey",
             count(*) filter (
               where c.direction = 'inbound'
                 and c.read_at is null
                 and c.status <> 'read'
             ) over (
-              partition by coalesce(c.client_id::text, c.id::text)
+              partition by coalesce(
+                c.client_id::text,
+                substring(c.content from 'From:[ \t]*([^\r\n]+)'),
+                c.id::text
+              )
             ) as "unreadCount",
             row_number() over (
-              partition by coalesce(c.client_id::text, c.id::text)
+              partition by coalesce(
+                c.client_id::text,
+                substring(c.content from 'From:[ \t]*([^\r\n]+)'),
+                c.id::text
+              )
               order by c.created_at desc, c.id desc
             ) as row_num
           from communications c
@@ -450,6 +469,8 @@ export const communicationsRouter = createRouter({
           latest."clientFirstName",
           latest."clientLastName",
           latest."unreadCount",
+          latest."senderDisplay",
+          latest."senderGroupKey",
           count(*) over() as "total"
         from latest
         order by "createdAt" desc, "id" desc
@@ -465,6 +486,62 @@ export const communicationsRouter = createRouter({
         })),
         total: dbNumber(rows[0]?.total),
       };
+    }),
+
+  getBySender: protectedProcedure
+    .input(
+      z.object({
+        senderGroupKey: z.string().min(1),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db.execute(sql`
+        select
+          c.id,
+          c.client_id as "clientId",
+          c.channel,
+          c.direction,
+          c.subject,
+          c.content,
+          c.status,
+          c.assigned_to as "assignedTo",
+          u.name as "assignedToName",
+          c.read_at as "readAt",
+          c.provider_message_id as "providerMessageId",
+          c.dedupe_key as "dedupeKey",
+          c.created_at as "createdAt"
+        from communications c
+        left join users u
+          on c.assigned_to = u.id
+          and u.practice_id = ${ctx.practiceId}
+          and u.deleted_at is null
+        where c.practice_id = ${ctx.practiceId}
+          and c.deleted_at is null
+          and (
+            coalesce(
+              c.client_id::text,
+              substring(c.content from 'From:[ \t]*([^\r\n]+)'),
+              c.id::text
+            ) = ${input.senderGroupKey}
+            or c.id::text = ${input.senderGroupKey}
+          )
+        order by c.created_at asc, c.id asc;
+      `);
+      return result as unknown as Array<{
+        id: string;
+        clientId: string | null;
+        channel: string;
+        direction: string;
+        subject: string | null;
+        content: string | null;
+        status: string;
+        assignedTo: string | null;
+        assignedToName: string | null;
+        readAt: Date | string | null;
+        providerMessageId: string | null;
+        dedupeKey: string | null;
+        createdAt: Date | string | null;
+      }>;
     }),
 
   getByClient: protectedProcedure
@@ -650,6 +727,7 @@ export const communicationsRouter = createRouter({
           id: communications.id,
           clientId: communications.clientId,
           direction: communications.direction,
+          content: communications.content,
         })
         .from(communications)
         .where(
