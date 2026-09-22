@@ -44,16 +44,11 @@ export interface PdfInvoiceExtraction {
 }
 
 export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
-  // Import pdfjs-dist directly. Setting workerSrc to "" disables the fake-worker
-  // mechanism that tries to load pdf.worker.mjs, absent in Next.js standalone builds.
+  // Import pdfjs-dist directly. When bundled by Next.js (not serverExternal),
+  // the DOMMatrix polyfill in instrumentation.register() has already run and the
+  // pdfjs-dist fake-worker handles text extraction in-process without needing a worker file.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
-    // Locate the worker file. In Next.js standalone builds the worker is included
-  // via outputFileTracingIncludes and available at its npm path.
-  const workerPath = require.resolve(
-    "pdfjs-dist/legacy/build/pdf.worker.mjs"
-  );
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "file://" + workerPath;
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) });
   const doc = await loadingTask.promise;
   const textParts: string[] = [];
