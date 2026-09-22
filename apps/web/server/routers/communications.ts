@@ -1,3 +1,4 @@
+import { parseSenderIdentity } from "@/lib/inbox-cleaner";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, sql, isNull, or, ne, isNotNull } from "drizzle-orm";
@@ -712,6 +713,175 @@ export const communicationsRouter = createRouter({
           updated: updated.length,
         };
       });
+    }),
+
+  suggestClientAction: inboxStaffProcedure
+    .input(
+      z.object({
+        senderGroupKey: z.string().min(1),
+        content: z.string().optional().nullable(),
+        subject: z.string().optional().nullable(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const parsed = parseSenderIdentity(input.senderGroupKey, input.content);
+
+      const matchedCandidates: Array<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string | null;
+        phone: string | null;
+        matchReason: string;
+      }> = [];
+
+      if (parsed.email) {
+        const emailMatches = await ctx.db
+          .select({
+            id: clients.id,
+            firstName: clients.firstName,
+            lastName: clients.lastName,
+            email: clients.email,
+            phone: clients.phone,
+          })
+          .from(clients)
+          .where(
+            and(
+              eq(clients.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(clients.deletedAt),
+              ilike(clients.email, parsed.email),
+            ),
+          )
+          .limit(3);
+
+        emailMatches.forEach((m) => {
+          matchedCandidates.push({
+            ...m,
+            matchReason: "Zhodný email",
+          });
+        });
+      }
+
+      if (parsed.lastName && parsed.lastName !== "Klient") {
+        const nameMatches = await ctx.db
+          .select({
+            id: clients.id,
+            firstName: clients.firstName,
+            lastName: clients.lastName,
+            email: clients.email,
+            phone: clients.phone,
+          })
+          .from(clients)
+          .where(
+            and(
+              eq(clients.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(clients.deletedAt),
+              ilike(clients.lastName, parsed.lastName),
+            ),
+          )
+          .limit(4);
+
+        nameMatches.forEach((m) => {
+          if (!matchedCandidates.some((existing) => existing.id === m.id)) {
+            const sameFirst = parsed.firstName && m.firstName.toLowerCase().includes(parsed.firstName.toLowerCase());
+            matchedCandidates.push({
+              ...m,
+              matchReason: sameFirst ? "Zhoda mena a priezviska" : "Rovnaké priezvisko",
+            });
+          }
+        });
+      }
+
+      return {
+        suggestedNewClient: {
+          firstName: parsed.firstName || "",
+          lastName: parsed.lastName || "",
+          email: parsed.email || "",
+          phone: "",
+        },
+        matchedCandidates,
+      };
+    }),
+
+  createClientAndLink: inboxStaffProcedure
+    .input(
+      z.object({
+        communicationId: z.string().uuid(),
+        senderGroupKey: z.string().optional(),
+        firstName: z.string().trim().min(1, "Meno je povinné").max(128),
+        lastName: z.string().trim().min(1, "Priezvisko je povinné").max(128),
+        email: z.string().trim().email().optional().or(z.literal("")),
+        phone: z.string().trim().max(32).optional().or(z.literal("")),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const normalizedEmail = input.email ? input.email.toLowerCase() : null;
+      const normalizedPhone = input.phone ? normalizeE164(input.phone) || input.phone : null;
+
+      const [newClient] = await ctx.db
+        .insert(clients)
+        .values({
+          practiceId: ctx.practiceId,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          email: normalizedEmail,
+          phone: normalizedPhone,
+        })
+        .returning({
+          id: clients.id,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          email: clients.email,
+        });
+
+      if (!newClient) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Nepodarilo sa vytvoriť profil klienta",
+        });
+      }
+
+      await ctx.db
+        .update(communications)
+        .set({
+          clientId: newClient.id,
+          assignedTo: ctx.user.id,
+        })
+        .where(
+          and(
+            eq(communications.id, input.communicationId),
+            eq(communications.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(communications.deletedAt),
+          ),
+        );
+
+      if (input.senderGroupKey) {
+        await ctx.db
+          .update(communications)
+          .set({
+            clientId: newClient.id,
+            assignedTo: ctx.user.id,
+          })
+          .where(
+            and(
+              eq(communications.practiceId, ctx.practiceId),
+              activePracticePredicate(ctx.practiceId),
+              isNull(communications.clientId),
+              isNull(communications.deletedAt),
+              or(
+                eq(communications.id, input.communicationId),
+                ilike(communications.content, "%" + input.senderGroupKey + "%"),
+              ),
+            ),
+          );
+      }
+
+      return {
+        client: newClient,
+      };
     }),
 
   linkCommunicationToClient: inboxStaffProcedure

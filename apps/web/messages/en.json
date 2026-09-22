@@ -2128,7 +2128,13 @@
     "noticeEmail": "Email is sent to the client's registered address. Replies arrive in this inbox automatically.",
     "channelWhatsapp": "WhatsApp",
     "optionWhatsapp": "WhatsApp",
-    "noticeWhatsapp": "WhatsApp message sent via the clinic's connected number."
+    "noticeWhatsapp": "WhatsApp message sent via the clinic's connected number.",
+    "aiAssistantTitle": "AI Assistant: Action proposal",
+    "badgeNewSender": "New sender",
+    "aiCreateClientTitle": "Create new client profile:",
+    "btnCreateAndLink": "Create & Link",
+    "aiMatchedCandidateTitle": "Or link to matched client:",
+    "toastClientCreatedAndLinked": "Client created and messages linked"
   },
   "inventory": {
     "categories": {
