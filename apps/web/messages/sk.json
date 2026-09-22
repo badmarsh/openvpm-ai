@@ -691,7 +691,27 @@
     "infoTitle": "💡 Ako fungujú automatizácie?",
     "infoDescription": "Pravidlá sa spúšťajú na základe udalostí (prepustenie z ambulancie, výročie návštevy…). AI generuje správu v slovenčine/maďarčine s Fear-Free tónom. Správy sú odosielané cez SMS alebo e-mail — nakonfigurujte Twilio/Resend v nastaveniach.",
     "tabClient": "Klientske automatizácie",
-    "tabClinical": "Klinický strážca & Pravidlá"
+    "tabClinical": "Klinický strážca & Pravidlá",
+    "tabAiAgents": "AI Agenti & Workflow",
+    "aiAgents": {
+      "suggestClientTitle": "Inbox: AI Navrhy klientov",
+      "suggestClientDesc": "Automaticky navrhuje vytvorenie alebo priradenie klienta pri kazdom novom prichodziom emaili.",
+      "parseInvoiceTitle": "Inbox: Import faktur z PDF",
+      "parseInvoiceDesc": "Zobrazuje tlacidlo Sklad pri PDF prilohach od dodavatelov. Extrahuje polozky faktury cez AI a priamo aktualizuje zasoby.",
+      "senderGroupingTitle": "Inbox: Parovanie odosielatelov",
+      "senderGroupingDesc": "Zoskupuje spravy od rovnakeho odosielatela do jedneho vlakna. Identifikuje klientov podla e-mailovej adresy.",
+      "wholesaleTitle": "Sklad: Wholesale parsery",
+      "wholesaleDesc": "Aktivni dodavatelia s podporou automatickeho parsovania faktur a cennikov.",
+      "sectionInbox": "Inbox",
+      "sectionInventory": "Sklad a Zasoby",
+      "infoBanner": "AI moduly su softverove komponenty integrovane priamo do OpenVPM AI. Prepinanie ulozi preferenciu lokalne — pre globalne nastavenia kliniky kontaktujte spravcu.",
+      "alwaysOn": "vzdy aktivne",
+      "statusActive": "Aktivny",
+      "statusDisabled": "Vypnuty",
+      "parserActive": "aktivny",
+      "parserPartial": "ciastocny",
+      "parserInactive": "neaktivny"
+    }
   },
   "auth": {
     "login": {

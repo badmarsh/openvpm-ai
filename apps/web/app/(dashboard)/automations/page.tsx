@@ -2,17 +2,23 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Zap, ShieldCheck, Loader2 } from "lucide-react";
+import { Zap, ShieldCheck, Bot, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/lib/i18n";
 import { ClientAutomationsView } from "@/components/automations/client-automations-view";
 import { ClinicalAutomationsView } from "@/components/automations/clinical-automations-view";
+import { AiAgentsView } from "@/components/automations/ai-agents-view";
 import { PageHeader } from "@/components/layout/page-header";
 
 function AutomationsContent() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "clinical" ? "clinical" : "client";
+  const initialTab =
+    searchParams.get("tab") === "clinical"
+      ? "clinical"
+      : searchParams.get("tab") === "ai-agents"
+        ? "ai-agents"
+        : "client";
   const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
@@ -27,7 +33,7 @@ function AutomationsContent() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-xl">
           <TabsTrigger value="client" className="gap-2">
             <Zap className="h-4 w-4" />
             <span>{t("automations.tabClient", "Klientske automatizácie")}</span>
@@ -35,6 +41,10 @@ function AutomationsContent() {
           <TabsTrigger value="clinical" className="gap-2">
             <ShieldCheck className="h-4 w-4" />
             <span>{t("automations.tabClinical", "Klinický strážca & Pravidlá")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai-agents" className="gap-2">
+            <Bot className="h-4 w-4" />
+            <span>{t("automations.tabAiAgents", "AI Agenti & Workflow")}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -44,6 +54,10 @@ function AutomationsContent() {
 
         <TabsContent value="clinical" className="space-y-4">
           <ClinicalAutomationsView />
+        </TabsContent>
+
+        <TabsContent value="ai-agents" className="space-y-4">
+          <AiAgentsView />
         </TabsContent>
       </Tabs>
     </div>

@@ -691,7 +691,27 @@
     "infoTitle": "💡 How do automations work?",
     "infoDescription": "Rules are triggered by events (discharge, visit anniversary…). AI generates a message in Slovak/Hungarian with a Fear-Free tone. Messages are sent via SMS or email — configure Twilio/Resend in settings.",
     "tabClient": "Client Automations",
-    "tabClinical": "Clinical Guardian & Rules"
+    "tabClinical": "Clinical Guardian & Rules",
+    "tabAiAgents": "AI Agents & Workflow",
+    "aiAgents": {
+      "suggestClientTitle": "Inbox: AI Client Suggestions",
+      "suggestClientDesc": "Automatically suggests creating or linking a client for every new inbound email.",
+      "parseInvoiceTitle": "Inbox: PDF Invoice Import",
+      "parseInvoiceDesc": "Shows a Stock button for PDF attachments from suppliers. Extracts invoice items via AI and updates inventory directly.",
+      "senderGroupingTitle": "Inbox: Sender Matching",
+      "senderGroupingDesc": "Groups messages from the same sender into one thread. Identifies clients by email address.",
+      "wholesaleTitle": "Stock: Wholesale Parsers",
+      "wholesaleDesc": "Active suppliers with automatic invoice and price-list parsing support.",
+      "sectionInbox": "Inbox",
+      "sectionInventory": "Stock & Inventory",
+      "infoBanner": "AI modules are software components integrated directly into OpenVPM AI. Toggling saves the preference locally — for clinic-wide settings contact your administrator.",
+      "alwaysOn": "always on",
+      "statusActive": "Active",
+      "statusDisabled": "Disabled",
+      "parserActive": "active",
+      "parserPartial": "partial",
+      "parserInactive": "inactive"
+    }
   },
   "auth": {
     "login": {
