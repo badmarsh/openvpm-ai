@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import {
-  CheckCircle2,
   Info,
   Mail,
   Package,
   Users,
-  XCircle,
   Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -230,6 +228,12 @@ function AgentCard({ module: mod, isEnabled, onToggle, t }: AgentCardProps) {
                 <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
                   {mod.moduleKey}
                 </code>
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full shrink-0",
+                    isOn ? "bg-green-500" : "bg-transparent",
+                  )}
+                />
                 {mod.alwaysOn && (
                   <Badge variant="secondary" className="h-4 px-1 text-[10px]">
                     {t("automations.aiAgents.alwaysOn", "vzdy aktivne")}
@@ -250,24 +254,6 @@ function AgentCard({ module: mod, isEnabled, onToggle, t }: AgentCardProps) {
         <CardDescription className="text-xs leading-relaxed">
           {t(mod.descKey, mod.descFallback)}
         </CardDescription>
-
-        <div className="flex items-center gap-1.5 text-xs">
-          {isOn ? (
-            <>
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-green-700 dark:text-green-400">
-                {t("automations.aiAgents.statusActive", "Aktivny")}
-              </span>
-            </>
-          ) : (
-            <>
-              <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                {t("automations.aiAgents.statusDisabled", "Vypnuty")}
-              </span>
-            </>
-          )}
-        </div>
 
         {mod.subItems && mod.subItems.length > 0 && (
           <div className="space-y-1 border-t pt-1">
