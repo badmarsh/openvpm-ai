@@ -139,6 +139,8 @@ import {
   InvoicesTab,
   AllergyForm,
 } from "@/components/patients/sections";
+import { PatientStickyRail } from "@/components/patients/patient-sticky-rail";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 function PatientChartChunkLoading() {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -389,6 +391,7 @@ export default function PatientDetailPage() {
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const headerCardRef = useRef<HTMLDivElement>(null);
   const photoUploadAttemptRef = useRef<ManagedUploadAttempt | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
@@ -1025,7 +1028,7 @@ export default function PatientDetailPage() {
       ) : null}
 
       {/* Patient Header Card */}
-      <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
+      <div ref={headerCardRef} className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="space-y-1">
@@ -1315,6 +1318,16 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      <PatientStickyRail
+        name={patient.name}
+        species={patient.species}
+        status={patient.status ?? "active"}
+        allergies={patient.allergies ?? []}
+        latestWeight={latestWeight}
+        ambulatoryEnabled={ambulatoryProfile.enabled}
+        sentinelRef={headerCardRef}
+      />
 
       {/* Deceased Patient Sympathy Banner (Sympathy Gate active) */}
       {patient.status === "deceased" ? (
@@ -1691,45 +1704,35 @@ export default function PatientDetailPage() {
       ) : null}
 
       {/* Tab Navigation */}
-      <div className="mt-6 overflow-x-auto border-b border-border">
-        <div
-          role="tablist"
-          aria-label={t("patients.detail.chartSectionsAria", "Sekcie karty pacienta")}
-          className="flex min-w-max gap-0"
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              id={`patient-tab-${tab.id}`}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              aria-controls={`patient-panel-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "relative min-h-11 px-4 py-2.5 text-sm font-medium transition-colors",
-                activeTab === tab.id
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div
-        id={`patient-panel-${activeTab}`}
-        role="tabpanel"
-        aria-labelledby={`patient-tab-${activeTab}`}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as Tab)}
         className="mt-6"
       >
-        {activeTab === "overview" && (
+        <div className="overflow-x-auto border-b border-border">
+          <TabsList
+            aria-label={t("patients.detail.chartSectionsAria", "Sekcie karty pacienta")}
+            className="inline-flex h-auto w-auto min-w-max gap-0 rounded-none bg-transparent p-0"
+          >
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className={cn(
+                  "relative min-h-11 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium shadow-none transition-colors data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none",
+                )}
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+
+        <TabsContent value="overview" className="mt-6">
+          <section aria-labelledby="patient-section-overview">
+            <h2 id="patient-section-overview" className="sr-only">
+              {t("patients.tabs.overview", "Overview")}
+            </h2>
           <div className="rounded-lg border border-border bg-card p-6">
             <h3 className="font-heading text-base font-semibold mb-4">
               {t("patients.profile.basicInfo", "Basic Information")}
@@ -1826,11 +1829,16 @@ export default function PatientDetailPage() {
                     : "\u2014"}
                 </dd>
               </div>
-            </dl>
-          </div>
-        )}
+          </dl>
+         </div>
+          </section>
+        </TabsContent>
 
-        {activeTab === "weight" && (
+        <TabsContent value="weight" className="mt-6">
+          <section aria-labelledby="patient-section-weight">
+            <h2 id="patient-section-weight" className="sr-only">
+              {t("patients.tabs.weight", "Weight History")}
+            </h2>
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
               {t(
@@ -1993,9 +2001,9 @@ export default function PatientDetailPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => setActiveTab("vitals")}
-                                >
-                                  Review vitals
+                                onClick={() => setActiveTab("vitals")}
+                               >
+                                  {t("patients.weight.reviewVitals", "Review vitals")}
                                 </Button>
                               ) : (
                                 <WeightCorrectionDialog
@@ -2023,9 +2031,14 @@ export default function PatientDetailPage() {
               />
             )}
           </div>
-        )}
+          </section>
+        </TabsContent>
 
-        {activeTab === "vitals" && (
+        <TabsContent value="vitals" className="mt-6">
+          <section aria-labelledby="patient-section-vitals">
+            <h2 id="patient-section-vitals" className="sr-only">
+              {t("patients.tabs.vitals", "Vitals")}
+            </h2>
           <VitalsTab
             patientId={patient.id}
             timeZone={recordsTimeZone}
@@ -2034,9 +2047,14 @@ export default function PatientDetailPage() {
             canRecordVitals={canRecordVitals}
             canCorrectClinicalRecords={canCorrectClinicalRecords}
           />
-        )}
+          </section>
+        </TabsContent>
 
-        {activeTab === "vaccinations" && (
+        <TabsContent value="vaccinations" className="mt-6">
+          <section aria-labelledby="patient-section-vaccinations">
+            <h2 id="patient-section-vaccinations" className="sr-only">
+              {t("patients.tabs.vaccinations", "Vaccinations")}
+            </h2>
           <VaccinationsTab
             patientId={patient.id}
             timeZone={recordsTimeZone}
@@ -2044,27 +2062,50 @@ export default function PatientDetailPage() {
             canPrepareCertificate={canManagePatientDetail}
             canEditCertificate={canEditVaccinationCertificate}
           />
-        )}
+          </section>
+        </TabsContent>
 
-        {activeTab === "records" && (
+        <TabsContent value="records" className="mt-6">
+          <section aria-labelledby="patient-section-records">
+            <h2 id="patient-section-records" className="sr-only">
+              {t("patients.tabs.records", "Medical Records")}
+            </h2>
           <MedicalRecordsTab
             patientId={patient.id}
             timeZone={recordsTimeZone}
             canCorrectClinicalRecords={canCorrectClinicalRecords}
             canSearchPatientHistory={canSearchPatientHistory}
           />
-        )}
+          </section>
+        </TabsContent>
 
-        {activeTab === "documents" && (
+        <TabsContent value="documents" className="mt-6">
+          <section aria-labelledby="patient-section-documents">
+            <h2 id="patient-section-documents" className="sr-only">
+              {t("patients.tabs.documents", "Documents")}
+            </h2>
           <DocumentsTab patientId={patient.id} timeZone={recordsTimeZone} />
-        )}
+          </section>
+        </TabsContent>
 
-        {activeTab === "appointments" && (
+        <TabsContent value="appointments" className="mt-6">
+          <section aria-labelledby="patient-section-appointments">
+            <h2 id="patient-section-appointments" className="sr-only">
+              {t("patients.tabs.appointments", "Appointments")}
+            </h2>
           <AppointmentsTab patientId={patient.id} timeZone={recordsTimeZone} />
-        )}
+          </section>
+        </TabsContent>
 
-        {activeTab === "invoices" && <InvoicesTab patientId={patient.id} />}
-      </div>
+        <TabsContent value="invoices" className="mt-6">
+          <section aria-labelledby="patient-section-invoices">
+            <h2 id="patient-section-invoices" className="sr-only">
+              {t("patients.tabs.invoices", "Invoices")}
+            </h2>
+          <InvoicesTab patientId={patient.id} />
+          </section>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

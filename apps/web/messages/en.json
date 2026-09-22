@@ -2102,7 +2102,8 @@
     "noClientsFound": "No clients found",
     "typeToSearchClient": "Type to search for a client",
     "unmatchedInboundTitle": "Unmatched inbound message",
-    "needsClientBadge": "Needs client",
+    "needsClientBadge": "Needs client",,
+    "searchOtherClient": "Assign to another client..."
     "linkToClientTitle": "Link to client",
     "linkToClientDesc": "Search by name, email, or phone.",
     "viewerCannotLink": "Viewer access cannot link inbox messages.",
@@ -2134,6 +2135,8 @@
     "aiCreateClientTitle": "Create new client profile:",
     "btnCreateAndLink": "Create & Link",
     "aiMatchedCandidateTitle": "Or link to matched client:",
+    "aiSuggestionMatch": "Matched client found",
+    "aiSuggestionNew": "Create client",
     "toastClientCreatedAndLinked": "Client created and messages linked",    "aiAssistantSubtitleMatch": "Found a matching client",
     "aiAssistantSubtitleNew": "Suggests: new client profile",
     "aiConfidenceBadgeHigh": "High match",
@@ -3387,7 +3390,12 @@
       "saving": "Saving…",
       "saveCorrection": "Save correction",
       "cancel": "Cancel",
-      "toastSuccess": "Weight corrected; original preserved in the audit log"
+      "toastSuccess": "Weight corrected; original preserved in the audit log",
+      "reviewVitals": "Review vitals"
+    },
+    "stickyRail": {
+      "allergies": "Allergies",
+      "weight": "Weight"
     },
     "vaccinations": {
       "title": "Vaccinations",

@@ -2103,6 +2103,7 @@
     "typeToSearchClient": "Píšte pre vyhľadanie klienta",
     "unmatchedInboundTitle": "Nepriradená prichádzajúca správa",
     "needsClientBadge": "Chýba klient",
+    "searchOtherClient": "Priradit inému klientovi...",
     "linkToClientTitle": "Prepojiť s klientom",
     "linkToClientDesc": "Hľadajte podľa mena, emailu alebo telefónu.",
     "viewerCannotLink": "S rolou prehliadača nie je možné prepájať správy.",
@@ -2134,6 +2135,8 @@
     "aiCreateClientTitle": "Založiť nový profil klienta:",
     "btnCreateAndLink": "Založiť & Prepojiť",
     "aiMatchedCandidateTitle": "Alebo priradiť k nájdenému klientovi:",
+    "aiSuggestionMatch": "Nájdený zhodný klient",
+    "aiSuggestionNew": "Vytvoriť klienta",
     "toastClientCreatedAndLinked": "Klient bol vytvorený a správy prepojené"
   ,
     "aiAssistantTitle": "AI Asistent",
@@ -3396,7 +3399,12 @@
       "saving": "Ukladá sa…",
       "saveCorrection": "Uložiť opravu",
       "cancel": "Zrušiť",
-      "toastSuccess": "Hmotnosť bola opravená; originál je zachovaný v auditnom zázname"
+      "toastSuccess": "Hmotnosť bola opravená; originál je zachovaný v auditnom zázname",
+      "reviewVitals": "Zobraziť vitálne funkcie"
+    },
+    "stickyRail": {
+      "allergies": "Alergie",
+      "weight": "Hmotnosť"
     },
     "vaccinations": {
       "title": "Vakcinácie a odčervenia",
