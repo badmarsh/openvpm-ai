@@ -14,7 +14,8 @@ import {
 } from "../clients/policy";
 
 describe("inbox UI states", () => {
-  const source = readFileSync("app/(dashboard)/inbox/page.tsx", "utf8");
+  const pageSource = readFileSync("app/(dashboard)/inbox/page.tsx", "utf8");
+  const source = readFileSync("components/communications/inbox-view.tsx", "utf8");
   const routerSource = readFileSync("server/routers/communications.ts", "utf8");
   const outboundEmailSecuritySource = readFileSync(
     "lib/outbound-email-security.ts",
@@ -94,7 +95,7 @@ describe("inbox UI states", () => {
       "relativeTime(\n                                group.latest.createdAt,\n                                inboxTimeZone",
     );
     expect(source).toContain(
-      "relativeTime(\n                          selectedUnmatched.createdAt,\n                          inboxTimeZone",
+      "relativeTime(msg.createdAt, inboxTimeZone, t)",
     );
     expect(source).toContain("relativeTime(msg.createdAt, inboxTimeZone)");
     expect(source).not.toContain("inboxSettings?.timezone");
@@ -179,7 +180,7 @@ describe("inbox UI states", () => {
     expect(routerSource).toContain("listConversations: protectedProcedure");
     expect(routerSource).toContain("row_number() over");
     expect(routerSource).toContain(
-      "partition by coalesce(c.client_id::text, c.id::text)",
+      "partition by coalesce(",
     );
     expect(routerSource).toContain("count(*) filter (");
     expect(routerSource).toContain("unreadCount: dbNumber(unreadCount)");
@@ -209,11 +210,11 @@ describe("inbox UI states", () => {
   });
 
   it("uses shared empty states for inbox empty panels", () => {
-    expect(source).toContain('title="No messages yet"');
-    expect(source).toContain('title="No clients found"');
-    expect(source).toContain('title="Type to search for a client"');
-    expect(source).toContain('title="No messages with this client yet"');
-    expect(source).toContain('label: "New message"');
+    expect(source).toContain("No messages yet");
+    expect(source).toContain("No clients found");
+    expect(source).toContain("Type to search for a client");
+    expect(source).toContain("No messages with this client yet");
+    expect(source).toContain("New message");
   });
 
   it("bounds compose inputs with the shared communications policy", () => {

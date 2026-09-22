@@ -225,7 +225,11 @@ function MessageContentBubble({
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-emerald-600">Pokračuj cez <strong>Sklad → Import dodacieho listu</strong> pre finálne potvrdenie.</p>
+         <p className="text-[10px] text-emerald-600">Pokračuj cez <strong>Sklad → Import dodacieho listu</strong> pre finálne potvrdenie.</p>
+          <Link href="/inventory" className="flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors">
+            <Package className="h-3 w-3" />
+            {t("inbox.goToInventory", "Otvoriť Sklad & Lieky →")}
+          </Link>
         </div>
       ) : null}
 

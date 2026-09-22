@@ -55,10 +55,40 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const textContent = await page.getTextContent();
+
+    // pdfjs-dist splits combining diacritical marks (á, č, ž, ň, ď, ľ, ť, š)
+    // into separate text items. Use transform positions to join items that belong
+    // to the same word without inserting a space. Items on the same baseline within
+    // ~1.5× the font size are concatenated directly; otherwise a space or newline
+    // separates them.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pageText = (textContent.items as Array<{ str?: string }>)
-      .map((item) => item.str ?? "")
-      .join(" ");
+    const items = textContent.items as Array<{ str?: string; transform?: number[]; width?: number; height?: number }>;
+    let pageText = "";
+    let prevY = -Infinity;
+    let prevEnd = -Infinity;
+    let prevFontHeight = 12;
+    for (const item of items) {
+      const s = item.str ?? "";
+      if (!s) continue;
+      const tx = item.transform;
+      const x = tx ? tx[4] : prevEnd;
+      const y = tx ? tx[5] : prevY;
+      const fontHeight = tx ? Math.abs(tx[3] || tx[0] || 12) : prevFontHeight;
+      const gap = x - prevEnd;
+      const verticalShift = Math.abs(y - prevY);
+      if (pageText.length === 0) {
+       // first item
+      } else if (verticalShift > fontHeight * 0.5) {
+       pageText += "\n";
+      } else if (gap > fontHeight * 0.3) {
+       pageText += " ";
+      }
+      // else: no separator — items touching or overlapping (diacritics)
+      pageText += s;
+      prevY = y;
+      prevEnd = x + (item.width ?? s.length * fontHeight * 0.5);
+      prevFontHeight = fontHeight;
+    }
     textParts.push(pageText);
     page.cleanup();
   }
