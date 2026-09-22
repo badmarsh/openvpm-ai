@@ -28,13 +28,13 @@ export const DEFAULT_GEMINI_PRESETS: CachedAiModel[] = [
 ];
 
 export const DEFAULT_PRACTICE_FEATURE_MAPPINGS: PracticeAiFeatureMappings = {
-  assistant: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.2 },
-  imagingRtg: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.1 },
-  voiceSoap: { provider: "gemini", model: "gemini-3.6-flash" },
-  labParser: { provider: "gemini", model: "gemini-3.6-flash" },
+  assistant: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0.2 },
+  imagingRtg: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0.1 },
+  voiceSoap: { provider: "gemini", model: "gemini-3.8-flash" },
+  labParser: { provider: "gemini", model: "gemini-3.8-flash" },
   imageGeneration: { provider: "alibaba", model: "qwen-image-3.0", size: "1024*1024" },
   videoGeneration: { provider: "alibaba", model: "wan3.0-video", duration: 5 },
-  marketingCopy: { provider: "gemini", model: "gemini-3.6-flash" },
-  deepThinking: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0.1 },
-  invoiceParser: { provider: "gemini", model: "gemini-3.6-flash", temperature: 0 },
+  marketingCopy: { provider: "gemini", model: "gemini-3.8-flash" },
+  deepThinking: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0.1 },
+  invoiceParser: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0 },
 };
