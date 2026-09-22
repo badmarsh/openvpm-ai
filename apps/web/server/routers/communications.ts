@@ -1,7 +1,7 @@
 import { parseSenderIdentity } from "@/lib/inbox-cleaner";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, and, desc, sql, isNull, or, ne, isNotNull } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, or, ne, isNotNull, ilike } from "drizzle-orm";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
 import {
   communications,
@@ -36,6 +36,8 @@ import {
   RECOVERY_HOLD_BLOCK_MESSAGE,
 } from "@/lib/recovery-hold";
 import { assertOutboundEmailAllowed } from "@/lib/outbound-email-security";
+import { parsePdfInvoice, extractPdfText, type PdfInvoiceExtraction } from "@/lib/inventory/pdf-invoice-parser";
+
 
 export {
   COMMUNICATION_CONTENT_MAX_LENGTH,
@@ -1519,4 +1521,166 @@ export const communicationsRouter = createRouter({
       }
       return comm;
     }),
+
+  replyToUnmatched: inboxStaffProcedure
+    .input(
+      z.object({
+        communicationId: z.string().uuid(),
+        senderGroupKey: z.string().optional(),
+        toEmail: z.string().email(),
+        subject: z.string().trim().max(COMMUNICATION_SUBJECT_MAX_LENGTH).optional(),
+        content: z
+          .string()
+          .trim()
+          .min(1, 'Message content is required')
+          .max(COMMUNICATION_CONTENT_MAX_LENGTH),
+        requestId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const msgContent = input.content.trim();
+
+      if (!(await lockPracticeForExternalSideEffects(ctx.db, ctx.practiceId))) {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: RECOVERY_HOLD_BLOCK_MESSAGE });
+      }
+
+      const [practice] = await ctx.db
+        .select({ name: practices.name, email: practices.email, createdAt: practices.createdAt })
+        .from(practices)
+        .where(activePracticeWhere(ctx.practiceId))
+        .limit(1);
+
+      if (!practice) throw practiceNotFound();
+
+      await assertOutboundEmailAllowed({
+        practiceId: ctx.practiceId,
+        practiceCreatedAt: practice.createdAt,
+        userId: ctx.user.id,
+        userEmailVerifiedAt: ctx.user.emailVerifiedAt,
+        ip: ctx.ip,
+        operation: 'inbox',
+      });
+
+      const practiceName = practice.name?.trim() || 'OpenVPM';
+      const replyToEmail = validReplyToEmail(practice.email);
+      const replySubject = input.subject?.trim() || ('Message from ' + practiceName);
+      const dedupeKey = 'email:inbox:' + ctx.practiceId + ':' + input.requestId;
+
+      const [inserted] = await ctx.db
+        .insert(communications)
+        .values({
+          practiceId: ctx.practiceId,
+          clientId: null,
+          channel: 'email',
+          direction: 'outbound',
+          subject: replySubject,
+          content: msgContent,
+          assignedTo: ctx.user.id,
+          dedupeKey,
+          status: 'pending',
+        })
+        .onConflictDoNothing({ target: communications.dedupeKey })
+        .returning();
+
+      let comm = inserted;
+      if (!comm) {
+        const [existing] = await ctx.db
+          .select()
+          .from(communications)
+          .where(and(eq(communications.practiceId, ctx.practiceId), eq(communications.dedupeKey, dedupeKey)))
+          .limit(1);
+        if (!existing) throw new TRPCError({ code: 'CONFLICT', message: 'Message request ID is already in use.' });
+        comm = existing;
+      }
+
+      let deliveryResult: { success: boolean; id?: string; error?: string };
+      let providerMessageId: string | undefined;
+
+      try {
+        deliveryResult = await sendEmail({
+          to: input.toEmail,
+          subject: replySubject,
+          html: renderComposedEmail({ practiceName, content: msgContent, replyToEmail }),
+          ...(replyToEmail ? { replyTo: replyToEmail } : {}),
+          idempotencyKey: dedupeKey,
+        });
+        providerMessageId = deliveryResult.id;
+      } catch (error) {
+        deliveryResult = { success: false, error: error instanceof Error ? error.message : 'Message delivery failed' };
+      }
+
+      const deliveryStatus = deliveryResult.success ? ('sent' as const) : ('failed' as const);
+      const updatePatch: { status: 'sent' | 'failed'; providerMessageId?: string } = { status: deliveryStatus };
+      if (providerMessageId) updatePatch.providerMessageId = providerMessageId;
+
+      await ctx.db
+        .update(communications)
+        .set(updatePatch)
+        .where(and(eq(communications.id, comm.id), eq(communications.practiceId, ctx.practiceId), isNull(communications.deletedAt)));
+
+      if (!deliveryResult.success) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: deliveryResult.error ?? 'Message delivery failed' });
+      }
+
+      return { ok: true, communicationId: comm.id };
+    }),
+  parseAttachmentAsInvoice: inboxStaffProcedure
+    .input(
+      z.object({
+        communicationId: z.string().uuid(),
+        attachmentId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Load communication to get providerMessageId (email_id from Resend)
+      const [comm] = await ctx.db
+        .select({
+          id: communications.id,
+          practiceId: communications.practiceId,
+          providerMessageId: communications.providerMessageId,
+          channel: communications.channel,
+        })
+        .from(communications)
+        .where(
+          and(
+            eq(communications.id, input.communicationId),
+            eq(communications.practiceId, ctx.practiceId),
+            isNull(communications.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (!comm) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Communication not found" });
+      }
+      if (comm.channel !== "email") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only email attachments are supported" });
+      }
+      if (!comm.providerMessageId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No provider email ID for this communication" });
+      }
+
+      // 2. Fetch PDF binary from Resend receiving API
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Resend API key not configured" });
+
+      const attRes = await fetch(
+        `https://api.resend.com/emails/receiving/${comm.providerMessageId}/attachments/${input.attachmentId}`,
+        { headers: { Authorization: `Bearer ${apiKey}` } }
+      );
+      if (!attRes.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to fetch attachment from Resend: ${attRes.status}`,
+        });
+      }
+
+      const pdfBuffer = Buffer.from(await attRes.arrayBuffer());
+
+      // 3. Parse via AI + rule-based fallback
+      const extraction = await parsePdfInvoice(pdfBuffer);
+
+      return extraction;
+    }),
+
 });

@@ -29,6 +29,8 @@ import {
   ChevronDown,
   ChevronUp,
   Paperclip,
+  Package,
+  CheckCircle2,
 } from "lucide-react";
 import { cleanEmailBody } from "@/lib/inbox-cleaner";
 import { trpc } from "@/lib/trpc";
@@ -116,13 +118,28 @@ function MessageContentBubble({
   channel,
   direction,
   providerMessageId,
+  communicationId,
 }: {
   content: string | null;
   channel: string;
   direction: string;
   providerMessageId?: string | null;
+  communicationId?: string;
 }) {
   const [showHistory, setShowHistory] = useState(false);
+  const [importingAttId, setImportingAttId] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<null | { items: { name: string; quantity: number; unit: string; totalWithVat: number }[]; supplierName: string; invoiceNumber: string }>(null);
+
+  const parseAttachmentMutation = trpc.communications.parseAttachmentAsInvoice.useMutation({
+    onSuccess: (data) => {
+      setImportResult({ items: data.items, supplierName: data.supplierName, invoiceNumber: data.invoiceNumber });
+      setImportingAttId(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Parsovanie faktúry zlyhalo");
+      setImportingAttId(null);
+    },
+  });
   const attMatch = content ? content.match(/<!--INBOX_ATTACHMENTS:([\s\S]*?)-->/) : null;
   let attachments: Array<{ id: string; filename?: string; content_type?: string }> = [];
   if (attMatch && attMatch[1]) {
@@ -151,21 +168,64 @@ function MessageContentBubble({
           </div>
           <div className="grid gap-1.5">
             {attachments.map((att) => (
-              <a
-                key={att.id}
-                href={"/api/inbox/attachments/" + providerMessageId + "/" + att.id}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-md border border-border bg-background/80 hover:bg-background px-2.5 py-1.5 transition-colors shadow-sm text-foreground"
-              >
-                <FileText className="h-4 w-4 text-primary shrink-0" />
-                <span className="truncate text-xs font-medium">
-                  {att.filename || "Príloha"}
-                </span>
-                <Download className="h-3.5 w-3.5 ml-auto text-muted-foreground shrink-0" />
-              </a>
+              <div key={att.id} className="flex items-center gap-1.5">
+                <a
+                  href={"/api/inbox/attachments/" + providerMessageId + "/" + att.id}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1 items-center gap-2 rounded-md border border-border bg-background/80 hover:bg-background px-2.5 py-1.5 transition-colors shadow-sm text-foreground min-w-0"
+                >
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  <span className="truncate text-xs font-medium">
+                    {att.filename || "Príloha"}
+                  </span>
+                  <Download className="h-3.5 w-3.5 ml-auto text-muted-foreground shrink-0" />
+                </a>
+                {communicationId && att.filename?.toLowerCase().endsWith(".pdf") ? (
+                  <button
+                    type="button"
+                    title="Importovať do skladu"
+                    disabled={importingAttId === att.id || parseAttachmentMutation.isPending}
+                    onClick={() => {
+                      setImportingAttId(att.id);
+                      parseAttachmentMutation.mutate({ communicationId, attachmentId: att.id });
+                    }}
+                    className="shrink-0 flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2 py-1.5 text-[11px] font-medium text-amber-800 transition-colors disabled:opacity-50"
+                  >
+                    {importingAttId === att.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Package className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden sm:inline">Sklad</span>
+                  </button>
+                ) : null}
+              </div>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {importResult ? (
+        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-800">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>{importResult.supplierName} — {importResult.invoiceNumber}</span>
+            </div>
+            <button type="button" onClick={() => setImportResult(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="space-y-0.5">
+            {importResult.items.map((it, idx) => (
+              <div key={idx} className="flex justify-between text-emerald-900">
+                <span className="truncate">{it.name}</span>
+                <span className="shrink-0 ml-2 font-mono">{it.quantity} {it.unit} — {it.totalWithVat.toFixed(2)} €</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-emerald-600">Pokračuj cez <strong>Sklad → Import dodacieho listu</strong> pre finálne potvrdenie.</p>
         </div>
       ) : null}
 
@@ -1285,6 +1345,7 @@ export function InboxView() {
                           channel={msg.channel}
                           direction={msg.direction}
                           providerMessageId={msg.providerMessageId}
+                          communicationId={msg.id}
                         />
 
                         <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
@@ -1582,6 +1643,7 @@ export function InboxView() {
                             channel={msg.channel}
                             direction={msg.direction}
                             providerMessageId={msg.providerMessageId}
+                            communicationId={msg.id}
                           />
 
                           <div
