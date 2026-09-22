@@ -19,6 +19,7 @@ export type WholesalerType =
   | "SG_VET"
   | "SANVET"
   | "PHRAMED"
+  | "PHARMACOPOLA"
   | "GENERIC_CSV";
 
 export interface WholesalerDeliveryItem {
@@ -109,13 +110,15 @@ export function parseWholesalerDeliveryNote(options: ParseDeliveryNoteOptions): 
       return parseSanvet(lines);
     case "PHRAMED":
       return parsePhramed(lines);
+    case "PHARMACOPOLA":
+      return parsePharmacopolaText(lines);
     case "GENERIC_CSV":
     default:
       return parseGenericCsv(lines);
   }
 }
 
-function detectWholesaler(content: string, filename?: string): WholesalerType {
+export function detectWholesaler(content: string, filename?: string): WholesalerType {
   const upper = content.toUpperCase();
   const fnUpper = (filename || "").toUpperCase();
 
@@ -178,6 +181,13 @@ function detectWholesaler(content: string, filename?: string): WholesalerType {
     fnUpper.includes("PHARMED")
   ) {
     return "PHRAMED";
+  }
+  if (
+    upper.includes("PHARMACOPOLA") ||
+    fnUpper.includes("PHARMACOPOLA") ||
+    /^ZF[0-9]/.test(fnUpper)
+  ) {
+    return "PHARMACOPOLA";
   }
   return "GENERIC_CSV";
 }
@@ -601,6 +611,94 @@ function parseSanvet(lines: string[]): WholesalerDeliveryNote {
 
 function parsePhramed(lines: string[]): WholesalerDeliveryNote {
   return parseStandardDeliveryLines(lines, "PHRAMED", "PHRAMED s.r.o.", "PHM");
+}
+/**
+ * PHARMACOPOLA s.r.o. — PDF invoice text parser.
+ * Handles ZF-prefixed invoices. Product lines start with OBC code.
+ * Format: "OBC018394 Product Name" followed by "qty MJ unitPrice_bezDPH unitPrice_sDPH DPH% zl% zl% bezDPH sDPH"
+ */
+function parsePharmacopolaText(lines: string[]): WholesalerDeliveryNote {
+  const items: WholesalerDeliveryItem[] = [];
+  let docNumber = `ZF-${Date.now().toString().slice(-6)}`;
+  let issueDate = new Date().toISOString().slice(0, 10);
+
+  for (const line of lines) {
+    const invMatch = line.match(/Faktúra\s+(ZF\d+)/i);
+    if (invMatch) docNumber = invMatch[1];
+    if (line.toLowerCase().includes("dátum dokladu")) {
+      const dateMatch = line.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+      if (dateMatch) {
+        const [, d, m, y] = dateMatch;
+        issueDate = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const obcMatch = line.match(/^(OBC\d+)\s+(.+)/);
+    if (!obcMatch) continue;
+
+    const sku = obcMatch[1];
+    const name = obcMatch[2].trim();
+    if (!name) continue;
+
+    // Find the quantity data line after the OBC line
+    let qtyLine = "";
+    for (let j = i + 1; j <= Math.min(i + 4, lines.length - 1); j++) {
+      if (/^\d+\s+(Kus|ks|bal|ml|g|l|kg)\s+/i.test(lines[j])) {
+        qtyLine = lines[j];
+        break;
+      }
+    }
+    if (!qtyLine) continue;
+
+    const parts = qtyLine.trim().split(/\s+/);
+    const qty = parseSlovakNumber(parts[0]) || 1;
+    const unit = parts[1] || "ks";
+    const unitPriceWithoutVat = parseSlovakNumber(parts[2]);
+    const vatRate = parts[4] ? parseInt(parts[4], 10) || 5 : 5;
+
+    // Last two numeric tokens = totalBezDPH, totalSDPH
+    const numericParts = parts.filter((p) => /^[\d,\.]+$/.test(p)).map(parseSlovakNumber);
+    let totalWithoutVat: number;
+    let totalWithVat: number;
+    if (numericParts.length >= 2) {
+      totalWithVat = numericParts[numericParts.length - 1];
+      totalWithoutVat = numericParts[numericParts.length - 2];
+    } else {
+      totalWithoutVat = Math.round(qty * unitPriceWithoutVat * 100) / 100;
+      totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
+    }
+
+    items.push({
+      sku,
+      name,
+      batchNumber: "BEZ-SARZE",
+      quantity: qty,
+      unit,
+      unitPriceWithoutVat,
+      vatRate,
+      totalWithoutVat,
+      totalWithVat,
+      isControlledSubstance: isControlledSubstanceName(name),
+    });
+  }
+
+  const sumWithoutVat = items.reduce((acc, it) => acc + it.totalWithoutVat, 0);
+  const sumWithVat = items.reduce((acc, it) => acc + it.totalWithVat, 0);
+
+  return {
+    wholesaler: "PHARMACOPOLA",
+    deliveryNoteNumber: docNumber,
+    issueDate,
+    supplierName: "PHARMACOPOLA s.r.o.",
+    supplierIco: "31570895",
+    items,
+    totalWithoutVat: Math.round(sumWithoutVat * 100) / 100,
+    totalVat: Math.round((sumWithVat - sumWithoutVat) * 100) / 100,
+    totalWithVat: Math.round(sumWithVat * 100) / 100,
+  };
 }
 
 function parseGenericCsv(lines: string[]): WholesalerDeliveryNote {

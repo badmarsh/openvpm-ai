@@ -2135,7 +2135,33 @@
     "aiCreateClientTitle": "Create new client profile:",
     "btnCreateAndLink": "Create & Link",
     "aiMatchedCandidateTitle": "Or link to matched client:",
+<<<<<<< HEAD
     "toastClientCreatedAndLinked": "Client created and messages linked"
+=======
+    "aiSuggestionMatch": "Matched client found",
+    "aiSuggestionNew": "Create client",
+    "toastClientCreatedAndLinked": "Client created and messages linked",
+    "aiAssistantSubtitleMatch": "Found a matching client",
+    "aiAssistantSubtitleNew": "Suggests: new client profile",
+    "aiConfidenceBadgeHigh": "High match",
+    "aiConfidenceBadgeLow": "New sender",
+    "aiExtractedData": "Extracted data",
+    "aiFieldFirstName": "First name",
+    "aiFieldLastName": "Last name",
+    "aiFieldEmail": "Email",
+    "aiOrLabel": "or",
+    "btnMatch": "Link",
+    "toastUnmatchedReplySent": "Reply sent",
+    "replyUnmatchedTitle": "Reply by email",
+    "replySubjectPlaceholder": "Subject",
+    "replyContentPlaceholder": "Type your reply...",
+    "btnSendReply": "Send reply",
+    "btnImportToStock": "Stock",
+    "importInvoiceTitle": "Import invoice to stock",
+    "importInvoiceSuccess": "Invoice parsed",
+    "importInvoiceHint": "Continue via Stock → Import delivery note to confirm.",
+    "importInvoiceError": "Invoice parsing failed"
+>>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
   },
   "inventory": {
     "categories": {
@@ -3317,7 +3343,8 @@
       "copyMicrochip": "Click to copy microchip",
       "callClient": "Call client",
       "uploadPhoto": "Upload photo",
-      "tryPhotoAgain": "Try photo again"
+      "tryPhotoAgain": "Try photo again",
+      "chipLabel": "Chip:"
     },
     "vitals": {
       "title": "Vitals",
@@ -3375,7 +3402,17 @@
       "saving": "Saving…",
       "saveCorrection": "Save correction",
       "cancel": "Cancel",
+<<<<<<< HEAD
       "toastSuccess": "Weight corrected; original preserved in the audit log"
+=======
+      "toastSuccess": "Weight corrected; original preserved in the audit log",
+      "reviewVitals": "Review vitals",
+      "toastRecorded": "Weight recorded"
+    },
+    "stickyRail": {
+      "allergies": "Allergies",
+      "weight": "Weight"
+>>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
     },
     "vaccinations": {
       "title": "Vaccinations",
@@ -3621,13 +3658,27 @@
     "detail": {
       "photoUpdated": "Patient photo updated",
       "summaryDownloaded": "Medical summary downloaded",
-      "chartSectionsAria": "Patient chart sections"
+      "chartSectionsAria": "Patient chart sections",
+      "summaryError": "Failed to generate medical summary"
     },
     "list": {
       "openPatientAria": "Open patient {name}"
     },
     "age_months": "{count} mo.",
-    "age_years": "{count} yr."
+    "age_years": "{count} yr.",
+    "allergy": {
+      "toastRecorded": "Allergy recorded",
+      "correctionRecorded": "Allergy correction recorded"
+    },
+    "photo": {
+      "uploadFailed": "Upload failed",
+      "uploadError": "Failed to upload photo"
+    },
+    "fieldVisit": {
+      "started": "Field visit started",
+      "resumed": "Open field visit resumed",
+      "addLocationFirst": "Add an active location before starting a field visit."
+    }
   },
   "recalls": {
     "checkingAccess": "Checking recall access...",

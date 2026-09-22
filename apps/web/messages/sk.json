@@ -2101,7 +2101,7 @@
     "noContactInfo": "Žiadne kontaktné údaje",
     "noClientsFound": "Nenašli sa žiadni klienti",
     "typeToSearchClient": "Píšte pre vyhľadanie klienta",
-    "unmatchedInboundTitle": "Nepriradená prichádzajúca správa",
+    "unmatchedInboundTitle": "Nepriradená prichodzíca správa",
     "needsClientBadge": "Chýba klient",
     "linkToClientTitle": "Prepojiť s klientom",
     "linkToClientDesc": "Hľadajte podľa mena, emailu alebo telefónu.",
@@ -2129,12 +2129,41 @@
     "channelWhatsapp": "WhatsApp",
     "optionWhatsapp": "WhatsApp",
     "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky.",
-    "aiAssistantTitle": "AI Asistent: Návrh akcie",
+    "aiAssistantTitle": "AI Asistent",
     "badgeNewSender": "Nový odosielateľ",
+<<<<<<< HEAD
     "aiCreateClientTitle": "Založiť nový profil klienta:",
     "btnCreateAndLink": "Založiť & Prepojiť",
     "aiMatchedCandidateTitle": "Alebo priradiť k nájdenému klientovi:",
     "toastClientCreatedAndLinked": "Klient bol vytvorený a správy prepojené"
+=======
+    "aiCreateClientTitle": "Vytvorit nový profil",
+    "btnCreateAndLink": "Vytvorit a prepojiť",
+    "aiMatchedCandidateTitle": "Priradiť k nájdenému klientovi",
+    "aiSuggestionMatch": "Nájdený zhodný klient",
+    "aiSuggestionNew": "Vytvoriť klienta",
+    "toastClientCreatedAndLinked": "Klient bol vytvorený a správy prepojené",
+    "aiAssistantSubtitleMatch": "Nájdený zodpovedajúci klient",
+    "aiAssistantSubtitleNew": "Navrhuje: nový klientsky profil",
+    "aiConfidenceBadgeHigh": "Vysoká zhoda",
+    "aiConfidenceBadgeLow": "Nový odosielateľ",
+    "aiExtractedData": "Vyextrahované údaje",
+    "aiFieldFirstName": "Meno",
+    "aiFieldLastName": "Priezvisko",
+    "aiFieldEmail": "Email",
+    "aiOrLabel": "alebo",
+    "btnMatch": "Spárovať",
+    "toastUnmatchedReplySent": "Odpoveď odoslaná",
+    "replyUnmatchedTitle": "Odpovedať emailom",
+    "replySubjectPlaceholder": "Predmet",
+    "replyContentPlaceholder": "Napíšte odpoveď...",
+    "btnSendReply": "Odoslať odpoveď",
+    "btnImportToStock": "Sklad",
+    "importInvoiceTitle": "Import faktúry do skladu",
+    "importInvoiceSuccess": "Faktúra naparsovaná",
+    "importInvoiceHint": "Pokračuj cez Sklad → Import dodacieho listu pre finálne potvrdenie.",
+    "importInvoiceError": "Parsovanie faktúry zlyhalo"
+>>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
   },
   "inventory": {
     "categories": {
@@ -3316,7 +3345,8 @@
       "copyMicrochip": "Kliknutím skopírujete číslo čipu",
       "callClient": "Zavolať majiteľovi",
       "uploadPhoto": "Nahrať fotografiu",
-      "tryPhotoAgain": "Skúsiť fotografiu znova"
+      "tryPhotoAgain": "Skúsiť fotografiu znova",
+      "chipLabel": "Čip:"
     },
     "vitals": {
       "title": "Vitálne funkcie",
@@ -3374,7 +3404,17 @@
       "saving": "Ukladá sa…",
       "saveCorrection": "Uložiť opravu",
       "cancel": "Zrušiť",
+<<<<<<< HEAD
       "toastSuccess": "Hmotnosť bola opravená; originál je zachovaný v auditnom zázname"
+=======
+      "toastSuccess": "Hmotnosť bola opravená; originál je zachovaný v auditnom zázname",
+      "reviewVitals": "Zobraziť vitálne funkcie",
+      "toastRecorded": "Hmotnosť zaznamenaná"
+    },
+    "stickyRail": {
+      "allergies": "Alergie",
+      "weight": "Hmotnosť"
+>>>>>>> 6c1b5c2b (feat(inbox): PDF invoice parsing + PHARMACOPOLA wholesaler + import-to-stock button)
     },
     "vaccinations": {
       "title": "Vakcinácie a odčervenia",
@@ -3620,13 +3660,27 @@
     "detail": {
       "photoUpdated": "Fotografia pacienta aktualizovaná",
       "summaryDownloaded": "Zdravotný súhrn stiahnutý",
-      "chartSectionsAria": "Sekcie karty pacienta"
+      "chartSectionsAria": "Sekcie karty pacienta",
+      "summaryError": "Nepodarilo sa vygenerovať zdravotný súhrn"
     },
     "list": {
       "openPatientAria": "Otvoriť pacienta {name}"
     },
     "age_months": "{count} mes.",
-    "age_years": "{count} r."
+    "age_years": "{count} r.",
+    "allergy": {
+      "toastRecorded": "Alergia zaznamenaná",
+      "correctionRecorded": "Korekcia alergie zaznamenaná"
+    },
+    "photo": {
+      "uploadFailed": "Nahrávanie zlyhalo",
+      "uploadError": "Nepodarilo sa nahrať fotografiu"
+    },
+    "fieldVisit": {
+      "started": "Terénna návšteva spustená",
+      "resumed": "Otvorená terénna návšteva obnovená",
+      "addLocationFirst": "Pred začatím terénnej návštevy pridajte aktívnu lokalitu."
+    }
   },
   "recalls": {
     "checkingAccess": "Overuje sa prístup k pripomienkam...",
