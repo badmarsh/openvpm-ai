@@ -60,7 +60,7 @@ export async function transcribeAudio(fileKey: string): Promise<string> {
     // by sending the multimodal audio data URL directly to chat completions.
     if (hasInferenceProxyConfiguration()) {
       const baseURL = inferenceProxyBaseUrl()!;
-      const apiKey = "at-proxy";
+      const apiKey = process.env.AT_PROXY_KEY ?? "at-proxy";
       const modelCandidates = [
         "gemini-3.8-flash",
         "gemini-2.5-flash",
@@ -165,7 +165,7 @@ export async function transcribeAudioDirect(
   try {
     if (hasInferenceProxyConfiguration()) {
       const baseURL = inferenceProxyBaseUrl()!;
-      const apiKey = "at-proxy";
+      const apiKey = process.env.AT_PROXY_KEY ?? "at-proxy";
       const modelCandidates = [
         "gemini-3.8-flash",
         "gemini-2.5-flash",
