@@ -40,6 +40,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# pdfjs-dist 5.x fake-worker requires pdf.worker.mjs alongside the server chunks.
+# Copy the minified worker from node_modules to the expected location in standalone.
+COPY --from=builder /app/node_modules/.pnpm/pdfjs-dist@5.4.296/node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs ./apps/web/.next/server/chunks/pdf.worker.mjs
 
 USER nextjs
 EXPOSE 3000
