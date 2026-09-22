@@ -1,4 +1,13 @@
-import { OUTBOUND_EMAIL_ERROR_MESSAGES } from "@/lib/outbound-email-security";
+// Re-declare constants here to keep this module client-safe (no node:crypto dependency).
+// Keep in sync with OUTBOUND_EMAIL_ERROR_MESSAGES in outbound-email-security.ts.
+const ERROR_MESSAGES = {
+  FREE_FORM_DISABLED:
+    "Free-form email sending from the inbox is disabled for account safety.",
+  VERIFY_EMAIL: "Verify your email address before sending external email.",
+  TEMPORARILY_UNAVAILABLE: "Email sending is temporarily unavailable.",
+  RATE_LIMITED:
+    "Email sending is temporarily limited for account safety. Try again after the limit resets or contact OpenVPM support.",
+} as const;
 
 type TranslateFn = (
   key: string,
@@ -20,28 +29,28 @@ export function translateOutboundEmailError(
 
   const trimmed = message.trim();
 
-  if (trimmed === OUTBOUND_EMAIL_ERROR_MESSAGES.FREE_FORM_DISABLED) {
+  if (trimmed === ERROR_MESSAGES.FREE_FORM_DISABLED) {
     return t(
       "inbox.errorFreeFormEmailDisabled",
       "Free-form email sending from the inbox is disabled for account safety."
     );
   }
 
-  if (trimmed === OUTBOUND_EMAIL_ERROR_MESSAGES.VERIFY_EMAIL) {
+  if (trimmed === ERROR_MESSAGES.VERIFY_EMAIL) {
     return t(
       "inbox.errorVerifyEmailBeforeSending",
       "Verify your email address before sending external email."
     );
   }
 
-  if (trimmed === OUTBOUND_EMAIL_ERROR_MESSAGES.TEMPORARILY_UNAVAILABLE) {
+  if (trimmed === ERROR_MESSAGES.TEMPORARILY_UNAVAILABLE) {
     return t(
       "inbox.errorEmailTemporarilyUnavailable",
       "Email sending is temporarily unavailable."
     );
   }
 
-  if (trimmed === OUTBOUND_EMAIL_ERROR_MESSAGES.RATE_LIMITED) {
+  if (trimmed === ERROR_MESSAGES.RATE_LIMITED) {
     return t(
       "inbox.errorEmailTemporarilyLimited",
       "Email sending is temporarily limited for account safety. Try again after the limit resets or contact OpenVPM support."
