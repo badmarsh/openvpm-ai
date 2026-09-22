@@ -138,6 +138,9 @@ import {
   DocumentsTab,
   InvoicesTab,
   AllergyForm,
+  PrescriptionsTab,
+  LabResultsTab,
+  ProceduresTab,
 } from "@/components/patients/sections";
 import { PatientStickyRail } from "@/components/patients/patient-sticky-rail";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -232,6 +235,9 @@ function calculateAge(
 type Tab =
   | "overview"
   | "records"
+  | "prescriptions"
+  | "labResults"
+  | "procedures"
   | "documents"
   | "appointments"
   | "weight"
@@ -357,7 +363,7 @@ export default function PatientDetailPage() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTabState] = useState<Tab>(() => {
     const urlTab = searchParams.get("tab");
-    if (urlTab && ["overview","records","documents","appointments","weight","vitals","vaccinations","invoices"].includes(urlTab)) {
+    if (urlTab && ["overview","records","prescriptions","labResults","procedures","documents","appointments","weight","vitals","vaccinations","invoices"].includes(urlTab)) {
       return urlTab as Tab;
     }
     return "overview";
@@ -380,6 +386,9 @@ export default function PatientDetailPage() {
     () => [
       { id: "overview", label: t("patients.tabs.overview", "Overview") },
       { id: "records", label: t("patients.tabs.records", "Medical Records") },
+      { id: "prescriptions", label: t("patients.tabs.prescriptions", "Prescriptions") },
+      { id: "labResults", label: t("patients.tabs.labResults", "Lab Results") },
+      { id: "procedures", label: t("patients.tabs.procedures", "Procedures") },
       { id: "documents", label: t("patients.tabs.documents", "Documents") },
       { id: "appointments", label: t("patients.tabs.appointments", "Appointments") },
       { id: "weight", label: t("patients.tabs.weight", "Weight History") },
@@ -2076,6 +2085,33 @@ export default function PatientDetailPage() {
             canCorrectClinicalRecords={canCorrectClinicalRecords}
             canSearchPatientHistory={canSearchPatientHistory}
           />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="prescriptions" className="mt-6">
+          <section aria-labelledby="patient-section-prescriptions">
+            <h2 id="patient-section-prescriptions" className="sr-only">
+              {t("patients.tabs.prescriptions", "Prescriptions")}
+            </h2>
+          <PrescriptionsTab patientId={patient.id} timeZone={recordsTimeZone} />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="labResults" className="mt-6">
+          <section aria-labelledby="patient-section-labResults">
+            <h2 id="patient-section-labResults" className="sr-only">
+              {t("patients.tabs.labResults", "Lab Results")}
+            </h2>
+          <LabResultsTab patientId={patient.id} timeZone={recordsTimeZone} />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="procedures" className="mt-6">
+          <section aria-labelledby="patient-section-procedures">
+            <h2 id="patient-section-procedures" className="sr-only">
+              {t("patients.tabs.procedures", "Procedures")}
+            </h2>
+          <ProceduresTab patientId={patient.id} timeZone={recordsTimeZone} />
           </section>
         </TabsContent>
 

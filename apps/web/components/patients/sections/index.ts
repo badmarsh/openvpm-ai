@@ -5,3 +5,6 @@ export { AppointmentsTab } from "./appointments-tab";
 export { DocumentsTab } from "./documents-tab";
 export { InvoicesTab } from "./invoices-tab";
 export { AllergyForm } from "./allergy-form";
+export { PrescriptionsTab } from "./prescriptions-tab";
+export { LabResultsTab } from "./lab-results-tab";
+export { ProceduresTab } from "./procedures-tab";
