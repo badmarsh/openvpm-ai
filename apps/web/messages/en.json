@@ -660,7 +660,7 @@
     }
   },
   "automations": {
-    "pageTitle": "CRM Automations",
+    "pageTitle": "Automations",
     "pageSubtitle": "Rules for automated client communication",
     "statsTotal": "Total rules",
     "statsActive": "Active",

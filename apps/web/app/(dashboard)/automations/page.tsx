@@ -25,7 +25,7 @@ function AutomationsContent() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title={t("automations.pageTitle", "Automatizácie a pravidlá kliniky")}
+        title={t("automations.pageTitle", "Automatizácie")}
         subtitle={t(
           "automations.pageSubtitle",
           "Manažment klientskych marketingových automatizácií, interného Klinického strážcu a zákonných lehôt.",
