@@ -222,14 +222,19 @@ export async function POST(request: Request) {
       if (fullEmail?.data) {
         emailBody = fullEmail.data.text || "";
       }
+      // SDK wraps response as { data: body }; check both .data.attachments and event fallback
+      const sdkAttachments =
+        (fullEmail?.data as { attachments?: unknown[] } | null)?.attachments;
       const attachments =
-        fullEmail?.data?.attachments && fullEmail.data.attachments.length > 0
-          ? fullEmail.data.attachments
+        Array.isArray(sdkAttachments) && sdkAttachments.length > 0
+          ? sdkAttachments
           : Array.isArray(event.data.attachments) && event.data.attachments.length > 0
           ? event.data.attachments
           : [];
       if (attachments.length > 0) {
         emailAttachmentsMeta = "\n\n<!--INBOX_ATTACHMENTS:" + JSON.stringify(attachments) + "-->";
+      } else {
+        console.warn("[resend-webhook] email.received has no attachments", providerMessageId);
       }
     } catch (err) {
       console.warn("[resend-webhook] Could not fetch full email body:", err);
