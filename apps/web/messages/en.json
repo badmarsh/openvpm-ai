@@ -2134,8 +2134,21 @@
     "aiCreateClientTitle": "Create new client profile:",
     "btnCreateAndLink": "Create & Link",
     "aiMatchedCandidateTitle": "Or link to matched client:",
-    "toastClientCreatedAndLinked": "Client created and messages linked"
-  },
+    "toastClientCreatedAndLinked": "Client created and messages linked",    "aiAssistantSubtitleMatch": "Found a matching client",
+    "aiAssistantSubtitleNew": "Suggests: new client profile",
+    "aiConfidenceBadgeHigh": "High match",
+    "aiConfidenceBadgeLow": "New sender",
+    "aiExtractedData": "Extracted data",
+    "aiFieldFirstName": "First name",
+    "aiFieldLastName": "Last name",
+    "aiFieldEmail": "Email",
+    "aiOrLabel": "or",
+    "btnMatch": "Link",
+    "toastUnmatchedReplySent": "Reply sent",
+    "replyUnmatchedTitle": "Reply by email",
+    "replySubjectPlaceholder": "Subject",
+    "replyContentPlaceholder": "Type your reply...",
+    "btnSendReply": "Send reply"  },
   "inventory": {
     "categories": {
       "all": "All Categories",
