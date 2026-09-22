@@ -8,3 +8,5 @@ export { AllergyForm } from "./allergy-form";
 export { PrescriptionsTab } from "./prescriptions-tab";
 export { LabResultsTab } from "./lab-results-tab";
 export { ProceduresTab } from "./procedures-tab";
+export { OverviewTab } from "./overview-tab";
+export { WeightHistoryTab } from "./weight-history-tab";

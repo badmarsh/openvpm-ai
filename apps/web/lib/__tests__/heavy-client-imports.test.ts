@@ -24,10 +24,15 @@ const RECHARTS_PAGE_CHUNKS: Record<
     loading: "ReportChartChunkLoading",
     importCount: 2,
   },
-  "app/(dashboard)/patients/[id]/page.tsx": {
+  "components/patients/sections/vitals-tab.tsx": {
     chunk: "components/patients/patient-trend-charts",
     loading: "PatientChartChunkLoading",
     importCount: 2,
+  },
+  "components/patients/sections/weight-history-tab.tsx": {
+    chunk: "components/patients/patient-trend-charts",
+    loading: "PatientChartChunkLoading",
+    importCount: 1,
   },
   "app/(dashboard)/records/page.tsx": {
     chunk: "components/patients/patient-trend-charts",

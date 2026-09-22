@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { Fragment, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -34,7 +33,6 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
-import { WeightCorrectionDialog } from "@/components/records/weight-correction-dialog";
 import {
   dateTimeLocalInputUtcInstant,
   formatDateTimeLocalInputForTimeZone,
@@ -85,11 +83,9 @@ import {
   type PatientFileKind,
 } from "@/lib/records/file-kinds";
 import {
-  PATIENT_WEIGHT_MAX_KG,
-  PATIENT_WEIGHT_MIN_KG,
-  PATIENT_WEIGHT_STEP,
   isPatientWeightInputValid,
 } from "@/lib/records/patient-weight-policy";
+import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import {
   VITALS_BODY_CONDITION_MIN,
   VITALS_CAPILLARY_REFILL_MAX_SEC,
@@ -118,7 +114,6 @@ import {
   isVitalsOptionalTextInputValid,
   isVitalsOptionalWeightInputValid,
 } from "@/lib/records/vitals-policy";
-import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { formatAppointmentStatus } from "@/lib/scheduling/appointment-status";
 import {
   celsiusToFahrenheit,
@@ -141,39 +136,13 @@ import {
   PrescriptionsTab,
   LabResultsTab,
   ProceduresTab,
+  OverviewTab,
+  WeightHistoryTab,
 } from "@/components/patients/sections";
 import { PatientStickyRail } from "@/components/patients/patient-sticky-rail";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-function PatientChartChunkLoading() {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 h-5 w-32 animate-pulse rounded bg-muted" />
-      <div className="h-64 w-full animate-pulse rounded bg-muted" />
-    </div>
-  );
-}
 
-const WeightTrendChart = dynamic(
-  () =>
-    import("@/components/patients/patient-trend-charts").then(
-      (mod) => mod.WeightTrendChart,
-    ),
-  {
-    ssr: false,
-    loading: PatientChartChunkLoading,
-  },
-);
 
-const VitalsTrendChart = dynamic(
-  () =>
-    import("@/components/patients/patient-trend-charts").then(
-      (mod) => mod.VitalsTrendChart,
-    ),
-  {
-    ssr: false,
-    loading: PatientChartChunkLoading,
-  },
-);
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
 
@@ -507,7 +476,7 @@ export default function PatientDetailPage() {
           kind: "response",
           status: res.status,
         });
-        throw new Error(json.error ?? "Upload failed");
+        throw new Error(json.error ?? t("patients.photo.uploadFailed", "Upload failed"));
       }
 
       photoUploadAttemptRef.current = settleManagedUploadAttempt(attempt, {
@@ -522,7 +491,7 @@ export default function PatientDetailPage() {
         });
       }
       const message =
-        err instanceof Error ? err.message : "Failed to upload photo";
+        err instanceof Error ? err.message : t("patients.photo.uploadError", "Failed to upload photo");
       setPhotoUploadError(message);
       toast.error(message);
     } finally {
@@ -593,7 +562,7 @@ export default function PatientDetailPage() {
   );
   const addWeight = trpc.patients.addWeight.useMutation({
     onSuccess: () => {
-      toast.success("Weight recorded");
+      toast.success(t("patients.weight.toastRecorded", "Weight recorded"));
       setWeightMeasuredAt("");
       void refreshPatientDetail();
       setWeightKg("");
@@ -626,7 +595,7 @@ export default function PatientDetailPage() {
   const [allergyReaction, setAllergyReaction] = useState("");
   const addAllergy = trpc.patients.addAllergy.useMutation({
     onSuccess: () => {
-      toast.success("Allergy recorded");
+      toast.success(t("patients.allergy.toastRecorded", "Allergy recorded"));
       void refreshPatientDetail();
       setAllergyName("");
       setAllergyReaction("");
@@ -638,7 +607,7 @@ export default function PatientDetailPage() {
   const startFieldVisit = trpc.appointments.startFieldVisit.useMutation({
     onSuccess: ({ appointment, created }) => {
       toast.success(
-        created ? "Field visit started" : "Open field visit resumed",
+        created ? t("patients.fieldVisit.started", "Field visit started") : t("patients.fieldVisit.resumed", "Open field visit resumed"),
       );
       router.push(`/encounters/${appointment.id}`);
     },
@@ -646,7 +615,7 @@ export default function PatientDetailPage() {
   });
   const correctAllergy = trpc.patients.markAllergyEnteredInError.useMutation({
     onSuccess: () => {
-      toast.success("Allergy correction recorded");
+      toast.success(t("patients.allergy.correctionRecorded", "Allergy correction recorded"));
       void refreshPatientDetail();
     },
     onError: (err) => toast.error(err.message),
@@ -967,7 +936,7 @@ export default function PatientDetailPage() {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Failed to generate medical summary",
+          : t("patients.detail.summaryError", "Failed to generate medical summary"),
       );
     }
   }
@@ -1176,7 +1145,7 @@ export default function PatientDetailPage() {
                     className="group inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-muted/60 px-2.5 py-1 text-xs font-mono tabular-nums text-foreground/90 transition-all shadow-2xs hover:border-primary/40 cursor-pointer"
                     title={t("patients.profile.copyMicrochip", "Click to copy microchip")}
                   >
-                    <span className="text-[10px] uppercase font-sans text-muted-foreground font-semibold">Chip:</span>
+                    <span className="text-[10px] uppercase font-sans text-muted-foreground font-semibold">{t("patients.profile.chipLabel", "Chip:")}</span>
                     <span className="tracking-tight">{patient.microchipNumber}</span>
                     {copiedMicrochip ? (
                       <Check className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -1288,7 +1257,7 @@ export default function PatientDetailPage() {
                   fieldVisitLocations.length === 0) ? (
                   <p className="max-w-xs text-right text-xs text-destructive">
                     {fieldVisitLocationsQuery.error?.message ??
-                      "Add an active location before starting a field visit."}
+                      t("patients.fieldVisit.addLocationFirst", "Add an active location before starting a field visit.")}
                   </p>
                 ) : fieldVisitLocations.length > 1 &&
                   !selectedFieldVisitLocationId ? (
@@ -1742,104 +1711,10 @@ export default function PatientDetailPage() {
             <h2 id="patient-section-overview" className="sr-only">
               {t("patients.tabs.overview", "Overview")}
             </h2>
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h3 className="font-heading text-base font-semibold mb-4">
-              {t("patients.profile.basicInfo", "Basic Information")}
-            </h3>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.name", "Name")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">{patient.name}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.species", "Species")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {patient.species
-                    ? patient.species in PATIENT_SPECIES_EMOJI
-                      ? t(
-                          `patients.species_${patient.species}`,
-                          patient.species.charAt(0).toUpperCase() +
-                            patient.species.slice(1),
-                        )
-                      : patient.species.charAt(0).toUpperCase() +
-                        patient.species.slice(1)
-                    : "\u2014"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.breed", "Breed")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {patient.breed || "\u2014"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.sex", "Sex")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {formatSex(patient.sex, t)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.profile.dob", "Date of Birth")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {formatClinicalDate(patient.dob, recordsTimeZone, "\u2014")}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.profile.age", "Age")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {calculateAge(patient.dob, t)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.color", "Color")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {patient.color || "\u2014"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.microchipNumber", "Microchip Number")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {patient.microchipNumber || "\u2014"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.form.status", "Status")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium capitalize">
-                  {patient.status
-                    ? t(`patients.status_${patient.status}`, patient.status)
-                    : t("patients.status_active", "Active")}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t("patients.profile.owner", "Owner")}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium">
-                  {patient.clientFirstName
-                    ? `${patient.clientFirstName} ${patient.clientLastName}`
-                    : "\u2014"}
-                </dd>
-              </div>
-          </dl>
-         </div>
+          <OverviewTab
+            patient={patient}
+            recordsTimeZone={recordsTimeZone ?? ""}
+          />
           </section>
         </TabsContent>
 
@@ -1848,198 +1723,27 @@ export default function PatientDetailPage() {
             <h2 id="patient-section-weight" className="sr-only">
               {t("patients.tabs.weight", "Weight History")}
             </h2>
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              {t(
-                "patients.weight.includesVitalsHelp",
-                "Includes weights recorded here and in vitals. Review a vitals entry in the Vitals tab to correct its original clinical record.",
-              )}
-            </p>
-            {canManagePatientDetail && (
-              <form
-                onSubmit={handleRecordWeight}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="w-full sm:max-w-xs">
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                      {t(
-                        "patients.weight.weightUnit",
-                        `Weight (${chartMeasurementSystem === "us_customary" ? "lb" : "kg"})`,
-                        {
-                          unit:
-                            chartMeasurementSystem === "us_customary"
-                              ? "lb"
-                              : "kg",
-                        },
-                      )}
-                    </label>
-                    <input
-                      type="number"
-                      min={
-                        chartMeasurementSystem === "us_customary"
-                          ? roundClinicalMeasurement(
-                              kilogramsToPounds(PATIENT_WEIGHT_MIN_KG),
-                              3,
-                            )
-                          : PATIENT_WEIGHT_MIN_KG
-                      }
-                      max={
-                        chartMeasurementSystem === "us_customary"
-                          ? roundClinicalMeasurement(
-                              kilogramsToPounds(PATIENT_WEIGHT_MAX_KG),
-                              3,
-                            )
-                          : PATIENT_WEIGHT_MAX_KG
-                      }
-                      step={PATIENT_WEIGHT_STEP}
-                      value={weightKg}
-                      required
-                      aria-invalid={
-                        weightKg.trim().length > 0 &&
-                        !isPatientWeightInputValid(canonicalPatientWeight)
-                      }
-                      onChange={(event) => setWeightKg(event.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                  <div className="w-full sm:max-w-xs">
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      {t(
-                        "patients.weight.measuredAtLabel",
-                        `Measured at (${recordsSettingsTimeZone ?? "clinic timezone"})`,
-                        {
-                          timeZone:
-                            recordsSettingsTimeZone ??
-                            t(
-                              "patients.weight.loadingTimezone",
-                              "loading clinic timezone…",
-                            ),
-                        },
-                      )}
-                    </label>
-                    <DateTimePicker
-                      value={weightMeasuredAt}
-                      disabled={!recordsSettingsTimeZone}
-                      max={formatDateTimeLocalInputForTimeZone(
-                        new Date(),
-                        recordsSettingsTimeZone,
-                      )}
-                      onChange={(val) => setWeightMeasuredAt(val)}
-                    />
-                    <span className="mt-1 block text-[11px] text-muted-foreground font-normal">
-                      {t(
-                        "patients.weight.leaveBlankHelp",
-                        "Leave blank to record now; set a date for historical records.",
-                      )}
-                    </span>
-                  </div>
-                  <Button type="submit" disabled={!canSubmitWeight}>
-                    {addWeight.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-2 h-4 w-4" />
-                    )}
-                    {addWeight.isPending
-                      ? t("patients.actions.saving", "Saving...")
-                      : t("patients.weight.recordWeight", "Record weight")}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {patient.weights && patient.weights.length > 0 ? (
-              <>
-                {chartMeasurementSystem === "metric" ? (
-                  <WeightTrendChart data={weightTrend} />
-                ) : null}
-                <div className="overflow-x-auto rounded-lg border border-border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                          {t("patients.weight.date", "Date")}
-                        </th>
-                        <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                          {t(
-                            "patients.weight.weightCol",
-                            `Weight (${chartMeasurementSystem === "us_customary" ? "lb" : "kg"})`,
-                            {
-                              unit:
-                                chartMeasurementSystem === "us_customary"
-                                  ? "lb"
-                                  : "kg",
-                            },
-                          )}
-                        </th>
-                        <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                          {t("patients.weight.recordedBy", "Recorded By")}
-                        </th>
-                        {canCorrectClinicalRecords ? (
-                          <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                            {t("patients.weight.correction", "Correction")}
-                          </th>
-                        ) : null}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {patient.weights.map((weight) => (
-                        <tr
-                          key={weight.id}
-                          className="border-b border-border last:border-0"
-                        >
-                          <td className="px-4 py-3">
-                            {formatClinicalDate(
-                              weight.recordedAt,
-                              recordsTimeZone,
-                              "\u2014",
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-medium">
-                            {formatClinicalWeight(
-                              weight.weightKg,
-                              chartMeasurementSystem,
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {weight.recordedByName ?? "\u2014"}
-                          </td>
-                          {canCorrectClinicalRecords ? (
-                            <td className="px-4 py-3">
-                              {weight.source === "vitals" ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                onClick={() => setActiveTab("vitals")}
-                               >
-                                  {t("patients.weight.reviewVitals", "Review vitals")}
-                                </Button>
-                              ) : (
-                                <WeightCorrectionDialog
-                                  patientId={patient.id}
-                                  weight={weight}
-                                  measurementSystem={chartMeasurementSystem}
-                                  timeZone={recordsSettingsTimeZone}
-                                  onSaved={() => {
-                                    void refreshPatientDetail();
-                                  }}
-                                />
-                              )}
-                            </td>
-                          ) : null}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : (
-              <EmptyState
-                icon={Activity}
-                title={t("patients.weight.empty", "No weight records yet")}
-              />
-            )}
-          </div>
+          <WeightHistoryTab
+            weights={patient.weights}
+            patientId={patient.id}
+            canManagePatientDetail={canManagePatientDetail}
+            canCorrectClinicalRecords={canCorrectClinicalRecords}
+            weightKg={weightKg}
+            setWeightKg={setWeightKg}
+            weightMeasuredAt={weightMeasuredAt}
+            setWeightMeasuredAt={setWeightMeasuredAt}
+            onSubmitWeight={handleRecordWeight}
+            isAddingWeight={addWeight.isPending}
+            canSubmitWeight={canSubmitWeight}
+            weightTrend={weightTrend}
+            measurementSystem={chartMeasurementSystem}
+            recordsTimeZone={recordsTimeZone ?? ""}
+            recordsSettingsTimeZone={recordsSettingsTimeZone ?? undefined}
+            canonicalPatientWeight={Number(canonicalPatientWeight)}
+            maxMeasuredAt={formatDateTimeLocalInputForTimeZone(new Date(), recordsSettingsTimeZone)}
+            onRefresh={() => void refreshPatientDetail()}
+            onSwitchToVitals={() => setActiveTab("vitals")}
+          />
           </section>
         </TabsContent>
 
