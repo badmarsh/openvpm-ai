@@ -4021,7 +4021,8 @@
       "confirmCorrection": "Potvrdiť opravu",
       "retainedBanner": "Zadané omylom — ponechané v histórii karty",
       "correctedBy": "Opravil/a {name} · {date}"
-    }
+    },
+    "chartSectionsAria": "Sekcie zdravotnej dokumentácie"
   },
   "records.backToVisit": "Späť na návštevu",
   "records.changePatient": "Zmeniť pacienta",

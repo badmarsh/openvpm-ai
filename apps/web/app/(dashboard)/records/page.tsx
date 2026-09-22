@@ -52,6 +52,7 @@ import {
   type PrescriptionInventoryProduct,
 } from "@/components/records/prescription-inventory-product-picker";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   PATIENT_SEARCH_MAX_LENGTH,
@@ -1472,32 +1473,37 @@ function RecordsPageContent() {
 
       {/* Tabs */}
       {selectedPatient && (
-        <>
-          <div className="mt-6 max-w-full overflow-x-auto border-b border-border">
-            <div className="flex min-w-max gap-0">
+        <Tabs
+          value={currentTab}
+          onValueChange={(value) => {
+            setActiveTab(value as Tab);
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", value);
+            history.replaceState(null, "", url.toString());
+          }}
+          className="mt-6"
+        >
+          <div className="max-w-full overflow-x-auto border-b border-border">
+            <TabsList
+              aria-label={t("records.chartSectionsAria", "Sekcie zdravotnej dokumentácie")}
+              className="inline-flex h-auto w-auto min-w-max gap-0 rounded-none bg-transparent p-0"
+            >
               {visibleTabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
-                  <button
+                  <TabsTrigger
                     key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    value={tab.id}
                     className={cn(
-                      "relative flex min-h-11 shrink-0 items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                      currentTab === tab.id
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                      "relative flex min-h-11 shrink-0 items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium shadow-none transition-colors data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none",
                     )}
                   >
                     <Icon className="h-4 w-4" />
                     {tabLabels[tab.id]}
-                    {currentTab === tab.id && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                    )}
-                  </button>
+                  </TabsTrigger>
                 );
               })}
-            </div>
+            </TabsList>
           </div>
 
           {/* Tab Content */}
@@ -1519,7 +1525,9 @@ function RecordsPageContent() {
             ) : (
               <>
             {/* SOAP Notes Tab */}
-            {currentTab === "soap" && (
+            <TabsContent value="soap" className="mt-6">
+              <section aria-labelledby="records-section-soap">
+              <h2 id="records-section-soap" className="sr-only">{tabLabels.soap}</h2>
               <div>
                 {soapNotesError || soapNotesMissing ? (
                   <RecordsErrorPanel
@@ -1987,10 +1995,13 @@ function RecordsPageContent() {
                   </>
                 )}
               </div>
-            )}
+              </section>
+            </TabsContent>
 
             {/* Vaccinations Tab */}
-            {currentTab === "vaccinations" && (
+            <TabsContent value="vaccinations" className="mt-6">
+              <section aria-labelledby="records-section-vaccinations">
+              <h2 id="records-section-vaccinations" className="sr-only">{tabLabels.vaccinations}</h2>
               <div>
                 {canCreateVaccinations && (
                   <div className="mb-4 flex justify-end">
@@ -2216,10 +2227,13 @@ function RecordsPageContent() {
                   />
                 )}
               </div>
-            )}
+              </section>
+            </TabsContent>
 
             {/* Prescriptions Tab */}
-            {currentTab === "prescriptions" && (
+            <TabsContent value="prescriptions" className="mt-6">
+              <section aria-labelledby="records-section-prescriptions">
+              <h2 id="records-section-prescriptions" className="sr-only">{tabLabels.prescriptions}</h2>
               <div>
                 {canPrescribe && (
                   <div className="mb-4 flex justify-end">
@@ -2703,10 +2717,13 @@ function RecordsPageContent() {
                   <EmptyState icon={Pill} title={t("records.prescriptions.emptyTitle", "No prescriptions yet")} />
                 )}
               </div>
-            )}
+              </section>
+            </TabsContent>
 
             {/* Problems Tab */}
-            {currentTab === "problems" && (
+            <TabsContent value="problems" className="mt-6">
+              <section aria-labelledby="records-section-problems">
+              <h2 id="records-section-problems" className="sr-only">{tabLabels.problems}</h2>
               <div>
                 {canManageProblems && (
                   <div className="mb-4 flex justify-end">
@@ -2956,10 +2973,13 @@ function RecordsPageContent() {
                   />
                 )}
               </div>
-            )}
+              </section>
+            </TabsContent>
 
             {/* Lab Results Tab */}
-            {currentTab === "labResults" && (
+            <TabsContent value="labResults" className="mt-6">
+              <section aria-labelledby="records-section-labResults">
+              <h2 id="records-section-labResults" className="sr-only">{tabLabels.labResults}</h2>
               <div>
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
@@ -3613,10 +3633,13 @@ function RecordsPageContent() {
                   </>
                 )}
               </div>
-            )}
+              </section>
+            </TabsContent>
 
             {/* Procedures Tab */}
-            {currentTab === "procedures" && (
+            <TabsContent value="procedures" className="mt-6">
+              <section aria-labelledby="records-section-procedures">
+              <h2 id="records-section-procedures" className="sr-only">{tabLabels.procedures}</h2>
               <div>
                 {canCreateProcedures && (
                   <div className="flex justify-end mb-4">
@@ -3854,14 +3877,20 @@ function RecordsPageContent() {
                   <EmptyState icon={Scissors} title={t("records.procedures.emptyTitle", "No procedures recorded")} />
                 )}
               </div>
-            )}
+              </section>
+            </TabsContent>
 
             {/* Dental Chart Tab */}
-            {currentTab === "dental" && <DentalChartTab patientId={patientId} />}
+            <TabsContent value="dental" className="mt-6">
+              <section aria-labelledby="records-section-dental">
+              <h2 id="records-section-dental" className="sr-only">{tabLabels.dental}</h2>
+              <DentalChartTab patientId={patientId} />
+              </section>
+           </TabsContent>
               </>
             )}
           </div>
-        </>
+        </Tabs>
       )}
 
       {/* Prompt to search if no patient selected */}

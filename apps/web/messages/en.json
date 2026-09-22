@@ -4021,7 +4021,8 @@
       "confirmCorrection": "Confirm correction",
       "retainedBanner": "Entered in error — retained in chart history",
       "correctedBy": "Corrected by {name} · {date}"
-    }
+    },
+    "chartSectionsAria": "Medical records chart sections"
   },
   "records.backToVisit": "Back to visit",
   "records.changePatient": "Change Patient",
