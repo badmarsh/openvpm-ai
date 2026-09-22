@@ -33,6 +33,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cleanEmailBody } from "@/lib/inbox-cleaner";
+import { WholesalerImportDialog } from "@/components/inventory/wholesaler-import-dialog";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
@@ -130,11 +131,14 @@ function MessageContentBubble({
   const [showHistory, setShowHistory] = useState(false);
   const { t } = useI18n();
   const [importingAttId, setImportingAttId] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<null | { items: { name: string; quantity: number; unit: string; totalWithVat: number }[]; supplierName: string; invoiceNumber: string }>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [importPreloaded, setImportPreloaded] = useState<any | null>(null);
 
-  const parseAttachmentMutation = trpc.communications.parseAttachmentAsInvoice.useMutation({
+  const parseAttachmentMutation = trpc.extensions.wholesalerImport.parseAttachmentForImport.useMutation({
     onSuccess: (data) => {
-      setImportResult({ items: data.items, supplierName: data.supplierName, invoiceNumber: data.invoiceNumber });
+      setImportPreloaded(data);
+      setImportDialogOpen(true);
       setImportingAttId(null);
     },
     onError: (err) => {
@@ -208,31 +212,18 @@ function MessageContentBubble({
         </div>
       ) : null}
 
-      {importResult ? (
-        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 font-semibold text-emerald-800">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>{importResult.supplierName} — {importResult.invoiceNumber}</span>
-            </div>
-            <button type="button" onClick={() => setImportResult(null)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="space-y-0.5">
-            {importResult.items.map((it, idx) => (
-              <div key={idx} className="flex justify-between text-emerald-900">
-                <span className="truncate">{it.name}</span>
-                <span className="shrink-0 ml-2 font-mono">{it.quantity} {it.unit} — {it.totalWithVat.toFixed(2)} €</span>
-              </div>
-            ))}
-         </div>
-         <Link href="/inventory" className="flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors">
-            <Package className="h-3 w-3" />
-            {t("inbox.goToInventory", "Otvoriť Sklad & Lieky →")}
-          </Link>
-        </div>
-      ) : null}
+      <WholesalerImportDialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          setImportDialogOpen(open);
+          if (!open) setImportPreloaded(null);
+        }}
+        onSuccess={() => {
+          setImportDialogOpen(false);
+          setImportPreloaded(null);
+        }}
+        preloadedData={importPreloaded}
+      />
 
       {hasQuotedHistory ? (
         <div className="pt-1">

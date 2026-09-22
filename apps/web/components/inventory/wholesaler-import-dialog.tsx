@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
@@ -86,12 +86,16 @@ interface WholesalerImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** When provided the dialog opens directly on the review step. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  preloadedData?: { deliveryNote: any; items: any[] } | null;
 }
 
 export function WholesalerImportDialog({
   open,
   onOpenChange,
   onSuccess,
+  preloadedData,
 }: WholesalerImportDialogProps) {
   const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
@@ -105,6 +109,20 @@ export function WholesalerImportDialog({
   const [markup, setMarkup] = useState<string>("30");
   const [linkSearchIndex, setLinkSearchIndex] = useState<number | null>(null);
   const [linkSearchText, setLinkSearchText] = useState("");
+
+  // When preloadedData is provided and the dialog opens, skip to review step.
+  useEffect(() => {
+    if (!open || !preloadedData) return;
+    setParsedData(preloadedData);
+    const initial: Record<number, ItemReviewState> = {};
+    preloadedData.items.forEach((item: any, idx: number) => {
+      initial[idx] = {
+        action: item.isControlledSubstance ? "skip" : item.suggestedAction,
+      };
+    });
+    setItemStates(initial);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, preloadedData]);
 
   const parseMutation = trpc.extensions.wholesalerImport.parse.useMutation({
     onSuccess: (data) => {

@@ -3,6 +3,10 @@ import { eq, and, isNull, or, ilike, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
 import { products, extAutomationEvents } from "@openpims/db";
+import { communications } from "@openpims/db";
+import { parsePdfInvoice, type InvoiceParserAiConfig } from "@/lib/inventory/pdf-invoice-parser";
+import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 import {
   parseWholesalerDeliveryNote,
   parseDate,
@@ -302,6 +306,157 @@ export const wholesalerImportRouter = createRouter({
         items: itemsWithMatch,
       };
     }),
+  /**
+   * Parse a PDF invoice attachment from the inbox and return items in the
+   * format WholesalerImportDialog expects, with product matching applied.
+   */
+  parseAttachmentForImport: staffProcedure
+    .input(
+      z.object({
+        communicationId: z.string().uuid(),
+        attachmentId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [comm] = await ctx.db
+        .select({
+          id: communications.id,
+          providerMessageId: communications.providerMessageId,
+          channel: communications.channel,
+        })
+        .from(communications)
+        .where(
+          and(
+            eq(communications.id, input.communicationId),
+            eq(communications.practiceId, ctx.practiceId),
+            isNull(communications.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (!comm) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Communication not found" });
+      }
+      if (comm.channel !== "email") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Only email attachments are supported" });
+      }
+      if (!comm.providerMessageId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No provider email ID for this communication" });
+      }
+
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Resend API key not configured" });
+      }
+
+      const resendUrl =
+        "https://api.resend.com/emails/receiving/" +
+        comm.providerMessageId +
+        "/attachments/" +
+        input.attachmentId;
+      const attRes = await fetch(resendUrl, {
+        headers: { Authorization: "Bearer " + apiKey },
+      });
+      if (!attRes.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to fetch attachment from Resend: " + attRes.status,
+        });
+      }
+
+      const attData = (await attRes.json()) as { download_url?: string };
+      const downloadUrl = attData.download_url;
+      if (!downloadUrl) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Resend attachment download URL not found" });
+      }
+
+      const fileRes = await fetch(downloadUrl);
+      if (!fileRes.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to download PDF from Resend CDN: " + fileRes.status,
+        });
+      }
+
+      const pdfBuffer = Buffer.from(await fileRes.arrayBuffer());
+
+      let aiConfig: InvoiceParserAiConfig | undefined;
+      try {
+        const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "invoiceParser");
+        if (resolved.baseUrl && resolved.apiKey) {
+          aiConfig = { baseUrl: resolved.baseUrl, apiKey: resolved.apiKey, model: resolved.modelId };
+        }
+      } catch {
+        // rule-based fallback
+      }
+
+      const extraction = await parsePdfInvoice(pdfBuffer, aiConfig);
+
+      const existingProducts = await ctx.db
+        .select({
+          id: products.id,
+          name: products.name,
+          sku: products.sku,
+          stockQuantity: products.stockQuantity,
+          lotNumber: products.lotNumber,
+          expirationDate: products.expirationDate,
+          unitPrice: products.unitPrice,
+          costPrice: products.costPrice,
+        })
+        .from(products)
+        .where(and(eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt)));
+
+      const itemsWithMatch = extraction.items.map((item) => {
+        const matchBySku = existingProducts.find(
+          (p) => item.sku && p.sku && p.sku.toLowerCase() === item.sku.toLowerCase()
+        );
+        const matchByName = matchBySku
+          ? null
+          : existingProducts.find(
+              (p) =>
+                p.name.toLowerCase() === item.name.toLowerCase() ||
+                p.name.toLowerCase().includes(item.name.toLowerCase()) ||
+                item.name.toLowerCase().includes(p.name.toLowerCase())
+            );
+        const matched = matchBySku || matchByName;
+        const isControlled = isControlledSubstanceName(item.name);
+        const suggestedAction =
+          isControlled ? "skip" : matched ? "update_stock" : "create_product";
+
+        return {
+          ...item,
+          batchNumber: null,
+          isControlledSubstance: isControlled,
+          matchedProduct: matched
+            ? {
+                id: matched.id,
+                name: matched.name,
+                sku: matched.sku,
+                currentStock: matched.stockQuantity,
+                currentLot: matched.lotNumber,
+                currentExpiration: matched.expirationDate,
+                currentUnitPrice: matched.unitPrice,
+              }
+            : null,
+          suggestedAction,
+        };
+      });
+
+      return {
+        deliveryNote: {
+          wholesaler: extraction.supplierName || "AUTO",
+          deliveryNoteNumber: extraction.invoiceNumber,
+          issueDate: extraction.issueDate,
+          supplierName: extraction.supplierName,
+          supplierIco: null,
+          totalWithoutVat: extraction.totalWithoutVat || null,
+          totalVat: null,
+          totalWithVat: extraction.totalWithVat || null,
+        },
+        items: itemsWithMatch,
+      };
+    }),
+
 
   /**
    * Search the practice inventory catalog so staff can manually link an
@@ -515,4 +670,3 @@ export const wholesalerImportRouter = createRouter({
       };
     }),
 });
-
