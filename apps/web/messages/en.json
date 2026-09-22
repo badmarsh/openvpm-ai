@@ -2103,7 +2103,8 @@
     "typeToSearchClient": "Type to search for a client",
     "unmatchedInboundTitle": "Unmatched inbound message",
     "needsClientBadge": "Needs client",
-    "linkToClientTitle": "Link to client",
+
+"searchOtherClient": "Assign to another client...",    "linkToClientTitle": "Link to client",
     "linkToClientDesc": "Search by name, email, or phone.",
     "viewerCannotLink": "Viewer access cannot link inbox messages.",
     "btnUnassign": "Unassign",
