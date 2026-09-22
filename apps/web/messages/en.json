@@ -2102,8 +2102,8 @@
     "noClientsFound": "No clients found",
     "typeToSearchClient": "Type to search for a client",
     "unmatchedInboundTitle": "Unmatched inbound message",
-    "needsClientBadge": "Needs client",,
-    "searchOtherClient": "Assign to another client..."
+    "needsClientBadge": "Needs client",
+    "searchOtherClient": "Assign to another client...",
     "linkToClientTitle": "Link to client",
     "linkToClientDesc": "Search by name, email, or phone.",
     "viewerCannotLink": "Viewer access cannot link inbox messages.",

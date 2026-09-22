@@ -312,6 +312,11 @@ export function InboxView() {
   const [newMessageMode, setNewMessageMode] = useState(false);
   const [newClientSearch, setNewClientSearch] = useState("");
   const [smsBannerDismissed, setSmsBannerDismissed] = useState(false);
+  const [showClientSearch, setShowClientSearch] = useState(false);
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  const [dismissedAiSuggestion, setDismissedAiSuggestion] = useState(false);
+  const [replyUnmatchedContent, setReplyUnmatchedContent] = useState("");
+  const [replyUnmatchedSubject, setReplyUnmatchedSubject] = useState("");
   const trimmedNewClientSearch = newClientSearch.trim();
   const trimmedLinkClientSearch = linkClientSearch.trim();
   const canSearchNewClients = isClientSearchInputValid(newClientSearch);
@@ -427,6 +432,10 @@ export function InboxView() {
     }
   }, [inboxSettingsError, inboxSettingsMissing]);
 
+  const replyUnmatchedRequestRef = useRef<{
+    fingerprint: string;
+    requestId: string;
+  } | null>(null);
   const externalComposeRequest = useRef<{
     fingerprint: string;
     requestId: string;
@@ -552,6 +561,18 @@ export function InboxView() {
       },
     });
 
+  const replyToUnmatchedMutation =
+    trpc.communications.replyToUnmatched.useMutation({
+      onSuccess: () => {
+        setReplyUnmatchedContent("");
+        setReplyUnmatchedSubject("");
+        setShowReplyForm(false);
+        replyUnmatchedRequestRef.current = null;
+        utils.communications.listConversations.invalidate();
+      },
+      onError: (err) => { toast.error(err.message); },
+    });
+
   const conversationGroups = useMemo((): ConversationGroup[] => {
     if (!commsData?.items) return [];
     return (commsData.items as InboxListItem[]).map((item) => {
@@ -635,6 +656,8 @@ export function InboxView() {
   }
 
   function handleSelectUnmatched(item: InboxListItem, senderGroupKey?: string) {
+    setDismissedAiSuggestion(false);
+    setShowReplyForm(false);
     setSelectedClientId(null);
     setSelectedClientName("");
     setSelectedSenderKey(senderGroupKey || item.senderGroupKey || item.id);
@@ -1167,6 +1190,73 @@ export function InboxView() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* AI suggestion — yellow dismissible banner */}
+                {(() => {
+                  if (!aiActionData || dismissedAiSuggestion) return null;
+                  const suggested = aiActionData.suggestedNewClient;
+                  const candidates = aiActionData.matchedCandidates ?? [];
+                  const hasMatch = candidates.length > 0;
+                  const primary = hasMatch ? candidates[0] : null;
+                  const firstName = suggested?.firstName || "";
+                  const lastName = suggested?.lastName || "";
+                  const email = suggested?.email || "";
+                  const hasData = firstName || lastName || email;
+                  if (!hasData && !hasMatch) return null;
+                  const displayName = hasMatch
+                    ? (primary!.firstName + " " + primary!.lastName)
+                    : ([firstName, lastName].filter(Boolean).join(" ") || email);
+                  return (
+                    <div className="flex items-center gap-2 rounded-md border border-amber-200/80 bg-amber-50/80 dark:border-amber-800/30 dark:bg-amber-950/20 px-3 py-1.5 mb-1">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] text-amber-700 dark:text-amber-300 font-medium shrink-0">
+                          {hasMatch ? t("inbox.aiSuggestionMatch", "Nájdený klient:") : t("inbox.aiSuggestionNew", "Vytvoriť klienta:")}
+                        </span>
+                        <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-100 truncate">{displayName}</span>
+                        {hasMatch && primary?.email ? (
+                          <span className="text-[10px] text-amber-600/70 truncate hidden sm:inline">{primary.email}</span>
+                        ) : null}
+                      </div>
+                      {hasMatch ? (
+                        <Button
+                          size="sm"
+                          className="h-6 text-[11px] gap-1 px-2.5 shrink-0 bg-amber-600 hover:bg-amber-700 text-white border-0"
+                          disabled={linkCommunicationMutation.isPending}
+                          onClick={() => handleLinkUnmatchedClient(primary!)}
+                        >
+                          {linkCommunicationMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCheck className="h-3 w-3" />}
+                          {t("inbox.btnMatch", "Spárovať")}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="h-6 text-[11px] gap-1 px-2.5 shrink-0 bg-amber-600 hover:bg-amber-700 text-white border-0"
+                          disabled={createAndLinkMutation.isPending}
+                          onClick={() => {
+                            createAndLinkMutation.mutate({
+                              communicationId: selectedUnmatched!.id,
+                              senderGroupKey: selectedSenderKey || undefined,
+                              firstName: firstName || "Klient",
+                              lastName: lastName || "Novy",
+                              email: email,
+                            });
+                          }}
+                        >
+                          {createAndLinkMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
+                          {t("inbox.btnCreateAndLink", "Vytvoriť & Prepojiť")}
+                        </Button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDismissedAiSuggestion(true)}
+                        className="h-5 w-5 flex items-center justify-center rounded text-amber-500 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors shrink-0"
+                        aria-label="Zavrieť návrh"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })()}
                 {unmatchedThreadLoading && !unmatchedThread ? (
                   <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1214,192 +1304,162 @@ export function InboxView() {
                 )}
               </div>
 
-              <div className="border-t border-border p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-medium">
-                      {t("inbox.linkToClientTitle", "Link to client")}
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      {t(
-                        "inbox.linkToClientDesc",
-                        "Search by name, email, or phone.",
-                      )}
-                    </p>
-                  </div>
-                </div>
-
+              {/* ─── Bottom strip ─── */}
+              <div className="border-t border-border">
                 {canMutateInbox ? (
-                  <>
-                    {/* AI Assistant Suggestion Card */}
-                    {selectedUnmatched ? (
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3 mb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                            <Sparkles className="h-4 w-4" />
-                            <span>{t("inbox.aiAssistantTitle", "AI Asistent: Návrh akcie")}</span>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] bg-background">
-                            {t("inbox.badgeNewSender", "Nový odosielateľ")}
-                          </Badge>
+                  <div className="px-3 py-1">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                      onClick={() => {
+                        setShowClientSearch(v => !v);
+                        if (showClientSearch) setLinkClientSearch("");
+                      }}
+                    >
+                      <Search className="h-3 w-3 shrink-0" />
+                      <span>{t("inbox.searchOtherClient", "Priradiť inému klientovi...")}</span>
+                      {showClientSearch ? (
+                        <ChevronUp className="h-3 w-3 ml-auto shrink-0" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3 ml-auto shrink-0" />
+                      )}
+                    </button>
+                    {showClientSearch ? (
+                      <div className="pb-1 space-y-1.5">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder={t("inbox.searchClientsPlaceholder", "Search clients...")}
+                            value={linkClientSearch}
+                            maxLength={CLIENT_SEARCH_MAX_LENGTH}
+                            autoFocus
+                            onChange={(e) => setLinkClientSearch(e.target.value)}
+                            className="pl-8 h-8 text-xs"
+                          />
                         </div>
-
-                        {/* Quick Create Client */}
-                        {aiActionData?.suggestedNewClient ? (
-                          <div className="rounded-md border border-border bg-background p-2.5 space-y-2">
-                            <div className="text-xs font-medium text-foreground flex items-center gap-1">
-                              <UserPlus className="h-3.5 w-3.5 text-primary" />
-                              <span>{t("inbox.aiCreateClientTitle", "Založiť nový profil klienta:")}</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <Input
-                                placeholder="Meno"
-                                defaultValue={aiActionData.suggestedNewClient.firstName}
-                                id="new-client-fn"
-                                className="h-7 text-xs"
-                              />
-                              <Input
-                                placeholder="Priezvisko"
-                                defaultValue={aiActionData.suggestedNewClient.lastName}
-                                id="new-client-ln"
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div className="flex items-center justify-between gap-2 pt-1">
-                              <span className="text-[11px] text-muted-foreground truncate font-mono">
-                                {aiActionData.suggestedNewClient.email || selectedUnmatched.channel}
-                              </span>
-                              <Button
-                                size="sm"
-                                className="h-7 text-xs gap-1"
-                                disabled={createAndLinkMutation.isPending}
-                                onClick={() => {
-                                  const fn = (document.getElementById("new-client-fn") as HTMLInputElement)?.value;
-                                  const ln = (document.getElementById("new-client-ln") as HTMLInputElement)?.value;
-                                  createAndLinkMutation.mutate({
-                                    communicationId: selectedUnmatched.id,
-                                    senderGroupKey: selectedSenderKey || undefined,
-                                    firstName: fn || aiActionData.suggestedNewClient.firstName || "Klient",
-                                    lastName: ln || aiActionData.suggestedNewClient.lastName || "Nový",
-                                    email: aiActionData.suggestedNewClient.email || "",
-                                  });
-                                }}
-                              >
-                                <UserPlus className="h-3 w-3" />
-                                <span>{t("inbox.btnCreateAndLink", "Založiť & Prepojiť")}</span>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* Matched existing candidates */}
-                        {aiActionData?.matchedCandidates && aiActionData.matchedCandidates.length > 0 ? (
-                          <div className="space-y-1.5 pt-1">
-                            <div className="text-[11px] font-medium text-muted-foreground">
-                              {t("inbox.aiMatchedCandidateTitle", "Alebo priradiť k nájdenému klientovi:")}
-                            </div>
-                            {aiActionData.matchedCandidates.map((candidate) => (
-                              <button
-                                key={candidate.id}
-                                type="button"
-                                onClick={() => handleLinkUnmatchedClient(candidate)}
-                                disabled={linkCommunicationMutation.isPending}
-                                className="flex w-full items-center justify-between rounded border border-border bg-background p-2 text-left hover:bg-accent transition-colors text-xs"
-                              >
-                                <div>
-                                  <div className="font-medium text-foreground">
-                                    {candidate.firstName} {candidate.lastName}
+                        {canSearchLinkClients ? (
+                          <div className="max-h-36 overflow-y-auto rounded-md border border-border">
+                            {linkClientError || linkClientMissing ? (
+                              <div className="m-2 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+                                {linkClientError?.message ?? t("inbox.errorSearchingClients", "Unable to search clients. Please retry.")}
+                              </div>
+                            ) : linkClientLoading ? (
+                              <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t("inbox.searchingClients", "Searching clients...")}
+                              </div>
+                            ) : linkClientResults && linkClientResults.length > 0 ? (
+                              linkClientResults.map((client) => (
+                                <button
+                                  key={client.id}
+                                  onClick={() => handleLinkUnmatchedClient(client)}
+                                  disabled={linkCommunicationMutation.isPending}
+                                  className="flex w-full items-center justify-between gap-3 border-b border-border px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="truncate text-sm font-medium">{client.firstName} {client.lastName}</div>
+                                    <div className="truncate text-xs text-muted-foreground">{client.email || client.phone || t("inbox.noContactInfo", "No contact info")}</div>
                                   </div>
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {candidate.matchReason} {candidate.email ? "• " + candidate.email : ""}
-                                  </div>
-                                </div>
-                                <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                              </button>
-                            ))}
+                                  <UserPlus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                </button>
+                              ))
+                            ) : (
+                              <div className="py-4 text-center text-xs text-muted-foreground">
+                                {t("inbox.noClientsFound", "No clients found")}
+                              </div>
+                            )}
                           </div>
                         ) : null}
                       </div>
                     ) : null}
-
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder={t(
-                          "inbox.searchClientsPlaceholder",
-                          "Search clients...",
-                        )}
-                        value={linkClientSearch}
-                        maxLength={CLIENT_SEARCH_MAX_LENGTH}
-                        onChange={(e) => setLinkClientSearch(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-
-                    <div className="max-h-44 overflow-y-auto rounded-md border border-border">
-                      {linkClientError || linkClientMissing ? (
-                        <div className="m-2 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-                          {linkClientError?.message ??
-                            t(
-                              "inbox.errorSearchingClients",
-                              "Unable to search clients. Please retry.",
-                            )}
-                        </div>
-                      ) : linkClientLoading ? (
-                        <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {t(
-                            "inbox.searchingClients",
-                            "Searching clients...",
-                          )}
-                        </div>
-                      ) : linkClientResults && linkClientResults.length > 0 ? (
-                        linkClientResults.map((client) => (
-                          <button
-                            key={client.id}
-                            onClick={() => handleLinkUnmatchedClient(client)}
-                            disabled={linkCommunicationMutation.isPending}
-                            className="flex w-full items-center justify-between gap-3 border-b border-border px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium">
-                                {client.firstName} {client.lastName}
-                              </div>
-                              <div className="truncate text-xs text-muted-foreground">
-                                {client.email ||
-                                  client.phone ||
-                                  t("inbox.noContactInfo", "No contact info")}
-                              </div>
-                            </div>
-                            <UserPlus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          </button>
-                        ))
-                      ) : canSearchLinkClients ? (
-                        <EmptyState
-                          className="border-0 bg-transparent py-6"
-                          icon={Search}
-                          title={t("inbox.noClientsFound", "No clients found")}
-                        />
-                      ) : (
-                        <EmptyState
-                          className="border-0 bg-transparent py-6"
-                          icon={Search}
-                          title={t(
-                            "inbox.typeToSearchClient",
-                            "Type to search for a client",
-                          )} /* title="Type to search for a client" */
-                        />
-                      )}
-                    </div>
-                  </>
+                  </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {t(
-                      "inbox.viewerCannotLink",
-                      "Viewer access cannot link inbox messages.",
-                    )}
+                  <p className="px-3 py-2 text-xs text-muted-foreground">
+                    {t("inbox.viewerCannotLink", "Viewer access cannot link inbox messages.")}
                   </p>
                 )}
+
+                {/* Reply compose bar */}
+                {canMutateInbox && selectedUnmatched?.channel === "email" ? (() => {
+                  const fromHeader = selectedUnmatched.content?.match(/^From:[ 	]*(.+)$/m)?.[1]?.trim() ?? "";
+                  const bracketMatch = /<([^>]+)>/.exec(fromHeader);
+                  const toEmail = (bracketMatch ? bracketMatch[1] : fromHeader).trim();
+                  const originalSubject = selectedUnmatched.subject ?? "";
+                  const replySubjectDefault = originalSubject.startsWith("Re:") ? originalSubject : ("Re: " + originalSubject);
+                  if (!toEmail.includes("@")) return null;
+                  return (
+                    <div className="border-t border-border">
+                      {showReplyForm ? (
+                        <div className="px-3 pt-2 pb-2.5 space-y-1.5 bg-muted/20">
+                          <div className="flex items-center gap-1.5 justify-between">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Send className="h-3 w-3 text-primary shrink-0" />
+                              <span className="text-[11px] font-medium">{t("inbox.replyUnmatchedTitle", "Odpovedať")}</span>
+                              <span className="font-mono text-[10px] text-muted-foreground truncate">{toEmail}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { setShowReplyForm(false); setReplyUnmatchedContent(""); setReplyUnmatchedSubject(""); }}
+                              className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <Input
+                            value={replyUnmatchedSubject || replySubjectDefault}
+                            onChange={(e) => setReplyUnmatchedSubject(e.target.value)}
+                            placeholder={t("inbox.replySubjectPlaceholder", "Predmet")}
+                            className="h-7 text-xs"
+                            maxLength={200}
+                          />
+                          <textarea
+                            value={replyUnmatchedContent}
+                            onChange={(e) => setReplyUnmatchedContent(e.target.value)}
+                            placeholder={t("inbox.replyContentPlaceholder", "Napíšte odpoveď...")}
+                            className="w-full min-h-[52px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            maxLength={5000}
+                            autoFocus
+                          />
+                          <Button
+                            size="sm"
+                            className="w-full gap-1.5 h-7 text-xs"
+                            disabled={replyToUnmatchedMutation.isPending || replyUnmatchedContent.trim().length < 1}
+                            onClick={() => {
+                              const trimmedContent = replyUnmatchedContent.trim();
+                              if (!trimmedContent) return;
+                              const finalSubject = (replyUnmatchedSubject || replySubjectDefault).trim();
+                              const fingerprint = [toEmail, finalSubject, trimmedContent].join("|SEP|");
+                              if (replyUnmatchedRequestRef.current?.fingerprint !== fingerprint) {
+                                replyUnmatchedRequestRef.current = { fingerprint, requestId: crypto.randomUUID() };
+                              }
+                              replyToUnmatchedMutation.mutate({
+                                communicationId: selectedUnmatched.id,
+                                senderGroupKey: selectedUnmatched.senderGroupKey ?? undefined,
+                                toEmail,
+                                subject: finalSubject,
+                                content: trimmedContent,
+                                requestId: replyUnmatchedRequestRef.current!.requestId,
+                              });
+                            }}
+                          >
+                            {replyToUnmatchedMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                            {t("inbox.btnSendReply", "Odoslať odpoveď")}
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowReplyForm(true)}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
+                        >
+                          <Send className="h-3.5 w-3.5 shrink-0" />
+                          <span className="flex-1 text-left truncate text-muted-foreground/70">{t("inbox.replyContentPlaceholder", "Napíšte odpoveď...")}</span>
+                          <span className="font-mono text-[10px] shrink-0 text-muted-foreground/50">{toEmail}</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })() : null}
               </div>
             </div>
           ) : selectedClientId ? (
