@@ -140,7 +140,9 @@ type ClinicalDraftFields = {
 function providerDisplayName(name: string | null): string {
   const normalized = name?.trim();
   if (!normalized) return "Unassigned provider";
-  return /^(dr\.?|doctor)\s/i.test(normalized)
+  // Recognise Slovak / Czech professional prefixes (MVDr., MUDr., Ing., etc.)
+  // as well as English Dr. / Doctor so we never double-prefix.
+  return /^(dr\.?|doctor|[A-Z][A-Za-z]{1,5}r\.)\s/i.test(normalized)
     ? normalized
     : `Dr. ${normalized}`;
 }
@@ -235,7 +237,7 @@ function PatientAssignmentPanel({
   appointmentId: string;
   clientName: string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const utils = trpc.useUtils();
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<{
@@ -392,24 +394,16 @@ function PatientAssignmentPanel({
 function formatAppointmentTime(
   value: Date | string,
   timeZone?: string | null,
+  locale?: string,
 ): string {
+  const bcp47 = locale === "sk" ? "sk-SK" : "en-US";
+  const opts: Intl.DateTimeFormatOptions = locale === "sk"
+    ? { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timeZone ?? undefined }
+    : { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: timeZone ?? undefined };
   try {
-    return new Date(value).toLocaleString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: timeZone ?? undefined,
-    });
+    return new Date(value).toLocaleString(bcp47, opts);
   } catch {
-    return new Date(value).toLocaleString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    return new Date(value).toLocaleString(bcp47, { ...opts, timeZone: undefined });
   }
 }
 
@@ -431,21 +425,17 @@ function defaultPayLaterDueDate(timeZone?: string | null): string {
   return addDateInputDays(today, 30);
 }
 
-function formatClinicDate(value: string): string {
+function formatClinicDate(value: string, locale?: string): string {
   const [year, month, day] = value.split("-").map(Number);
-  return new Date(Date.UTC(year!, month! - 1, day!)).toLocaleDateString(
-    "en-US",
-    {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "UTC",
-    },
-  );
+  const bcp47 = locale === "sk" ? "sk-SK" : "en-US";
+  const opts: Intl.DateTimeFormatOptions = locale === "sk"
+    ? { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }
+    : { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" };
+  return new Date(Date.UTC(year!, month! - 1, day!)).toLocaleDateString(bcp47, opts);
 }
 
 function EncounterLoading() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-12 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
@@ -455,7 +445,7 @@ function EncounterLoading() {
 }
 
 export default function EncounterWorkspacePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const params = useParams<{ appointmentId: string }>();
   const { data: session, status: sessionStatus } = useSession();
   const appointmentId = params.appointmentId;
@@ -635,6 +625,7 @@ export default function EncounterWorkspacePage() {
                 {formatAppointmentTime(
                   appointment.startTime,
                   taxConfigQuery.data?.timezone,
+                  locale,
                 )}
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -1061,7 +1052,7 @@ function VisitCompletionGuide({
   invoicesQuery: InvoiceQueryState;
   hasActiveInvoice: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const reconciliation = trpc.encounters.getVisitReconciliation.useQuery(
     { appointmentId },
     { enabled: Boolean(appointmentId && patientId) },
@@ -1144,9 +1135,9 @@ function VisitCompletionGuide({
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">
               {t("encounters.completion.finishVisitBadge", "Finish this visit")}
             </p>
-            <CardTitle className="mt-1">{action.title}</CardTitle>
+            <CardTitle className="mt-1">{t("encounters.completion.title." + action.target, action.title)}</CardTitle>
             <CardDescription className="mt-1 max-w-2xl">
-              {action.description}
+              {t("encounters.completion.desc." + action.target, action.description)}
             </CardDescription>
           </div>
           {actionHref && actionLabel ? (
@@ -1248,7 +1239,7 @@ function VisitCloseout({
   compact?: boolean;
   soapPlan?: string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const utils = trpc.useUtils();
   const isOnline = useOnlineStatus();
   const [compactExpanded, setCompactExpanded] = useState(!compact);
@@ -1770,7 +1761,7 @@ function VisitCloseout({
           })
         : closeout?.followUpDisposition === "needed" && closeout.followUpDueDate
           ? t("encounters.closeout.neededBy", "Needed by {date}", {
-              date: formatClinicDate(closeout.followUpDueDate),
+              date: formatClinicDate(closeout.followUpDueDate, locale),
             })
           : undefined;
       const instructions = closeout?.dischargeInstructions
@@ -1796,6 +1787,7 @@ function VisitCloseout({
         visitDate: formatAppointmentTime(
           appointment.startTime,
           data.practice.timezone,
+          locale,
         ),
         doctorName: closeout?.clinicalFinalizerName ?? undefined,
         diagnosis: closeout?.diagnosisSummary ?? undefined,
@@ -1846,7 +1838,7 @@ function VisitCloseout({
         : amendment.followUpDisposition === "needed" &&
             amendment.followUpDueDate
           ? t("encounters.closeout.neededBy", "Needed by {date}", {
-              date: formatClinicDate(amendment.followUpDueDate),
+              date: formatClinicDate(amendment.followUpDueDate, locale),
             })
           : undefined;
       const instructions = amendment.dischargeInstructions
@@ -1872,6 +1864,7 @@ function VisitCloseout({
         visitDate: formatAppointmentTime(
           appointment.startTime,
           data.practice.timezone,
+          locale,
         ),
         doctorName: amendment.clinicalFinalizerName,
         diagnosis: amendment.diagnosisSummary ?? undefined,
@@ -2338,6 +2331,7 @@ function VisitCloseout({
                     ? ` · ${formatAppointmentTime(
                         closeout.clinicalFinalizedAt,
                         data.practice.timezone,
+                        locale,
                       )}`
                     : ""}
                 </dd>
@@ -2356,6 +2350,7 @@ function VisitCloseout({
                           time: formatAppointmentTime(
                             closeout.followUpScheduledAt,
                             data.practice.timezone,
+                            locale,
                           ),
                         },
                       )
@@ -2365,7 +2360,7 @@ function VisitCloseout({
                           "encounters.closeout.followUpNeededByAssigned",
                           "Needed by {date} · Assigned to {assignee}",
                           {
-                            date: formatClinicDate(closeout.followUpDueDate),
+                            date: formatClinicDate(closeout.followUpDueDate, locale),
                             assignee:
                               closeout.followUpAssigneeName ??
                               t(
@@ -2512,11 +2507,13 @@ function VisitCloseout({
                             finalizedAt: formatAppointmentTime(
                               amendment.clinicalFinalizedAt,
                               data.practice.timezone,
+                              locale,
                             ),
                             reopenedBy: amendment.reopenedByName,
                             reopenedAt: formatAppointmentTime(
                               amendment.reopenedAt,
                               data.practice.timezone,
+                              locale,
                             ),
                           },
                         )}
@@ -2563,6 +2560,7 @@ function VisitCloseout({
                           ? formatAppointmentTime(
                               amendment.followUpScheduledAt,
                               data.practice.timezone,
+                              locale,
                             )
                           : amendment.followUpDisposition === "needed" &&
                               amendment.followUpDueDate
@@ -2572,6 +2570,7 @@ function VisitCloseout({
                                 {
                                   date: formatClinicDate(
                                     amendment.followUpDueDate,
+                                    locale,
                                   ),
                                   assignee:
                                     amendment.followUpAssigneeName ??
@@ -2836,7 +2835,7 @@ type ClinicalCloseoutFormProps = {
 };
 
 function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const finalizationIssues = [
     props.soapDraft
       ? t(
@@ -3287,7 +3286,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
             </option>
             {props.followUpAppointments.map((candidate) => (
               <option key={candidate.id} value={candidate.id}>
-                {formatAppointmentTime(candidate.startTime, props.timeZone)}
+                {formatAppointmentTime(candidate.startTime, props.timeZone, locale)}
               </option>
             ))}
           </select>
@@ -3588,7 +3587,7 @@ function FollowUpResolutionPanel({
   isPending: boolean;
   onResolve: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const ready = Boolean(
     selectedResolution &&
     (selectedResolution === "scheduled"
@@ -3608,7 +3607,7 @@ function FollowUpResolutionPanel({
             "Due {due} · Assigned to {assignee}. This queue state is audited separately from the signed discharge.",
             {
               due: dueDate
-                ? formatClinicDate(dueDate)
+                ? formatClinicDate(dueDate, locale)
                 : t(
                     "encounters.followUpPanel.dueDateUnavailable",
                     "date unavailable",
@@ -3630,7 +3629,7 @@ function FollowUpResolutionPanel({
           <p className="mt-1 text-muted-foreground">
             {resolverName ??
               t("encounters.followUpPanel.clinicStaff", "Clinic staff")}{" "}
-            · {formatAppointmentTime(resolvedAt, timeZone)}
+            · {formatAppointmentTime(resolvedAt, timeZone, locale)}
             {resolutionScheduledAt
               ? t(
                   "encounters.followUpPanel.scheduledAtPrefix",
@@ -3639,6 +3638,7 @@ function FollowUpResolutionPanel({
                     time: formatAppointmentTime(
                       resolutionScheduledAt,
                       timeZone,
+                      locale,
                     ),
                   },
                 )
@@ -3715,7 +3715,7 @@ function FollowUpResolutionPanel({
                   </option>
                   {followUpAppointments.map((appointment) => (
                     <option key={appointment.id} value={appointment.id}>
-                      {formatAppointmentTime(appointment.startTime, timeZone)}
+                      {formatAppointmentTime(appointment.startTime, timeZone, locale)}
                     </option>
                   ))}
                 </select>
@@ -3812,7 +3812,7 @@ function OperationalCloseoutForm({
   onDownload: () => void;
   onComplete: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const paidReady = Boolean(
     activeInvoice &&
     activeInvoice.itemCount > 0 &&
@@ -4092,7 +4092,7 @@ function EncounterInvoices({
   }>;
   canManage: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const fmt = useCurrencyFormatterWithConfig();
 
   return (
@@ -4222,7 +4222,7 @@ function VisitWorkReconciliation({
   canCorrect: boolean;
   canVoid: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const utils = trpc.useUtils();
   const fmt = useCurrencyFormatterWithConfig();
   const reconciliation = trpc.encounters.getVisitReconciliation.useQuery({
@@ -4572,7 +4572,7 @@ function ChargeCapture({
     dispenseChargeDescription: string | null;
   }>;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const utils = trpc.useUtils();
   const isOnline = useOnlineStatus();
   const [selectedCatalogId, setSelectedCatalogId] = useState("");
