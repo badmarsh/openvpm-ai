@@ -66,8 +66,8 @@ function renderComposedEmail(opts: {
     : null;
   const body = escapeHtml(opts.content).replace(/\n/g, "<br />");
   const replyNotice = safeReplyToEmail
-    ? `Replies go to ${safeReplyToEmail}. Email replies are not imported into OpenVPM yet.`
-    : `Email replies are not imported into OpenVPM yet. Please contact ${safePracticeName} directly if you need to respond.`;
+    ? `Reply directly to this email — your message will arrive in our inbox.`
+    : `To reply, contact ${safePracticeName} directly.`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -188,7 +188,7 @@ async function practiceTimeZone(
 const createCommunicationInput = z
   .object({
     clientId: z.string().uuid(),
-    channel: z.enum(["phone", "sms", "email", "portal"]),
+    channel: z.enum(["phone", "sms", "email", "portal", "whatsapp"]),
     direction: z.enum(["inbound", "outbound"]),
     subject: z.string().trim().max(COMMUNICATION_SUBJECT_MAX_LENGTH).optional(),
     content: z
@@ -378,6 +378,7 @@ export const communicationsRouter = createRouter({
             coalesce(latest_assignment.assigned_to_name, u.name) as "assignedToName",
             c.read_at as "readAt",
             c.provider_message_id as "providerMessageId",
+            c.dedupe_key as "dedupeKey",
             c.created_at as "createdAt",
             cl.first_name as "clientFirstName",
             cl.last_name as "clientLastName",
@@ -481,6 +482,7 @@ export const communicationsRouter = createRouter({
           assignedToName: users.name,
           readAt: communications.readAt,
           providerMessageId: communications.providerMessageId,
+          dedupeKey: communications.dedupeKey,
           createdAt: communications.createdAt,
         })
         .from(communications)
@@ -765,7 +767,7 @@ export const communicationsRouter = createRouter({
 
       const isDeliverableOutbound =
         input.direction === "outbound" &&
-        (input.channel === "sms" || input.channel === "email");
+        (input.channel === "sms" || input.channel === "email" || input.channel === "whatsapp");
 
       if (isDeliverableOutbound) {
         if (
@@ -866,7 +868,7 @@ export const communicationsRouter = createRouter({
 
       let smsRecipient: string | null = null;
       let smsSenderLocationId: string | undefined;
-      if (input.direction === "outbound" && input.channel === "sms") {
+      if (input.direction === "outbound" && (input.channel === "sms" || input.channel === "whatsapp")) {
         if (input.patientId) {
           const [patient] = await ctx.db
             .select({ status: patients.status })
@@ -1000,7 +1002,9 @@ export const communicationsRouter = createRouter({
       }
 
       const outboundDedupeKey = isDeliverableOutbound
-          ? `${input.channel}:inbox:${ctx.practiceId}:${input.requestId!}`
+          ? input.channel === "whatsapp"
+            ? `wa:out:${ctx.practiceId}:${input.requestId!}`
+            : `${input.channel}:inbox:${ctx.practiceId}:${input.requestId!}`
           : undefined;
       const insertCommunication = async (
         tx: Pick<Database, "insert" | "select">,
@@ -1008,7 +1012,7 @@ export const communicationsRouter = createRouter({
         const insert = tx.insert(communications).values({
           practiceId: ctx.practiceId,
           clientId: input.clientId,
-          channel: input.channel,
+          channel: input.channel === "whatsapp" ? "sms" : input.channel,
           direction: input.direction,
           subject,
           content,
@@ -1042,7 +1046,7 @@ export const communicationsRouter = createRouter({
               eq(communications.practiceId, ctx.practiceId),
               eq(communications.dedupeKey, outboundDedupeKey),
               eq(communications.clientId, input.clientId),
-              eq(communications.channel, input.channel),
+              eq(communications.channel, input.channel === "whatsapp" ? "sms" : input.channel),
               eq(communications.direction, "outbound"),
               isNull(communications.deletedAt),
             ),
@@ -1106,7 +1110,7 @@ export const communicationsRouter = createRouter({
       };
       let providerMessageId: string | undefined;
       try {
-        if (input.channel === "sms") {
+        if (input.channel === "sms" || input.channel === "whatsapp") {
           deliveryResult = await sendSms({
             to: smsRecipient!,
             body: content,
@@ -1137,7 +1141,7 @@ export const communicationsRouter = createRouter({
         deliveryResult = {
           success: false,
           outcome:
-            input.channel === "sms" ? "outcome_unknown" : "definite_failure",
+            (input.channel === "sms" || input.channel === "whatsapp") ? "outcome_unknown" : "definite_failure",
           error:
             error instanceof Error && error.message
               ? error.message

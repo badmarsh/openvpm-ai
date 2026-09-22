@@ -1,4 +1,4 @@
-const DEFAULT_EMAIL_FROM = "OpenVPM <noreply@mail.openvpm.com>";
+const DEFAULT_EMAIL_FROM = "OpenVPM Vet <noreply@dev.significa.sk>";
 
 export function nonBlankEmailValue(
   value: string | null | undefined

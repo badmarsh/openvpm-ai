@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import {
   Mail,
   MessageSquare,
+  MessageCircle,
   Phone,
   Globe,
   Send,
@@ -45,7 +46,7 @@ import { communicationStatusLabel } from "@/lib/communications/status";
 import { toast } from "sonner";
 
 type FilterTab = "all" | "unread" | "sent";
-type Channel = "phone" | "sms" | "email" | "portal";
+type Channel = "phone" | "sms" | "email" | "portal" | "whatsapp";
 
 type InboxListItem = {
   id: string;
@@ -96,7 +97,13 @@ const channelIcons: Record<Channel, React.ElementType> = {
   sms: MessageSquare,
   email: Mail,
   portal: Globe,
+  whatsapp: MessageCircle,
 };
+
+/** WhatsApp messages are stored as channel="sms" with dedupeKey prefixed "wa:". */
+function isWhatsAppMessage(item: { dedupeKey?: string | null; providerMessageId?: string | null }): boolean {
+  return item.dedupeKey?.startsWith("wa:") === true;
+}
 
 function dateInputDayNumber(value: string): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -189,6 +196,7 @@ export function InboxView() {
       sms: t("inbox.channelSms", "SMS"),
       email: t("inbox.channelEmail", "Email"),
       portal: t("inbox.channelPortal", "Portal"),
+      whatsapp: t("inbox.channelWhatsapp", "WhatsApp"),
     }),
     [t],
   );
@@ -341,7 +349,7 @@ export function InboxView() {
   });
 
   const composeDeliveryChannel =
-    composeChannel === "sms"
+    composeChannel === "sms" || composeChannel === "whatsapp"
       ? "sms"
       : composeChannel === "portal"
         ? "portal"
@@ -360,7 +368,7 @@ export function InboxView() {
     isCommunicationContentValid(composeContent, composeDeliveryChannel) &&
     !composeSubjectInvalid &&
     !createMutation.isPending &&
-    !smsComposeBlocked;
+    !(composeChannel === "sms" && smsComposeBlocked);
 
   const markReadMutation = trpc.communications.markClientRead.useMutation({
     onSuccess: (_data, variables) => {
@@ -463,8 +471,9 @@ export function InboxView() {
           name: assignedToName ?? t("inbox.staffFallback", "staff"),
         })
     : t("inbox.unassigned", "Unassigned");
-  const SelectedUnmatchedIcon = selectedUnmatched
-    ? (channelIcons[selectedUnmatched.channel as Channel] ?? MessageSquare)
+  const selectedUnmatchedEffectiveChannel = selectedUnmatched ? (isWhatsAppMessage(selectedUnmatched) ? "whatsapp" : (selectedUnmatched.channel as Channel)) : null;
+  const SelectedUnmatchedIcon = selectedUnmatchedEffectiveChannel
+    ? (channelIcons[selectedUnmatchedEffectiveChannel] ?? MessageSquare)
     : MessageSquare;
   const selectedUnmatchedChannel = selectedUnmatched
     ? (localizedChannelLabels[selectedUnmatched.channel as Channel] ??
@@ -792,8 +801,9 @@ export function InboxView() {
               />
             ) : (
               conversationGroups.map((group) => {
+                const effectiveChannel = isWhatsAppMessage(group.latest) ? "whatsapp" : (group.latest.channel as Channel);
                 const Icon =
-                  channelIcons[group.latest.channel as Channel] ??
+                  channelIcons[effectiveChannel] ??
                   MessageSquare;
                 const isSelected =
                   group.kind === "client"
@@ -1213,7 +1223,8 @@ export function InboxView() {
                   </div>
                 ) : timeline && timeline.length > 0 ? (
                   [...timeline].reverse().map((msg) => {
-                    const Icon = channelIcons[msg.channel as Channel];
+                    const effectiveMsgChannel = isWhatsAppMessage(msg) ? "whatsapp" : (msg.channel as Channel);
+                    const Icon = channelIcons[effectiveMsgChannel] ?? MessageSquare;
                     const isOutbound = msg.direction === "outbound";
                     const statusLabel = communicationStatusLabel(msg);
 
@@ -1315,6 +1326,8 @@ export function InboxView() {
                     className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                   >
                     <option value="sms">{t("inbox.optionSms", "SMS")}</option>
+                    <option value="email">{t("inbox.optionEmail", "Email")}</option>
+                    <option value="whatsapp">{t("inbox.optionWhatsapp", "WhatsApp")}</option>
                     <option value="portal">Portal</option>
                   </select>
 
@@ -1365,6 +1378,20 @@ export function InboxView() {
                     {t(
                       "inbox.noticePortal",
                       "Portal messages are visible to the client in their portal message thread and replies return to this inbox.",
+                    )}
+                  </p>
+                ) : composeChannel === "email" ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "inbox.noticeEmail",
+                      "Email is sent to the client’s registered address. Replies arrive in this inbox automatically.",
+                    )}
+                  </p>
+                ) : composeChannel === "whatsapp" ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "inbox.noticeWhatsapp",
+                      "WhatsApp message sent via the clinic's connected number.",
                     )}
                   </p>
                 ) : smsComposeBlocked && smsSummary ? (

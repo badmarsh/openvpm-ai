@@ -2123,7 +2123,12 @@
     "emptySelectConversationDesc": "Pick a conversation from the list to read and reply.",
     "emptyInboxActionSendFirst": "Send your first message to a client.",
     "emptyInboxViewer": "No client communications to review yet.",
-    "btnNewMessage": "New message"
+    "btnNewMessage": "New message",
+    "optionEmail": "Email",
+    "noticeEmail": "Email is sent to the client's registered address. Replies arrive in this inbox automatically.",
+    "channelWhatsapp": "WhatsApp",
+    "optionWhatsapp": "WhatsApp",
+    "noticeWhatsapp": "WhatsApp message sent via the clinic's connected number."
   },
   "inventory": {
     "categories": {
