@@ -64,6 +64,8 @@ type InboxListItem = {
   clientFirstName: string | null;
   clientLastName: string | null;
   unreadCount?: number;
+  senderDisplay?: string | null;
+  senderGroupKey?: string | null;
 };
 
 type ClientSearchResult = {
@@ -87,6 +89,7 @@ type ConversationGroup =
       kind: "unmatched";
       id: string;
       communicationId: string;
+      senderGroupKey: string;
       clientName: string;
       latest: InboxListItem;
       unreadCount: number;
@@ -188,6 +191,7 @@ export function InboxView() {
   const [selectedClientName, setSelectedClientName] = useState<string>("");
   const [selectedUnmatched, setSelectedUnmatched] =
     useState<InboxListItem | null>(null);
+  const [selectedSenderKey, setSelectedSenderKey] = useState<string | null>(null);
   const [linkClientSearch, setLinkClientSearch] = useState("");
 
   const localizedChannelLabels: Record<Channel, string> = useMemo(
@@ -239,6 +243,14 @@ export function InboxView() {
   } = trpc.communications.getByClient.useQuery(
     { clientId: selectedClientId! },
     { enabled: !!selectedClientId },
+  );
+
+  const {
+    data: unmatchedThread,
+    isLoading: unmatchedThreadLoading,
+  } = trpc.communications.getBySender.useQuery(
+    { senderGroupKey: selectedSenderKey! },
+    { enabled: !!selectedSenderKey },
   );
 
   const {
@@ -424,15 +436,18 @@ export function InboxView() {
         item.unreadCount ?? (isUnreadInboxMessage(item) ? 1 : 0),
       );
       if (!item.clientId) {
+        const senderKey = item.senderGroupKey || item.id;
+        const senderTitle = item.senderDisplay || t("inbox.unmatchedPrefix", "Unmatched {channel}", {
+          channel:
+            localizedChannelLabels[item.channel as Channel] ??
+            t("inbox.channelMessageFallback", "Message"),
+        });
         return {
           kind: "unmatched",
-          id: `unmatched:${item.id}`,
+          id: `unmatched:${senderKey}`,
           communicationId: item.id,
-          clientName: t("inbox.unmatchedPrefix", "Unmatched {channel}", {
-            channel:
-              localizedChannelLabels[item.channel as Channel] ??
-              t("inbox.channelMessageFallback", "Message"),
-          }),
+          senderGroupKey: senderKey,
+          clientName: senderTitle,
           latest: item,
           unreadCount,
         };
@@ -488,6 +503,7 @@ export function InboxView() {
     setSelectedClientId(clientId);
     setSelectedClientName(clientName);
     setSelectedUnmatched(null);
+    setSelectedSenderKey(null);
     setLinkClientSearch("");
     setNewMessageMode(false);
     if (unreadCount > 0 && canMutateInbox) {
@@ -495,9 +511,10 @@ export function InboxView() {
     }
   }
 
-  function handleSelectUnmatched(item: InboxListItem) {
+  function handleSelectUnmatched(item: InboxListItem, senderGroupKey?: string) {
     setSelectedClientId(null);
     setSelectedClientName("");
+    setSelectedSenderKey(senderGroupKey || item.senderGroupKey || item.id);
     setSelectedUnmatched(item);
     setLinkClientSearch("");
     setNewMessageMode(false);
@@ -808,7 +825,7 @@ export function InboxView() {
                 const isSelected =
                   group.kind === "client"
                     ? selectedClientId === group.clientId && !selectedUnmatched
-                    : selectedUnmatched?.id === group.communicationId;
+                    : (selectedSenderKey ? selectedSenderKey === group.senderGroupKey : selectedUnmatched?.id === group.communicationId);
                 const isUnread = group.unreadCount > 0;
                 const preview =
                   group.latest.subject ||
@@ -825,7 +842,7 @@ export function InboxView() {
                             group.clientName,
                             group.unreadCount,
                           )
-                        : handleSelectUnmatched(group.latest)
+                        : handleSelectUnmatched(group.latest, group.senderGroupKey)
                     }
                     className={cn(
                       "w-full text-left px-4 py-3 border-b border-border transition-colors",
@@ -1012,57 +1029,63 @@ export function InboxView() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="truncate font-medium text-sm">
-                      {t(
+                      {selectedUnmatched.senderDisplay ||
+                      t(
                         "inbox.unmatchedInboundTitle",
                         "Unmatched inbound message",
                       )}
                     </h3>
                     <Badge variant="secondary" className="mt-1">
                       {t("inbox.needsClientBadge", "Needs client")}
+                      {unmatchedThread && unmatchedThread.length > 1 ? ` (${unmatchedThread.length})` : ""}
                     </Badge>
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <div className="flex justify-start">
-                  <div className="max-w-[70%] rounded-lg bg-muted px-3 py-2">
-                    <div className="flex items-center gap-1.5 mb-1 text-muted-foreground">
-                      <ArrowLeft className="h-3 w-3" />
-                      <SelectedUnmatchedIcon className="h-3 w-3" />
-                      <span className="text-[10px] uppercase font-medium">
-                        {selectedUnmatchedChannel}
-                      </span>
-                    </div>
-
-                    {selectedUnmatched.subject ? (
-                      <p className="text-xs font-semibold mb-0.5">
-                        {selectedUnmatched.subject}
-                      </p>
-                    ) : null}
-
-                    <p className="text-sm whitespace-pre-wrap">
-                      {selectedUnmatched.content ||
-                        t("inbox.noContent", "No content")}
-                    </p>
-
-                    <div className="flex items-center gap-1 mt-1 text-muted-foreground">
-                      <Clock className="h-2.5 w-2.5" />
-                      <span className="text-[10px]">
-                        {relativeTime(
-                          selectedUnmatched.createdAt,
-                          inboxTimeZone,
-                          t,
-                        )}
-                      </span>
-                      {selectedUnmatched.status ? (
-                        <span className="text-[10px] ml-1 capitalize">
-                          {selectedUnmatched.status}
-                        </span>
-                      ) : null}
-                    </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {unmatchedThreadLoading && !unmatchedThread ? (
+                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("inbox.loadingMessages", "Loading messages...")}
                   </div>
-                </div>
+                ) : (
+                  (unmatchedThread && unmatchedThread.length > 0 ? unmatchedThread : [selectedUnmatched]).map((msg) => (
+                    <div key={msg.id} className="flex justify-start">
+                      <div className="max-w-[75%] rounded-lg bg-muted px-3 py-2">
+                        <div className="flex items-center gap-1.5 mb-1 text-muted-foreground">
+                          <ArrowLeft className="h-3 w-3" />
+                          <SelectedUnmatchedIcon className="h-3 w-3" />
+                          <span className="text-[10px] uppercase font-medium">
+                            {selectedUnmatchedChannel}
+                          </span>
+                        </div>
+
+                        {msg.subject ? (
+                          <p className="text-xs font-semibold mb-1 text-foreground">
+                            {msg.subject}
+                          </p>
+                        ) : null}
+
+                        <p className="text-sm whitespace-pre-wrap">
+                          {msg.content || t("inbox.noContent", "No content")}
+                        </p>
+
+                        <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
+                          <Clock className="h-2.5 w-2.5" />
+                          <span className="text-[10px]">
+                            {relativeTime(msg.createdAt, inboxTimeZone, t)}
+                          </span>
+                          {msg.status ? (
+                            <span className="text-[10px] ml-1 capitalize">
+                              {msg.status}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="border-t border-border p-4 space-y-3">
