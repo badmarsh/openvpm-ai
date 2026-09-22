@@ -102,7 +102,7 @@ function saveEnabledState(state: Record<string, boolean>) {
   }
 }
 
-type TFn = (key: string, fallback: string, params?: Record<string, unknown>) => string;
+type TFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
 
 function getIcon(id: string) {
   switch (id) {
