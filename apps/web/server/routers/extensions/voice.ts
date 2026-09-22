@@ -51,7 +51,8 @@ import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 const DEFAULT_MODEL = DEFAULT_AI_MODEL;
 
 function activeModelId(): string {
-  return process.env.AI_MODEL ?? DEFAULT_MODEL;
+  // Model resolved from ext_ai_settings DB; fall back to DEFAULT_AI_MODEL.
+  return DEFAULT_MODEL;
 }
 
 export const voiceRouter = createRouter({

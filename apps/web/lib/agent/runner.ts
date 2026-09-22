@@ -167,12 +167,8 @@ function nonBlank(value: string | undefined): string | undefined {
 
 /** Resolve the model id from request override → AI_MODEL → legacy AGENT_MODEL → default. */
 function activeModelId(override?: string): string {
-  return (
-    nonBlank(override) ??
-    nonBlank(process.env.AI_MODEL) ??
-    nonBlank(process.env.AGENT_MODEL) ??
-    DEFAULT_MODEL
-  );
+  // Model override comes from tRPC caller or ext_ai_settings; never from env vars.
+  return nonBlank(override) ?? DEFAULT_MODEL;
 }
 
 /** Google (Gemini) vs Anthropic (Claude) inferred from the model id. */

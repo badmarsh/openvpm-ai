@@ -19,6 +19,7 @@ export const DEFAULT_ALIBABA_PRESETS: CachedAiModel[] = [
 ];
 
 export const DEFAULT_GEMINI_PRESETS: CachedAiModel[] = [
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Odporucany / Rychly a multimodalny)', isVision: true },
   { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash (Odporúčaný / Rýchly a multimodálny)", isVision: true },
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview (Klinické usudzovanie)", isVision: true },
   { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", isVision: true },

@@ -321,7 +321,7 @@ export const dischargeRouter = createRouter({
               followUp: input.followUp ?? null,
               reportText: input.reportText,
               language: input.language,
-              modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
+              modelId: DEFAULT_AI_MODEL,
               status: "draft",
               revision: 0,
             })
@@ -598,7 +598,7 @@ export const dischargeRouter = createRouter({
               followUp: input.followUp ?? null,
               reportText: input.reportText,
               language: input.language,
-              modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
+              modelId: DEFAULT_AI_MODEL,
               status,
               revision: 0,
             })

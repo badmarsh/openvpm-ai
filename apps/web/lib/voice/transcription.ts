@@ -60,11 +60,11 @@ export async function transcribeAudio(fileKey: string): Promise<string> {
     // by sending the multimodal audio data URL directly to chat completions.
     if (hasInferenceProxyConfiguration()) {
       const baseURL = inferenceProxyBaseUrl()!;
-      const apiKey = process.env.AI_API_KEY || "";
+      const apiKey = "at-proxy";
       const modelCandidates = [
-        process.env.AI_MODEL?.replace(/^(google\/|models\/)/, ""),
+        "gemini-3.8-flash",
         "gemini-2.5-flash",
-        "gemini-3-flash",
+        
       ].filter((m): m is string => Boolean(m && m.trim()));
 
       let lastError: Error | null = null;
@@ -165,11 +165,11 @@ export async function transcribeAudioDirect(
   try {
     if (hasInferenceProxyConfiguration()) {
       const baseURL = inferenceProxyBaseUrl()!;
-      const apiKey = process.env.AI_API_KEY || "";
+      const apiKey = "at-proxy";
       const modelCandidates = [
-        process.env.AI_MODEL?.replace(/^(google\/|models\/)/, ""),
+        "gemini-3.8-flash",
         "gemini-2.5-flash",
-        "gemini-3-flash",
+        
       ].filter((m): m is string => Boolean(m && m.trim()));
 
       let lastError: Error | null = null;

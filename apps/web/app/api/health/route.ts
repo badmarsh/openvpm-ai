@@ -129,7 +129,8 @@ const HOSTED_ANTHROPIC_AI_ENV_NAMES = ["ANTHROPIC_API_KEY"];
 // authentication is Vercel OIDC -> Google workload identity federation, so no
 // long-lived Google private key is accepted as a complete production setup.
 function activeAiModel(): string {
-  return envValue("AI_MODEL") ?? envValue("AGENT_MODEL") ?? DEFAULT_AI_MODEL;
+  // Model is resolved from ext_ai_settings DB; default comes from AT proxy config.
+  return DEFAULT_AI_MODEL;
 }
 
 function isGeminiModel(model: string): boolean {
