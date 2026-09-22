@@ -29,7 +29,7 @@ export const DEFAULT_GEMINI_PRESETS: CachedAiModel[] = [
 
 export const DEFAULT_PRACTICE_FEATURE_MAPPINGS: PracticeAiFeatureMappings = {
   assistant: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0.2 },
-  imagingRtg: { provider: "gemini", model: "gemini-3.8-flash", temperature: 0.1 },
+  imagingRtg: { provider: "gemini", model: "gemini-3.1-pro", temperature: 0.1 },
   voiceSoap: { provider: "gemini", model: "gemini-3.8-flash" },
   labParser: { provider: "gemini", model: "gemini-3.8-flash" },
   imageGeneration: { provider: "alibaba", model: "qwen-image-3.0", size: "1024*1024" },
