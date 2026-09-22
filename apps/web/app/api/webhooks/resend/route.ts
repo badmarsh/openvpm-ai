@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { Resend, type WebhookEventPayload } from "resend";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull } from "drizzle-orm";
 import { db } from "@openpims/db/client";
-import { communications, emailSuppressions, practices } from "@openpims/db";
+import { clients, communications, emailSuppressions, practices } from "@openpims/db";
 import { withSystem, withTenant } from "@/lib/tenant-db";
 import { readRequestTextWithLimit } from "@/lib/request-json";
 import {
@@ -28,6 +28,49 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type EmailWebhookEvent = AuthEmailWebhookEvent;
+
+// Resend SDK exposes EmailReceivedEvent via WebhookEventPayload union but does
+// not re-export the individual interface. We narrow it locally.
+interface ResendEmailReceivedEvent {
+  type: "email.received";
+  created_at: string;
+  data: {
+    email_id: string;
+    created_at: string;
+    from: string;
+    to: string[];
+    bcc: string[];
+    cc: string[];
+    message_id: string;
+    subject: string;
+    attachments: Array<{
+      id: string;
+      filename: string | null;
+      content_type: string;
+      content_disposition: string | null;
+      content_id: string | null;
+    }>;
+  };
+}
+
+function isEmailReceivedEvent(
+  event: WebhookEventPayload,
+): event is ResendEmailReceivedEvent {
+  return event.type === "email.received";
+}
+
+function isEmailWebhookEvent(
+  event: WebhookEventPayload,
+): event is EmailWebhookEvent {
+  const data = (event as { data?: { email_id?: unknown; to?: unknown } }).data;
+  return typeof data?.email_id === "string" && Array.isArray(data.to);
+}
+
+/** Extract the sender address from a "Display Name <addr@example.com>" header. */
+function parseSenderAddress(from: string): string {
+  const match = /<([^>]+)>/.exec(from);
+  return (match ? match[1] : from).trim().toLowerCase();
+}
 
 function payloadTooLargeResponse() {
   return NextResponse.json(
@@ -59,13 +102,6 @@ function verifiedEvent(
   } catch {
     return null;
   }
-}
-
-function isEmailWebhookEvent(
-  event: WebhookEventPayload,
-): event is EmailWebhookEvent {
-  const data = (event as { data?: { email_id?: unknown; to?: unknown } }).data;
-  return typeof data?.email_id === "string" && Array.isArray(data.to);
 }
 
 function communicationStatusForEvent(
@@ -167,6 +203,89 @@ export async function POST(request: Request) {
   const event = verifiedEvent(rawBody.text, request.headers);
   if (!event) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Inbound email: a client replied or wrote directly to the clinic inbox
+  // ---------------------------------------------------------------------------
+  if (isEmailReceivedEvent(event)) {
+    const senderEmail = parseSenderAddress(event.data.from);
+    const subject = event.data.subject?.trim() || null;
+    const providerMessageId = event.data.email_id;
+    const dedupeKey = `inbound:email:${providerMessageId}`;
+
+    // Resolve which practice owns this inbound address. Resend routes to a
+    // single endpoint so we scan all active practices for a client whose
+    // stored email matches the sender. First match wins; unmatched goes into
+    // the inbox without a clientId for manual review.
+    await withSystem(db, async (tx) => {
+      // Find a matching client across all practices
+      const matchedClients = await tx
+        .select({
+          id: clients.id,
+          practiceId: clients.practiceId,
+        })
+        .from(clients)
+        .where(
+          and(
+            ilike(clients.email, senderEmail),
+            isNull(clients.deletedAt),
+          ),
+        )
+        .limit(5);
+
+      if (matchedClients.length > 0) {
+        // Insert one inbound communication per matched practice/client pair
+        for (const matched of matchedClients) {
+          await withTenant(db, matched.practiceId, async (tenantTx) => {
+            await tenantTx
+              .insert(communications)
+              .values({
+                practiceId: matched.practiceId,
+                clientId: matched.id,
+                channel: "email",
+                direction: "inbound",
+                subject,
+                content: `From: ${event.data.from}`,
+                status: "pending",
+                providerMessageId,
+                dedupeKey,
+              })
+              .onConflictDoNothing({ target: communications.dedupeKey });
+          });
+        }
+      } else {
+        // Unmatched: insert as clientId=null into first active practice so
+        // front-desk can review and manually assign to the correct client.
+        const activePractices = await tx
+          .select({ id: practices.id })
+          .from(practices)
+          .where(isNull(practices.deletedAt))
+          .limit(1);
+
+        if (activePractices.length > 0) {
+          const practiceId = activePractices[0]!.id;
+          await withTenant(db, practiceId, async (tenantTx) => {
+            await tenantTx
+              .insert(communications)
+              .values({
+                practiceId,
+                clientId: null,
+                channel: "email",
+                direction: "inbound",
+                subject,
+                content: `From: ${event.data.from}`,
+                status: "pending",
+                providerMessageId,
+                dedupeKey,
+              })
+              .onConflictDoNothing({ target: communications.dedupeKey });
+          });
+        }
+      }
+    });
+
+    return NextResponse.json({ ok: true });
   }
 
   if (!isEmailWebhookEvent(event)) {

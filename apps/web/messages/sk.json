@@ -2123,7 +2123,12 @@
     "emptySelectConversationDesc": "Vyberte konverzáciu zo zoznamu na prečítanie a odpoveď.",
     "emptyInboxActionSendFirst": "Odošlite prvú správu klientovi.",
     "emptyInboxViewer": "Zatiaľ žiadna komunikácia s klientmi na kontrolu.",
-    "btnNewMessage": "Nová správa"
+    "btnNewMessage": "Nová správa",
+    "optionEmail": "Email",
+    "noticeEmail": "Email je odoslaný na registrovanú adresu klienta. Odpovede dorazí do tejto schránky automaticky.",
+    "channelWhatsapp": "WhatsApp",
+    "optionWhatsapp": "WhatsApp",
+    "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky."
   },
   "inventory": {
     "categories": {
