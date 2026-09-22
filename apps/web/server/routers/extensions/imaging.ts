@@ -193,7 +193,7 @@ export const imagingRouter = createRouter({
               fileId: input.fileId,
               appointmentId: input.appointmentId ?? null,
               requestedBy: ctx.user.id,
-              modelId: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
+              modelId: DEFAULT_AI_MODEL,
               imageType: input.imageType,
               userPrompt: input.userPrompt ?? null,
               status: "PENDING",
@@ -244,6 +244,14 @@ export const imagingRouter = createRouter({
         } catch {
           model = configuredModel();
         }
+
+        // Update the analysis record with the actual resolved model ID
+        await withTenant(ctx.db, ctx.practiceId, (tx) =>
+          tx
+            .update(aiImagingAnalyses)
+            .set({ modelId: model.modelId })
+            .where(eq(aiImagingAnalyses.id, analysis.id)),
+        );
 
         const systemPrompt =
           MODALITY_SYSTEM_PROMPTS[input.imageType] ?? MEDICAL_IMAGING_SYSTEM_PROMPT;
