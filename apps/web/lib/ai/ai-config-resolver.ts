@@ -300,27 +300,10 @@ export async function resolvePracticeLanguageModel(
 
   if (resolved.provider === "default" || !resolved.baseUrl || !resolved.apiKey) {
     // Fall back to system configured model
-    try {
-      return configuredModel();
-    } catch {
-      // If Vertex/Anthropic is not set, check if a valid system API key is configured or local proxy
-      const baseUrl = process.env.AI_BASE_URL || "";
-      const apiKey = process.env.AI_API_KEY || process.env.OPENROUTER_API_KEY || "";
-      const isLocalHost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
-
-      if (baseUrl && (apiKey || isLocalHost)) {
-        const isGeminiFallback = baseUrl.includes("generativelanguage.googleapis.com");
-        const proxy = createOpenAICompatible({
-          name: "fallback-provider",
-          baseURL: baseUrl,
-          apiKey: apiKey || "aliproxy-local-key",
-          fetch: isGeminiFallback ? createGeminiFetch() : undefined,
-        });
-        return proxy(resolved.modelId || DEFAULT_AI_MODEL);
-      }
-
-      // No active practice AI provider and no system fallback available!
-      throw new TRPCError({
+     try {
+       return configuredModel();
+     } catch {
+       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
           "Žiadny AI poskytovateľ nie je aktívny alebo chýba platný API kľúč. Prejdite do Nastavenia -> AI a povoľte poskytovateľa (Google Gemini alebo OpenAI gateway) so zadaným kľúčom.",
