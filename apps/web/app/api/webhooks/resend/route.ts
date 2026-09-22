@@ -214,6 +214,23 @@ export async function POST(request: Request) {
     const providerMessageId = event.data.email_id;
     const dedupeKey = `inbound:email:${providerMessageId}`;
 
+    let emailBody = "";
+    let emailAttachmentsMeta = "";
+    try {
+      const resendClient = new Resend(emailEnv("RESEND_API_KEY") ?? "re_webhook_fetch");
+      const fullEmail = await resendClient.emails.receiving.get(providerMessageId);
+      if (fullEmail?.data) {
+        emailBody = fullEmail.data.text || "";
+        if (fullEmail.data.attachments && fullEmail.data.attachments.length > 0) {
+          emailAttachmentsMeta = "\n\n<!--INBOX_ATTACHMENTS:" + JSON.stringify(fullEmail.data.attachments) + "-->";
+        }
+      }
+    } catch (err) {
+      console.warn("[resend-webhook] Could not fetch full email body:", err);
+    }
+
+    const finalContent = ("From: " + event.data.from + "\n\n" + emailBody + emailAttachmentsMeta).trim();
+
     // Resolve which practice owns this inbound address. Resend routes to a
     // single endpoint so we scan all active practices for a client whose
     // stored email matches the sender. First match wins; unmatched goes into

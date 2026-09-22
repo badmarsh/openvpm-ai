@@ -23,7 +23,13 @@ import {
   UserPlus,
   AlertCircle,
   Loader2,
+  FileText,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  Paperclip,
 } from "lucide-react";
+import { cleanEmailBody } from "@/lib/inbox-cleaner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
@@ -104,6 +110,97 @@ const channelIcons: Record<Channel, React.ElementType> = {
 };
 
 /** WhatsApp messages are stored as channel="sms" with dedupeKey prefixed "wa:". */
+function MessageContentBubble({
+  content,
+  channel,
+  direction,
+  providerMessageId,
+}: {
+  content: string | null;
+  channel: string;
+  direction: string;
+  providerMessageId?: string | null;
+}) {
+  const [showHistory, setShowHistory] = useState(false);
+  const attMatch = content ? content.match(/<!--INBOX_ATTACHMENTS:([\s\S]*?)-->/) : null;
+  let attachments: Array<{ id: string; filename?: string; content_type?: string }> = [];
+  if (attMatch && attMatch[1]) {
+    try {
+      attachments = JSON.parse(attMatch[1]);
+    } catch {}
+  }
+
+  const rawWithoutMeta = content ? content.replace(/\n*<!--INBOX_ATTACHMENTS:[\s\S]*?-->/g, "").trim() : "";
+  const isEmail = channel === "email" && direction === "inbound";
+  const { cleanText, hasQuotedHistory, rawText } = isEmail
+    ? cleanEmailBody(rawWithoutMeta)
+    : { cleanText: rawWithoutMeta, hasQuotedHistory: false, rawText: rawWithoutMeta };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+        {cleanText || "[Žiadny text správy]"}
+      </p>
+
+      {attachments.length > 0 ? (
+        <div className="mt-2 space-y-1.5 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground mb-1">
+            <Paperclip className="h-3 w-3" />
+            <span>Prílohy ({attachments.length}):</span>
+          </div>
+          <div className="grid gap-1.5">
+            {attachments.map((att) => (
+              <a
+                key={att.id}
+                href={"/api/inbox/attachments/" + providerMessageId + "/" + att.id}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-md border border-border bg-background/80 hover:bg-background px-2.5 py-1.5 transition-colors shadow-sm text-foreground"
+              >
+                <FileText className="h-4 w-4 text-primary shrink-0" />
+                <span className="truncate text-xs font-medium">
+                  {att.filename || "Príloha"}
+                </span>
+                <Download className="h-3.5 w-3.5 ml-auto text-muted-foreground shrink-0" />
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {hasQuotedHistory ? (
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHistory(!showHistory);
+            }}
+            className="flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+          >
+            {showHistory ? (
+              <>
+                <ChevronUp className="h-3 w-3" />
+                <span>Skryť pôvodnú citáciu</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3" />
+                <span>Zobraziť celú pôvodnú správu</span>
+              </>
+            )}
+          </button>
+          {showHistory ? (
+            <div className="mt-1.5 rounded bg-muted/60 p-2 text-xs font-mono text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto border border-border/40">
+              {rawText}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function isWhatsAppMessage(item: { dedupeKey?: string | null; providerMessageId?: string | null }): boolean {
   return item.dedupeKey?.startsWith("wa:") === true;
 }
@@ -1067,9 +1164,12 @@ export function InboxView() {
                           </p>
                         ) : null}
 
-                        <p className="text-sm whitespace-pre-wrap">
-                          {msg.content || t("inbox.noContent", "No content")}
-                        </p>
+                        <MessageContentBubble
+                          content={msg.content}
+                          channel={msg.channel}
+                          direction={msg.direction}
+                          providerMessageId={msg.providerMessageId}
+                        />
 
                         <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
                           <Clock className="h-2.5 w-2.5" />
@@ -1300,9 +1400,12 @@ export function InboxView() {
                             </p>
                           )}
 
-                          <p className="text-sm whitespace-pre-wrap">
-                            {msg.content}
-                          </p>
+                          <MessageContentBubble
+                            content={msg.content}
+                            channel={msg.channel}
+                            direction={msg.direction}
+                            providerMessageId={msg.providerMessageId}
+                          />
 
                           <div
                             className={cn(
