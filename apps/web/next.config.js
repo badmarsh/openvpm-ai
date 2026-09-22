@@ -14,6 +14,12 @@ const nextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
   serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  outputFileTracingIncludes: {
+    "/api/trpc/[trpc]": [
+      "./node_modules/.pnpm/pdfjs-dist@*/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+      "./node_modules/.pnpm/pdfjs-dist@*/node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+    ],
+  },
   eslint: {
     // lib/pdf/fonts/roboto-regular.ts is auto-generated (227 KB) and causes
     // ESLint to exceed its call-stack limit. ESLint is run separately in CI.

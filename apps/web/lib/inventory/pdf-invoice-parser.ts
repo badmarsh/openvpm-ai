@@ -48,7 +48,12 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   // mechanism that tries to load pdf.worker.mjs, absent in Next.js standalone builds.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+    // Locate the worker file. In Next.js standalone builds the worker is included
+  // via outputFileTracingIncludes and available at its npm path.
+  const workerPath = require.resolve(
+    "pdfjs-dist/legacy/build/pdf.worker.mjs"
+  );
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "file://" + workerPath;
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) });
   const doc = await loadingTask.promise;
   const textParts: string[] = [];
