@@ -1,5 +1,39 @@
 import type { Instrumentation } from "next";
 
+// Polyfill DOMMatrix for pdfjs-dist 5.x in Node.js server environments.
+// pdfjs-dist requires DOMMatrix for transform operations; this minimal stub
+// enables text extraction without a canvas implementation.
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    if (typeof DOMMatrix === "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).DOMMatrix = class DOMMatrix {
+        m11 = 1; m12 = 0; m13 = 0; m14 = 0;
+        m21 = 0; m22 = 1; m23 = 0; m24 = 0;
+        m31 = 0; m32 = 0; m33 = 1; m34 = 0;
+        m41 = 0; m42 = 0; m43 = 0; m44 = 1;
+        isIdentity = true;
+        is2D = true;
+        constructor(_init?: string | number[]) {}
+        scale() { return this; }
+        translate() { return this; }
+        rotate() { return this; }
+        multiply() { return this; }
+        inverse() { return this; }
+        toFloat32Array() { return new Float32Array(16); }
+        toFloat64Array() { return new Float64Array(16); }
+        toString() { return "matrix(1,0,0,1,0,0)"; }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        static fromMatrix() { return new (globalThis as any).DOMMatrix(); }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        static fromFloat32Array() { return new (globalThis as any).DOMMatrix(); }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        static fromFloat64Array() { return new (globalThis as any).DOMMatrix(); }
+      };
+    }
+  }
+}
+
 const REQUEST_ERROR_DEDUPE_MS = 60_000;
 const MAX_RECENT_REQUEST_ERRORS = 100;
 const recentRequestErrors = new Map<string, number>();
