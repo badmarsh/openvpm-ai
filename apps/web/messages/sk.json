@@ -2128,7 +2128,13 @@
     "noticeEmail": "Email je odoslaný na registrovanú adresu klienta. Odpovede dorazí do tejto schránky automaticky.",
     "channelWhatsapp": "WhatsApp",
     "optionWhatsapp": "WhatsApp",
-    "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky."
+    "noticeWhatsapp": "WhatsApp správa odoslaná cez číslo kliniky.",
+    "aiAssistantTitle": "AI Asistent: Návrh akcie",
+    "badgeNewSender": "Nový odosielateľ",
+    "aiCreateClientTitle": "Založiť nový profil klienta:",
+    "btnCreateAndLink": "Založiť & Prepojiť",
+    "aiMatchedCandidateTitle": "Alebo priradiť k nájdenému klientovi:",
+    "toastClientCreatedAndLinked": "Klient bol vytvorený a správy prepojené"
   },
   "inventory": {
     "categories": {

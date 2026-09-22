@@ -67,3 +67,53 @@ export function cleanEmailBody(raw: string | null | undefined): {
   };
 }
 
+
+export function parseSenderIdentity(rawHeader: string | null | undefined, rawContent?: string | null): {
+  email: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+} {
+  let fromStr = rawHeader || "";
+  if (!fromStr && rawContent) {
+    const m = rawContent.match(/From:[ \t]*([^\r\n]+)/i);
+    if (m) fromStr = m[1].trim();
+  }
+
+  let email = "";
+  let fullName = "";
+
+  const emailMatch =
+    fromStr.match(/<([^>]+)>/) ||
+    fromStr.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  if (emailMatch) {
+    email = emailMatch[1].trim().toLowerCase();
+  }
+
+  const nameMatch =
+    fromStr.match(/^["']?([^"'<]+)["']?\s*</) || fromStr.match(/^([^<]+)</);
+  if (nameMatch && nameMatch[1].trim()) {
+    fullName = nameMatch[1].trim();
+  } else if (email) {
+    const localPart = email.split("@")[0];
+    const parts = localPart.split(/[._-]/).filter((p) => isNaN(Number(p)) && p.length > 1);
+    if (parts.length > 0) {
+      fullName = parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+    }
+  }
+
+  const nameTokens = fullName.trim().split(/\s+/);
+  let firstName = "";
+  let lastName = "";
+  if (nameTokens.length === 1 && nameTokens[0]) {
+    firstName = nameTokens[0];
+    lastName = "Klient";
+  } else if (nameTokens.length >= 2) {
+    firstName = nameTokens[0];
+    lastName = nameTokens.slice(1).join(" ");
+  }
+
+  return { email, fullName, firstName, lastName };
+}
+
+

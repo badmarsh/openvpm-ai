@@ -21,6 +21,7 @@ import {
   UserCheck,
   UserMinus,
   UserPlus,
+  Sparkles,
   AlertCircle,
   Loader2,
   FileText,
@@ -512,6 +513,31 @@ export function InboxView() {
       toast.error(err.message);
     },
   });
+
+  const { data: aiActionData } =
+    trpc.communications.suggestClientAction.useQuery(
+      {
+        senderGroupKey: selectedSenderKey || selectedUnmatched?.id || "",
+        content: selectedUnmatched?.content,
+        subject: selectedUnmatched?.subject,
+      },
+      { enabled: Boolean(selectedUnmatched && canMutateInbox) },
+    );
+
+  const createAndLinkMutation =
+    trpc.communications.createClientAndLink.useMutation({
+      onSuccess: (data) => {
+        toast.success(t("inbox.toastClientCreatedAndLinked", "Client created and messages linked"));
+        utils.communications.listConversations.invalidate();
+        setSelectedUnmatched(null);
+        setSelectedSenderKey(null);
+        setSelectedClientId(data.client.id);
+        setSelectedClientName(data.client.firstName + " " + data.client.lastName);
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      },
+    });
 
   const linkCommunicationMutation =
     trpc.communications.linkCommunicationToClient.useMutation({
@@ -1205,6 +1231,97 @@ export function InboxView() {
 
                 {canMutateInbox ? (
                   <>
+                    {/* AI Assistant Suggestion Card */}
+                    {selectedUnmatched ? (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3 mb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                            <Sparkles className="h-4 w-4" />
+                            <span>{t("inbox.aiAssistantTitle", "AI Asistent: Návrh akcie")}</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] bg-background">
+                            {t("inbox.badgeNewSender", "Nový odosielateľ")}
+                          </Badge>
+                        </div>
+
+                        {/* Quick Create Client */}
+                        {aiActionData?.suggestedNewClient ? (
+                          <div className="rounded-md border border-border bg-background p-2.5 space-y-2">
+                            <div className="text-xs font-medium text-foreground flex items-center gap-1">
+                              <UserPlus className="h-3.5 w-3.5 text-primary" />
+                              <span>{t("inbox.aiCreateClientTitle", "Založiť nový profil klienta:")}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <Input
+                                placeholder="Meno"
+                                defaultValue={aiActionData.suggestedNewClient.firstName}
+                                id="new-client-fn"
+                                className="h-7 text-xs"
+                              />
+                              <Input
+                                placeholder="Priezvisko"
+                                defaultValue={aiActionData.suggestedNewClient.lastName}
+                                id="new-client-ln"
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                              <span className="text-[11px] text-muted-foreground truncate font-mono">
+                                {aiActionData.suggestedNewClient.email || selectedUnmatched.channel}
+                              </span>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                disabled={createAndLinkMutation.isPending}
+                                onClick={() => {
+                                  const fn = (document.getElementById("new-client-fn") as HTMLInputElement)?.value;
+                                  const ln = (document.getElementById("new-client-ln") as HTMLInputElement)?.value;
+                                  createAndLinkMutation.mutate({
+                                    communicationId: selectedUnmatched.id,
+                                    senderGroupKey: selectedSenderKey || undefined,
+                                    firstName: fn || aiActionData.suggestedNewClient.firstName || "Klient",
+                                    lastName: ln || aiActionData.suggestedNewClient.lastName || "Nový",
+                                    email: aiActionData.suggestedNewClient.email || "",
+                                  });
+                                }}
+                              >
+                                <UserPlus className="h-3 w-3" />
+                                <span>{t("inbox.btnCreateAndLink", "Založiť & Prepojiť")}</span>
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* Matched existing candidates */}
+                        {aiActionData?.matchedCandidates && aiActionData.matchedCandidates.length > 0 ? (
+                          <div className="space-y-1.5 pt-1">
+                            <div className="text-[11px] font-medium text-muted-foreground">
+                              {t("inbox.aiMatchedCandidateTitle", "Alebo priradiť k nájdenému klientovi:")}
+                            </div>
+                            {aiActionData.matchedCandidates.map((candidate) => (
+                              <button
+                                key={candidate.id}
+                                type="button"
+                                onClick={() => handleLinkUnmatchedClient(candidate)}
+                                disabled={linkCommunicationMutation.isPending}
+                                className="flex w-full items-center justify-between rounded border border-border bg-background p-2 text-left hover:bg-accent transition-colors text-xs"
+                              >
+                                <div>
+                                  <div className="font-medium text-foreground">
+                                    {candidate.firstName} {candidate.lastName}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {candidate.matchReason} {candidate.email ? "• " + candidate.email : ""}
+                                  </div>
+                                </div>
+                                <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
