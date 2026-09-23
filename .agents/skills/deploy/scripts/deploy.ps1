@@ -50,34 +50,9 @@ if (-not $SkipEnvCheck) {
     # AKTIVNA ENV OCHRNA: kazdy deploy prepise .env na serveri (zname dokploy
     # spravanie - 109+ premennych sa strati). Vzdy pushnime lokalny env subor
     # pred webhookom, aby sa hodnoty nevyhodili spolu s buildom.
-    Write-Host "  Pushujem env do Dokploy..." -ForegroundColor Yellow
-    $pushed = $false
-    $dokToken = if ($env:DOKPLOY_TOKEN) { $env:DOKPLOY_TOKEN } elseif (Test-Path '.env') {
-        $tLine = Get-Content '.env' | Where-Object { $_ -match '^DOKPLOY_TOKEN=(.*)$' }
-        if ($tLine) { $matches[1].Trim('"').Trim("'") } else { $null }
-    } else { $null }
-
-    if ($dokToken) {
-        try {
-            $rawEnv = Get-Content $EnvFile -Raw
-            $res = Invoke-RestMethod -Uri "https://dev.significa.sk/api/compose.saveEnvironment" -Method Post -Headers @{"x-api-key" = $dokToken; "Content-Type" = "application/json"} -Body (ConvertTo-Json @{composeId = "pvdhIxlCIhYTKvnmrZ8Mk"; env = $rawEnv}) -ErrorAction Stop
-            if ($res -eq $true -or $res.ok -eq $true) {
-                $pushed = $true
-            }
-        } catch {
-            Write-Host "  REST API saveEnvironment varovanie: $_" -ForegroundColor DarkGray
-        }
-    }
-
-    if (-not $pushed) {
-        $rawEnv = Get-Content $EnvFile -Raw
-        dokploy compose save-environment --composeId "pvdhIxlCIhYTKvnmrZ8Mk" --env $rawEnv
-        if ($LASTEXITCODE -eq 0) {
-            $pushed = $true
-        }
-    }
-
-    if (-not $pushed) {
+    Write-Host "  Pushujem env do Dokploy (node push-env.js)..." -ForegroundColor Yellow
+    node .agents/skills/deploy/scripts/push-env.js $EnvFile
+    if ($LASTEXITCODE -ne 0) {
         Write-Host "CHYBA: Synchronizacia env zlyhala. Deploy zastaveny - pri pokracovani by sa env na serveri vymazali." -ForegroundColor Red
         exit 1
     }
