@@ -1,4 +1,19 @@
 import { parseSenderIdentity } from "@/lib/inbox-cleaner";
+import {
+  buildInboxReplyPrompt,
+  detectSupplierInvoice,
+  draftViolatesSympathy,
+  evaluateSympathyGate,
+  fallbackReplyDraft,
+  inboxReplySystemPrompt,
+} from "@/lib/inbox/ai-reply";
+import { generateText } from "ai";
+import {
+  resolveFeatureConfig,
+  resolvePracticeLanguageModel,
+} from "@/lib/ai/ai-config-resolver";
+import { recordUsage } from "@/lib/billing/usage";
+import { rateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, sql, isNull, or, ne, isNotNull, ilike } from "drizzle-orm";
@@ -37,7 +52,6 @@ import {
 } from "@/lib/recovery-hold";
 import { assertOutboundEmailAllowed } from "@/lib/outbound-email-security";
 import { parsePdfInvoice, extractPdfText, type PdfInvoiceExtraction, type InvoiceParserAiConfig } from "@/lib/inventory/pdf-invoice-parser";
-import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
 
 
 export {
@@ -155,9 +169,16 @@ type InboxConversationRow = {
   assignedToName: string | null;
   readAt: Date | string | null;
   providerMessageId: string | null;
+  dedupeKey: string | null;
   createdAt: Date | string | null;
   clientFirstName: string | null;
   clientLastName: string | null;
+  senderDisplay: string | null;
+  senderGroupKey: string | null;
+  patientId: string | null;
+  patientName: string | null;
+  patientSpecies: string | null;
+  sympathyActive: boolean | null;
   unreadCount: number | string | bigint | null;
   total: number | string | bigint | null;
 };
@@ -356,6 +377,10 @@ export const communicationsRouter = createRouter({
     .input(
       z.object({
         inboxFilter: z.enum(["all", "unread", "sent"]).optional(),
+        channelFilter: z
+          .enum(["all", "whatsapp", "email", "sms", "portal", "phone"])
+          .optional(),
+        suppliersOnly: z.boolean().optional(),
         limit: z.number().int().min(1).max(100).default(25),
         offset: listOffsetInput,
       }),
@@ -367,6 +392,27 @@ export const communicationsRouter = createRouter({
           : input.inboxFilter === "sent"
             ? sql`and c.direction = 'outbound' and c.status in ('sent', 'delivered', 'read')`
             : sql``;
+
+      // WhatsApp rows are stored as channel='sms' with dedupe_key 'wa:*'.
+      const channelClause =
+        input.channelFilter === "whatsapp"
+          ? sql`and c.channel = 'sms' and c.dedupe_key like 'wa:%'`
+          : input.channelFilter === "sms"
+            ? sql`and c.channel = 'sms' and (c.dedupe_key is null or c.dedupe_key not like 'wa:%')`
+            : input.channelFilter === "email"
+              ? sql`and c.channel = 'email'`
+              : input.channelFilter === "portal"
+                ? sql`and c.channel = 'portal'`
+                : input.channelFilter === "phone"
+                  ? sql`and c.channel = 'phone'`
+                  : sql``;
+
+      // Supplier filter: conversations whose latest message carries inbound
+      // attachments metadata (supplier PDF invoices arrive as email
+      // attachments and embed <!--INBOX_ATTACHMENTS:…--> in the content).
+      const supplierClause = input.suppliersOnly
+        ? sql`and c.content like '%INBOX_ATTACHMENTS%'`
+        : sql``;
 
       const result = await ctx.db.execute(sql`
         with base as (
@@ -386,6 +432,17 @@ export const communicationsRouter = createRouter({
             c.created_at as "createdAt",
             cl.first_name as "clientFirstName",
             cl.last_name as "clientLastName",
+            latest_patient.id as "patientId",
+            latest_patient.name as "patientName",
+            latest_patient.species as "patientSpecies",
+            exists (
+              select 1
+              from patients sympathy_p
+              where sympathy_p.practice_id = ${ctx.practiceId}
+                and sympathy_p.client_id = c.client_id
+                and sympathy_p.status = 'deceased'
+                and sympathy_p.deleted_at is null
+            ) as "sympathyActive",
             coalesce(
               case when cl.id is not null then concat(cl.first_name, ' ', cl.last_name) end,
               substring(c.content from 'From:[ \t]*([^\r\n]+)'),
@@ -441,6 +498,15 @@ export const communicationsRouter = createRouter({
             order by ca.created_at desc, ca.id desc
             limit 1
           ) latest_assignment on true
+          left join lateral (
+            select p.id, p.name, p.species
+            from patients p
+            where p.practice_id = ${ctx.practiceId}
+              and p.client_id = c.client_id
+              and p.deleted_at is null
+            order by p.created_at desc, p.id desc
+            limit 1
+          ) latest_patient on true
           where c.practice_id = ${ctx.practiceId}
             and c.deleted_at is null
             and exists (
@@ -451,6 +517,8 @@ export const communicationsRouter = createRouter({
             )
             and (c.client_id is null or cl.id is not null)
             ${filterClause}
+            ${channelClause}
+            ${supplierClause}
         ),
         latest as (
           select *
@@ -472,6 +540,10 @@ export const communicationsRouter = createRouter({
           latest."createdAt",
           latest."clientFirstName",
           latest."clientLastName",
+          latest."patientId",
+          latest."patientName",
+          latest."patientSpecies",
+          latest."sympathyActive",
           latest."unreadCount",
           latest."senderDisplay",
           latest."senderGroupKey",
@@ -484,8 +556,9 @@ export const communicationsRouter = createRouter({
 
       const rows = rowsFromExecute<InboxConversationRow>(result);
       return {
-        items: rows.map(({ total: _total, unreadCount, ...row }) => ({
+        items: rows.map(({ total: _total, unreadCount, sympathyActive, ...row }) => ({
           ...row,
+          sympathyActive: Boolean(sympathyActive),
           unreadCount: dbNumber(unreadCount),
         })),
         total: dbNumber(rows[0]?.total),
@@ -806,6 +879,200 @@ export const communicationsRouter = createRouter({
         },
         matchedCandidates,
       };
+    }),
+
+  /**
+   * AI reply assistant (Modul 5 — Smart Reply Box).
+   *
+   * Generates a draft reply with clinical context (client + patients + recent
+   * thread) for staff review. Human-in-the-loop: the draft is returned as an
+   * editable concept (`requiresReview: true`) and is NEVER sent automatically.
+   *
+   * Safety gates:
+   *  - Sympathy Gate: any deceased patient of the client forces pietny
+   *    (condolence) tone; AI output that slips into cheerful/marketing tone
+   *    is discarded and replaced by the deterministic condolence template.
+   *  - Prompt injection: all client-originated text travels inside
+   *    `<db_record>` boundaries and can never rewrite system instructions.
+   */
+  suggestReply: inboxStaffProcedure
+    .input(
+      z.object({
+        clientId: z.string().uuid(),
+        locale: z.enum(["sk", "en"]).default("sk"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const limited = await rateLimit({
+        key: `inbox-reply:${ctx.practiceId}:actor:${ctx.user.id}`,
+        limit: 20,
+        windowMs: 60_000,
+      });
+      if (!limited.success) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many reply suggestions at once. Wait a minute and try again.",
+        });
+      }
+
+      const [client] = await ctx.db
+        .select({
+          id: clients.id,
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+        })
+        .from(clients)
+        .where(
+          and(
+            eq(clients.id, input.clientId),
+            eq(clients.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(clients.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!client) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+      }
+
+      const clientPatients = await ctx.db
+        .select({
+          id: patients.id,
+          name: patients.name,
+          species: patients.species,
+          status: patients.status,
+        })
+        .from(patients)
+        .where(
+          and(
+            eq(patients.clientId, input.clientId),
+            eq(patients.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(patients.deletedAt),
+          ),
+        )
+        .orderBy(desc(patients.createdAt))
+        .limit(10);
+
+      const sympathy = evaluateSympathyGate(clientPatients);
+
+      const recent = await ctx.db
+        .select({
+          direction: communications.direction,
+          channel: communications.channel,
+          content: communications.content,
+        })
+        .from(communications)
+        .where(
+          and(
+            eq(communications.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            eq(communications.clientId, input.clientId),
+            isNull(communications.deletedAt),
+          ),
+        )
+        .orderBy(desc(communications.createdAt))
+        .limit(6);
+
+      const clientName = `${client.firstName} ${client.lastName}`.trim() || null;
+      const system = inboxReplySystemPrompt(input.locale, sympathy.sympathyActive);
+      const prompt = buildInboxReplyPrompt({
+        clientName,
+        patients: clientPatients,
+        recentMessages: [...recent].reverse(),
+        locale: input.locale,
+        sympathyActive: sympathy.sympathyActive,
+      });
+
+      let modelId = "template-fallback";
+      let usedAi = false;
+      let aiDraft: string | null = null;
+      try {
+        const featureConfig = await resolveFeatureConfig(
+          ctx.db,
+          ctx.practiceId,
+          "assistant",
+        );
+        modelId = featureConfig.modelId;
+        const model = await resolvePracticeLanguageModel(
+          ctx.db,
+          ctx.practiceId,
+          "assistant",
+        );
+        const result = await generateText({
+          model,
+          system,
+          prompt,
+          temperature: 0.3,
+        });
+        const text = result.text.trim();
+        if (text.length > 0) {
+          aiDraft = text.slice(0, 2000);
+          usedAi = true;
+          await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
+        }
+      } catch {
+        aiDraft = null;
+      }
+
+      // Sympathy enforcement: a grieving owner must never receive a cheerful
+      // or marketing-toned draft. Reject violating AI output.
+      let sympathyFiltered = false;
+      let draft = aiDraft;
+      if (sympathy.sympathyActive && draft && draftViolatesSympathy(draft)) {
+        draft = null;
+        sympathyFiltered = true;
+      }
+      if (!draft) {
+        draft = fallbackReplyDraft({
+          clientFirstName: client.firstName,
+          patientName: clientPatients[0]?.name ?? null,
+          sympathyActive: sympathy.sympathyActive,
+          locale: input.locale,
+        });
+        if (!usedAi || sympathyFiltered) {
+          usedAi = false;
+          if (!sympathyFiltered) modelId = "template-fallback";
+        }
+      }
+
+      return {
+        draft,
+        sympathyActive: sympathy.sympathyActive,
+        sympathyFiltered,
+        deceasedPatients: sympathy.deceasedPatients,
+        model: modelId,
+        usedAi,
+        requiresReview: true as const,
+      };
+    }),
+
+  /**
+   * Supplier-invoice flag for a single communication (shared heuristic with
+   * the inbox UI badge). Pure metadata check — no AI, no side effects.
+   */
+  detectSupplierInvoice: protectedProcedure
+    .input(z.object({ communicationId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [comm] = await ctx.db
+        .select({
+          subject: communications.subject,
+          content: communications.content,
+        })
+        .from(communications)
+        .where(
+          and(
+            eq(communications.id, input.communicationId),
+            eq(communications.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(communications.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!comm) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Communication not found" });
+      }
+      return detectSupplierInvoice(comm.content, comm.subject);
     }),
 
   createClientAndLink: inboxStaffProcedure

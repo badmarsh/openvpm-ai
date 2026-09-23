@@ -72,6 +72,15 @@ function parseSenderAddress(from: string): string {
   return (match ? match[1] : from).trim().toLowerCase();
 }
 
+/**
+ * Escape a literal value for an ILIKE comparison so crafted sender addresses
+ * (containing `%` or `_`) can never widen the client lookup into a wildcard
+ * match. Postgres LIKE treats backslash as the default escape character.
+ */
+function escapeIlikeLiteral(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
 function payloadTooLargeResponse() {
   return NextResponse.json(
     { error: "Email webhook payload too large" },
@@ -243,6 +252,10 @@ export async function POST(request: Request) {
       }
     }
 
+    // Store the full inbound email: sender header (used for unmatched sender
+    // grouping) + plain-text body + attachment metadata. Display-time
+    // cleaning (signature / quote stripping via `cleanEmailBody`) happens in
+    // the inbox thread view so the raw evidence is never lost.
     const finalContent = ("From: " + event.data.from + "\n\n" + emailBody + emailAttachmentsMeta).trim();
 
     // Resolve which practice owns this inbound address. Resend routes to a
@@ -250,7 +263,9 @@ export async function POST(request: Request) {
     // stored email matches the sender. First match wins; unmatched goes into
     // the inbox without a clientId for manual review.
     await withSystem(db, async (tx) => {
-      // Find a matching client across all practices
+      // Find a matching client across all practices. senderEmail is a parsed
+      // address (lowercased, no display name); match it exactly after
+      // escaping LIKE wildcards so crafted addresses can't widen the lookup.
       const matchedClients = await tx
         .select({
           id: clients.id,
@@ -259,7 +274,7 @@ export async function POST(request: Request) {
         .from(clients)
         .where(
           and(
-            ilike(clients.email, senderEmail),
+            ilike(clients.email, escapeIlikeLiteral(senderEmail)),
             isNull(clients.deletedAt),
           ),
         )
@@ -277,7 +292,7 @@ export async function POST(request: Request) {
                 channel: "email",
                 direction: "inbound",
                 subject,
-                content: `From: ${event.data.from}`,
+                content: finalContent,
                 status: "pending",
                 providerMessageId,
                 dedupeKey,
@@ -305,7 +320,7 @@ export async function POST(request: Request) {
                 channel: "email",
                 direction: "inbound",
                 subject,
-                content: `From: ${event.data.from}`,
+                content: finalContent,
                 status: "pending",
                 providerMessageId,
                 dedupeKey,

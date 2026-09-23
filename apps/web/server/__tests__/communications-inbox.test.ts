@@ -482,6 +482,7 @@ describe("communications inbox workflows", () => {
           createdAt,
           clientFirstName: "Ada",
           clientLastName: "Lovelace",
+          sympathyActive: false,
           unreadCount: 3,
         },
       ],
