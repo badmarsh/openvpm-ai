@@ -135,7 +135,7 @@ if (-not $webhookUrl) {
 }
 
 try {
-    $res = Invoke-RestMethod -Uri $webhookUrl -Method Post -SkipCertificateCheck
+    node -e "const https = require('https'); const req = https.request(process.argv[1], {method: 'POST', rejectUnauthorized: false}, res => { console.log('Status:', res.statusCode); res.on('data', d => process.stdout.write(d)); }); req.on('error', e => { console.error(e); process.exit(1); }); req.end();" "$webhookUrl"
     Write-Host "OK Dokploy odpoved: $($res.message)" -ForegroundColor Green
     Write-Host "Build je aktivny a viditelny v Dokploy UI pod Deployments!" -ForegroundColor Cyan
 } catch {
