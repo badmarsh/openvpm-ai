@@ -201,7 +201,7 @@ test("Generovanie 23 nových screenshotov v Light Mode (1920x1080)", async ({ br
   await dismissOverlays(page);
   await page.waitForTimeout(3000);
   try {
-    const vitalsTab = page.locator('button:has-text("Vitals"), button:has-text("Vitálne"), [value="vitals"]').first();
+    const vitalsTab = page.locator('button:has-text("Diagnostics & Vitals"), button:has-text("Diagnostika &"), [value="diagnostics"]').first();
     if (await vitalsTab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await vitalsTab.click();
       await page.waitForTimeout(2000);
@@ -218,7 +218,7 @@ test("Generovanie 23 nových screenshotov v Light Mode (1920x1080)", async ({ br
   await page.waitForTimeout(3000);
   try {
     // Hľadaj SOAP/záznamy sekciu
-    const recordsTab = page.locator('button:has-text("Záznamy"), button:has-text("Records"), button:has-text("SOAP"), [value="records"]').first();
+    const recordsTab = page.locator('button:has-text("Klinická história"), button:has-text("Medical Records"), button:has-text("SOAP"), [value="history"]').first();
     if (await recordsTab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await recordsTab.click();
       await page.waitForTimeout(1500);
