@@ -60,7 +60,7 @@ if (-not $SkipEnvCheck) {
 # =============================================
 Write-Host "
 [1/6] Kontrola lokalneho gitu..." -ForegroundColor Yellow
-$status = git status --porcelain
+$status = git status --porcelain -uno
 if ($status) {
     Write-Host "VAROVANIE: Lokalny repozitar obsahuje necommitute zmeny:" -ForegroundColor Yellow
     git status -s
