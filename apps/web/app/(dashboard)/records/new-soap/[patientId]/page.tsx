@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -413,6 +413,39 @@ export default function NewSoapNotePage() {
   const aiConfigured = agentStatus.data?.configured ?? false;
   const canUseAi = agentStatus.data?.canUseAi ?? false;
   const needsAiBillingSetup = agentStatus.data?.needsBillingSetup ?? false;
+
+  // GT-005: the draft request must carry the visit context (appointment
+  // type, date, doctor, notes). Without it the model drafts only from
+  // chart data and loses the reason for the visit.
+  const appointmentQuery = trpc.appointments.getById.useQuery(
+    { id: appointmentId! },
+    { enabled: canCreateSoapNote && !!appointmentId },
+  );
+
+  const visitContext = useMemo(() => {
+    const appt = appointmentQuery.data;
+    if (!appt) return undefined;
+    const parts: string[] = [];
+    if (appt.typeName) parts.push(`Typ termínu: ${appt.typeName}`);
+    if (appt.startTime) {
+      parts.push(
+        `Termín: ${new Date(appt.startTime).toLocaleString("sk-SK", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}`,
+      );
+    }
+    if (appt.doctorName) parts.push(`Lekár: ${appt.doctorName}`);
+    if (appt.locationName) parts.push(`Lokácia: ${appt.locationName}`);
+    if (appt.notes && appt.notes.trim()) {
+      parts.push(`Poznámky / dôvod návštevy: ${appt.notes.trim()}`);
+    }
+    if (parts.length === 0) return undefined;
+    // Server bound is 2000 chars (optionalClinicalTextInput); stay under it
+    // client-side so long notes never reject the whole draft request.
+    return parts.join("\n").slice(0, 2000);
+  }, [appointmentQuery.data]);
+
   const draftWithAi = trpc.ai.draftSoapNote.useMutation({
     onSuccess: (draft) => {
       if (finalizedElsewhereRef.current) return;
@@ -440,6 +473,7 @@ export default function NewSoapNotePage() {
     }
     draftWithAi.mutate({
       patientId: params.patientId,
+      visitContext,
       mode: draftMode,
       deepThinking: draftMode === "pro",
     });

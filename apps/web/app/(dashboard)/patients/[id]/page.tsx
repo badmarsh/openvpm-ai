@@ -203,16 +203,24 @@ function calculateAge(
 
 type Tab =
   | "overview"
+  | "clinical"
+  | "preventive"
   | "records"
   | "prescriptions"
-  | "labResults"
-  | "procedures"
   | "documents"
   | "appointments"
-  | "weight"
-  | "vitals"
-  | "vaccinations"
   | "invoices";
+
+// Backwards-compatible mapping for previously bookmarked ?tab= links:
+// weight merged into overview; labResults+vitals into clinical;
+// vaccinations+procedures into preventive.
+const LEGACY_TAB_MAP: Record<string, Tab> = {
+  weight: "overview",
+  vitals: "clinical",
+  labResults: "clinical",
+  vaccinations: "preventive",
+  procedures: "preventive",
+};
 
 
 function canManagePatientDetailRole(role?: string | null): boolean {
@@ -332,8 +340,22 @@ export default function PatientDetailPage() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTabState] = useState<Tab>(() => {
     const urlTab = searchParams.get("tab");
-    if (urlTab && ["overview","records","prescriptions","labResults","procedures","documents","appointments","weight","vitals","vaccinations","invoices"].includes(urlTab)) {
-      return urlTab as Tab;
+    if (urlTab) {
+      if (
+        [
+          "overview",
+          "clinical",
+          "preventive",
+          "records",
+          "prescriptions",
+          "documents",
+          "appointments",
+          "invoices",
+        ].includes(urlTab)
+      ) {
+        return urlTab as Tab;
+      }
+      return LEGACY_TAB_MAP[urlTab] ?? "overview";
     }
     return "overview";
   });
@@ -354,15 +376,12 @@ export default function PatientDetailPage() {
   const tabs: { id: Tab; label: string }[] = useMemo(
     () => [
       { id: "overview", label: t("patients.tabs.overview", "Overview") },
+      { id: "clinical", label: t("patients.tabs.clinical", "Clinical Records") },
+      { id: "preventive", label: t("patients.tabs.preventive", "Preventive Care") },
       { id: "records", label: t("patients.tabs.records", "Medical Records") },
       { id: "prescriptions", label: t("patients.tabs.prescriptions", "Prescriptions") },
-      { id: "labResults", label: t("patients.tabs.labResults", "Lab Results") },
-      { id: "procedures", label: t("patients.tabs.procedures", "Procedures") },
       { id: "documents", label: t("patients.tabs.documents", "Documents") },
       { id: "appointments", label: t("patients.tabs.appointments", "Appointments") },
-      { id: "weight", label: t("patients.tabs.weight", "Weight History") },
-      { id: "vitals", label: t("patients.tabs.vitals", "Vitals") },
-      { id: "vaccinations", label: t("patients.tabs.vaccinations", "Vaccinations") },
       { id: "invoices", label: t("patients.tabs.invoices", "Invoices") },
     ],
     [t],
@@ -1707,75 +1726,105 @@ export default function PatientDetailPage() {
         </div>
 
         <TabsContent value="overview" className="mt-6">
-          <section aria-labelledby="patient-section-overview">
-            <h2 id="patient-section-overview" className="sr-only">
-              {t("patients.tabs.overview", "Overview")}
-            </h2>
-          <OverviewTab
-            patient={patient}
-            recordsTimeZone={recordsTimeZone ?? ""}
-          />
-          </section>
+          <div className="space-y-10">
+            <section aria-labelledby="patient-section-overview">
+              <h2 id="patient-section-overview" className="sr-only">
+                {t("patients.tabs.overview", "Overview")}
+              </h2>
+              <OverviewTab
+                patient={patient}
+                recordsTimeZone={recordsTimeZone ?? ""}
+              />
+            </section>
+            <section aria-labelledby="patient-section-weight">
+              <h3
+                id="patient-section-weight"
+                className="mb-4 border-b border-border pb-2 text-base font-semibold"
+              >
+                {t("patients.tabs.weight", "Weight History")}
+              </h3>
+              <WeightHistoryTab
+                weights={patient.weights}
+                patientId={patient.id}
+                canManagePatientDetail={canManagePatientDetail}
+                canCorrectClinicalRecords={canCorrectClinicalRecords}
+                weightKg={weightKg}
+                setWeightKg={setWeightKg}
+                weightMeasuredAt={weightMeasuredAt}
+                setWeightMeasuredAt={setWeightMeasuredAt}
+                onSubmitWeight={handleRecordWeight}
+                isAddingWeight={addWeight.isPending}
+                canSubmitWeight={canSubmitWeight}
+                weightTrend={weightTrend}
+                measurementSystem={chartMeasurementSystem}
+                recordsTimeZone={recordsTimeZone ?? ""}
+                recordsSettingsTimeZone={recordsSettingsTimeZone ?? undefined}
+                canonicalPatientWeight={Number(canonicalPatientWeight)}
+                maxMeasuredAt={formatDateTimeLocalInputForTimeZone(new Date(), recordsSettingsTimeZone)}
+                onRefresh={() => void refreshPatientDetail()}
+                onSwitchToVitals={() => setActiveTab("clinical")}
+              />
+            </section>
+          </div>
         </TabsContent>
 
-        <TabsContent value="weight" className="mt-6">
-          <section aria-labelledby="patient-section-weight">
-            <h2 id="patient-section-weight" className="sr-only">
-              {t("patients.tabs.weight", "Weight History")}
-            </h2>
-          <WeightHistoryTab
-            weights={patient.weights}
-            patientId={patient.id}
-            canManagePatientDetail={canManagePatientDetail}
-            canCorrectClinicalRecords={canCorrectClinicalRecords}
-            weightKg={weightKg}
-            setWeightKg={setWeightKg}
-            weightMeasuredAt={weightMeasuredAt}
-            setWeightMeasuredAt={setWeightMeasuredAt}
-            onSubmitWeight={handleRecordWeight}
-            isAddingWeight={addWeight.isPending}
-            canSubmitWeight={canSubmitWeight}
-            weightTrend={weightTrend}
-            measurementSystem={chartMeasurementSystem}
-            recordsTimeZone={recordsTimeZone ?? ""}
-            recordsSettingsTimeZone={recordsSettingsTimeZone ?? undefined}
-            canonicalPatientWeight={Number(canonicalPatientWeight)}
-            maxMeasuredAt={formatDateTimeLocalInputForTimeZone(new Date(), recordsSettingsTimeZone)}
-            onRefresh={() => void refreshPatientDetail()}
-            onSwitchToVitals={() => setActiveTab("vitals")}
-          />
-          </section>
+        <TabsContent value="clinical" className="mt-6">
+          <div className="space-y-10">
+            <section aria-labelledby="patient-section-clinical-lab">
+              <h3
+                id="patient-section-clinical-lab"
+                className="mb-4 border-b border-border pb-2 text-base font-semibold"
+              >
+                {t("patients.tabs.labResults", "Lab Results")}
+              </h3>
+              <LabResultsTab patientId={patient.id} timeZone={recordsTimeZone} />
+            </section>
+            <section aria-labelledby="patient-section-clinical-vitals">
+              <h3
+                id="patient-section-clinical-vitals"
+                className="mb-4 border-b border-border pb-2 text-base font-semibold"
+              >
+                {t("patients.tabs.vitals", "Vitals")}
+              </h3>
+              <VitalsTab
+                patientId={patient.id}
+                timeZone={recordsTimeZone}
+                measurementSystem={chartMeasurementSystem}
+                bodyConditionScale={chartBodyConditionScale}
+                canRecordVitals={canRecordVitals}
+                canCorrectClinicalRecords={canCorrectClinicalRecords}
+              />
+            </section>
+          </div>
         </TabsContent>
 
-        <TabsContent value="vitals" className="mt-6">
-          <section aria-labelledby="patient-section-vitals">
-            <h2 id="patient-section-vitals" className="sr-only">
-              {t("patients.tabs.vitals", "Vitals")}
-            </h2>
-          <VitalsTab
-            patientId={patient.id}
-            timeZone={recordsTimeZone}
-            measurementSystem={chartMeasurementSystem}
-            bodyConditionScale={chartBodyConditionScale}
-            canRecordVitals={canRecordVitals}
-            canCorrectClinicalRecords={canCorrectClinicalRecords}
-          />
-          </section>
-        </TabsContent>
-
-        <TabsContent value="vaccinations" className="mt-6">
-          <section aria-labelledby="patient-section-vaccinations">
-            <h2 id="patient-section-vaccinations" className="sr-only">
-              {t("patients.tabs.vaccinations", "Vaccinations")}
-            </h2>
-          <VaccinationsTab
-            patientId={patient.id}
-            timeZone={recordsTimeZone}
-            canCorrectClinicalRecords={canCorrectClinicalRecords}
-            canPrepareCertificate={canManagePatientDetail}
-            canEditCertificate={canEditVaccinationCertificate}
-          />
-          </section>
+        <TabsContent value="preventive" className="mt-6">
+          <div className="space-y-10">
+            <section aria-labelledby="patient-section-preventive-vaccinations">
+              <h3
+                id="patient-section-preventive-vaccinations"
+                className="mb-4 border-b border-border pb-2 text-base font-semibold"
+              >
+                {t("patients.tabs.vaccinations", "Vaccinations")}
+              </h3>
+              <VaccinationsTab
+                patientId={patient.id}
+                timeZone={recordsTimeZone}
+                canCorrectClinicalRecords={canCorrectClinicalRecords}
+                canPrepareCertificate={canManagePatientDetail}
+                canEditCertificate={canEditVaccinationCertificate}
+              />
+            </section>
+            <section aria-labelledby="patient-section-preventive-procedures">
+              <h3
+                id="patient-section-preventive-procedures"
+                className="mb-4 border-b border-border pb-2 text-base font-semibold"
+              >
+                {t("patients.tabs.procedures", "Procedures")}
+              </h3>
+              <ProceduresTab patientId={patient.id} timeZone={recordsTimeZone} />
+            </section>
+          </div>
         </TabsContent>
 
         <TabsContent value="records" className="mt-6">
@@ -1798,24 +1847,6 @@ export default function PatientDetailPage() {
               {t("patients.tabs.prescriptions", "Prescriptions")}
             </h2>
           <PrescriptionsTab patientId={patient.id} timeZone={recordsTimeZone} />
-          </section>
-        </TabsContent>
-
-        <TabsContent value="labResults" className="mt-6">
-          <section aria-labelledby="patient-section-labResults">
-            <h2 id="patient-section-labResults" className="sr-only">
-              {t("patients.tabs.labResults", "Lab Results")}
-            </h2>
-          <LabResultsTab patientId={patient.id} timeZone={recordsTimeZone} />
-          </section>
-        </TabsContent>
-
-        <TabsContent value="procedures" className="mt-6">
-          <section aria-labelledby="patient-section-procedures">
-            <h2 id="patient-section-procedures" className="sr-only">
-              {t("patients.tabs.procedures", "Procedures")}
-            </h2>
-          <ProceduresTab patientId={patient.id} timeZone={recordsTimeZone} />
           </section>
         </TabsContent>
 

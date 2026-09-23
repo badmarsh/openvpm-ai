@@ -2859,7 +2859,7 @@
     "clients": "Clients",
     "schedule": "Schedule",
     "appointments": "Appointments",
-    "records": "Clinical Records",
+    "records": "Clinical Card",
     "billing": "Billing",
     "invoices": "Invoices",
     "estimates": "Estimates",
@@ -3020,7 +3020,9 @@
       "weight": "Weight History",
       "vitals": "Vitals",
       "vaccinations": "Vaccinations",
-      "invoices": "Invoices"
+      "invoices": "Invoices",
+      "clinical": "Clinical Records",
+      "preventive": "Preventive Care"
     },
     "prescriptionsTab": {
       "loadError": "Unable to load prescriptions.",

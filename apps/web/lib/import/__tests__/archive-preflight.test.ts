@@ -557,7 +557,10 @@ describe.skipIf(process.platform === "win32")("migration archive preflight", () 
     expect(
       firstArchiveBlocker(await preflightMigrationArchives([overArchive])),
     ).toBe("candidate_output_too_large");
-  });
+    // Builds two near-cap-size archives and runs the full preflight twice;
+    // under full parallel suite load on small CI boxes this can exceed the
+    // default 5s testTimeout (observed 5.3s vs 2.6s in isolation).
+  }, 30_000);
 
   it("accepts the exact source-row cap and rejects one row over", async () => {
     const header = "firstName,lastName,clientId\n";

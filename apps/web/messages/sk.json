@@ -2859,7 +2859,7 @@
     "clients": "Majitelia",
     "schedule": "Rozvrh",
     "appointments": "Termíny",
-    "records": "Záznamy",
+    "records": "Klinická karta",
     "billing": "Fakturácia & Pokladňa",
     "invoices": "Faktúry",
     "estimates": "Cenové ponuky",
@@ -3020,7 +3020,9 @@
       "weight": "História hmotnosti",
       "vitals": "Vitálne funkcie",
       "vaccinations": "Vakcinácie a odčervenia",
-      "invoices": "Faktúry"
+      "invoices": "Faktúry",
+      "clinical": "Klinické záznamy",
+      "preventive": "Preventívna starostlivosť"
     },
     "prescriptionsTab": {
       "loadError": "Nepodarilo sa načítať predpisy.",
