@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/common/empty-state";
 import { useI18n } from "@/lib/i18n";
@@ -45,7 +45,7 @@ export function LabResultsTab({
         title={t("patients.labResultsTab.empty", "No lab results yet")}
         description={t(
           "patients.labResultsTab.emptyDesc",
-          "Lab results entered in Records will show up here.",
+          "Lab results entered in the clinical record will show up here.",
         )}
       />
     );
@@ -57,12 +57,15 @@ export function LabResultsTab({
         <p className="text-sm text-muted-foreground">
           {t(
             "patients.labResultsTab.readonlyNotice",
-            "Viewing lab result history. Open Records to enter or correct results.",
+            "Lab results are entered in the clinical record. The button opens a prefilled form for this patient.",
           )}
         </p>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/records?patientId=${encodeURIComponent(patientId)}&tab=labResults`}>
-            {t("patients.labResultsTab.openInRecords", "Open in Records")}
+        <Button asChild size="sm">
+          <Link
+            href={`/records?patientId=${encodeURIComponent(patientId)}&tab=labResults&new=1`}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t("patients.labResultsTab.addResult", "Add lab result")}
           </Link>
         </Button>
       </div>

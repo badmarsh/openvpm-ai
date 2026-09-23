@@ -1289,7 +1289,7 @@ function RecordsPageContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t("records.title", "Medical Records")}
+        title={t("records.title", "Clinical Record")}
         subtitle={t("records.subtitle", "Clinical documentation and patient history")}
       />
 

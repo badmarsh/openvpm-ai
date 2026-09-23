@@ -1,12 +1,13 @@
 "use client";
 
-import { Pill } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
+import { Pill, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/common/empty-state";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 function getPrescriptionStatusBadge(status: string | null) {
@@ -22,19 +23,32 @@ function getPrescriptionStatusBadge(status: string | null) {
   }
 }
 
+type PrescriptionFilter = "all" | "active" | "finished";
+
 export function PrescriptionsTab({
   patientId,
   timeZone,
+  canPrescribe = true,
 }: {
   patientId: string;
   timeZone?: string | null;
+  canPrescribe?: boolean;
 }) {
   const { t } = useI18n();
+  const [filter, setFilter] = useState<PrescriptionFilter>("all");
   const {
     data: prescriptions,
     isLoading,
     error,
   } = trpc.records.listPrescriptions.useQuery({ patientId });
+
+  const groups = useMemo(() => {
+    const rows = prescriptions ?? [];
+    return {
+      active: rows.filter((rx) => rx.effectiveStatus === "active"),
+      finished: rows.filter((rx) => rx.effectiveStatus !== "active"),
+    };
+  }, [prescriptions]);
 
   if (error) {
     return (
@@ -58,27 +72,80 @@ export function PrescriptionsTab({
         title={t("patients.prescriptionsTab.empty", "No prescriptions yet")}
         description={t(
           "patients.prescriptionsTab.emptyDesc",
-          "Prescriptions written in Records will show up here.",
+          "Prescriptions written in the clinical record will show up here.",
         )}
       />
     );
   }
 
+  const visibleRows =
+    filter === "active"
+      ? groups.active
+      : filter === "finished"
+        ? groups.finished
+        : prescriptions;
+
+  const filters: { id: PrescriptionFilter; label: string; count: number }[] = [
+    {
+      id: "all",
+      label: t("patients.prescriptionsTab.filterAll", "All"),
+      count: prescriptions.length,
+    },
+    {
+      id: "active",
+      label: t("patients.prescriptionsTab.filterActive", "Active"),
+      count: groups.active.length,
+    },
+    {
+      id: "finished",
+      label: t("patients.prescriptionsTab.filterFinished", "Finished"),
+      count: groups.finished.length,
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {t(
             "patients.prescriptionsTab.readonlyNotice",
-            "Viewing prescription history. Open Records to create or manage prescriptions.",
+            "Prescriptions are written in the clinical record. The button opens a prefilled prescription for this patient.",
           )}
         </p>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/records?patientId=${encodeURIComponent(patientId)}&tab=prescriptions`}>
-            {t("patients.prescriptionsTab.openInRecords", "Open in Records")}
-          </Link>
-        </Button>
+        {canPrescribe ? (
+          <Button asChild size="sm">
+            <Link
+              href={`/records?patientId=${encodeURIComponent(patientId)}&tab=prescriptions&new=1`}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t("patients.prescriptionsTab.issuePrescription", "Write prescription")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
+
+      <div className="flex flex-wrap items-center gap-2" role="group">
+        {filters.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setFilter(option.id)}
+            aria-pressed={filter === option.id}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
+              filter === option.id
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {option.label}
+            <span className="tabular-nums text-muted-foreground">
+              {option.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead>
@@ -95,7 +162,7 @@ export function PrescriptionsTab({
               <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.prescriptionsTab.colStatus", "Status")}
               </th>
-              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+              <th className="h-10 px-4 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {t("patients.prescriptionsTab.colRefills", "Refills")}
               </th>
               <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -104,38 +171,65 @@ export function PrescriptionsTab({
             </tr>
           </thead>
           <tbody>
-            {prescriptions.map((rx) => (
-              <tr
-                key={rx.id}
-                className="border-b border-border last:border-0"
-              >
-                <td className="px-4 py-3 font-medium">{rx.medicationName}</td>
-                <td className="px-4 py-3">{rx.dosage ?? "\u2014"}</td>
-                <td className="px-4 py-3">{rx.frequency ?? "\u2014"}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
-                      getPrescriptionStatusBadge(rx.effectiveStatus),
-                    )}
-                  >
-                    {rx.effectiveStatus === "active"
-                      ? t("patients.prescriptionsTab.statusActive", "active")
-                      : rx.effectiveStatus === "cancelled"
-                        ? t("patients.prescriptionsTab.statusCancelled", "cancelled")
-                        : rx.effectiveStatus === "expired"
-                          ? t("patients.prescriptionsTab.statusExpired", "expired")
-                          : (rx.effectiveStatus ?? "unknown")}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{rx.refillsRemaining ?? 0}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {rx.startDate
-                    ? formatClinicalDate(rx.startDate, timeZone, "\u2014")
-                    : "\u2014"}
-                </td>
-              </tr>
-            ))}
+            {visibleRows.map((rx, index) => {
+              const previous = visibleRows[index - 1];
+              const previousIsActive = previous?.effectiveStatus === "active";
+              const isActive = rx.effectiveStatus === "active";
+              const startsActiveGroup = filter === "all" && isActive && !previous;
+              const startsFinishedGroup =
+                filter === "all" && !isActive && (previousIsActive || !previous);
+              return (
+                <Fragment key={rx.id}>
+                  {startsActiveGroup || startsFinishedGroup ? (
+                    <tr className="border-b border-border bg-muted/30">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        {startsActiveGroup
+                          ? t(
+                              "patients.prescriptionsTab.activeSection",
+                              "Active medication",
+                            )
+                          : t(
+                              "patients.prescriptionsTab.finishedSection",
+                              "Finished medication",
+                            )}
+                      </td>
+                    </tr>
+                  ) : null}
+                  <tr className="border-b border-border last:border-0">
+                    <td className="px-4 py-2.5 font-medium">{rx.medicationName}</td>
+                    <td className="px-4 py-2.5 tabular-nums">{rx.dosage ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5">{rx.frequency ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5">
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+                          getPrescriptionStatusBadge(rx.effectiveStatus),
+                        )}
+                      >
+                        {rx.effectiveStatus === "active"
+                          ? t("patients.prescriptionsTab.statusActive", "active")
+                          : rx.effectiveStatus === "cancelled"
+                            ? t("patients.prescriptionsTab.statusCancelled", "cancelled")
+                            : rx.effectiveStatus === "expired"
+                              ? t("patients.prescriptionsTab.statusExpired", "expired")
+                              : (rx.effectiveStatus ?? "unknown")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">
+                      {rx.refillsRemaining ?? 0}
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground">
+                      {rx.startDate
+                        ? formatClinicalDate(rx.startDate, timeZone, "\u2014")
+                        : "\u2014"}
+                    </td>
+                  </tr>
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

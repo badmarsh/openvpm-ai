@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState, useRef } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -29,6 +37,7 @@ import {
   Pencil,
   ReceiptEuro,
   Stethoscope,
+  Syringe,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -203,23 +212,36 @@ function calculateAge(
 
 type Tab =
   | "overview"
-  | "clinical"
+  | "history"
+  | "diagnostics"
   | "preventive"
-  | "records"
   | "prescriptions"
-  | "documents"
-  | "appointments"
-  | "invoices";
+  | "admin";
+
+const TAB_IDS: Tab[] = [
+  "overview",
+  "history",
+  "diagnostics",
+  "preventive",
+  "prescriptions",
+  "admin",
+];
 
 // Backwards-compatible mapping for previously bookmarked ?tab= links:
-// weight merged into overview; labResults+vitals into clinical;
-// vaccinations+procedures into preventive.
+// weight/appointments merged into overview; labResults+vitals into
+// diagnostics; records into history; vaccinations+procedures into
+// preventive; documents+invoices into admin.
 const LEGACY_TAB_MAP: Record<string, Tab> = {
   weight: "overview",
-  vitals: "clinical",
-  labResults: "clinical",
+  appointments: "overview",
+  clinical: "diagnostics",
+  vitals: "diagnostics",
+  labResults: "diagnostics",
+  records: "history",
   vaccinations: "preventive",
   procedures: "preventive",
+  documents: "admin",
+  invoices: "admin",
 };
 
 
@@ -241,6 +263,18 @@ function canCorrectClinicalRecordRole(role?: string | null): boolean {
 }
 
 function canEditVaccinationCertificateRole(role?: string | null): boolean {
+  return role === "admin" || role === "veterinarian" || role === "technician";
+}
+
+function canCreateSoapNoteRole(role?: string | null): boolean {
+  return role === "admin" || role === "veterinarian";
+}
+
+function canPrescribeRole(role?: string | null): boolean {
+  return role === "admin" || role === "veterinarian";
+}
+
+function canRecordVaccinationRole(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "technician";
 }
 
@@ -332,6 +366,29 @@ function PatientDetailLoadingPanel({ label }: { label: string }) {
   );
 }
 
+/** Dense heading wrapper for a chart sub-section inside one clinical unit. */
+function ChartSection({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={`patient-section-${id}`} className="space-y-3">
+      <h3
+        id={`patient-section-${id}`}
+        className="border-b border-border pb-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+      >
+        {label}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
 export default function PatientDetailPage() {
   const { t } = useI18n();
   const params = useParams<{ id: string }>();
@@ -341,18 +398,7 @@ export default function PatientDetailPage() {
   const [activeTab, setActiveTabState] = useState<Tab>(() => {
     const urlTab = searchParams.get("tab");
     if (urlTab) {
-      if (
-        [
-          "overview",
-          "clinical",
-          "preventive",
-          "records",
-          "prescriptions",
-          "documents",
-          "appointments",
-          "invoices",
-        ].includes(urlTab)
-      ) {
+      if (TAB_IDS.includes(urlTab as Tab)) {
         return urlTab as Tab;
       }
       return LEGACY_TAB_MAP[urlTab] ?? "overview";
@@ -373,19 +419,58 @@ export default function PatientDetailPage() {
   const [fieldVisitLocationId, setFieldVisitLocationId] = useState("");
   const [copiedMicrochip, setCopiedMicrochip] = useState(false);
 
+  // Six dense clinical units replace the previous eleven spread-out tabs.
   const tabs: { id: Tab; label: string }[] = useMemo(
     () => [
       { id: "overview", label: t("patients.tabs.overview", "Overview") },
-      { id: "clinical", label: t("patients.tabs.clinical", "Clinical Records") },
-      { id: "preventive", label: t("patients.tabs.preventive", "Preventive Care") },
-      { id: "records", label: t("patients.tabs.records", "Medical Records") },
-      { id: "prescriptions", label: t("patients.tabs.prescriptions", "Prescriptions") },
-      { id: "documents", label: t("patients.tabs.documents", "Documents") },
-      { id: "appointments", label: t("patients.tabs.appointments", "Appointments") },
-      { id: "invoices", label: t("patients.tabs.invoices", "Invoices") },
+      { id: "history", label: t("patients.tabs.records", "Medical Records") },
+      {
+        id: "diagnostics",
+        label: t("patients.tabs.diagnostics", "Diagnostics & Vitals"),
+      },
+      {
+        id: "preventive",
+        label: t("patients.tabs.preventive", "Vaccinations & Procedures"),
+      },
+      {
+        id: "prescriptions",
+        label: t("patients.tabs.prescriptions", "Prescriptions & Therapy"),
+      },
+      { id: "admin", label: t("patients.tabs.admin", "Documents & Billing") },
     ],
     [t],
   );
+
+  // Sub-sections rendered inside a tab. Labels live here so every panel keeps
+  // a stable, translatable heading.
+  const chartSections = useMemo(
+    () => ({
+      overview: [
+        { id: "weight", label: t("patients.tabs.weight", "Weight History") },
+        {
+          id: "appointments",
+          label: t("patients.tabs.appointments", "Appointments"),
+        },
+      ],
+      diagnostics: [
+        { id: "labResults", label: t("patients.tabs.labResults", "Lab Results") },
+        { id: "vitals", label: t("patients.tabs.vitals", "Vitals") },
+      ],
+      preventive: [
+        {
+          id: "vaccinations",
+          label: t("patients.tabs.vaccinations", "Vaccinations"),
+        },
+        { id: "procedures", label: t("patients.tabs.procedures", "Procedures") },
+      ],
+      admin: [
+        { id: "documents", label: t("patients.tabs.documents", "Documents") },
+        { id: "invoices", label: t("patients.tabs.invoices", "Invoices") },
+      ],
+    }),
+    [t],
+  );
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerCardRef = useRef<HTMLDivElement>(null);
@@ -406,6 +491,9 @@ export default function PatientDetailPage() {
   const canSearchPatientHistory = canSearchPatientHistoryRole(
     session?.user?.role,
   );
+  const canCreateSoapNote = canCreateSoapNoteRole(session?.user?.role);
+  const canPrescribe = canPrescribeRole(session?.user?.role);
+  const canRecordVaccination = canRecordVaccinationRole(session?.user?.role);
 
   const {
     data: patient,
@@ -549,6 +637,16 @@ export default function PatientDetailPage() {
   const recentVisitsQuery = trpc.appointments.listByPatient.useQuery(
     { patientId: canonicalPatientId, limit: 5 },
     { enabled: ambulatoryEnabled },
+  );
+  // Owner contact for the overview quick facts.
+  const clientQuery = trpc.clients.getById.useQuery(
+    { id: patient?.clientId ?? "" },
+    { enabled: Boolean(patient?.clientId) },
+  );
+  // Insurance status shown next to the patient facts.
+  const insuranceQuery = trpc.insurance.listPolicies.useQuery(
+    { patientId: canonicalPatientId },
+    { enabled: Boolean(patient?.id) },
   );
   const recordsSettingsMissing =
     !recordsSettingsLoading && !recordsSettingsError && !recordsSettings;
@@ -764,6 +862,58 @@ export default function PatientDetailPage() {
         .filter((value): value is string => Boolean(value))
         .join(" · ") || "Recorded without summary values"
     : "None recorded";
+  const activeVisitId =
+    (recentVisitsQuery.data ?? []).find((visit) => visit.status === "in_exam")
+      ?.id ?? null;
+  // Overview shows the raw measurement line (or nothing) so the panel can
+  // render its own localized empty state.
+  const overviewVitalsSummary = latestSnapshotVitals
+    ? [
+        latestSnapshotVitals.temperatureC != null
+          ? formatClinicalTemperature(
+              latestSnapshotVitals.temperatureC,
+              ambulatoryProfile.measurementSystem,
+            )
+          : null,
+        latestSnapshotVitals.heartRateBpm != null
+          ? String(latestSnapshotVitals.heartRateBpm) + " /min"
+          : null,
+        latestSnapshotVitals.respiratoryRateBpm != null
+          ? String(latestSnapshotVitals.respiratoryRateBpm) + " /min"
+          : null,
+        latestSnapshotVitals.weightKg != null
+          ? formatClinicalWeight(
+              latestSnapshotVitals.weightKg,
+              ambulatoryProfile.measurementSystem,
+            )
+          : null,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .join(" · ") || null
+    : null;
+  const overviewVitalsAt = latestSnapshotVitals?.recordedAt
+    ? formatClinicalDateTime(latestSnapshotVitals.recordedAt, recordsTimeZone)
+    : null;
+  const insurancePolicy = insuranceQuery.data?.[0] ?? null;
+  const insuranceSummary = insurancePolicy
+    ? {
+        providerName: insurancePolicy.providerName ?? null,
+        policyNumber: insurancePolicy.policyNumber ?? null,
+        expirationDate: insurancePolicy.expirationDate
+          ? String(insurancePolicy.expirationDate)
+          : null,
+        coveragePercent:
+          insurancePolicy.coveragePercent !== null &&
+          insurancePolicy.coveragePercent !== undefined
+            ? Number(insurancePolicy.coveragePercent)
+            : null,
+      }
+    : null;
+  const insuranceExpired = Boolean(
+    insurancePolicy?.expirationDate &&
+      new Date(insurancePolicy.expirationDate).getTime() < Date.now(),
+  );
+
   const currentVaccinations = (vaccinationsQuery.data ?? []).filter(
     (vaccination) => !vaccination.correctionId,
   );
@@ -1289,12 +1439,6 @@ export default function PatientDetailPage() {
                 ) : null}
               </div>
             ) : null}
-            {canManagePatientDetail && (
-              <>
-                <CapturePhotos patientId={patient.id} />
-                <ConsentSign patientId={patient.id} />
-              </>
-            )}
             <Button variant="outline" size="sm" onClick={handleDownloadSummary}>
               <FileDown className="mr-2 h-4 w-4" />
               {t(
@@ -1726,155 +1870,176 @@ export default function PatientDetailPage() {
         </div>
 
         <TabsContent value="overview" className="mt-6">
-          <div className="space-y-10">
-            <section aria-labelledby="patient-section-overview">
-              <h2 id="patient-section-overview" className="sr-only">
-                {t("patients.tabs.overview", "Overview")}
-              </h2>
-              <OverviewTab
-                patient={patient}
-                recordsTimeZone={recordsTimeZone ?? ""}
-              />
-            </section>
-            <section aria-labelledby="patient-section-weight">
-              <h3
-                id="patient-section-weight"
-                className="mb-4 border-b border-border pb-2 text-base font-semibold"
-              >
-                {t("patients.tabs.weight", "Weight History")}
-              </h3>
-              <WeightHistoryTab
-                weights={patient.weights}
-                patientId={patient.id}
-                canManagePatientDetail={canManagePatientDetail}
-                canCorrectClinicalRecords={canCorrectClinicalRecords}
-                weightKg={weightKg}
-                setWeightKg={setWeightKg}
-                weightMeasuredAt={weightMeasuredAt}
-                setWeightMeasuredAt={setWeightMeasuredAt}
-                onSubmitWeight={handleRecordWeight}
-                isAddingWeight={addWeight.isPending}
-                canSubmitWeight={canSubmitWeight}
-                weightTrend={weightTrend}
-                measurementSystem={chartMeasurementSystem}
-                recordsTimeZone={recordsTimeZone ?? ""}
-                recordsSettingsTimeZone={recordsSettingsTimeZone ?? undefined}
-                canonicalPatientWeight={Number(canonicalPatientWeight)}
-                maxMeasuredAt={formatDateTimeLocalInputForTimeZone(new Date(), recordsSettingsTimeZone)}
-                onRefresh={() => void refreshPatientDetail()}
-                onSwitchToVitals={() => setActiveTab("clinical")}
-              />
-            </section>
+          <div className="space-y-8">
+            <OverviewTab
+              patient={patient}
+              recordsTimeZone={recordsTimeZone}
+              clientPhone={clientQuery.data?.phone ?? null}
+              latestVitalsSummary={overviewVitalsSummary}
+              latestVitalsAt={overviewVitalsAt}
+              activeProblems={activeProblems.map((problem) => ({
+                description: problem.description,
+                onsetDate: problem.onsetDate,
+              }))}
+              allergies={(patient.allergies ?? []).map((allergy) => ({
+                allergen: allergy.allergen,
+                severity: allergy.severity,
+              }))}
+              activeMedicationsCount={activePrescriptions.length}
+              insurance={insuranceSummary}
+              insuranceLoading={insuranceQuery.isLoading}
+              insuranceExpired={insuranceExpired}
+            />
+            {chartSections.overview.map((section) => (
+              <ChartSection key={section.id} id={section.id} label={section.label}>
+                {section.id === "weight" ? (
+                  <WeightHistoryTab
+                    weights={patient.weights}
+                    patientId={patient.id}
+                    canManagePatientDetail={canManagePatientDetail}
+                    canCorrectClinicalRecords={canCorrectClinicalRecords}
+                    weightKg={weightKg}
+                    setWeightKg={setWeightKg}
+                    weightMeasuredAt={weightMeasuredAt}
+                    setWeightMeasuredAt={setWeightMeasuredAt}
+                    onSubmitWeight={handleRecordWeight}
+                    isAddingWeight={addWeight.isPending}
+                    canSubmitWeight={canSubmitWeight}
+                    weightTrend={weightTrend}
+                    measurementSystem={chartMeasurementSystem}
+                    recordsTimeZone={recordsTimeZone ?? ""}
+                    recordsSettingsTimeZone={recordsSettingsTimeZone ?? undefined}
+                    canonicalPatientWeight={Number(canonicalPatientWeight)}
+                    maxMeasuredAt={formatDateTimeLocalInputForTimeZone(new Date(), recordsSettingsTimeZone)}
+                    onRefresh={() => void refreshPatientDetail()}
+                    onSwitchToVitals={() => setActiveTab("diagnostics")}
+                  />
+                ) : null}
+                {section.id === "appointments" ? (
+                  <AppointmentsTab patientId={patient.id} timeZone={recordsTimeZone} />
+                ) : null}
+              </ChartSection>
+            ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="clinical" className="mt-6">
-          <div className="space-y-10">
-            <section aria-labelledby="patient-section-clinical-lab">
-              <h3
-                id="patient-section-clinical-lab"
-                className="mb-4 border-b border-border pb-2 text-base font-semibold"
-              >
-                {t("patients.tabs.labResults", "Lab Results")}
-              </h3>
-              <LabResultsTab patientId={patient.id} timeZone={recordsTimeZone} />
-            </section>
-            <section aria-labelledby="patient-section-clinical-vitals">
-              <h3
-                id="patient-section-clinical-vitals"
-                className="mb-4 border-b border-border pb-2 text-base font-semibold"
-              >
-                {t("patients.tabs.vitals", "Vitals")}
-              </h3>
-              <VitalsTab
-                patientId={patient.id}
-                timeZone={recordsTimeZone}
-                measurementSystem={chartMeasurementSystem}
-                bodyConditionScale={chartBodyConditionScale}
-                canRecordVitals={canRecordVitals}
-                canCorrectClinicalRecords={canCorrectClinicalRecords}
-              />
-            </section>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="preventive" className="mt-6">
-          <div className="space-y-10">
-            <section aria-labelledby="patient-section-preventive-vaccinations">
-              <h3
-                id="patient-section-preventive-vaccinations"
-                className="mb-4 border-b border-border pb-2 text-base font-semibold"
-              >
-                {t("patients.tabs.vaccinations", "Vaccinations")}
-              </h3>
-              <VaccinationsTab
-                patientId={patient.id}
-                timeZone={recordsTimeZone}
-                canCorrectClinicalRecords={canCorrectClinicalRecords}
-                canPrepareCertificate={canManagePatientDetail}
-                canEditCertificate={canEditVaccinationCertificate}
-              />
-            </section>
-            <section aria-labelledby="patient-section-preventive-procedures">
-              <h3
-                id="patient-section-preventive-procedures"
-                className="mb-4 border-b border-border pb-2 text-base font-semibold"
-              >
-                {t("patients.tabs.procedures", "Procedures")}
-              </h3>
-              <ProceduresTab patientId={patient.id} timeZone={recordsTimeZone} />
-            </section>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="records" className="mt-6">
+        <TabsContent value="history" className="mt-6">
           <section aria-labelledby="patient-section-records">
             <h2 id="patient-section-records" className="sr-only">
               {t("patients.tabs.records", "Medical Records")}
             </h2>
-          <MedicalRecordsTab
-            patientId={patient.id}
-            timeZone={recordsTimeZone}
-            canCorrectClinicalRecords={canCorrectClinicalRecords}
-            canSearchPatientHistory={canSearchPatientHistory}
-          />
+            <MedicalRecordsTab
+              patientId={patient.id}
+              timeZone={recordsTimeZone}
+              canCorrectClinicalRecords={canCorrectClinicalRecords}
+              canSearchPatientHistory={canSearchPatientHistory}
+              canCreateSoapNote={canCreateSoapNote}
+              activeVisitId={activeVisitId}
+            />
           </section>
+        </TabsContent>
+
+        <TabsContent value="diagnostics" className="mt-6">
+          <div className="space-y-8">
+            {chartSections.diagnostics.map((section) => (
+              <ChartSection key={section.id} id={section.id} label={section.label}>
+                {section.id === "labResults" ? (
+                  <LabResultsTab patientId={patient.id} timeZone={recordsTimeZone} />
+                ) : null}
+                {section.id === "vitals" ? (
+                  <VitalsTab
+                    patientId={patient.id}
+                    timeZone={recordsTimeZone}
+                    measurementSystem={chartMeasurementSystem}
+                    bodyConditionScale={chartBodyConditionScale}
+                    canRecordVitals={canRecordVitals}
+                    canCorrectClinicalRecords={canCorrectClinicalRecords}
+                  />
+                ) : null}
+              </ChartSection>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preventive" className="mt-6">
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-muted-foreground">
+                {t(
+                  "patients.chartActions.preventiveHelp",
+                  "Preventive care lives in this unit: vaccination calendar, batches and certificates plus every recorded procedure.",
+                )}
+              </p>
+              {canRecordVaccination ? (
+                <Button asChild size="sm">
+                  <Link
+                    href={`/records?patientId=${encodeURIComponent(patient.id)}&tab=vaccinations&new=1`}
+                  >
+                    <Syringe className="mr-2 h-4 w-4" />
+                    {t("patients.chartActions.recordVaccination", "Record vaccination")}
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+            {chartSections.preventive.map((section) => (
+              <ChartSection key={section.id} id={section.id} label={section.label}>
+                {section.id === "vaccinations" ? (
+                  <VaccinationsTab
+                    patientId={patient.id}
+                    timeZone={recordsTimeZone}
+                    canCorrectClinicalRecords={canCorrectClinicalRecords}
+                    canPrepareCertificate={canManagePatientDetail}
+                    canEditCertificate={canEditVaccinationCertificate}
+                  />
+                ) : null}
+                {section.id === "procedures" ? (
+                  <ProceduresTab patientId={patient.id} timeZone={recordsTimeZone} />
+                ) : null}
+              </ChartSection>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="prescriptions" className="mt-6">
           <section aria-labelledby="patient-section-prescriptions">
             <h2 id="patient-section-prescriptions" className="sr-only">
-              {t("patients.tabs.prescriptions", "Prescriptions")}
+              {t("patients.tabs.prescriptions", "Prescriptions & Therapy")}
             </h2>
-          <PrescriptionsTab patientId={patient.id} timeZone={recordsTimeZone} />
+            <PrescriptionsTab
+              patientId={patient.id}
+              timeZone={recordsTimeZone}
+              canPrescribe={canPrescribe}
+            />
           </section>
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-6">
-          <section aria-labelledby="patient-section-documents">
-            <h2 id="patient-section-documents" className="sr-only">
-              {t("patients.tabs.documents", "Documents")}
-            </h2>
-          <DocumentsTab patientId={patient.id} timeZone={recordsTimeZone} />
-          </section>
-        </TabsContent>
-
-        <TabsContent value="appointments" className="mt-6">
-          <section aria-labelledby="patient-section-appointments">
-            <h2 id="patient-section-appointments" className="sr-only">
-              {t("patients.tabs.appointments", "Appointments")}
-            </h2>
-          <AppointmentsTab patientId={patient.id} timeZone={recordsTimeZone} />
-          </section>
-        </TabsContent>
-
-        <TabsContent value="invoices" className="mt-6">
-          <section aria-labelledby="patient-section-invoices">
-            <h2 id="patient-section-invoices" className="sr-only">
-              {t("patients.tabs.invoices", "Invoices")}
-            </h2>
-          <InvoicesTab patientId={patient.id} />
-          </section>
+        <TabsContent value="admin" className="mt-6">
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-muted-foreground">
+                {t(
+                  "patients.chartActions.adminHelp",
+                  "Owner consents, photo documentation, attached reports and billing history for this patient.",
+                )}
+              </p>
+              {canManagePatientDetail && (
+                <>
+                  <CapturePhotos patientId={patient.id} />
+                  <ConsentSign patientId={patient.id} />
+                </>
+              )}
+            </div>
+            {chartSections.admin.map((section) => (
+              <ChartSection key={section.id} id={section.id} label={section.label}>
+                {section.id === "documents" ? (
+                  <DocumentsTab patientId={patient.id} timeZone={recordsTimeZone} />
+                ) : null}
+                {section.id === "invoices" ? (
+                  <InvoicesTab patientId={patient.id} />
+                ) : null}
+              </ChartSection>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

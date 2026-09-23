@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Command } from "cmdk";
@@ -351,18 +351,25 @@ export function CommandSearch({
       !patients.data ||
       !clients.data);
 
-  const visibleNavigationItems =
-    status === "authenticated" && role !== undefined
-      ? navigationItems.filter((item) => item.roles.includes(role))
-      : [];
-  const visibleQuickActionItems =
-    status === "authenticated" && role !== undefined
-      ? quickActionItems.filter((item) => item.roles.includes(role))
-      : [];
+  const visibleNavigationItems = useMemo(
+    () =>
+      status === "authenticated" && role !== undefined
+        ? navigationItems.filter((item) => item.roles.includes(role))
+        : [],
+    [role, status],
+  );
+  const visibleQuickActionItems = useMemo(
+    () =>
+      status === "authenticated" && role !== undefined
+        ? quickActionItems.filter((item) => item.roles.includes(role))
+        : [],
+    [role, status],
+  );
 
-  function itemLabel(item: CommandItemConfig) {
-    return t(item.labelKey, item.fallbackLabel);
-  }
+  const itemLabel = useCallback(
+    (item: CommandItemConfig) => t(item.labelKey, item.fallbackLabel),
+    [t],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -411,7 +418,13 @@ export function CommandSearch({
     }
 
     return results;
-  }, [hasQuery, debouncedSearch, visibleQuickActionItems, visibleNavigationItems, t]);
+  }, [
+    hasQuery,
+    debouncedSearch,
+    itemLabel,
+    visibleQuickActionItems,
+    visibleNavigationItems,
+  ]);
 
   // Section 2: Context-aware no-query ordering
   const clientMatch = pathname.match(/^\/clients\/([^/]+)$/);

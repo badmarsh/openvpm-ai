@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Copy,
   ArrowLeft,
@@ -42,6 +43,10 @@ import {
   soapEditorNeedsLeaveGuard,
 } from "@/lib/records/soap-navigation";
 import { useOnlineStatus } from "@/lib/use-online-status";
+import {
+  buildVisitContext,
+  type VisitContextItem,
+} from "@/lib/records/visit-context";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -415,36 +420,74 @@ export default function NewSoapNotePage() {
   const needsAiBillingSetup = agentStatus.data?.needsBillingSetup ?? false;
 
   // GT-005: the draft request must carry the visit context (appointment
-  // type, date, doctor, notes). Without it the model drafts only from
-  // chart data and loses the reason for the visit.
+  // type, reason for the visit, today's measurements). Without it the model
+  // drafts only from chart data and loses what happened in the clinic today.
   const appointmentQuery = trpc.appointments.getById.useQuery(
     { id: appointmentId! },
     { enabled: canCreateSoapNote && !!appointmentId },
   );
 
-  const visitContext = useMemo(() => {
-    const appt = appointmentQuery.data;
-    if (!appt) return undefined;
-    const parts: string[] = [];
-    if (appt.typeName) parts.push(`Typ termínu: ${appt.typeName}`);
-    if (appt.startTime) {
-      parts.push(
-        `Termín: ${new Date(appt.startTime).toLocaleString("sk-SK", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}`,
-      );
-    }
-    if (appt.doctorName) parts.push(`Lekár: ${appt.doctorName}`);
-    if (appt.locationName) parts.push(`Lokácia: ${appt.locationName}`);
-    if (appt.notes && appt.notes.trim()) {
-      parts.push(`Poznámky / dôvod návštevy: ${appt.notes.trim()}`);
-    }
-    if (parts.length === 0) return undefined;
-    // Server bound is 2000 chars (optionalClinicalTextInput); stay under it
-    // client-side so long notes never reject the whole draft request.
-    return parts.join("\n").slice(0, 2000);
-  }, [appointmentQuery.data]);
+  // Measurements belong to the visit, so they stay readable even after the
+  // appointment is closed out.
+  const visitVitalsQuery = trpc.vitals.listByAppointment.useQuery(
+    { appointmentId: appointmentId! },
+    { enabled: canCreateSoapNote && !!appointmentId },
+  );
+
+  const visitContext = useMemo(
+    () =>
+      buildVisitContext({
+        appointment: appointmentQuery.data ?? null,
+        vitals: visitVitalsQuery.data ?? null,
+      }),
+    [appointmentQuery.data, visitVitalsQuery.data],
+  );
+
+  const visitContextChipLabel = useCallback(
+    (item: VisitContextItem): string => {
+      switch (item.id) {
+        case "visitType":
+          return t("records.newSoap.aiContextChipVisitType", "Visit: {value}", {
+            value: item.value,
+          });
+        case "reason":
+          return t("records.newSoap.aiContextChipReason", "Reason: {value}", {
+            value: item.value,
+          });
+        case "doctor":
+          return t("records.newSoap.aiContextChipDoctor", "Doctor: {value}", {
+            value: item.value,
+          });
+        case "location":
+          return t("records.newSoap.aiContextChipLocation", "Location: {value}", {
+            value: item.value,
+          });
+        case "temperatureC":
+          return t(
+            "records.newSoap.aiContextChipTemperature",
+            "Temperature: {value}",
+            { value: item.value },
+          );
+        case "heartRateBpm":
+          return t("records.newSoap.aiContextChipHeartRate", "Heart rate: {value}", {
+            value: item.value,
+          });
+        case "respiratoryRateBpm":
+          return t(
+            "records.newSoap.aiContextChipRespiratoryRate",
+            "Respiratory rate: {value}",
+            { value: item.value },
+          );
+        case "weightKg":
+          return t("records.newSoap.aiContextChipWeight", "Weight: {value}", {
+            value: item.value,
+          });
+        default:
+          return item.value;
+      }
+    },
+    [t],
+  );
 
   const draftWithAi = trpc.ai.draftSoapNote.useMutation({
     onSuccess: (draft) => {
@@ -473,7 +516,7 @@ export default function NewSoapNotePage() {
     }
     draftWithAi.mutate({
       patientId: params.patientId,
-      visitContext,
+      visitContext: visitContext.text ?? undefined,
       mode: draftMode,
       deepThinking: draftMode === "pro",
     });
@@ -1099,6 +1142,49 @@ export default function NewSoapNotePage() {
             </p>
           ) : null}
         </div>
+      </div>
+
+      {/* GT-005: show exactly which visit data the AI draft receives. */}
+      <div
+        className="mt-4 rounded-lg border border-border bg-muted/20 px-3.5 py-2.5"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-wide text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5" />
+            {t("records.newSoap.aiContextTitle", "AI context")}
+          </span>
+          {visitContext.hasContext ? (
+            <span className="text-muted-foreground">
+              {t(
+                "records.newSoap.aiContextSent",
+                "Sent to the model when drafting:",
+              )}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {t(
+                "records.newSoap.aiContextEmpty",
+                "No visit context – the AI will draft a generic structure",
+              )}
+            </span>
+          )}
+        </div>
+        {visitContext.hasContext ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {visitContext.items.map((item) => (
+              <span
+                key={item.id}
+                className="inline-flex max-w-full items-center truncate rounded-md border border-border bg-background px-2 py-0.5 text-xs font-medium"
+                title={visitContextChipLabel(item)}
+              >
+                {visitContextChipLabel(item)}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6 space-y-6">

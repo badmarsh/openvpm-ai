@@ -1,6 +1,6 @@
 "use client";
 
-import { Scissors } from "lucide-react";
+import { Plus, Scissors } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/common/empty-state";
 import { useI18n } from "@/lib/i18n";
@@ -44,7 +44,7 @@ export function ProceduresTab({
         title={t("patients.proceduresTab.empty", "No procedures recorded")}
         description={t(
           "patients.proceduresTab.emptyDesc",
-          "Procedures recorded in Records will show up here.",
+          "Procedures recorded in the clinical record will show up here.",
         )}
       />
     );
@@ -56,12 +56,15 @@ export function ProceduresTab({
         <p className="text-sm text-muted-foreground">
           {t(
             "patients.proceduresTab.readonlyNotice",
-            "Viewing procedure history. Open Records to add or manage procedures.",
+            "Procedures are recorded in the clinical record. The button opens a prefilled form for this patient.",
           )}
         </p>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/records?patientId=${encodeURIComponent(patientId)}&tab=procedures`}>
-            {t("patients.proceduresTab.openInRecords", "Open in Records")}
+        <Button asChild size="sm">
+          <Link
+            href={`/records?patientId=${encodeURIComponent(patientId)}&tab=procedures&new=1`}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t("patients.proceduresTab.addProcedure", "Add procedure")}
           </Link>
         </Button>
       </div>

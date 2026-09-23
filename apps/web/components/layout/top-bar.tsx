@@ -26,7 +26,7 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/clients": { label: "Clients", i18nKey: "nav.clients" },
   "/encounters": { label: "Encounters", i18nKey: "nav.encounters" },
   "/schedule": { label: "Schedule", i18nKey: "nav.schedule" },
-  "/records": { label: "Records", i18nKey: "nav.records" },
+  "/records": { label: "Clinical Record", i18nKey: "nav.records" },
   "/lab-results": { label: "Lab Inbox", i18nKey: "nav.labResults" },
   "/billing": { label: "Billing", i18nKey: "nav.billing" },
   "/inventory": { label: "Inventory", i18nKey: "nav.inventory" },

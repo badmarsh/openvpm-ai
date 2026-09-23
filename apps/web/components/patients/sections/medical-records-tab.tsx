@@ -142,11 +142,15 @@ export function MedicalRecordsTab({
   timeZone,
   canCorrectClinicalRecords,
   canSearchPatientHistory,
+  canCreateSoapNote = false,
+  activeVisitId,
 }: {
   patientId: string;
   timeZone?: string | null;
   canCorrectClinicalRecords: boolean;
   canSearchPatientHistory: boolean;
+  canCreateSoapNote?: boolean;
+  activeVisitId?: string | null;
 }) {
   const { t } = useI18n();
   const [historySearchActive, setHistorySearchActive] = useState(false);
@@ -170,8 +174,28 @@ export function MedicalRecordsTab({
   });
   const notesMissing = !isLoading && !error && !notes;
 
+  const newNoteHref = activeVisitId
+    ? `/records/new-soap/${encodeURIComponent(patientId)}?appointmentId=${encodeURIComponent(activeVisitId)}`
+    : `/records/new-soap/${encodeURIComponent(patientId)}`;
+
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {t(
+            "patients.chartActions.newClinicalNoteHelp",
+            "SOAP notes stay in draft until you finalize them. Drafting needs an active visit.",
+          )}
+        </p>
+        {canCreateSoapNote ? (
+          <Button asChild size="sm">
+            <Link href={newNoteHref}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("patients.chartActions.newClinicalNote", "New clinical note")}
+            </Link>
+          </Button>
+        ) : null}
+      </div>
       {canSearchPatientHistory ? (
         <PatientHistorySearch
           patientId={patientId}
@@ -207,7 +231,7 @@ export function MedicalRecordsTab({
             )}
             description={t(
               "patients.recordsTab.emptyDesc",
-              "SOAP notes written in Records will show up here.",
+              "SOAP notes written in the clinical record will show up here.",
             )}
           />
         ) : (

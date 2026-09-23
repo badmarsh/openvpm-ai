@@ -110,7 +110,7 @@ const vanillaSections: NavSection[] = [
       },
       {
         href: "/records",
-        label: "Záznamy",
+        label: "Klinická karta",
         i18nKey: "nav.records",
         icon: FileText,
         roles: allRoles,
