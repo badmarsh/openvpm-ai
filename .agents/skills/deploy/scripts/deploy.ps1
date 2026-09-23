@@ -8,7 +8,7 @@ param (
 $ErrorActionPreference = "Stop"
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "  OPENVPM AI — DEPLOY TO dev.significa.sk (Dokploy)" -ForegroundColor Cyan
+Write-Host "  OPENVPM AI - DEPLOY TO dev.significa.sk (Dokploy)" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
 # --- Load DOKPLOY_TOKEN from .env if not already in environment ---
@@ -19,7 +19,7 @@ if (-not $env:DOKPLOY_TOKEN -and (Test-Path ".env")) {
 }
 
 # =============================================
-# [0/6] ENV PREMENNE — kontrola a sync
+# [0/6] ENV PREMENNE - kontrola a sync
 # =============================================
 if (-not $SkipEnvCheck) {
     Write-Host "
@@ -40,14 +40,14 @@ if (-not $SkipEnvCheck) {
     $envCheckCode = $LASTEXITCODE
 
     if ($envCheckCode -eq 1) {
-        Write-Host "Deployment zastaveny — env subor nenajdeny." -ForegroundColor Red
+        Write-Host "Deployment zastaveny - env subor nenajdeny." -ForegroundColor Red
         exit 1
     }
     if ($envCheckCode -eq 2) {
         Write-Host "VAROVANIE: Niektore kluce chybaju. Pokracujem (deploy moze zlyhaf v produkcii)." -ForegroundColor Yellow
     }
 
-    # Pripomenuti — pushni env do Dokploy ak sa nieco zmenilo
+    # Pripomenuti - pushni env do Dokploy ak sa nieco zmenilo
     Write-Host "  Ak si upravil $EnvFile, pushni zmeny do Dokploy:" -ForegroundColor DarkGray
     Write-Host "  dokploy env push $EnvFile" -ForegroundColor DarkGray
 } else {
@@ -130,7 +130,7 @@ try {
     Write-Host "OK Dokploy odpoved: $($res.message)" -ForegroundColor Green
     Write-Host "Build je aktivny a viditelny v Dokploy UI pod Deployments!" -ForegroundColor Cyan
 } catch {
-    Write-Host "Webhook zlyhal ($($_.Exception.Message)), spustam manuálny SSH fallback..." -ForegroundColor Yellow
+    Write-Host "Webhook zlyhal ($($_.Exception.Message)), spustam manualny SSH fallback..." -ForegroundColor Yellow
     $remoteCommands = "cd /etc/dokploy/compose/compose-parse-online-port-wdunfq/code/ && "
     if ($RunDbInit) {
         $remoteCommands += "echo '==> Spustam db-init...' && docker compose run --rm db-init && "
