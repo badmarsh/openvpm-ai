@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
-import { priceWithMarkup } from "@/lib/inventory/markup";
+import Link from "next/link";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+import { isInventoryCurrencyAmountInputValid } from "@/lib/inventory/policy";
+import { importErrorKey } from "@/lib/inventory/import-errors";
+import { priceIncludingVat, CATEGORY_MARKUPS, priceWithMarkup } from "@/lib/inventory/markup";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +44,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type WholesalerChoice =
+  | "PHARMACOPOLA"
+  | "TOPVET"
   | "AUTO"
   | "CYMEDICA"
   | "PHARMOS"
@@ -54,6 +60,8 @@ type WholesalerChoice =
 
 const WHOLESALER_OPTIONS: WholesalerChoice[] = [
   "AUTO",
+  "PHARMACOPOLA",
+  "TOPVET",
   "CYMEDICA",
   "PHARMOS",
   "SAMOHYL",
@@ -77,6 +85,10 @@ interface LinkedProduct {
 
 interface ItemReviewState {
   action: ItemAction;
+  category?: string;
+  vatRate?: number;
+  markup?: string;
+  activeSubstance?: string;
   linkedProduct?: LinkedProduct | null;
   /** Manual retail-price override (string money); otherwise derived from markup. */
   retailPriceOverride?: string;
@@ -124,6 +136,17 @@ export function WholesalerImportDialog({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, preloadedData]);
 
+  const acceptParsed = (data: any) => {
+    setParsedData(data);
+    setItemStates(Object.fromEntries(data.items.map((item: any, i: number) => [i, {
+      action: item.isControlledSubstance || item.quantity <= 0 ? "skip" : item.suggestedAction,
+      category: item.category || "medication",
+    }])));
+  };
+  const pdfMutation = trpc.extensions.wholesalerImport.parsePdf.useMutation({
+    onSuccess: acceptParsed,
+    onError: err => toast.error(t(importErrorKey(err.message))),
+  });
   const parseMutation = trpc.extensions.wholesalerImport.parse.useMutation({
     onSuccess: (data) => {
       setParsedData(data);
@@ -146,8 +169,7 @@ export function WholesalerImportDialog({
     },
     onError: (err) => {
       toast.error(
-        err.message ||
-          t("inventory.wholesalerImport.parseError", "Nepodarilo sa spracovať dodací list.")
+        t(importErrorKey(err.message))
       );
     },
   });
@@ -167,8 +189,7 @@ export function WholesalerImportDialog({
     },
     onError: (err) => {
       toast.error(
-        err.message ||
-          t("inventory.wholesalerImport.confirmError", "Chyba pri zápise položiek do skladu.")
+        t(err.data?.code === "CONFLICT" ? "inventory.wholesalerImport.conflictError" : err.message === "CONTROLLED_IMPORT_BLOCKED" ? importErrorKey(err.message) : "inventory.wholesalerImport.confirmError")
       );
     },
   });
@@ -190,17 +211,26 @@ export function WholesalerImportDialog({
   };
 
   const readFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t("inventory.wholesalerImport.errors.tooLarge")); return;
+    }
+    if (parseMutation.isPending || pdfMutation.isPending) return;
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
+      if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
+        pdfMutation.mutate({ base64: text.split(",")[1] }); return;
+      }
       parseMutation.mutate({
         content: text,
         filename: file.name,
         wholesaler: wholesaler === "AUTO" ? undefined : wholesaler,
       });
     };
-    reader.readAsText(file);
+    reader.onerror = () => toast.error(t("inventory.wholesalerImport.parseError"));
+    if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") reader.readAsDataURL(file);
+    else reader.readAsText(file);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,7 +242,7 @@ export function WholesalerImportDialog({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (parseMutation.isPending) return;
+    if (parseMutation.isPending || pdfMutation.isPending) return;
     const file = e.dataTransfer.files?.[0];
     if (file) readFile(file);
   };
@@ -226,13 +256,18 @@ export function WholesalerImportDialog({
 
   const retailPriceFor = (item: any, idx: number): string => {
     const override = itemStates[idx]?.retailPriceOverride;
-    if (override && override.trim()) return override.trim();
-    const computed = priceWithMarkup(item.unitPriceWithoutVat.toFixed(2), markup);
-    return computed ?? item.unitPriceWithoutVat.toFixed(2);
+    if (override !== undefined) return override.trim();
+    const computed = priceWithMarkup(item.unitPriceWithoutVat.toFixed(2), itemStates[idx]?.markup ?? markup);
+    return computed ?? "";
   };
 
+  const isControlledItem = (item: any, idx: number): boolean => !!item.isControlledSubstance
+    || isControlledSubstanceName(item.name)
+    || isControlledSubstanceName(itemStates[idx]?.linkedProduct?.name ?? "")
+    || isControlledSubstanceName(itemStates[idx]?.activeSubstance ?? "");
+
   const effectiveAction = (item: any, idx: number): ItemAction =>
-    itemStates[idx]?.action ?? item.suggestedAction;
+    isControlledItem(item, idx) || item.quantity <= 0 ? "skip" : itemStates[idx]?.action ?? item.suggestedAction;
 
   const effectiveProductId = (item: any, idx: number): string | undefined =>
     itemStates[idx]?.linkedProduct?.id ?? item.matchedProduct?.id;
@@ -245,20 +280,32 @@ export function WholesalerImportDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsedData, itemStates]);
 
+  const hasControlled = parsedData?.items.some((item: any, idx: number) => isControlledItem(item, idx)) ?? false;
+  const validPrices = parsedData?.items.every((item: any, idx: number) => effectiveAction(item, idx) === "skip" ||
+    isInventoryCurrencyAmountInputValid(retailPriceFor(item, idx).replace(",", "."))) ?? false;
+
   const handleConfirm = () => {
-    if (!parsedData) return;
+    if (!parsedData || !validPrices) return;
     const items = parsedData.items.map((item: any, idx: number) => {
       const action = effectiveAction(item, idx);
+      if (action === "skip") return {
+        action, name: item.name, sku: item.sku || item.ean || undefined,
+        productId: effectiveProductId(item, idx),
+        isControlledSubstance: isControlledItem(item, idx), quantity: 1,
+      };
       return {
         action,
         productId: action === "update_stock" ? effectiveProductId(item, idx) : undefined,
         name: item.name,
         sku: item.sku || item.ean || item.suklOrAdcCode || undefined,
-        category: "Lieky a materiály",
+        category: itemStates[idx]?.category ?? item.category ?? "medication",
+        barcode: item.ean || undefined,
+        isControlledSubstance: !!item.isControlledSubstance,
+        activeSubstance: itemStates[idx]?.activeSubstance || undefined,
         unit: item.unit || undefined,
         costPrice: item.unitPriceWithoutVat.toFixed(2),
         retailPrice: retailPriceFor(item, idx),
-        vatRate: item.vatRate,
+        vatRate: itemStates[idx]?.vatRate ?? item.vatRate,
         lotNumber: item.batchNumber || undefined,
         expirationDate: item.expirationDate || undefined,
         quantity: item.quantity,
@@ -268,7 +315,7 @@ export function WholesalerImportDialog({
     confirmMutation.mutate({
       deliveryNoteNumber: parsedData.deliveryNote.deliveryNoteNumber,
       supplierName: parsedData.deliveryNote.supplierName,
-      wholesaler: parsedData.deliveryNote.wholesaler,
+      wholesaler: WHOLESALER_OPTIONS.includes(parsedData.deliveryNote.wholesaler) && parsedData.deliveryNote.wholesaler !== "AUTO" ? parsedData.deliveryNote.wholesaler : undefined,
       issueDate: parsedData.deliveryNote.issueDate,
       items,
     });
@@ -280,7 +327,7 @@ export function WholesalerImportDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={value => { if (!value && !confirmMutation.isPending) handleReset(); onOpenChange(value); }}>
       <DialogContent className="max-w-6xl max-h-[88vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -356,17 +403,17 @@ export function WholesalerImportDialog({
                   dragActive
                     ? "border-primary bg-primary/5"
                     : "border-border hover:border-primary/50 hover:bg-muted/50",
-                  parseMutation.isPending && "pointer-events-none opacity-60"
+                  (parseMutation.isPending || pdfMutation.isPending) && "pointer-events-none opacity-60"
                 )}
               >
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.txt,.edi,.dat"
+                  accept=".pdf,.csv,.txt,.edi,.dat,.xml"
                   className="hidden"
                   onChange={handleFileChange}
                 />
-                {parseMutation.isPending ? (
+                {(parseMutation.isPending || pdfMutation.isPending) ? (
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-sm font-medium">
@@ -458,7 +505,7 @@ export function WholesalerImportDialog({
               )}
 
               {/* Controlled substances safety banner */}
-              {parsedData.items.some((it: any) => it.isControlledSubstance) && (
+              {hasControlled && (
                 <div className="flex items-center gap-2 px-3 py-2 text-xs bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 rounded-md">
                   <ShieldAlert className="h-4 w-4 shrink-0" />
                   <span>
@@ -470,6 +517,11 @@ export function WholesalerImportDialog({
                 </div>
               )}
 
+              {hasControlled && (
+                <Link href="/controlled-substances" className="text-xs text-purple-700 underline">
+                  {t("inventory.wholesalerImport.openControlledBook")}
+                </Link>
+              )}
               {/* Markup controls */}
               <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border p-3 bg-muted/20">
                 <div className="space-y-1">
@@ -485,7 +537,7 @@ export function WholesalerImportDialog({
                       step={1}
                       value={Number(markup) || 0}
                       aria-label={t("inventory.wholesalerImport.markupSliderAria", "Posuvník marže")}
-                      onChange={(e) => setMarkup(e.target.value)}
+                      onChange={(e) => { setMarkup(e.target.value); setItemStates(prev => Object.fromEntries(Object.entries(prev).map(([k, v]) => [k, { ...v, markup: undefined }]))); }}
                       className="w-40 accent-primary"
                     />
                     <Input
@@ -495,7 +547,7 @@ export function WholesalerImportDialog({
                       max="100000"
                       step="1"
                       value={markup}
-                      onChange={(e) => setMarkup(e.target.value)}
+                      onChange={(e) => { setMarkup(e.target.value); setItemStates(prev => Object.fromEntries(Object.entries(prev).map(([k, v]) => [k, { ...v, markup: undefined }]))); }}
                       className="h-8 w-20"
                     />
                   </div>
@@ -510,7 +562,7 @@ export function WholesalerImportDialog({
                       Object.fromEntries(
                         Object.entries(prev).map(([k, v]) => [
                           k,
-                          { ...v, retailPriceOverride: undefined },
+                          { ...v, retailPriceOverride: undefined, markup: undefined },
                         ])
                       )
                     )
@@ -519,6 +571,13 @@ export function WholesalerImportDialog({
                   <RefreshCw className="h-3 w-3 mr-1" />
                   {t("inventory.wholesalerImport.resetPrices", "Znovu prepočítať ceny podľa marže")}
                 </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => {
+                  setItemStates(prev => Object.fromEntries(parsedData.items.map((item: any, idx: number) => [idx, {
+                    ...prev[idx], action: prev[idx]?.action ?? item.suggestedAction,
+                    markup: CATEGORY_MARKUPS[prev[idx]?.category ?? item.category ?? "medication"] ?? "30",
+                    retailPriceOverride: undefined,
+                  }])));
+                }}>{t("inventory.wholesalerImport.applyCategoryMarkup")}</Button>
                 <p className="text-[11px] text-muted-foreground">
                   {t(
                     "inventory.wholesalerImport.markupHint",
@@ -530,31 +589,31 @@ export function WholesalerImportDialog({
               {/* Review table */}
               <div className="border border-border rounded-lg overflow-hidden">
                 <TableScroll className="max-h-[380px]">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-xs tabular-nums">
                     <thead className="bg-muted/60 text-muted-foreground sticky top-0 border-b border-border">
                       <tr>
-                        <th className="py-2 px-3 text-left font-medium">
+                        <th className="py-2.5 px-3 text-left font-medium">
                           {t("inventory.wholesalerImport.colProduct", "Priradený produkt / Položka")}
                         </th>
-                        <th className="py-2 px-3 text-left font-medium">
+                        <th className="py-2.5 px-3 text-left font-medium">
                           {t("inventory.wholesalerImport.colCode", "Kód")}
                         </th>
-                        <th className="py-2 px-3 text-left font-medium">
+                        <th className="py-2.5 px-3 text-left font-medium">
                           {t("inventory.wholesalerImport.colBatch", "Šarža / Expirácia")}
                         </th>
-                        <th className="py-2 px-3 text-right font-medium">
+                        <th className="py-2.5 px-3 text-right font-medium">
                           {t("inventory.wholesalerImport.colQty", "Množstvo")}
                         </th>
-                        <th className="py-2 px-3 text-right font-medium">
+                        <th className="py-2.5 px-3 text-right font-medium">
                           {t("inventory.wholesalerImport.colPurchasePrice", "Nákup bez DPH")}
                         </th>
-                        <th className="py-2 px-3 text-right font-medium">
+                        <th className="py-2.5 px-3 text-right font-medium">
                           {t("inventory.wholesalerImport.colVat", "DPH")}
                         </th>
-                        <th className="py-2 px-3 text-right font-medium">
+                        <th className="py-2.5 px-3 text-right font-medium">
                           {t("inventory.wholesalerImport.colRetailPrice", "Predajná cena")}
                         </th>
-                        <th className="py-2 px-3 text-left font-medium">
+                        <th className="py-2.5 px-3 text-left font-medium">
                           {t("inventory.wholesalerImport.colAction", "Akcia")}
                         </th>
                       </tr>
@@ -564,20 +623,38 @@ export function WholesalerImportDialog({
                         const action = effectiveAction(item, idx);
                         const linked = itemStates[idx]?.linkedProduct ?? null;
                         const displayProduct = linked ?? item.matchedProduct;
-                        const isControlled = !!item.isControlledSubstance;
+                        const isControlled = isControlledItem(item, idx);
+                        const vat = itemStates[idx]?.vatRate ?? item.vatRate;
                         return (
                           <tr key={idx} className="hover:bg-muted/30 transition-colors align-top">
                             {/* Matched product / link */}
-                            <td className="py-2 px-3 min-w-[220px]">
+                            <td className="py-2.5 px-3 min-w-[220px]">
                               <div className="font-medium text-foreground flex items-center gap-1.5 flex-wrap">
                                 {item.name}
                                 {isControlled && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-semibold">
                                     <ShieldAlert className="h-3 w-3" />
-                                    {t("inventory.wholesalerImport.controlledBadge", "Omamná látka")}
+                                    {t("inventory.wholesalerImport.controlledBadge", "Zákon 139/1998 Z. z. – Omamná látka")}
                                   </span>
                                 )}
                               </div>
+                              <select className="mt-1 h-7 border rounded bg-background text-xs" disabled={isControlled}
+                                value={itemStates[idx]?.category ?? item.category ?? "medication"}
+                                aria-label={t("inventory.table.colCategory")}
+                                onChange={e => setItemState(idx, { category: e.target.value })}>
+                                {Object.keys(CATEGORY_MARKUPS).map(c => <option key={c} value={c}>{t(`inventory.categories.${c}`)}</option>)}
+                              </select>
+                              {!isControlled && <Input className="mt-1 h-7 text-xs" maxLength={255}
+                                placeholder={t("inventory.wholesalerImport.activeSubstance")}
+                                aria-label={t("inventory.wholesalerImport.activeSubstance")}
+                                value={itemStates[idx]?.activeSubstance ?? ""}
+                                onChange={e => setItemState(idx, { activeSubstance: e.target.value })} />}
+                              {!displayProduct && !isControlled && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <Button type="button" size="sm" variant="outline" onClick={() => setItemState(idx, { action: "create_product" })}>{t("inventory.wholesalerImport.actionCreate")}</Button>
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => setItemState(idx, { action: "skip" })}>{t("inventory.wholesalerImport.actionSkip")}</Button>
+                                </div>
+                              )}
                               {displayProduct ? (
                                 <div className="mt-1 flex items-center gap-1.5 text-[11px]">
                                   <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -599,6 +676,7 @@ export function WholesalerImportDialog({
                                 <button
                                   type="button"
                                   className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:underline"
+                                  disabled={isControlled}
                                   onClick={() => openLinkSearch(idx, item.name)}
                                 >
                                   <Link2 className="h-3 w-3" />
@@ -677,16 +755,16 @@ export function WholesalerImportDialog({
                               )}
                             </td>
                             {/* Item code */}
-                            <td className="py-2 px-3 font-mono text-[11px] text-muted-foreground">
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
                               {item.sku || item.ean || item.suklOrAdcCode || "—"}
                             </td>
                             {/* Batch & expiry */}
-                            <td className="py-2 px-3">
+                            <td className="py-2.5 px-3">
                               {item.batchNumber && item.batchNumber !== "BEZ-SARZE" ? (
                                 <span className="font-mono text-[11px] font-medium">{item.batchNumber}</span>
                               ) : (
                                 <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-[10px] font-semibold">
-                                  BEZ-SARZE
+                                  {t("inventory.wholesalerImport.noBatch")}
                                 </span>
                               )}
                               <div className="text-[10px] text-muted-foreground mt-0.5">
@@ -696,26 +774,29 @@ export function WholesalerImportDialog({
                               </div>
                             </td>
                             {/* Quantity */}
-                            <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">
-                              {item.quantity} {item.unit || "ks"}
+                            <td className="py-2.5 px-3 text-right font-mono font-medium whitespace-nowrap">
+                              {isControlled ? "—" : <>{item.quantity} {item.unit || t("inventory.wholesalerImport.pieces")}</>}
                             </td>
                             {/* Purchase price */}
-                            <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
-                              {formatCurrency(item.unitPriceWithoutVat)}
+                            <td className="py-2.5 px-3 text-right font-mono whitespace-nowrap">
+                              {isControlled ? "—" : formatCurrency(item.unitPriceWithoutVat)}
                             </td>
                             {/* VAT rate */}
-                            <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
-                              {item.vatRate}%
+                            <td className="py-2.5 px-3 text-right font-mono whitespace-nowrap">
+                              <select className="h-7 border rounded bg-background tabular-nums" value={vat}
+                                disabled={isControlled}
+                                aria-label={t("inventory.wholesalerImport.colVat")}
+                                onChange={e => setItemState(idx, { vatRate: Number(e.target.value) })}>
+                                {[...new Set([0, 5, 19, 23, vat])].sort((a,b) => a-b).map(rate => <option key={rate} value={rate}>{rate}%</option>)}
+                              </select>
                             </td>
                             {/* Proposed retail price */}
-                            <td className="py-2 px-3 text-right whitespace-nowrap">
+                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
                               <Input
                                 type="text"
                                 inputMode="decimal"
-                                value={
-                                  itemStates[idx]?.retailPriceOverride ??
-                                  retailPriceFor(item, idx)
-                                }
+                                disabled={isControlled}
+                                value={isControlled ? "" : itemStates[idx]?.retailPriceOverride ?? retailPriceFor(item, idx)}
                                 onChange={(e) =>
                                   setItemState(idx, {
                                     retailPriceOverride: e.target.value,
@@ -727,6 +808,9 @@ export function WholesalerImportDialog({
                                   "Predajná cena za jednotku"
                                 )}
                               />
+                              <div className="mt-1 tabular-nums font-medium">
+                                {isControlled ? "—" : t("inventory.wholesalerImport.grossPrice", undefined, { price: priceIncludingVat(retailPriceFor(item, idx), vat) === null ? "—" : formatCurrency(priceIncludingVat(retailPriceFor(item, idx), vat)!) })}
+                              </div>
                               {displayProduct?.currentUnitPrice && (
                                 <div className="text-[10px] text-muted-foreground mt-0.5">
                                   {t("inventory.wholesalerImport.currentPrice", "akt.")}{" "}
@@ -735,8 +819,9 @@ export function WholesalerImportDialog({
                               )}
                             </td>
                             {/* Action */}
-                            <td className="py-2 px-3">
+                            <td className="py-2.5 px-3">
                               <Select
+                                disabled={isControlled || item.quantity <= 0}
                                 value={action}
                                 onValueChange={(val: ItemAction) => setItemState(idx, { action: val })}
                               >
@@ -793,7 +878,7 @@ export function WholesalerImportDialog({
             <Button
               type="button"
               onClick={handleConfirm}
-              disabled={confirmMutation.isPending || actionableCount === 0}
+              disabled={confirmMutation.isPending || !validPrices || (actionableCount === 0 && !hasControlled)}
             >
               {confirmMutation.isPending ? (
                 <>

@@ -33,7 +33,7 @@ export interface WholesalerDeliveryItem {
   quantity: number;
   unit: string;
   unitPriceWithoutVat: number;
-  vatRate: number; // e.g. 10 or 20
+  vatRate: number; // e.g. 5, 19 or 23; retain explicit historical/zero rates
   totalWithoutVat: number;
   totalWithVat: number;
   isControlledSubstance?: boolean;
@@ -72,12 +72,18 @@ function splitCsvLine(line: string, preferredDelimiter?: string): string[] {
   return line.split(delimiter).map((c) => c.trim().replace(/^"/, "").replace(/"$/, ""));
 }
 
-/**
- * Parses numeric value supporting both comma (14,50) and dot (14.50) decimal separators.
- */
+/** Preserve explicit zero and historical tax rates; use the current standard rate when absent. */
+function parseVatRate(value: string | undefined, fallback = 23): number {
+  if (!value?.trim()) return fallback;
+  const rate = Number(value.trim().replace(",", "."));
+  return Number.isFinite(rate) && rate >= 0 && rate <= 100 ? rate : fallback;
+}
+
+/** Parse decimal commas and Slovak thousands separators. */
 function parseSlovakNumber(val?: string): number {
   if (!val) return 0;
-  const cleaned = val.replace(/\s+/g, "").replace(",", ".");
+  const compact = val.replace(/\s+/g, "");
+  const cleaned = compact.includes(",") ? compact.replace(/\./g, "").replace(",", ".") : compact;
   return parseFloat(cleaned) || 0;
 }
 
@@ -310,7 +316,7 @@ function parseCymedicaCsv(lines: string[]): WholesalerDeliveryNote {
     const qty = parseSlovakNumber(cols[4]) || 1;
     const unit = cols[5] || "ks";
     const price = parseSlovakNumber(cols[6]);
-    const vatRate = parseInt(cols[7], 10) || 10;
+    const vatRate = parseVatRate(cols[7]);
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
 
@@ -368,7 +374,7 @@ function parsePharmos(lines: string[]): WholesalerDeliveryNote {
     const exp = parseDate(cols[3]);
     const qty = parseSlovakNumber(cols[4]) || 1;
     const price = parseSlovakNumber(cols[5]);
-    const vatRate = parseInt(cols[6], 10) || 10;
+    const vatRate = parseVatRate(cols[6]);
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
 
@@ -418,7 +424,7 @@ function parseSamohyl(lines: string[]): WholesalerDeliveryNote {
     const name = cols[1] || cols[0];
     const qty = parseSlovakNumber(cols[2]) || 1;
     const price = parseSlovakNumber(cols[3]);
-    const vatRate = 20;
+    const vatRate = 23;
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * 1.2 * 100) / 100;
 
@@ -467,7 +473,7 @@ function parseHenrySchein(lines: string[]): WholesalerDeliveryNote {
     const name = cols[1];
     const qty = parseSlovakNumber(cols[2]) || 1;
     const price = parseSlovakNumber(cols[3]);
-    const vatRate = 20;
+    const vatRate = 23;
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * 1.2 * 100) / 100;
 
@@ -534,7 +540,7 @@ function parseStandardDeliveryLines(
     const exp = parseDate(cols[3]);
     const qty = parseSlovakNumber(cols[4]) || 1;
     const price = parseSlovakNumber(cols[5]);
-    const vatRate = parseInt(cols[6], 10) || 10;
+    const vatRate = parseVatRate(cols[6]);
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
 
@@ -649,13 +655,12 @@ function parseSgVet(rawContent: string): WholesalerDeliveryNote {
         extractXmlTag(block, "cena_bez_dph")
     );
     const vatRate =
-      parseInt(
+      parseVatRate(
         extractXmlTag(block, "vat") ??
           extractXmlTag(block, "dph") ??
           extractXmlTag(block, "sadzba_dph") ??
-          "10",
-        10
-      ) || 10;
+          "23"
+      );
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
 
@@ -735,7 +740,7 @@ function parseTopvet(lines: string[]): WholesalerDeliveryNote {
         qty = parseSlovakNumber(parts[0]) || 1;
         unit = parts[unitIdx];
         unitPriceWithoutVat = parseSlovakNumber(parts[2]) || parseSlovakNumber(parts[1]);
-        vatRate = parseInt(parts[3], 10) || 5;
+        vatRate = parseVatRate(parts[3], 5);
         totalWithoutVat = Math.round(qty * unitPriceWithoutVat * 100) / 100;
         totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
         break;
@@ -825,7 +830,7 @@ function parsePharmacopolaText(lines: string[]): WholesalerDeliveryNote {
     const qty = parseSlovakNumber(parts[0]) || 1;
     const unit = parts[1] || "ks";
     const unitPriceWithoutVat = parseSlovakNumber(parts[2]);
-    const vatRate = parts[4] ? parseInt(parts[4], 10) || 5 : 5;
+    const vatRate = parseVatRate(parts[4], 5);
 
     // Last two numeric tokens = totalBezDPH, totalSDPH
     const numericParts = parts.filter((p) => /^[\d,\.]+$/.test(p)).map(parseSlovakNumber);
@@ -883,7 +888,7 @@ function parseGenericCsv(lines: string[]): WholesalerDeliveryNote {
     const name = cols[0];
     const qty = parseSlovakNumber(cols[1]) || 1;
     const price = parseSlovakNumber(cols[2]);
-    const vatRate = parseInt(cols[3], 10) || 20;
+    const vatRate = parseVatRate(cols[3]);
     const totalWithoutVat = Math.round(qty * price * 100) / 100;
     const totalWithVat = Math.round(totalWithoutVat * (1 + vatRate / 100) * 100) / 100;
 

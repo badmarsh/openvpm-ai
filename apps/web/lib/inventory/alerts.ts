@@ -74,14 +74,15 @@ export function classifyExpiration(
 
 export function inventoryAlert(
   product: InventoryAlertInput,
-  today: Date | string = new Date()
+  today: Date | string = new Date(),
+  windowDays = 90
 ): InventoryAlert {
   const tracked = product.inventoryTracked !== false;
   const stockStatus = tracked
     ? classifyStock(product.stockQuantity, product.reorderPoint)
     : "not_tracked";
   const expirationStatus = tracked
-    ? classifyExpiration(product.expirationDate, today)
+    ? classifyExpiration(product.expirationDate, today, windowDays)
     : "none";
   return {
     stockStatus,

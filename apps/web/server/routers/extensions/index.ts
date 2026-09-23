@@ -1,3 +1,4 @@
+import { inventoryMetadataRouter } from "./inventory-metadata";
 import { createRouter } from "../../trpc";
 import { ekasaRouter } from "./ekasa";
 import { v2ImportRouter } from "./v2-import";
@@ -34,6 +35,7 @@ import { fieldVisitsRouter } from "./field-visits";
  * Keeps extensions fully isolated from vanilla routers.
  */
 export const extensionsRouter = createRouter({
+  inventoryMetadata: inventoryMetadataRouter,
   ekasa: ekasaRouter,
   v2Import: v2ImportRouter,
   imaging: imagingRouter,

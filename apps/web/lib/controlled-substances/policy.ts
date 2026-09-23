@@ -87,6 +87,6 @@ export const CONTROLLED_SUBSTANCES_REGEX =
 
 export function isControlledSubstanceName(drugName: string): boolean {
   if (!drugName) return false;
-  return CONTROLLED_SUBSTANCES_REGEX.test(drugName.trim());
+  return CONTROLLED_SUBSTANCES_REGEX.test(drugName.normalize("NFKD").replace(/\p{M}/gu, "").replace(/[\u200B-\u200F\uFEFF]/g, "").trim());
 }
 

@@ -1,8 +1,12 @@
+import { createHash, randomUUID } from "node:crypto";
+import { matchInventoryProduct, normalizeProductName } from "@/lib/inventory/matching";
+import { isInventoryOptionalExpirationDateInputValid } from "@/lib/inventory/policy";
+import { IMPORT_ERRORS } from "@/lib/inventory/import-errors";
 import { z } from "zod";
 import { eq, and, isNull, or, ilike, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../../trpc";
-import { products, extAutomationEvents } from "@openpims/db";
+import { products, extAutomationEvents, extInventoryMetadata, extInventoryReceipts, controlledSubstanceLog } from "@openpims/db";
 import { communications } from "@openpims/db";
 import { parsePdfInvoice, type InvoiceParserAiConfig } from "@/lib/inventory/pdf-invoice-parser";
 import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
@@ -28,15 +32,18 @@ const wholesalerTypeSchema = z.enum([
   "SANVET",
   "PHRAMED",
   "GENERIC_CSV",
+  "TOPVET",
+  "PHARMACOPOLA",
 ]);
 
 /** Money input capped to a sane POS range (decimal with max 2 places). */
 const importMoneyInput = z
   .string()
   .trim()
-  .regex(/^\d+(?:[.,]\d{1,2})?$/, "Cena musí byť kladné číslo s najviac 2 desatinnými miestami")
+  .regex(/^\d+(?:[.,]\d{1,2})?$/, "Price must be nonnegative with at most two decimals")
   .max(16)
-  .transform((v) => v.replace(",", "."));
+  .transform((v) => v.replace(",", "."))
+  .refine(v => Number(v) <= 99999999.99, "Price exceeds storage limit");
 
 const confirmItemSchema = z.object({
   action: z.enum(["update_stock", "create_product", "skip"]),
@@ -44,6 +51,9 @@ const confirmItemSchema = z.object({
   name: z.string().trim().min(1).max(255),
   sku: z.string().trim().max(64).optional(),
   category: z.string().trim().max(128).optional(),
+  barcode: z.string().trim().max(64).optional(),
+  activeSubstance: z.string().trim().max(255).optional(),
+  isControlledSubstance: z.boolean().optional(),
   unit: z.string().trim().max(16).optional(),
   /** Purchase (unit) price from the delivery note, without VAT. */
   costPrice: importMoneyInput.optional(),
@@ -64,15 +74,14 @@ const confirmItemSchema = z.object({
     .nullable()
     .transform((v) => {
       if (!v || !v.trim()) return undefined;
-      return parseDate(v) || (v.match(/^\d{4}-\d{2}-\d{2}$/) ? v : undefined);
-    }),
+      return parseDate(v) || v;
+    }).refine(v => !v || isInventoryOptionalExpirationDateInputValid(v), "Invalid expiration date"),
   quantity: z.coerce
     .number()
-    .positive("Množstvo musí byť aspoň 1")
-    .transform((v) => Math.max(1, Math.round(v))),
+    .finite().positive().max(10000).multipleOf(0.001),
 });
 
-const FALLBACK_MARKUP_MULTIPLIER = 1.25;
+const FALLBACK_MARKUP_MULTIPLIER = 1.30;
 
 /**
  * Derives the retail price for a confirmed line. Returns null when neither
@@ -107,125 +116,177 @@ async function applyConfirmedItems(
   let updatedCount = 0;
   let createdCount = 0;
   let skippedCount = 0;
-  const externalSource = `wholesaler:${input.supplierName}`;
+  // Resolve catalog identities before any write; client names cannot disguise a controlled target.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${ctx.practiceId + ":inventory-receipt"}))`);
+  const catalog = await tx.select().from(products).where(and(
+    eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt),
+  )).for("update");
+  const metadataRows = await tx.select().from(extInventoryMetadata).where(eq(extInventoryMetadata.practiceId, ctx.practiceId));
+  const controlledReview: Array<{ name: string; line: number }> = [];
+  const targets = input.items.map((item, line) => {
+    const candidates = item.productId ? catalog.filter((p: any) => p.id === item.productId)
+      : item.sku ? catalog.filter((p: any) => p.sku?.toLowerCase() === item.sku?.toLowerCase()) : [];
+    if (candidates.length > 1 && item.action !== "skip") {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Ambiguous product code: choose a catalog product explicitly" });
+    }
+    const target = candidates[0];
+    const controlled = item.isControlledSubstance || isControlledSubstanceName(item.name)
+      || isControlledSubstanceName(item.activeSubstance ?? "") || isControlledSubstanceName(target?.name ?? "")
+      || isControlledSubstanceName(metadataRows.find((m: any) => m.productId === target?.id)?.activeSubstance ?? "");
+    if (controlled) {
+      if (item.action !== "skip") throw new TRPCError({ code: "FORBIDDEN", message: IMPORT_ERRORS.controlled });
+      controlledReview.push({ name: target && isControlledSubstanceName(target.name) ? target.name : item.name, line: line + 1 });
+    }
+    if (item.action === "update_stock" && !target) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    }
+    return target;
+  });
+  const receiptKey = createHash("sha256").update(JSON.stringify([
+    input.supplierName.trim().toLowerCase(), input.deliveryNoteNumber.trim().toLowerCase(),
+  ])).digest("hex");
+  const claimed = await tx.insert(extInventoryReceipts).values({
+    practiceId: ctx.practiceId, receiptKey, supplierName: input.supplierName,
+    deliveryNoteNumber: input.deliveryNoteNumber, controlledReview,
+  }).onConflictDoNothing().returning({ id: extInventoryReceipts.id });
+  if (!claimed.length) throw new TRPCError({ code: "CONFLICT", message: "Delivery note already imported" });
 
-  const buildStockUpdatePayload = (
-    item: z.infer<typeof confirmItemSchema>,
-  ): Record<string, unknown> => {
+  for (const [index, item] of input.items.entries()) {
+    if (item.action === "skip") { skippedCount++; continue; }
+    const target = targets[index];
+    const id = target?.id ?? randomUUID();
+    if (target && target.stockQuantity + item.quantity > 2147483647) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Stock quantity exceeds the supported limit" });
+    }
     const retailPrice = deriveRetailPrice(item.retailPrice, item.costPrice);
-    const updatePayload: Record<string, unknown> = {
-      stockQuantity: sql`${products.stockQuantity} + ${item.quantity}`,
-    };
-    if (retailPrice) updatePayload.unitPrice = retailPrice;
-    if (item.lotNumber) updatePayload.lotNumber = item.lotNumber;
-    if (item.expirationDate) updatePayload.expirationDate = item.expirationDate;
-    if (item.costPrice) updatePayload.costPrice = item.costPrice;
-    return updatePayload;
-  };
-
-  for (const item of input.items) {
-    if (item.action === "skip") {
-      skippedCount++;
-      continue;
-    }
-
-    // Server-side controlled-substance gate (Zákon č. 139/1998 Z. z.):
-    // controlled substances must never enter inventory through an
-    // AI/PDF-driven import, even if the client overrides the "skip"
-    // suggestion in the preview. They require manual entry with the
-    // zero-prefill + witness workflow on the controlled-substances screen.
-    if (isControlledSubstanceName(item.name)) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message:
-          "Kontrolovanú látku '" +
-          item.name +
-          "' nie je možné importovať zo zásielky (Zákon č. 139/1998 Z. z.). Záznam vytvorte ručne v sekcii Kontrolované látky.",
+    if (target) {
+      // Refuse silent mixing of different batches in the upstream single-lot stock model.
+      if (target.stockQuantity > 0 && target.lotNumber && item.lotNumber && target.lotNumber !== item.lotNumber) {
+        throw new TRPCError({ code: "CONFLICT", message: "Different batch: create a separate product or reconcile existing stock first" });
+      }
+      await tx.update(products).set({
+        inventoryTracked: true,
+        stockQuantity: sql`${products.stockQuantity} + ${item.quantity}`,
+        ...(retailPrice ? { unitPrice: retailPrice } : {}),
+        ...(item.costPrice ? { costPrice: item.costPrice } : {}),
+        ...(item.lotNumber ? { lotNumber: item.lotNumber } : {}),
+        ...(item.expirationDate ? { expirationDate: item.expirationDate } : {}),
+        ...(item.vatRate !== undefined ? { taxable: item.vatRate !== 0 } : {}),
+      }).where(and(eq(products.id, id), eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt)));
+      updatedCount++;
+    } else {
+      if (!retailPrice) throw new TRPCError({ code: "BAD_REQUEST", message: "A reviewed price is required" });
+      await tx.insert(products).values({
+        id, practiceId: ctx.practiceId, name: item.name, sku: item.sku || null,
+        category: item.category || null, unitPrice: retailPrice, costPrice: item.costPrice || null,
+        taxable: item.vatRate !== 0, stockQuantity: item.quantity, inventoryTracked: true,
+        lotNumber: item.lotNumber || null, expirationDate: item.expirationDate || null,
+        // Receipt provenance belongs to ext_inventory_receipts, not migration identity columns.
       });
+      createdCount++;
     }
-
-    if (item.action === "update_stock" && item.productId) {
-      await tx
-        .update(products)
-        .set(buildStockUpdatePayload(item))
-        .where(
-          and(
-            eq(products.id, item.productId),
-            eq(products.practiceId, ctx.practiceId),
-            isNull(products.deletedAt)
-          )
-        );
-      updatedCount++;
-      continue;
-    }
-
-    // create_product — with idempotency: an identical line from the SAME
-    // delivery note (same sku, or same external delivery-note identity) is
-    // upgraded to a stock update instead of creating a duplicate product.
-    const duplicateCandidates = await tx
-      .select({ id: products.id })
-      .from(products)
-      .where(
-        and(
-          eq(products.practiceId, ctx.practiceId),
-          isNull(products.deletedAt),
-          or(
-            item.sku ? eq(products.sku, item.sku) : undefined,
-            and(
-              eq(products.externalSource, externalSource),
-              eq(products.externalId, input.deliveryNoteNumber),
-              eq(products.name, item.name),
-            ),
-          ),
-        ),
-      )
-      .limit(1);
-
-    const duplicate = duplicateCandidates[0] as { id: string } | undefined;
-    if (duplicate) {
-      await tx
-        .update(products)
-        .set(buildStockUpdatePayload(item))
-        .where(
-          and(
-            eq(products.id, duplicate.id),
-            eq(products.practiceId, ctx.practiceId),
-            isNull(products.deletedAt)
-          )
-        );
-      updatedCount++;
-      continue;
-    }
-
-    await tx.insert(products).values({
-      practiceId: ctx.practiceId,
-      name: item.name,
-      sku: item.sku || null,
-      category: item.category || "Lieky a materiály",
-      unitPrice:
-        deriveRetailPrice(item.retailPrice, item.costPrice) ?? "10.00",
-      costPrice: item.costPrice || null,
-      stockQuantity: item.quantity,
-      inventoryTracked: true,
-      lotNumber: item.lotNumber || null,
-      expirationDate: item.expirationDate || null,
-      externalSource,
-      externalId: input.deliveryNoteNumber,
-    });
-    createdCount++;
+    const metadata = {
+      supplierName: input.supplierName, supplierCode: item.sku || null,
+      ...(item.barcode ? { barcode: item.barcode } : {}),
+      ...(item.activeSubstance ? { activeSubstance: item.activeSubstance } : {}),
+      ...(item.vatRate !== undefined ? { vatRate: String(item.vatRate) } : {}),
+    };
+    await tx.insert(extInventoryMetadata).values({ practiceId: ctx.practiceId, productId: id, ...metadata })
+      .onConflictDoUpdate({ target: [extInventoryMetadata.practiceId, extInventoryMetadata.productId], set: metadata });
   }
-
   return { updatedCount, createdCount, skippedCount };
 }
 
+async function importCatalog(ctx: { db: any; practiceId: string }, supplierName: string) {
+  const rows = await ctx.db.select({
+    id: products.id, name: products.name, sku: products.sku,
+    stockQuantity: products.stockQuantity, lotNumber: products.lotNumber,
+    expirationDate: products.expirationDate, unitPrice: products.unitPrice,
+    category: products.category,
+    barcode: extInventoryMetadata.barcode, supplierCode: extInventoryMetadata.supplierCode,
+    supplierName: extInventoryMetadata.supplierName, activeSubstance: extInventoryMetadata.activeSubstance,
+  }).from(products).leftJoin(extInventoryMetadata, and(
+    eq(products.id, extInventoryMetadata.productId), eq(extInventoryMetadata.practiceId, ctx.practiceId),
+  )).where(and(eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt)));
+  return rows.map((p: any) => ({ ...p, supplierCode: p.supplierName === supplierName ? p.supplierCode : null }));
+}
+
+function matchItems(items: any[], catalog: any[]) {
+  return items.map(item => {
+    const matched = matchInventoryProduct(item, catalog);
+    const controlled = !!item.isControlledSubstance || isControlledSubstanceName(item.name) || isControlledSubstanceName(matched?.name ?? "")
+      || isControlledSubstanceName(matched?.activeSubstance ?? "");
+    return { ...item, isControlledSubstance: controlled,
+      category: matched?.category?.toLowerCase() ?? "medication",
+      matchedProduct: matched ? { id: matched.id, name: matched.name, sku: matched.sku,
+        currentStock: matched.stockQuantity, currentLot: matched.lotNumber,
+        currentExpiration: matched.expirationDate, currentUnitPrice: matched.unitPrice } : null,
+      suggestedAction: controlled || item.quantity <= 0 ? "skip" : matched ? "update_stock" : "create_product",
+    };
+  });
+}
+async function parsePdfForImport(buffer: Buffer, ctx: { db: any; practiceId: string }) {
+  let config: InvoiceParserAiConfig | undefined;
+  try {
+    const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "invoiceParser");
+    if (resolved.baseUrl && resolved.apiKey) config = { baseUrl: resolved.baseUrl, apiKey: resolved.apiKey, model: resolved.modelId };
+  } catch { /* deterministic parser remains available */ }
+  let extraction;
+  try { extraction = await parsePdfInvoice(buffer, config); }
+  catch (error) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error && Object.values(IMPORT_ERRORS).some(v => v === error.message) ? error.message : IMPORT_ERRORS.corrupted });
+  }
+  if (!extraction.items.length) throw new TRPCError({ code: "BAD_REQUEST", message: IMPORT_ERRORS.noItems });
+  return {
+    deliveryNote: { wholesaler: undefined, deliveryNoteNumber: extraction.invoiceNumber,
+      issueDate: extraction.issueDate, supplierName: extraction.supplierName,
+      totalWithoutVat: extraction.totalWithoutVat, totalWithVat: extraction.totalWithVat },
+    items: matchItems(extraction.items, await importCatalog(ctx, extraction.supplierName)),
+  };
+}
+
 export const wholesalerImportRouter = createRouter({
+  parsePdf: staffProcedure.input(z.object({ base64: z.string().min(1).max(6_990_508) }))
+    .mutation(({ ctx, input }) => parsePdfForImport(Buffer.from(input.base64, "base64"), ctx)),
+  linkControlledReview: protectedProcedure.use(requireRole("veterinarian", "admin"))
+    .input(z.object({ receiptId: z.string().uuid(), line: z.number().int().positive(), entryId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => ctx.db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${ctx.practiceId + ":opl-review:" + input.entryId}))`);
+      const used = await tx.select({ id: extInventoryReceipts.id }).from(extInventoryReceipts).where(and(
+        eq(extInventoryReceipts.practiceId, ctx.practiceId),
+        sql`${extInventoryReceipts.controlledReview} @> ${JSON.stringify([{ ledgerId: input.entryId }])}::jsonb`,
+      )).limit(1);
+      if (used.length) throw new TRPCError({ code: "CONFLICT", message: "This manual receipt is already linked" });
+      const [receipt] = await tx.select().from(extInventoryReceipts).where(and(
+        eq(extInventoryReceipts.id, input.receiptId), eq(extInventoryReceipts.practiceId, ctx.practiceId),
+      )).for("update");
+      const review = receipt?.controlledReview.find(r => r.line === input.line);
+      const [entry] = await tx.select().from(controlledSubstanceLog).where(and(
+        eq(controlledSubstanceLog.id, input.entryId), eq(controlledSubstanceLog.practiceId, ctx.practiceId),
+        eq(controlledSubstanceLog.action, "received"), eq(controlledSubstanceLog.performedBy, ctx.user.id),
+        isNull(controlledSubstanceLog.deletedAt),
+      ));
+      if (!review || review.ledgerId || !entry || normalizeProductName(entry.drugName) !== normalizeProductName(review.name)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Manual receipt entry must match the source drug and reviewing clinician" });
+      }
+      await tx.update(extInventoryReceipts).set({ controlledReview: receipt.controlledReview.map(r =>
+        r.line === input.line ? { ...r, ledgerId: entry.id } : r,
+      ) }).where(and(eq(extInventoryReceipts.id, receipt.id), eq(extInventoryReceipts.practiceId, ctx.practiceId)));
+      return { success: true };
+    })),
+  pendingControlledReviews: protectedProcedure.use(requireRole("admin", "veterinarian"))
+    .query(({ ctx }) => ctx.db.select().from(extInventoryReceipts).where(and(
+      eq(extInventoryReceipts.practiceId, ctx.practiceId),
+      sql`jsonb_path_exists(${extInventoryReceipts.controlledReview}, '$[*] ? (!exists(@.ledgerId))')`,
+    )).orderBy(extInventoryReceipts.createdAt).limit(100)),
+
   /**
    * Parse delivery note from file content and attempt to match items to existing clinic inventory.
    */
   parse: staffProcedure
     .input(
       z.object({
-        content: z.string().min(1, "Obsah dodacieho listu je prázdny").max(5_242_880, "Súbor je príliš veľký (max 5 MB)"),
+        content: z.string().min(1, "Delivery note is empty").max(5_242_880, "File exceeds 5 MB"),
         wholesaler: wholesalerTypeSchema.optional(),
         filename: z.string().optional(),
       })
@@ -241,71 +302,12 @@ export const wholesalerImportRouter = createRouter({
       } catch (err) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Chyba pri parsovaní dodacieho listu: ${err instanceof Error ? err.message : String(err)}`,
+          message: "Failed to parse delivery note",
         });
       }
 
-      // Fetch all active products for the practice to match items
-      const existingProducts = await ctx.db
-        .select({
-          id: products.id,
-          name: products.name,
-          sku: products.sku,
-          stockQuantity: products.stockQuantity,
-          lotNumber: products.lotNumber,
-          expirationDate: products.expirationDate,
-          unitPrice: products.unitPrice,
-          costPrice: products.costPrice,
-        })
-        .from(products)
-        .where(
-          and(
-            eq(products.practiceId, ctx.practiceId),
-            isNull(products.deletedAt)
-          )
-        );
-
-      const itemsWithMatch = parsed.items.map((item) => {
-        // Priority 1: Match by SKU/EAN/SUKL
-        const matchBySku = existingProducts.find(
-          (p) =>
-            (item.sku && p.sku && p.sku.toLowerCase() === item.sku.toLowerCase()) ||
-            (item.ean && p.sku && p.sku.toLowerCase() === item.ean.toLowerCase()) ||
-            (item.suklOrAdcCode && p.sku && p.sku.toLowerCase() === item.suklOrAdcCode.toLowerCase())
-        );
-
-        // Priority 2: Match by exact or partial name
-        const matchByName = matchBySku
-          ? null
-          : existingProducts.find(
-              (p) =>
-                p.name.toLowerCase() === item.name.toLowerCase() ||
-                p.name.toLowerCase().includes(item.name.toLowerCase()) ||
-                item.name.toLowerCase().includes(p.name.toLowerCase())
-            );
-
-        const matched = matchBySku || matchByName;
-        const isControlled = item.isControlledSubstance ?? false;
-        const suggestedAction = isControlled
-          ? "skip"
-          : ((matched ? "update_stock" : "create_product") as "update_stock" | "create_product" | "skip");
-
-        return {
-          ...item,
-          matchedProduct: matched
-            ? {
-                id: matched.id,
-                name: matched.name,
-                sku: matched.sku,
-                currentStock: matched.stockQuantity,
-                currentLot: matched.lotNumber,
-                currentExpiration: matched.expirationDate,
-                currentUnitPrice: matched.unitPrice,
-              }
-            : null,
-          suggestedAction,
-        };
-      });
+      if (!parsed.items.length) throw new TRPCError({ code: "BAD_REQUEST", message: IMPORT_ERRORS.noItems });
+      const itemsWithMatch = matchItems(parsed.items, await importCatalog(ctx, parsed.supplierName));
 
       return {
         deliveryNote: {
@@ -395,81 +397,7 @@ export const wholesalerImportRouter = createRouter({
 
       const pdfBuffer = Buffer.from(await fileRes.arrayBuffer());
 
-      let aiConfig: InvoiceParserAiConfig | undefined;
-      try {
-        const resolved = await resolveFeatureConfig(ctx.db, ctx.practiceId, "invoiceParser");
-        if (resolved.baseUrl && resolved.apiKey) {
-          aiConfig = { baseUrl: resolved.baseUrl, apiKey: resolved.apiKey, model: resolved.modelId };
-        }
-      } catch {
-        // rule-based fallback
-      }
-
-      const extraction = await parsePdfInvoice(pdfBuffer, aiConfig);
-
-      const existingProducts = await ctx.db
-        .select({
-          id: products.id,
-          name: products.name,
-          sku: products.sku,
-          stockQuantity: products.stockQuantity,
-          lotNumber: products.lotNumber,
-          expirationDate: products.expirationDate,
-          unitPrice: products.unitPrice,
-          costPrice: products.costPrice,
-        })
-        .from(products)
-        .where(and(eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt)));
-
-      const itemsWithMatch = extraction.items.map((item) => {
-        const matchBySku = existingProducts.find(
-          (p) => item.sku && p.sku && p.sku.toLowerCase() === item.sku.toLowerCase()
-        );
-        const matchByName = matchBySku
-          ? null
-          : existingProducts.find(
-              (p) =>
-                p.name.toLowerCase() === item.name.toLowerCase() ||
-                p.name.toLowerCase().includes(item.name.toLowerCase()) ||
-                item.name.toLowerCase().includes(p.name.toLowerCase())
-            );
-        const matched = matchBySku || matchByName;
-        const isControlled = isControlledSubstanceName(item.name);
-        const suggestedAction =
-          isControlled ? "skip" : matched ? "update_stock" : "create_product";
-
-        return {
-          ...item,
-          batchNumber: null,
-          isControlledSubstance: isControlled,
-          matchedProduct: matched
-            ? {
-                id: matched.id,
-                name: matched.name,
-                sku: matched.sku,
-                currentStock: matched.stockQuantity,
-                currentLot: matched.lotNumber,
-                currentExpiration: matched.expirationDate,
-                currentUnitPrice: matched.unitPrice,
-              }
-            : null,
-          suggestedAction,
-        };
-      });
-
-      return {
-        deliveryNote: {
-          wholesaler: extraction.supplierName || "AUTO",
-          deliveryNoteNumber: extraction.invoiceNumber,
-          issueDate: extraction.issueDate,
-          supplierName: extraction.supplierName,
-          supplierIco: null,
-          totalWithoutVat: extraction.totalWithoutVat || null,
-          totalVat: null,
-          totalWithVat: extraction.totalWithVat || null,
-        },
-        items: itemsWithMatch,
-      };
+      return parsePdfForImport(pdfBuffer, ctx);
     }),
 
 
@@ -485,7 +413,7 @@ export const wholesalerImportRouter = createRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const q = `%${input.query.trim()}%`;
+      const q = `%${input.query.trim().replace(/[%_\\]/g, "\\$&")}%`;
       return ctx.db
         .select({
           id: products.id,
@@ -501,7 +429,7 @@ export const wholesalerImportRouter = createRouter({
           and(
             eq(products.practiceId, ctx.practiceId),
             isNull(products.deletedAt),
-            or(ilike(products.name, q), ilike(products.sku, q)),
+            or(ilike(products.name, q), ilike(products.sku, q), sql`exists (select 1 from ${extInventoryMetadata} m where m.practice_id = ${ctx.practiceId} and m.product_id = ${products.id} and m.barcode ilike ${q})`),
           )
         )
         .orderBy(products.name)
@@ -513,8 +441,8 @@ export const wholesalerImportRouter = createRouter({
    *
    * Applies confirmed retail prices (after markup), batch/LOT + expiry
    * tracking and creates a durable `inventory_delivery_received` automation
-   * event. Duplicate-safe per (supplier, delivery note, sku/name) so a
-   * double-confirm cannot create duplicate catalog entries.
+   * event. Duplicate-safe per (practice, supplier, delivery note) so a
+   * double-confirm cannot add stock twice.
    */
   confirmImport: staffProcedure
     .input(
@@ -527,41 +455,19 @@ export const wholesalerImportRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const counts = await ctx.db.transaction(async (tx) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        applyConfirmedItems(ctx, tx as any, input),
-      );
-
-      // ── Post-commit: emit inventory_delivery_received into the event bus ──
-      // Fire-and-forget outside the stock transaction (SKILL.md §7): an event
-      // failure must never roll back a completed stock receipt. Idempotent
-      // per delivery note via deterministic dedupeKey.
-      void (ctx.db as any)
-        .insert(extAutomationEvents)
-        .values({
-          practiceId: ctx.practiceId,
-          eventType: "inventory_delivery_received",
+      const counts = await ctx.db.transaction(async tx => {
+        const result = await applyConfirmedItems(ctx, tx, input);
+        // Durable outbox: commit stock, pending OPL and event atomically. Workers run after commit.
+        await tx.insert(extAutomationEvents).values({
+          practiceId: ctx.practiceId, eventType: "inventory_delivery_received",
           sourceRouter: "wholesalerImport.confirmImport",
-          dedupeKey: `inventory_delivery_${ctx.practiceId}_${input.deliveryNoteNumber}`,
-          emittedBy: ctx.user?.id ?? null,
-          status: "pending",
-          availableAt: new Date(),
-          payload: {
-            deliveryNoteNumber: input.deliveryNoteNumber,
-            supplierName: input.supplierName,
-            wholesaler: input.wholesaler ?? null,
-            updatedCount: counts.updatedCount,
-            createdCount: counts.createdCount,
-            skippedCount: counts.skippedCount,
-          },
-        })
-        .onConflictDoNothing()
-        .catch((err: unknown) => {
-          console.error(
-            "[automation] inventory_delivery_received event insertion failed",
-            err,
-          );
-        });
+          dedupeKey: `inventory_delivery_${ctx.practiceId}_${createHash("sha256").update(input.supplierName + ":" + input.deliveryNoteNumber).digest("hex")}`,
+          emittedBy: ctx.user.id, status: "pending", availableAt: new Date(),
+          payload: { deliveryNoteNumber: input.deliveryNoteNumber, supplierName: input.supplierName,
+            wholesaler: input.wholesaler ?? null, ...result },
+        }).onConflictDoNothing();
+        return result;
+      });
 
       return {
         success: true,
@@ -575,113 +481,14 @@ export const wholesalerImportRouter = createRouter({
    * @deprecated Prefer confirmImport — kept for backward compatibility with the
    * legacy dialog and existing integrations.
    */
-  applyDeliveryNote: staffProcedure
-    .input(
-      z.object({
-        deliveryNoteNumber: z.string().min(1),
-        supplierName: z.string().min(1),
-        issueDate: z.string().optional(),
-        items: z.array(
-          z.object({
-            action: z.enum(["update_stock", "create_product", "skip"]),
-            productId: z.string().uuid().optional(),
-            name: z.string().min(1),
-            sku: z.string().optional(),
-            category: z.string().optional(),
-            unitPrice: z.string().optional(),
-            costPrice: z.string().optional(),
-            lotNumber: z
-              .string()
-              .optional()
-              .nullable()
-              .transform((v) => (v && v.trim() ? v.trim() : "BEZ-SARZE")),
-            expirationDate: z
-              .string()
-              .optional()
-              .nullable()
-              .transform((v) => {
-                if (!v || !v.trim()) return undefined;
-                return parseDate(v) || (v.match(/^\d{4}-\d{2}-\d{2}$/) ? v : undefined);
-              }),
-            quantity: z
-              .coerce
-              .number()
-              .positive("Množstvo musí byť aspoň 1")
-              .transform((v) => Math.max(1, Math.round(v))),
-          })
-        ),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      let updatedCount = 0;
-      let createdCount = 0;
-      let skippedCount = 0;
-
-      await ctx.db.transaction(async (tx) => {
-        for (const item of input.items) {
-          if (item.action === "skip") {
-            skippedCount++;
-            continue;
-          }
-
-          if (item.action === "update_stock" && item.productId) {
-            // Update stock and optionally lot / expiration if newer/provided
-            const updatePayload: Record<string, unknown> = {
-              stockQuantity: sql`${products.stockQuantity} + ${item.quantity}`,
-            };
-            if (item.lotNumber) {
-              updatePayload.lotNumber = item.lotNumber;
-            }
-            if (item.expirationDate) {
-              updatePayload.expirationDate = item.expirationDate;
-            }
-            if (item.costPrice) {
-              updatePayload.costPrice = item.costPrice;
-            }
-
-            await tx
-              .update(products)
-              .set(updatePayload)
-              .where(
-                and(
-                  eq(products.id, item.productId),
-                  eq(products.practiceId, ctx.practiceId),
-                  isNull(products.deletedAt)
-                )
-              );
-            updatedCount++;
-          } else if (item.action === "create_product") {
-            const calculatedUnitPrice = item.unitPrice
-              ? item.unitPrice
-              : item.costPrice
-              ? (parseFloat(item.costPrice) * 1.25).toFixed(2)
-              : "10.00";
-
-            await tx.insert(products).values({
-              practiceId: ctx.practiceId,
-              name: item.name,
-              sku: item.sku || null,
-              category: item.category || "Lieky a materiály",
-              unitPrice: calculatedUnitPrice,
-              costPrice: item.costPrice || null,
-              stockQuantity: item.quantity,
-              inventoryTracked: true,
-              lotNumber: item.lotNumber || null,
-              expirationDate: item.expirationDate || null,
-              externalSource: `wholesaler:${input.supplierName}`,
-              externalId: input.deliveryNoteNumber,
-            });
-            createdCount++;
-          }
-        }
-      });
-
-      return {
-        success: true,
-        deliveryNoteNumber: input.deliveryNoteNumber,
-        updatedCount,
-        createdCount,
-        skippedCount,
-      };
-    }),
+  applyDeliveryNote: staffProcedure.input(z.object({
+    deliveryNoteNumber: z.string().trim().min(1).max(64),
+    supplierName: z.string().trim().min(1).max(255),
+    items: z.array(confirmItemSchema.extend({ unitPrice: importMoneyInput.optional() })).min(1).max(500),
+  })).mutation(async ({ ctx, input }) => {
+    const counts = await ctx.db.transaction(tx => applyConfirmedItems(ctx, tx, {
+      ...input, items: input.items.map(item => ({ ...item, retailPrice: item.retailPrice ?? item.unitPrice })),
+    }));
+    return { success: true, deliveryNoteNumber: input.deliveryNoteNumber, ...counts };
+  }),
 });

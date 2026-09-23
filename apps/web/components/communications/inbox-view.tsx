@@ -33,6 +33,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cleanEmailBody } from "@/lib/inbox-cleaner";
+import { importErrorKey } from "@/lib/inventory/import-errors";
 import { WholesalerImportDialog } from "@/components/inventory/wholesaler-import-dialog";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -142,7 +143,7 @@ function MessageContentBubble({
       setImportingAttId(null);
     },
     onError: (err) => {
-      toast.error(err.message || "Parsovanie faktúry zlyhalo");
+      toast.error(t(importErrorKey(err.message)));
       setImportingAttId(null);
     },
   });

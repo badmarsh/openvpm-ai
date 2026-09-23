@@ -347,3 +347,15 @@ CYM-999;Parafínový olej 1000ml;;31.12.2028;2;ks;5,00;20;10,00
     expect(note.items[1].quantity).toBe(-1);
   });
 });
+
+describe("reviewed Slovak VAT rates", () => {
+  it.each([0, 5, 19, 23, 20])("preserves explicit %i%%, including zero and historical invoices", rate => {
+    const note = parseWholesalerDeliveryNote({ content: `Bandage;2;10;${rate}`, wholesaler: "GENERIC_CSV" });
+    expect(note.items[0].vatRate).toBe(rate);
+    expect(note.items[0].totalWithVat).toBeCloseTo(20 * (1 + rate / 100));
+  });
+  it("defaults unlabelled generic goods to 23%, not the obsolete standard rate", () => {
+    const note = parseWholesalerDeliveryNote({ content: "Bandage;2;10", wholesaler: "GENERIC_CSV" });
+    expect(note.items[0].vatRate).toBe(23);
+  });
+});

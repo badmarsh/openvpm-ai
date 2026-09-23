@@ -98,11 +98,12 @@ function InlineLookupError({ message }: { message: string }) {
   );
 }
 
-function LogEntryForm({ onClose }: { onClose: () => void }) {
+function LogEntryForm({ onClose, onRecorded }: { onClose: () => void; onRecorded?: (id: string) => void }) {
   const { t } = useI18n();
   const utils = trpc.useUtils();
   const createMutation = trpc.controlledSubstances.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (entry) => {
+      onRecorded?.(entry.id);
       toast.success(t("controlledSubstances.logEntryRecorded", "Log entry recorded"));
       utils.controlledSubstances.list.invalidate();
       utils.controlledSubstances.summary.invalidate();
@@ -559,6 +560,39 @@ function SummarySection() {
   );
 }
 
+/** Source references and blank manual form are deliberately separate (zero AI prefill). */
+function PendingImportReviews() {
+  const { t } = useI18n();
+  const reviews = trpc.extensions.wholesalerImport.pendingControlledReviews.useQuery();
+  const [selected, setSelected] = useState<{ receiptId: string; line: number } | null>(null);
+  const [entryId, setEntryId] = useState("");
+  const link = trpc.extensions.wholesalerImport.linkControlledReview.useMutation({
+    onSuccess: () => { setSelected(null); setEntryId(""); void reviews.refetch(); },
+    onError: () => toast.error(t("inventory.wholesalerImport.reviewLinkError")),
+  });
+  return <section className="mt-4 space-y-2 rounded-md border border-purple-500/30 p-3">
+    <h2 className="text-sm font-semibold">{t("inventory.wholesalerImport.pendingTitle")}</h2>
+    <p className="text-xs text-muted-foreground">{t("inventory.wholesalerImport.manualOnly")}</p>
+    {reviews.error && <p role="alert">{t("inventory.wholesalerImport.reviewLoadError")}</p>}
+    {reviews.data?.flatMap(receipt => receipt.controlledReview.filter(row => !row.ledgerId).map(row =>
+      <div key={receipt.id + row.line} className="flex flex-wrap items-center gap-2 text-sm">
+        <span>{receipt.supplierName} · {receipt.deliveryNoteNumber} · {row.name}</span>
+        <Button size="sm" variant="outline" onClick={() => { setEntryId(""); setSelected({ receiptId: receipt.id, line: row.line }); }}>
+          {t("inventory.wholesalerImport.manualEntry")}
+        </Button>
+      </div>
+    ))}
+    {selected && <>
+      {!entryId && <LogEntryForm key={selected.receiptId + selected.line} onClose={() => setSelected(null)} onRecorded={id => setEntryId(id)} />}
+      <label className="block text-xs">{t("inventory.wholesalerImport.reviewEntryId")}
+        <Input value={entryId} onChange={e => setEntryId(e.target.value)} />
+      </label>
+      <Button disabled={!entryId || link.isPending} onClick={() => link.mutate({ ...selected, entryId })}>{t("inventory.wholesalerImport.linkManualEntry")}</Button>
+      <Button variant="ghost" onClick={() => setSelected(null)}>{t("common.cancel")}</Button>
+    </>}
+  </section>;
+}
+
 export default function ControlledSubstancesPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -653,6 +687,8 @@ function ControlledSubstancesLogPage() {
       {canRecordControlledSubstance && showForm && (
         <LogEntryForm onClose={() => setShowForm(false)} />
       )}
+
+      {canRecordControlledSubstance && <PendingImportReviews />}
 
       {/* Summary Section */}
       <div className="mt-6">

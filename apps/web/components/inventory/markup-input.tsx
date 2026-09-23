@@ -25,7 +25,7 @@ export function MarkupInput({
           step="0.01"
           value={markup}
           onChange={(event) => setMarkup(event.target.value)}
-          className="mt-1 h-8"
+          className="mt-1 h-8 tabular-nums text-right"
         />
       </label>
       <Button

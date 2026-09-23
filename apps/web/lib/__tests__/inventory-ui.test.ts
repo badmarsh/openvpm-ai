@@ -91,7 +91,9 @@ describe("inventory product form UX", () => {
     expect(source).toContain("unitPrice: form.unitPrice.trim()");
     expect(source).toContain("taxable: form.taxable");
     expect(source).toContain('type="checkbox"');
-    expect(source).toContain('product.taxable ? "Taxable" : "Not taxable"');
+    expect(source).toContain('t("inventory.table.taxable", "Taxable")');
+    expect(source).toContain('t("inventory.table.notTaxable", "Not taxable")');
+    expect(source).toContain("product.vatRate");
     expect(source).toContain("lotNumber: trimmedOrUndefined(form.lotNumber)");
     expect(source).toContain(
       "expirationDate: trimmedOrUndefined(form.expirationDate)"

@@ -20,3 +20,12 @@ export function priceWithMarkup(cost: string, markup: string): string | null {
   if (cents > INVENTORY_MONEY_AMOUNT_MAX * 100) return null;
   return centsToMoney(cents);
 }
+
+/** Display gross retail; catalog unitPrice remains NET to avoid double taxation in billing. */
+export function priceIncludingVat(net: string, vat: number): string | null {
+  if (!Number.isFinite(vat) || vat < 0 || vat > 100) return null;
+  return priceWithMarkup(net.replace(",", "."), String(vat));
+}
+export const CATEGORY_MARKUPS: Record<string, string> = {
+  medication: "30", supply: "50", food: "30", vaccine: "30",
+};
