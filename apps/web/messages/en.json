@@ -1425,13 +1425,13 @@
     "no": "No"
   },
   "controlledSubstances": {
-    "title": "Controlled Substances",
-    "subtitle": "Substance logbook and compliance tracking",
+    "title": "Controlled Substances Register (OPK)",
+    "subtitle": "Movement log for narcotic and psychotropic substances under Act No. 139/1998 Coll.",
     "checkingAccess": "Checking controlled-substance access...",
     "restrictedTitle": "Controlled substance log is restricted",
     "restrictedDesc": "Only administrators and veterinarians can view or record controlled-substance activity.",
     "backToDashboard": "Back to dashboard",
-    "logEntry": "Log Entry",
+    "logEntry": "Record movement",
     "newLogEntry": "New Log Entry",
     "drugName": "Drug Name",
     "drugNameRequired": "Drug Name *",
@@ -1485,15 +1485,19 @@
     "filterPlaceholder": "Filter by drug name...",
     "loadingEntries": "Loading controlled-substance entries...",
     "table": {
-      "dateTime": "Date/Time",
-      "drugName": "Drug Name",
+      "dateTime": "Date & time",
+      "drugName": "Drug name",
       "schedule": "Schedule",
-      "action": "Action",
+      "action": "Movement type",
       "qtyUnit": "Qty/Unit",
       "patient": "Patient",
-      "performedBy": "Performed By",
+      "performedBy": "Veterinarian",
       "witness": "Witness",
-      "notes": "Notes"
+      "notes": "Notes",
+      "received": "Received",
+      "issued": "Issued",
+      "balance": "Balance",
+      "lotNumber": "Batch (lot)"
     },
     "pagination": {
       "showing": "Showing {start}–{end} of {total}",
@@ -1505,13 +1509,13 @@
       "filterDesc": "Try a different drug name or clear the filter.",
       "noEntriesTitle": "No controlled substance entries yet",
       "noEntriesDesc": "Record each received, administered, wasted, or returned scheduled-drug event here.",
-      "logFirst": "Log first entry"
+      "logFirst": "Record a controlled substance receipt"
     },
     "actions": {
       "received": "Received",
-      "administered": "Administered",
-      "wasted": "Wasted",
-      "returned": "Returned"
+      "administered": "Issued — application",
+      "wasted": "Destruction",
+      "returned": "Issued — return"
     },
     "units": {
       "mg": "mg",
@@ -1525,6 +1529,15 @@
       "scheduleIII": "Schedule III",
       "scheduleIV": "Schedule IV",
       "scheduleV": "Schedule V"
+    },
+    "ledger": {
+      "title": "Controlled substance movement ledger",
+      "subtitle": "Date, patient, veterinarian, batch, received and issued quantity with the running balance are captured for every movement."
+    },
+    "movementKinds": {
+      "income": "Income (delivery note)",
+      "issue": "Issue (application / prescription)",
+      "disposal": "Destruction / expiry"
     }
   },
   "dashboard": {
@@ -5740,7 +5753,22 @@
       "verifyAppNotice": "Verify receipt using Over doklad app (FS SR)",
       "defaultService": "Veterinary examination and care",
       "stornoReason": "Reason: {reason}",
-      "originalDocUid": "Original receipt UID: {uid}"
+      "originalDocUid": "Original receipt UID: {uid}",
+      "ariaLabel": "e-Kasa thermal receipt inspector",
+      "closeAria": "Close drawer",
+      "dicLabel": "Tax ID:",
+      "vatIdLabel": "VAT ID:",
+      "registerLabel": "Register:",
+      "colItem": "Item / Service",
+      "colPriceVat": "Price / VAT",
+      "itemFallback": "Item",
+      "itemLine": "{qty}.000 pcs × {price}",
+      "stornoBanner": "*** RECEIPT STORNO ***",
+      "vatLaw": "VAT breakdown (Act No. 222/2004 Coll.)",
+      "vatRate": "Rate",
+      "paidTotal": "PAID ({method}):",
+      "uidLabel": "UID (FS SR code):",
+      "okpLabel": "OKP:"
     },
     "close": "Close",
     "receiptIssued": "Receipt issued",
@@ -5757,7 +5785,148 @@
     "verificationLabel": "Receipt verification on FS SR portal:",
     "verifyOnline": "Verify online",
     "printReceipt": "Print receipt ({width})",
-    "mockNotice": "⚠️ Pre-certification emulation — document serves internal logging only and is not fiscally registered with FS SR."
+    "mockNotice": "⚠️ Pre-certification emulation — document serves internal logging only and is not fiscally registered with FS SR.",
+    "page": {
+      "title": "e-Kasa Cash Register",
+      "subtitle": "Electronic sales records for the Slovak Financial Administration (Act No. 289/2008 Coll.)",
+      "tabs": {
+        "receipts": "Receipts",
+        "closures": "Closures",
+        "accountant": "For accountant"
+      },
+      "pilotBadge": "Pilot emulation mode",
+      "pilotNotice": "e-Kasa runs in pre-certification mode (internal records, VAT calculation and receipt printing). Legally binding fiscal receipts before the Financial Administration require a connection to a certified CHDÚ or fiscal driver (e.g. FiskalPRO / Varos).",
+      "dailyClosure": {
+        "title": "Daily closure",
+        "desc": "Close the register and generate today's Z-report",
+        "cta": "Go to closures"
+      },
+      "receipts": {
+        "title": "Cash register receipts",
+        "subtitle": "Overview of fiscal receipts and their verification state with the Slovak Financial Administration.",
+        "filterAll": "All",
+        "refresh": "Refresh",
+        "emptyTitle": "No cash register receipts",
+        "emptyDesc": "Receipts are created automatically when a payment is recorded at the register.",
+        "emptyFilteredTitle": "No receipts in this state",
+        "emptyFilteredDesc": "No receipts exist for the selected verification state. Choose another filter.",
+        "emptyCta": "Go to billing",
+        "syncHint": "Synchronise the offline receipt with the Financial Administration",
+        "syncFs": "Sync FS",
+        "previewHint": "Thermal receipt preview",
+        "preview": "Preview",
+        "printHint": "Print receipt",
+        "print": "Print",
+        "stornoHint": "Cancel receipt",
+        "retryHint": "Retry submission",
+        "retry": "Submit"
+      },
+      "col": {
+        "receiptNumber": "Receipt number",
+        "date": "Date",
+        "amount": "Amount",
+        "vat": "VAT",
+        "payment": "Payment",
+        "verification": "Verification",
+        "uid": "UID",
+        "actions": "Actions"
+      },
+      "badgeReturn": "RETURN",
+      "verification": {
+        "valid": "Valid receipt",
+        "offline": "Offline / stored in CHDU",
+        "pending": "Awaiting submission",
+        "failed": "Verification error",
+        "storno": "Cancellation"
+      },
+      "status": {
+        "PENDING": "Pending",
+        "SENT": "Sent",
+        "CONFIRMED": "Confirmed",
+        "FAILED": "Failed",
+        "OFFLINE_STORED": "Offline"
+      },
+      "pagination": {
+        "showingFrom": "Showing records from {offset}",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "closures": {
+        "today": "Today ({date})",
+        "todayFallback": "Today",
+        "closedBadge": "Closed: {number}",
+        "openBadge": "Open day (running state)",
+        "closedAt": "Closure executed: {when}",
+        "autoHint": "The closure is generated automatically at 23:59 or can be run manually.",
+        "run": "Run daily closure (Z-report)",
+        "totalToday": "Total revenue today",
+        "receiptCount": "{count} receipts",
+        "cash": "In cash",
+        "card": "By card",
+        "vat23": "VAT 23% (base / tax)",
+        "history": "Daily closure history",
+        "emptyTitle": "No daily closures",
+        "emptyDesc": "After the first closure, the history of Z-reports with daily revenue appears here.",
+        "colZReport": "Z-report number",
+        "colReceipts": "Receipts",
+        "colCash": "Cash",
+        "colCard": "Card",
+        "colTotal": "Total",
+        "colStatus": "Status",
+        "statusClosed": "Closed"
+      },
+      "accountant": {
+        "month": "Month",
+        "year": "Year",
+        "download": "Download CSV for accountant",
+        "emptyTitle": "No closures recorded for the selected month",
+        "emptyDesc": "Daily closures are recorded automatically at 23:59 on every business day.",
+        "emptyCta": "Go to closures",
+        "totalMonth": "Total revenue for the month",
+        "closureMix": "{closures} closures / {receipts} receipts",
+        "totalCash": "Cash revenue",
+        "totalCard": "Card revenue",
+        "totalTransfer": "Bank transfers",
+        "vatTitle": "VAT rate breakdown for the tax return (SK)",
+        "vat23": "Standard rate 23%",
+        "vat19": "Reduced rate 19%",
+        "vat5": "Reduced rate 5%",
+        "vat0": "VAT exempt 0%",
+        "vatBase": "Base:",
+        "vatTax": "VAT:"
+      },
+      "storno": {
+        "title": "Receipt cancellation",
+        "legalNotice": "Under Act No. 289/2008 Coll., a negative corrective receipt linked to the original receipt ({reference}) will be issued and submitted to the Financial Administration register.",
+        "reasonLabel": "Cancellation reason",
+        "reasonPlaceholder": "e.g. Wrong payment method, goods returned...",
+        "cancel": "Cancel",
+        "confirm": "Confirm cancellation"
+      },
+      "toast": {
+        "resent": "Receipt was submitted successfully",
+        "resendError": "Submission error: {message}",
+        "stornoOk": "Receipt was cancelled successfully",
+        "stornoError": "Cancellation error: {message}",
+        "closureOk": "Daily closure {number} completed successfully!",
+        "closureError": "Closure error: {message}",
+        "csvDownloaded": "CSV export for the accountant was downloaded"
+      },
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      }
+    }
   },
   "voice": {
     "soap": {
@@ -6921,7 +7090,10 @@
       "biteReport": "Bite Report (RVPS)",
       "printBiteReport": "Print Bite Report for RVPS",
       "printInspection": "Print official report",
-      "legalNotice": "Legal obligation: Under § 17 par. 1(b) of Act No. 39/2007 Coll., the owner or keeper of susceptible carnivores must ensure rabies vaccination. The veterinarian reports the vaccination to CRSZ and RVPS within 3 working days of administration."
+      "legalNotice": "Legal obligation: Under § 17 par. 1(b) of Act No. 39/2007 Coll., the owner or keeper of susceptible carnivores must ensure rabies vaccination. The veterinarian reports the vaccination to CRSZ and RVPS within 3 working days of administration.",
+      "subViewVaccinations": "Rabies vaccination register (§ 19(1))",
+      "subViewObservations": "14-day observation after a bite (§ 19(2))",
+      "emptyCta": "Go to vaccinations"
     },
     "withdrawal": {
       "title": "Withdrawal Period Log (RVPS Official Register)",
@@ -7120,7 +7292,65 @@
       "signatureModalDesc": "After signing the XML in D.Signer, paste the SHA-256 hash of the signed container.",
       "signatureModalLabel": "Signature Hash *",
       "signatureModalPlaceholder": "e.g. 7a8f... (SHA-256 hex digest)",
-      "btnConfirmSignature": "Confirm KEP Signature"
+      "btnConfirmSignature": "Confirm KEP Signature",
+      "sendStateAll": "All send states",
+      "sendStateSent": "Sent",
+      "sendStateAwaiting": "Awaiting export",
+      "sendStateError": "Error",
+      "reportDateFrom": "Report date from",
+      "reportDateTo": "to",
+      "emptyCta": "Create KVEPIS export",
+      "colReportDate": "Report date",
+      "colSendState": "Send state",
+      "typeInfectious": "Infectious disease notification",
+      "hubTitle": "KVEPIS Submission Hub",
+      "hubSubtitle": "Managed preparation of statutory notifications for the SVPS SR via UPVS. Schema validation, signing XML/JSON package generation and receipt matching against the patient record.",
+      "createBtn": "Create submission",
+      "xmlInvalid": "The submission is invalid – the XML cannot be generated.",
+      "credTitle": "Practice access (IČO · KVL · ÚPVS)",
+      "credConfiguredIco": "Configured: IČO {ico}",
+      "credKvlShort": "KVL {kvl}",
+      "credMailbox": "Mailbox {box}",
+      "credHint": "Enter the practice identification data required to generate submissions.",
+      "credIco": "Practice IČO",
+      "credKvl": "Vet KVL ID",
+      "credSchranka": "ÚPVS mailbox",
+      "credSignMethod": "Signature method (QES)",
+      "signDsigner": "D.Signer / Disig (eID reader)",
+      "signCloudSeal": "Practice cloud seal",
+      "signHsm": "HSM module",
+      "credSave": "Save access",
+      "newTitle": "New submission",
+      "newDesc": "The submission type determines the required fields of the ŠVPS SR validation engine.",
+      "fieldType": "Submission type",
+      "fieldFarmIco": "Farm IČO",
+      "fieldCehz": "CEHZ herd code",
+      "fieldEarTag": "Ear tag number",
+      "fieldTransponder": "Transponder / chip",
+      "fieldKvl": "Vet KVL number",
+      "fieldSpecies": "Animal species",
+      "fieldDiagnosis": "Diagnosis",
+      "fieldMedication": "Medication name",
+      "fieldMeatWithdrawal": "Withdrawal period — meat (days)",
+      "fieldMilkWithdrawal": "Withdrawal period — milk (days)",
+      "fieldAdministeredAt": "Administration date",
+      "fieldSafeUntil": "End of withdrawal period",
+      "fieldIncidentDate": "Incident date (rabies)",
+      "phTransponder": "15 digits per ISO 11784",
+      "phSpecies": "cattle / dog",
+      "listTitle": "Prepared submissions",
+      "listDesc": "Outpatient book → KVEPIS / ÚPVS.",
+      "listRefresh": "Refresh",
+      "errSvpsPrefix": "ŠVPS error:",
+      "btnValidate": "Validate",
+      "btnDownloadXml": "Download XML (D.Signer)",
+      "btnMarkSigned": "Mark as signed",
+      "btnSubmitUpvs": "Submit to ÚPVS",
+      "btnUploadReceipt": "Upload receipt",
+      "validationOk": "The submission is valid and ready for signature.",
+      "validationFailed": "The submission contains errors that prevent submission:",
+      "receiptInvalidJson": "The receipt must be a valid JSON file from ÚPVS.",
+      "xmlUnavailable": "The XML form is not available."
     },
     "title": "Statutory Registers",
     "subtitle": "Veterinary compliance records in accordance with Law 39/2007 Z. z. and Law 139/1998 Z. z.",
@@ -7135,7 +7365,9 @@
       "protocols": "Statutory Protocols & Consents",
       "withdrawals": "Withdrawal Periods (Meat / Milk)",
       "crsz": "CRSZ & Microchips / PetPass",
-      "kvepis": "KVEPIS & UPVS (SVPS)"
+      "kvepis": "KVEPIS & UPVS (SVPS)",
+      "crszChip": "CRSZ — dog microchipping",
+      "infectious": "Infectious diseases (rabies, tapeworms)"
     },
     "exportCsv": "Export to CSV",
     "print": "Print",
@@ -7148,7 +7380,9 @@
       "therapyColumn": "Therapy / Medicines used",
       "noRecords": "No records found in the treatment diary.",
       "totalTreatments": "Total treatments: {count}",
-      "printInspection": "Print official report"
+      "printInspection": "Print official report",
+      "emptyDesc": "The treatment diary fills automatically from clinic records for food-producing animals.",
+      "emptyCta": "Go to patient records"
     },
     "badgeKvlSvps": "ŠVPS SR / KVL SR",
     "complianceUnknown": "Unknown",
@@ -7164,7 +7398,9 @@
       "addressColumn": "Address / City",
       "phoneColumn": "Phone",
       "noRecords": "No records in the euthanasia register.",
-      "printInspection": "Print official report"
+      "printInspection": "Print official report",
+      "emptyDesc": "The euthanasia and carcass disposal register is filled from closed patient cases.",
+      "emptyCta": "Go to patients"
     },
     "narcotics": {
       "title": "Controlled substances",
@@ -7195,14 +7431,16 @@
       "actionAdministered": "Administered to patient",
       "actionWasted": "Disposal (waste)",
       "actionReturned": "Returned to supplier",
-      "scheduleLabel": "Sch."
+      "scheduleLabel": "Sch.",
+      "emptyDesc": "Controlled-substance movements are recorded in the OPK register under Act No. 139/1998 Coll."
     },
     "protocols": {
       "title": "Slovak veterinary protocols and informed consents",
       "subtitle": "Official form wordings per KVL SR standards for printing and client signing.",
       "printProtocol": "Print blank protocol",
       "noForms": "No forms available.",
-      "templateId": "Template ID: {slug}"
+      "templateId": "Template ID: {slug}",
+      "emptyDesc": "Statutory forms load once the protocols module is enabled for your clinic."
     },
     "dateRangeTo": "to"
   },

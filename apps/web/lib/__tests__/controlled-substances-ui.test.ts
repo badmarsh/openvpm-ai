@@ -125,8 +125,10 @@ describe("controlled substances UI bounds", () => {
       "{canRecordControlledSubstance && showForm && ("
     );
     expect(source).toContain("verifiedLogPayload.log.items.map((entry)");
-    expect(source).toContain(
-      "formatControlledSubstanceDateTime(\n                            entry.performedAt,\n                            verifiedLogPayload.settings.timezone"
+    // Formatting is asserted whitespace-insensitively so the ledger table can
+    // be re-indented without weakening the practice-timezone guarantee.
+    expect(source.replace(/\s+/g, " ")).toContain(
+      "formatControlledSubstanceDateTime( entry.performedAt, verifiedLogPayload.settings.timezone"
     );
     expect(source).toContain("verifiedLogPayload.log.total");
     expect(source).not.toContain("const logTimeZone = settingsQuery.data?.timezone");

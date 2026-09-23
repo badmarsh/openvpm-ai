@@ -32,15 +32,65 @@ export function formatCurrency(
   ).format(Number.isFinite(n) ? (n as number) : 0);
 }
 
-export function formatDate(date: Date | string, country?: string | null): string {
+export function formatDate(
+  date: Date | string,
+  country?: string | null,
+  /** Active UI language — wins over `country` when provided. */
+  language?: string | null
+): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat(localeForCountry(country), {
+  const locale = language
+    ? localeTagForLanguage(language)
+    : localeForCountry(country);
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     // Date-only values must not shift by the runtime's timezone.
     timeZone: "UTC",
   }).format(d);
+}
+
+/**
+ * Maps the active UI language ("sk" | "en") to a BCP-47 formatting locale.
+ * Never hardcode `sk-SK` / `en-US` at call sites — resolve it here instead.
+ */
+export function localeTagForLanguage(language?: string | null): string {
+  return (language ?? "").toLowerCase().startsWith("en") ? "en-GB" : "sk-SK";
+}
+
+/**
+ * Locale-aware date + time formatter (24h clock) that can pin an explicit IANA
+ * timezone. Clinical registries must print in the practice timezone, not in
+ * whatever zone the operator's browser happens to use.
+ */
+export function formatDateTime(
+  value: Date | string | null | undefined,
+  options: { timeZone?: string | null; language?: string | null } = {}
+): string {
+  if (!value) return "—";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const base: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  };
+  const locale = localeTagForLanguage(options.language);
+
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      ...base,
+      timeZone: options.timeZone ?? undefined,
+    }).format(date);
+  } catch {
+    // Invalid/unsupported timezone — fall back to the runtime zone.
+    return new Intl.DateTimeFormat(locale, base).format(date);
+  }
 }
 
 /** Which controlled-drug / prescribing framework applies (used later, P1). */

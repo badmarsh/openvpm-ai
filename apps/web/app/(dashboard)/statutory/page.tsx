@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { formatStatutoryDate, formatStatutoryDateTime } from "@/lib/date-helpers";
+import { localeTagForLanguage } from "@/lib/locale/format";
 import {
   BookOpen,
   Syringe,
@@ -32,6 +33,14 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { CrszPanel } from "@/components/statutory/crsz-panel";
 import { RabiesObservationPanel } from "@/components/statutory/rabies-observation-panel";
 import { CarcassDisposalPanel } from "@/components/statutory/carcass-disposal-panel";
@@ -110,6 +119,7 @@ function openInspectionPrintView({
   headers,
   rows,
   summaryNotes,
+  language,
 }: {
   title: string;
   statutoryReference: string;
@@ -117,17 +127,18 @@ function openInspectionPrintView({
   headers: string[];
   rows: (string | number | null | undefined)[][];
   summaryNotes?: string;
+  language?: string | null;
 }) {
   const printWindow = window.open("", "_blank", "width=1100,height=850");
   if (!printWindow) return;
 
-  const todayStr = new Date().toLocaleDateString("sk-SK", {
+  const todayStr = new Intl.DateTimeFormat(localeTagForLanguage(language), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(new Date());
 
   const tableRows = rows
     .map((row, idx) => {
@@ -234,15 +245,16 @@ function printRabiesBiteInspectionReport(opts?: {
   vaccineName?: string;
   lotNumber?: string;
   administeredAt?: string | Date | null;
+  language?: string | null;
 }) {
   const printWindow = window.open("", "_blank", "width=850,height=950");
   if (!printWindow) return;
 
-  const todayStr = new Date().toLocaleDateString("sk-SK", {
+  const todayStr = new Intl.DateTimeFormat(localeTagForLanguage(opts?.language), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  });
+  }).format(new Date());
 
   const lastVax = opts?.administeredAt ? formatStatutoryDate(opts.administeredAt) : "________________";
   const patientDesc = [opts?.species, opts?.breed].filter(Boolean).join(" • ") || "Pes / Mačka";
@@ -421,7 +433,7 @@ export default function StatutoryPage() {
         onValueChange={(v) => setActiveTab(v as StatutoryTab)}
         className="w-full"
       >
-        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1 justify-start">
+        <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-muted/50 p-1">
           <TabsTrigger value="rabies" className="gap-2">
             <Syringe className="h-4 w-4" />
             <span>{t("statutory.tabs.rabies", "Kniha besnoty")}</span>
@@ -457,6 +469,50 @@ export default function StatutoryPage() {
         </TabsList>
       </Tabs>
 
+      {/* Register categories — quick jump to the statutory source of truth */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          {
+            key: "kvepis",
+            icon: Globe,
+            label: t("statutory.tabs.kvepis", "KVEPIS & ÚPVS (ŠVPS)"),
+          },
+          {
+            key: "crsz",
+            icon: ShieldCheck,
+            label: t("statutory.tabs.crszChip", "CRSZ — čipovanie psov"),
+          },
+          {
+            key: "rabies",
+            icon: Syringe,
+            label: t(
+              "statutory.tabs.infectious",
+              "Infekčné ochorenia (besnota, pásomnice)",
+            ),
+          },
+        ].map((category) => {
+          const CategoryIcon = category.icon;
+          const isActive = activeTab === category.key;
+          return (
+            <button
+              key={category.key}
+              type="button"
+              onClick={() => setActiveTab(category.key as StatutoryTab)}
+              aria-pressed={isActive}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                isActive
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+              )}
+            >
+              <CategoryIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              {category.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Tab Panels */}
       <div>
         {activeTab === "rabies" && <RabiesRegisterTab />}
@@ -476,7 +532,8 @@ export default function StatutoryPage() {
 // 1. Rabies Register (Kniha besnoty)
 // ---------------------------------------------------------------------------
 function RabiesRegisterTab() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const router = useRouter();
   const [subView, setSubView] = useState<"vaccinations" | "observations">("vaccinations");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -571,6 +628,7 @@ function RabiesRegisterTab() {
       ];
     });
     openInspectionPrintView({
+      language: locale,
       title: "Úradná Kniha Očkovania Zvierat Proti Besnote",
       statutoryReference: "Evidencia v zmysle § 19 ods. 1 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti",
       subtitle: "Zákonný výkaz pre inšpekčné kontroly Regionálnej veterinárnej a potravinovej správy (RVPS) a CRSZ",
@@ -583,26 +641,22 @@ function RabiesRegisterTab() {
   return (
     <div className="space-y-4">
       {/* Sub-view switcher */}
-      <div className="flex items-center gap-2 border-b border-border pb-3">
-        <Button
-          variant={subView === "vaccinations" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSubView("vaccinations")}
-          className="gap-2 text-xs"
-        >
-          <Syringe className="h-3.5 w-3.5" />
-          <span>Kniha očkovania proti besnote (§ 19 ods. 1)</span>
-        </Button>
-        <Button
-          variant={subView === "observations" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSubView("observations")}
-          className="gap-2 text-xs"
-        >
-          <ShieldAlert className="h-3.5 w-3.5" />
-          <span>14-dňové pozorovanie po pohryznutí (§ 19 ods. 2)</span>
-        </Button>
-      </div>
+      <Tabs
+        value={subView}
+        onValueChange={(v) => setSubView(v as "vaccinations" | "observations")}
+        className="w-full"
+      >
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
+          <TabsTrigger value="vaccinations" className="gap-1.5">
+            <Syringe className="h-4 w-4" />
+            <span>{t("statutory.rabies.subViewVaccinations", "Kniha očkovania proti besnote (§ 19 ods. 1)")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="observations" className="gap-1.5">
+            <ShieldAlert className="h-4 w-4" />
+            <span>{t("statutory.rabies.subViewObservations", "14-dňové pozorovanie po pohryznutí (§ 19 ods. 2)")}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {subView === "observations" ? (
         <RabiesObservationPanel />
@@ -664,6 +718,7 @@ function RabiesRegisterTab() {
               printRabiesBiteInspectionReport(
                 filteredItems[0]
                   ? {
+                      language: locale,
                       patientName: filteredItems[0].patientName,
                       species: filteredItems[0].species,
                       breed: filteredItems[0].breed ?? undefined,
@@ -730,113 +785,123 @@ function RabiesRegisterTab() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : !filteredItems.length ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {t("statutory.rabies.noRecords")}
-          </div>
+          <EmptyState
+            className="border-0 bg-transparent"
+            icon={Syringe}
+            title={t("statutory.rabies.emptyTitle", "Žiadne záznamy o vakcinácii proti besnote")}
+            description={t(
+              "statutory.rabies.noRecords",
+              "Nenašli sa žiadne záznamy o vakcinácii proti besnote podľa zadaných kritérií.",
+            )}
+            action={{
+              label: t("statutory.rabies.emptyCta", "Prejsť na očkovania"),
+              onClick: () => router.push("/vaccinations"),
+              icon: Syringe,
+            }}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-border bg-muted/60 text-muted-foreground">
-                <tr>
-                  <th className="p-3">{t("statutory.rabies.dateColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.patientColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.chipColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.vaccineColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.revaccColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.ownerColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.contactColumn")}</th>
-                  <th className="p-3">{t("statutory.rabies.complianceColumn")}</th>
-                  <th className="p-3 text-right">{t("statutory.rabies.printColumn")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredItems.map((r) => {
-                  const comp = getRabiesComplianceStatus(r.administeredAt, r.createdAt);
-                  return (
-                    <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-medium whitespace-nowrap">
-                        {formatStatutoryDate(r.administeredAt)}
-                      </td>
-                      <td className="p-3">
-                        <div className="font-semibold text-foreground">{r.patientName}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {r.species} {r.breed ? `• ${r.breed}` : ""}
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>{t("statutory.rabies.dateColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.patientColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.chipColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.vaccineColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.revaccColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.ownerColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.contactColumn")}</TableHead>
+                <TableHead>{t("statutory.rabies.complianceColumn")}</TableHead>
+                <TableHead className="text-right">{t("statutory.rabies.printColumn")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredItems.map((r) => {
+                const comp = getRabiesComplianceStatus(r.administeredAt, r.createdAt);
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-xs font-medium">
+                      {formatStatutoryDate(r.administeredAt)}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5">
+                      <div className="text-sm font-semibold text-foreground">{r.patientName}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {r.species} {r.breed ? `• ${r.breed}` : ""}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 font-mono text-xs">
+                      {r.microchipNumber ? (
+                        <span className="text-foreground">{r.microchipNumber}</span>
+                      ) : (
+                        <span className="font-medium text-amber-600">{t("statutory.rabies.notChipped")}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5">
+                      <div className="text-sm font-medium text-foreground">{r.vaccineName}</div>
+                      {r.lotNumber && (
+                        <div className="font-mono text-[11px] text-muted-foreground">
+                          {t("statutory.rabies.lotLabel")} {r.lotNumber}
                         </div>
-                      </td>
-                      <td className="p-3 font-mono text-[11px]">
-                        {r.microchipNumber ? (
-                          <span className="text-foreground">{r.microchipNumber}</span>
-                        ) : (
-                          <span className="text-amber-600 font-medium">{t("statutory.rabies.notChipped")}</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="font-medium text-foreground">{r.vaccineName}</div>
-                        {r.lotNumber && (
-                          <div className="text-[11px] text-muted-foreground">
-                            {t("statutory.rabies.lotLabel")} {r.lotNumber}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 whitespace-nowrap">
-                        {r.nextDueDate ? (
-                          <span className="font-medium text-foreground">
-                            {formatStatutoryDate(r.nextDueDate)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="font-medium text-foreground">
-                          {r.clientFirstName} {r.clientLastName}
-                        </div>
-                        {r.clientCity && (
-                          <div className="text-[11px] text-muted-foreground">{r.clientCity}</div>
-                        )}
-                      </td>
-                      <td className="p-3 text-muted-foreground whitespace-nowrap">
-                        {r.clientPhone || "—"}
-                      </td>
-                      <td className="p-3 whitespace-nowrap">
-                        <Badge
-                          variant="outline"
-                          className={cn("text-[10px] font-medium border", comp.badgeClass)}
-                        >
-                          {t(comp.labelKey, comp.labelKey, comp.labelParams ?? {})}
-                        </Badge>
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title={t("statutory.rabies.printBiteReport")}
-                          onClick={() =>
-                            printRabiesBiteInspectionReport({
-                              patientName: r.patientName,
-                              species: r.species,
-                              breed: r.breed ?? undefined,
-                              microchipNumber: r.microchipNumber ?? undefined,
-                              clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
-                              clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
-                              clientPhone: r.clientPhone ?? undefined,
-                              vaccineName: r.vaccineName,
-                              lotNumber: r.lotNumber ?? undefined,
-                              administeredAt: r.administeredAt,
-                            })
-                          }
-                          className="h-7 gap-1 px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
-                        >
-                          <Printer className="h-3 w-3" />
-                          <span>RVPS</span>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-xs">
+                      {r.nextDueDate ? (
+                        <span className="font-medium text-foreground">
+                          {formatStatutoryDate(r.nextDueDate)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5">
+                      <div className="text-sm font-medium text-foreground">
+                        {r.clientFirstName} {r.clientLastName}
+                      </div>
+                      {r.clientCity && (
+                        <div className="text-[11px] text-muted-foreground">{r.clientCity}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
+                      {r.clientPhone || "—"}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[10px] font-medium border", comp.badgeClass)}
+                      >
+                        {t(comp.labelKey, comp.labelKey, comp.labelParams ?? {})}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 whitespace-nowrap text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={t("statutory.rabies.printBiteReport")}
+                        onClick={() =>
+                          printRabiesBiteInspectionReport({
+                            language: locale,
+                            patientName: r.patientName,
+                            species: r.species,
+                            breed: r.breed ?? undefined,
+                            microchipNumber: r.microchipNumber ?? undefined,
+                            clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
+                            clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
+                            clientPhone: r.clientPhone ?? undefined,
+                            vaccineName: r.vaccineName,
+                            lotNumber: r.lotNumber ?? undefined,
+                            administeredAt: r.administeredAt,
+                          })
+                        }
+                        className="h-7 gap-1 px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                      >
+                        <Printer className="h-3 w-3" />
+                        <span>RVPS</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </div>
       <div className="text-right text-xs text-muted-foreground">
@@ -852,7 +917,8 @@ function RabiesRegisterTab() {
 // 2. Treatment Diary (Kniha ošetrení / Denník ošetrených zvierat)
 // ---------------------------------------------------------------------------
 function TreatmentDiaryTab() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -918,6 +984,7 @@ function TreatmentDiaryTab() {
       i.plan || "—",
     ]);
     openInspectionPrintView({
+      language: locale,
       title: "Klinický Denník Ošetrených Zvierat (Kniha Ošetrení)",
       statutoryReference: "Evidencia v zmysle § 22 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti",
       subtitle: "Zákonný denník veterinárnych úkonov a spotreby humánnych a veterinárnych liečiv",
@@ -986,47 +1053,56 @@ function TreatmentDiaryTab() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : !data?.items?.length ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {t("statutory.treatment.noRecords")}
-          </div>
+          <EmptyState
+            className="border-0 bg-transparent"
+            icon={BookOpen}
+            title={t("statutory.treatment.noRecords")}
+            description={t(
+              "statutory.treatment.emptyDesc",
+              "Kniha ošetrení sa plní automaticky zo záznamov kliniky pre potravinové zvieratá.",
+            )}
+            action={{
+              label: t("statutory.treatment.emptyCta", "Prejsť na záznamy pacientov"),
+              onClick: () => router.push("/records"),
+              icon: BookOpen,
+            }}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-border bg-muted/60 text-muted-foreground">
-                <tr>
-                  <th className="p-3">{t("statutory.treatment.dateColumn")}</th>
-                  <th className="p-3">{t("statutory.treatment.patientOwnerColumn")}</th>
-                  <th className="p-3">{t("statutory.treatment.doctorColumn")}</th>
-                  <th className="p-3">{t("statutory.treatment.diagnosisColumn")}</th>
-                  <th className="p-3">{t("statutory.treatment.therapyColumn")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-medium whitespace-nowrap">
-                      {formatStatutoryDateTime(item.createdAt)}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-semibold text-foreground">{item.patientName}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {item.clientFirstName} {item.clientLastName} • {item.species}
-                      </div>
-                    </td>
-                    <td className="p-3 font-medium text-foreground whitespace-nowrap">
-                      {item.authorName || t("statutory.treatment.doctorColumn")}
-                    </td>
-                    <td className="p-3 max-w-xs truncate text-muted-foreground" title={item.assessment ?? ""}>
-                      {item.assessment || "—"}
-                    </td>
-                    <td className="p-3 max-w-sm truncate text-muted-foreground" title={item.plan ?? ""}>
-                      {item.plan || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("statutory.treatment.dateColumn")}</TableHead>
+                <TableHead>{t("statutory.treatment.patientOwnerColumn")}</TableHead>
+                <TableHead>{t("statutory.treatment.doctorColumn")}</TableHead>
+                <TableHead>{t("statutory.treatment.diagnosisColumn")}</TableHead>
+                <TableHead>{t("statutory.treatment.therapyColumn")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="px-3 py-2.5 font-medium whitespace-nowrap">
+                    {formatStatutoryDateTime(item.createdAt)}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5">
+                    <div className="font-semibold text-foreground">{item.patientName}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {item.clientFirstName} {item.clientLastName} • {item.species}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 font-medium text-foreground whitespace-nowrap">
+                    {item.authorName || t("statutory.treatment.doctorColumn")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 max-w-xs truncate text-muted-foreground" title={item.assessment ?? ""}>
+                    {item.assessment || "—"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 max-w-sm truncate text-muted-foreground" title={item.plan ?? ""}>
+                    {item.plan || "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
       <div className="text-right text-xs text-muted-foreground">
@@ -1045,7 +1121,8 @@ function TreatmentDiaryTab() {
 // 3. Euthanasia Register (Register eutanázií a asanácií)
 // ---------------------------------------------------------------------------
 function EuthanasiaRegisterTab() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const router = useRouter();
   const [subView, setSubView] = useState<"register" | "carcass">("register");
   const { data, isLoading } = trpc.reports.euthanasiaRegister.useQuery();
 
@@ -1099,6 +1176,7 @@ function EuthanasiaRegisterTab() {
       "Ukončený / Na odhlásenie v CRSZ",
     ]);
     openInspectionPrintView({
+      language: locale,
       title: "Register Eutanázií a Asanácií Tiel Uhynutých Zvierat",
       statutoryReference: "Evidencia v zmysle § 22 ods. 5 zákona č. 39/2007 Z. z. o veterinárnej starostlivosti",
       subtitle: "Úradný podklad pre odhlásenie z Centrálneho registra spoločenských zvierat (CRSZ) a kontrolu ŠVPS SR",
@@ -1173,51 +1251,60 @@ function EuthanasiaRegisterTab() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : !data?.items?.length ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {t("statutory.euthanasia.noRecords")}
-          </div>
+          <EmptyState
+            className="border-0 bg-transparent"
+            icon={Skull}
+            title={t("statutory.euthanasia.noRecords")}
+            description={t(
+              "statutory.euthanasia.emptyDesc",
+              "Register eutanázií a asanácií sa napĺňa z ukončených prípadov pacientov.",
+            )}
+            action={{
+              label: t("statutory.euthanasia.emptyCta", "Prejsť na pacientov"),
+              onClick: () => router.push("/patients"),
+              icon: Skull,
+            }}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-border bg-muted/60 text-muted-foreground">
-                <tr>
-                  <th className="p-3">{t("statutory.euthanasia.dateColumn")}</th>
-                  <th className="p-3">{t("statutory.euthanasia.patientColumn")}</th>
-                  <th className="p-3">{t("statutory.euthanasia.chipColumn")}</th>
-                  <th className="p-3">{t("statutory.euthanasia.ownerColumn")}</th>
-                  <th className="p-3">{t("statutory.euthanasia.addressColumn")}</th>
-                  <th className="p-3">{t("statutory.euthanasia.phoneColumn")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-medium whitespace-nowrap">
-                      {formatStatutoryDate(item.updatedAt)}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-semibold text-foreground">{item.name}</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {item.species} {item.breed ? `• ${item.breed}` : ""}
-                      </div>
-                    </td>
-                    <td className="p-3 font-mono text-[11px]">
-                      {item.microchipNumber || "—"}
-                    </td>
-                    <td className="p-3 font-medium text-foreground">
-                      {item.clientFirstName} {item.clientLastName}
-                    </td>
-                    <td className="p-3 text-muted-foreground">
-                      {item.clientCity ? `${item.clientAddress || ""}, ${item.clientCity}` : "—"}
-                    </td>
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">
-                      {item.clientPhone || "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("statutory.euthanasia.dateColumn")}</TableHead>
+                <TableHead>{t("statutory.euthanasia.patientColumn")}</TableHead>
+                <TableHead>{t("statutory.euthanasia.chipColumn")}</TableHead>
+                <TableHead>{t("statutory.euthanasia.ownerColumn")}</TableHead>
+                <TableHead>{t("statutory.euthanasia.addressColumn")}</TableHead>
+                <TableHead>{t("statutory.euthanasia.phoneColumn")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="px-3 py-2.5 font-medium whitespace-nowrap">
+                    {formatStatutoryDate(item.updatedAt)}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5">
+                    <div className="font-semibold text-foreground">{item.name}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {item.species} {item.breed ? `• ${item.breed}` : ""}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 font-mono text-[11px]">
+                    {item.microchipNumber || "—"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 font-medium text-foreground">
+                    {item.clientFirstName} {item.clientLastName}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 text-muted-foreground">
+                    {item.clientCity ? `${item.clientAddress || ""}, ${item.clientCity}` : "—"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
+                    {item.clientPhone || "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
         </>
@@ -1237,7 +1324,8 @@ const ACTION_LABEL_SK: Record<string, string> = {
 };
 
 function NarcoticsTab() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const router = useRouter();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -1255,9 +1343,9 @@ function NarcoticsTab() {
 
   const handlePrintOPK = () => {
     if (!data?.items?.length && !summary?.length) return;
-    const todayStr = new Date().toLocaleDateString("sk-SK", {
+    const todayStr = new Intl.DateTimeFormat(localeTagForLanguage(locale), {
       day: "2-digit", month: "2-digit", year: "numeric",
-    });
+    }).format(new Date());
     const printWindow = window.open("", "_blank", "width=900,height=1000");
     if (!printWindow) return;
 
@@ -1424,54 +1512,62 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : !data?.items?.length ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {t("statutory.narcotics.noRecords")}{" "}
-            <Link href="/controlled-substances" className="text-primary underline">{t("statutory.narcotics.addRecord")}</Link>
-          </div>
+          <EmptyState
+            className="border-0 bg-transparent"
+            icon={ShieldAlert}
+            title={t("statutory.narcotics.noRecords")}
+            description={t(
+              "statutory.narcotics.emptyDesc",
+              "Pohyby omamných a psychotropných látok sa evidujú v knihe OPK podľa zákona č. 139/1998 Z. z.",
+            )}
+            action={{
+              label: t("statutory.narcotics.addRecord"),
+              onClick: () => router.push("/controlled-substances"),
+              icon: ShieldAlert,
+            }}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-border bg-muted/60 text-muted-foreground">
-                <tr>
-                  <th className="p-3">{t("statutory.narcotics.dateColumn")}</th>
-                  <th className="p-3">{t("statutory.narcotics.drugColumn")}</th>
-                  <th className="p-3">{t("statutory.narcotics.actionColumn")}</th>
-                  <th className="p-3 text-right">{t("statutory.narcotics.qtyColumn")}</th>
-                  <th className="p-3">{t("statutory.narcotics.lotColumn")}</th>
-                  <th className="p-3">{t("statutory.narcotics.patientColumn")}</th>
-                  <th className="p-3">{t("statutory.narcotics.doctorColumn")}</th>
-                  <th className="p-3">{t("statutory.narcotics.witnessColumn")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {data.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 whitespace-nowrap font-medium">{formatStatutoryDate(item.performedAt)}</td>
-                    <td className="p-3">
-                      <span className="font-semibold">{item.drugName}</span>
-                      <span className="ml-1 text-muted-foreground">({t("statutory.narcotics.scheduleLabel")} {item.deaSchedule})</span>
-                    </td>
-                    <td className="p-3">
-                      <span className={cn(
-                        "inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium",
-                        item.action === "received" && "bg-blue-100 text-blue-700",
-                        item.action === "administered" && "bg-green-100 text-green-700",
-                        item.action === "wasted" && "bg-amber-100 text-amber-700",
-                        item.action === "returned" && "bg-gray-100 text-gray-700",
-                      )}>
-                        {t(`statutory.narcotics.action${item.action.charAt(0).toUpperCase() + item.action.slice(1)}`, ACTION_LABEL_SK[item.action] ?? item.action)}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right font-mono">{item.quantity} {item.unit}</td>
-                    <td className="p-3 font-mono text-[11px] text-muted-foreground">{item.lotNumber || "—"}</td>
-                    <td className="p-3">{item.patientName || "—"}</td>
-                    <td className="p-3 whitespace-nowrap">{item.performerName || "—"}</td>
-                    <td className="p-3 whitespace-nowrap">{item.witnessName || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+<Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>{t("statutory.narcotics.dateColumn")}</TableHead>
+      <TableHead>{t("statutory.narcotics.drugColumn")}</TableHead>
+      <TableHead>{t("statutory.narcotics.actionColumn")}</TableHead>
+      <TableHead className="text-right">{t("statutory.narcotics.qtyColumn")}</TableHead>
+      <TableHead>{t("statutory.narcotics.lotColumn")}</TableHead>
+      <TableHead>{t("statutory.narcotics.patientColumn")}</TableHead>
+      <TableHead>{t("statutory.narcotics.doctorColumn")}</TableHead>
+      <TableHead>{t("statutory.narcotics.witnessColumn")}</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    {data.items.map((item) => (
+      <TableRow key={item.id}>
+        <TableCell className="px-3 py-2.5 whitespace-nowrap font-medium">{formatStatutoryDate(item.performedAt)}</TableCell>
+        <TableCell className="px-3 py-2.5">
+          <span className="font-semibold">{item.drugName}</span>
+          <span className="ml-1 text-muted-foreground">({t("statutory.narcotics.scheduleLabel")} {item.deaSchedule})</span>
+        </TableCell>
+        <TableCell className="px-3 py-2.5">
+          <span className={cn(
+            "inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium",
+            item.action === "received" && "bg-blue-100 text-blue-700",
+            item.action === "administered" && "bg-green-100 text-green-700",
+            item.action === "wasted" && "bg-amber-100 text-amber-700",
+            item.action === "returned" && "bg-gray-100 text-gray-700",
+          )}>
+            {t(`statutory.narcotics.action${item.action.charAt(0).toUpperCase() + item.action.slice(1)}`, ACTION_LABEL_SK[item.action] ?? item.action)}
+          </span>
+        </TableCell>
+        <TableCell className="px-3 py-2.5 text-right font-mono">{item.quantity} {item.unit}</TableCell>
+        <TableCell className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">{item.lotNumber || "—"}</TableCell>
+        <TableCell className="px-3 py-2.5">{item.patientName || "—"}</TableCell>
+        <TableCell className="px-3 py-2.5 whitespace-nowrap">{item.performerName || "—"}</TableCell>
+        <TableCell className="px-3 py-2.5 whitespace-nowrap">{item.witnessName || "—"}</TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
         )}
       </div>
 
@@ -1501,7 +1597,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
 // 5. Protocols Tab (Zákonné protokoly & formuláre)
 // ---------------------------------------------------------------------------
 function ProtocolsTab() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: forms, isLoading } = trpc.records.listConsentForms.useQuery();
   const [selectedForm, setSelectedForm] = useState<string | null>(null);
 
@@ -1562,9 +1658,15 @@ function ProtocolsTab() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : !forms?.length ? (
-        <div className="p-8 text-center text-muted-foreground text-sm">
-          {t("statutory.protocols.noForms")}
-        </div>
+        <EmptyState
+          className="border-0 bg-transparent"
+          icon={FileSignature}
+          title={t("statutory.protocols.noForms")}
+          description={t(
+            "statutory.protocols.emptyDesc",
+            "Zákonné formuláre sa načítajú po sprístupnení modulu protokolov pre vašu ambulanciu.",
+          )}
+        />
       ) : (
         <div className="grid gap-6 md:grid-cols-3">
           {/* List of forms */}

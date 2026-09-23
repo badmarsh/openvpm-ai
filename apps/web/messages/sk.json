@@ -1425,13 +1425,13 @@
     "no": "Nie"
   },
   "controlledSubstances": {
-    "title": "Kontrolované látky",
-    "subtitle": "Evidencia kontrolovaných látok a sledovanie zhody podľa platnej legislatívy",
+    "title": "Kniha omamných látok (OPK)",
+    "subtitle": "Evidencia pohybu omamných a psychotropných látok podľa zákona č. 139/1998 Z. z.",
     "checkingAccess": "Overovanie prístupu ku knihe omamných látok...",
     "restrictedTitle": "Prístup ku knihe omamných látok je obmedzený",
     "restrictedDesc": "Zobrazovať a evidovať pohyb omamných a psychotropných látok môžu len administrátori a veterinárni lekári.",
     "backToDashboard": "Späť na prehľad",
-    "logEntry": "Zaevidovať úkon",
+    "logEntry": "Zaznamenať pohyb",
     "newLogEntry": "Nový záznam v knihe",
     "drugName": "Názov liečiva",
     "drugNameRequired": "Názov liečiva *",
@@ -1488,12 +1488,16 @@
       "dateTime": "Dátum a čas",
       "drugName": "Názov liečiva",
       "schedule": "Trieda",
-      "action": "Úkon",
+      "action": "Druh pohybu",
       "qtyUnit": "Množstvo / Jednotka",
       "patient": "Pacient",
-      "performedBy": "Vykonal",
+      "performedBy": "Lekár",
       "witness": "Svedok",
-      "notes": "Poznámky"
+      "notes": "Poznámky",
+      "received": "Prijaté",
+      "issued": "Vydané",
+      "balance": "Zostatok",
+      "lotNumber": "Šarža"
     },
     "pagination": {
       "showing": "Zobrazuje sa {start}–{end} z {total}",
@@ -1505,13 +1509,13 @@
       "filterDesc": "Skúste iný názov liečiva alebo vymažte filter.",
       "noEntriesTitle": "Zatiaľ žiadne záznamy omamných látok",
       "noEntriesDesc": "Každý príjem, podanie pacientovi, znehodnotenie alebo vrátenie evidujte na tomto mieste.",
-      "logFirst": "Zaevidovať prvý úkon"
+      "logFirst": "Zaznamenať príjem omamnej látky"
     },
     "actions": {
-      "received": "Prijaté",
-      "administered": "Podané",
-      "wasted": "Znehodnotené",
-      "returned": "Vrátené"
+      "received": "Príjem",
+      "administered": "Výdaj — aplikácia",
+      "wasted": "Likvidácia",
+      "returned": "Výdaj — vrátenie"
     },
     "units": {
       "mg": "mg",
@@ -1525,6 +1529,15 @@
       "scheduleIII": "Trieda III",
       "scheduleIV": "Trieda IV",
       "scheduleV": "Trieda V"
+    },
+    "ledger": {
+      "title": "Kniha pohybov omamných látok",
+      "subtitle": "Dátum, pacient, lekár, šarža, prijaté a vydané množstvo so zostatkom sa evidujú pri každom pohybe."
+    },
+    "movementKinds": {
+      "income": "Príjem (dodací list)",
+      "issue": "Výdaj (aplikácia / ordinácia)",
+      "disposal": "Likvidácia / expirácia"
     }
   },
   "dashboard": {
@@ -5740,7 +5753,22 @@
       "verifyAppNotice": "Overte doklad pomocou aplikácie Over doklad (FS SR)",
       "defaultService": "Veterinárne vyšetrenie a starostlivosť",
       "stornoReason": "Dôvod: {reason}",
-      "originalDocUid": "Pôvodný doklad UID: {uid}"
+      "originalDocUid": "Pôvodný doklad UID: {uid}",
+      "ariaLabel": "Panel detailu e-Kasa dokladu",
+      "closeAria": "Zavrieť panel",
+      "dicLabel": "DIČ:",
+      "vatIdLabel": "IČ DPH:",
+      "registerLabel": "KP:",
+      "colItem": "Položka / Služba",
+      "colPriceVat": "Cena / DPH",
+      "itemFallback": "Položka",
+      "itemLine": "{qty}.000 ks × {price}",
+      "stornoBanner": "*** STORNO DOKLADU ***",
+      "vatLaw": "Rozpis DPH (Zákon č. 222/2004 Z. z.)",
+      "vatRate": "Sadzba",
+      "paidTotal": "UHRADENÉ ({method}):",
+      "uidLabel": "UID (Kód FS SR):",
+      "okpLabel": "OKP:"
     },
     "close": "Zavrieť",
     "receiptIssued": "Pokladničný doklad vystavený",
@@ -5757,7 +5785,148 @@
     "verificationLabel": "Overenie dokladu na portáli FS SR:",
     "verifyOnline": "Overiť online",
     "printReceipt": "Tlačiť doklad ({width})",
-    "mockNotice": "⚠️ Predcertifikačná emulácia — doklad má interný evidenčný charakter a nie je fiškálne registrovaný na FS SR."
+    "mockNotice": "⚠️ Predcertifikačná emulácia — doklad má interný evidenčný charakter a nie je fiškálne registrovaný na FS SR.",
+    "page": {
+      "title": "e-Kasa Pokladňa",
+      "subtitle": "Elektronická evidencia tržieb Finančnej správy SR (Zákon č. 289/2008 Z. z.)",
+      "tabs": {
+        "receipts": "Doklady",
+        "closures": "Uzávierky",
+        "accountant": "Pre účtovníka"
+      },
+      "pilotBadge": "Režim pilotnej emulácie",
+      "pilotNotice": "e-Kasa beží v predcertifikačnom režime (interná evidencia, výpočet DPH a tlač dokladov). Pre legislatívne záväzné fiškálne doklady pred FS SR je potrebné pripojenie k certifikovanému CHDÚ alebo fiškálnemu driveru (napr. FiskalPRO / Varos).",
+      "dailyClosure": {
+        "title": "Denná uzávierka",
+        "desc": "Zatvorte pokladňu a vygenerujte Z-report pre dnešný deň",
+        "cta": "Prejsť na uzávierky"
+      },
+      "receipts": {
+        "title": "Pokladničné doklady",
+        "subtitle": "Prehľad fiškálnych dokladov a stavu ich overenia voči Finančnej správe SR.",
+        "filterAll": "Všetky",
+        "refresh": "Obnoviť",
+        "emptyTitle": "Žiadne pokladničné doklady",
+        "emptyDesc": "Doklady sa vytvárajú automaticky pri zaznamenaní platby v pokladni.",
+        "emptyFilteredTitle": "Žiadne doklady v tomto stave",
+        "emptyFilteredDesc": "Pre zvolený stav overenia neexistujú žiadne doklady. Zvoľte iný filter.",
+        "emptyCta": "Prejsť na fakturáciu",
+        "syncHint": "Synchronizovať offline doklad s Finančnou správou",
+        "syncFs": "Sync FS",
+        "previewHint": "Náhľad termálneho dokladu",
+        "preview": "Náhľad",
+        "printHint": "Tlačiť doklad",
+        "print": "Tlačiť",
+        "stornoHint": "Stornovať doklad",
+        "retryHint": "Opakovať odoslanie",
+        "retry": "Odoslať"
+      },
+      "col": {
+        "receiptNumber": "Číslo dokladu",
+        "date": "Dátum",
+        "amount": "Suma",
+        "vat": "DPH",
+        "payment": "Platba",
+        "verification": "Overenie",
+        "uid": "UID",
+        "actions": "Akcie"
+      },
+      "badgeReturn": "VRÁTENIE",
+      "verification": {
+        "valid": "Platný doklad",
+        "offline": "Offline / V pamäti CHDÚ",
+        "pending": "Čaká na odoslanie",
+        "failed": "Chyba overenia",
+        "storno": "Storno"
+      },
+      "status": {
+        "PENDING": "Čaká",
+        "SENT": "Odoslané",
+        "CONFIRMED": "Potvrdené",
+        "FAILED": "Chyba",
+        "OFFLINE_STORED": "Offline"
+      },
+      "pagination": {
+        "showingFrom": "Zobrazené záznamy od {offset}",
+        "previous": "Predchádzajúce",
+        "next": "Ďalšie"
+      },
+      "closures": {
+        "today": "Dnešný deň ({date})",
+        "todayFallback": "Dnes",
+        "closedBadge": "Uzavreté: {number}",
+        "openBadge": "Otvorený deň (priebežný stav)",
+        "closedAt": "Uzávierka bola vykonaná: {when}",
+        "autoHint": "Uzávierka sa automaticky vygeneruje o 23:59 alebo ju môžete spustiť manuálne.",
+        "run": "Vykonať dennú uzávierku (Z-report)",
+        "totalToday": "Celková tržba dňa",
+        "receiptCount": "{count} dokladov",
+        "cash": "V hotovosti",
+        "card": "Platobnou kartou",
+        "vat23": "DPH 23 % (základ / daň)",
+        "history": "História denných uzávierok",
+        "emptyTitle": "Žiadne denné uzávierky",
+        "emptyDesc": "Po prvej uzávierke sa tu zobrazí história Z-reportov s tržbami po dňoch.",
+        "colZReport": "Číslo Z-reportu",
+        "colReceipts": "Dokladov",
+        "colCash": "Hotovosť",
+        "colCard": "Karta",
+        "colTotal": "Spolu",
+        "colStatus": "Stav",
+        "statusClosed": "Uzavreté"
+      },
+      "accountant": {
+        "month": "Mesiac",
+        "year": "Rok",
+        "download": "Stiahnuť CSV pre účtovníčku",
+        "emptyTitle": "Pre zvolený mesiac nie sú evidované žiadne uzávierky",
+        "emptyDesc": "Denné uzávierky sa automaticky zapisujú o 23:59 každého pracovného dňa.",
+        "emptyCta": "Prejsť na uzávierky",
+        "totalMonth": "Celkové tržby za mesiac",
+        "closureMix": "{closures} uzávierok / {receipts} bločkov",
+        "totalCash": "Tržby v hotovosti",
+        "totalCard": "Tržby platobnou kartou",
+        "totalTransfer": "Bankové prevody",
+        "vatTitle": "Rozpad sadzieb DPH pre daňové priznanie (SR)",
+        "vat23": "Základná sadzba 23 %",
+        "vat19": "Znížená sadzba 19 %",
+        "vat5": "Znížená sadzba 5 %",
+        "vat0": "Oslobodené od DPH 0 %",
+        "vatBase": "Základ:",
+        "vatTax": "DPH:"
+      },
+      "storno": {
+        "title": "Storno pokladničného dokladu",
+        "legalNotice": "V súlade so Zákonom č. 289/2008 Z. z. bude vystavený záporný opravný doklad naviazaný na pôvodný doklad ({reference}) a odoslaný do evidencie FS SR.",
+        "reasonLabel": "Dôvod storna",
+        "reasonPlaceholder": "Napr. Chybná platobná metóda, vrátenie tovaru...",
+        "cancel": "Zrušiť",
+        "confirm": "Potvrdiť storno"
+      },
+      "toast": {
+        "resent": "Doklad bol úspešne odoslaný",
+        "resendError": "Chyba pri odoslaní: {message}",
+        "stornoOk": "Doklad bol úspešne stornovaný",
+        "stornoError": "Chyba pri storne: {message}",
+        "closureOk": "Denná uzávierka {number} bola úspešne vykonaná!",
+        "closureError": "Chyba pri uzávierke: {message}",
+        "csvDownloaded": "CSV export pre účtovníčku bol stiahnutý"
+      },
+      "months": {
+        "january": "Január",
+        "february": "Február",
+        "march": "Marec",
+        "april": "Apríl",
+        "may": "Máj",
+        "june": "Jún",
+        "july": "Júl",
+        "august": "August",
+        "september": "September",
+        "october": "Október",
+        "november": "November",
+        "december": "December"
+      }
+    }
   },
   "voice": {
     "soap": {
@@ -6921,7 +7090,10 @@
       "biteReport": "Hlásenie poranenia (RVPS)",
       "printBiteReport": "Tlačiť Hlásenie o poranení človeka (RVPS)",
       "printInspection": "Tlačiť úradný výkaz",
-      "legalNotice": "Zákonná povinnosť: Podľa § 17 ods. 1 písm. b) zákona č. 39/2007 Z. z. je vlastník alebo držiteľ vnímavých mäsožravcov povinný zabezpečiť vakcináciu proti besnote. Veterinárny lekár nahlasuje vakcináciu do CRSZ a RVPS do 3 pracovných dní od aplikácie."
+      "legalNotice": "Zákonná povinnosť: Podľa § 17 ods. 1 písm. b) zákona č. 39/2007 Z. z. je vlastník alebo držiteľ vnímavých mäsožravcov povinný zabezpečiť vakcináciu proti besnote. Veterinárny lekár nahlasuje vakcináciu do CRSZ a RVPS do 3 pracovných dní od aplikácie.",
+      "subViewVaccinations": "Kniha očkovania proti besnote (§ 19 ods. 1)",
+      "subViewObservations": "14-dňové pozorovanie po pohryznutí (§ 19 ods. 2)",
+      "emptyCta": "Prejsť na očkovania"
     },
     "withdrawal": {
       "title": "Kniha ochranných lehôt (Úradná zostava RVPS)",
@@ -7120,7 +7292,65 @@
       "signatureModalDesc": "Po podpise XML v aplikácii D.Signer vložte kontrolný SHA-256 odtlačok podpísaného kontajnera.",
       "signatureModalLabel": "Odtlačok podpisu (Hash) *",
       "signatureModalPlaceholder": "napr. 7a8f... (SHA-256 hex digest)",
-      "btnConfirmSignature": "Potvrdiť KEP podpis"
+      "btnConfirmSignature": "Potvrdiť KEP podpis",
+      "sendStateAll": "Všetky stavy",
+      "sendStateSent": "Odoslané",
+      "sendStateAwaiting": "Čaká na export",
+      "sendStateError": "Chyba",
+      "reportDateFrom": "Dátum hlásenia od",
+      "reportDateTo": "do",
+      "emptyCta": "Vytvoriť export KVEPIS",
+      "colReportDate": "Dátum hlásenia",
+      "colSendState": "Stav odoslania",
+      "typeInfectious": "Hlásenie infekčného ochorenia",
+      "hubTitle": "KVEPIS Submission Hub",
+      "hubSubtitle": "Riadená príprava zákonných hlásení pre ŠVPS SR cez ÚPVS. Validácia schém, generovanie podpisového XML/JSON balíčka a párovanie doručenky so záznamom pacienta.",
+      "createBtn": "Vytvoriť podanie",
+      "xmlInvalid": "Podanie nie je validné – XML sa nedá vygenerovať.",
+      "credTitle": "Prístup kliniky (IČO · KVL · ÚPVS)",
+      "credConfiguredIco": "Nakonfigurované: IČO {ico}",
+      "credKvlShort": "KVL {kvl}",
+      "credMailbox": "Schránka {box}",
+      "credHint": "Zadajte identifikačné údaje kliniky pre generovanie podaní.",
+      "credIco": "IČO ambulancie",
+      "credKvl": "KVL ID lekára",
+      "credSchranka": "ÚPVS schránka",
+      "credSignMethod": "Spôsob podpisu (KEP)",
+      "signDsigner": "D.Signer / Disig (eID čítačka)",
+      "signCloudSeal": "Cloudová pečať ambulancie",
+      "signHsm": "HSM modul",
+      "credSave": "Uložiť prístup",
+      "newTitle": "Nové podanie",
+      "newDesc": "Typ podania určuje povinné polia validačného enginu ŠVPS SR.",
+      "fieldType": "Typ podania",
+      "fieldFarmIco": "IČO farmy",
+      "fieldCehz": "CEHZ kód chovu",
+      "fieldEarTag": "Číslo ušnej známky",
+      "fieldTransponder": "Transpondér / čip",
+      "fieldKvl": "KVL číslo lekára",
+      "fieldSpecies": "Druh zvieraťa",
+      "fieldDiagnosis": "Diagnóza",
+      "fieldMedication": "Názov liečiva",
+      "fieldMeatWithdrawal": "Ochranná lehota — mäso (dni)",
+      "fieldMilkWithdrawal": "Ochranná lehota — mlieko (dni)",
+      "fieldAdministeredAt": "Dátum podania",
+      "fieldSafeUntil": "Koniec ochrannej lehoty",
+      "fieldIncidentDate": "Dátum incidentu (besnota)",
+      "phTransponder": "15 číslic ISO 11784",
+      "phSpecies": "hovädzí dobytok / pes",
+      "listTitle": "Pripravené podania",
+      "listDesc": "Ambulantná kniha → KVEPIS / ÚPVS.",
+      "listRefresh": "Obnoviť",
+      "errSvpsPrefix": "Chyba ŠVPS:",
+      "btnValidate": "Validovať",
+      "btnDownloadXml": "Stiahnuť XML (D.Signer)",
+      "btnMarkSigned": "Označiť podpísané",
+      "btnSubmitUpvs": "Odoslať do ÚPVS",
+      "btnUploadReceipt": "Nahrať doručenku",
+      "validationOk": "Podanie je validné a pripravené na podpis.",
+      "validationFailed": "Podanie obsahuje chyby, ktoré bránia odoslaniu:",
+      "receiptInvalidJson": "Doručenka musí byť platný JSON súbor z ÚPVS.",
+      "xmlUnavailable": "XML formulár nie je k dispozícii."
     },
     "title": "Zákonné knihy a registre",
     "subtitle": "Evidencia v zmysle zákona č. 39/2007 Z. z. o veterinárnej starostlivosti a zákona č. 139/1998 Z. z.",
@@ -7135,7 +7365,9 @@
       "protocols": "Zákonné protokoly & formuláre",
       "withdrawals": "Ochranné lehoty (Mäso / Mlieko)",
       "crsz": "CRSZ & Mikročipy / PetPass",
-      "kvepis": "KVEPIS & ÚPVS (ŠVPS)"
+      "kvepis": "KVEPIS & ÚPVS (ŠVPS)",
+      "crszChip": "CRSZ — čipovanie psov",
+      "infectious": "Infekčné ochorenia (besnota, pásomnice)"
     },
     "exportCsv": "Exportovať CSV",
     "print": "Tlačiť",
@@ -7148,7 +7380,9 @@
       "therapyColumn": "Terapia / Použité liečivá",
       "noRecords": "Nenašli sa žiadne záznamy v denníku ošetrených zvierat.",
       "totalTreatments": "Celkovo ošetrení: {count}",
-      "printInspection": "Tlačiť úradný výkaz"
+      "printInspection": "Tlačiť úradný výkaz",
+      "emptyDesc": "Kniha ošetrení sa plní automaticky zo záznamov kliniky pre potravinové zvieratá.",
+      "emptyCta": "Prejsť na záznamy pacientov"
     },
     "badgeKvlSvps": "ŠVPS SR / KVL SR",
     "complianceUnknown": "Neznáme",
@@ -7164,7 +7398,9 @@
       "addressColumn": "Bydlisko / Mesto",
       "phoneColumn": "Telefón",
       "noRecords": "Žiadne záznamy v registri eutanázií.",
-      "printInspection": "Tlačiť úradný výkaz"
+      "printInspection": "Tlačiť úradný výkaz",
+      "emptyDesc": "Register eutanázií a asanácií sa napĺňa z ukončených prípadov pacientov.",
+      "emptyCta": "Prejsť na pacientov"
     },
     "narcotics": {
       "title": "Kontrolované látky",
@@ -7195,14 +7431,16 @@
       "actionAdministered": "Podanie pacientovi",
       "actionWasted": "Likvidácia (odpad)",
       "actionReturned": "Vrátenie dodávateľovi",
-      "scheduleLabel": "Zoz."
+      "scheduleLabel": "Zoz.",
+      "emptyDesc": "Pohyby omamných a psychotropných látok sa evidujú v knihe OPK podľa zákona č. 139/1998 Z. z."
     },
     "protocols": {
       "title": "Slovenské veterinárne protokoly a informované súhlasy",
       "subtitle": "Oficiálne znenia formulárov podľa štandardov KVL SR pre tlač a podpis klientom.",
       "printProtocol": "Tlačiť čistý protokol",
       "noForms": "Žiadne formuláre nie sú k dispozícii.",
-      "templateId": "Identifikátor šablóny: {slug}"
+      "templateId": "Identifikátor šablóny: {slug}",
+      "emptyDesc": "Zákonné formuláre sa načítajú po sprístupnení modulu protokolov pre vašu ambulanciu."
     },
     "dateRangeTo": "do"
   },

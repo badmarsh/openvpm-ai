@@ -16,11 +16,20 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { formatUserRole } from "@/lib/users/role";
+import { formatDateTime } from "@/lib/locale/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
-import { PageHeader } from "@/components/layout/page-header";
-import { TableScroll } from "@/components/common/table-scroll";
+import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH,
   CONTROLLED_SUBSTANCE_LOT_NUMBER_MAX_LENGTH,
@@ -56,12 +65,34 @@ const UNITS = [
   { label: "vial", value: "vial" },
 ] as const;
 
-const ACTION_STYLES: Record<string, string> = {
-  received: "bg-blue-100 text-blue-700",
-  administered: "bg-green-100 text-green-700",
-  wasted: "bg-amber-100 text-amber-700",
-  returned: "bg-gray-100 text-gray-700",
+/**
+ * Chromatic movement taxonomy (Zákon 139/1998 Z. z.):
+ * green = income (delivery note), violet/blue = issue (patient application /
+ * prescription), red = destruction or expiry write-off.
+ */
+const MOVEMENT_BADGE_STYLES: Record<string, string> = {
+  received:
+    "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  administered:
+    "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  returned: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  wasted: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
 };
+
+const MOVEMENT_KIND: Record<string, "income" | "issue" | "disposal"> = {
+  received: "income",
+  administered: "issue",
+  returned: "issue",
+  wasted: "disposal",
+};
+
+function sumReceivedAction(action: string): boolean {
+  return action === "received";
+}
+
+function formatBalance(value: number): string {
+  return (Number.isFinite(value) ? value : 0).toFixed(3);
+}
 
 function canManageControlledSubstancesRole(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian";
@@ -71,22 +102,10 @@ const trimmedOrUndefined = (value: string) => value.trim() || undefined;
 
 function formatControlledSubstanceDateTime(
   date: Date | string,
-  timeZone?: string | null
+  timeZone?: string | null,
+  language?: string | null
 ) {
-  const options: Intl.DateTimeFormatOptions = {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: timeZone ?? undefined,
-  };
-
-  try {
-    return new Date(date).toLocaleString("en-US", options);
-  } catch {
-    return new Date(date).toLocaleString("en-US", {
-      ...options,
-      timeZone: undefined,
-    });
-  }
+  return formatDateTime(date, { timeZone, language });
 }
 
 function InlineLookupError({ message }: { message: string }) {
@@ -239,7 +258,7 @@ function LogEntryForm({ onClose }: { onClose: () => void }) {
       onSubmit={handleSubmit}
       className="mt-4 rounded-lg border border-border bg-card p-4 space-y-3"
     >
-      <h3 className="font-medium text-sm">
+      <h3 className="font-heading text-base font-semibold">
         {t("controlledSubstances.newLogEntry", "New Log Entry")}
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -491,57 +510,62 @@ function SummarySection() {
               {t("controlledSubstances.summary.loading", "Loading summary...")}
             </div>
           ) : data && data.length > 0 ? (
-            <TableScroll>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="py-2 text-left font-medium text-muted-foreground">
-                      {t("controlledSubstances.summary.columns.drug", "Drug")}
-                    </th>
-                    <th className="py-2 text-right font-medium text-muted-foreground">
-                      {t("controlledSubstances.summary.columns.received", "Received")}
-                    </th>
-                    <th className="py-2 text-right font-medium text-muted-foreground">
-                      {t("controlledSubstances.summary.columns.administered", "Administered")}
-                    </th>
-                    <th className="py-2 text-right font-medium text-muted-foreground">
-                      {t("controlledSubstances.summary.columns.wasted", "Wasted")}
-                    </th>
-                    <th className="py-2 text-right font-medium text-muted-foreground">
-                      {t("controlledSubstances.summary.columns.returned", "Returned")}
-                    </th>
-                    <th className="py-2 text-right font-medium text-muted-foreground">
-                      {t("controlledSubstances.summary.columns.netBalance", "Net Balance")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((drug) => (
-                    <tr
-                      key={drug.drugName}
-                      className="border-b border-border/50 last:border-0"
-                    >
-                      <td className="py-2 font-medium">{drug.drugName}</td>
-                      <td className="py-2 text-right tabular-nums text-blue-600">
-                        {drug.totalReceived}
-                      </td>
-                      <td className="py-2 text-right tabular-nums text-green-600">
-                        {drug.totalAdministered}
-                      </td>
-                      <td className="py-2 text-right tabular-nums text-amber-600">
-                        {drug.totalWasted}
-                      </td>
-                      <td className="py-2 text-right tabular-nums text-gray-600">
-                        {drug.totalReturned}
-                      </td>
-                      <td className="py-2 text-right tabular-nums font-semibold">
-                        {(Number(drug.totalReceived) - Number(drug.totalAdministered) - Number(drug.totalWasted) - Number(drug.totalReturned)).toFixed(3)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableScroll>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>
+                    {t("controlledSubstances.summary.columns.drug", "Drug")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.summary.columns.received", "Received")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.summary.columns.administered", "Administered")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.summary.columns.wasted", "Wasted")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.summary.columns.returned", "Returned")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.summary.columns.netBalance", "Net Balance")}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((drug) => (
+                  <TableRow key={`${drug.drugName}-${drug.unit}`}>
+                    <TableCell className="px-3 py-2.5 font-medium">
+                      {drug.drugName}
+                      <span className="ml-1.5 text-xs text-muted-foreground">
+                        {t(`controlledSubstances.units.${drug.unit}`, drug.unit)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-emerald-600">
+                      {drug.totalReceived}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-violet-600">
+                      {drug.totalAdministered}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-red-600">
+                      {drug.totalWasted}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-blue-600">
+                      {drug.totalReturned}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 text-right font-mono font-semibold tabular-nums">
+                      {formatBalance(
+                        Number(drug.totalReceived) -
+                          Number(drug.totalAdministered) -
+                          Number(drug.totalWasted) -
+                          Number(drug.totalReturned),
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <EmptyState
               className="border-0 bg-transparent py-6"
@@ -596,7 +620,7 @@ export default function ControlledSubstancesPage() {
 }
 
 function ControlledSubstancesLogPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
@@ -609,6 +633,20 @@ function ControlledSubstancesLogPage() {
     limit,
     offset,
   });
+  /**
+   * Zákon 139/1998 Z. z. requires a running stock figure next to every
+   * movement, so the ledger is joined with the per-drug balance summary.
+   */
+  const { data: balances } = trpc.controlledSubstances.summary.useQuery({});
+  const balanceByDrug = new Map(
+    (balances ?? []).map((row) => [
+      row.drugName,
+      Number(row.totalReceived) -
+        Number(row.totalAdministered) -
+        Number(row.totalWasted) -
+        Number(row.totalReturned),
+    ]),
+  );
   const logError = settingsQuery.error ?? error;
   const isLogLoading = settingsQuery.isLoading || isLoading;
   const settingsMissing =
@@ -634,8 +672,11 @@ function ControlledSubstancesLogPage() {
   return (
     <div>
       <PageHeader
-        title={t("controlledSubstances.title", "Controlled Substance Log")}
-        subtitle={t("controlledSubstances.subtitle", "DEA-required tracking for scheduled drugs")}
+        title={t("controlledSubstances.title", "Kniha omamných látok (OPK)")}
+        subtitle={t(
+          "controlledSubstances.subtitle",
+          "Evidencia pohybu omamných a psychotropných látok podľa zákona č. 139/1998 Z. z.",
+        )}
         actions={
           <Button
             disabled={!canRecordControlledSubstance}
@@ -644,8 +685,8 @@ function ControlledSubstancesLogPage() {
               setShowForm(true);
             }}
           >
-            <Plus className="mr-1 h-4 w-4" />
-            {t("controlledSubstances.logEntry", "Log Entry")}
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t("controlledSubstances.logEntry", "Zaznamenať pohyb")}
           </Button>
         }
       />
@@ -659,20 +700,29 @@ function ControlledSubstancesLogPage() {
         <SummarySection />
       </div>
 
-      {/* Search / Filter */}
-      <div className="mt-4 flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name...")}
-            value={search}
-            maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setOffset(0);
-            }}
-            className="pl-9"
-          />
+      {/* Ledger toolbar */}
+      <div className="mt-6 space-y-3">
+        <PageSectionHeader
+          title={t("controlledSubstances.ledger.title", "Kniha pohybov omamných látok")}
+          subtitle={t(
+            "controlledSubstances.ledger.subtitle",
+            "Každý príjem, výdaj, likvidácia exspirácie a kontrola zostatku sa eviduje nezmazateľne v poradí podľa dátumu.",
+          )}
+        />
+        <div className="flex items-center gap-2">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name...")}
+              value={search}
+              maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setOffset(0);
+              }}
+              className="h-9 pl-9"
+            />
+          </div>
         </div>
       </div>
 
@@ -698,88 +748,129 @@ function ControlledSubstancesLogPage() {
         </div>
       ) : verifiedLogPayload.log.items.length > 0 ? (
         <>
-          <TableScroll className="mt-4 rounded-lg border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("controlledSubstances.table.dateTime", "Date/Time")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("controlledSubstances.table.drugName", "Drug Name")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+          <div className="mt-4 rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>
+                    {t("controlledSubstances.table.dateTime", "Date & time")}
+                  </TableHead>
+                  <TableHead>
+                    {t("controlledSubstances.table.drugName", "Drug name")}
+                  </TableHead>
+                  <TableHead>
                     {t("controlledSubstances.table.schedule", "Schedule")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("controlledSubstances.table.action", "Action")}
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    {t("controlledSubstances.table.qtyUnit", "Qty/Unit")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  </TableHead>
+                  <TableHead>
+                    {t("controlledSubstances.table.action", "Movement type")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.table.received", "Received")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.table.issued", "Issued")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("controlledSubstances.table.balance", "Balance")}
+                  </TableHead>
+                  <TableHead>
                     {t("controlledSubstances.table.patient", "Patient")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("controlledSubstances.table.performedBy", "Performed By")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  </TableHead>
+                  <TableHead>
+                    {t("controlledSubstances.table.performedBy", "Veterinarian")}
+                  </TableHead>
+                  <TableHead>
                     {t("controlledSubstances.table.witness", "Witness")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  </TableHead>
+                  <TableHead>
+                    {t("controlledSubstances.table.lotNumber", "Batch (lot)")}
+                  </TableHead>
+                  <TableHead>
                     {t("controlledSubstances.table.notes", "Notes")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {verifiedLogPayload.log.items.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {entry.performedAt
-                        ? formatControlledSubstanceDateTime(
-                            entry.performedAt,
-                            verifiedLogPayload.settings.timezone
-                          )
-                        : "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      {entry.drugName}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {entry.deaSchedule}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                          ACTION_STYLES[entry.action] ?? "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {entry.quantity} {t(`controlledSubstances.units.${entry.unit}`, entry.unit)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {entry.patientName || "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {entry.performerName || "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {entry.witnessName || "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
-                      {entry.notes || "\u2014"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {verifiedLogPayload.log.items.map((entry) => {
+                  const movementKind =
+                    MOVEMENT_KIND[entry.action] ?? "issue";
+                  const balance = balanceByDrug.get(entry.drugName);
+                  return (
+                    <TableRow key={entry.id}>
+                      <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                        {entry.performedAt
+                          ? formatControlledSubstanceDateTime(
+                              entry.performedAt,
+                              verifiedLogPayload.settings.timezone,
+                              locale
+                            )
+                          : "\u2014"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 font-medium">
+                        {entry.drugName}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-xs text-muted-foreground">
+                        {entry.deaSchedule}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5">
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge
+                            variant="outline"
+                            className={`h-5 px-2 text-[11px] font-medium ${
+                              MOVEMENT_BADGE_STYLES[entry.action] ??
+                              "border-border bg-muted/50 text-muted-foreground"
+                            }`}
+                          >
+                            {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
+                          </Badge>
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                            {t(
+                              `controlledSubstances.movementKinds.${movementKind}`,
+                              movementKind,
+                            )}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
+                        {sumReceivedAction(entry.action) ? entry.quantity : "\u2014"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
+                        {sumReceivedAction(entry.action) ? "\u2014" : entry.quantity}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
+                        {balance === undefined ? (
+                          "\u2014"
+                        ) : (
+                          <span
+                            className={
+                              balance <= 0 ? "text-red-600" : "font-medium"
+                            }
+                          >
+                            {formatBalance(balance)}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-muted-foreground">
+                        {entry.patientName || "\u2014"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-muted-foreground">
+                        {entry.performerName || "\u2014"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-muted-foreground">
+                        {entry.witnessName || "\u2014"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 font-mono text-xs text-muted-foreground">
+                        {entry.lotNumber || "\u2014"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 max-w-[220px] truncate text-muted-foreground">
+                        {entry.notes || "\u2014"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
@@ -835,7 +926,10 @@ function ControlledSubstancesLogPage() {
             search
               ? undefined
               : {
-                  label: t("controlledSubstances.empty.logFirst", "Log first entry"),
+                  label: t(
+                    "controlledSubstances.empty.logFirst",
+                    "Zaznamenať príjem omamnej látky",
+                  ),
                   onClick: () => {
                     if (!canRecordControlledSubstance) return;
                     setShowForm(true);
