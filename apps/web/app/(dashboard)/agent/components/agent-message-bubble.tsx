@@ -84,9 +84,9 @@ export function AgentMessageBubble({
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
             title={t("agent.copyReply", "Kopírovať odpoveď")}
           >
-            {isCopied ? (
-              <Check className="h-3 w-3 text-emerald-600" />
-            ) : (
+          {isCopied ? (
+            <Check className="h-3 w-3 text-success" />
+          ) : (
               <Copy className="h-3 w-3" />
             )}
           </button>

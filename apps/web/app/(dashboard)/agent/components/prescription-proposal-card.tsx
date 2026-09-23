@@ -113,7 +113,7 @@ export function PrescriptionProposalCard({
 
   if (saved) {
     return (
-      <div className="mt-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-[11px] text-emerald-700 dark:text-emerald-400">
+      <div className="mt-2 rounded-md border border-success/30 bg-success/10 p-2.5 text-[11px] text-success">
         <div className="flex items-center gap-1.5 font-medium">
           <Check className="h-3.5 w-3.5" />
           {t("agent.prescription.savedShort", "Recept vystavený po potvrdení lekárom")}
@@ -123,8 +123,8 @@ export function PrescriptionProposalCard({
   }
 
   return (
-    <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-2.5 text-[11px]">
-      <div className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-400">
+    <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px]">
+      <div className="flex items-center gap-1.5 font-semibold text-warning-muted-foreground">
         <Pill className="h-3.5 w-3.5" />
         {t(
           "agent.prescription.pendingTitle",

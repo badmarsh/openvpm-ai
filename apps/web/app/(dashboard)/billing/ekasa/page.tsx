@@ -311,7 +311,7 @@ function EkasaReceiptsContent() {
       <PageHeader
         title={
           <span className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand shrink-0">
               <ReceiptEuro className="h-5 w-5" />
             </span>
             <span className="flex items-center gap-2.5 flex-wrap">
@@ -348,15 +348,15 @@ function EkasaReceiptsContent() {
       />
 
       {/* Pre-certification / Emulation Notice Banner */}
-      <div className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Badge
-            variant="outline"
-            className="border-amber-500/50 bg-amber-500/20 text-amber-900 dark:text-amber-200 font-semibold shrink-0"
+            variant="warning"
+            className="font-semibold shrink-0"
           >
             {t("ekasa.page.pilotBadge", "Režim pilotnej emulácie")}
           </Badge>
-          <p className="text-xs text-amber-900 dark:text-amber-200">
+          <p className="text-xs text-warning-muted-foreground">
             {t(
               "ekasa.page.pilotNotice",
               "e-Kasa beží v predcertifikačnom režime (interná evidencia, výpočet DPH a tlač dokladov). Pre legislatívne záväzné fiškálne doklady pred FS SR je potrebné pripojenie k certifikovanému CHDÚ alebo fiškálnemu driveru (napr. FiskalPRO / Varos).",
@@ -516,7 +516,7 @@ function EkasaReceiptsContent() {
                                 {r.receiptNumber}
                               </span>
                               {r.receiptType === "RETURN" && (
-                                <Badge variant="outline" className="h-4 border-amber-500 bg-amber-50 px-1.5 py-0 text-[10px] font-semibold text-amber-600 dark:bg-amber-950/30">
+                                <Badge variant="outline" className="h-4 border-warning/40 bg-warning-muted px-1.5 py-0 text-[10px] font-semibold text-warning-muted-foreground">
                                   {t("ekasa.page.badgeReturn", "VRÁTENIE")}
                                 </Badge>
                               )}
@@ -564,7 +564,7 @@ function EkasaReceiptsContent() {
                                     "ekasa.page.receipts.syncHint",
                                     "Synchronizovať offline doklad s Finančnou správou",
                                   )}
-                                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-500/25 transition-all shadow-2xs"
+                                  className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-[11px] font-semibold text-warning-muted-foreground hover:bg-warning/25 transition-all shadow-2xs"
                                 >
                                   <RefreshCw
                                     className={`h-2.5 w-2.5 ${
@@ -703,13 +703,13 @@ function EkasaReceiptsContent() {
                     })}
                   </h2>
                   {dailySummaryData?.isClosed ? (
-                    <Badge className="bg-emerald-600">
+                    <Badge variant="success">
                       {t("ekasa.page.closures.closedBadge", "Uzavreté: {number}", {
                         number: dailySummaryData.closureNumber ?? "",
                       })}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-600">
+                    <Badge variant="outline" className="border-warning/40 bg-warning-muted text-warning-muted-foreground">
                       {t("ekasa.page.closures.openBadge", "Otvorený deň (priebežný stav)")}
                     </Badge>
                   )}
@@ -732,7 +732,7 @@ function EkasaReceiptsContent() {
                 <Button
                   onClick={() => closureMutation.mutate({})}
                   disabled={closureMutation.isPending}
-                  className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="gap-2"
                 >
                   {closureMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -769,7 +769,7 @@ function EkasaReceiptsContent() {
                   <span className="text-xs text-muted-foreground">
                     {t("ekasa.page.closures.cash", "V hotovosti")}
                   </span>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-emerald-600">
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
                     {formatAmount(dailySummaryData.summary.cashAmount)}
                   </p>
                 </div>
@@ -778,7 +778,7 @@ function EkasaReceiptsContent() {
                   <span className="text-xs text-muted-foreground">
                     {t("ekasa.page.closures.card", "Platobnou kartou")}
                   </span>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-blue-600">
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
                     {formatAmount(dailySummaryData.summary.cardAmount)}
                   </p>
                 </div>
@@ -789,7 +789,7 @@ function EkasaReceiptsContent() {
                   </span>
                   <p className="mt-1 font-mono text-sm font-semibold tabular-nums text-foreground">
                     {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.base)} /{" "}
-                    <span className="text-emerald-600">
+                    <span className="text-muted-foreground">
                       {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.vat)}
                     </span>
                   </p>
@@ -845,10 +845,10 @@ function EkasaReceiptsContent() {
                       <TableCell className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
                         {c.receiptsCount}
                       </TableCell>
-                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs font-medium tabular-nums text-emerald-600">
+                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-foreground">
                         {formatAmount(c.cashAmount)}
                       </TableCell>
-                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs font-medium tabular-nums text-blue-600">
+                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-foreground">
                         {formatAmount(c.cardAmount)}
                       </TableCell>
                       <TableCell className="px-3 py-2.5 text-right font-mono text-xs font-semibold tabular-nums text-foreground">
@@ -910,7 +910,7 @@ function EkasaReceiptsContent() {
             <Button
               onClick={downloadCsv}
               disabled={isLoadingAccountant || !accountantData?.closures?.length}
-              className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+              className="gap-2"
             >
               <Download className="h-4 w-4" />
               {t("ekasa.page.accountant.download", "Stiahnuť CSV pre účtovníčku")}
@@ -961,7 +961,7 @@ function EkasaReceiptsContent() {
                   <span className="text-xs text-muted-foreground">
                     {t("ekasa.page.accountant.totalCash", "Tržby v hotovosti")}
                   </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-emerald-600">
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
                     {formatAmount(accountantData.totals.cashAmount)}
                   </p>
                 </div>
@@ -970,7 +970,7 @@ function EkasaReceiptsContent() {
                   <span className="text-xs text-muted-foreground">
                     {t("ekasa.page.accountant.totalCard", "Tržby platobnou kartou")}
                   </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-blue-600">
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
                     {formatAmount(accountantData.totals.cardAmount)}
                   </p>
                 </div>
@@ -979,7 +979,7 @@ function EkasaReceiptsContent() {
                   <span className="text-xs text-muted-foreground">
                     {t("ekasa.page.accountant.totalTransfer", "Bankové prevody")}
                   </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-violet-600">
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
                     {formatAmount(accountantData.totals.transferAmount)}
                   </p>
                 </div>
@@ -1004,7 +1004,7 @@ function EkasaReceiptsContent() {
                     </p>
                     <p className="font-mono tabular-nums">
                       {t("ekasa.page.accountant.vatTax", "DPH:")}{" "}
-                      <strong className="text-emerald-600">
+                      <strong className="text-foreground">
                         {formatAmount(accountantData.totals.vat23.vat)}
                       </strong>
                     </p>
@@ -1020,7 +1020,7 @@ function EkasaReceiptsContent() {
                     </p>
                     <p className="font-mono tabular-nums">
                       {t("ekasa.page.accountant.vatTax", "DPH:")}{" "}
-                      <strong className="text-emerald-600">
+                      <strong className="text-foreground">
                         {formatAmount(accountantData.totals.vat19.vat)}
                       </strong>
                     </p>
@@ -1036,7 +1036,7 @@ function EkasaReceiptsContent() {
                     </p>
                     <p className="font-mono tabular-nums">
                       {t("ekasa.page.accountant.vatTax", "DPH:")}{" "}
-                      <strong className="text-emerald-600">
+                      <strong className="text-foreground">
                         {formatAmount(accountantData.totals.vat5.vat)}
                       </strong>
                     </p>
@@ -1109,7 +1109,7 @@ function EkasaReceiptsContent() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning-muted-foreground">
               {t(
                 "ekasa.page.storno.legalNotice",
                 "V súlade so Zákonom č. 289/2008 Z. z. bude vystavený záporný opravný doklad naviazaný na pôvodný doklad ({reference}) a odoslaný do evidencie FS SR.",

@@ -99,7 +99,7 @@ export default function MediaPage() {
             onClick={() => setTab("library")}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
               tab === "library"
-                ? "bg-teal-800 text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -109,7 +109,7 @@ export default function MediaPage() {
             onClick={() => setTab("canvas")}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
               tab === "canvas"
-                ? "bg-teal-800 text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -137,7 +137,7 @@ export default function MediaPage() {
                 onClick={() => setFilter(k)}
                 className={`rounded-full px-4 py-1.5 text-xs font-semibold border transition-colors cursor-pointer ${
                   filter === k
-                    ? "bg-teal-800 text-white border-teal-800 shadow-sm"
+                    ? "bg-primary text-primary-foreground border-primary shadow-xs"
                     : "bg-card border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -149,14 +149,14 @@ export default function MediaPage() {
 
             <Link href="/marketing/consents">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <ShieldCheck className="h-3.5 w-3.5 text-brand" />
                 {t("marketing.media.gdprConsents", "GDPR Súhlasy")}
               </Button>
             </Link>
 
             <Button
               size="sm"
-              className="gap-1.5 text-xs h-9 bg-teal-800 hover:bg-teal-900 text-white"
+              className="gap-1.5 text-xs h-9 bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={() => setUploading(true)}
             >
               <Camera size={14} /> {t("marketing.media.uploadSocialPhoto", "Fotka na sociálne siete")}
@@ -164,7 +164,7 @@ export default function MediaPage() {
           </div>
 
           {notice && (
-            <div className="rounded-xl border border-teal-500/25 bg-teal-500/10 px-4 py-2.5 text-xs font-medium text-teal-900 dark:text-teal-200">
+            <div className="rounded-xl border border-brand/25 bg-brand/10 px-4 py-2.5 text-xs font-medium text-brand">
               {notice}
             </div>
           )}
@@ -242,17 +242,17 @@ export default function MediaPage() {
                         {/* Status chips */}
                         <div className="flex flex-wrap gap-1">
                           {h === "ok" && consentUntilDate && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-muted text-success-muted-foreground">
                               <ShieldCheck size={11} /> súhlas do {consentUntilDate.toLocaleDateString("sk-SK")}
                             </span>
                           )}
                           {h === "expiring" && consentUntilDate && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-800 dark:text-amber-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-warning-muted text-warning-muted-foreground">
                               <ShieldAlert size={11} /> vyprší {consentUntilDate.toLocaleDateString("sk-SK")}
                             </span>
                           )}
                           {h === "bad" && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-800 dark:text-red-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-destructive/10 text-destructive">
                               <ShieldAlert size={11} /> súhlas chýba/odvolaný
                             </span>
                           )}
@@ -262,7 +262,7 @@ export default function MediaPage() {
                             </span>
                           )}
                           {(asset.meta as any)?.edit?.preset && (asset.meta as any).edit.preset !== "none" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-500/15 text-teal-800 dark:text-teal-300">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand/15 text-brand">
                               {t("marketing.media.editPrefix", "úprava")}: {(asset.meta as any).edit.preset}
                             </span>
                           )}
@@ -366,7 +366,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
         <div className="flex gap-1.5">
           <button
             onClick={() => setOpen(true)}
-            className="flex-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 px-2 py-1.5 text-[11px] font-bold text-teal-850 dark:text-teal-300 hover:bg-teal-100 transition cursor-pointer inline-flex items-center justify-center gap-1 border border-teal-200/50 dark:border-teal-800/40"
+            className="flex-1 rounded-lg bg-brand/10 px-2 py-1.5 text-[11px] font-bold text-brand hover:bg-brand/20 transition cursor-pointer inline-flex items-center justify-center gap-1 border border-brand/20"
           >
             <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
           </button>
@@ -377,7 +377,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
                 deleteMutation.mutate({ id: asset.id });
               }
             }}
-            className="rounded-lg border border-border px-2 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-red-600 hover:border-red-300 transition cursor-pointer"
+            className="rounded-lg border border-border px-2 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:border-destructive/30 transition cursor-pointer"
             title={t("marketing.media.deleteMedia", "Zmazať médium")}
           >
             <Trash2 size={11} />
@@ -396,9 +396,9 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
   }
 
   return (
-    <div className="rounded-xl border border-teal-500/30 bg-card p-2.5 space-y-2 pt-2 text-left">
+    <div className="rounded-xl border border-border bg-card p-2.5 space-y-2 pt-2 text-left">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-teal-800 dark:text-teal-300 font-bold text-[10px] uppercase tracking-wide">
+        <div className="flex items-center gap-1 text-brand font-bold text-[10px] uppercase tracking-wide">
           <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
         </div>
         <button
@@ -418,7 +418,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
             onClick={() => apply({ preset: p.key })}
             className={`rounded-md px-1.5 py-1 text-[10px] font-semibold cursor-pointer transition-colors ${
               (edit.preset ?? "none") === p.key
-                ? "bg-teal-800 text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -452,12 +452,12 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
           onChange={(e) => setOverlay(e.target.value)}
           placeholder={t("marketing.media.overlayPlaceholder", "Text do grafiky…")}
           maxLength={60}
-          className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-[11px] outline-none focus:border-teal-600"
+          className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-[11px] outline-none focus:border-primary"
         />
         <button
           disabled={editMutation.isPending}
           onClick={() => apply({ overlay })}
-          className="rounded-md bg-teal-800 px-2.5 text-[10px] font-bold text-white cursor-pointer disabled:opacity-50"
+          className="rounded-md bg-primary px-2.5 text-[10px] font-bold text-primary-foreground cursor-pointer disabled:opacity-50"
         >
           {editMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : "OK"}
         </button>
@@ -587,10 +587,10 @@ function UploadPanel({
   };
 
   return (
-    <div className="rounded-2xl border border-teal-500/30 bg-card p-5 shadow-lg space-y-4">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-lg space-y-4">
       <div className="flex items-center justify-between border-b pb-2.5">
         <div className="flex items-center gap-2">
-          <ImagePlus size={18} className="text-teal-700" />
+          <ImagePlus size={18} className="text-brand" />
           <h3 className="text-sm font-bold text-foreground">
             Nová fotka alebo video klip pacienta so súhlasom
           </h3>
@@ -607,7 +607,7 @@ function UploadPanel({
             ref={fileRef}
             type="file"
             accept="image/*,video/*"
-            className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-teal-50 file:text-teal-800"
+            className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-muted file:text-foreground"
             onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
           />
         </div>
@@ -665,16 +665,16 @@ function UploadPanel({
 
       {/* Consent Missing Warning + Quick Reception Grant */}
       {!consentId && (
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 p-3 text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2">
+        <div className="rounded-xl bg-warning/10 border border-warning/30 p-3 text-xs text-warning-muted-foreground flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <ShieldAlert size={16} className="text-amber-600 shrink-0" />
+            <ShieldAlert size={16} className="text-warning shrink-0" />
             <span>{t("marketing.media.noActiveConsent", "Pre tohto klienta zatiaľ neexistuje aktívny súhlas {consent}.", { consent: "photo_social" })}</span>
           </div>
 
           <Button
             size="sm"
             disabled={grantMutation.isPending || !ownerId}
-            className="text-xs h-8 bg-amber-700 hover:bg-amber-800 text-white"
+            className="text-xs h-8 bg-warning text-warning-foreground hover:bg-warning/90"
             onClick={() => grantMutation.mutate({ clientId: ownerId, scope: "photo_social" })}
           >
             {grantMutation.isPending ? t("marketing.media.grantingConsent", "Ukladám súhlas...") : t("marketing.media.grantConsentAtReception", "Získať súhlas na recepcii (podpis)")}
@@ -682,7 +682,7 @@ function UploadPanel({
         </div>
       )}
 
-      {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
 
       <div className="flex items-center justify-end gap-2 pt-2 border-t">
         <Button variant="outline" size="sm" onClick={() => onClose()}>
@@ -691,7 +691,7 @@ function UploadPanel({
         <Button
           size="sm"
           disabled={createMutation.isPending || !dataUrl || !consentId}
-          className="gap-1.5 bg-teal-800 hover:bg-teal-900 text-white"
+          className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
           onClick={handleSave}
         >
           {createMutation.isPending ? (

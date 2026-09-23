@@ -50,7 +50,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Vyčistí rozpracované diktovanie a pripraví novú poznámku pre pacienta.",
     exampleUsage: "„Nová poznámka pacienta... Pes prichádza na kontrolu po operácii...“",
     icon: FileText,
-    badgeColor: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+    badgeColor: "bg-info-muted text-info-muted-foreground border-info/30",
     actionKey: "new_note",
   },
   {
@@ -61,7 +61,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Spustí mikrofón a začne zaznamenávať klinickú konzultáciu.",
     exampleUsage: "„Začať konzultáciu... pacient mačka 3 roky...“",
     icon: Mic,
-    badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+    badgeColor: "bg-success-muted text-success-muted-foreground border-success/30",
     actionKey: "start_consultation",
   },
   {
@@ -72,7 +72,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Zastaví nahrávanie zvuku a spustí AI prepis s extrakciou SOAP.",
     exampleUsage: "„...kontrola o 7 dní. Ukončiť poznámku.“",
     icon: Play,
-    badgeColor: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+    badgeColor: "bg-warning-muted text-warning-muted-foreground border-warning/30",
     actionKey: "end_note",
   },
   {
@@ -96,7 +96,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Vloží nový riadok a odsek do klinického textu.",
     exampleUsage: "„...sliznice ružové. Nový odsek. Palpácia brucha nebolestivá...“",
     icon: AlignLeft,
-    badgeColor: "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 border-teal-200 dark:border-teal-800",
+    badgeColor: "bg-brand/15 text-brand border-brand/30",
     actionKey: "new_paragraph",
   },
   {
@@ -107,7 +107,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Vloží odrážkový bod (•) pre prehľadný zoznam symptómov alebo liečiv.",
     exampleUsage: "„Odrážka amoxicilín 250 miligramov. Odrážka meloxikam...“",
     icon: List,
-    badgeColor: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200 dark:border-sky-800",
+    badgeColor: "bg-info-muted text-info-muted-foreground border-info/30",
     actionKey: "bullet_point",
   },
   {
@@ -153,7 +153,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Presmeruje na kalendár a rozvrh termínov kliniky (/appointments).",
     exampleUsage: "„Otvoriť termíny“",
     icon: Calendar,
-    badgeColor: "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800",
+    badgeColor: "bg-destructive/10 text-destructive border-destructive/20",
     actionKey: "open_appointments",
   },
   {
@@ -175,7 +175,7 @@ export const VOICE_COMMANDS: VoiceCommandItem[] = [
     description: "Otvorí zoznam klinických záznamov a SOAP protokolov (/records).",
     exampleUsage: "„Hľadať v záznamoch“",
     icon: Search,
-    badgeColor: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700",
+    badgeColor: "bg-muted text-muted-foreground border-border",
     actionKey: "search_records",
   },
 ];
@@ -366,8 +366,8 @@ export function VoiceCommandsModal({
                     >
                       {isCopied ? (
                         <>
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
-                          <span className="text-emerald-600">Skopírované</span>
+                          <Check className="h-3.5 w-3.5 text-success" />
+                          <span className="text-success">Skopírované</span>
                         </>
                       ) : (
                         <>

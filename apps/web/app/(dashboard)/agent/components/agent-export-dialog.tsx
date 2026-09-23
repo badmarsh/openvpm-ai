@@ -77,7 +77,7 @@ export function AgentExportButtons({
         title={t("agent.export.copyTitle", "Kopírovať ako Markdown")}
         className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
         <span className="hidden sm:inline">{t("agent.export.copy", "Kopírovať")}</span>
       </Button>
 

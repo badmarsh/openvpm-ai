@@ -297,7 +297,7 @@ export default function PosCheckoutPage() {
         title={
           <span className="flex items-center gap-2">
             <span>Pultový predaj (Rýchla pokladňa)</span>
-            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
+            <Badge variant="outline" className="text-xs bg-brand/15 text-brand border-brand/30">
               e-Kasa Zero-Touch
             </Badge>
           </span>
@@ -457,7 +457,7 @@ export default function PosCheckoutPage() {
             {selectedClient ? (
               <div className="flex items-center justify-between p-2 rounded bg-muted/40 font-medium text-foreground">
                 <span>{selectedClient.name}</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
               </div>
             ) : (
               <div className="relative">
@@ -638,14 +638,14 @@ export default function PosCheckoutPage() {
               {discount > 0 && (
                 <div className="flex justify-between text-muted-foreground">
                   <span>{t("billing.pos.discount", "Zľava")}</span>
-                  <span className="text-rose-600 dark:text-rose-400">
+                  <span className="text-destructive">
                     -{discount.toFixed(2)} €
                   </span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-base text-foreground pt-1 border-t border-dashed border-border">
                 <span>{t("billing.pos.totalDue", "Spolu k úhrade")}:</span>
-                <span className="text-emerald-600 dark:text-emerald-400">
+                <span className="text-foreground">
                   {cartTotal.toFixed(2)} €
                 </span>
               </div>
@@ -658,7 +658,7 @@ export default function PosCheckoutPage() {
                 size="lg"
                 onClick={() => handleCheckout("CASH")}
                 disabled={cart.length === 0 || createPosSale.isPending}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700 h-12 text-sm font-semibold"
+                className="gap-2 h-12 text-sm font-semibold"
               >
                 {createPosSale.isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -669,11 +669,11 @@ export default function PosCheckoutPage() {
               </Button>
 
               <Button
-                variant="default"
+                variant="secondary"
                 size="lg"
                 onClick={() => handleCheckout("CARD")}
                 disabled={cart.length === 0 || createPosSale.isPending}
-                className="gap-2 bg-blue-600 hover:bg-blue-700 h-12 text-sm font-semibold"
+                className="gap-2 h-12 text-sm font-semibold"
               >
                 {createPosSale.isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

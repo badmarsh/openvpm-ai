@@ -365,7 +365,7 @@ export default function HandoutsPage() {
                 className="group relative bg-[#fffdfa] dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden ring-1 ring-stone-950/5 dark:ring-white/5"
               >
                 {/* 1. Flyer Top Header Strip */}
-                <div className="bg-teal-800 dark:bg-teal-950 text-white px-4 py-2.5 flex items-center justify-between border-b border-teal-900/30">
+                <div className="bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-between border-b border-border/30">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center shrink-0">
                       <PawPrint className="w-3.5 h-3.5 text-white" />
@@ -380,12 +380,12 @@ export default function HandoutsPage() {
                       EDUKAČNÝ LETÁK
                     </span>
                     {handout.isPublic ? (
-                      <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/90 text-white">
+                      <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-success text-success-foreground">
                         <Globe className="h-2.5 w-2.5" />
                         Verejný
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full bg-stone-700 text-stone-200">
+                      <span className="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         <Lock className="h-2.5 w-2.5" />
                         Interný
                       </span>
@@ -438,15 +438,15 @@ export default function HandoutsPage() {
                     </h3>
 
                     {/* Structured Flyer Checklist (Čo robiť / Zásady) */}
-                    <div className="rounded-xl bg-stone-50 dark:bg-stone-950/50 border border-stone-200/70 dark:border-stone-800/80 p-2.5 space-y-1.5">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-teal-400 flex items-center gap-1">
-                        <Check className="w-3 h-3" />
+                    <div className="rounded-xl bg-muted/40 border border-border p-2.5 space-y-1.5">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-foreground flex items-center gap-1">
+                        <Check className="w-3 h-3 text-brand" />
                         Hlavné zásady starostlivosti:
                       </p>
                       <ul className="space-y-1">
                         {checklist.map((item, idx) => (
-                          <li key={idx} className="text-[11px] leading-tight text-stone-700 dark:text-stone-300 flex items-start gap-1.5">
-                            <span className="text-teal-600 dark:text-teal-400 font-bold shrink-0">✓</span>
+                          <li key={idx} className="text-[11px] leading-tight text-muted-foreground flex items-start gap-1.5">
+                            <span className="text-brand font-bold shrink-0">✓</span>
                             <span className="line-clamp-1">{item}</span>
                           </li>
                         ))}
@@ -454,8 +454,8 @@ export default function HandoutsPage() {
                     </div>
 
                     {/* Warning Callout */}
-                    <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 text-[10px] text-amber-900 dark:text-amber-200 flex items-start gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="rounded-lg bg-warning/10 border border-warning/30 px-2.5 py-1.5 text-[10px] text-warning-muted-foreground flex items-start gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
                         <strong>Kedy volať lekára:</strong> Apatia, zvracanie, krvácanie z rany alebo teplota.
                       </span>
@@ -471,7 +471,7 @@ export default function HandoutsPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase text-stone-800 dark:text-stone-200">
-                            <Smartphone className="w-3 h-3 text-teal-600" />
+                            <Smartphone className="w-3 h-3 text-brand" />
                             Naskenujte do mobilu
                           </div>
                           <p className="text-[10px] font-mono text-muted-foreground truncate">
@@ -502,8 +502,8 @@ export default function HandoutsPage() {
                       >
                         {copied === handout.slug ? (
                           <>
-                            <Check className="h-3 w-3 text-emerald-600" />
-                            <span className="text-emerald-600">Hotovo</span>
+                            <Check className="h-3 w-3 text-success" />
+                            <span className="text-success">Hotovo</span>
                           </>
                         ) : (
                           <>
@@ -520,7 +520,7 @@ export default function HandoutsPage() {
                         onClick={() => window.open(`/h/${handout.slug}`, "_blank")}
                         title="Vytlačiť leták"
                       >
-                        <Printer className="h-3 w-3 text-teal-700" />
+                        <Printer className="h-3 w-3 text-muted-foreground" />
                         <span>Tlačiť</span>
                       </Button>
 
