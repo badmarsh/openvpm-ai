@@ -25,6 +25,7 @@ function AutomationsContent() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
+        icon={Zap}
         title={t("automations.pageTitle", "Automatizácie")}
         subtitle={t(
           "automations.pageSubtitle",

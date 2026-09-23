@@ -245,6 +245,7 @@ export default function VaccinationRecallsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={Syringe}
         title={t("recalls.title", "Vaccination recalls")}
         subtitle={t(
           "recalls.subtitle",

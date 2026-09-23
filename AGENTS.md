@@ -70,6 +70,7 @@ Package manager: **pnpm@9.15.0** (Node `>=20`).
 - **tRPC Mount Point:** All custom extension routers go in `apps/web/server/routers/extensions/` and attach strictly under `extensions: extensionsRouter` in `apps/web/server/routers/_app.ts` (`trpc.extensions.*`).
 - **Sidebar & Navigation:** Do NOT hardcode links in `sidebar.tsx`. Add them to `apps/web/config/custom-nav.ts`.
 - **Generic Vanilla vs SK/AI Extensions:** Keep changes to vanilla files generic so they can be cleanly backported upstream. Keep Slovak-specific or AI-specific logic in `ext_*` schemas or `extensions/` routers.
+- **Dashboard UI kit:** Follow `docs/UIKIT.md`. New list pages use `PageHeader` + `PageToolbar` + `DataTableFrame` / `KpiGrid` from `apps/web/components/layout/page-kit.tsx`. Do not invent per-page table or button chrome.
 
 ---
 

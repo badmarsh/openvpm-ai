@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import {
   Search,
   FileText,
+  PawPrint,
   Syringe,
   Pill,
   ClipboardList,
@@ -752,6 +753,10 @@ function RecordsPageContent() {
     { query: replacementPatientSearch.trim() },
     { enabled: canSearchReplacementPatients }
   );
+  const recentPatientsQuery = trpc.patients.list.useQuery(
+    { limit: 25 },
+    { enabled: !selectedPatient && !canSearchPatients }
+  );
 
   const patientId = selectedPatient?.id ?? "";
   const visitContextMatchesPatient =
@@ -1289,8 +1294,12 @@ function RecordsPageContent() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={FileText}
         title={t("records.title", "Clinical Record")}
-        subtitle={t("records.subtitle", "Clinical documentation and patient history")}
+        subtitle={t(
+          "records.subtitle",
+          "Clinical documentation. Identity and owner stay on the patient card.",
+        )}
       />
 
       {/* Patient Search */}
@@ -1318,17 +1327,17 @@ function RecordsPageContent() {
             searchResults) && (
           <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">
             {patientSearchError || patientSearchMissing ? (
-              <div className="px-4 py-3 text-sm text-destructive">
+              <div className="px-3 py-2 text-sm text-destructive">
                 {patientSearchError?.message ??
                   t("records.searchError", "Unable to search patients. Please retry.")}
               </div>
             ) : isSearchingPatients ? (
-              <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 {t("records.searchingPatients", "Searching patients...")}
               </div>
             ) : searchResults && searchResults.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground">
+              <div className="px-3 py-2 text-sm text-muted-foreground">
                 {t("records.noPatientsFound", "No patients found")}
               </div>
             ) : (
@@ -1349,7 +1358,7 @@ function RecordsPageContent() {
                     setShowPrescriptionForm(false);
                     setPrescriptionForm(initialPrescriptionForm());
                   }}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-muted/50 first:rounded-t-lg last:rounded-b-lg transition-colors"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted/50 first:rounded-t-lg last:rounded-b-lg transition-colors"
                 >
                   <div>
                     <span className="font-medium">{patient.name}</span>
@@ -1378,7 +1387,7 @@ function RecordsPageContent() {
 
       {/* Selected Patient Banner */}
       {selectedPatient && (
-        <div className="mt-4 flex flex-col items-stretch gap-3 rounded-lg border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 flex flex-col items-stretch gap-3 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 text-sm">
             <span className="block truncate font-medium sm:inline">
               {selectedPatient.name}
@@ -1400,27 +1409,39 @@ function RecordsPageContent() {
             )}
           </div>
           {!linkedAppointmentId ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-11 w-full sm:h-9 sm:w-auto"
-              onClick={() => {
-                setSelectedPatient(null);
-                setSearchQuery("");
-                setShowVaccinationForm(false);
-                setVaccinationForm(initialVaccinationForm());
-                setShowProblemForm(false);
-                setProblemForm(initialProblemForm());
-                setShowLabForm(false);
-                setLabForm(initialLabResultForm());
-                setShowProcedureForm(false);
-                setProcedureForm(initialProcedureForm());
-                setShowPrescriptionForm(false);
-                setPrescriptionForm(initialPrescriptionForm());
-              }}
-            >
-              {t("records.changePatient", "Change Patient")}
-            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 w-full sm:h-9 sm:w-auto"
+                asChild
+              >
+                <Link href={`/patients/${selectedPatient.id}`}>
+                  {t("records.openIdentity", "Otvoriť kartu pacienta")}
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-11 w-full sm:h-9 sm:w-auto"
+                onClick={() => {
+                  setSelectedPatient(null);
+                  setSearchQuery("");
+                  setShowVaccinationForm(false);
+                  setVaccinationForm(initialVaccinationForm());
+                  setShowProblemForm(false);
+                  setProblemForm(initialProblemForm());
+                  setShowLabForm(false);
+                  setLabForm(initialLabResultForm());
+                  setShowProcedureForm(false);
+                  setProcedureForm(initialProcedureForm());
+                  setShowPrescriptionForm(false);
+                  setPrescriptionForm(initialPrescriptionForm());
+                }}
+              >
+                {t("records.changePatient", "Change Patient")}
+              </Button>
+            </div>
           ) : null}
         </div>
       )}
@@ -1428,7 +1449,7 @@ function RecordsPageContent() {
       {selectedPatient &&
       linkedAppointmentId &&
       linkedPatientId === selectedPatient.id ? (
-        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-teal-300 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-100 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-sm text-teal-950 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-100 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-medium">{t("records.recordingForThisVisit", "Recording for this visit")}</p>
             <p className="mt-0.5 text-xs">
@@ -1464,7 +1485,7 @@ function RecordsPageContent() {
 
       {selectedPatient && !isOnline ? (
         <div
-          className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+          className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
           role="status"
         >
           {t("records.offlineBanner", "Offline — clinical forms stay only on this device. Keep this page open and reconnect before saving a record.")}
@@ -2100,25 +2121,25 @@ function RecordsPageContent() {
                   <RecordsLoadingPanel label={t("records.vaccinations.loading", "Loading vaccinations...")} />
                 ) : vaccinations && vaccinations.length > 0 ? (
                   <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.vaccinations.colVaccine", "Vaccine")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.vaccinations.colDateAdministered", "Date Administered")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.vaccinations.colNextDue", "Next Due")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.vaccinations.colAdministeredBy", "Administered By")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.vaccinations.colStatus", "Status")}
                           </th>
-                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                             {t("records.vaccinations.colActions", "Actions")}
                           </th>
                         </tr>
@@ -2138,10 +2159,10 @@ function RecordsPageContent() {
                                       "bg-destructive/5 text-muted-foreground",
                                   )}
                                 >
-                                  <td className="px-4 py-3 font-medium align-middle">
+                                  <td className="px-3 py-2 font-medium align-middle">
                                     {vax.vaccineName}
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap align-middle">
+                                  <td className="px-3 py-2 whitespace-nowrap align-middle">
                                     {vax.administeredAt
                                       ? formatClinicalDate(
                                           vax.administeredAt,
@@ -2149,7 +2170,7 @@ function RecordsPageContent() {
                                         )
                                       : "--"}
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap align-middle">
+                                  <td className="px-3 py-2 whitespace-nowrap align-middle">
                                     {vax.nextDueDate
                                       ? formatClinicalDate(
                                           vax.nextDueDate,
@@ -2157,10 +2178,10 @@ function RecordsPageContent() {
                                         )
                                       : "--"}
                                   </td>
-                                  <td className="px-4 py-3 text-muted-foreground align-middle">
+                                  <td className="px-3 py-2 text-muted-foreground align-middle">
                                     {vax.administeredByName ?? "--"}
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap align-middle">
+                                  <td className="px-3 py-2 whitespace-nowrap align-middle">
                                     {vax.correctionId ? (
                                       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
                                         {t("records.enteredInError", "Entered in error")}
@@ -2182,7 +2203,7 @@ function RecordsPageContent() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 text-right align-middle whitespace-nowrap">
+                                  <td className="px-3 py-2 text-right align-middle whitespace-nowrap">
                                     <ClinicalCorrectionControl
                                       className="flex justify-end"
                                       timeZone={recordsTimeZone}
@@ -2561,28 +2582,28 @@ function RecordsPageContent() {
                   <RecordsLoadingPanel label={t("records.prescriptions.loading", "Loading prescriptions...")} />
                 ) : prescriptionsList && prescriptionsList.length > 0 ? (
                   <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.prescriptions.colMedication", "Medication")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.prescriptions.colDosage", "Dosage")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.prescriptions.colFrequency", "Frequency")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.prescriptions.colInventory", "Inventory")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.prescriptions.colStatus", "Status")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.prescriptions.colRefills", "Refills")}
                           </th>
-                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-right font-medium text-muted-foreground">
                             {t("records.prescriptions.colActions", "Actions")}
                           </th>
                         </tr>
@@ -2593,14 +2614,14 @@ function RecordsPageContent() {
                             key={rx.id}
                             className="border-b border-border last:border-0"
                           >
-                            <td className="px-4 py-3 font-medium">
+                            <td className="px-3 py-2 font-medium">
                               {rx.medicationName}
                             </td>
-                            <td className="px-4 py-3">{rx.dosage ?? "--"}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2">{rx.dosage ?? "--"}</td>
+                            <td className="px-3 py-2">
                               {rx.frequency ?? "--"}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-3 py-2 text-muted-foreground">
                               {rx.productName ? (
                                 <span>
                                   {rx.productName}
@@ -2614,7 +2635,7 @@ function RecordsPageContent() {
                                 "--"
                               )}
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2">
                               <span
                                 className={cn(
                                   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
@@ -2630,10 +2651,10 @@ function RecordsPageContent() {
                                       : (rx.effectiveStatus ?? "unknown")}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2">
                               {rx.refillsRemaining ?? 0}
                             </td>
-                            <td className="space-y-2 px-4 py-3 text-right align-top">
+                            <td className="space-y-2 px-3 py-2 text-right align-top">
                               <div>
                                 <Button
                                   variant="ghost"
@@ -2867,7 +2888,7 @@ function RecordsPageContent() {
                     {problems.map((problem) => (
                       <div
                         key={problem.id}
-                        className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-3 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div>
                           <p
@@ -2982,7 +3003,7 @@ function RecordsPageContent() {
               <h2 id="records-section-labResults" className="sr-only">{tabLabels.labResults}</h2>
               <div>
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                  <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p className="font-medium">
@@ -3315,34 +3336,34 @@ function RecordsPageContent() {
                       <LabTrendCharts groups={labTrendGroups} />
                     )}
                     <div className="overflow-x-auto rounded-lg border border-border">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-border bg-muted/50">
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colTestName", "Test Name")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colResult", "Result")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colUnit", "Unit")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colReferenceRange", "Reference Range")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colStatus", "Status")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colReviewEvidence", "Review evidence")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colOrderedBy", "Ordered By")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colDate", "Date")}
                             </th>
-                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {t("records.labResults.colActions", "Actions")}
                             </th>
                           </tr>
@@ -3364,7 +3385,7 @@ function RecordsPageContent() {
                                     "bg-destructive/5 text-muted-foreground"
                                 )}
                               >
-                                <td className="px-4 py-3 font-medium">
+                                <td className="px-3 py-2 font-medium">
                                   {lab.testName}
                                   {lab.replacesLabResultId ? (
                                     <a
@@ -3385,7 +3406,7 @@ function RecordsPageContent() {
                                 </td>
                                 <td
                                   className={cn(
-                                    "px-4 py-3",
+                                    "px-3 py-2",
                                     outOfRange
                                       ? "text-red-600 font-semibold dark:text-red-400"
                                       : ""
@@ -3393,16 +3414,16 @@ function RecordsPageContent() {
                                 >
                                   {lab.resultValue ?? "--"}
                                 </td>
-                                <td className="px-4 py-3 text-muted-foreground">
+                                <td className="px-3 py-2 text-muted-foreground">
                                   {lab.unit ?? "--"}
                                 </td>
-                                <td className="px-4 py-3 text-muted-foreground">
+                                <td className="px-3 py-2 text-muted-foreground">
                                   {lab.referenceRangeLow != null &&
                                   lab.referenceRangeHigh != null
                                     ? `${lab.referenceRangeLow} - ${lab.referenceRangeHigh}`
                                     : "--"}
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-3 py-2">
                                   <div className="flex flex-col items-start gap-1">
                                     <span
                                       className={cn(
@@ -3438,7 +3459,7 @@ function RecordsPageContent() {
                                     ) : null}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-xs text-muted-foreground">
+                                <td className="px-3 py-2 text-xs text-muted-foreground">
                                   {lab.completedAt ? (
                                     <span className="block">
                                       {t("records.labResults.completedBy", "Completed {date} · {actor}", {
@@ -3469,10 +3490,10 @@ function RecordsPageContent() {
                                     </span>
                                   ) : null}
                                 </td>
-                                <td className="px-4 py-3 text-muted-foreground">
+                                <td className="px-3 py-2 text-muted-foreground">
                                   {lab.orderedByName ?? "--"}
                                 </td>
-                                <td className="px-4 py-3 text-muted-foreground">
+                                <td className="px-3 py-2 text-muted-foreground">
                                   {lab.createdAt
                                     ? formatClinicalDate(
                                         lab.createdAt,
@@ -3480,7 +3501,7 @@ function RecordsPageContent() {
                                       )
                                     : "--"}
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-3 py-2">
                                   {lab.correctionId ? (
                                     <div className="min-w-64">
                                       <ClinicalCorrectionControl
@@ -3815,22 +3836,22 @@ function RecordsPageContent() {
                   <RecordsLoadingPanel label={t("records.procedures.loading", "Loading procedures...")} />
                 ) : proceduresList && proceduresList.length > 0 ? (
                   <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.procedures.colName", "Name")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.procedures.colPerformedBy", "Performed By")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.procedures.colDuration", "Duration")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.procedures.colAnesthesia", "Anesthesia")}
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {t("records.procedures.colDate", "Date")}
                           </th>
                         </tr>
@@ -3841,7 +3862,7 @@ function RecordsPageContent() {
                             key={proc.id}
                             className="border-b border-border last:border-0"
                           >
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2">
                               <p className="font-medium">{proc.name}</p>
                               {proc.description && (
                                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -3849,18 +3870,18 @@ function RecordsPageContent() {
                                 </p>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-3 py-2 text-muted-foreground">
                               {proc.performedByName ?? "--"}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-3 py-2 text-muted-foreground">
                               {proc.durationMinutes
                                 ? t("records.procedures.minutesValue", "{minutes} min", { minutes: proc.durationMinutes })
                                 : "--"}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-3 py-2 text-muted-foreground">
                               {proc.anesthesiaUsed ?? "--"}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-3 py-2 text-muted-foreground">
                               {proc.createdAt
                                 ? formatClinicalDate(
                                     proc.createdAt,
@@ -3893,13 +3914,110 @@ function RecordsPageContent() {
         </Tabs>
       )}
 
-      {/* Prompt to search if no patient selected */}
-      {!selectedPatient && (
-        <EmptyState
-          className="mt-6"
-          icon={Search}
-          title={t("records.searchPrompt", "Search for a patient above to view their medical records")}
-        />
+      {/* Recent patients landing — clinical chart, not search-only */}
+      {!selectedPatient && !canSearchPatients && (
+        <div className="mt-6 space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">
+              {t("records.recentPatientsTitle", "Nedávni pacienti")}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "records.recentPatientsSubtitle",
+                "Otvorte klinickú kartu. Identita a majiteľ ostávajú na karte pacienta.",
+              )}
+            </p>
+          </div>
+          {recentPatientsQuery.isLoading ? (
+            <TableSkeleton rows={8} columns={4} />
+          ) : recentPatientsQuery.error ? (
+            <RecordsErrorPanel message={recentPatientsQuery.error.message} />
+          ) : recentPatientsQuery.data?.items.length ? (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="h-9 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("records.colPatient", "Pacient")}
+                    </th>
+                    <th className="h-9 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("records.colSpecies", "Druh")}
+                    </th>
+                    <th className="h-9 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("records.colOwner", "Majiteľ")}
+                    </th>
+                    <th className="h-9 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("records.openChart", "Otvoriť klinickú kartu")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPatientsQuery.data.items.map((patient) => (
+                    <tr
+                      key={patient.id}
+                      className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                      onClick={() => {
+                        setSelectedPatient({
+                          id: patient.id,
+                          name: patient.name,
+                          species: patient.species,
+                          breed: patient.breed,
+                          clientFirstName: patient.clientFirstName,
+                          clientLastName: patient.clientLastName,
+                        });
+                        setSearchQuery(patient.name);
+                        setShowVaccinationForm(false);
+                        setVaccinationForm(initialVaccinationForm());
+                        setShowProblemForm(false);
+                        setProblemForm(initialProblemForm());
+                        setShowLabForm(false);
+                        setLabForm(initialLabResultForm());
+                        setShowProcedureForm(false);
+                        setProcedureForm(initialProcedureForm());
+                        setShowPrescriptionForm(false);
+                        setPrescriptionForm(initialPrescriptionForm());
+                      }}
+                    >
+                      <td className="px-3 py-2 font-medium">
+                        {patient.name}
+                        {patient.breed ? (
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {patient.breed}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 capitalize text-muted-foreground">
+                        {patient.species
+                          ? t(`patients.species_${patient.species}`, patient.species)
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {patient.clientFirstName && patient.clientLastName
+                          ? `${patient.clientFirstName} ${patient.clientLastName}`
+                          : t("patients.profile.noOwner", "Owner not listed")}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <Button size="sm" variant="ghost" className="h-8 text-xs">
+                          {t("records.openChart", "Otvoriť klinickú kartu")}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              className="mt-2"
+              icon={PawPrint}
+              title={t("records.emptyPatientsTitle", "Žiadni pacienti")}
+              description={t(
+                "records.emptyPatientsDescription",
+                "Pridajte pacienta na karte pacienta, potom tu otvoríte klinickú dokumentáciu.",
+              )}
+            />
+          )}
+        </div>
       )}
     </div>
   );

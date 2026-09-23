@@ -527,14 +527,7 @@ export function Sidebar({
                               )}
 
                             {!isCollapsed && item.badge && (
-                              <span
-                                className={cn(
-                                  "ml-auto rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-wider",
-                                  isActive
-                                    ? "bg-white/25 text-white"
-                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-                                )}
-                              >
+                              <span className="ml-auto rounded-md bg-background px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-wider text-foreground ring-1 ring-border">
                                 {item.badge}
                               </span>
                             )}
@@ -566,10 +559,7 @@ export function Sidebar({
                   .slice(0, 2)}
               </div>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                  {session.user.name}
-                </p>
-                <p className="truncate text-[10px] text-muted-foreground capitalize font-medium">
+                <p className="truncate text-[11px] text-muted-foreground capitalize font-medium">
                   {session.user.role
                     ? t(
                         `roles.${session.user.role}`,

@@ -3,14 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Search, Plus, Users, Phone, Mail } from "lucide-react";
+import { Plus, Users, Phone, Mail } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { TableSkeleton } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+} from "@/components/layout/page-kit";
+import { cn } from "@/lib/utils";
 import { CLIENT_SEARCH_MAX_LENGTH } from "@/lib/clients/policy";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
 import { useI18n } from "@/lib/i18n";
@@ -45,15 +54,17 @@ export default function ClientsPage() {
     : null;
 
   return (
-    <div>
+    <div className={pageShellClass}>
       <PageHeader
+        icon={Users}
         title={t("clients.title", "Clients")}
         subtitle={t("clients.subtitle", "Manage client information")}
         actions={
           canManageClients ? (
             <Button
+              size="sm"
               onClick={() => router.push("/clients/new")}
-              className="h-11 w-full sm:h-10 sm:w-auto"
+              className="w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
               {t("clients.new_client", "New Client")}
@@ -62,19 +73,15 @@ export default function ClientsPage() {
         }
       />
 
-      <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("clients.search_placeholder", "Search clients...")}
-            value={search}
-            maxLength={CLIENT_SEARCH_MAX_LENGTH}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 pl-9 sm:h-10"
-          />
-        </div>
+      <PageToolbar>
+        <SearchField
+          value={search}
+          maxLength={CLIENT_SEARCH_MAX_LENGTH}
+          placeholder={t("clients.search_placeholder", "Search clients...")}
+          onChange={setSearch}
+        />
         {verifiedClientList && (
-          <p className="text-sm text-muted-foreground sm:shrink-0">
+          <p className="text-xs text-muted-foreground sm:ml-auto sm:shrink-0">
             {verifiedClientList.total === 1
               ? t("clients.plural_one", "1 client", {
                   count: verifiedClientList.total,
@@ -92,18 +99,18 @@ export default function ClientsPage() {
                   )}
           </p>
         )}
-      </div>
+      </PageToolbar>
 
       {error || clientsMissing ? (
-        <div className="mt-6 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
           {error?.message ??
             t("common.error_retry", "Unable to load clients. Please retry.")}
         </div>
       ) : isLoading ? (
-        <TableSkeleton rows={8} cols={5} className="mt-6" />
+        <TableSkeleton rows={8} cols={5} />
       ) : verifiedClientList && verifiedClientList.items.length > 0 ? (
         <>
-          <div className="mt-6 space-y-3 sm:hidden">
+          <div className="space-y-3 sm:hidden">
             {verifiedClientList.items.map((client) => {
               const fullName = `${client.firstName} ${client.lastName}`;
 
@@ -150,23 +157,23 @@ export default function ClientsPage() {
             })}
           </div>
 
-          <div className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block">
-            <table className="w-full text-sm">
+          <DataTableFrame className="hidden sm:block">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("clients.column_name", "Name")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("clients.column_email", "Email")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("clients.column_phone", "Phone")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("clients.column_city", "City")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("clients.column_created", "Created")}
                   </th>
                 </tr>
@@ -176,9 +183,9 @@ export default function ClientsPage() {
                   <tr
                     key={client.id}
                     onClick={() => router.push(`/clients/${client.id}`)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    className={cn("cursor-pointer", tableRowClass)}
                   >
-                    <td className="px-4 py-3">
+                    <td className={tableCellClass}>
                       <div className="font-medium text-foreground">{client.firstName} {client.lastName}</div>
                       {(client.patientCount > 0 || client.city) && (
                         <div className="text-[11px] text-muted-foreground mt-0.5">
@@ -199,7 +206,7 @@ export default function ClientsPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {client.email ? (
                         <a
                           href={`mailto:${client.email}`}
@@ -211,7 +218,7 @@ export default function ClientsPage() {
                         </a>
                       ) : "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {client.phone ? (
                         <span className="inline-flex items-center gap-1.5">
                           <a
@@ -228,10 +235,10 @@ export default function ClientsPage() {
                         </span>
                       ) : "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {client.city || "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {formatClinicalDate(
                         client.createdAt,
                         clientListTimeZone,
@@ -242,11 +249,10 @@ export default function ClientsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTableFrame>
         </>
       ) : (
         <EmptyState
-          className="mt-6"
           icon={Users}
           title={
             hasSearch

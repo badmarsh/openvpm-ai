@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Calendar,
@@ -9,7 +10,6 @@ import {
   Clock,
   ExternalLink,
   FileText,
-  Filter,
   HeartHandshake,
   Layers,
   Loader2,
@@ -18,7 +18,6 @@ import {
   Search,
   Stethoscope,
   User,
-  Users,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -38,6 +37,7 @@ type TabKey = "today" | "active" | "followUps" | "all";
 
 export default function EncountersPage() {
   const { t } = useI18n();
+  const router = useRouter();
   const todayStr = useMemo(() => formatDateInputLocal(), []);
 
   const [activeTab, setActiveTab] = useState<TabKey>("today");
@@ -213,6 +213,7 @@ export default function EncountersPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
+        icon={Stethoscope}
         title={t("encounters.hub.title", "Vyšetrenia a klinické návštevy")}
         subtitle={t(
           "encounters.hub.subtitle",
@@ -512,25 +513,25 @@ export default function EncountersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="py-3 px-4">
+                  <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableDueDate", "Termín kontroly")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tablePatient", "Pacient")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableClient", "Majiteľ")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableAssignee", "Zodpovedný riešiteľ")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableNotes", "Poznámky")}
                     </th>
-                    <th className="py-3 px-4 text-right">
+                    <th className="py-2 px-3 text-right">
                       {t("encounters.hub.tableActions", "Akcie")}
                     </th>
                   </tr>
@@ -544,9 +545,12 @@ export default function EncountersPage() {
                     return (
                       <tr
                         key={item.closeoutId}
-                        className="hover:bg-muted/40 transition-colors"
+                        className="cursor-pointer hover:bg-muted/40 transition-colors"
+                        onClick={() =>
+                          router.push(`/encounters/${item.appointmentId}#visit-closeout`)
+                        }
                       >
-                        <td className="py-3 px-4 whitespace-nowrap font-medium">
+                        <td className="py-2 px-3 whitespace-nowrap font-medium">
                           <div className="flex items-center gap-1.5">
                             <Clock
                               className={cn(
@@ -559,10 +563,11 @@ export default function EncountersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-2 px-3 whitespace-nowrap">
                           {item.patientId ? (
                             <Link
                               href={`/patients/${item.patientId}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
                             >
                               <span>{item.patientName || "—"}</span>
@@ -574,22 +579,23 @@ export default function EncountersPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap text-muted-foreground">
+                        <td className="py-2 px-3 whitespace-nowrap text-muted-foreground">
                           {item.clientFirstName} {item.clientLastName}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-2 px-3 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                             <User className="h-3.5 w-3.5" />
                             {item.assigneeName || "—"}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-xs text-muted-foreground max-w-xs truncate">
+                        <td className="py-2 px-3 text-xs text-muted-foreground max-w-xs truncate">
                           {item.followUpNotes || "—"}
                         </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <td className="py-2 px-3 text-right whitespace-nowrap">
                           <Button size="sm" asChild className="gap-1.5">
                             <Link
                               href={`/encounters/${item.appointmentId}#visit-closeout`}
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" />
                               {t("encounters.hub.resolveFollowUp", "Vyriešiť kontrolu")}
@@ -631,31 +637,31 @@ export default function EncountersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="py-3 px-4">
+                  <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableTime", "Čas")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tablePatient", "Pacient")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableClient", "Majiteľ")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableType", "Typ úkonu")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableDoctor", "Lekár")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableLocation", "Miestnosť / Pobočka")}
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-2 px-3">
                       {t("encounters.hub.tableStatus", "Stav")}
                     </th>
-                    <th className="py-3 px-4 text-right">
+                    <th className="py-2 px-3 text-right">
                       {t("encounters.hub.tableActions", "Akcie")}
                     </th>
                   </tr>
@@ -672,21 +678,24 @@ export default function EncountersPage() {
                       <tr
                         key={apt.id}
                         className={cn(
-                          "transition-colors hover:bg-muted/40",
+                          "cursor-pointer transition-colors hover:bg-muted/40",
                           isInExam && "bg-emerald-500/5",
                           isCheckedIn && "bg-amber-500/5"
                         )}
+                        onClick={() => router.push(`/encounters/${apt.id}`)}
                       >
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <div className="font-semibold text-foreground">
+                        <td className="py-2 px-3 whitespace-nowrap">
+                          <div className="font-semibold tabular-nums text-foreground">
                             {formatTime(apt.startTime)}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
-                            do {formatTime(apt.endTime)}
+                          <div className="text-[11px] tabular-nums text-muted-foreground">
+                            {t("encounters.hub.until", "do {time}", {
+                              time: formatTime(apt.endTime),
+                            })}
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-2 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <span className="text-base" aria-hidden="true">
                               {emoji}
@@ -694,6 +703,7 @@ export default function EncountersPage() {
                             {apt.patientId ? (
                               <Link
                                 href={`/patients/${apt.patientId}`}
+                                onClick={(e) => e.stopPropagation()}
                                 className="font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
                               >
                                 <span>{apt.patientName || t("dashboard.upcoming.unknownPatient", "Neznámy")}</span>
@@ -707,7 +717,7 @@ export default function EncountersPage() {
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-2 px-3 whitespace-nowrap">
                           <div className="font-medium text-foreground text-xs">
                             {apt.clientFirstName} {apt.clientLastName}
                           </div>
@@ -718,7 +728,7 @@ export default function EncountersPage() {
                           )}
                         </td>
 
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-2 px-3 whitespace-nowrap">
                           {apt.typeName ? (
                             <span
                               className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
@@ -740,7 +750,7 @@ export default function EncountersPage() {
                           )}
                         </td>
 
-                        <td className="py-3 px-4 whitespace-nowrap text-xs text-foreground">
+                        <td className="py-2 px-3 whitespace-nowrap text-xs text-foreground">
                           {apt.doctorName ? (
                             <div className="flex items-center gap-1">
                               <User className="h-3.5 w-3.5 text-muted-foreground" />
@@ -751,25 +761,30 @@ export default function EncountersPage() {
                           )}
                         </td>
 
-                        <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground">
+                        <td className="py-2 px-3 whitespace-nowrap text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3 text-muted-foreground/60" />
                             <span>
-                              {apt.roomName || apt.locationName || "Ambulancia"}
+                              {apt.roomName ||
+                                apt.locationName ||
+                                t("encounters.hub.examRoomFallback", "Ambulancia")}
                             </span>
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-2 px-3 whitespace-nowrap">
                           {getStatusBadge(apt.status)}
                         </td>
 
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <td className="py-2 px-3 text-right whitespace-nowrap">
                           {isInExam || isCheckedIn ? (
                             <Button size="sm" asChild className="gap-1.5 shadow-xs">
-                              <Link href={`/encounters/${apt.id}`}>
+                              <Link
+                                href={`/encounters/${apt.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Stethoscope className="h-3.5 w-3.5" />
-                                {t("encounters.hub.enterRoom", "Vstúpiť do ambulancie")}
+                                {t("encounters.hub.enterRoom", "Otvoriť vyšetrenie")}
                               </Link>
                             </Button>
                           ) : isCheckedOut ? (
@@ -779,7 +794,10 @@ export default function EncountersPage() {
                               asChild
                               className="gap-1.5"
                             >
-                              <Link href={`/encounters/${apt.id}#visit-closeout`}>
+                              <Link
+                                href={`/encounters/${apt.id}#visit-closeout`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <FileText className="h-3.5 w-3.5" />
                                 {t("encounters.hub.viewRecord", "Zobraziť protokol")}
                               </Link>
@@ -791,7 +809,10 @@ export default function EncountersPage() {
                               asChild
                               className="gap-1.5"
                             >
-                              <Link href={`/encounters/${apt.id}`}>
+                              <Link
+                                href={`/encounters/${apt.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Stethoscope className="h-3.5 w-3.5" />
                                 {t("encounters.hub.openEncounter", "Otvoriť vyšetrenie")}
                               </Link>

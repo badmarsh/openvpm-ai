@@ -3197,6 +3197,7 @@ function SchedulePageContent() {
         </div>
       ) : null}
       <PageHeader
+        icon={Calendar}
         title={t("schedule.title", "Schedule")}
         subtitle={t("schedule.subtitle", "Appointment calendar")}
         actions={<CalendarSubscribe />}

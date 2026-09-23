@@ -264,6 +264,7 @@ export default function CareRemindersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={BellRing}
         title={t("careReminders.title", "Care reminders")}
         subtitle={t(
           "careReminders.subtitle",

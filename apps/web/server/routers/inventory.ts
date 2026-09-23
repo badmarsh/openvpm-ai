@@ -24,6 +24,7 @@ import {
   isInventoryCurrencyAmountInputValid,
 } from "@/lib/inventory/policy";
 import { clinicalDateInput } from "@/lib/records/clinical-inputs";
+import { isMissingRelationError } from "@/lib/db/missing-relation";
 import { listOffsetInput } from "./pagination";
 import {
   POSTGRES_INTEGER_MAX,
@@ -221,26 +222,6 @@ export const inventoryRouter = createRouter({
       const expiringSoonCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} >= ${todayYmd} and ${products.expirationDate} <= ${soonYmd}`;
       const attentionCondition = sql`(${lowStockCondition} or (${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} <= ${soonYmd}))`;
 
-      const baseConditions: SQL[] = [
-        eq(products.practiceId, ctx.practiceId),
-        activePracticePredicate(ctx.practiceId),
-        isNull(products.deletedAt),
-      ];
-
-      if (input.search) {
-        baseConditions.push(
-          sql`(${ilike(products.name, `%${input.search}%`)} OR ${ilike(products.sku, `%${input.search}%`)} OR exists (select 1 from ${extInventoryMetadata} m where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId} and (m.barcode ilike ${"%" + input.search + "%"} or m.active_substance ilike ${"%" + input.search + "%"})))`
-        );
-      }
-
-      if (input.category) {
-        baseConditions.push(sql`lower(${products.category}) = ${input.category.toLowerCase()}`);
-      }
-
-      if (input.supplierName) baseConditions.push(sql`exists (select 1 from ${extInventoryMetadata} m
-        where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId} and m.supplier_name = ${input.supplierName})`);
-      if (input.belowMinimum) baseConditions.push(sql`${products.inventoryTracked} and (${products.stockQuantity} <= 0 or ${products.stockQuantity} < coalesce(${products.reorderPoint}, 10))`);
-
       const alertCondition =
         input.alert === "attention"
           ? attentionCondition
@@ -251,54 +232,95 @@ export const inventoryRouter = createRouter({
               : input.alert === "expiring_soon"
                 ? expiringSoonCondition
                 : null;
-      const conditions = alertCondition
-        ? [...baseConditions, alertCondition]
-        : baseConditions;
 
-      const countWhere = (extra?: SQL) =>
-        ctx.db
-          .select({ count: sql<number>`count(*)` })
-          .from(products)
-          .where(and(...(extra ? [...baseConditions, extra] : baseConditions)));
+      const run = async (includeMetadata: boolean) => {
+        const baseConditions: SQL[] = [
+          eq(products.practiceId, ctx.practiceId),
+          activePracticePredicate(ctx.practiceId),
+          isNull(products.deletedAt),
+        ];
 
-      const [
-        items,
-        countResult,
-        attentionCount,
-        lowStockCount,
-        expiredCount,
-        expiringSoonCount,
-      ] = await Promise.all([
-        ctx.db
-          .select({
-            ...getTableColumns(products),
-            vatRate: sql<string | null>`(select m.vat_rate from ${extInventoryMetadata} m where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId})`,
-          })
-          .from(products)
-          .where(and(...conditions))
-          .orderBy(products.name, products.id)
-          .limit(input.limit)
-          .offset(input.offset),
-        countWhere(alertCondition ?? undefined),
-        countWhere(attentionCondition),
-        countWhere(lowStockCondition),
-        countWhere(expiredCondition),
-        countWhere(expiringSoonCondition),
-      ]);
+        if (input.search) {
+          baseConditions.push(
+            includeMetadata
+              ? sql`(${ilike(products.name, `%${input.search}%`)} OR ${ilike(products.sku, `%${input.search}%`)} OR exists (select 1 from ${extInventoryMetadata} m where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId} and (m.barcode ilike ${"%" + input.search + "%"} or m.active_substance ilike ${"%" + input.search + "%"})))`
+              : sql`(${ilike(products.name, `%${input.search}%`)} OR ${ilike(products.sku, `%${input.search}%`)})`,
+          );
+        }
 
-      return {
-        items: items.map((p) => ({
-          ...p,
-          ...inventoryAlert(p, todayYmd, input.expiryWindowDays),
-        })),
-        total: Number(countResult[0]?.count ?? 0),
-        alertCounts: {
-          attention: Number(attentionCount[0]?.count ?? 0),
-          lowStock: Number(lowStockCount[0]?.count ?? 0),
-          expired: Number(expiredCount[0]?.count ?? 0),
-          expiringSoon: Number(expiringSoonCount[0]?.count ?? 0),
-        },
+        if (input.category) {
+          baseConditions.push(
+            sql`lower(${products.category}) = ${input.category.toLowerCase()}`,
+          );
+        }
+
+        if (input.supplierName && includeMetadata) {
+          baseConditions.push(sql`exists (select 1 from ${extInventoryMetadata} m
+        where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId} and m.supplier_name = ${input.supplierName})`);
+        }
+        if (input.belowMinimum)
+          baseConditions.push(
+            sql`${products.inventoryTracked} and (${products.stockQuantity} <= 0 or ${products.stockQuantity} < coalesce(${products.reorderPoint}, 10))`,
+          );
+
+        const conditions = alertCondition
+          ? [...baseConditions, alertCondition]
+          : baseConditions;
+
+        const countWhere = (extra?: SQL) =>
+          ctx.db
+            .select({ count: sql<number>`count(*)` })
+            .from(products)
+            .where(and(...(extra ? [...baseConditions, extra] : baseConditions)));
+
+        const [
+          items,
+          countResult,
+          attentionCount,
+          lowStockCount,
+          expiredCount,
+          expiringSoonCount,
+        ] = await Promise.all([
+          ctx.db
+            .select({
+              ...getTableColumns(products),
+              vatRate: includeMetadata
+                ? sql<string | null>`(select m.vat_rate from ${extInventoryMetadata} m where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId})`
+                : sql<string | null>`null`,
+            })
+            .from(products)
+            .where(and(...conditions))
+            .orderBy(products.name, products.id)
+            .limit(input.limit)
+            .offset(input.offset),
+          countWhere(alertCondition ?? undefined),
+          countWhere(attentionCondition),
+          countWhere(lowStockCondition),
+          countWhere(expiredCondition),
+          countWhere(expiringSoonCondition),
+        ]);
+
+        return {
+          items: items.map((p) => ({
+            ...p,
+            ...inventoryAlert(p, todayYmd, input.expiryWindowDays),
+          })),
+          total: Number(countResult[0]?.count ?? 0),
+          alertCounts: {
+            attention: Number(attentionCount[0]?.count ?? 0),
+            lowStock: Number(lowStockCount[0]?.count ?? 0),
+            expired: Number(expiredCount[0]?.count ?? 0),
+            expiringSoon: Number(expiringSoonCount[0]?.count ?? 0),
+          },
+        };
       };
+
+      try {
+        return await run(true);
+      } catch (err) {
+        if (!isMissingRelationError(err, "ext_inventory_metadata")) throw err;
+        return await run(false);
+      }
     }),
 
   create: inventoryManagerProcedure

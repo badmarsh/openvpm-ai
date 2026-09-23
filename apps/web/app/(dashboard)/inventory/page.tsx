@@ -3,10 +3,9 @@
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { MarkupInput } from "@/components/inventory/markup-input";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
-  Search,
   Package,
   Plus,
   Minus,
@@ -26,7 +25,20 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { TableScroll } from "@/components/common/table-scroll";
+import {
+  DataTableFrame,
+  KpiCard,
+  KpiGrid,
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
@@ -233,7 +245,7 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-4 rounded-lg border border-border bg-card p-4 space-y-3"
+      className="rounded-lg border border-border bg-card p-4 space-y-3"
     >
       <h3 className="font-medium text-sm">
         {t("inventory.form.titleAddProduct", "Add Product")}
@@ -261,7 +273,7 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className={filterControlClass}
         >
           <option value="">
             {t("inventory.form.categoryPlaceholder", "Category")}
@@ -282,7 +294,7 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
           onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
           required
         />
-        <label className="flex h-10 items-center gap-2 rounded-md border border-input px-3 text-sm">
+        <label className="flex h-9 items-center gap-2 rounded-md border border-input px-3 text-xs">
           <input
             type="checkbox"
             checked={form.taxable}
@@ -463,28 +475,28 @@ function EditProductRow({
   };
 
   return (
-    <tr className="border-b border-border bg-muted/20">
-      <td className="py-2.5 px-3">
+    <tr className={cn(tableRowClass, "bg-muted/20")}>
+      <td className={tableCellClass}>
         <Input
           value={form.name}
           maxLength={INVENTORY_PRODUCT_NAME_MAX_LENGTH}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           value={form.sku}
           maxLength={INVENTORY_PRODUCT_SKU_MAX_LENGTH}
           onChange={(e) => setForm({ ...form, sku: e.target.value })}
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm w-full"
+          className={cn(filterControlClass, "h-8 w-full px-2")}
         >
           <option value="">--</option>
           {form.category &&
@@ -498,7 +510,7 @@ function EditProductRow({
           ))}
         </select>
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           type="number"
           min={INVENTORY_MONEY_AMOUNT_MIN}
@@ -506,10 +518,10 @@ function EditProductRow({
           step="0.01"
           value={form.unitPrice}
           onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-          className="h-8 text-sm tabular-nums text-right"
+          className="h-8 text-xs tabular-nums text-right"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <label className="flex items-center justify-center gap-2 text-xs">
           <input
             type="checkbox"
@@ -521,7 +533,7 @@ function EditProductRow({
           {t("inventory.form.taxableLabel", "Taxable")}
         </label>
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           type="number"
           min={INVENTORY_MONEY_AMOUNT_MIN}
@@ -529,14 +541,14 @@ function EditProductRow({
           step="0.01"
           value={form.costPrice}
           onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
-          className="h-8 text-sm tabular-nums text-right"
+          className="h-8 text-xs tabular-nums text-right"
         />
         <MarkupInput cost={form.costPrice} onApply={(unitPrice) => setForm({ ...form, unitPrice })} />
       </td>
-      <td className="py-2.5 px-3 text-right tabular-nums">
+      <td className={cn(tableCellClass, "text-right tabular-nums")}>
         {product.inventoryTracked ? product.stockQuantity : "—"}
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           type="number"
           min={INVENTORY_STOCK_QUANTITY_MIN}
@@ -547,17 +559,17 @@ function EditProductRow({
           onChange={(e) =>
             setForm({ ...form, reorderPoint: parseInt(e.target.value) || 0 })
           }
-          className="h-8 text-sm tabular-nums text-right w-20"
+          className="h-8 w-20 text-xs tabular-nums text-right"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <div className="space-y-1">
           <Input
             value={form.lotNumber}
             disabled={!product.inventoryTracked}
             maxLength={INVENTORY_PRODUCT_LOT_NUMBER_MAX_LENGTH}
             onChange={(e) => setForm({ ...form, lotNumber: e.target.value })}
-            className="h-8 text-sm"
+            className="h-8 text-xs"
             placeholder={t("inventory.edit.lotPlaceholder", "Lot")}
           />
           <Input
@@ -572,12 +584,12 @@ function EditProductRow({
             onChange={(e) =>
               setForm({ ...form, expirationDate: e.target.value })
             }
-            className="h-8 text-sm"
+            className="h-8 text-xs"
           />
         </div>
       </td>
-      <td className="py-2.5 px-3" />
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass} />
+      <td className={tableCellClass}>
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -773,14 +785,14 @@ function StockAdjustPopover({
               : INVENTORY_ADJUSTMENT_QUANTITY_MIN
           );
         }}
-        className="h-8 text-sm mb-2"
+        className="h-8 text-xs mb-2"
         placeholder={t("inventory.adjust.quantityPlaceholder", "Quantity")}
       />
       <Input
         value={reason}
         maxLength={INVENTORY_ADJUSTMENT_REASON_MAX_LENGTH}
         onChange={(e) => setReason(e.target.value)}
-        className="h-8 text-sm mb-2"
+        className="h-8 text-xs mb-2"
         placeholder={t("inventory.adjust.reasonPlaceholder", "Reason *")}
       />
       <div className="flex gap-2">
@@ -878,7 +890,7 @@ function AddSupplierForm({ onClose }: { onClose: () => void }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-4 rounded-lg border border-border bg-card p-4 space-y-3"
+      className="rounded-lg border border-border bg-card p-4 space-y-3"
     >
       <h3 className="font-medium text-sm">
         {t("inventory.supplier.titleAdd", "Add Supplier")}
@@ -1013,16 +1025,16 @@ function EditSupplierRow({
   };
 
   return (
-    <tr className="border-b border-border bg-muted/20">
-      <td className="py-2.5 px-3">
+    <tr className={cn(tableRowClass, "bg-muted/20")}>
+      <td className={tableCellClass}>
         <Input
           value={form.name}
           maxLength={INVENTORY_SUPPLIER_NAME_MAX_LENGTH}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           type="email"
           value={form.contactEmail}
@@ -1030,34 +1042,34 @@ function EditSupplierRow({
           onChange={(e) =>
             setForm({ ...form, contactEmail: e.target.value })
           }
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           value={form.phone}
           maxLength={INVENTORY_SUPPLIER_PHONE_MAX_LENGTH}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           value={form.address}
           maxLength={INVENTORY_SUPPLIER_ADDRESS_MAX_LENGTH}
           onChange={(e) => setForm({ ...form, address: e.target.value })}
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <Input
           value={form.notes}
           maxLength={INVENTORY_SUPPLIER_NOTES_MAX_LENGTH}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          className="h-8 text-sm"
+          className="h-8 text-xs"
         />
       </td>
-      <td className="py-2.5 px-3">
+      <td className={tableCellClass}>
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -1148,8 +1160,9 @@ export default function InventoryPage() {
     !suppliersQuery.data;
 
   return (
-    <div>
+    <div className={pageShellClass}>
       <PageHeader
+        icon={Package}
         title={t("inventory.page.title", "Inventory")}
         subtitle={t(
           "inventory.page.subtitle",
@@ -1178,19 +1191,17 @@ export default function InventoryPage() {
         }
       />
 
-      {/* Tabs */}
       <Tabs
         value={tab}
         onValueChange={(v) => setTab(v as "products" | "suppliers")}
-        className="mt-4"
       >
-        <TabsList>
-          <TabsTrigger value="products" className="gap-2">
-            <Package className="h-4 w-4" />
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="products" className={underlineTabsTriggerClass}>
+            <Package className="h-3.5 w-3.5" />
             {t("inventory.tabs.products", "Products")}
           </TabsTrigger>
-          <TabsTrigger value="suppliers" className="gap-2">
-            <Truck className="h-4 w-4" />
+          <TabsTrigger value="suppliers" className={underlineTabsTriggerClass}>
+            <Truck className="h-3.5 w-3.5" />
             {t("inventory.tabs.suppliers", "Suppliers")}
           </TabsTrigger>
         </TabsList>
@@ -1199,24 +1210,20 @@ export default function InventoryPage() {
       {/* Products Tab */}
       {tab === "products" && (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div className="relative w-full min-w-48 flex-1 sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={t(
-                  "inventory.page.searchPlaceholder",
-                  "Search by name or SKU..."
-                )}
-                value={search}
-                maxLength={INVENTORY_PRODUCT_SEARCH_MAX_LENGTH}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 pl-9"
-              />
-            </div>
+          <PageToolbar>
+            <SearchField
+              value={search}
+              maxLength={INVENTORY_PRODUCT_SEARCH_MAX_LENGTH}
+              placeholder={t(
+                "inventory.page.searchPlaceholder",
+                "Search by name or SKU..."
+              )}
+              onChange={setSearch}
+            />
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className={filterControlClass}
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat.value} value={cat.value}>
@@ -1227,7 +1234,7 @@ export default function InventoryPage() {
             <select
               value={alertFilter}
               onChange={(e) => setAlertFilter(e.target.value as AlertFilter)}
-              className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className={filterControlClass}
             >
               {ALERT_FILTERS.map((filter) => (
                 <option key={filter.value} value={filter.value}>
@@ -1235,18 +1242,25 @@ export default function InventoryPage() {
                 </option>
               ))}
             </select>
-            <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={supplierName}
+            <select
+              className={filterControlClass}
+              value={supplierName}
               aria-label={t("inventory.page.supplierFilter")}
-              onChange={e => setSupplierName(e.target.value)}>
+              onChange={(e) => setSupplierName(e.target.value)}
+            >
               <option value="">{t("inventory.page.allSuppliers")}</option>
-              {(supplierOptions.data ?? []).map(name => <option key={name} value={name}>{name}</option>)}
+              {(supplierOptions.data ?? []).map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
-            <label className="flex h-9 items-center gap-2 rounded-md border px-3 text-xs">
-              <input type="checkbox" checked={belowMinimum} onChange={e => setBelowMinimum(e.target.checked)} />
+            <label className={cn(filterControlClass, "inline-flex items-center gap-2")}>
+              <input type="checkbox" checked={belowMinimum} onChange={(e) => setBelowMinimum(e.target.checked)} />
               {t("inventory.page.onlyBelowMinimum")}
             </label>
             {productsQuery.data && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground sm:ml-auto">
                 {productsQuery.data.total === 1
                   ? t("inventory.page.plural_one", "{count} product", {
                       count: productsQuery.data.total,
@@ -1261,7 +1275,7 @@ export default function InventoryPage() {
                     })}
               </p>
             )}
-          </div>
+          </PageToolbar>
 
           <WholesalerImportDialog
             open={showImportDialog}
@@ -1274,74 +1288,37 @@ export default function InventoryPage() {
           )}
 
           {productsQuery.data && (
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
-              <button
-                type="button"
+            <KpiGrid>
+              <KpiCard
+                active={alertFilter === "attention"}
                 onClick={() => setAlertFilter("attention")}
-                className={cn(
-                  "rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-primary/40",
-                  alertFilter === "attention" && "border-primary bg-primary/5"
-                )}
-              >
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  {t("inventory.page.alertAttention", "Needs attention")}
-                </span>
-                <span className="mt-1 block text-xl font-semibold tabular-nums">
-                  {productsQuery.data.alertCounts.attention}
-                </span>
-              </button>
-              <button
-                type="button"
+                icon={<AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
+                label={t("inventory.page.alertAttention", "Needs attention")}
+                value={productsQuery.data.alertCounts.attention}
+              />
+              <KpiCard
+                active={alertFilter === "low_stock"}
                 onClick={() => setAlertFilter("low_stock")}
-                className={cn(
-                  "rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-primary/40",
-                  alertFilter === "low_stock" && "border-primary bg-primary/5"
-                )}
-              >
-                <span className="text-muted-foreground">
-                  {t("inventory.page.alertLowStock", "Low stock")}
-                </span>
-                <span className="mt-1 block text-xl font-semibold tabular-nums">
-                  {productsQuery.data.alertCounts.lowStock}
-                </span>
-              </button>
-              <button
-                type="button"
+                label={t("inventory.page.alertLowStock", "Low stock")}
+                value={productsQuery.data.alertCounts.lowStock}
+              />
+              <KpiCard
+                active={alertFilter === "expired"}
                 onClick={() => setAlertFilter("expired")}
-                className={cn(
-                  "rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-primary/40",
-                  alertFilter === "expired" && "border-primary bg-primary/5"
-                )}
-              >
-                <span className="text-muted-foreground">
-                  {t("inventory.page.alertExpired", "Expired")}
-                </span>
-                <span className="mt-1 block text-xl font-semibold tabular-nums">
-                  {productsQuery.data.alertCounts.expired}
-                </span>
-              </button>
-              <button
-                type="button"
+                label={t("inventory.page.alertExpired", "Expired")}
+                value={productsQuery.data.alertCounts.expired}
+              />
+              <KpiCard
+                active={alertFilter === "expiring_soon"}
                 onClick={() => setAlertFilter("expiring_soon")}
-                className={cn(
-                  "rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-primary/40",
-                  alertFilter === "expiring_soon" &&
-                    "border-primary bg-primary/5"
-                )}
-              >
-                <span className="text-muted-foreground">
-                  {t("inventory.page.alertExpiringSoon", "Expiring soon")}
-                </span>
-                <span className="mt-1 block text-xl font-semibold tabular-nums">
-                  {productsQuery.data.alertCounts.expiringSoon}
-                </span>
-              </button>
-            </div>
+                label={t("inventory.page.alertExpiringSoon", "Expiring soon")}
+                value={productsQuery.data.alertCounts.expiringSoon}
+              />
+            </KpiGrid>
           )}
 
           {productsQuery.error || productsMissing ? (
-            <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
               {productsQuery.error?.message ??
                 t(
                   "inventory.page.loadError",
@@ -1349,44 +1326,43 @@ export default function InventoryPage() {
                 )}
             </div>
           ) : productsQuery.isLoading ? (
-            <div role="status" aria-label={t("inventory.page.loading")}><TableSkeleton className="mt-4" columns={11} /></div>
+            <div role="status" aria-label={t("inventory.page.loading")}><TableSkeleton columns={11} /></div>
           ) : productsQuery.data && productsQuery.data.items.length > 0 ? (
-            <div className="mt-4 rounded-lg border border-border overflow-hidden bg-card">
-              <TableScroll className="border-0">
-                <table className="w-full text-sm tabular-nums">
+            <DataTableFrame>
+                <table className="w-full text-xs tabular-nums">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colName", "Name")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colSku", "SKU")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colCategory", "Category")}
                     </th>
-                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("inventory.table.colPriceUnit", "Price / unit")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colTax", "Tax")}
                     </th>
-                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("inventory.table.colCost", "Cost")}
                     </th>
-                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("inventory.table.colStockUnits", "Stock units")}
                     </th>
-                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("inventory.table.colReorderPoint", "Reorder Pt")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colLotExpiry", "Lot / Expiry")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colStatus", "Status")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.table.colActions", "Actions")}
                     </th>
                   </tr>
@@ -1412,37 +1388,37 @@ export default function InventoryPage() {
                     return (
                       <tr
                         key={product.id}
-                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                        className={tableRowClass}
                       >
-                        <td className="py-2.5 px-3 font-medium">
+                        <td className={cn(tableCellClass, "font-medium")}>
                           {product.name}
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-muted-foreground">
+                        <td className={cn(tableCellClass, "font-mono text-muted-foreground")}>
                           {product.sku || "\u2014"}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-muted-foreground")}>
                           {formatProductCategory(product.category, t)}
                         </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">
+                        <td className={cn(tableCellClass, "text-right tabular-nums")}>
                           {formatCurrency(product.unitPrice)}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-muted-foreground")}>
                           {product.vatRate != null ? `${Number(product.vatRate)}%` : product.taxable ? t("inventory.table.taxable", "Taxable") : t("inventory.table.notTaxable", "Not taxable")}
                         </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-right tabular-nums text-muted-foreground")}>
                           {product.costPrice
                             ? formatCurrency(product.costPrice)
                             : "\u2014"}
                         </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">
+                        <td className={cn(tableCellClass, "text-right tabular-nums")}>
                           {product.inventoryTracked
                             ? product.stockQuantity
                             : "—"}
                         </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-right tabular-nums text-muted-foreground")}>
                           {product.reorderPoint ?? "\u2014"}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-muted-foreground")}>
                           <span className="block">
                             {product.lotNumber
                               ? t("inventory.table.lotPrefix", `Lot ${product.lotNumber}`, { number: product.lotNumber })
@@ -1454,7 +1430,7 @@ export default function InventoryPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className={tableCellClass}>
                           <div className="flex flex-wrap gap-1">
                             <span
                               className={cn(
@@ -1476,7 +1452,7 @@ export default function InventoryPage() {
                             )}
                           </div>
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className={tableCellClass}>
                           {canManageInventory ? (
                             <div className="relative flex gap-1">
                               <Button
@@ -1540,10 +1516,9 @@ export default function InventoryPage() {
                   })}
                 </tbody>
               </table>
-            </TableScroll>
 
             {/* Products Pagination */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border py-2.5 px-3 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border px-3 py-2 text-xs text-muted-foreground">
               <div>
                 {t(
                   "inventory.pagination.showing",
@@ -1582,10 +1557,9 @@ export default function InventoryPage() {
                 </Button>
               </div>
             </div>
-          </div>
+            </DataTableFrame>
         ) : (
             <EmptyState
-              className="mt-6"
               icon={Package}
               title={
                 alertFilter !== "all"
@@ -1639,9 +1613,9 @@ export default function InventoryPage() {
       {/* Suppliers Tab */}
       {tab === "suppliers" && (
         <>
-          <div className="mt-4 flex items-center justify-between">
+          <PageToolbar>
             {suppliersQuery.data && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {suppliersQuery.data.length === 1
                   ? t("inventory.suppliersTab.plural_one", "{count} supplier", {
                       count: suppliersQuery.data.length,
@@ -1660,20 +1634,20 @@ export default function InventoryPage() {
               <Button
                 size="sm"
                 onClick={() => setShowAddSupplier(true)}
-                className="ml-auto"
+                className="sm:ml-auto"
               >
                 <Plus className="h-4 w-4 mr-1" />{" "}
                 {t("inventory.suppliersTab.btnAddSupplier", "Add Supplier")}
               </Button>
             )}
-          </div>
+          </PageToolbar>
 
           {canManageInventory && showAddSupplier && (
             <AddSupplierForm onClose={() => setShowAddSupplier(false)} />
           )}
 
           {suppliersQuery.error || suppliersMissing ? (
-            <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
               {suppliersQuery.error?.message ??
                 t(
                   "inventory.suppliersTab.loadError",
@@ -1681,28 +1655,28 @@ export default function InventoryPage() {
                 )}
             </div>
           ) : suppliersQuery.isLoading ? (
-            <div role="status" aria-label={t("inventory.suppliersTab.loading")}><TableSkeleton className="mt-4" columns={6} /></div>
+            <div role="status" aria-label={t("inventory.suppliersTab.loading")}><TableSkeleton columns={6} /></div>
           ) : suppliersQuery.data && suppliersQuery.data.length > 0 ? (
-            <TableScroll className="mt-4 rounded-lg border border-border">
-              <table className="w-full text-sm tabular-nums">
+            <DataTableFrame>
+              <table className="w-full text-xs tabular-nums">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.suppliersTab.colName", "Name")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.suppliersTab.colEmail", "Email")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.suppliersTab.colPhone", "Phone")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.suppliersTab.colAddress", "Address")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.suppliersTab.colNotes", "Notes")}
                     </th>
-                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className={tableHeadClass}>
                       {t("inventory.suppliersTab.colActions", "Actions")}
                     </th>
                   </tr>
@@ -1725,27 +1699,27 @@ export default function InventoryPage() {
                     return (
                       <tr
                         key={supplier.id}
-                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                        className={tableRowClass}
                       >
-                        <td className="py-2.5 px-3 font-medium">
+                        <td className={cn(tableCellClass, "font-medium")}>
                           {supplier.name}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-muted-foreground")}>
                           {supplier.contactEmail || "\u2014"}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-muted-foreground")}>
                           {supplier.phone || "\u2014"}
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">
+                        <td className={cn(tableCellClass, "text-muted-foreground")}>
                           {supplier.address || "\u2014"}
                         </td>
                         <td
-                          className="max-w-xs truncate py-2.5 px-3 text-muted-foreground"
+                          className={cn(tableCellClass, "max-w-xs truncate text-muted-foreground")}
                           title={supplier.notes ?? undefined}
                         >
                           {supplier.notes || "\u2014"}
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className={tableCellClass}>
                           {canManageInventory ? (
                             <Button
                               size="sm"
@@ -1770,10 +1744,9 @@ export default function InventoryPage() {
                   })}
                 </tbody>
               </table>
-            </TableScroll>
+            </DataTableFrame>
           ) : (
             <EmptyState
-              className="mt-6"
               icon={Truck}
               title={t("inventory.suppliersTab.emptyTitle", "No suppliers yet")}
               description={t(

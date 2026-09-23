@@ -3,16 +3,26 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Search, Plus, PawPrint, GitMerge } from "lucide-react";
+import { Plus, PawPrint, GitMerge } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { TableSkeleton } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+} from "@/components/layout/page-kit";
 import { PATIENT_SEARCH_MAX_LENGTH } from "@/lib/patients/policy";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import {
   PATIENT_SPECIES_EMOJI,
   PATIENT_SPECIES_OPTIONS,
@@ -87,17 +97,19 @@ export default function PatientsPage() {
   const patientsMissing = !isLoading && !error && !data;
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
+        icon={PawPrint}
         title={t("patients.title", "Patients")}
         subtitle={t("patients.subtitle", "Manage patient records")}
         actions={
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
             {canReviewDuplicates ? (
               <Button
+                size="sm"
                 variant="outline"
                 onClick={() => router.push("/patients/duplicates")}
-                className="h-11 w-full sm:h-10 sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t("patients.actions.reviewDuplicates", "Review duplicates")}
@@ -105,8 +117,9 @@ export default function PatientsPage() {
             ) : null}
             {canManagePatients && (
               <Button
+                size="sm"
                 onClick={() => router.push("/patients/new")}
-                className="h-11 w-full sm:h-10 sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 {t("patients.new_patient", "New Patient")}
@@ -116,24 +129,20 @@ export default function PatientsPage() {
         }
       />
 
-      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t(
-              "patients.search_placeholder",
-              "Search patients or owners...",
-            )}
-            value={search}
-            maxLength={PATIENT_SEARCH_MAX_LENGTH}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 pl-9 sm:h-10"
-          />
-        </div>
+      <PageToolbar>
+        <SearchField
+          value={search}
+          maxLength={PATIENT_SEARCH_MAX_LENGTH}
+          placeholder={t(
+            "patients.search_placeholder",
+            "Search patients or owners...",
+          )}
+          onChange={setSearch}
+        />
         <select
           value={species}
           onChange={(e) => setSpecies(e.target.value as SpeciesFilter)}
-          className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:h-10 sm:w-auto"
+          className={filterControlClass}
         >
           {speciesOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -144,7 +153,7 @@ export default function PatientsPage() {
           ))}
         </select>
         {data && (
-          <p className="text-sm text-muted-foreground sm:shrink-0">
+          <p className="text-xs text-muted-foreground sm:ml-auto sm:shrink-0">
             {data.total === 1
               ? t("patients.plural_one", "{count} patient", { count: data.total })
               : data.total >= 2 && data.total <= 4
@@ -152,17 +161,17 @@ export default function PatientsPage() {
                 : t("patients.plural_other", "{count} patients", { count: data.total })}
           </p>
         )}
-      </div>
+      </PageToolbar>
 
       {error || patientsMissing ? (
-        <div className="mt-6 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
           {error?.message ?? t("common.error_retry", "Unable to load patients. Please retry.")}
         </div>
       ) : isLoading ? (
-        <TableSkeleton rows={8} cols={5} className="mt-6" />
+        <TableSkeleton rows={8} cols={5} />
       ) : data && data.items.length > 0 ? (
         <>
-          <div className="mt-6 space-y-3 sm:hidden">
+          <div className="space-y-3 sm:hidden">
             {data.items.map((patient) => {
               const ownerName =
                 patient.clientFirstName && patient.clientLastName
@@ -226,23 +235,23 @@ export default function PatientsPage() {
             })}
           </div>
 
-          <div className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block">
-            <table className="w-full text-sm">
+          <DataTableFrame className="hidden sm:block">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("patients.column_name", "Name")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("patients.column_breed", "Breed")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("patients.column_owner", "Owner")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("patients.column_sex", "Sex")}
                   </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  <th className={tableHeadClass}>
                     {t("patients.column_status", "Status")}
                   </th>
                 </tr>
@@ -260,9 +269,9 @@ export default function PatientsPage() {
                     <tr
                       key={patient.id}
                       onClick={() => router.push(`/patients/${patient.id}`)}
-                      className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                      className={cn("cursor-pointer", tableRowClass)}
                     >
-                      <td className="px-4 py-3 font-medium">
+                      <td className={cn(tableCellClass, "font-medium")}>
                         <span className="mr-1.5">
                           {speciesEmoji[patient.species ?? "other"] ??
                             "\uD83D\uDC3E"}
@@ -274,7 +283,7 @@ export default function PatientsPage() {
                           </p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {patient.breed || "\u2014"}
                         {patient.species && (
                           <p className="mt-0.5 text-xs">
@@ -282,7 +291,7 @@ export default function PatientsPage() {
                           </p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {patient.clientFirstName && patient.clientLastName
                           ? `${patient.clientFirstName} ${patient.clientLastName}`
                           : t("patients.profile.noOwner", "Owner not listed")}
@@ -290,10 +299,10 @@ export default function PatientsPage() {
                           <p className="mt-0.5 text-xs">{patient.clientPhone}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {formatSex(patient.sex, t)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={tableCellClass}>
                         <Badge
                           variant={
                             patient.status === "active"
@@ -311,11 +320,10 @@ export default function PatientsPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </DataTableFrame>
         </>
       ) : (
         <EmptyState
-          className="mt-6"
           icon={PawPrint}
           title={
             hasFilters
