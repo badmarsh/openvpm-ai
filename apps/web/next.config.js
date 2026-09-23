@@ -7,11 +7,26 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
 
+/**
+ * Extra dev origins allowed to request dev-only assets (HMR, /_next/*), used
+ * by the sandboxed live preview ("3001-<sandbox>.e2b.app,*.e2b.app").
+ * Unset in normal dev and production, so behaviour there is unchanged.
+ */
+function previewDevOrigins() {
+  const raw = process.env.PREVIEW_DEV_ORIGINS?.trim();
+  if (!raw) return undefined;
+  return raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../../"),
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
   poweredByHeader: false,
+  allowedDevOrigins: previewDevOrigins(),
   transpilePackages: ["@openpims/api", "@openpims/db", "@openpims/email"],
   serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
   outputFileTracingIncludes: {
