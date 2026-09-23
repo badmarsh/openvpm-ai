@@ -397,10 +397,12 @@ describe("communications.create delivery", () => {
         html: expect.stringContaining("Hello<br />&lt;script&gt;"),
       }),
     );
+    // Email inbound (Resend) is live: the footer now invites direct replies
+    // instead of the old "replies are not imported yet" notice.
     expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining(
-          "Email replies are not imported into OpenVPM yet.",
+          "Reply directly to this email — your message will arrive in our inbox.",
         ),
       }),
     );
@@ -564,7 +566,7 @@ describe("communications.create delivery", () => {
     expect(sendArgs).not.toHaveProperty("replyTo");
     expect(sendArgs).toMatchObject({
       html: expect.stringContaining(
-        "Please contact Neighborhood Veterinary directly",
+        "To reply, contact Neighborhood Veterinary directly.",
       ),
     });
   });

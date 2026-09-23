@@ -55,13 +55,21 @@ describe("isAgentConfigured (provider-agnostic)", () => {
     );
   });
 
-  it("a Claude model is configured only with a non-blank Anthropic API key", () => {
-    vi.stubEnv("AI_MODEL", "claude-sonnet-4-6");
-    vi.stubEnv("ANTHROPIC_API_KEY", "   ");
-    stubVertexOidcConfiguration(); // wrong provider's credentials
+  it("the default Gemini model requires a complete Vertex boundary even when an Anthropic key is present", () => {
+    // Since the AT-proxy migration the env no longer selects the model:
+    // activeModelId() resolves the default Gemini model (or a DB-driven
+    // override), so the env-based configuration check validates the Vertex
+    // boundary for the default model. An Anthropic key alone cannot satisfy it.
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
     expect(isAgentConfigured()).toBe(false);
-    vi.stubEnv("ANTHROPIC_API_KEY", " sk-ant-test ");
+
+    stubVertexOidcConfiguration();
     expect(isAgentConfigured()).toBe(true);
+  });
+
+  it("a blank Anthropic key alone is never a complete boundary", () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "   ");
+    expect(isAgentConfigured()).toBe(false);
   });
 
   it("defaults to Gemini on Vertex when AI_MODEL/AGENT_MODEL are blank", () => {

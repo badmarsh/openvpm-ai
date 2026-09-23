@@ -65,12 +65,17 @@ describe("mobile clinic-day UI", () => {
   it("keeps record tabs reachable and clinical forms single-column on phones", () => {
     const source = readDashboardPage("records");
 
+    // Mobile reachability contract: the tab bar keeps its top spacing
+    // (mt-6 on the Tabs root after the patient-card section split), the
+    // scrolling container keeps overflow-x-auto, and the tab list keeps
+    // min-w-max so tabs scroll horizontally instead of wrapping off-screen.
+    expect(source).toContain('className="mt-6"');
     expect(source).toContain(
-      'className="mt-6 max-w-full overflow-x-auto border-b border-border"'
+      'className="max-w-full overflow-x-auto border-b border-border"'
     );
-    expect(source).toContain('className="flex min-w-max gap-0"');
+    expect(source).toContain("w-auto min-w-max gap-0");
     expect(source).toContain(
-      '"relative flex min-h-11 shrink-0 items-center gap-2 px-4 py-2.5'
+      '"relative flex min-h-11 shrink-0 items-center gap-2'
     );
     expect(source).toContain(
       'className="grid grid-cols-1 gap-4 sm:grid-cols-2"'

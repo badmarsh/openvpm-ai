@@ -40,6 +40,7 @@ import {
 import { platformEmailIdentityConfigurationReady } from "@/lib/platform-email-preferences";
 import { hostedSmsCredentialIssueCount } from "@/lib/messaging/hosted-sms-readiness";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+import { hasInferenceProxyConfiguration } from "@/lib/agent/inference-proxy";
 
 export const dynamic = "force-dynamic";
 
@@ -138,6 +139,19 @@ function isGeminiModel(model: string): boolean {
 }
 
 function hostedAiCheck(): { ok: boolean; detail: string } {
+  // The Cloudflare AT inference proxy is a first-class AI backend: when
+  // AT_PROXY_URL is configured, model calls go through the proxy and the
+  // Vertex/Anthropic env boundaries are not required. Checking for the proxy
+  // here also surfaces an env wipe (e.g. Dokploy deploy overwriting .env)
+  // that would otherwise break the whole AI pipeline while health still
+  // reported ok — or, conversely, keep health red on proxy-only deployments.
+  if (hasInferenceProxyConfiguration()) {
+    return {
+      ok: true,
+      detail: "Hosted AI via AT inference proxy (AT_PROXY_URL set)",
+    };
+  }
+
   const model = activeAiModel();
   if (isGeminiModel(model)) {
     return hostedEnvCheck(

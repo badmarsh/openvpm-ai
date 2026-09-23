@@ -21,6 +21,16 @@ import {
 } from "@/lib/kvepis/builder";
 import { transcribeAudioDirect } from "@/lib/voice/transcription";
 import { parseFieldVisitTranscript } from "@/lib/voice/field-visit-parser";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+
+/**
+ * Withdrawal periods (ochranné lehoty) must stay within a plausible range.
+ * The products table does not store per-product statutory withdrawal data,
+ * so this input bound is the only validation available — it stops obvious
+ * garbage (e.g. 100000 days) from flowing into prescriptions and KVEPIS
+ * treatment-diary drafts.
+ */
+const MAX_WITHDRAWAL_DAYS = 365;
 
 const vetProcedure = protectedProcedure.use(
   requireRole("admin", "veterinarian", "technician")
@@ -127,7 +137,7 @@ export const fieldVisitsRouter = createRouter({
         cowId: z.string().uuid(),
         diagnosis: z.string().min(3),
         serviceIds: z.array(z.string().uuid()).default([]),
-        products: z.array(z.object({ productId: z.string().uuid(), quantity: z.number().min(0.1), instructions: z.string().optional(), meatWithdrawalDays: z.number().int().min(0).optional(), milkWithdrawalDays: z.number().int().min(0).optional() })).default([]),
+        products: z.array(z.object({ productId: z.string().uuid(), quantity: z.number().min(0.1), instructions: z.string().optional(), meatWithdrawalDays: z.number().int().min(0).max(MAX_WITHDRAWAL_DAYS).optional(), milkWithdrawalDays: z.number().int().min(0).max(MAX_WITHDRAWAL_DAYS).optional() })).default([]),
         notes: z.string().optional(),
         sendToKvepis: z.boolean().default(false),
       })
@@ -153,6 +163,19 @@ export const fieldVisitsRouter = createRouter({
       for (const prodItem of input.products) {
         const p = await ctx.db.query.products.findFirst({ where: and(eq(products.id, prodItem.productId), eq(products.practiceId, ctx.practiceId)) });
         if (p) {
+          // Controlled-substances gate (Zákon č. 139/1998 Z. z.): the voice-first
+          // field-visit flow is AI-assisted prefill, so controlled substances must
+          // never be recorded through it. They require manual entry with witness
+          // on the controlled-substances screen.
+          if (isControlledSubstanceName(p.name)) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "Kontrolovanú látku '" +
+                p.name +
+                "' nie je možné podávať cez terénny výjazd (Zákon č. 139/1998 Z. z.). Záznam vytvorte ručne v sekcii Kontrolované látky.",
+            });
+          }
           const lineTotal = parseFloat(p.unitPrice || "0") * prodItem.quantity;
           addedSubtotal += lineTotal;
           await ctx.db.insert(invoiceItems).values({ invoiceId: draftInvoice.id, description: `${p.name} — ${prodItem.quantity} ks (${cow.name})`, quantity: prodItem.quantity, unitPrice: p.unitPrice, total: lineTotal.toFixed(2), taxable: p.taxable, itemType: "product", itemId: p.id });

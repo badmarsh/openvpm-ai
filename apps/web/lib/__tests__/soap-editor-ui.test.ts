@@ -634,10 +634,19 @@ describe("records page state handling", () => {
   it("does not show restricted Records tabs as active content for front desk users", () => {
     const source = readFileSync("app/(dashboard)/records/page.tsx", "utf8");
 
+    // Role gate: tabs are filtered by role and the active tab is clamped to
+    // the visible set...
     expect(source).toContain("const visibleTabs = tabs.filter");
     expect(source).toContain("const currentTab = visibleTabs.some");
-    expect(source).toContain('{currentTab === "soap"');
-    expect(source).toContain('{currentTab === "vaccinations"');
+    // ...and the Tabs control is driven by the CLAMPED currentTab, not the
+    // raw activeTab. After the patient-card section split the tab bodies
+    // render as Radix TabsContent children of that Tabs control, so a
+    // restricted tab id can never become active content for a role that
+    // cannot see it (even when the URL says ?tab=soap).
+    expect(source).toContain("value={currentTab}");
+    expect(source).toContain('<TabsContent value="soap"');
+    expect(source).toContain('<TabsContent value="vaccinations"');
+    expect(source).not.toContain("value={activeTab}");
     expect(source).not.toContain('{activeTab === "soap"');
   });
 

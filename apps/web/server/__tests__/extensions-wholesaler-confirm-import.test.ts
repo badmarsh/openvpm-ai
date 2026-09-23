@@ -213,6 +213,56 @@ describe("wholesalerImportRouter.confirmImport", () => {
       })
     ).rejects.toThrow();
   });
+
+  it("blocks controlled substances server-side even when the client overrides the skip suggestion (Zákon č. 139/1998 Z. z.)", async () => {
+    const { mockDb, updateFn, insertFn } = createConfirmDb();
+    const caller = createCaller(mockDb);
+
+    await expect(
+      caller.confirmImport({
+        deliveryNoteNumber: "DL-2026-99",
+        supplierName: "VETOQUINOL s.r.o.",
+        items: [
+          {
+            // The preview suggests "skip" for controlled substances; the
+            // server must not trust a client payload that re-enables it.
+            action: "create_product",
+            name: "Ketalar 500 mg/ml 10 ml",
+            quantity: 2,
+          },
+        ],
+      })
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: expect.stringContaining("Kontrolovanú látku"),
+    });
+
+    expect(updateFn).not.toHaveBeenCalled();
+    expect(insertFn).not.toHaveBeenCalled();
+  });
+
+  it("still allows the preview's skip action for controlled substances", async () => {
+    const { mockDb, updateFn, productInserts } = createConfirmDb();
+    const caller = createCaller(mockDb);
+
+    const result = await caller.confirmImport({
+      deliveryNoteNumber: "DL-2026-100",
+      supplierName: "VETOQUINOL s.r.o.",
+      items: [
+        {
+          action: "skip",
+          name: "Ketalar 500 mg/ml 10 ml",
+          quantity: 1,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.skippedCount).toBe(1);
+    expect(updateFn).not.toHaveBeenCalled();
+    // Only the post-commit event-bus insert may happen — no product writes.
+    expect(productInserts().length).toBe(0);
+  });
 });
 
 describe("wholesalerImportRouter.searchProducts", () => {

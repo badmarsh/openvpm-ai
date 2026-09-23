@@ -9,6 +9,7 @@ import {
   AgentRecoveryHoldError,
   runAgent,
 } from "../runner";
+import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 
 const mocks = vi.hoisted(() => {
   const anthropicModel = vi.fn((modelId: string) => ({
@@ -96,8 +97,19 @@ function deferred<T = void>() {
 }
 
 beforeEach(() => {
-  vi.stubEnv("AI_MODEL", "claude-sonnet-4-6");
-  vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+  // Since the AT-proxy migration the env no longer selects the model:
+  // runAgent() resolves the default Gemini model, so the provider
+  // configuration check validates the complete Vertex AI OIDC boundary.
+  vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
+  vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
+  vi.stubEnv("GCP_PROJECT_NUMBER", "123456789012");
+  vi.stubEnv(
+    "GCP_SERVICE_ACCOUNT_EMAIL",
+    "vertex@openvpm-ai.iam.gserviceaccount.com",
+  );
+  vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_ID", "vercel");
+  vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", "vercel");
+  vi.stubEnv("ANTHROPIC_API_KEY", "");
 
   mocks.rateLimit.mockResolvedValue({
     success: true,
@@ -124,17 +136,8 @@ afterEach(() => {
 
 describe("runAgent rate limiting", () => {
   it("builds Gemini through Vercel OIDC workload identity federation", async () => {
-    vi.stubEnv("AI_MODEL", "google/gemini-3.5-flash");
+    // Vertex env comes from beforeEach; the model is the DB/env default.
     vi.stubEnv("ANTHROPIC_API_KEY", "");
-    vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
-    vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
-    vi.stubEnv("GCP_PROJECT_NUMBER", "123456789012");
-    vi.stubEnv(
-      "GCP_SERVICE_ACCOUNT_EMAIL",
-      "vertex@openvpm-ai.iam.gserviceaccount.com",
-    );
-    vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_ID", "vercel");
-    vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", "vercel");
 
     await runAgent({ instruction: "Summarize today", context });
 
@@ -166,7 +169,9 @@ describe("runAgent rate limiting", () => {
     await expect(
       authConfig.subject_token_supplier.getSubjectToken(),
     ).resolves.toBe("signed-vercel-token");
-    expect(mocks.vertexModel).toHaveBeenCalledWith("gemini-3.5-flash");
+    expect(mocks.vertexModel).toHaveBeenCalledWith(
+      DEFAULT_AI_MODEL.replace(/^(google\/|models\/)/, ""),
+    );
     expect(mocks.createAnthropic).not.toHaveBeenCalled();
   });
 
@@ -390,8 +395,9 @@ describe("runAgent rate limiting", () => {
     }
   });
 
-  it("does not spend rate-limit buckets when the agent provider key is blank", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "   ");
+  it("does not spend rate-limit buckets when the agent provider boundary is absent", async () => {
+    // No Vertex boundary and no AT proxy configured for the default model.
+    vi.unstubAllEnvs();
 
     await expect(
       runAgent({ instruction: "Find overdue invoices", context }),
