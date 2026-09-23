@@ -359,7 +359,7 @@ export default function DashboardPage() {
             </p>
           </div>
           {pendingFollowUps.data?.length ? (
-            <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+            <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-muted-foreground">
               {t("dashboard.followUps.openCount", "{count} open", {
                 count: pendingFollowUps.data.length,
               })}
@@ -391,7 +391,7 @@ export default function DashboardPage() {
                     <AlertTriangle
                       className={cn(
                         "mt-0.5 h-4 w-4 shrink-0",
-                        overdue ? "text-destructive" : "text-amber-600",
+                        overdue ? "text-destructive" : "text-warning",
                       )}
                     />
                     <div className="min-w-0">

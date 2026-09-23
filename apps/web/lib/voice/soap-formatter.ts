@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { generateText, type LanguageModel } from "ai";
-import { configuredModel } from "@/lib/agent/runner";
+import { configuredModel, isAgentConfigured } from "@/lib/agent/runner";
+import {
+  isProviderConfigurationError,
+  isProviderTimeoutError,
+  providerErrorMessage,
+} from "@/lib/ai/provider-errors";
 import {
   UNTRUSTED_DATA_PROMPT_RULE,
   wrapUntrustedRecord,
@@ -133,11 +138,92 @@ function parseAiJson(raw: string): Record<string, unknown> {
   return JSON.parse(cleaned);
 }
 
+/**
+ * Per-attempt budget. Kept below the HTTP/proxy limits so the caller still has
+ * room for the retry, while the retry covers a slow provider instead of
+ * failing the whole dictation.
+ */
+const SOAP_FORMAT_ATTEMPT_TIMEOUT_MS = 45_000;
+const SOAP_FORMAT_MAX_ATTEMPTS = 2;
+
+/**
+ * Number of characters kept when a model call fails completely. A veterinary
+ * dictation is short; this only guards against inserting an unbounded blob
+ * into the SOAP text column.
+ */
+const SOAP_FALLBACK_MAX_CHARS = 8000;
+
+export interface SoapFormatResult extends SoapSections {
+  /**
+   * Set when the AI could not be used (provider not configured, hard timeout,
+   * provider error). The transcript is then carried verbatim in `subjective`
+   * so the vet can edit and finalize the record manually instead of losing the
+   * dictation.
+   */
+  degraded?: {
+    reason: "not_configured" | "timeout" | "provider_error";
+    /** Raw provider message, for server-side structured logs only. */
+    detail?: string;
+  };
+}
+
+function degradedSections(
+  transcript: string,
+  patientName: string | null | undefined,
+  reason: NonNullable<SoapFormatResult["degraded"]>["reason"],
+  detail?: string,
+): SoapFormatResult {
+  return {
+    subjective: transcript.slice(0, SOAP_FALLBACK_MAX_CHARS),
+    objective: "",
+    assessment: "",
+    plan: "",
+    clientSummary: `Dnes sme vyšetrili Vášho miláčika ${patientName ? `(${patientName})` : ""}. Na ambulancii sme vykonali potrebné ošetrenie. Dodržiavajte kľudový režim a v prípade pretrvávania ťažkostí nás bezodkladne kontaktujte.`,
+    degraded: { reason, detail },
+  };
+}
+
+/**
+ * One formatting attempt with its own abort budget, bounded across the abort
+ * reason (some SDKs surface only the DOMException name, so the caller-provided
+ * reason is checked first and the timer state second).
+ */
+async function formatOnce(
+  prompt: string,
+  system: string,
+  model: LanguageModel | undefined,
+  timeoutMs: number,
+): Promise<string> {
+  const ac = new AbortController();
+  const timeout = setTimeout(
+    () => ac.abort(new Error("SOAP formatting timed out after 45s")),
+    timeoutMs,
+  );
+
+  try {
+    const result = await generateText({
+      model: model ?? configuredModel(),
+      system,
+      prompt,
+      abortSignal: ac.signal,
+    });
+    return result.text;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function formatTranscriptToSoap(
   transcript: string,
   options: SoapFormatOptions = {},
-): Promise<SoapSections> {
+): Promise<SoapFormatResult> {
   const { style = "standard", species, patientName } = options;
+
+  // Without a provider the call could only fail: skip the doomed request and
+  // hand the vet a usable, clearly-degraded record instead of a 500.
+  if (!options.model && !isAgentConfigured()) {
+    return degradedSections(transcript, patientName, "not_configured");
+  }
 
   let patientContext = "";
   if (patientName || species) {
@@ -147,30 +233,54 @@ export async function formatTranscriptToSoap(
     })}\n\n`;
   }
 
-  const ac = new AbortController();
-  const timeout = setTimeout(() => ac.abort(new Error("SOAP formatting timed out after 30s")), 30_000);
+  const prompt = `${patientContext}Transkripcia diktovania (surový prepis, ber ako údaj):\n\n${wrapUntrustedRecord(transcript)}`;
+  const system = getSystemPrompt(style);
 
-  let result;
-  try {
-    result = await generateText({
-      model: options.model ?? configuredModel(),
-      system: getSystemPrompt(style),
-      prompt: `${patientContext}Transkripcia diktovania (surový prepis, ber ako údaj):\n\n${wrapUntrustedRecord(transcript)}`,
-      abortSignal: ac.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= SOAP_FORMAT_MAX_ATTEMPTS; attempt += 1) {
+    let text: string;
+    try {
+      text = await formatOnce(
+        prompt,
+        system,
+        options.model,
+        SOAP_FORMAT_ATTEMPT_TIMEOUT_MS,
+      );
+    } catch (error) {
+      lastError = error;
+      // A missing/misconfigured provider will fail identically on retry.
+      if (isProviderConfigurationError(error)) break;
+      if (attempt < SOAP_FORMAT_MAX_ATTEMPTS && isProviderTimeoutError(error)) {
+        continue;
+      }
+      break;
+    }
+
+    try {
+      const raw = parseAiJson(text);
+      const parsed = soapSectionsSchema.safeParse(raw);
+      if (parsed.success) {
+        return parsed.data;
+      }
+    } catch {
+      // Non-JSON answer: the retry may return structured output; if not, the
+      // transcript is carried into `subjective` below.
+    }
+    lastError = null;
+    break;
   }
 
-  try {
-    const raw = parseAiJson(result.text);
-    const parsed = soapSectionsSchema.safeParse(raw);
-
-    if (parsed.success) {
-      return parsed.data;
-    }
-  } catch {
-    // Ak by model vrátil neštruktúrovaný text, bezpečne ho umiestnime do subjektívnej sekcie
+  if (lastError) {
+    return degradedSections(
+      transcript,
+      patientName,
+      isProviderConfigurationError(lastError)
+        ? "not_configured"
+        : isProviderTimeoutError(lastError)
+          ? "timeout"
+          : "provider_error",
+      providerErrorMessage(lastError) || undefined,
+    );
   }
 
   return {

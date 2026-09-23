@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { eq, and, isNull, desc, ilike, or } from "drizzle-orm";
+import { eq, and, isNull, desc, ilike, or, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { generateText } from "ai";
 import {
@@ -365,6 +365,82 @@ export const imagingRouter = createRouter({
           ),
         )
         .orderBy(desc(aiImagingAnalyses.createdAt));
+    }),
+
+  /**
+   * Register of imaging analyses across the whole practice.
+   *
+   * Radiology work is not per-patient in reality: the vet wants one list of
+   * everything that was taken (RTG, USG, CT, MRI), newest first, filterable by
+   * modality and status. `listByPatient` stays for the chart view.
+   */
+  listRecent: imagingProcedure
+    .input(
+      z
+        .object({
+          patientId: z.string().uuid().optional(),
+          imageType: z
+            .enum(["xray", "ct", "mri", "ultrasound", "photo"])
+            .optional(),
+          status: z.enum(["all", "PENDING", "COMPLETED", "FAILED"]).default("all"),
+          limit: z.number().int().min(1).max(200).default(50),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions = [
+        eq(aiImagingAnalyses.practiceId, ctx.practiceId),
+        isNull(aiImagingAnalyses.deletedAt),
+      ];
+
+      if (input?.patientId) {
+        conditions.push(eq(aiImagingAnalyses.patientId, input.patientId));
+      }
+      if (input?.imageType) {
+        conditions.push(eq(aiImagingAnalyses.imageType, input.imageType));
+      }
+      if (input?.status && input.status !== "all") {
+        conditions.push(eq(aiImagingAnalyses.status, input.status));
+      }
+
+      const [items, countRows] = await Promise.all([
+        ctx.db
+          .select({
+            id: aiImagingAnalyses.id,
+            patientId: aiImagingAnalyses.patientId,
+            patientName: patients.name,
+            patientSpecies: patients.species,
+            patientBreed: patients.breed,
+            imageType: aiImagingAnalyses.imageType,
+            analysisType: aiImagingAnalyses.analysisType,
+            status: aiImagingAnalyses.status,
+            modelId: aiImagingAnalyses.modelId,
+            userPrompt: aiImagingAnalyses.userPrompt,
+            errorMessage: aiImagingAnalyses.errorMessage,
+            revision: aiImagingAnalyses.revision,
+            createdAt: aiImagingAnalyses.createdAt,
+            completedAt: aiImagingAnalyses.completedAt,
+            // Qualified SQL text: interpolated columns lose their table
+            // qualifier inside a `select` field.
+            hasResult: sql<boolean>`ai_imaging_analyses.result is not null`,
+          })
+          .from(aiImagingAnalyses)
+          .leftJoin(patients, eq(patients.id, aiImagingAnalyses.patientId))
+          .where(and(...conditions))
+          .orderBy(desc(aiImagingAnalyses.createdAt))
+          .limit(input?.limit ?? 50)
+          .offset(input?.offset ?? 0),
+        ctx.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(aiImagingAnalyses)
+          .where(and(...conditions)),
+      ]);
+
+      return {
+        items,
+        total: Number(countRows[0]?.count ?? 0),
+      };
     }),
 
   /** Vráti detail jednej analýzy */

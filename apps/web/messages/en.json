@@ -1372,7 +1372,12 @@
     "noEmail": "No email on file",
     "cityNotListed": "City not listed",
     "addedPrefix": "Added {date}",
-    "openClient": "Open client {name}"
+    "openClient": "Open client {name}",
+    "column_patients": "Animals",
+    "column_actions": "Actions",
+    "list": {
+      "open": "Card"
+    }
   },
   "common": {
     "save": "Save",
@@ -3068,7 +3073,9 @@
     "marketingScripts": "Operative Scripts",
     "marketingCompetitors": "Competitor Intel",
     "v2Import": "V2 Migration",
-    "ekasaClosures": "Daily closures (Z-report)"
+    "ekasaClosures": "Daily closures (Z-report)",
+    "imaging": "X-ray & imaging AI",
+    "medications": "Medications & oversight"
   },
   "newSoap": {
     "loadingEditor": "Loading editor...",
@@ -3665,7 +3672,8 @@
       "summaryError": "Failed to generate medical summary"
     },
     "list": {
-      "openPatientAria": "Open patient {name}"
+      "openPatientAria": "Open patient {name}",
+      "open": "Card"
     },
     "age_months": "{count} mo.",
     "age_years": "{count} yr.",
@@ -3709,7 +3717,8 @@
       "insurancePolicyLabel": "Policy",
       "insuranceValidUntil": "Valid until",
       "insuranceCoverage": "Coverage"
-    }
+    },
+    "column_actions": "Actions"
   },
   "recalls": {
     "checkingAccess": "Checking recall access...",
@@ -4166,7 +4175,51 @@
     "colOwner": "Owner",
     "openChart": "Open clinical chart",
     "emptyPatientsTitle": "No patients",
-    "emptyPatientsDescription": "Add a patient on the patient card, then open clinical documentation here."
+    "emptyPatientsDescription": "Add a patient on the patient card, then open clinical documentation here.",
+"register": {
+      "title": "Clinical cards",
+      "subtitle": "Every clinical card with its activity, treatment and alerts. Open a card with one click.",
+      "toEncounters": "Today's visits",
+      "kpiPatients": "Active cards",
+      "kpiPrescriptions": "On medication",
+      "kpiProblems": "Open problems",
+      "kpiAlerts": "Guardian alerts",
+      "tabAll": "All cards",
+      "tabAttention": "Needs attention",
+      "tabRecent": "Activity in 30 days",
+      "rowCount": "{count} cards",
+      "searchPlaceholder": "Filter cards by patient, owner or microchip...",
+      "filterSpecies": "Species",
+      "allSpecies": "All species",
+      "filterStatus": "Card status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusDeceased": "Deceased",
+      "statusAll": "All statuses",
+      "legendOverdue": "vaccination overdue",
+      "emptyFilterTitle": "No card matches the filter",
+      "emptyFilterDescription": "Clear the search or relax the filters.",
+      "emptyTitle": "No clinical cards yet",
+      "emptyDescription": "A card appears with the first patient — vitals, a SOAP note, a vaccination or a prescription.",
+      "colPatient": "Patient",
+      "colOwner": "Owner",
+      "colLastVisit": "Last visit",
+      "colSoap": "SOAP",
+      "colProblems": "Problems",
+      "colPrescriptions": "Medication",
+      "colVaccination": "Vaccination",
+      "colActions": "Actions",
+      "noOwner": "Owner not listed",
+      "chip": "chip {chip}",
+      "unknownAuthor": "—",
+      "noVisit": "No records",
+      "statusDeceasedShort": "deceased",
+      "statusInactiveShort": "inactive",
+      "vaccinationOverdue": "Overdue",
+      "openCard": "Card",
+      "newSoap": "New SOAP",
+      "backToRegister": "Card list"
+    }
   },
   "reports": {
     "header": {
@@ -6113,7 +6166,10 @@
       "soapCopied": "SOAP record copied to clipboard",
       "confirmPrepareFailed": "Could not prepare clinician confirmation. Please review and retry.",
       "saveConflict": "The record changed concurrently. Reload and retry.",
-      "confirmationExpired": "The confirmation expired or is invalid. Review the content and confirm again."
+      "confirmationExpired": "The confirmation expired or is invalid. Review the content and confirm again.",
+      "providerNotConfigured": "No AI provider is configured. Enable one in Settings → AI and try again.",
+      "providerTimeout": "The AI provider did not answer in time. Try again or set a faster model.",
+      "formattingDegradedToast": "The transcript is ready, but AI formatting was unavailable. Please finish the SOAP manually."
     },
     "commands": {
       "newNoteReady": "A new patient note is ready",
@@ -6249,6 +6305,13 @@
       "copy": "Copy",
       "copied": "Summary copied for the owner",
       "description": "Empathetic text without Latin — suitable for handing to the owner or sending as a message."
+    },
+    "degraded": {
+      "title": "AI formatting was unavailable",
+      "notConfigured": "No AI provider is configured. The dictation transcript is kept below — finish the SOAP manually or enable a provider in Settings.",
+      "timeout": "The AI provider did not answer in time. The transcript is kept below — try reformatting again or finish the SOAP manually.",
+      "openSettings": "Open Settings → AI",
+      "providerError": "The AI provider returned an error. The transcript is saved below — try formatting again or complete the SOAP note manually."
     }
   },
   "imaging": {
@@ -6403,6 +6466,25 @@
     },
     "page": {
       "loading": "Loading image diagnostics..."
+    },
+    "register": {
+      "title": "Radiology register",
+      "subtitle": "Every X-ray, ultrasound, CT and MRI in the practice, with AI findings and confirmation state.",
+      "filterType": "Modality",
+      "allTypes": "All modalities",
+      "filterStatus": "Status",
+      "allStatuses": "All statuses",
+      "showAllPatients": "All patients",
+      "emptyTitle": "No analyses match this filter",
+      "emptyDescription": "Upload an image in the editor — the analysis is stored with its AI finding and clinician confirmation.",
+      "colDate": "Date",
+      "colPatient": "Patient",
+      "colType": "Modality",
+      "colQuestion": "Question asked",
+      "colStatus": "Status",
+      "colActions": "Actions",
+      "unknownPatient": "Unknown",
+      "revision": "rev. {count}"
     }
   },
   "discharge": {
@@ -8964,5 +9046,49 @@
       "micDenied": "Microphone access failed. Check your browser permissions.",
       "transcribeFailed": "Transcription failed. Try again or enter the diagnosis manually."
     }
+  },
+  "medications": {
+    "title": "Prescribed medication oversight",
+    "subtitle": "Every prescription in one place — treatment state, controlled substances, ending and overdue courses, interactions and Clinical Guardian alerts.",
+    "toControlled": "Controlled substances log",
+    "toRecords": "Clinical cards",
+    "kpiActive": "Active prescriptions",
+    "kpiActivePatients": "{count} patients",
+    "kpiEnding": "Ending within {days} days",
+    "kpiEndingHint": "schedule a check-up",
+    "kpiOverdue": "Overdue",
+    "kpiOverdueHint": "stop or extend the course",
+    "kpiGuardian": "Medication guardian",
+    "kpiGuardianHint": "{count} critical",
+    "scopeActive": "Active",
+    "scopeEnding": "Ending",
+    "scopeOverdue": "Overdue",
+    "scopeControlled": "Controlled",
+    "scopeAlerts": "Alerts",
+    "scopeAll": "All",
+    "rowCount": "{count} prescriptions",
+    "searchPlaceholder": "Filter by medication, patient or owner...",
+    "legendOpl": "controlled substance (Act 139/1998)",
+    "legendInteraction": "interaction in the course",
+    "legendGuardian": "guardian alert",
+    "emptyTitle": "No prescriptions in this filter",
+    "emptyDescription": "Prescriptions are issued in the patient's clinical card (Prescriptions tab) or during a visit.",
+    "colPatient": "Patient",
+    "colMedication": "Medication",
+    "colPrescriber": "Prescribed by",
+    "colPeriod": "Course period",
+    "colQuantity": "Quantity",
+    "colOversight": "Oversight",
+    "colActions": "Actions",
+    "noOwner": "Owner not listed",
+    "unknownPrescriber": "—",
+    "openEnded": "open-ended",
+    "overdueHint": "Course should have ended",
+    "statusActive": "In progress",
+    "refills": "+{count} refills",
+    "guardianBadge": "{count}× guardian",
+    "interactionBadge": "{count}× interaction",
+    "openCard": "Card",
+    "openVisit": "Visit"
   }
 }

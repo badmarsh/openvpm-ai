@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/agent/runner", () => ({
   configuredModel: mocks.configuredModel,
+  // The formatter short-circuits the provider call when no AI provider is
+  // configured; the unit tests always exercise the model path.
+  isAgentConfigured: () => true,
 }));
 
 vi.mock("ai", () => ({

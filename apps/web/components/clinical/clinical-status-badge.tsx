@@ -56,7 +56,7 @@ export function ClinicalStatusBadge({
       <div className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
         <Badge
           variant="outline"
-          className={`bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-200 ${
+          className={`bg-warning-muted text-warning-muted-foreground border-warning/30 ${
             isSm
               ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
               : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
@@ -66,10 +66,10 @@ export function ClinicalStatusBadge({
             "AI koncept vygenerovaný modelom. Čaká na explicitnú revíziu a autorizáciu veterinárnym lekárom (Zákon č. 39/2007 Z. z. §3)."
           )}
         >
-          <Sparkles className={isSm ? "h-3 w-3 text-amber-600" : "h-3.5 w-3.5 text-amber-600"} />
+          <Sparkles className={isSm ? "h-3 w-3 text-warning" : "h-3.5 w-3.5 text-warning"} />
           <span>{t("clinical.status.aiDraft", "AI Koncept (Čaká na autorizáciu)")}</span>
           {formattedScore !== null && (
-            <span className="font-mono text-[10px] bg-amber-200/60 dark:bg-amber-800/40 px-1 py-0.2 rounded font-bold">
+            <span className="font-mono text-[10px] bg-warning/15 px-1 py-0.2 rounded font-bold">
               {formattedScore}%
             </span>
           )}
@@ -83,7 +83,7 @@ export function ClinicalStatusBadge({
       <div className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
         <Badge
           variant="outline"
-          className={`bg-slate-50 text-slate-800 border-slate-300 dark:bg-slate-900/40 dark:text-slate-200 ${
+          className={`bg-muted text-muted-foreground border-border ${
             isSm
               ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
               : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
@@ -93,7 +93,7 @@ export function ClinicalStatusBadge({
             "Hodnoty boli automaticky prepísané z dokumentu alebo prístroja (deterministický parser, žiadny AI model). Vyžadujú kontrolu a potvrdenie veterinárnym lekárom (Zákon č. 39/2007 Z. z. §3)."
           )}
         >
-          <FileEdit className={isSm ? "h-3 w-3 text-slate-600" : "h-3.5 w-3.5 text-slate-600"} />
+          <FileEdit className={isSm ? "h-3 w-3 text-muted-foreground" : "h-3.5 w-3.5 text-muted-foreground"} />
           <span>{t("clinical.status.imported", "Importované (nepotvrdené lekárom)")}</span>
         </Badge>
       </div>
@@ -105,7 +105,7 @@ export function ClinicalStatusBadge({
       <div className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
         <Badge
           variant="outline"
-          className={`bg-sky-50 text-sky-900 border-sky-300 dark:bg-sky-950/40 dark:text-sky-200 ${
+          className={`bg-info-muted text-info-muted-foreground border-info/30 ${
             isSm
               ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
               : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
@@ -115,7 +115,7 @@ export function ClinicalStatusBadge({
             "Administratívny koncept vytvorený personálom. Doteraz nepodpísaný ošetrujúcim veterinárnym lekárom."
           )}
         >
-          <FileEdit className={isSm ? "h-3 w-3 text-sky-600" : "h-3.5 w-3.5 text-sky-600"} />
+          <FileEdit className={isSm ? "h-3 w-3 text-info" : "h-3.5 w-3.5 text-info"} />
           <span>{t("clinical.status.adminDraft", "Administratívny koncept")}</span>
         </Badge>
       </div>
@@ -137,7 +137,7 @@ export function ClinicalStatusBadge({
     <div className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
       <Badge
         variant="outline"
-        className={`bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-200 ${
+        className={`bg-success-muted text-success-muted-foreground border-success/30 ${
           isSm
             ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
             : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
@@ -147,7 +147,7 @@ export function ClinicalStatusBadge({
           "Platný klinický záznam autorizovaný a podpísaný veterinárnym lekárom v zmysle Zákona č. 39/2007 Z. z. (§3)."
         )}
       >
-        <ShieldCheck className={isSm ? "h-3 w-3 text-emerald-600" : "h-3.5 w-3.5 text-emerald-600"} />
+        <ShieldCheck className={isSm ? "h-3 w-3 text-success" : "h-3.5 w-3.5 text-success"} />
         <span>{t("clinical.status.authorized", "Autorizované lekárom (Podpísané)")}</span>
         {doctorName && (
           <span className="font-normal opacity-90">

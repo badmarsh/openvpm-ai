@@ -87,6 +87,22 @@ import {
   fetchWithClientTimeout,
 } from "@/lib/client-fetch";
 import { DicomViewer } from "@/components/imaging/dicom-viewer";
+import { EmptyState } from "@/components/common/empty-state";
+import { TableSkeleton } from "@/components/common/loading";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeadCell,
+  DataTableHeaderRow,
+  DataTableRow,
+  DataTableScroll,
+  DataTableShell,
+  IdentityCell,
+  SpeciesIcon,
+} from "@/components/common/data-table";
+import { formatSpecies } from "@/lib/patients/species";
 
 const IMAGE_TYPES = [
   { value: "xray", labelKey: "imaging.types.xray", label: "Röntgen" },
@@ -331,6 +347,22 @@ function ImagingContent() {
   const historyQuery = trpc.extensions.imaging.listByPatient.useQuery(
     { patientId: selectedPatient?.id ?? "" },
     { enabled: !!selectedPatient },
+  );
+
+  // Practice-wide radiology register (the list the clinic reads every day).
+  const [registerType, setRegisterType] = useState<"all" | ImageType>("all");
+  const [registerStatus, setRegisterStatus] = useState<
+    "all" | "PENDING" | "COMPLETED" | "FAILED"
+  >("all");
+  const registerQuery = trpc.extensions.imaging.listRecent.useQuery(
+    {
+      patientId: selectedPatient?.id,
+      imageType: registerType === "all" ? undefined : registerType,
+      status: registerStatus,
+      limit: 100,
+      offset: 0,
+    },
+    { enabled: activeTab === "history", refetchInterval: 60_000 },
   );
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -796,101 +828,250 @@ function ImagingContent() {
       </div>
 
       {activeTab === "history" ? (
-        /* History View */
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              {t("imaging.history.title", "História vyšetrení snímkov")}
-            </CardTitle>
-            <CardDescription>
-              {selectedPatient
-                ? t("imaging.history.forPatient", "Zoznam predchádzajúcich analýz pre pacienta {name}.", { name: selectedPatient.name })
-                : t("imaging.history.selectPatientHint", "Vyberte pacienta v editore pre zobrazenie jeho histórie snímkov.")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!selectedPatient ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm font-medium">{t("imaging.history.noPatient", "Nie je vybraný žiadny pacient")}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("imaging.history.noPatientHint", "Vráťte sa do editora a vyberte pacienta, ktorého snímky si prajete zobraziť.")}
-                </p>
+        /* Radiology register — every analysis in the practice, newest first */
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-lg font-semibold">
+                <History className="h-5 w-5 text-primary" />
+                {t("imaging.register.title", "Register rádiologických analýz")}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {selectedPatient
+                  ? t(
+                      "imaging.history.forPatient",
+                      "Zoznam predchádzajúcich analýz pre pacienta {name}.",
+                      { name: selectedPatient.name },
+                    )
+                  : t(
+                      "imaging.register.subtitle",
+                      "Všetky RTG, USG, CT a MRI snímky kliniky vrátane AI nálezov a stavu potvrdenia.",
+                    )}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={registerType}
+                onChange={(event) =>
+                  setRegisterType(event.target.value as "all" | ImageType)
+                }
+                className="h-9 rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground shadow-xs focus:outline-hidden focus:ring-2 focus:ring-primary"
+                aria-label={t("imaging.register.filterType", "Modalita")}
+              >
+                <option value="all">
+                  {t("imaging.register.allTypes", "Všetky modality")}
+                </option>
+                {IMAGE_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {t(type.labelKey, type.label)}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={registerStatus}
+                onChange={(event) =>
+                  setRegisterStatus(
+                    event.target.value as "all" | "PENDING" | "COMPLETED" | "FAILED",
+                  )
+                }
+                className="h-9 rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground shadow-xs focus:outline-hidden focus:ring-2 focus:ring-primary"
+                aria-label={t("imaging.register.filterStatus", "Stav")}
+              >
+                <option value="all">
+                  {t("imaging.register.allStatuses", "Všetky stavy")}
+                </option>
+                <option value="COMPLETED">
+                  {t("imaging.status.completed", "Vyhodnotené")}
+                </option>
+                <option value="PENDING">
+                  {t("imaging.status.inProgress", "Prebieha")}
+                </option>
+                <option value="FAILED">
+                  {t("imaging.status.failed", "Zlyhalo")}
+                </option>
+              </select>
+              {selectedPatient ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setActiveTab("editor")}
-                  className="mt-4 text-xs"
+                  className="gap-1.5"
+                  onClick={() => setSelectedPatient(null)}
                 >
-                  {t("imaging.history.goToEditor", "Prejsť do editora")}
+                  {t("imaging.register.showAllPatients", "Všetci pacienti")}
                 </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <DataTableShell>
+            {registerQuery.isLoading ? (
+              <div className="p-4">
+                <TableSkeleton rows={5} cols={6} />
               </div>
-            ) : historyQuery.isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : !historyQuery.data || historyQuery.data.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">
-                  {t("imaging.history.empty", "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne analýzy.", { name: selectedPatient.name })}
-                </p>
+            ) : (registerQuery.data?.items.length ?? 0) === 0 ? (
+              <div className="p-8">
+                <EmptyState
+                  icon={ImageIcon}
+                  title={t(
+                    "imaging.register.emptyTitle",
+                    "Žiadne analýzy v tomto filtri",
+                  )}
+                  description={t(
+                    "imaging.register.emptyDescription",
+                    "Nahrajte snímku v editore — analýza sa uloží do registra vrátane AI nálezu a potvrdenia lekárom.",
+                  )}
+                />
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {historyQuery.data.map((item) => (
-                  <Card key={item.id} className="hover:border-primary/50 transition-colors">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base font-semibold uppercase">
-                          {t("imaging.history.itemTitle", "{type} snímok", { type: item.imageType })}
-                        </CardTitle>
-                        <Badge
-                          variant={
-                            item.status === "COMPLETED"
-                              ? "default"
+              <DataTableScroll>
+                <DataTable>
+                  <DataTableHead>
+                    <DataTableHeaderRow>
+                      <DataTableHeadCell>
+                        {t("imaging.register.colDate", "Dátum")}
+                      </DataTableHeadCell>
+                      <DataTableHeadCell>
+                        {t("imaging.register.colPatient", "Pacient")}
+                      </DataTableHeadCell>
+                      <DataTableHeadCell>
+                        {t("imaging.register.colType", "Modalita")}
+                      </DataTableHeadCell>
+                      <DataTableHeadCell>
+                        {t("imaging.register.colQuestion", "Zadaná otázka")}
+                      </DataTableHeadCell>
+                      <DataTableHeadCell>
+                        {t("imaging.register.colStatus", "Stav")}
+                      </DataTableHeadCell>
+                      <DataTableHeadCell align="right">
+                        {t("imaging.register.colActions", "Akcie")}
+                      </DataTableHeadCell>
+                    </DataTableHeaderRow>
+                  </DataTableHead>
+                  <DataTableBody>
+                    {registerQuery.data?.items.map((item) => (
+                      <DataTableRow key={item.id}>
+                        <DataTableCell>
+                          <div className="text-xs text-foreground">
+                            {new Date(item.createdAt).toLocaleDateString("sk-SK")}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {new Date(item.createdAt).toLocaleTimeString("sk-SK", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </DataTableCell>
+                        <DataTableCell>
+                          <IdentityCell
+                            icon={
+                              <SpeciesIcon
+                                species={item.patientSpecies}
+                                label={formatSpecies(item.patientSpecies, t)}
+                              />
+                            }
+                            primary={
+                              item.patientId ? (
+                                <Link
+                                  href={`/patients/${item.patientId}`}
+                                  className="transition-colors hover:text-primary"
+                                >
+                                  {item.patientName ??
+                                    t("imaging.register.unknownPatient", "Neznámy")}
+                                </Link>
+                              ) : (
+                                t("imaging.register.unknownPatient", "Neznámy")
+                              )
+                            }
+                            secondary={item.patientBreed ?? undefined}
+                          />
+                        </DataTableCell>
+                        <DataTableCell>
+                          <Badge variant="outline" className="uppercase">
+                            {item.imageType}
+                          </Badge>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {item.modelId}
+                          </div>
+                        </DataTableCell>
+                        <DataTableCell>
+                          <p className="line-clamp-2 max-w-xs text-xs text-muted-foreground">
+                            {item.userPrompt ??
+                              t(
+                                "imaging.history.defaultPrompt",
+                                "Štandardná diagnostická analýza",
+                              )}
+                          </p>
+                        </DataTableCell>
+                        <DataTableCell>
+                          <Badge
+                            variant={
+                              item.status === "COMPLETED"
+                                ? "success"
+                                : item.status === "FAILED"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="text-[11px]"
+                          >
+                            {item.status === "COMPLETED"
+                              ? t("imaging.status.completed", "Vyhodnotené")
                               : item.status === "FAILED"
-                                ? "destructive"
-                                : "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {item.status === "COMPLETED"
-                            ? t("imaging.status.completed", "Vyhodnotené")
-                            : item.status === "FAILED"
-                              ? t("imaging.status.failed", "Zlyhalo")
-                              : t("imaging.status.inProgress", "Prebieha")}
-                        </Badge>
-                      </div>
-                      <CardDescription className="line-clamp-2 text-xs mt-1">
-                        {item.userPrompt || t("imaging.history.defaultPrompt", "Štandardná diagnostická analýza")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(item.createdAt).toLocaleDateString("sk-SK")}
-                      </span>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setAnalysisId(item.id);
-                          setActiveTab("editor");
-                          toast.info(t("imaging.toast.loadedToPreview", "Analýza načítaná do náhľadu"));
-                        }}
-                        className="gap-1.5 text-xs"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        {t("imaging.history.loadResult", "Načítať nález")}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                                ? t("imaging.status.failed", "Zlyhalo")
+                                : t("imaging.status.inProgress", "Prebieha")}
+                          </Badge>
+                          {item.revision > 0 ? (
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                              {t("imaging.register.revision", "rev. {count}", {
+                                count: item.revision,
+                              })}
+                            </div>
+                          ) : null}
+                        </DataTableCell>
+                        <DataTableCell align="right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => {
+                              setAnalysisId(item.id);
+                              if (
+                                item.patientId &&
+                                item.patientId !== selectedPatient?.id
+                              ) {
+                                setSelectedPatient({
+                                  id: item.patientId,
+                                  name:
+                                    item.patientName ??
+                                    t(
+                                      "imaging.register.unknownPatient",
+                                      "Neznámy",
+                                    ),
+                                  species: item.patientSpecies,
+                                  breed: item.patientBreed,
+                                  clientName: "",
+                                });
+                              }
+                              setActiveTab("editor");
+                              toast.info(
+                                t(
+                                  "imaging.toast.loadedToPreview",
+                                  "Analýza načítaná do náhľadu",
+                                ),
+                              );
+                            }}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            {t("imaging.history.loadResult", "Načítať nález")}
+                          </Button>
+                        </DataTableCell>
+                      </DataTableRow>
+                    ))}
+                  </DataTableBody>
+                </DataTable>
+              </DataTableScroll>
             )}
-          </CardContent>
-        </Card>
+          </DataTableShell>
+        </div>
       ) : (
         /* Main 2-Column Editor Layout */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -82,8 +82,13 @@ export function computeControlledSubstanceBalance(
  * Controlled veterinary substances requiring strict zero AI prefill and
  * veterinarian verification before administration or prescription.
  */
-export const CONTROLLED_SUBSTANCES_REGEX =
-  /ketam[ií]n|ketamidor|ketalar|narkamon|calypsol|fentan[yí]l|buprenorf[ií]n|temgesic|vetergesic|bupredyne|butorfanol|butorphanol|torbugesic|dolorex|metad[oó]n|methadon|metisedive|comfortion|diazepam|apauvi|seduxen|fenobarbital|phenobarbital|phenoleptil|propofol|morfin|morphin/i;
+export const CONTROLLED_SUBSTANCES_PATTERN_SOURCE =
+  "ketam[ií]n|ketamidor|ketalar|narkamon|calypsol|fentan[yí]l|buprenorf[ií]n|temgesic|vetergesic|bupredyne|butorfanol|butorphanol|torbugesic|dolorex|metad[oó]n|methadon|metisedive|comfortion|diazepam|apauvi|seduxen|fenobarbital|phenobarbital|phenoleptil|propofol|morfin|morphin";
+
+export const CONTROLLED_SUBSTANCES_REGEX = new RegExp(
+  CONTROLLED_SUBSTANCES_PATTERN_SOURCE,
+  "i",
+);
 
 export function isControlledSubstanceName(drugName: string): boolean {
   if (!drugName) return false;
