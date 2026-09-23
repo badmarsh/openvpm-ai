@@ -104,6 +104,7 @@ export function ClinicalCardsRegister() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={ClipboardList}
         title={t("records.register.title", "Klinické karty")}
         subtitle={t(
           "records.register.subtitle",

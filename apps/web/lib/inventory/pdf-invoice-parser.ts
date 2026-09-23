@@ -7,7 +7,7 @@
 
 import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 import { IMPORT_ERRORS } from "./import-errors";
-import { dirname, join, sep } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   parseWholesalerDeliveryNote,
@@ -60,8 +60,8 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   const root = dirname(nodeRequire.resolve("pdfjs-dist/package.json"));
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
-    standardFontDataUrl: join(root, "standard_fonts") + sep,
-    cMapUrl: join(root, "cmaps") + sep,
+    standardFontDataUrl: join(root, "standard_fonts").replace(/\\/g, "/") + "/",
+    cMapUrl: join(root, "cmaps").replace(/\\/g, "/") + "/",
     cMapPacked: true,
     isEvalSupported: false,
     useWasm: false,

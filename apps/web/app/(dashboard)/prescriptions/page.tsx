@@ -106,6 +106,7 @@ export default function MedicationOversightPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={Pill}
         title={t(
           "medications.title",
           "Dohľad nad predpísanými liečivami",

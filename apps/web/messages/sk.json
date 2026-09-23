@@ -816,7 +816,16 @@
       "confirmPlaceholder": "Znova zadajte heslo",
       "activating": "Aktivuje sa…",
       "activateButton": "Aktivovať účet"
-    }
+    },
+    "openIdentity": "Otvoriť kartu pacienta",
+    "recentPatientsTitle": "Nedávni pacienti",
+    "recentPatientsSubtitle": "Otvorte klinickú kartu. Identita a majiteľ ostávajú na karte pacienta.",
+    "colPatient": "Pacient",
+    "colSpecies": "Druh",
+    "colOwner": "Majiteľ",
+    "openChart": "Otvoriť klinickú kartu",
+    "emptyPatientsTitle": "Žiadni pacienti",
+    "emptyPatientsDescription": "Pridajte pacienta na karte pacienta, potom tu otvoríte klinickú dokumentáciu."
   },
   "billing": {
     "page": {
@@ -4176,7 +4185,7 @@
     "openChart": "Otvoriť klinickú kartu",
     "emptyPatientsTitle": "Žiadni pacienti",
     "emptyPatientsDescription": "Pridajte pacienta na karte pacienta, potom tu otvoríte klinickú dokumentáciu.",
-"register": {
+    "register": {
       "title": "Klinické karty",
       "subtitle": "Zoznam všetkých klinických kariet s aktivitou, liečbou a upozorneniami. Kliknutím otvoríte kartu pacienta.",
       "toEncounters": "Vyšetrenia dnes",

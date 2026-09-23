@@ -251,10 +251,8 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: ${S3_REGION:-us-east-1}
-      AI_BASE_URL: ${AI_BASE_URL}
-      AI_API_KEY: ${AI_API_KEY}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      AI_MODEL: ${AI_MODEL:-google/gemini-2.5-flash}
+      AT_PROXY_URL: ${AT_PROXY_URL}
+      AT_PROXY_KEY: ${AT_PROXY_KEY}
     networks:
       - internal
       - dokploy-network

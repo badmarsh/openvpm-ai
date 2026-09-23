@@ -111,10 +111,20 @@ if (-not $SkipTypeCheck) {
 # =============================================
 Write-Host "
 [4/6] Odosielam zmeny na remote GitHub origin/main..." -ForegroundColor Yellow
-git push origin main
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Chyba pri git push! Deployment zastaveny." -ForegroundColor Red
-    exit 1
+$isAhead = (git rev-list --count origin/main..main).Trim()
+if ([int]$isAhead -gt 0) {
+    $ghToken = try { (gh auth token 2>$null).Trim() } catch { $null }
+    if ($ghToken) {
+        git -c credential.helper= push "https://x-access-token:$ghToken@github.com/badmarsh/openvpm-ai.git" main
+    } else {
+        git push origin main
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Chyba pri git push! Deployment zastaveny." -ForegroundColor Red
+        exit 1
+    }
+} else {
+    Write-Host "Vetva main je aktualna oproti origin/main." -ForegroundColor Green
 }
 $latestCommit = git log -1 --oneline
 Write-Host "OK Nasadzovany commit: $latestCommit" -ForegroundColor Green

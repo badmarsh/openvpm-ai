@@ -57,7 +57,8 @@ describe("responsive dashboard and portal tables", () => {
           .some(
             (candidate) =>
               candidate.includes("overflow-x-auto") ||
-              candidate.includes("<TableScroll")
+              candidate.includes("<TableScroll") ||
+              candidate.includes("<DataTableFrame")
           );
         if (!localWrapper) {
           offenders.push(`${file}:${lineIndex + 1}`);

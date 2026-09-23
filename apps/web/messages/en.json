@@ -816,7 +816,16 @@
       "confirmPlaceholder": "Re-enter your password",
       "activating": "Activating…",
       "activateButton": "Activate account"
-    }
+    },
+    "openIdentity": "Open patient card",
+    "recentPatientsTitle": "Recent patients",
+    "recentPatientsSubtitle": "Open the clinical chart. Identity and owner stay on the patient card.",
+    "colPatient": "Patient",
+    "colSpecies": "Species",
+    "colOwner": "Owner",
+    "openChart": "Open clinical chart",
+    "emptyPatientsTitle": "No patients",
+    "emptyPatientsDescription": "Add a patient on the patient card, then open clinical documentation here."
   },
   "billing": {
     "page": {
@@ -4176,7 +4185,7 @@
     "openChart": "Open clinical chart",
     "emptyPatientsTitle": "No patients",
     "emptyPatientsDescription": "Add a patient on the patient card, then open clinical documentation here.",
-"register": {
+    "register": {
       "title": "Clinical cards",
       "subtitle": "Every clinical card with its activity, treatment and alerts. Open a card with one click.",
       "toEncounters": "Today's visits",

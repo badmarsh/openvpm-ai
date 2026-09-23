@@ -4,7 +4,10 @@ import {
   configuredModel,
   isAgentConfigured,
 } from "../runner";
-import { inferenceProxyModel } from "../inference-proxy";
+import {
+  inferenceProxyBaseUrl,
+  inferenceProxyModel,
+} from "../inference-proxy";
 import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 
 const mocks = vi.hoisted(() => {
@@ -122,5 +125,19 @@ describe("OpenAI-compatible inference proxy (AT_PROXY_URL)", () => {
 
     expect(isAgentConfigured()).toBe(false);
     expect(mocks.createOpenAICompatible).not.toHaveBeenCalled();
+  });
+
+  it("normalizes URLs lacking /v1 and strips trailing slashes", () => {
+    vi.stubEnv("AT_PROXY_URL", "https://call-fly-cabinet-namely.trycloudflare.com");
+    expect(inferenceProxyBaseUrl()).toBe("https://call-fly-cabinet-namely.trycloudflare.com/v1");
+
+    vi.stubEnv("AT_PROXY_URL", "https://call-fly-cabinet-namely.trycloudflare.com/");
+    expect(inferenceProxyBaseUrl()).toBe("https://call-fly-cabinet-namely.trycloudflare.com/v1");
+
+    vi.stubEnv("AT_PROXY_URL", "https://call-fly-cabinet-namely.trycloudflare.com/v1");
+    expect(inferenceProxyBaseUrl()).toBe("https://call-fly-cabinet-namely.trycloudflare.com/v1");
+
+    vi.stubEnv("AT_PROXY_URL", "https://call-fly-cabinet-namely.trycloudflare.com/v1/");
+    expect(inferenceProxyBaseUrl()).toBe("https://call-fly-cabinet-namely.trycloudflare.com/v1");
   });
 });
