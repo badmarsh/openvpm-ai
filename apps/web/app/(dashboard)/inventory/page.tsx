@@ -1,5 +1,6 @@
 "use client";
 
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { MarkupInput } from "@/components/inventory/markup-input";
 
 import { useState, useMemo, useEffect } from "react";
@@ -60,6 +61,7 @@ import {
 const CATEGORIES = [
   { key: "all", label: "All Categories", value: "" },
   { key: "medication", label: "Medication", value: "medication" },
+  { key: "vaccine", label: "Vaccines", value: "vaccine" },
   { key: "preventive", label: "Preventive", value: "preventive" },
   { key: "supplement", label: "Supplement", value: "supplement" },
   { key: "food", label: "Food", value: "food" },
@@ -462,7 +464,7 @@ function EditProductRow({
 
   return (
     <tr className="border-b border-border bg-muted/20">
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           value={form.name}
           maxLength={INVENTORY_PRODUCT_NAME_MAX_LENGTH}
@@ -470,7 +472,7 @@ function EditProductRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           value={form.sku}
           maxLength={INVENTORY_PRODUCT_SKU_MAX_LENGTH}
@@ -478,7 +480,7 @@ function EditProductRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -496,7 +498,7 @@ function EditProductRow({
           ))}
         </select>
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           type="number"
           min={INVENTORY_MONEY_AMOUNT_MIN}
@@ -504,10 +506,10 @@ function EditProductRow({
           step="0.01"
           value={form.unitPrice}
           onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-          className="h-8 text-sm text-right"
+          className="h-8 text-sm tabular-nums text-right"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <label className="flex items-center justify-center gap-2 text-xs">
           <input
             type="checkbox"
@@ -519,7 +521,7 @@ function EditProductRow({
           {t("inventory.form.taxableLabel", "Taxable")}
         </label>
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           type="number"
           min={INVENTORY_MONEY_AMOUNT_MIN}
@@ -527,14 +529,14 @@ function EditProductRow({
           step="0.01"
           value={form.costPrice}
           onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
-          className="h-8 text-sm text-right"
+          className="h-8 text-sm tabular-nums text-right"
         />
         <MarkupInput cost={form.costPrice} onApply={(unitPrice) => setForm({ ...form, unitPrice })} />
       </td>
-      <td className="px-4 py-2 text-right tabular-nums">
+      <td className="py-2.5 px-3 text-right tabular-nums">
         {product.inventoryTracked ? product.stockQuantity : "—"}
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           type="number"
           min={INVENTORY_STOCK_QUANTITY_MIN}
@@ -545,10 +547,10 @@ function EditProductRow({
           onChange={(e) =>
             setForm({ ...form, reorderPoint: parseInt(e.target.value) || 0 })
           }
-          className="h-8 text-sm text-right w-20"
+          className="h-8 text-sm tabular-nums text-right w-20"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <div className="space-y-1">
           <Input
             value={form.lotNumber}
@@ -574,8 +576,8 @@ function EditProductRow({
           />
         </div>
       </td>
-      <td className="px-4 py-2" />
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3" />
+      <td className="py-2.5 px-3">
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -1012,7 +1014,7 @@ function EditSupplierRow({
 
   return (
     <tr className="border-b border-border bg-muted/20">
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           value={form.name}
           maxLength={INVENTORY_SUPPLIER_NAME_MAX_LENGTH}
@@ -1020,7 +1022,7 @@ function EditSupplierRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           type="email"
           value={form.contactEmail}
@@ -1031,7 +1033,7 @@ function EditSupplierRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           value={form.phone}
           maxLength={INVENTORY_SUPPLIER_PHONE_MAX_LENGTH}
@@ -1039,7 +1041,7 @@ function EditSupplierRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           value={form.address}
           maxLength={INVENTORY_SUPPLIER_ADDRESS_MAX_LENGTH}
@@ -1047,7 +1049,7 @@ function EditSupplierRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <Input
           value={form.notes}
           maxLength={INVENTORY_SUPPLIER_NOTES_MAX_LENGTH}
@@ -1055,7 +1057,7 @@ function EditSupplierRow({
           className="h-8 text-sm"
         />
       </td>
-      <td className="px-4 py-2">
+      <td className="py-2.5 px-3">
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -1096,6 +1098,9 @@ export default function InventoryPage() {
   const [tab, setTab] = useState<"products" | "suppliers">("products");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [belowMinimum, setBelowMinimum] = useState(false);
+  const supplierOptions = trpc.extensions.inventoryMetadata.suppliers.useQuery();
   const [alertFilter, setAlertFilter] = useState<AlertFilter>("all");
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -1112,13 +1117,16 @@ export default function InventoryPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchFilter, category, alertFilter]);
+  }, [searchFilter, category, alertFilter, supplierName, belowMinimum]);
 
   const productsQuery = trpc.inventory.list.useQuery(
     {
       search: searchFilter || undefined,
       category: category || undefined,
       alert: alertFilter,
+      supplierName: supplierName || undefined,
+      belowMinimum,
+      expiryWindowDays: 29,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     },
@@ -1191,7 +1199,7 @@ export default function InventoryPage() {
       {/* Products Tab */}
       {tab === "products" && (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <div className="relative w-full min-w-48 flex-1 sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -1202,13 +1210,13 @@ export default function InventoryPage() {
                 value={search}
                 maxLength={INVENTORY_PRODUCT_SEARCH_MAX_LENGTH}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
+                className="h-9 pl-9"
               />
             </div>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat.value} value={cat.value}>
@@ -1219,7 +1227,7 @@ export default function InventoryPage() {
             <select
               value={alertFilter}
               onChange={(e) => setAlertFilter(e.target.value as AlertFilter)}
-              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {ALERT_FILTERS.map((filter) => (
                 <option key={filter.value} value={filter.value}>
@@ -1227,6 +1235,16 @@ export default function InventoryPage() {
                 </option>
               ))}
             </select>
+            <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={supplierName}
+              aria-label={t("inventory.page.supplierFilter")}
+              onChange={e => setSupplierName(e.target.value)}>
+              <option value="">{t("inventory.page.allSuppliers")}</option>
+              {(supplierOptions.data ?? []).map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+            <label className="flex h-9 items-center gap-2 rounded-md border px-3 text-xs">
+              <input type="checkbox" checked={belowMinimum} onChange={e => setBelowMinimum(e.target.checked)} />
+              {t("inventory.page.onlyBelowMinimum")}
+            </label>
             {productsQuery.data && (
               <p className="text-sm text-muted-foreground">
                 {productsQuery.data.total === 1
@@ -1269,7 +1287,7 @@ export default function InventoryPage() {
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                   {t("inventory.page.alertAttention", "Needs attention")}
                 </span>
-                <span className="mt-1 block text-xl font-semibold">
+                <span className="mt-1 block text-xl font-semibold tabular-nums">
                   {productsQuery.data.alertCounts.attention}
                 </span>
               </button>
@@ -1284,7 +1302,7 @@ export default function InventoryPage() {
                 <span className="text-muted-foreground">
                   {t("inventory.page.alertLowStock", "Low stock")}
                 </span>
-                <span className="mt-1 block text-xl font-semibold">
+                <span className="mt-1 block text-xl font-semibold tabular-nums">
                   {productsQuery.data.alertCounts.lowStock}
                 </span>
               </button>
@@ -1299,7 +1317,7 @@ export default function InventoryPage() {
                 <span className="text-muted-foreground">
                   {t("inventory.page.alertExpired", "Expired")}
                 </span>
-                <span className="mt-1 block text-xl font-semibold">
+                <span className="mt-1 block text-xl font-semibold tabular-nums">
                   {productsQuery.data.alertCounts.expired}
                 </span>
               </button>
@@ -1315,7 +1333,7 @@ export default function InventoryPage() {
                 <span className="text-muted-foreground">
                   {t("inventory.page.alertExpiringSoon", "Expiring soon")}
                 </span>
-                <span className="mt-1 block text-xl font-semibold">
+                <span className="mt-1 block text-xl font-semibold tabular-nums">
                   {productsQuery.data.alertCounts.expiringSoon}
                 </span>
               </button>
@@ -1331,46 +1349,44 @@ export default function InventoryPage() {
                 )}
             </div>
           ) : productsQuery.isLoading ? (
-            <div className="mt-6 text-center text-muted-foreground">
-              {t("inventory.page.loading", "Loading...")}
-            </div>
+            <div role="status" aria-label={t("inventory.page.loading")}><TableSkeleton className="mt-4" columns={11} /></div>
           ) : productsQuery.data && productsQuery.data.items.length > 0 ? (
             <div className="mt-4 rounded-lg border border-border overflow-hidden bg-card">
               <TableScroll className="border-0">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm tabular-nums">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colName", "Name")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colSku", "SKU")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colCategory", "Category")}
                     </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colPriceUnit", "Price / unit")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colTax", "Tax")}
                     </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colCost", "Cost")}
                     </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colStockUnits", "Stock units")}
                     </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    <th className="h-10 px-3 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colReorderPoint", "Reorder Pt")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colLotExpiry", "Lot / Expiry")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colStatus", "Status")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.table.colActions", "Actions")}
                     </th>
                   </tr>
@@ -1398,35 +1414,35 @@ export default function InventoryPage() {
                         key={product.id}
                         className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                       >
-                        <td className="px-4 py-3 font-medium">
+                        <td className="py-2.5 px-3 font-medium">
                           {product.name}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="py-2.5 px-3 font-mono text-muted-foreground">
                           {product.sku || "\u2014"}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="py-2.5 px-3 text-muted-foreground">
                           {formatProductCategory(product.category, t)}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td className="py-2.5 px-3 text-right tabular-nums">
                           {formatCurrency(product.unitPrice)}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {product.taxable ? t("inventory.table.taxable", "Taxable") : t("inventory.table.notTaxable", "Not taxable")} {/* product.taxable ? "Taxable" : "Not taxable" */}
+                        <td className="py-2.5 px-3 text-muted-foreground">
+                          {product.vatRate != null ? `${Number(product.vatRate)}%` : product.taxable ? t("inventory.table.taxable", "Taxable") : t("inventory.table.notTaxable", "Not taxable")}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                        <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
                           {product.costPrice
                             ? formatCurrency(product.costPrice)
                             : "\u2014"}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td className="py-2.5 px-3 text-right tabular-nums">
                           {product.inventoryTracked
                             ? product.stockQuantity
                             : "—"}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                        <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground">
                           {product.reorderPoint ?? "\u2014"}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="py-2.5 px-3 text-muted-foreground">
                           <span className="block">
                             {product.lotNumber
                               ? t("inventory.table.lotPrefix", `Lot ${product.lotNumber}`, { number: product.lotNumber })
@@ -1438,7 +1454,7 @@ export default function InventoryPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="py-2.5 px-3">
                           <div className="flex flex-wrap gap-1">
                             <span
                               className={cn(
@@ -1460,7 +1476,7 @@ export default function InventoryPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="py-2.5 px-3">
                           {canManageInventory ? (
                             <div className="relative flex gap-1">
                               <Button
@@ -1527,7 +1543,7 @@ export default function InventoryPage() {
             </TableScroll>
 
             {/* Products Pagination */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border px-4 py-3 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border py-2.5 px-3 text-sm text-muted-foreground">
               <div>
                 {t(
                   "inventory.pagination.showing",
@@ -1577,7 +1593,7 @@ export default function InventoryPage() {
                       "inventory.empty.filterAlertTitle",
                       "No products match this alert filter"
                     )
-                  : search || category
+                  : search || category || supplierName || belowMinimum
                     ? t(
                         "inventory.empty.filterSearchTitle",
                         "No products match your filters"
@@ -1590,7 +1606,7 @@ export default function InventoryPage() {
                       "inventory.empty.filterAlertDesc",
                       "Clear the alert filter to see all inventory items."
                     )
-                  : search || category
+                  : search || category || supplierName || belowMinimum
                     ? t(
                         "inventory.empty.filterSearchDesc",
                         "Clear the search or category filter to broaden the list."
@@ -1604,7 +1620,7 @@ export default function InventoryPage() {
                 canManageInventory &&
                 alertFilter === "all" &&
                 !search &&
-                !category
+                !category && !supplierName && !belowMinimum
                   ? {
                       label: t(
                         "inventory.empty.addFirstProduct",
@@ -1665,30 +1681,28 @@ export default function InventoryPage() {
                 )}
             </div>
           ) : suppliersQuery.isLoading ? (
-            <div className="mt-6 text-center text-muted-foreground">
-              {t("inventory.suppliersTab.loading", "Loading...")}
-            </div>
+            <div role="status" aria-label={t("inventory.suppliersTab.loading")}><TableSkeleton className="mt-4" columns={6} /></div>
           ) : suppliersQuery.data && suppliersQuery.data.length > 0 ? (
             <TableScroll className="mt-4 rounded-lg border border-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm tabular-nums">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colName", "Name")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colEmail", "Email")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colPhone", "Phone")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colAddress", "Address")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colNotes", "Notes")}
                     </th>
-                    <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <th className="h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                       {t("inventory.suppliersTab.colActions", "Actions")}
                     </th>
                   </tr>
@@ -1713,25 +1727,25 @@ export default function InventoryPage() {
                         key={supplier.id}
                         className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                       >
-                        <td className="px-4 py-3 font-medium">
+                        <td className="py-2.5 px-3 font-medium">
                           {supplier.name}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="py-2.5 px-3 text-muted-foreground">
                           {supplier.contactEmail || "\u2014"}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="py-2.5 px-3 text-muted-foreground">
                           {supplier.phone || "\u2014"}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="py-2.5 px-3 text-muted-foreground">
                           {supplier.address || "\u2014"}
                         </td>
                         <td
-                          className="max-w-xs truncate px-4 py-3 text-muted-foreground"
+                          className="max-w-xs truncate py-2.5 px-3 text-muted-foreground"
                           title={supplier.notes ?? undefined}
                         >
                           {supplier.notes || "\u2014"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="py-2.5 px-3">
                           {canManageInventory ? (
                             <Button
                               size="sm"

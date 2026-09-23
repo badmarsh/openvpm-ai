@@ -225,3 +225,43 @@ describe("parsePdfInvoice AI path", () => {
     expect(result.parseMethod).not.toBe("ai");
   });
 });
+
+describe("PDF delivery-note regression", () => {
+  it("parses sample delivery-note text and retains batch, expiry, zero VAT and controlled flags", async () => {
+    const result = await parsePdfInvoice(buildMinimalPdf([
+      "CYMEDICA", "# Dodaci list: 202610048",
+      "Kod;Nazov;Sarza;Expiracia;Mnozstvo;MJ;CenaBezDPH;DPH",
+      "CYM-1;Bandage;LOT1;31.12.2027;10;ks;2,50;23",
+      "CYM-2;Diazepam;LOT2;30.06.2027;2;ks;5,00;5",
+    ]));
+    expect(result.parseMethod).toBe("rule-based");
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]).toMatchObject({ sku: "CYM-1", batchNumber: "LOT1", expirationDate: "2027-12-31", unitPriceWithoutVat: 2.5 });
+    expect(result.items[1]).toMatchObject({ isControlledSubstance: true, name: "Diazepam" });
+  });
+  it("flags AI-extracted controlled names deterministically and preserves 0% VAT", async () => {
+    mockAiResponse(JSON.stringify({ ...JSON.parse(VALID_AI_JSON), items: [{
+      name: "Morfín", sku: "M1", quantity: 1, unit: "bal", unitPriceWithoutVat: 10,
+      vatRate: 0, totalWithoutVat: 10, totalWithVat: 10, batchNumber: "B1", expirationDate: "2027-12-31",
+    }] }));
+    const result = await parsePdfInvoice(buildMinimalPdf(["FAKTURA"]), AI_CONFIG);
+    expect(result.items[0]).toMatchObject({ isControlledSubstance: true, vatRate: 0, batchNumber: "B1", expirationDate: "2027-12-31" });
+  });
+  it("does not turn corrupted or scanned PDFs into successful empty imports", async () => {
+    await expect(parsePdfInvoice(Buffer.from("%PDF-1.4 corrupt"))).rejects.toThrow("PDF_CORRUPTED");
+    await expect(parsePdfInvoice(buildMinimalPdf([]))).rejects.toThrow("PDF_NO_TEXT");
+  });
+  it("reports password-protected PDFs with a client-localizable error", async () => {
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({ encryption: { userPassword: "test-password", ownerPassword: "test-owner" } });
+    pdf.text("PRIVATE INVOICE", 10, 10);
+    await expect(parsePdfInvoice(Buffer.from(pdf.output("arraybuffer")))).rejects.toThrow("PDF_PASSWORD_PROTECTED");
+  });
+  it("supports repeated and concurrent extraction without sharing a document worker", async () => {
+    const pdf = buildMinimalPdf(["FAKTURA repeated"]);
+    for (let i = 0; i < 5; i++) {
+      const results = await Promise.all([extractPdfText(pdf), extractPdfText(pdf)]);
+      expect(results.every(text => text.includes("repeated"))).toBe(true);
+    }
+  });
+});

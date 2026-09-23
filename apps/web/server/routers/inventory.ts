@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { eq, and, isNull, ilike, sql, type SQL } from "drizzle-orm";
+import { eq, and, isNull, ilike, sql, getTableColumns, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure, requireRole } from "../trpc";
-import { auditLog, practices, products, suppliers } from "@openpims/db";
+import { auditLog, practices, products, suppliers, extInventoryMetadata } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import {
@@ -202,6 +202,9 @@ export const inventoryRouter = createRouter({
           "Category",
           INVENTORY_PRODUCT_CATEGORY_MAX_LENGTH
         ),
+        supplierName: z.string().trim().max(255).optional(),
+        belowMinimum: z.boolean().optional(),
+        expiryWindowDays: z.number().int().min(0).max(365).default(90),
         alert: inventoryAlertFilterSchema.optional(),
         limit: z.number().int().min(1).max(100).default(50),
         offset: listOffsetInput,
@@ -212,7 +215,7 @@ export const inventoryRouter = createRouter({
         new Date(),
         await practiceTimeZone(ctx)
       );
-      const soonYmd = addDaysYmd(todayYmd, 90);
+      const soonYmd = addDaysYmd(todayYmd, input.expiryWindowDays);
       const lowStockCondition = sql`${products.inventoryTracked} and ${products.stockQuantity} <= coalesce(${products.reorderPoint}, 10)`;
       const expiredCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} < ${todayYmd}`;
       const expiringSoonCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} >= ${todayYmd} and ${products.expirationDate} <= ${soonYmd}`;
@@ -226,13 +229,17 @@ export const inventoryRouter = createRouter({
 
       if (input.search) {
         baseConditions.push(
-          sql`(${ilike(products.name, `%${input.search}%`)} OR ${ilike(products.sku, `%${input.search}%`)})`
+          sql`(${ilike(products.name, `%${input.search}%`)} OR ${ilike(products.sku, `%${input.search}%`)} OR exists (select 1 from ${extInventoryMetadata} m where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId} and (m.barcode ilike ${"%" + input.search + "%"} or m.active_substance ilike ${"%" + input.search + "%"})))`
         );
       }
 
       if (input.category) {
-        baseConditions.push(eq(products.category, input.category));
+        baseConditions.push(sql`lower(${products.category}) = ${input.category.toLowerCase()}`);
       }
+
+      if (input.supplierName) baseConditions.push(sql`exists (select 1 from ${extInventoryMetadata} m
+        where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId} and m.supplier_name = ${input.supplierName})`);
+      if (input.belowMinimum) baseConditions.push(sql`${products.inventoryTracked} and (${products.stockQuantity} <= 0 or ${products.stockQuantity} < coalesce(${products.reorderPoint}, 10))`);
 
       const alertCondition =
         input.alert === "attention"
@@ -263,7 +270,10 @@ export const inventoryRouter = createRouter({
         expiringSoonCount,
       ] = await Promise.all([
         ctx.db
-          .select()
+          .select({
+            ...getTableColumns(products),
+            vatRate: sql<string | null>`(select m.vat_rate from ${extInventoryMetadata} m where m.product_id = ${products.id} and m.practice_id = ${ctx.practiceId})`,
+          })
           .from(products)
           .where(and(...conditions))
           .orderBy(products.name, products.id)
@@ -279,7 +289,7 @@ export const inventoryRouter = createRouter({
       return {
         items: items.map((p) => ({
           ...p,
-          ...inventoryAlert(p, todayYmd),
+          ...inventoryAlert(p, todayYmd, input.expiryWindowDays),
         })),
         total: Number(countResult[0]?.count ?? 0),
         alertCounts: {

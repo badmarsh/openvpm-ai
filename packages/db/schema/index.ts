@@ -66,3 +66,5 @@ export * from "./ext_marketing_website";
 export * from "./ext_ai_settings";
 export * from "./ext_whatsapp";
 export * from "./ext_clinical_guardian";
+
+export * from "./ext_inventory";

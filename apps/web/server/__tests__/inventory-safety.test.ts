@@ -163,8 +163,8 @@ describe("inventory mutation safety", () => {
     expect(source).toContain(
       "const todayYmd = formatDateInputForTimeZone(\n        new Date(),\n        await practiceTimeZone(ctx)\n      )"
     );
-    expect(source).toContain("const soonYmd = addDaysYmd(todayYmd, 90)");
-    expect(source).toContain("inventoryAlert(p, todayYmd)");
+    expect(source).toContain("const soonYmd = addDaysYmd(todayYmd, input.expiryWindowDays)");
+    expect(source).toContain("inventoryAlert(p, todayYmd, input.expiryWindowDays)");
     expect(source).not.toContain("const todayYmd = ymdFromDate(today)");
   });
 

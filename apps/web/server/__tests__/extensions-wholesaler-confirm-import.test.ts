@@ -1,300 +1,68 @@
-import { describe, expect, it, vi } from "vitest";
-import { products, extAutomationEvents } from "@openpims/db";
-import { wholesalerImportRouter } from "../routers/extensions/wholesaler-import";
+import { describe, expect, it } from "vitest";
+import { products, extInventoryReceipts, extInventoryMetadata } from "@openpims/db";
+import { createImportDb, PRODUCT_ID, PRACTICE_ID } from "./helpers/wholesaler-db";
 
-const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
-const USER_ID = "00000000-0000-0000-0000-000000000001";
-const PRODUCT_ID = "00000000-0000-0000-0000-000000000002";
+const receipt = { deliveryNoteNumber: "DL-2026-78", supplierName: "Test supplier" };
+const regular = { action: "create_product" as const, name: "Obväz 5 cm", sku: "NEW-1", costPrice: "2.50", retailPrice: "3.75", quantity: 5, vatRate: 23 };
 
-function createCaller(db: Record<string, unknown>, role = "admin") {
-  const session = {
-    user: {
-      id: USER_ID,
-      email: `${role}@example.com`,
-      name: "Veterinarian",
-      role,
-      practiceId: PRACTICE_ID,
-    },
-  };
-  return wholesalerImportRouter.createCaller({ db, session, practiceId: PRACTICE_ID } as never);
-}
-
-/**
- * Builds the chainable drizzle mock used by confirmImport:
- * - select → from → where → (orderBy →) limit
- * - update → set → where
- * - insert → values → onConflictDoNothing (async)
- *
- * Note: the post-commit inventory_delivery_received event emission also goes
- * through insertFn (arg = extAutomationEvents), so product-specific
- * assertions filter calls by the table argument.
- */
-function createConfirmDb(opts?: { duplicates?: { id: string }[] }) {
-  const duplicates = opts?.duplicates ?? [];
-  const setFn = vi.fn(() => ({
-    where: vi.fn(async () => []),
-  }));
-  const updateFn = vi.fn(() => ({ set: setFn }));
-  const valuesFn = vi.fn(() => ({
-    onConflictDoNothing: vi.fn(async () => []),
-  }));
-  const insertFn = vi.fn(() => ({ values: valuesFn }));
-  const selectFn = vi.fn(() => ({
-    from: vi.fn(() => ({
-      where: vi.fn(() => ({
-        limit: vi.fn(async () => duplicates),
-        orderBy: vi.fn(() => ({
-          limit: vi.fn(async () => duplicates),
-        })),
-      })),
-    })),
-  }));
-  const mockDb: Record<string, unknown> = {
-    execute: vi.fn(async () => undefined),
-    transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(mockDb)),
-    update: updateFn,
-    insert: insertFn,
-    select: selectFn,
-  };
-  const insertCalls = () => insertFn.mock.calls as unknown[][];
-  const setCalls = () => setFn.mock.calls as unknown[][];
-  const valuesCalls = () => valuesFn.mock.calls as unknown[][];
-  const productInserts = () =>
-    insertCalls().filter(([table]) => table === products);
-  const eventInserts = () =>
-    insertCalls().filter(([table]) => table === extAutomationEvents);
-  return { mockDb, updateFn, setFn, insertFn, valuesFn, setCalls, valuesCalls, productInserts, eventInserts };
-}
-
-describe("wholesalerImportRouter.confirmImport", () => {
-  it("updates matched stock with retail price, batch and expiry", async () => {
-    const { mockDb, updateFn, setCalls, productInserts, eventInserts } = createConfirmDb();
-    const caller = createCaller(mockDb);
-
-    const result = await caller.confirmImport({
-      deliveryNoteNumber: "DL-2026-77",
-      supplierName: "Cymedica SK",
-      wholesaler: "CYMEDICA",
-      items: [
-        {
-          action: "update_stock",
-          productId: PRODUCT_ID,
-          name: "Amoksiklav 100ml",
-          costPrice: "14.50",
-          retailPrice: "20.30",
-          vatRate: 10,
-          lotNumber: "BATCH123",
-          expirationDate: "31.12.2027",
-          quantity: 10,
-        },
-      ],
-    });
-
-    expect(result.success).toBe(true);
+describe("wholesaler import confirmation", () => {
+  it("creates stock with net retail and separate supplier / VAT metadata, without violating migration identity constraints", async () => {
+    const { caller, writes } = createImportDb();
+    expect(await caller().confirmImport({ ...receipt, items: [regular] })).toMatchObject({ createdCount: 1 });
+    const product = writes.find(w => w.table === products)?.values;
+    expect(product).toMatchObject({ practiceId: PRACTICE_ID, unitPrice: "3.75", stockQuantity: 5 });
+    expect(product.externalSource).toBeUndefined();
+    expect(product.externalId).toBeUndefined();
+    expect(writes.find(w => w.table === extInventoryMetadata)?.values).toMatchObject({ supplierName: receipt.supplierName, supplierCode: "NEW-1", vatRate: "23" });
+  });
+  it("updates a tenant catalog target with reviewed prices and fractional stock", async () => {
+    const { caller, db } = createImportDb([{ id: PRODUCT_ID, name: regular.name, sku: regular.sku, stockQuantity: 0 }]);
+    const result = await caller().confirmImport({ ...receipt, items: [{ ...regular, action: "update_stock", productId: PRODUCT_ID, quantity: 1.5, lotNumber: "LOT1", expirationDate: "31.12.2027" }] });
     expect(result.updatedCount).toBe(1);
-    expect(result.createdCount).toBe(0);
-    expect(updateFn).toHaveBeenCalledTimes(1);
-    expect(setCalls()[0]?.[0]).toMatchObject({
-      unitPrice: "20.30",
-      costPrice: "14.50",
-      lotNumber: "BATCH123",
-      expirationDate: "2027-12-31",
-    });
-    // No product row was created — only the durable event was inserted.
-    expect(productInserts()).toHaveLength(0);
-    expect(eventInserts().length).toBeGreaterThanOrEqual(1);
+    expect(db.update).toHaveBeenCalledOnce();
   });
-
-  it("creates new products with the confirmed markup retail price", async () => {
-    const { mockDb, valuesCalls, productInserts } = createConfirmDb();
-    const caller = createCaller(mockDb);
-
-    const result = await caller.confirmImport({
-      deliveryNoteNumber: "DL-2026-78",
-      supplierName: "Samohýl SK",
-      items: [
-        {
-          action: "create_product",
-          name: "Nový obväz 5cm",
-          sku: "NEW-002",
-          costPrice: "2.50",
-          retailPrice: "3.75",
-          vatRate: 23,
-          lotNumber: "LOT456",
-          quantity: 5,
-        },
-      ],
-    });
-
-    expect(result.createdCount).toBe(1);
-    expect(productInserts()).toHaveLength(1);
-    expect(valuesCalls()[0]?.[0]).toMatchObject({
-      practiceId: PRACTICE_ID,
-      name: "Nový obväz 5cm",
-      sku: "NEW-002",
-      unitPrice: "3.75",
-      costPrice: "2.50",
-      lotNumber: "LOT456",
-      externalSource: "wholesaler:Samohýl SK",
-      externalId: "DL-2026-78",
-    });
+  it("rejects a replay instead of adding stock a second time", async () => {
+    const { caller, db, writes } = createImportDb([], true);
+    await expect(caller().confirmImport({ ...receipt, items: [regular] })).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(db.update).not.toHaveBeenCalled();
+    expect(writes.some(w => w.table === products)).toBe(false);
   });
-
-  it("upgrades duplicate create lines to stock updates (idempotent re-confirm)", async () => {
-    const { mockDb, updateFn, productInserts } = createConfirmDb({
-      duplicates: [{ id: PRODUCT_ID }],
-    });
-    const caller = createCaller(mockDb);
-
-    const result = await caller.confirmImport({
-      deliveryNoteNumber: "DL-2026-78",
-      supplierName: "Samohýl SK",
-      items: [
-        {
-          action: "create_product",
-          name: "Nový obväz 5cm",
-          sku: "NEW-002",
-          costPrice: "2.50",
-          quantity: 5,
-        },
-      ],
-    });
-
-    expect(result.createdCount).toBe(0);
-    expect(result.updatedCount).toBe(1);
-    expect(updateFn).toHaveBeenCalledTimes(1);
-    expect(productInserts()).toHaveLength(0);
+  it.each(["Ketamín", "Diazepam", "Butorfanol", "Morfín", "Fentanyl", "Propofol"])("blocks %s on BOTH import endpoints", async name => {
+    for (const endpoint of ["confirmImport", "applyDeliveryNote"] as const) {
+      const { caller, db } = createImportDb();
+      await expect(caller()[endpoint]({ ...receipt, items: [{ ...regular, name }] })).rejects.toMatchObject({ code: "FORBIDDEN", message: "CONTROLLED_IMPORT_BLOCKED" });
+      expect(db.insert).not.toHaveBeenCalled();
+      expect(db.update).not.toHaveBeenCalled();
+    }
   });
-
-  it("accepts decimal-comma Slovak prices and skips 'skip' lines", async () => {
-    const { mockDb } = createConfirmDb();
-    const caller = createCaller(mockDb);
-
-    const result = await caller.confirmImport({
-      deliveryNoteNumber: "DL-2026-79",
-      supplierName: "Pharmos a.s.",
-      items: [
-        {
-          action: "create_product",
-          name: "Dezinfekcia 1L",
-          costPrice: "4,90",
-          retailPrice: "7,35",
-          quantity: 2,
-        },
-        {
-          action: "skip",
-          name: "Ignorovaná položka",
-          quantity: 1,
-        },
-      ],
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.createdCount).toBe(1);
+  it("does not trust a harmless client name for a controlled catalog product", async () => {
+    const { caller, db } = createImportDb([{ id: PRODUCT_ID, name: "Morfín", sku: regular.sku }]);
+    await expect(caller().confirmImport({ ...receipt, items: [{ ...regular, action: "update_stock", productId: PRODUCT_ID }] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+  it("saves a pending reference for skipped controlled lines, NOT stock or an auto-filled ledger", async () => {
+    const { caller, writes, db } = createImportDb();
+    const result = await caller().confirmImport({ ...receipt, items: [{ action: "skip", name: "Ketamín", quantity: 1 }] });
     expect(result.skippedCount).toBe(1);
+    expect(db.update).not.toHaveBeenCalled();
+    expect(writes.some(w => w.table === products)).toBe(false);
+    expect(writes.find(w => w.table === extInventoryReceipts)?.values.controlledReview).toEqual([{ name: "Ketamín", line: 1 }]);
   });
-
-  it("rejects invalid price formats", async () => {
-    const { mockDb } = createConfirmDb();
-    const caller = createCaller(mockDb);
-
-    await expect(
-      caller.confirmImport({
-        deliveryNoteNumber: "DL-2026-80",
-        supplierName: "Pharmos a.s.",
-        items: [
-          {
-            action: "create_product",
-            name: "Dezinfekcia 1L",
-            costPrice: "abc",
-            quantity: 2,
-          },
-        ],
-      })
-    ).rejects.toThrow();
+  it("fails closed for nonexistent/cross-tenant product IDs", async () => {
+    const { caller, db } = createImportDb();
+    await expect(caller().confirmImport({ ...receipt, items: [{ ...regular, action: "update_stock", productId: PRODUCT_ID }] })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(db.insert).not.toHaveBeenCalled();
   });
-
-  it("blocks controlled substances server-side even when the client overrides the skip suggestion (Zákon č. 139/1998 Z. z.)", async () => {
-    const { mockDb, updateFn, insertFn } = createConfirmDb();
-    const caller = createCaller(mockDb);
-
-    await expect(
-      caller.confirmImport({
-        deliveryNoteNumber: "DL-2026-99",
-        supplierName: "VETOQUINOL s.r.o.",
-        items: [
-          {
-            // The preview suggests "skip" for controlled substances; the
-            // server must not trust a client payload that re-enables it.
-            action: "create_product",
-            name: "Ketalar 500 mg/ml 10 ml",
-            quantity: 2,
-          },
-        ],
-      })
-    ).rejects.toMatchObject({
-      code: "FORBIDDEN",
-      message: expect.stringContaining("Kontrolovanú látku"),
-    });
-
-    expect(updateFn).not.toHaveBeenCalled();
-    expect(insertFn).not.toHaveBeenCalled();
+  it("accepts decimal-comma money, rejects invalid price and quantity", async () => {
+    const { caller } = createImportDb();
+    await expect(caller().confirmImport({ ...receipt, items: [{ ...regular, costPrice: "2,50", retailPrice: "3,75" }] })).resolves.toMatchObject({ createdCount: 1 });
+    for (const patch of [{ costPrice: "abc" }, { quantity: -1 }, { quantity: 0 }, { quantity: 10001 }]) {
+      await expect(caller().confirmImport({ ...receipt, items: [{ ...regular, ...patch }] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    }
   });
-
-  it("still allows the preview's skip action for controlled substances", async () => {
-    const { mockDb, updateFn, productInserts } = createConfirmDb();
-    const caller = createCaller(mockDb);
-
-    const result = await caller.confirmImport({
-      deliveryNoteNumber: "DL-2026-100",
-      supplierName: "VETOQUINOL s.r.o.",
-      items: [
-        {
-          action: "skip",
-          name: "Ketalar 500 mg/ml 10 ml",
-          quantity: 1,
-        },
-      ],
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.skippedCount).toBe(1);
-    expect(updateFn).not.toHaveBeenCalled();
-    // Only the post-commit event-bus insert may happen — no product writes.
-    expect(productInserts().length).toBe(0);
-  });
-});
-
-describe("wholesalerImportRouter.searchProducts", () => {
-  it("returns catalog matches for manual linking", async () => {
-    const rows = [
-      {
-        id: PRODUCT_ID,
-        name: "Amoksiklav 100ml",
-        sku: "CYM-001",
-        stockQuantity: 15,
-        unitPrice: "18.85",
-        lotNumber: "B1",
-        expirationDate: "2027-12-31",
-      },
-    ];
-    const mockDb: Record<string, unknown> = {
-      execute: vi.fn(async () => undefined),
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            orderBy: vi.fn(() => ({
-              limit: vi.fn(async () => rows),
-            })),
-          })),
-        })),
-      })),
-    };
-    mockDb.transaction = vi.fn(async (cb: (tx: unknown) => unknown) => cb(mockDb));
-
-    const caller = createCaller(mockDb, "front_desk");
-    const result = await caller.searchProducts({ query: "amoxi", limit: 5 });
-    expect(result).toHaveLength(1);
-    expect(result[0]?.id).toBe(PRODUCT_ID);
+  it.each(["technician", "front_desk", "viewer"])("keeps controlled review restricted for %s", async role => {
+    const { caller } = createImportDb();
+    await expect(caller(role).pendingControlledReviews()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller(role).linkControlledReview({ receiptId: PRODUCT_ID, entryId: PRODUCT_ID, line: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

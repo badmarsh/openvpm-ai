@@ -5,6 +5,10 @@
  * when AI is unavailable.
  */
 
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+import { IMPORT_ERRORS } from "./import-errors";
+import { dirname, join, sep } from "node:path";
+
 import {
   parseWholesalerDeliveryNote,
   detectWholesaler,
@@ -20,6 +24,10 @@ export interface InvoiceParserAiConfig {
 
 export interface PdfInvoiceItem {
   sku?: string;
+  ean?: string;
+  batchNumber?: string;
+  expirationDate?: string;
+  isControlledSubstance?: boolean;
   name: string;
   quantity: number;
   unit: string;
@@ -43,58 +51,77 @@ export interface PdfInvoiceExtraction {
 }
 
 export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
-  // Import pdfjs-dist directly. When bundled by Next.js (not serverExternal),
-  // the DOMMatrix polyfill in instrumentation.register() has already run and the
-  // pdfjs-dist fake-worker handles text extraction in-process without needing a worker file.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) });
-  const doc = await loadingTask.promise;
+  if (pdfBuffer.length > 5 * 1024 * 1024) throw new Error(IMPORT_ERRORS.tooLarge);
+  // External ESM keeps the worker's relative import resolvable in Next's Node runtime.
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // Resolve at runtime; webpack rewrites a statically imported createRequire.resolve
+  // into a relative bundle ID, which is not a usable filesystem font directory.
+  const nodeRequire = process.getBuiltinModule("module").createRequire(import.meta.url);
+  const root = dirname(nodeRequire.resolve("pdfjs-dist/package.json"));
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer),
+    standardFontDataUrl: join(root, "standard_fonts") + sep,
+    cMapUrl: join(root, "cmaps") + sep,
+    cMapPacked: true,
+    isEvalSupported: false,
+    useWasm: false,
+    stopAtErrors: true,
+  });
   try {
+    const doc = await loadingTask.promise;
+    if (doc.numPages > 100) throw new Error(IMPORT_ERRORS.tooLarge);
     const textParts: string[] = [];
     for (let p = 1; p <= doc.numPages; p++) {
       const page = await doc.getPage(p);
-      const textContent = await page.getTextContent();
+      try {
+        const textContent = await page.getTextContent();
 
-      // pdfjs-dist splits combining diacritical marks (á, č, ž, ň, ď, ľ, ť, š)
-      // into separate text items. Use transform positions to join items that belong
-      // to the same word without inserting a space. Items on the same baseline within
-      // ~1.5× the font size are concatenated directly; otherwise a space or newline
-      // separates them.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items = textContent.items as Array<{ str?: string; transform?: number[]; width?: number; height?: number }>;
-      let pageText = "";
-      let prevY = -Infinity;
-      let prevEnd = -Infinity;
-      let prevFontHeight = 12;
-      for (const item of items) {
-        const s = item.str ?? "";
-        if (!s) continue;
-        const tx = item.transform;
-        const x = tx ? tx[4] : prevEnd;
-        const y = tx ? tx[5] : prevY;
-        const fontHeight = tx ? Math.abs(tx[3] || tx[0] || 12) : prevFontHeight;
-        const gap = x - prevEnd;
-        const verticalShift = Math.abs(y - prevY);
-        if (pageText.length === 0) {
-         // first item
-        } else if (verticalShift > fontHeight * 0.5) {
-         pageText += "\n";
-        } else if (gap > fontHeight * 0.3) {
-         pageText += " ";
+        // pdfjs-dist splits combining diacritical marks (á, č, ž, ň, ď, ľ, ť, š)
+        // into separate text items. Use transform positions to join items that belong
+        // to the same word without inserting a space. Items on the same baseline within
+        // ~1.5× the font size are concatenated directly; otherwise a space or newline
+        // separates them.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const items = textContent.items as Array<{ str?: string; transform?: number[]; width?: number; height?: number }>;
+        let pageText = "";
+        let prevY = -Infinity;
+        let prevEnd = -Infinity;
+        let prevFontHeight = 12;
+        for (const item of items) {
+          const s = item.str ?? "";
+          if (!s) continue;
+          const tx = item.transform;
+          const x = tx ? tx[4] : prevEnd;
+          const y = tx ? tx[5] : prevY;
+          const fontHeight = tx ? Math.abs(tx[3] || tx[0] || 12) : prevFontHeight;
+          const gap = x - prevEnd;
+          const verticalShift = Math.abs(y - prevY);
+          if (pageText.length === 0) {
+           // first item
+          } else if (verticalShift > fontHeight * 0.5) {
+           pageText += "\n";
+          } else if (gap > fontHeight * 0.3) {
+           pageText += " ";
+          }
+          // else: no separator — items touching or overlapping (diacritics)
+          pageText += s;
+          prevY = y;
+          prevEnd = x + (item.width ?? s.length * fontHeight * 0.5);
+          prevFontHeight = fontHeight;
         }
-        // else: no separator — items touching or overlapping (diacritics)
-        pageText += s;
-        prevY = y;
-        prevEnd = x + (item.width ?? s.length * fontHeight * 0.5);
-        prevFontHeight = fontHeight;
-      }
-      textParts.push(pageText);
-      page.cleanup();
+        textParts.push(pageText);
+      } finally { page.cleanup(); }
     }
-    return textParts.join("\n");
+    const text = textParts.join("\n");
+    if (!text.trim()) throw new Error(IMPORT_ERRORS.noText);
+    return text;
+  } catch (error) {
+    if (error instanceof Error && Object.values(IMPORT_ERRORS).some(v => v === error.message)) throw error;
+    const name = error && typeof error === "object" && "name" in error ? error.name : "";
+    throw new Error(name === "PasswordException" ? IMPORT_ERRORS.password : IMPORT_ERRORS.corrupted);
   } finally {
-    await doc.destroy();
+    // Also releases the worker when loading rejects (password/corruption).
+    await loadingTask.destroy();
   }
 }
 
@@ -102,14 +129,7 @@ export async function parsePdfInvoice(
   pdfBuffer: Buffer,
   aiConfig?: InvoiceParserAiConfig,
 ): Promise<PdfInvoiceExtraction> {
-  let rawText = "";
-
-  try {
-    rawText = await extractPdfText(pdfBuffer);
-  } catch (err) {
-    console.error("[pdf-invoice-parser] PDF text extraction failed:", err);
-    return buildFallbackResult(rawText);
-  }
+  const rawText = await extractPdfText(pdfBuffer);
 
   try {
     const aiResult = aiConfig ? await parseWithAi(rawText, aiConfig) : null;
@@ -117,7 +137,7 @@ export async function parsePdfInvoice(
       return { ...aiResult, rawText, parseMethod: "ai" };
     }
   } catch (err) {
-    console.warn("[pdf-invoice-parser] AI parsing failed, falling back:", err);
+    console.warn("[pdf-invoice-parser] AI extraction rejected; using deterministic parser");
   }
 
   try {
@@ -125,7 +145,7 @@ export async function parsePdfInvoice(
     const parsed = parseWholesalerDeliveryNote({ content: rawText, wholesaler: wholesalerType });
     return wholesalerNoteToExtraction(parsed, rawText, "rule-based");
   } catch (err) {
-    console.error("[pdf-invoice-parser] Rule-based parsing failed:", err);
+    console.warn("[pdf-invoice-parser] No supported delivery-note layout");
     return buildFallbackResult(rawText);
   }
 }
@@ -244,6 +264,9 @@ async function parseWithAi(
     '  "items": [',
     "    {",
     '      "sku": "string alebo null",',
+    '      "ean": "string alebo null",',
+    '      "batchNumber": "string alebo null",',
+    '      "expirationDate": "YYYY-MM-DD alebo null",',
     '      "name": "string - kompletny obchodny nazov produktu",',
     '      "quantity": number,',
     '      "unit": "string (ks, bal, ml, g, l, kg)",',
@@ -275,6 +298,7 @@ async function parseWithAi(
   const cleanBase = config.baseUrl.replace(/\/+$/, "");
   const response = await fetch(cleanBase + "/chat/completions", {
     method: "POST",
+    signal: AbortSignal.timeout(30_000),
     headers,
     body: JSON.stringify({
       model: config.model,
@@ -324,7 +348,11 @@ async function parseWithAi(
     quantity: Number(it.quantity) || 0,
     unit: it.unit || "ks",
     unitPriceWithoutVat: Number(it.unitPriceWithoutVat) || 0,
-    vatRate: Number(it.vatRate) || 10,
+    vatRate: Number(it.vatRate ?? 23),
+    ean: it.ean || undefined,
+    batchNumber: it.batchNumber || undefined,
+    expirationDate: it.expirationDate || undefined,
+    isControlledSubstance: isControlledSubstanceName(String(it.name ?? "")),
     totalWithoutVat: Number(it.totalWithoutVat) || 0,
     totalWithVat: Number(it.totalWithVat) || 0,
   }));
@@ -363,6 +391,10 @@ function wholesalerNoteToExtraction(
     issueDate: note.issueDate,
     items: note.items.map((it) => ({
       sku: it.sku,
+      ean: it.ean,
+      batchNumber: it.batchNumber,
+      expirationDate: it.expirationDate,
+      isControlledSubstance: isControlledSubstanceName(it.name),
       name: it.name,
       quantity: it.quantity,
       unit: it.unit,
