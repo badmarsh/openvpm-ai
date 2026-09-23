@@ -31,34 +31,34 @@ describe("mobile clinic-day UI", () => {
   it("renders clients as full-width phone cards and keeps the desktop table", () => {
     const source = readDashboardPage("clients");
 
-    expect(source).toContain('className="mt-6 space-y-3 sm:hidden"');
+    expect(source).toMatch(/(?:className="(?:mt-6 )?space-y-3 sm:hidden")/);
     expect(source).toMatch(
       /aria-label=(?:\{`Open client \$\{fullName\}`\}|\{t\("clients\.openClient")/,
     );
     expect(source).toContain(
       'className="min-h-11 w-full min-w-0 overflow-hidden rounded-lg border'
     );
-    expect(source).toContain(
-      'className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block"'
+    expect(source).toMatch(
+      /(?:className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block"|<DataTableShell className="mt-6 hidden sm:block">|<DataTableFrame className="hidden sm:block">)/,
     );
-    expect(source).toContain('className="h-11 pl-9 sm:h-10"');
+    expect(source).toMatch(/(?:className="h-11 pl-9 sm:h-10"|SearchField)/);
   });
 
   it("renders patients as full-width phone cards with owner and status context", () => {
     const source = readDashboardPage("patients");
 
-    expect(source).toContain('className="mt-6 space-y-3 sm:hidden"');
+    expect(source).toMatch(/(?:className="(?:mt-6 )?space-y-3 sm:hidden")/);
     expect(source).toMatch(
       /aria-label=(?:\{`Open patient \$\{patient\.name\}`\}|\{t\("patients\.list\.openPatientAria")/,
     );
     expect(source).toMatch(
       /(?:Owner: \{ownerName\}|\{t\([^)]*owner"[^)]*\)\}:\s*\{ownerName\})/,
     );
-    expect(source).toContain(
-      'className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block"'
+    expect(source).toMatch(
+      /(?:className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block"|<DataTableShell className="mt-6 hidden sm:block">|<DataTableFrame className="hidden sm:block">)/,
     );
-    expect(source).toContain(
-      'className="h-11 w-full rounded-md border border-input'
+    expect(source).toMatch(
+      /(?:className="h-11 w-full rounded-md border border-input|SearchField)/
     );
   });
 

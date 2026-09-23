@@ -29,6 +29,8 @@ import { duplicateShieldRouter } from "./duplicate-shield";
 import { aiSettingsRouter } from "./ai-settings";
 import { clinicalGuardianRouter } from "./clinical-guardian";
 import { fieldVisitsRouter } from "./field-visits";
+import { clinicalRegisterRouter } from "./clinical-register";
+import { medicationOversightRouter } from "./medication-oversight";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -65,6 +67,8 @@ export const extensionsRouter = createRouter({
   aiSettings: aiSettingsRouter,
   clinicalGuardian: clinicalGuardianRouter,
   fieldVisits: fieldVisitsRouter,
+  clinicalRegister: clinicalRegisterRouter,
+  medicationOversight: medicationOversightRouter,
 });
 
 export {
@@ -95,4 +99,6 @@ export {
   aiSettingsRouter,
   clinicalGuardianRouter,
   fieldVisitsRouter,
+  clinicalRegisterRouter,
+  medicationOversightRouter,
 };

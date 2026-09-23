@@ -37,6 +37,7 @@ import {
   ClinicianConfirmationError,
 } from "@/lib/ai/clinician-confirmation";
 import { formatTranscriptToSoap, type SoapStyle } from "@/lib/voice/soap-formatter";
+import { aiProviderTrpcError } from "@/lib/ai/provider-errors";
 import { resolvePracticeLanguageModel } from "@/lib/ai/ai-config-resolver";
 import { extractBillableItemsFromSoap } from "@/lib/voice/treatment-extractor";
 import { uploadFile, readPrimaryObject } from "@/lib/s3";
@@ -147,10 +148,9 @@ export const voiceRouter = createRouter({
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Audio transcription failed: ${message}`,
-        });
+        // A missing provider or a slow gateway is an operational state, not a
+        // crash: it must not raise an ops alert on every dictation attempt.
+        throw aiProviderTrpcError(err, "Audio transcription failed");
       }
 
       await ctx.db
@@ -163,6 +163,11 @@ export const voiceRouter = createRouter({
         .where(eq(voiceDictations.id, dictation.id));
 
       // 5. SOAP formátovanie
+      //
+      // The transcript is already persisted above (status FORMATTING), so a
+      // failed formatting call can never lose the dictation. When the AI cannot
+      // answer, the record is still completed in a degraded state with the raw
+      // transcript in `subjective`; the vet edits and finalizes it manually.
       try {
         const aiModel = await resolvePracticeLanguageModel(
           ctx.db,
@@ -183,29 +188,31 @@ export const voiceRouter = createRouter({
             objective: soap.objective,
             assessment: soap.assessment,
             plan: soap.plan,
+            status: "COMPLETED",
+            completedAt: new Date(),
             rawAiResponse: {
               transcript,
               soap,
               model: dictation.modelId,
               style: input.style,
+              formattingDegraded: soap.degraded ?? null,
             },
-            status: "COMPLETED",
-            completedAt: new Date(),
           })
           .where(eq(voiceDictations.id, dictation.id))
           .returning();
 
-        return completed ?? dictation;
+        return {
+          ...(completed ?? dictation),
+          formattingDegraded: soap.degraded ?? null,
+          clientSummary: "clientSummary" in soap ? soap.clientSummary : undefined,
+        };
       } catch (err) {
         const message = err instanceof Error ? err.message : "SOAP formatting failed";
         await ctx.db
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `SOAP formatting failed: ${message}`,
-        });
+        throw aiProviderTrpcError(err, "SOAP formatting failed");
       }
     }),
 
@@ -323,10 +330,7 @@ export const voiceRouter = createRouter({
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Audio transcription failed: ${message}`,
-        });
+        throw aiProviderTrpcError(err, "Audio transcription failed");
       }
 
       await ctx.db
@@ -359,6 +363,7 @@ export const voiceRouter = createRouter({
               transcript,
               soap,
               model: dictation.modelId,
+              formattingDegraded: soap.degraded ?? null,
             },
             status: "COMPLETED",
             completedAt: new Date(),
@@ -366,7 +371,10 @@ export const voiceRouter = createRouter({
           .where(eq(voiceDictations.id, dictation.id))
           .returning();
 
-        return updated;
+        return {
+          ...(updated ?? dictation),
+          formattingDegraded: soap.degraded ?? null,
+        };
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "SOAP formatting failed";
@@ -374,10 +382,7 @@ export const voiceRouter = createRouter({
           .update(voiceDictations)
           .set({ status: "FAILED", errorMessage: message })
           .where(eq(voiceDictations.id, dictation.id));
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `SOAP formatting failed: ${message}`,
-        });
+        throw aiProviderTrpcError(err, "SOAP formatting failed");
       }
     }),
 
@@ -458,11 +463,19 @@ export const voiceRouter = createRouter({
         }
       }
 
-      const aiModel = await resolvePracticeLanguageModel(
-        ctx.db,
-        ctx.practiceId,
-        "voiceSoap",
-      );
+      // A practice without an active AI provider must still be able to format
+      // text: the formatter then falls back to carrying the transcript in
+      // `subjective` instead of throwing away the operator's work.
+      let aiModel: Awaited<ReturnType<typeof resolvePracticeLanguageModel>> | undefined;
+      try {
+        aiModel = await resolvePracticeLanguageModel(
+          ctx.db,
+          ctx.practiceId,
+          "voiceSoap",
+        );
+      } catch {
+        aiModel = undefined;
+      }
 
       const soap = await formatTranscriptToSoap(input.transcript, {
         style: input.style as SoapStyle,

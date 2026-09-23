@@ -14,6 +14,8 @@ import {
   MessageSquare,
   FlaskConical,
   Tractor,
+  ScanLine,
+  Pill,
 } from "lucide-react";
 
 export type UserRole =
@@ -127,6 +129,26 @@ export const customNavItems: CustomNavItem[] = [
     icon: ImageIcon,
     roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'marketing',
+  },
+  // AI imaging (RTG / USG / CT / MRI) — radiology work needs a nav entry of
+  // its own; it used to be reachable only from the /agent hub.
+  {
+    href: "/agent/imaging",
+    label: "RTG & zobrazovacia AI",
+    i18nKey: "nav.imaging",
+    icon: ScanLine,
+    roles: ["admin", "veterinarian", "technician"],
+    section: "clinical",
+    badge: "AI",
+  },
+  // Medication oversight over every prescription in the practice.
+  {
+    href: "/prescriptions",
+    label: "Lieky & dohľad",
+    i18nKey: "nav.medications",
+    icon: Pill,
+    roles: ["admin", "veterinarian", "technician"],
+    section: "pharmacy",
   },
   // AI
   {

@@ -1372,7 +1372,12 @@
     "noEmail": "Email neuvedený",
     "cityNotListed": "Mesto neuvedené",
     "addedPrefix": "Pridané {date}",
-    "openClient": "Otvoriť kartu klienta {name}"
+    "openClient": "Otvoriť kartu klienta {name}",
+    "column_patients": "Zvieratá",
+    "column_actions": "Akcie",
+    "list": {
+      "open": "Karta"
+    }
   },
   "common": {
     "save": "Uložiť",
@@ -2993,7 +2998,9 @@
     "marketingScripts": "Operačné skripty",
     "marketingCompetitors": "Konkurencia & Trh",
     "v2Import": "V2 Migrácia",
-    "ekasaClosures": "Denné uzávierky (Z-report)"
+    "ekasaClosures": "Denné uzávierky (Z-report)",
+    "imaging": "RTG & zobrazovacia AI",
+    "medications": "Lieky & dohľad"
   },
   "newSoap": {
     "loadingEditor": "Načítavam editor...",
@@ -3589,7 +3596,8 @@
       "summaryError": "Nepodarilo sa vygenerovať zdravotný súhrn"
     },
     "list": {
-      "openPatientAria": "Otvoriť pacienta {name}"
+      "openPatientAria": "Otvoriť pacienta {name}",
+      "open": "Karta"
     },
     "age_months": "{count} mes.",
     "age_years": "{count} r.",
@@ -3633,7 +3641,8 @@
       "insurancePolicyLabel": "Zmluva",
       "insuranceValidUntil": "Platnosť do",
       "insuranceCoverage": "Krytie"
-    }
+    },
+    "column_actions": "Akcie"
   },
   "recalls": {
     "checkingAccess": "Overuje sa prístup k pripomienkam...",
@@ -4081,7 +4090,51 @@
     "searchPrompt": "Vyberte pacienta na zobrazenie záznamov",
     "settingsError": "Nepodarilo sa načítať nastavenia praxe",
     "settingsErrorWithMsg": "Nepodarilo sa načítať nastavenia záznamov. {message}",
-    "unsavedChangesWarning": "Tento klinický záznam nebol uložený na serveri. Chcete odísť a prísť o tieto hodnoty?"
+    "unsavedChangesWarning": "Tento klinický záznam nebol uložený na serveri. Chcete odísť a prísť o tieto hodnoty?",
+    "register": {
+      "title": "Klinické karty",
+      "subtitle": "Zoznam všetkých klinických kariet s aktivitou, liečbou a upozorneniami. Kliknutím otvoríte kartu pacienta.",
+      "toEncounters": "Vyšetrenia dnes",
+      "kpiPatients": "Aktívne karty",
+      "kpiPrescriptions": "Na liečbe",
+      "kpiProblems": "Otvorené diagnózy",
+      "kpiAlerts": "Upozornenia strážcu",
+      "tabAll": "Všetky karty",
+      "tabAttention": "Vyžadujú pozornosť",
+      "tabRecent": "Aktivita 30 dní",
+      "rowCount": "{count} kariet",
+      "searchPlaceholder": "Filtrovať karty podľa pacienta, majiteľa alebo čipu...",
+      "filterSpecies": "Druh",
+      "allSpecies": "Všetky druhy",
+      "filterStatus": "Stav karty",
+      "statusActive": "Aktívne",
+      "statusInactive": "Neaktívne",
+      "statusDeceased": "Zosnulé",
+      "statusAll": "Všetky stavy",
+      "legendOverdue": "prepadnutá vakcinácia",
+      "emptyFilterTitle": "Žiadna karta nezodpovedá filtru",
+      "emptyFilterDescription": "Zrušte vyhľadávanie alebo zmeňte filtre.",
+      "emptyTitle": "Zatiaľ žiadne klinické karty",
+      "emptyDescription": "Karta vznikne s prvým pacientom — vitálne funkcie, SOAP záznam, očkovanie alebo predpis.",
+      "colPatient": "Pacient",
+      "colOwner": "Majiteľ",
+      "colLastVisit": "Posledná návšteva",
+      "colSoap": "SOAP",
+      "colProblems": "Diagnózy",
+      "colPrescriptions": "Liečba",
+      "colVaccination": "Vakcinácia",
+      "colActions": "Akcie",
+      "noOwner": "Majiteľ neuvedený",
+      "chip": "čip {chip}",
+      "unknownAuthor": "—",
+      "noVisit": "Bez záznamu",
+      "statusDeceasedShort": "zosnulé",
+      "statusInactiveShort": "neaktívne",
+      "vaccinationOverdue": "Po termíne",
+      "openCard": "Karta",
+      "newSoap": "Nový SOAP",
+      "backToRegister": "Zoznam kariet"
+    }
   },
   "reports": {
     "header": {
@@ -6028,7 +6081,10 @@
       "soapCopied": "SOAP záznam skopírovaný do schránky",
       "confirmPrepareFailed": "Nepodarilo sa pripraviť potvrdenie klinika. Skontrolujte obsah a skúste znova.",
       "saveConflict": "Záznam bol medzičasom zmenený. Obnovte dáta a skúste znova.",
-      "confirmationExpired": "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova."
+      "confirmationExpired": "Potvrdenie vypršalo alebo je neplatné. Skontrolujte obsah a potvrďte znova.",
+      "providerNotConfigured": "AI poskytovateľ nie je nakonfigurovaný. Povoľte ho v Nastaveniach → AI a skúste znova.",
+      "providerTimeout": "AI poskytovateľ neodpovedal v časovom limite. Skúste znova alebo nastavte rýchlejší model.",
+      "formattingDegradedToast": "Prepis je hotový, ale AI formátovanie nebolo dostupné. SOAP upravte ručne."
     },
     "commands": {
       "newNoteReady": "Pripravená nová poznámka pacienta",
@@ -6164,6 +6220,13 @@
       "copy": "Kopírovať",
       "copied": "Súhrn skopírovaný pre majiteľa",
       "description": "Empatický text bez latinčiny – vhodný na odovzdanie majiteľovi alebo zaslanie správy."
+    },
+    "degraded": {
+      "title": "AI formátovanie nebolo dostupné",
+      "notConfigured": "Nie je nastavený žiadny AI poskytovateľ. Prepis diktátu je uložený nižšie — SOAP dokončite ručne alebo povoľte poskytovateľa v Nastaveniach.",
+      "timeout": "AI poskytovateľ neodpovedal v časovom limite. Prepis je uložený nižšie — skúste preformátovať znova alebo SOAP dokončite ručne.",
+      "openSettings": "Otvoriť Nastavenia → AI",
+      "providerError": "AI poskytovateľ vrátil chybu. Prepis diktátu je uložený nižšie — skúste preformátovať znova alebo SOAP dokončite ručne."
     }
   },
   "imaging": {
@@ -6318,6 +6381,25 @@
     },
     "page": {
       "loading": "Načítavam diagnostiku snímkov..."
+    },
+    "register": {
+      "title": "Register rádiologických analýz",
+      "subtitle": "Všetky RTG, USG, CT a MRI snímky kliniky vrátane AI nálezov a stavu potvrdenia.",
+      "filterType": "Modalita",
+      "allTypes": "Všetky modality",
+      "filterStatus": "Stav",
+      "allStatuses": "Všetky stavy",
+      "showAllPatients": "Všetci pacienti",
+      "emptyTitle": "Žiadne analýzy v tomto filtri",
+      "emptyDescription": "Nahrajte snímku v editore — analýza sa uloží do registra vrátane AI nálezu a potvrdenia lekárom.",
+      "colDate": "Dátum",
+      "colPatient": "Pacient",
+      "colType": "Modalita",
+      "colQuestion": "Zadaná otázka",
+      "colStatus": "Stav",
+      "colActions": "Akcie",
+      "unknownPatient": "Neznámy",
+      "revision": "rev. {count}"
     }
   },
   "discharge": {
@@ -8877,5 +8959,49 @@
       "micDenied": "Prístup k mikrofónu sa nepodaril. Skontrolujte povolenia prehliadača.",
       "transcribeFailed": "Prepis sa nepodaril. Skúste znova alebo zadajte diagnózu manuálne."
     }
+  },
+  "medications": {
+    "title": "Dohľad nad predpísanými liečivami",
+    "subtitle": "Všetky predpisy na jednom mieste — stav liečby, OPL, končiace a prepadnuté dávky, interakcie a upozornenia klinického strážcu.",
+    "toControlled": "Kniha OPL",
+    "toRecords": "Klinické karty",
+    "kpiActive": "Aktívne predpisy",
+    "kpiActivePatients": "{count} pacientov",
+    "kpiEnding": "Končia do {days} dní",
+    "kpiEndingHint": "naplánujte kontrolu",
+    "kpiOverdue": "Po termíne",
+    "kpiOverdueHint": "ukončite alebo predĺžte liečbu",
+    "kpiGuardian": "Strážca liekov",
+    "kpiGuardianHint": "{count} kritických",
+    "scopeActive": "Aktívne",
+    "scopeEnding": "Končiace",
+    "scopeOverdue": "Po termíne",
+    "scopeControlled": "OPL",
+    "scopeAlerts": "Upozornenia",
+    "scopeAll": "Všetky",
+    "rowCount": "{count} predpisov",
+    "searchPlaceholder": "Filtrovať podľa lieku, pacienta alebo majiteľa...",
+    "legendOpl": "omamná látka (Zákon 139/1998)",
+    "legendInteraction": "interakcia v liečbe",
+    "legendGuardian": "upozornenie strážcu",
+    "emptyTitle": "Žiadne predpisy v tomto filtri",
+    "emptyDescription": "Predpisy sa vystavujú v klinickej karte pacienta (záložka Predpisy) alebo počas vyšetrenia.",
+    "colPatient": "Pacient",
+    "colMedication": "Liečivo",
+    "colPrescriber": "Predpísal",
+    "colPeriod": "Obdobie liečby",
+    "colQuantity": "Množstvo",
+    "colOversight": "Dohľad",
+    "colActions": "Akcie",
+    "noOwner": "Majiteľ neuvedený",
+    "unknownPrescriber": "—",
+    "openEnded": "neurčito",
+    "overdueHint": "Liečba mala skončiť",
+    "statusActive": "Prebieha",
+    "refills": "+{count} opakovaní",
+    "guardianBadge": "{count}× strážca",
+    "interactionBadge": "{count}× interakcia",
+    "openCard": "Karta",
+    "openVisit": "Vyšetrenie"
   }
 }

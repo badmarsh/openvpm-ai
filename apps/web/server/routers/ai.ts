@@ -28,6 +28,10 @@ import {
   SoapDraftUnavailableError,
   draftSoapNote,
 } from "@/lib/ai/soap-draft";
+import {
+  aiFailureReason,
+  aiProviderTrpcError,
+} from "@/lib/ai/provider-errors";
 import { resolvePracticeLanguageModel } from "@/lib/ai/ai-config-resolver";
 import type { LanguageModel } from "ai";
 import { rateLimit } from "@/lib/rate-limit";
@@ -531,6 +535,12 @@ export const aiRouter = createRouter({
         }
         if (e instanceof SoapDraftUnavailableError) {
           throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
+        }
+        // A provider timeout or an upstream 4xx is an operational state, not a
+        // crash: classify it so the vet gets an actionable message instead of
+        // an ops page with a stack trace.
+        if (aiFailureReason(e)) {
+          throw aiProviderTrpcError(e, "Could not draft the note. Try again.");
         }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

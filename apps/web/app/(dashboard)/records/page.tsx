@@ -46,6 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { ClinicalCorrectionControl } from "@/components/records/clinical-correction-control";
+import { ClinicalCardsRegister } from "@/components/records/clinical-cards-register";
 import { DentalChartTab } from "@/components/records/dental-chart-tab";
 import {
   PrescriptionInventoryProductPicker,
@@ -1276,6 +1277,13 @@ function RecordsPageContent() {
       prescriptionForm.acknowledgeSafetyWarnings) &&
     !createPrescription.isPending;
 
+  // Register-first: without a selected patient the page shows the clinical-card
+  // register (every chart, newest activity first) instead of an empty search
+  // box. Search remains available there as a filter, not as a prerequisite.
+  if (!selectedPatient) {
+    return <ClinicalCardsRegister />;
+  }
+
   const tabLabels: Record<Tab, string> = {
     soap: t("records.tabs.soap", "SOAP Notes"),
     vaccinations: t("records.tabs.vaccinations", "Vaccinations"),
@@ -1399,6 +1407,19 @@ function RecordsPageContent() {
               </span>
             )}
           </div>
+          {!linkedAppointmentId ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 w-full gap-1.5 sm:h-9 sm:w-auto"
+              asChild
+            >
+              <Link href="/records">
+                <ClipboardList className="h-3.5 w-3.5" />
+                {t("records.register.backToRegister", "Zoznam kariet")}
+              </Link>
+            </Button>
+          ) : null}
           {!linkedAppointmentId ? (
             <Button
               variant="ghost"
