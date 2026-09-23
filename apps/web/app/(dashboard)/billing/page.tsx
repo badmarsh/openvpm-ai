@@ -349,6 +349,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={ReceiptEuro}
         title={t("billing.page.title", "Billing")}
         subtitle={t("billing.page.subtitle", "Invoices and payments")}
         actions={

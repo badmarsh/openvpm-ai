@@ -39,7 +39,7 @@ const MAX_BATCH_SIZE = 100;
 
 /** Dense registry table header — same token grid as /clients and /patients (px-3 for 12px content). */
 const TH =
-  "h-10 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80";
+  "h-9 px-3 py-2 text-left align-middle text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
 
 function canOperateRecalls(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "front_desk";
@@ -156,12 +156,8 @@ export default function VaccinationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Syringe className="w-7 h-7 text-primary" />
-            {t("nav.vaccinations", "Očkovania & Imunizácia")}
-          </span>
-        }
+        icon={Syringe}
+        title={t("nav.vaccinations", "Očkovania & Imunizácia")}
         subtitle={t(
           "vaccinations.subtitle",
           "Kompletný register očkovaní, automatický výpočet revakcinácií, zákaznícke SMS pripomienky a zákonná evidencia besnoty (Zákon č. 39/2007 Z. z.).",
@@ -190,8 +186,11 @@ export default function VaccinationsPage() {
         onValueChange={(v) => setActiveTab(v as "recalls" | "rabies" | "search")}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
-          <TabsTrigger value="recalls" className="gap-2 text-xs">
+        <TabsList className="grid h-auto w-full max-w-lg grid-cols-3 rounded-none border-b bg-transparent p-0">
+          <TabsTrigger
+            value="recalls"
+            className="gap-2 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+          >
             <BellRing className="h-3.5 w-3.5" />
             <span>{t("vaccinations.tabs.recalls", "Revakcinácie")}</span>
             {eligibleRecipients.length > 0 && (
@@ -204,7 +203,10 @@ export default function VaccinationsPage() {
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>{t("vaccinations.tabs.rabies", "Register besnoty")}</span>
           </TabsTrigger>
-          <TabsTrigger value="search" className="gap-2 text-xs">
+          <TabsTrigger
+            value="search"
+            className="gap-2 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+          >
             <Search className="h-3.5 w-3.5" />
             <span>{t("vaccinations.tabs.search", "Preukaz pacienta")}</span>
           </TabsTrigger>

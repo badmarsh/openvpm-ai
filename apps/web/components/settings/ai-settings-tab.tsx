@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { HeartbeatDot } from "@/components/ui/status-pulse-badge";
 import {
   Select,
   SelectContent,
@@ -353,14 +354,11 @@ export function AiSettingsTab() {
               </div>
               <div className="flex items-center gap-2">
                 {openaiIsActive ? (
-                  <Badge variant="default" className="bg-emerald-600 text-[10px] py-0 px-1.5 h-5">
-                    {t("settings.ai.providers.activeBadge", "Aktívny")}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-muted-foreground text-[10px] py-0 px-1.5 h-5">
-                    {t("settings.ai.providers.inactiveBadge", "Neaktívny")}
-                  </Badge>
-                )}
+                  <HeartbeatDot
+                    tone="ok"
+                    label={t("settings.ai.providers.activeBadge", "Aktívny")}
+                  />
+                ) : null}
                 <Switch
                   checked={openaiIsActive}
                   onCheckedChange={setOpenaiIsActive}
@@ -466,14 +464,11 @@ export function AiSettingsTab() {
               </div>
               <div className="flex items-center gap-2">
                 {geminiIsActive ? (
-                  <Badge variant="default" className="bg-emerald-600 text-[10px] py-0 px-1.5 h-5">
-                    {t("settings.ai.providers.activeBadge", "Aktívny")}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-muted-foreground text-[10px] py-0 px-1.5 h-5">
-                    {t("settings.ai.providers.inactiveBadge", "Neaktívny")}
-                  </Badge>
-                )}
+                  <HeartbeatDot
+                    tone="ok"
+                    label={t("settings.ai.providers.activeBadge", "Aktívny")}
+                  />
+                ) : null}
                 <Switch
                   checked={geminiIsActive}
                   onCheckedChange={setGeminiIsActive}
@@ -579,14 +574,11 @@ export function AiSettingsTab() {
               </div>
               <div className="flex items-center gap-2">
                 {alibabaIsActive ? (
-                  <Badge variant="default" className="bg-emerald-600 text-[10px] py-0 px-1.5 h-5">
-                    {t("settings.ai.providers.activeBadge", "Aktívny")}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-muted-foreground text-[10px] py-0 px-1.5 h-5">
-                    {t("settings.ai.providers.inactiveBadge", "Neaktívny")}
-                  </Badge>
-                )}
+                  <HeartbeatDot
+                    tone={aliHealth && aliHealth.online === false ? "down" : "ok"}
+                    label={t("settings.ai.providers.activeBadge", "Aktívny")}
+                  />
+                ) : null}
                 <Switch
                   checked={alibabaIsActive}
                   onCheckedChange={setAlibabaIsActive}

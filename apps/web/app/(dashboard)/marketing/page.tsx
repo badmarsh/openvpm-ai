@@ -8,15 +8,11 @@ import {
   FileText,
   Globe,
   Loader2,
-  Building2,
-  ShieldAlert,
-  Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { PageSectionHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/common/empty-state";
 import { MarketingStudioContent } from "./_marketing-studio";
 import { ContentCalendarTab } from "@/components/marketing/content-calendar-tab";
 import { SocialApprovalQueueTab } from "@/components/marketing/social-approval-queue-tab";
@@ -38,86 +34,22 @@ function TabLoadingFallback() {
   );
 }
 
-// 2B: static color map — dynamic `bg-${color}-100` classes are purged by Tailwind
-const competitorColorMap: Record<string, string> = {
-  blue: "bg-blue-100 dark:bg-blue-900/30",
-  green: "bg-green-100 dark:bg-green-900/30",
-  purple: "bg-purple-100 dark:bg-purple-900/30",
-};
-
 function CompetitorsTab() {
   const { t } = useI18n();
-  const competitors = [
-    { initials: "VK", name: "Vet Klinika Bratislava", typeKey: "marketing.competitors.typeClinic", typeFallback: "Veterinárna klinika", posts: 24, engagement: "3.2%", growth: "+12%", growthPositive: true, color: "blue" },
-    { initials: "PV", name: "Pet Vets Košice", typeKey: "marketing.competitors.typeAmbulance", typeFallback: "Veterinárna ambulancia", posts: 18, engagement: "2.8%", growth: "+8%", growthPositive: true, color: "green" },
-    { initials: "AC", name: "Animal Care B. Bystrica", typeKey: "marketing.competitors.typePractice", typeFallback: "Veterinárna prax", posts: 15, engagement: "4.1%", growth: "-2%", growthPositive: false, color: "purple" },
-  ];
   return (
     <div className="space-y-6">
       <PageSectionHeader
         title={t("marketing.competitors.title", "Konkurencia & Intel")}
         subtitle={t("marketing.competitors.subtitle", "Monitorovanie konkurenčných aktivít a trhový výskum")}
-        actions={
-          <Button className="text-xs gap-1.5" variant="outline" size="sm">
-            <Globe className="h-3.5 w-3.5" />
-            <span>{t("marketing.competitors.startMonitoring", "Spustiť monitorovanie")}</span>
-          </Button>
-        }
       />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {competitors.map((competitor) => (
-          <div key={competitor.initials} className="rounded-xl border bg-card p-5 shadow-xs">
-            <div className="flex items-center gap-2 mb-3">
-              <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", competitorColorMap[competitor.color] ?? "bg-muted")}>
-                <span className="text-xs font-bold">{competitor.initials}</span>
-              </div>
-              <div>
-                <div className="font-medium text-sm">{competitor.name}</div>
-                <div className="text-xs text-muted-foreground">{t(competitor.typeKey, competitor.typeFallback)}</div>
-              </div>
-            </div>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("marketing.competitors.posts30d", "Publikácie (30 dní)")}</span>
-                <span className="font-medium">{competitor.posts}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("marketing.competitors.engagement", "Zapojenie")}</span>
-                <span className="font-medium">{competitor.engagement}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t("marketing.competitors.followerGrowth", "Rast sledujúcich")}</span>
-                <span className={cn("font-medium", competitor.growthPositive ? "text-emerald-600" : "text-red-600")}>{competitor.growth}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-xl border bg-card p-5 shadow-xs">
-        <h3 className="font-medium text-sm mb-3">{t("marketing.competitors.recentDiscoveries", "Nedávne objavy")}</h3>
-        <div className="space-y-3">
-          <div className="p-3 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
-            <div className="flex items-start gap-2">
-              <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-              <div>
-                <div className="text-xs font-medium">{t("marketing.competitors.newCampaign", "Nová akcia konkurencie")}</div>
-                <div className="text-xs text-muted-foreground mt-1">{t("marketing.competitors.discoveryCampaignDetail", "Vet Klinika Bratislava spustila výhodnú ponuku preventívnych prehliadok", { name: "Vet Klinika Bratislava" })}</div>
-              </div>
-            </div>
-          </div>
-          <div className="p-3 border rounded-lg">
-            <div className="flex items-start gap-2">
-              <Users className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-              <div>
-                <div className="text-xs font-medium">{t("marketing.competitors.teamChange", "Zmena v tíme")}</div>
-                <div className="text-xs text-muted-foreground mt-1">{t("marketing.competitors.discoveryTeamDetail", "Pet Vets Košice zamestnali nového veterinára so špecializáciou na ortopédiu", { name: "Pet Vets Košice" })}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <EmptyState
+        icon={Globe}
+        title={t("marketing.competitors.emptyTitle", "Monitorovanie konkurencie nie je pripojené")}
+        description={t(
+          "marketing.competitors.emptyDescription",
+          "Žiadne demo kliniky. Pripojte zdroj trhu, keď bude k dispozícii.",
+        )}
+      />
     </div>
   );
 }

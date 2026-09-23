@@ -953,6 +953,7 @@ function ReportsDashboard() {
   return (
     <div>
       <PageHeader
+        icon={BarChart3}
         title={t("reports.header.title", "Reports")}
         subtitle={t("reports.header.subtitle", "Practice analytics and insights")}
       />

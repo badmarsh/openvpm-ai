@@ -83,8 +83,10 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
      S3_REGION: "us-east-1"
-     NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
       PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-martin.sykora@vetsykora.sk,admin@vetsykora.sk}
+      AT_PROXY_URL: ${AT_PROXY_URL}
+      AT_PROXY_KEY: ${AT_PROXY_KEY}
     networks:
       - default
       - dokploy-network

@@ -851,6 +851,7 @@ export default function WhiteboardPage() {
   return (
     <div>
       <PageHeader
+        icon={ClipboardList}
         title={
           <span className="inline-flex items-center gap-3">
             {t("whiteboard.title", "Practice Whiteboard")}

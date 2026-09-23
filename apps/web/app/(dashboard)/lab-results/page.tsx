@@ -338,6 +338,7 @@ function LabResultsInboxContent() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={FlaskConical}
         title={t("labResults.title", "Laboratórne výsledky")}
         subtitle={
           isFrontDesk

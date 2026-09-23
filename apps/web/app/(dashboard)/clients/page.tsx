@@ -60,6 +60,7 @@ export default function ClientsPage() {
   return (
     <div>
       <PageHeader
+        icon={Users}
         title={t("clients.title", "Clients")}
         subtitle={t("clients.subtitle", "Manage client information")}
         actions={

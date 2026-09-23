@@ -706,6 +706,7 @@ function ControlledSubstancesLogPage() {
   return (
     <div>
       <PageHeader
+        icon={ShieldAlert}
         title={t("controlledSubstances.title", "Kniha omamných látok (OPK)")}
         subtitle={t(
           "controlledSubstances.subtitle",

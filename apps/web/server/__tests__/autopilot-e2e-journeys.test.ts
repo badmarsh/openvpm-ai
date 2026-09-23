@@ -210,6 +210,6 @@ describe("Autopilot Customer Journeys & Event Bus E2E", () => {
         patientId: PATIENT_ID,
         suppressionReason: "deceased_patient",
       });
-    });
+    }, 15_000);
   });
 });

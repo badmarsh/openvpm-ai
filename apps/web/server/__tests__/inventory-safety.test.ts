@@ -227,6 +227,22 @@ describe("inventory mutation safety", () => {
     expect(select).not.toHaveBeenCalled();
   });
 
+  it("falls back to catalog-only inventory list when ext_inventory_metadata is missing", () => {
+    const source = readFileSync("server/routers/inventory.ts", "utf8");
+    expect(source).toContain("isMissingRelationError");
+    expect(source).toContain('isMissingRelationError(err, "ext_inventory_metadata")');
+    expect(source).toContain("const run = async (includeMetadata: boolean)");
+    expect(source).toContain("return await run(false)");
+  });
+
+  it("falls back supplier names when ext_inventory_metadata is missing", () => {
+    const source = readFileSync(
+      "server/routers/extensions/inventory-metadata.ts",
+      "utf8",
+    );
+    expect(source).toContain('isMissingRelationError(err, "ext_inventory_metadata")');
+  });
+
   it("uses a total product order across duplicate names and multiple pages", async () => {
     const catalog = Array.from({ length: 60 }, (_, index) => ({
       id: `00000000-0000-0000-0000-${String(index).padStart(12, "0")}`,

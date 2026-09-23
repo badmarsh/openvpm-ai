@@ -1439,6 +1439,15 @@ export default function PatientDetailPage() {
                 ) : null}
               </div>
             ) : null}
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/records?patientId=${patient.id}`}>
+                <FileText className="mr-2 h-4 w-4" />
+                {t(
+                  "patients.actions.openClinicalChart",
+                  "Otvoriť klinickú kartu",
+                )}
+              </Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadSummary}>
               <FileDown className="mr-2 h-4 w-4" />
               {t(

@@ -73,12 +73,8 @@ export default function WellnessPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Heart className="w-7 h-7 text-primary" />
-            {t("marketing.wellness.title", "Wellness plány & programy")}
-          </span>
-        }
+        icon={Heart}
+        title={t("marketing.wellness.title", "Wellness plány & programy")}
         subtitle={t(
           "marketing.wellness.subtitle",
           "Preventívne programy kliniky a evidencia čerpania benefitov počas návštevy pacienta. Rešpektuje Sympathy Flow (blokované pre zosnulých pacientov)."

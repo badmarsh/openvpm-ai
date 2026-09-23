@@ -507,6 +507,7 @@ export default function FieldVisitsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={Tractor}
         title={t("fieldVisits.title", "Terénna prax & Farmy")}
         subtitle={t(
           "fieldVisits.subtitle",
@@ -813,20 +814,32 @@ export default function FieldVisitsPage() {
 
       {/* Hlavné záložky */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-          <TabsTrigger value="farms" className="gap-1.5 min-h-[44px]">
+        <TabsList className="grid h-auto w-full max-w-2xl grid-cols-4 rounded-none border-b bg-transparent p-0">
+          <TabsTrigger
+            value="farms"
+            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+          >
             <Building2 className="h-4 w-4" />
             {t("fieldVisits.tabs.farms", "Farmy & Fakturácia")}
           </TabsTrigger>
-          <TabsTrigger value="visits" className="gap-1.5 min-h-[44px]">
+          <TabsTrigger
+            value="visits"
+            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+          >
             <Calendar className="h-4 w-4" />
             {t("fieldVisits.tabs.visits", "Kniha ošetrení")}
           </TabsTrigger>
-          <TabsTrigger value="stock" className="gap-1.5 min-h-[44px]">
+          <TabsTrigger
+            value="stock"
+            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+          >
             <Package className="h-4 w-4" />
             {t("fieldVisits.tabs.stock", "Sklad liečiv")}
           </TabsTrigger>
-          <TabsTrigger value="new-visit" className="gap-1.5 min-h-[44px]">
+          <TabsTrigger
+            value="new-visit"
+            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+          >
             <Plus className="h-4 w-4" />
             {t("fieldVisits.tabs.newVisit", "Nový výjazd (Mobil)")}
           </TabsTrigger>

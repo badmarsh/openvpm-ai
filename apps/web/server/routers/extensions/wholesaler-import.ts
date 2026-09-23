@@ -16,6 +16,7 @@ import {
   parseDate,
   type WholesalerType,
 } from "@/lib/inventory/wholesaler-import";
+import { isMissingRelationError } from "@/lib/db/missing-relation";
 
 const staffProcedure = protectedProcedure.use(
   requireRole("admin", "veterinarian", "technician", "front_desk")
@@ -197,18 +198,51 @@ async function applyConfirmedItems(
   return { updatedCount, createdCount, skippedCount };
 }
 
+function missingInventoryImportSchema(err: unknown) {
+  return (
+    isMissingRelationError(err, "ext_inventory_metadata") ||
+    isMissingRelationError(err, "ext_inventory_receipts")
+  );
+}
+
+function missingInventoryImportSchemaError() {
+  return new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message:
+      "Inventory import tables are missing. Apply database migrations (pnpm db:migrate or pnpm db:push) and retry.",
+  });
+}
+
 async function importCatalog(ctx: { db: any; practiceId: string }, supplierName: string) {
-  const rows = await ctx.db.select({
-    id: products.id, name: products.name, sku: products.sku,
-    stockQuantity: products.stockQuantity, lotNumber: products.lotNumber,
-    expirationDate: products.expirationDate, unitPrice: products.unitPrice,
-    category: products.category,
-    barcode: extInventoryMetadata.barcode, supplierCode: extInventoryMetadata.supplierCode,
-    supplierName: extInventoryMetadata.supplierName, activeSubstance: extInventoryMetadata.activeSubstance,
-  }).from(products).leftJoin(extInventoryMetadata, and(
-    eq(products.id, extInventoryMetadata.productId), eq(extInventoryMetadata.practiceId, ctx.practiceId),
-  )).where(and(eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt)));
-  return rows.map((p: any) => ({ ...p, supplierCode: p.supplierName === supplierName ? p.supplierCode : null }));
+  const catalogWhere = and(eq(products.practiceId, ctx.practiceId), isNull(products.deletedAt));
+  try {
+    const rows = await ctx.db.select({
+      id: products.id, name: products.name, sku: products.sku,
+      stockQuantity: products.stockQuantity, lotNumber: products.lotNumber,
+      expirationDate: products.expirationDate, unitPrice: products.unitPrice,
+      category: products.category,
+      barcode: extInventoryMetadata.barcode, supplierCode: extInventoryMetadata.supplierCode,
+      supplierName: extInventoryMetadata.supplierName, activeSubstance: extInventoryMetadata.activeSubstance,
+    }).from(products).leftJoin(extInventoryMetadata, and(
+      eq(products.id, extInventoryMetadata.productId), eq(extInventoryMetadata.practiceId, ctx.practiceId),
+    )).where(catalogWhere);
+    return rows.map((p: any) => ({ ...p, supplierCode: p.supplierName === supplierName ? p.supplierCode : null }));
+  } catch (err) {
+    if (!isMissingRelationError(err, "ext_inventory_metadata")) throw err;
+    const rows = await ctx.db.select({
+      id: products.id, name: products.name, sku: products.sku,
+      stockQuantity: products.stockQuantity, lotNumber: products.lotNumber,
+      expirationDate: products.expirationDate, unitPrice: products.unitPrice,
+      category: products.category,
+    }).from(products).where(catalogWhere);
+    return rows.map((p: any) => ({
+      ...p,
+      barcode: null,
+      supplierCode: null,
+      supplierName: null,
+      activeSubstance: null,
+    }));
+  }
 }
 
 function matchItems(items: any[], catalog: any[]) {
@@ -414,26 +448,44 @@ export const wholesalerImportRouter = createRouter({
     )
     .query(async ({ ctx, input }) => {
       const q = `%${input.query.trim().replace(/[%_\\]/g, "\\$&")}%`;
-      return ctx.db
-        .select({
-          id: products.id,
-          name: products.name,
-          sku: products.sku,
-          stockQuantity: products.stockQuantity,
-          unitPrice: products.unitPrice,
-          lotNumber: products.lotNumber,
-          expirationDate: products.expirationDate,
-        })
-        .from(products)
-        .where(
-          and(
-            eq(products.practiceId, ctx.practiceId),
-            isNull(products.deletedAt),
-            or(ilike(products.name, q), ilike(products.sku, q), sql`exists (select 1 from ${extInventoryMetadata} m where m.practice_id = ${ctx.practiceId} and m.product_id = ${products.id} and m.barcode ilike ${q})`),
+      const columns = {
+        id: products.id,
+        name: products.name,
+        sku: products.sku,
+        stockQuantity: products.stockQuantity,
+        unitPrice: products.unitPrice,
+        lotNumber: products.lotNumber,
+        expirationDate: products.expirationDate,
+      };
+      const scoped = [
+        eq(products.practiceId, ctx.practiceId),
+        isNull(products.deletedAt),
+      ] as const;
+      try {
+        return await ctx.db
+          .select(columns)
+          .from(products)
+          .where(
+            and(
+              ...scoped,
+              or(
+                ilike(products.name, q),
+                ilike(products.sku, q),
+                sql`exists (select 1 from ${extInventoryMetadata} m where m.practice_id = ${ctx.practiceId} and m.product_id = ${products.id} and m.barcode ilike ${q})`,
+              ),
+            ),
           )
-        )
-        .orderBy(products.name)
-        .limit(input.limit);
+          .orderBy(products.name)
+          .limit(input.limit);
+      } catch (err) {
+        if (!isMissingRelationError(err, "ext_inventory_metadata")) throw err;
+        return ctx.db
+          .select(columns)
+          .from(products)
+          .where(and(...scoped, or(ilike(products.name, q), ilike(products.sku, q))))
+          .orderBy(products.name)
+          .limit(input.limit);
+      }
     }),
 
   /**
@@ -455,7 +507,9 @@ export const wholesalerImportRouter = createRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const counts = await ctx.db.transaction(async tx => {
+      let counts;
+      try {
+      counts = await ctx.db.transaction(async tx => {
         const result = await applyConfirmedItems(ctx, tx, input);
         // Durable outbox: commit stock, pending OPL and event atomically. Workers run after commit.
         await tx.insert(extAutomationEvents).values({
@@ -468,6 +522,10 @@ export const wholesalerImportRouter = createRouter({
         }).onConflictDoNothing();
         return result;
       });
+      } catch (err) {
+        if (missingInventoryImportSchema(err)) throw missingInventoryImportSchemaError();
+        throw err;
+      }
 
       return {
         success: true,
@@ -486,9 +544,14 @@ export const wholesalerImportRouter = createRouter({
     supplierName: z.string().trim().min(1).max(255),
     items: z.array(confirmItemSchema.extend({ unitPrice: importMoneyInput.optional() })).min(1).max(500),
   })).mutation(async ({ ctx, input }) => {
-    const counts = await ctx.db.transaction(tx => applyConfirmedItems(ctx, tx, {
-      ...input, items: input.items.map(item => ({ ...item, retailPrice: item.retailPrice ?? item.unitPrice })),
-    }));
-    return { success: true, deliveryNoteNumber: input.deliveryNoteNumber, ...counts };
+    try {
+      const counts = await ctx.db.transaction(tx => applyConfirmedItems(ctx, tx, {
+        ...input, items: input.items.map(item => ({ ...item, retailPrice: item.retailPrice ?? item.unitPrice })),
+      }));
+      return { success: true, deliveryNoteNumber: input.deliveryNoteNumber, ...counts };
+    } catch (err) {
+      if (missingInventoryImportSchema(err)) throw missingInventoryImportSchemaError();
+      throw err;
+    }
   }),
 });

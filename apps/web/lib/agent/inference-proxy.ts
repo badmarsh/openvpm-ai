@@ -17,9 +17,16 @@ function nonBlank(v: string | undefined): string | undefined {
   return t || undefined;
 }
 
-/** Base URL read exclusively from the Dokploy environment tab. */
+/**
+ * Base URL read exclusively from the Dokploy environment tab.
+ * Automatically normalizes the URL to end with `/v1` without duplicate slashes,
+ * accepting both `https://...trycloudflare.com` and `https://...trycloudflare.com/v1`.
+ */
 export function inferenceProxyBaseUrl(): string | undefined {
-  return nonBlank(process.env.AT_PROXY_URL);
+  const raw = nonBlank(process.env.AT_PROXY_URL);
+  if (!raw) return undefined;
+  const stripped = raw.replace(/\/+$/, "");
+  return stripped.endsWith("/v1") ? stripped : `${stripped}/v1`;
 }
 
 /** True when AT_PROXY_URL is present in the environment. */

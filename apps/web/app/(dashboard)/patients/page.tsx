@@ -103,6 +103,7 @@ export default function PatientsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={PawPrint}
         title={t("patients.title", "Patients")}
         subtitle={t("patients.subtitle", "Manage patient records")}
         actions={

@@ -128,6 +128,38 @@ const variantStyles: Record<
   },
 };
 
+/** Compact green/red heartbeat used for endpoint health — no label when idle. */
+export function HeartbeatDot({
+  tone = "ok",
+  label,
+  className,
+}: {
+  tone?: "ok" | "down";
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn("relative inline-flex h-2.5 w-2.5 shrink-0", className)}
+      role="status"
+      aria-label={label}
+    >
+      <span
+        className={cn(
+          "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+          tone === "down" ? "bg-red-400" : "bg-emerald-400",
+        )}
+      />
+      <span
+        className={cn(
+          "relative inline-flex h-2.5 w-2.5 rounded-full",
+          tone === "down" ? "bg-red-500" : "bg-emerald-500",
+        )}
+      />
+    </span>
+  );
+}
+
 export function StatusPulseBadge({
   variant,
   status,
