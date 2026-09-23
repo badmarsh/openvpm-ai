@@ -22,8 +22,9 @@ import { IntegrationModeBanner } from "@/components/common/integration-mode-bann
 import { toast } from "sonner";
 
 export function MessageLogsView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const utils = trpc.useUtils();
+  const dateLocale = locale === "sk" ? "sk-SK" : "en-US";
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("all");
@@ -243,7 +244,7 @@ export function MessageLogsView() {
                       </span>
                       {patient?.name && (
                         <Badge variant="outline" className="text-[10px]">
-                          {patient.name} ({patient.species || "zviera"})
+                          {patient.name} ({patient.species || t("inbox.patientSpeciesFallback", "Pet")})
                         </Badge>
                       )}
                       <span className="text-muted-foreground text-[11px] flex items-center gap-1">
@@ -298,8 +299,8 @@ export function MessageLogsView() {
                       {t("marketing.messages.logTemplate", "Šablóna:")} <strong>{log.templateKey}</strong> (v{log.templateVersion}) · {t("marketing.messages.logLegalBasis", "Základ:")} {log.legalBasis}
                     </span>
                     <span>
-                      {t("marketing.messages.logScheduled", "Plánované:")} {new Date(log.scheduledFor).toLocaleString("sk-SK")}
-                      {log.sentAt && ` · ${t("marketing.messages.logSent", "Odoslané:")} ${new Date(log.sentAt).toLocaleString("sk-SK")}`}
+                      {t("marketing.messages.logScheduled", "Plánované:")} {new Date(log.scheduledFor).toLocaleString(dateLocale)}
+                      {log.sentAt && ` · ${t("marketing.messages.logSent", "Odoslané:")} ${new Date(log.sentAt).toLocaleString(dateLocale)}`}
                     </span>
                   </div>
                 </div>

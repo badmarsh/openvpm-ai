@@ -91,8 +91,11 @@ describe("inbox UI states", () => {
     );
     expect(source).toContain("formatDateInputForTimeZone(now, timeZone)");
     expect(source).toContain("formatDateInputForTimeZone(d, timeZone)");
-    expect(source).toContain(
-      "relativeTime(\n                                group.latest.createdAt,\n                                inboxTimeZone",
+    // Conversation rail renders the latest-message timestamp through the
+    // practice-timezone contract (whitespace-insensitive: row layout is dense
+    // dashboard craft and may re-indent).
+    expect(source).toMatch(
+      /relativeTime\(\s*group\.latest\.createdAt,\s*inboxTimeZone,/,
     );
     expect(source).toContain(
       "relativeTime(msg.createdAt, inboxTimeZone, t)",

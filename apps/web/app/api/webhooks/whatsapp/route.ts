@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
-import Twilio from "twilio";
-import { and, desc, eq, ilike, isNull } from "drizzle-orm";
-import { appBaseUrl } from "@/lib/app-url";
+import { and, desc, ilike, isNull } from "drizzle-orm";
 import { readRequestTextWithLimit } from "@/lib/request-json";
 import {
   MESSAGING_WEBHOOK_BODY_MAX_BYTES,
   messagingWebhookContentLengthTooLarge,
 } from "@/lib/messaging-webhook-limits";
-import { normalizeE164 } from "@/lib/messaging";
-import { envValue } from "@/lib/messaging/env";
+import {
+  nonBlankParam,
+  normalizeWaNumber,
+  phoneMatchPattern,
+  verifyTwilioRequest,
+  whatsappDedupeKey,
+} from "@/lib/messaging/whatsapp-inbound";
 import { db } from "@openpims/db/client";
 import { clients, communications, extWhatsappMessages, practices } from "@openpims/db";
 import { withSystem, withTenant } from "@/lib/tenant-db";
@@ -17,40 +20,10 @@ import { latestAssignedToForClient } from "@/lib/communications/assignment";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Strip the "whatsapp:" prefix Twilio prepends to WA numbers. */
-function normalizeWaNumber(raw: string | undefined): string | null {
-  if (!raw) return null;
-  const stripped = raw.replace(/^whatsapp:/i, "");
-  return normalizeE164(stripped);
-}
-
 function payloadTooLargeResponse() {
   return NextResponse.json(
     { error: "WhatsApp webhook payload too large" },
     { status: 413 },
-  );
-}
-
-function nonBlankParam(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function requestValidationUrls(request: Request): string[] {
-  const url = new URL(request.url);
-  const canonical = new URL(`${url.pathname}${url.search}`, appBaseUrl());
-  return Array.from(new Set([url.toString(), canonical.toString()]));
-}
-
-function verifyTwilioRequest(
-  request: Request,
-  params: Record<string, string>,
-): boolean {
-  const authToken = envValue("TWILIO_AUTH_TOKEN");
-  const signature = request.headers.get("x-twilio-signature");
-  if (!authToken || !signature) return false;
-  return requestValidationUrls(request).some((url) =>
-    Twilio.validateRequest(authToken, signature, url, params),
   );
 }
 
@@ -101,15 +74,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing required whatsapp fields" }, { status: 400 });
   }
 
-  const dedupeKey = `wa:${twilioSid}`;
+  const dedupeKey = whatsappDedupeKey(twilioSid);
+  if (!dedupeKey) {
+    return NextResponse.json({ error: "missing required whatsapp fields" }, { status: 400 });
+  }
   const displayBody = body || (numMedia && numMedia !== "0" ? "[Media attachment]" : "[WhatsApp message]");
   const subject = `WhatsApp from ${profileName ?? fromWaId}`;
 
+  // Match client by phone number. phoneMatchPattern() accepts strictly
+  // "+<digits>" (normalizeE164 output) and escapes LIKE wildcards, so no
+  // caller-controlled `%`/`_` can ever widen the ILIKE lookup.
+  const phonePattern = phoneMatchPattern(fromWaId);
+  if (!phonePattern) {
+    return NextResponse.json({ error: "missing required whatsapp fields" }, { status: 400 });
+  }
+
   await withSystem(db, async (tx) => {
-    // Match client by phone number. fromWaId is normalizeE164() output
-    // ("+<digits>"), so the ILIKE pattern is digits-only: no `%`/`_`
-    // wildcards can reach the query.
-    //
     // Deterministic ordering: communications.dedupeKey is a GLOBAL unique
     // index, so of several matched practices only the FIRST insert actually
     // lands (later ones no-op on the unique conflict). Order by most
@@ -120,7 +100,7 @@ export async function POST(request: Request) {
       .from(clients)
       .where(
         and(
-          ilike(clients.phone, `%${fromWaId.replace("+", "")}`),
+          ilike(clients.phone, phonePattern),
           isNull(clients.deletedAt),
         ),
       )
