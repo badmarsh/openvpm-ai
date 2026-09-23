@@ -54,7 +54,7 @@ export interface GeminiVideoPollResult {
 
 function getGeminiConfig(custom?: Partial<GeminiMediaConfig>): GeminiMediaConfig {
   // API key via ext_ai_settings; AT proxy accepts any bearer token
-  const apiKey = custom?.apiKey || process.env.AT_PROXY_KEY ?? "at-proxy";
+  const apiKey = custom?.apiKey || (process.env.AT_PROXY_KEY ?? "at-proxy");
   const baseUrl = (custom?.baseUrl || "https://generativelanguage.googleapis.com").replace(/\/$/, "");
   return { apiKey, baseUrl };
 }
