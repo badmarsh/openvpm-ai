@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Google AI Studio + OpenCodex + Video Generation Engine
  *
  * Provides:
@@ -327,6 +327,16 @@ export async function pollGeminiVideo(
   }
 }
 
+/**
+ * Gemini media generation calls the native AI Studio REST endpoint
+ * (/v1beta/models/...:generateContent), which requires a real API key. The
+ * AT inference proxy is OpenAI-compatible (chat/completions) only and cannot
+ * serve that endpoint, so it does not count as media configuration.
+ *
+ * NOTE: a previous revision hard-coded this to `true`, which forced every
+ * image-generation fallback through a guaranteed 401/404 network call and
+ * replaced the curated offline-safe clinical visuals with TRPCError 502s.
+ */
 export function isGeminiMediaConfigured(): boolean {
-  return true;
+  return Boolean(process.env.GEMINI_API_KEY?.trim());
 }

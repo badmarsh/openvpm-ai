@@ -31,7 +31,9 @@ const ANCHOR_SOURCES: Record<string, string> = {
   "whiteboard-board": "app/(dashboard)/whiteboard/page.tsx",
   "client-portal-link": "app/(dashboard)/clients/[id]/page.tsx",
   "calendar-subscribe": "components/schedule/calendar-subscribe.tsx",
-  "inbox-list": "app/(dashboard)/inbox/page.tsx",
+  // The inbox list markup (and its data-tour anchor) moved from the page into
+  // the InboxView component during the inbox monolith split.
+  "inbox-list": "components/communications/inbox-view.tsx",
 };
 
 const RICH_CONTEXT: GuideContext = {

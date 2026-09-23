@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Twilio from "twilio";
-import { and, eq, ilike, isNull } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull } from "drizzle-orm";
 import { appBaseUrl } from "@/lib/app-url";
 import { readRequestTextWithLimit } from "@/lib/request-json";
 import {
@@ -106,7 +106,15 @@ export async function POST(request: Request) {
   const subject = `WhatsApp from ${profileName ?? fromWaId}`;
 
   await withSystem(db, async (tx) => {
-    // Match client by phone number
+    // Match client by phone number. fromWaId is normalizeE164() output
+    // ("+<digits>"), so the ILIKE pattern is digits-only: no `%`/`_`
+    // wildcards can reach the query.
+    //
+    // Deterministic ordering: communications.dedupeKey is a GLOBAL unique
+    // index, so of several matched practices only the FIRST insert actually
+    // lands (later ones no-op on the unique conflict). Order by most
+    // recently created client so that "first" is stable instead of
+    // depending on Postgres row order.
     const matchedClients = await tx
       .select({ id: clients.id, practiceId: clients.practiceId })
       .from(clients)
@@ -116,6 +124,7 @@ export async function POST(request: Request) {
           isNull(clients.deletedAt),
         ),
       )
+      .orderBy(desc(clients.createdAt))
       .limit(5);
 
     const insertForPractice = async (

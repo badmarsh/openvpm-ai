@@ -1,4 +1,10 @@
-const DEFAULT_EMAIL_FROM = "OpenVPM Vet <noreply@dev.significa.sk>";
+/**
+ * Neutral sender identity for deployments that do not configure EMAIL_FROM.
+ * Must never default to a specific customer's or staging domain — a
+ * self-hosted practice sending from a foreign domain breaks deliverability
+ * and misattributes mail.
+ */
+const DEFAULT_EMAIL_FROM = "OpenVPM <noreply@mail.openvpm.com>";
 
 export function nonBlankEmailValue(
   value: string | null | undefined

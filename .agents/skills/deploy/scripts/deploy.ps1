@@ -47,9 +47,16 @@ if (-not $SkipEnvCheck) {
         Write-Host "VAROVANIE: Niektore kluce chybaju. Pokracujem (deploy moze zlyhaf v produkcii)." -ForegroundColor Yellow
     }
 
-    # Pripomenuti - pushni env do Dokploy ak sa nieco zmenilo
-    Write-Host "  Ak si upravil $EnvFile, pushni zmeny do Dokploy:" -ForegroundColor DarkGray
-    Write-Host "  dokploy env push $EnvFile" -ForegroundColor DarkGray
+    # AKTIVNA ENV OCHRNA: kazdy deploy prepise .env na serveri (zname dokploy
+    # spravanie - 109+ premennych sa strati). Vzdy pushnime lokalny env subor
+    # pred webhookom, aby sa hodnoty nevyhodili spolu s buildom.
+    Write-Host "  Pushujem env do Dokploy (dokploy env push $EnvFile)..." -ForegroundColor Yellow
+    dokploy env push $EnvFile
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "CHYBA: 'dokploy env push' zlyhal. Deploy zastaveny - pri pokracovani by sa env na serveri vymazali." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "OK Env synchronizovane s Dokploy." -ForegroundColor Green
 } else {
     Write-Host "
 [0/6] Kontrola env preskocena (-SkipEnvCheck)." -ForegroundColor DarkGray
@@ -122,7 +129,9 @@ if (-not $webhookUrl -and (Test-Path ".env")) {
     Get-Content ".env" | ForEach-Object { if ($_ -match "^DOKPLOY_DEPLOY_WEBHOOK_URL\s*=\s*(.*)") { $webhookUrl = $Matches[1].Trim().Trim('"') } }
 }
 if (-not $webhookUrl) {
-    $webhookUrl = "https://dev.significa.sk/api/deploy/compose/KCp595z_p95jTHcBzoHyQ"
+    # Webhook URL obsahuje token - nesmie sa zapisovat do kodu.
+    Write-Host "CHYBA: DOKPLOY_DEPLOY_WEBHOOK_URL nie je nastaveny (env alebo .env). Webhook URL obsahuje token a nesmie sa zapisovat do kodu." -ForegroundColor Red
+    exit 1
 }
 
 try {
@@ -162,6 +171,18 @@ try {
 }
 
 Write-Host "HTTP status: $statusCode | Health: ok=$healthOk | DB: ok=$dbOk" -ForegroundColor $(if ($healthOk) { "Green" } else { "Red" })
+
+if (-not $healthOk -or -not $dbOk) {
+    Write-Host "
+==================================================" -ForegroundColor Red
+    Write-Host "  DEPLOYMENT ZAVRENEGOL NEDOSPOVELIVY SMOKE TEST!" -ForegroundColor Red
+    Write-Host "  Health endpoint nedokazal overit database/schema." -ForegroundColor Red
+    Write-Host "  URL: https://vet.dev.significa.sk" -ForegroundColor Red
+    Write-Host "  Commit: $latestCommit" -ForegroundColor Red
+    Write-Host "==================================================" -ForegroundColor Red
+    Write-Host "Prave kroky: skontroluj Dokploy logs, over env (dokploy env push .env.production.local), pri potrebe restart web kontainera." -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host "
 ==================================================" -ForegroundColor Green

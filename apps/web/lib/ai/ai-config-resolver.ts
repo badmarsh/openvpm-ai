@@ -187,7 +187,11 @@ export async function resolveFeatureConfig(
     if (apiKey) {
       return {
         provider: "openai",
-        modelId: model || DEFAULT_AI_MODEL,
+        // Only reuse the feature-mapping model when it was designated for
+        // OpenAI itself. Carrying a Gemini/Alibaba model id over to an
+        // OpenAI endpoint produces a "model not found" error at call time.
+        modelId:
+          provider === "openai" ? model || DEFAULT_AI_MODEL : DEFAULT_AI_MODEL,
         baseUrl: config.openaiBaseUrl || undefined,
         apiKey,
         temperature,

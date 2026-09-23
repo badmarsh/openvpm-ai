@@ -129,6 +129,21 @@ async function applyConfirmedItems(
       continue;
     }
 
+    // Server-side controlled-substance gate (Zákon č. 139/1998 Z. z.):
+    // controlled substances must never enter inventory through an
+    // AI/PDF-driven import, even if the client overrides the "skip"
+    // suggestion in the preview. They require manual entry with the
+    // zero-prefill + witness workflow on the controlled-substances screen.
+    if (isControlledSubstanceName(item.name)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message:
+          "Kontrolovanú látku '" +
+          item.name +
+          "' nie je možné importovať zo zásielky (Zákon č. 139/1998 Z. z.). Záznam vytvorte ručne v sekcii Kontrolované látky.",
+      });
+    }
+
     if (item.action === "update_stock" && item.productId) {
       await tx
         .update(products)
