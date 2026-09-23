@@ -86,7 +86,7 @@ export function ClinicalGuardianWidget() {
             className={`flex h-10 w-10 items-center justify-center rounded-lg ${
               criticalCount > 0
                 ? "bg-destructive/15 text-destructive"
-                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                : "bg-success/15 text-success"
             }`}
           >
             {criticalCount > 0 ? (
@@ -119,7 +119,7 @@ export function ClinicalGuardianWidget() {
           )}
 
           {statutoryCount > 0 && (
-            <Badge variant="secondary" className="gap-1 text-xs border-amber-500/30 text-amber-700 dark:text-amber-300">
+            <Badge variant="warning" className="gap-1 text-xs">
               <Clock className="h-3 w-3" />
               {t("clinicalGuardian.widget.statutoryBadge", "{count} zákonných", {
                 count: statutoryCount,
@@ -155,7 +155,7 @@ export function ClinicalGuardianWidget() {
       <div className="divide-y divide-border">
         {alerts.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
-            <ShieldCheck className="mx-auto h-8 w-8 text-emerald-500 mb-2 opacity-80" />
+            <ShieldCheck className="mx-auto h-8 w-8 text-success mb-2 opacity-80" />
             <p className="font-medium text-foreground">
               {t("clinicalGuardian.widget.allGoodTitle", "Všetky klinické kontroly a zákonné lehoty v poriadku")}
             </p>
@@ -189,7 +189,7 @@ export function ClinicalGuardianWidget() {
                     {isCritical ? (
                       <ShieldAlert className="h-4 w-4 text-destructive" />
                     ) : (
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertTriangle className="h-4 w-4 text-warning" />
                     )}
                   </div>
                   <div className="min-w-0">

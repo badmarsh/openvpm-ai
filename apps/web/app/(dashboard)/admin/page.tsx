@@ -70,18 +70,18 @@ function formatDateTime(value: Date | string | null) {
 }
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  trialing: "bg-blue-100 text-blue-700",
-  past_due: "bg-red-100 text-red-700",
-  canceled: "bg-gray-100 text-gray-500",
-  none: "bg-gray-100 text-gray-500",
+  active: "bg-success-muted text-success-muted-foreground",
+  trialing: "bg-info-muted text-info-muted-foreground",
+  past_due: "bg-destructive/10 text-destructive",
+  canceled: "bg-muted text-muted-foreground",
+  none: "bg-muted text-muted-foreground",
 };
 
 const recoveryTrialStyles: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  ending_soon: "bg-amber-100 text-amber-800",
-  expired: "bg-red-100 text-red-700",
-  no_trial: "bg-gray-100 text-gray-600",
+  active: "bg-success-muted text-success-muted-foreground",
+  ending_soon: "bg-warning-muted text-warning-muted-foreground",
+  expired: "bg-destructive/10 text-destructive",
+  no_trial: "bg-muted text-muted-foreground",
 };
 
 function recoveryLabel(value: string) {
@@ -343,10 +343,10 @@ export default function AdminPage() {
             <span
               className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
                 smsOperations.status === "critical"
-                  ? "bg-red-100 text-red-800"
+                  ? "bg-destructive/10 text-destructive"
                   : smsOperations.status === "attention"
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-green-100 text-green-800"
+                    ? "bg-warning-muted text-warning-muted-foreground"
+                    : "bg-success-muted text-success-muted-foreground"
               }`}
             >
               {smsOperations.status === "critical"
@@ -402,8 +402,8 @@ export default function AdminPage() {
                   <span
                     className={
                       valid
-                        ? "font-medium text-green-700"
-                        : "font-medium text-red-700"
+                        ? "font-medium text-success"
+                        : "font-medium text-destructive"
                     }
                   >
                     {valid
@@ -439,12 +439,12 @@ export default function AdminPage() {
                 [
                   t("admin.smsHealth.critical", "Critical"),
                   smsOperations.counts.critical,
-                  "text-red-700",
+                  "text-destructive",
                 ],
                 [
                   t("admin.smsHealth.attention", "Attention"),
                   smsOperations.counts.attention,
-                  "text-amber-700",
+                  "text-warning-muted-foreground",
                 ],
                 [
                   t("admin.smsHealth.sendExceptions", "Send exceptions"),
@@ -462,7 +462,7 @@ export default function AdminPage() {
                   smsOperations.counts.providerEvents,
                   smsOperations.counts.providerEventsQuarantined > 0 ||
                   smsOperations.counts.providerEventConflicts > 0
-                    ? "text-red-700"
+                    ? "text-destructive"
                     : "text-foreground",
                 ],
               ].map(([label, value, tone]) => (
@@ -519,8 +519,8 @@ export default function AdminPage() {
                           <span
                             className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${
                               item.severity === "p0"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-amber-100 text-amber-800"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-warning-muted text-warning-muted-foreground"
                             }`}
                           >
                             {item.severity}
@@ -548,7 +548,7 @@ export default function AdminPage() {
                 </table>
               </div>
             ) : (
-              <div className="mt-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
+              <div className="mt-4 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
                 {t(
                   "admin.smsHealth.noExceptions",
                   "No SMS operational exceptions need attention.",
@@ -556,7 +556,7 @@ export default function AdminPage() {
               </div>
             )}
             {smsOperations.truncated ? (
-              <p className="mt-2 text-xs font-medium text-amber-700">
+              <p className="mt-2 text-xs font-medium text-warning-muted-foreground">
                 {t(
                   "admin.smsHealth.bounded",
                   "Results are bounded. Resolve the oldest items, then refresh for the remaining queue.",
@@ -636,7 +636,7 @@ export default function AdminPage() {
                           {clinic.verifiedAdminEmail}
                         </a>
                       ) : (
-                        <p className="mt-0.5 text-xs font-medium text-amber-700">
+                        <p className="mt-0.5 text-xs font-medium text-warning-muted-foreground">
                           {t("admin.recovery.noVerifiedContact", "No verified admin contact")}
                         </p>
                       )}
@@ -659,7 +659,7 @@ export default function AdminPage() {
                     <td className="px-3 py-2 text-muted-foreground">
                       <p>{clinic.setupStage}</p>
                       {clinic.setupHelpRequestedAt ? (
-                        <p className="mt-0.5 text-xs font-medium text-emerald-700">
+                        <p className="mt-0.5 text-xs font-medium text-success">
                           {t(
                             "admin.recovery.helpRequested",
                             "Help requested {date}",
@@ -970,7 +970,7 @@ export default function AdminPage() {
                                   <button
                                     type="button"
                                     disabled={anyMutationPending}
-                                    className="rounded border border-green-300 bg-green-50 px-2 py-1 text-xs font-medium text-green-900 hover:bg-green-100 disabled:opacity-50"
+                                    className="rounded border border-success/30 bg-success/5 px-2 py-1 text-xs font-medium text-success hover:bg-success/10 disabled:opacity-50"
                                     onClick={async () => {
                                       const confirmed = await confirm({
                                         title: "Enable provider profile",
@@ -1036,7 +1036,7 @@ export default function AdminPage() {
                               <button
                                 type="button"
                                 disabled={anyMutationPending}
-                                className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                                className="rounded border border-warning/30 bg-warning/5 px-2 py-1 text-xs font-medium text-warning-muted-foreground hover:bg-warning/10 disabled:opacity-50"
                                 onClick={() => {
                                   const brandId = window.prompt(
                                     "After reviewing the Telnyx portal, enter the existing brand ID. Cancel if no provider object exists.",
@@ -1219,7 +1219,7 @@ export default function AdminPage() {
                 </table>
               </div>
               {messagingHistory.truncated ? (
-                <p className="mt-2 text-xs font-medium text-amber-700">
+                <p className="mt-2 text-xs font-medium text-warning-muted-foreground">
                   {t(
                     "admin.messaging.historyTruncated",
                     "History is truncated at {limit} events. Review the newest evidence before taking any separate operator action.",
@@ -1550,7 +1550,7 @@ export default function AdminPage() {
                 and are not in the opportunity denominator.
               </p>
             </div>
-            <div className="mt-4 rounded-md border border-amber-300/60 bg-amber-50/50 p-3 text-xs text-muted-foreground dark:bg-amber-950/10">
+            <div className="mt-4 rounded-md border border-warning/20 bg-warning/5 p-3 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">
                 {t("admin.funnel.evidenceQuality", "Conversion evidence quality")}
               </p>
@@ -1676,7 +1676,7 @@ export default function AdminPage() {
                 <td className="px-4 py-2.5 text-muted-foreground">
                   <p>{p.setupStage}</p>
                   {p.setupHelpRequestedAt ? (
-                    <p className="mt-0.5 text-xs font-medium text-emerald-700">
+                    <p className="mt-0.5 text-xs font-medium text-success">
                       Help requested{" "}
                       {formatDate(p.setupHelpRequestedAt, p.timezone)}
                     </p>
@@ -1700,7 +1700,7 @@ export default function AdminPage() {
                     }
                     className={`rounded border px-1.5 py-0.5 text-xs font-medium disabled:opacity-50 ${
                       p.analyticsExcluded
-                        ? "border-amber-300 bg-amber-50 text-amber-800"
+                        ? "border-warning/30 bg-warning/5 text-warning-muted-foreground"
                         : "border-border text-muted-foreground hover:bg-muted"
                     }`}
                   >
