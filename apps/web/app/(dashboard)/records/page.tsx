@@ -1437,9 +1437,10 @@ function RecordsPageContent() {
                   setProcedureForm(initialProcedureForm());
                   setShowPrescriptionForm(false);
                   setPrescriptionForm(initialPrescriptionForm());
+                  router.replace("/records");
                 }}
               >
-                {t("records.changePatient", "Change Patient")}
+                {t("records.register.backToRegister", "Card list")}
               </Button>
             </div>
           ) : null}
