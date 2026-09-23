@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Search, Plus, PawPrint, GitMerge } from "lucide-react";
+import { Search, Plus, PawPrint, GitMerge, ArrowUpRight } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,19 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { TableSkeleton } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeadCell,
+  DataTableHeaderRow,
+  DataTableRow,
+  DataTableScroll,
+  DataTableShell,
+  IdentityCell,
+  SpeciesIcon,
+} from "@/components/common/data-table";
 import { PATIENT_SEARCH_MAX_LENGTH } from "@/lib/patients/policy";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -226,92 +240,130 @@ export default function PatientsPage() {
             })}
           </div>
 
-          <div className="mt-6 hidden overflow-x-auto rounded-lg border border-border sm:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("patients.column_name", "Name")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("patients.column_breed", "Breed")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("patients.column_owner", "Owner")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("patients.column_sex", "Sex")}
-                  </th>
-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {t("patients.column_status", "Status")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((patient) => {
-                  const patientStatusText =
-                    patient.status === "active"
-                      ? t("patients.status_active", "active")
-                      : patient.status === "deceased"
-                        ? t("patients.status_deceased", "deceased")
-                        : t("patients.status_inactive", "inactive");
+          <DataTableShell className="mt-6 hidden sm:block">
+            <DataTableScroll>
+              <DataTable>
+                <DataTableHead>
+                  <DataTableHeaderRow>
+                    <DataTableHeadCell>
+                      {t("patients.column_name", "Name")}
+                    </DataTableHeadCell>
+                    <DataTableHeadCell>
+                      {t("patients.column_breed", "Breed")}
+                    </DataTableHeadCell>
+                    <DataTableHeadCell>
+                      {t("patients.column_owner", "Owner")}
+                    </DataTableHeadCell>
+                    <DataTableHeadCell>
+                      {t("patients.column_sex", "Sex")}
+                    </DataTableHeadCell>
+                    <DataTableHeadCell>
+                      {t("patients.column_status", "Status")}
+                    </DataTableHeadCell>
+                    <DataTableHeadCell align="right">
+                      {t("patients.column_actions", "Akcie")}
+                    </DataTableHeadCell>
+                  </DataTableHeaderRow>
+                </DataTableHead>
+                <DataTableBody>
+                  {data.items.map((patient) => {
+                    const patientStatusText =
+                      patient.status === "active"
+                        ? t("patients.status_active", "active")
+                        : patient.status === "deceased"
+                          ? t("patients.status_deceased", "deceased")
+                          : t("patients.status_inactive", "inactive");
 
-                  return (
-                    <tr
-                      key={patient.id}
-                      onClick={() => router.push(`/patients/${patient.id}`)}
-                      className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium">
-                        <span className="mr-1.5">
-                          {speciesEmoji[patient.species ?? "other"] ??
-                            "\uD83D\uDC3E"}
-                        </span>
-                        {patient.name}
-                        {patient.dob && (
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {calcAge(patient.dob, t)}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {patient.breed || "\u2014"}
-                        {patient.species && (
-                          <p className="mt-0.5 text-xs">
-                            {t("patients.species_" + patient.species, patient.species)}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {patient.clientFirstName && patient.clientLastName
-                          ? `${patient.clientFirstName} ${patient.clientLastName}`
-                          : t("patients.profile.noOwner", "Owner not listed")}
-                        {patient.clientPhone && (
-                          <p className="mt-0.5 text-xs">{patient.clientPhone}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatSex(patient.sex, t)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            patient.status === "active"
-                              ? "success"
-                              : patient.status === "deceased"
-                                ? "secondary"
-                                : "warning"
-                          }
-                        >
-                          {patientStatusText}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    return (
+                      <DataTableRow
+                        key={patient.id}
+                        interactive
+                        onClick={() => router.push(`/patients/${patient.id}`)}
+                      >
+                        <DataTableCell>
+                          <IdentityCell
+                            icon={
+                              <SpeciesIcon
+                                species={patient.species}
+                                label={t(
+                                  `patients.species_${patient.species}`,
+                                  patient.species,
+                                )}
+                              />
+                            }
+                            primary={patient.name}
+                            secondary={
+                              patient.dob ? calcAge(patient.dob, t) : undefined
+                            }
+                          />
+                        </DataTableCell>
+                        <DataTableCell>
+                          <div className="text-xs text-foreground">
+                            {patient.breed || "—"}
+                          </div>
+                          {patient.species ? (
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                              {t(
+                                `patients.species_${patient.species}`,
+                                patient.species,
+                              )}
+                            </div>
+                          ) : null}
+                        </DataTableCell>
+                        <DataTableCell>
+                          <div className="text-xs font-medium text-foreground">
+                            {patient.clientFirstName && patient.clientLastName
+                              ? `${patient.clientFirstName} ${patient.clientLastName}`
+                              : t(
+                                  "patients.profile.noOwner",
+                                  "Owner not listed",
+                                )}
+                          </div>
+                          {patient.clientPhone ? (
+                            <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                              {patient.clientPhone}
+                            </div>
+                          ) : null}
+                        </DataTableCell>
+                        <DataTableCell>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {formatSex(patient.sex, t)}
+                          </span>
+                        </DataTableCell>
+                        <DataTableCell>
+                          <Badge
+                            variant={
+                              patient.status === "active"
+                                ? "success"
+                                : patient.status === "deceased"
+                                  ? "secondary"
+                                  : "warning"
+                            }
+                          >
+                            {patientStatusText}
+                          </Badge>
+                        </DataTableCell>
+                        <DataTableCell align="right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5"
+                            asChild
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <Link href={`/patients/${patient.id}`}>
+                              {t("patients.list.open", "Karta")}
+                              <ArrowUpRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                        </DataTableCell>
+                      </DataTableRow>
+                    );
+                  })}
+                </DataTableBody>
+              </DataTable>
+            </DataTableScroll>
+          </DataTableShell>
         </>
       ) : (
         <EmptyState
