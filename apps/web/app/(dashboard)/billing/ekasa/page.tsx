@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import {
   ReceiptEuro,
@@ -28,51 +28,95 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
+import { StatusPulseBadge, type StatusPulseVariant } from "@/components/ui/status-pulse-badge";
 import { EkasaReceiptsSkeleton } from "@/components/ui/content-skeletons";
 import { ThermalReceiptDrawer } from "@/components/ekasa/thermal-receipt-drawer";
 import { IntegrationModeBanner } from "@/components/common/integration-mode-banner";
-import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useI18n } from "@/lib/i18n";
+import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
+import { formatDate, formatDateTime } from "@/lib/locale/format";
 
 type ReceiptStatus = "PENDING" | "SENT" | "CONFIRMED" | "FAILED" | "OFFLINE_STORED";
 type ActiveTab = "receipts" | "closures" | "accountant";
 
+/** Fiscal verification vocabulary surfaced to the operator. */
+type VerificationState = "valid" | "offline" | "pending" | "failed" | "storno";
+
 const STATUS_CONFIG: Record<
   ReceiptStatus,
-  { label: string; color: string; icon: React.ElementType }
+  { color: string; icon: React.ElementType }
 > = {
   PENDING: {
-    label: "Čaká",
     color: "bg-muted text-muted-foreground",
     icon: Clock,
   },
   SENT: {
-    label: "Odoslané",
     color: "bg-info-muted text-info-muted-foreground",
     icon: Send,
   },
   CONFIRMED: {
-    label: "Potvrdené",
     color: "bg-success-muted text-success-muted-foreground",
     icon: CheckCircle2,
   },
   FAILED: {
-    label: "Chyba",
     color: "bg-destructive/10 text-destructive",
     icon: XCircle,
   },
   OFFLINE_STORED: {
-    label: "Offline",
     color: "bg-warning-muted text-warning-muted-foreground",
     icon: WifiOff,
   },
 };
 
-const PAYMENT_LABEL: Record<string, string> = {
-  CASH: "Hotovosť",
-  CARD: "Karta",
-  TRANSFER: "Prevod",
+const VERIFICATION_VARIANT: Record<VerificationState, StatusPulseVariant> = {
+  valid: "confirmed",
+  offline: "offline",
+  pending: "pending",
+  failed: "failed",
+  storno: "failed",
 };
+
+function verificationStateOf(receipt: {
+  status: ReceiptStatus;
+  receiptType?: string | null;
+}): VerificationState {
+  if (receipt.receiptType === "STORNO") return "storno";
+  switch (receipt.status) {
+    case "CONFIRMED":
+      return "valid";
+    case "OFFLINE_STORED":
+      return "offline";
+    case "FAILED":
+      return "failed";
+    default:
+      return "pending";
+  }
+}
+
+const PAYMENT_LABEL: Record<string, { key: string; fallback: string }> = {
+  CASH: { key: "ekasa.paymentCash", fallback: "Cash" },
+  CARD: { key: "ekasa.paymentCard", fallback: "Card" },
+  TRANSFER: { key: "ekasa.paymentTransfer", fallback: "Transfer" },
+};
+
+function paymentMethodLabel(
+  t: (key: string, fallback?: string) => string,
+  method: string
+): string {
+  const entry = PAYMENT_LABEL[method];
+  return entry ? t(entry.key, entry.fallback) : method;
+}
 
 const VAT_LABEL: Record<string, string> = {
   ZERO: "0 %",
@@ -83,9 +127,43 @@ const VAT_LABEL: Record<string, string> = {
   STANDARD_23: "23 %",
 };
 
+/** Month labels follow the active UI language (never a fixed `sk-SK` string). */
+const MONTH_KEYS = [
+  "ekasa.page.months.january",
+  "ekasa.page.months.february",
+  "ekasa.page.months.march",
+  "ekasa.page.months.april",
+  "ekasa.page.months.may",
+  "ekasa.page.months.june",
+  "ekasa.page.months.july",
+  "ekasa.page.months.august",
+  "ekasa.page.months.september",
+  "ekasa.page.months.october",
+  "ekasa.page.months.november",
+  "ekasa.page.months.december",
+];
+
+const MONTH_FALLBACKS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 const PAGE_SIZE = 20;
 
 function EkasaReceiptsContent() {
+  const { t, locale } = useI18n();
+  const formatAmount = useCurrencyFormatter();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<ActiveTab>(
@@ -152,35 +230,39 @@ function EkasaReceiptsContent() {
   // Mutations
   const retryMutation = trpc.extensions.ekasa.retryReceipt.useMutation({
     onSuccess: () => {
-      toast.success("Doklad bol úspešne odoslaný");
+      toast.success(t("ekasa.page.toast.resent", "Doklad bol úspešne odoslaný"));
       refetchReceipts();
     },
     onError: (err) => {
-      toast.error(`Chyba pri odoslaní: ${err.message}`);
+      toast.error(t("ekasa.page.toast.resendError", "Chyba pri odoslaní: {message}", { message: err.message }));
     },
   });
 
   const stornoMutation = trpc.extensions.ekasa.stornoReceipt.useMutation({
     onSuccess: () => {
-      toast.success("Doklad bol úspešne stornovaný");
+      toast.success(t("ekasa.page.toast.stornoOk", "Doklad bol úspešne stornovaný"));
       setStornoTarget(null);
       setStornoReason("");
       setSelectedReceipt(null);
       refetchReceipts();
     },
     onError: (err) => {
-      toast.error(`Chyba pri storne: ${err.message}`);
+      toast.error(t("ekasa.page.toast.stornoError", "Chyba pri storne: {message}", { message: err.message }));
     },
   });
 
   const closureMutation = trpc.extensions.ekasa.performDailyClosure.useMutation({
     onSuccess: (res) => {
-      toast.success(`Denná uzávierka ${res.closureNumber} bola úspešne vykonaná!`);
+      toast.success(
+        t("ekasa.page.toast.closureOk", "Denná uzávierka {number} bola úspešne vykonaná!", {
+          number: res.closureNumber,
+        }),
+      );
       refetchSummary();
       refetchClosures();
     },
     onError: (err) => {
-      toast.error(`Chyba pri uzávierke: ${err.message}`);
+      toast.error(t("ekasa.page.toast.closureError", "Chyba pri uzávierke: {message}", { message: err.message }));
     },
   });
 
@@ -214,7 +296,7 @@ function EkasaReceiptsContent() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("CSV export pre účtovníčku bol stiahnutý");
+    toast.success(t("ekasa.page.toast.csvDownloaded", "CSV export pre účtovníčku bol stiahnutý"));
   };
 
   const statuses: ReceiptStatus[] = [
@@ -233,48 +315,35 @@ function EkasaReceiptsContent() {
               <ReceiptEuro className="h-5 w-5" />
             </span>
             <span className="flex items-center gap-2.5 flex-wrap">
-              <span>e-Kasa Pokladňa</span>
+              <span>{t("ekasa.page.title", "e-Kasa Pokladňa")}</span>
               <IntegrationModeBanner module="ekasa" size="sm" />
             </span>
           </span>
         }
-        subtitle="Elektronická evidencia tržieb Finančnej správy SR (Zákon č. 289/2008 Z. z.)"
+        subtitle={t(
+          "ekasa.page.subtitle",
+          "Elektronická evidencia tržieb Finančnej správy SR (Zákon č. 289/2008 Z. z.)",
+        )}
         actions={
-          <div className="flex rounded-lg border border-border bg-muted/30 p-1">
-            <button
-              onClick={() => setActiveTab("receipts")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === "receipts"
-                  ? "bg-background text-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <ReceiptEuro className="h-3.5 w-3.5" />
-              Doklady
-            </button>
-            <button
-              onClick={() => setActiveTab("closures")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === "closures"
-                  ? "bg-background text-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Lock className="h-3.5 w-3.5" />
-              Uzávierky
-            </button>
-            <button
-              onClick={() => setActiveTab("accountant")}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === "accountant"
-                  ? "bg-background text-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Pre účtovníka
-            </button>
-          </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as ActiveTab)}
+          >
+            <TabsList>
+              <TabsTrigger value="receipts" className="gap-1.5">
+                <ReceiptEuro className="h-4 w-4" />
+                {t("ekasa.page.tabs.receipts", "Doklady")}
+              </TabsTrigger>
+              <TabsTrigger value="closures" className="gap-1.5">
+                <Lock className="h-4 w-4" />
+                {t("ekasa.page.tabs.closures", "Uzávierky")}
+              </TabsTrigger>
+              <TabsTrigger value="accountant" className="gap-1.5">
+                <FileSpreadsheet className="h-4 w-4" />
+                {t("ekasa.page.tabs.accountant", "Pre účtovníka")}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         }
       />
 
@@ -285,10 +354,13 @@ function EkasaReceiptsContent() {
             variant="outline"
             className="border-amber-500/50 bg-amber-500/20 text-amber-900 dark:text-amber-200 font-semibold shrink-0"
           >
-            Režim pilotnej emulácie
+            {t("ekasa.page.pilotBadge", "Režim pilotnej emulácie")}
           </Badge>
           <p className="text-xs text-amber-900 dark:text-amber-200">
-            e-Kasa beží v predcertifikačnom režime (interná evidencia, výpočet DPH a tlač dokladov). Pre legislatívne záväzné fiškálne doklady pred FS SR je potrebné pripojenie k certifikovanému CHDÚ alebo fiškálnemu driveru (napr. FiskalPRO / Varos).
+            {t(
+              "ekasa.page.pilotNotice",
+              "e-Kasa beží v predcertifikačnom režime (interná evidencia, výpočet DPH a tlač dokladov). Pre legislatívne záväzné fiškálne doklady pred FS SR je potrebné pripojenie k certifikovanému CHDÚ alebo fiškálnemu driveru (napr. FiskalPRO / Varos).",
+            )}
           </p>
         </div>
       </div>
@@ -299,9 +371,14 @@ function EkasaReceiptsContent() {
           <div className="flex items-center gap-3">
             <Lock className="h-4 w-4 text-primary" />
             <div>
-              <p className="text-sm font-medium">Denná uzávierka</p>
+              <p className="text-sm font-medium">
+                {t("ekasa.page.dailyClosure.title", "Denná uzávierka")}
+              </p>
               <p className="text-xs text-muted-foreground">
-                Zatvorte pokladňu a vygenerujte Z-report pre dnešný deň
+                {t(
+                  "ekasa.page.dailyClosure.desc",
+                  "Zatvorte pokladňu a vygenerujte Z-report pre dnešný deň",
+                )}
               </p>
             </div>
           </div>
@@ -310,7 +387,7 @@ function EkasaReceiptsContent() {
             onClick={() => setActiveTab("closures")}
             className="shrink-0"
           >
-            Prejsť na uzávierky
+            {t("ekasa.page.dailyClosure.cta", "Prejsť na uzávierky")}
           </Button>
         </div>
       )}
@@ -320,52 +397,58 @@ function EkasaReceiptsContent() {
       {/* ========================================================================= */}
       {activeTab === "receipts" && (
         <div className="space-y-4">
-          {/* Status filter badges & Refresh */}
+          <PageSectionHeader
+            title={t("ekasa.page.receipts.title", "Pokladničné doklady")}
+            subtitle={t(
+              "ekasa.page.receipts.subtitle",
+              "Prehľad fiškálnych dokladov a stavu ich overenia voči Finančnej správe SR.",
+            )}
+          />
+
+          {/* Verifikácia dokladov */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              <button
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                variant={!statusFilter ? "default" : "outline"}
+                size="sm"
+                className="h-7 gap-1.5 rounded-full px-3 text-xs"
                 onClick={() => {
                   setStatusFilter(undefined);
                   setOffset(0);
                 }}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  !statusFilter
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
               >
-                Všetky
-              </button>
+                {t("ekasa.page.receipts.filterAll", "Všetky")}
+              </Button>
               {statuses.map((s) => {
                 const cfg = STATUS_CONFIG[s];
                 const Icon = cfg.icon;
                 return (
-                  <button
+                  <Button
                     key={s}
+                    variant={statusFilter === s ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 gap-1.5 rounded-full px-3 text-xs"
                     onClick={() => {
                       setStatusFilter(s);
                       setOffset(0);
                     }}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                      statusFilter === s
-                        ? cfg.color + " ring-2 ring-offset-1 ring-current"
-                        : "bg-muted text-muted-foreground hover:bg-accent"
-                    }`}
                   >
                     <Icon className="h-3 w-3" />
-                    {cfg.label}
-                  </button>
+                    {t(`ekasa.page.status.${s}`, s)}
+                  </Button>
                 );
               })}
             </div>
 
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => refetchReceipts()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="h-8 gap-1.5"
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              Obnoviť
-            </button>
+              {t("ekasa.page.receipts.refresh", "Obnoviť")}
+            </Button>
           </div>
 
           {/* Table */}
@@ -375,97 +458,100 @@ function EkasaReceiptsContent() {
                 <EkasaReceiptsSkeleton />
               </div>
             ) : !receipts || receipts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <ReceiptEuro className="mb-3 h-10 w-10 text-muted-foreground/30" />
-                <p className="font-medium text-muted-foreground">Žiadne doklady</p>
-                <p className="mt-1 text-xs text-muted-foreground/60">
-                  {statusFilter
-                    ? `Žiadne doklady so statusom „${STATUS_CONFIG[statusFilter].label}“`
-                    : "Doklady sa vytvárajú automaticky pri zaznamenaní platby"}
-                </p>
-              </div>
+              <EmptyState
+                className="border-0 bg-transparent"
+                icon={ReceiptEuro}
+                title={
+                  statusFilter
+                    ? t("ekasa.page.receipts.emptyFilteredTitle", "Žiadne doklady v tomto stave")
+                    : t("ekasa.page.receipts.emptyTitle", "Žiadne pokladničné doklady")
+                }
+                description={
+                  statusFilter
+                    ? t(
+                        "ekasa.page.receipts.emptyFilteredDesc",
+                        "Pre zvolený stav overenia neexistujú žiadne doklady. Zvoľte iný filter.",
+                      )
+                    : t(
+                        "ekasa.page.receipts.emptyDesc",
+                        "Doklady sa vytvárajú automaticky pri zaznamenaní platby v pokladni.",
+                      )
+                }
+                action={{
+                  label: t("ekasa.page.receipts.emptyCta", "Prejsť na fakturáciu"),
+                  onClick: () => router.push("/billing"),
+                  icon: Coins,
+                }}
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/30">
-                      {[
-                        "Číslo dokladu",
-                        "Dátum",
-                        "Suma",
-                        "DPH",
-                        "Platba",
-                        "Status",
-                        "UID",
-                        "Akcie",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t("ekasa.page.col.receiptNumber", "Číslo dokladu")}</TableHead>
+                    <TableHead>{t("ekasa.page.col.date", "Dátum")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.col.amount", "Suma")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.col.vat", "DPH")}</TableHead>
+                    <TableHead>{t("ekasa.page.col.payment", "Platba")}</TableHead>
+                    <TableHead>{t("ekasa.page.col.verification", "Overenie")}</TableHead>
+                    <TableHead>{t("ekasa.page.col.uid", "UID")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.col.actions", "Akcie")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                     {receipts.map((r) => {
-                      const statusVariant =
-                        r.status === "CONFIRMED"
-                          ? "confirmed"
-                          : r.status === "OFFLINE_STORED"
-                          ? "offline"
-                          : r.status === "FAILED"
-                          ? "failed"
-                          : "pending";
+                      const verification = verificationStateOf(
+                        r as { status: ReceiptStatus; receiptType?: string | null },
+                      );
                       const isPrintingThis = printingId === r.id;
 
                       return (
-                        <tr
+                        <TableRow
                           key={r.id}
                           onClick={() => setSelectedReceipt(r)}
-                          className="hover:bg-muted/30 cursor-pointer transition-colors group"
+                          className="group cursor-pointer"
                         >
-                          <td className="px-4 py-3 font-mono font-medium text-xs">
+                          <TableCell className="px-3 py-2.5 font-mono text-xs font-medium">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">
                                 {r.receiptNumber}
                               </span>
-                              {r.receiptType === "STORNO" && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-semibold">
-                                  STORNO
-                                </Badge>
-                              )}
                               {r.receiptType === "RETURN" && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30 font-semibold">
-                                  VRÁTENIE
+                                <Badge variant="outline" className="h-4 border-amber-500 bg-amber-50 px-1.5 py-0 text-[10px] font-semibold text-amber-600 dark:bg-amber-950/30">
+                                  {t("ekasa.page.badgeReturn", "VRÁTENIE")}
                                 </Badge>
                               )}
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap font-mono tabular-nums">
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
                             {r.issuedAt
-                              ? new Date(r.issuedAt).toLocaleString("sk-SK", {
-                                  dateStyle: "short",
-                                  timeStyle: "short",
-                                })
+                              ? formatDateTime(r.issuedAt, { language: locale })
                               : "—"}
-                          </td>
-                          <td className="px-4 py-3 font-semibold font-mono tabular-nums text-foreground">
-                            {Number(r.amountTotal).toFixed(2)} €
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground font-mono tabular-nums">
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 text-right font-mono text-sm font-semibold tabular-nums text-foreground">
+                            {formatAmount(r.amountTotal)}
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
                             {VAT_LABEL[r.vatRate] ?? r.vatRate}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
-                            {PAYMENT_LABEL[r.paymentMethod] ?? r.paymentMethod}
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 text-xs text-muted-foreground">
+                            {paymentMethodLabel(t, r.paymentMethod)}
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5">
                             <div className="flex items-center gap-2">
-                              <StatusPulseBadge
-                                variant={statusVariant}
-                                label={STATUS_CONFIG[r.status as ReceiptStatus]?.label}
-                              />
+                              {verification === "storno" ? (
+                                <Badge variant="destructive" className="gap-1 font-semibold">
+                                  <Ban className="h-3 w-3" />
+                                  {t("ekasa.page.verification.storno", "Storno")}
+                                </Badge>
+                              ) : (
+                                <StatusPulseBadge
+                                  variant={VERIFICATION_VARIANT[verification]}
+                                  label={t(
+                                    `ekasa.page.verification.${verification}`,
+                                    verification,
+                                  )}
+                                />
+                              )}
                               {r.status === "OFFLINE_STORED" && (
                                 <button
                                   type="button"
@@ -474,7 +560,10 @@ function EkasaReceiptsContent() {
                                     retryMutation.mutate({ receiptId: r.id });
                                   }}
                                   disabled={retryMutation.isPending}
-                                  title="Synchronizovať offline doklad s Finančnou správou"
+                                  title={t(
+                                    "ekasa.page.receipts.syncHint",
+                                    "Synchronizovať offline doklad s Finančnou správou",
+                                  )}
                                   className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-500/25 transition-all shadow-2xs"
                                 >
                                   <RefreshCw
@@ -482,100 +571,115 @@ function EkasaReceiptsContent() {
                                       retryMutation.isPending ? "animate-spin" : ""
                                     }`}
                                   />
-                                  <span>Sync FS</span>
+                                  <span>{t("ekasa.page.receipts.syncFs", "Sync FS")}</span>
                                 </button>
                               )}
                             </div>
-                          </td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground max-w-[120px] truncate tabular-nums">
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 max-w-[140px] truncate font-mono text-xs tabular-nums text-muted-foreground">
                             {r.uid ?? "—"}
-                          </td>
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2">
-                              <button
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 gap-1.5 px-2 text-xs"
                                 onClick={() => setSelectedReceipt(r)}
-                                title="Náhľad termálneho dokladu"
-                                className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors"
+                                title={t("ekasa.page.receipts.previewHint", "Náhľad termálneho dokladu")}
                               >
                                 <ReceiptEuro className="h-3.5 w-3.5 text-muted-foreground" />
-                                Náhľad
-                              </button>
+                                {t("ekasa.page.receipts.preview", "Náhľad")}
+                              </Button>
 
-                              <button
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 gap-1.5 px-2 text-xs"
                                 onClick={() => handlePrint(r.id)}
                                 disabled={isPrintingThis}
-                                title="Tlačiť doklad"
-                                className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50 transition-colors"
+                                title={t("ekasa.page.receipts.printHint", "Tlačiť doklad")}
                               >
                                 {isPrintingThis ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ) : (
                                   <Printer className="h-3.5 w-3.5 text-muted-foreground" />
                                 )}
-                                Tlačiť
-                              </button>
+                                {t("ekasa.page.receipts.print", "Tlačiť")}
+                              </Button>
 
                               {r.receiptType !== "STORNO" &&
                                 (r.status === "CONFIRMED" || r.status === "OFFLINE_STORED") && (
-                                  <button
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1.5 border-destructive/30 bg-destructive/5 px-2 text-xs text-destructive hover:bg-destructive/15"
                                     onClick={() => {
                                       setStornoTarget(r);
                                       setStornoReason("");
                                     }}
-                                    title="Stornovať doklad"
-                                    className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/15 transition-colors"
+                                    title={t("ekasa.page.receipts.stornoHint", "Stornovať doklad")}
                                   >
                                     <Ban className="h-3 w-3" />
-                                    Storno
-                                  </button>
+                                    {t("ekasa.page.verification.storno", "Storno")}
+                                  </Button>
                                 )}
 
                               {r.status === "FAILED" && (
-                                <button
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 gap-1.5 border-warning-muted/50 bg-warning-muted/30 px-2 text-xs text-warning-muted-foreground hover:bg-warning-muted/50"
                                   onClick={() => retryMutation.mutate({ receiptId: r.id })}
                                   disabled={retryMutation.isPending}
-                                  title="Opakovať odoslanie"
-                                  className="inline-flex items-center gap-1 rounded-md border border-warning-muted/50 bg-warning-muted/30 px-2 py-1 text-xs font-medium text-warning-muted-foreground hover:bg-warning-muted/50 disabled:opacity-50 transition-colors"
+                                  title={t("ekasa.page.receipts.retryHint", "Opakovať odoslanie")}
                                 >
                                   <RefreshCw
                                     className={`h-3 w-3 ${
                                       retryMutation.isPending ? "animate-spin" : ""
                                     }`}
                                   />
-                                  Odoslať
-                                </button>
+                                  {t("ekasa.page.receipts.retry", "Odoslať")}
+                                </Button>
                               )}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                </TableBody>
+              </Table>
             )}
 
             {/* Pagination */}
             {receipts && receipts.length > 0 && (
-              <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
-                <span>Zobrazené záznamy od {offset + 1}</span>
+              <div className="flex items-center justify-between border-t px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-mono tabular-nums">
+                  {t("ekasa.page.pagination.showingFrom", "Zobrazené záznamy od {offset}", {
+                    offset: offset + 1,
+                  })}
+                </span>
                 <div className="flex gap-1">
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
                     onClick={() => setOffset((prev) => Math.max(0, prev - PAGE_SIZE))}
                     disabled={offset === 0}
-                    className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-accent disabled:opacity-40 transition-colors"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
-                    Predchádzajúce
-                  </button>
-                  <button
+                    {t("ekasa.page.pagination.previous", "Predchádzajúce")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
                     onClick={() => setOffset((prev) => prev + PAGE_SIZE)}
                     disabled={receipts.length < PAGE_SIZE}
-                    className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-accent disabled:opacity-40 transition-colors"
                   >
-                    Ďalšie
+                    {t("ekasa.page.pagination.next", "Ďalšie")}
                     <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -593,25 +697,34 @@ function EkasaReceiptsContent() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Dnešný deň ({dailySummaryData?.date ?? "Dnes"})
+                  <h2 className="font-heading text-lg font-semibold text-foreground">
+                    {t("ekasa.page.closures.today", "Dnešný deň ({date})", {
+                      date: dailySummaryData?.date ?? t("ekasa.page.closures.todayFallback", "Dnes"),
+                    })}
                   </h2>
                   {dailySummaryData?.isClosed ? (
                     <Badge className="bg-emerald-600">
-                      Uzavreté: {dailySummaryData.closureNumber}
+                      {t("ekasa.page.closures.closedBadge", "Uzavreté: {number}", {
+                        number: dailySummaryData.closureNumber ?? "",
+                      })}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="border-amber-400 text-amber-600 bg-amber-50">
-                      Otvorený deň (priebežný stav)
+                    <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-600">
+                      {t("ekasa.page.closures.openBadge", "Otvorený deň (priebežný stav)")}
                     </Badge>
                   )}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {dailySummaryData?.isClosed
-                    ? `Uzávierka bola vykonaná dňa ${new Date(
-                        dailySummaryData.closedAt ?? ""
-                      ).toLocaleTimeString("sk-SK")}`
-                    : "Uzávierka sa automaticky vygeneruje o 23:59 alebo ju môžete spustiť manuálne."}
+                    ? t("ekasa.page.closures.closedAt", "Uzávierka bola vykonaná: {when}", {
+                        when: formatDateTime(dailySummaryData.closedAt, {
+                          language: locale,
+                        }),
+                      })
+                    : t(
+                        "ekasa.page.closures.autoHint",
+                        "Uzávierka sa automaticky vygeneruje o 23:59 alebo ju môžete spustiť manuálne.",
+                      )}
                 </p>
               </div>
 
@@ -619,14 +732,14 @@ function EkasaReceiptsContent() {
                 <Button
                   onClick={() => closureMutation.mutate({})}
                   disabled={closureMutation.isPending}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   {closureMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Lock className="h-4 w-4" />
                   )}
-                  Vykonať dennú uzávierku (Z-report)
+                  {t("ekasa.page.closures.run", "Vykonať dennú uzávierku (Z-report)")}
                 </Button>
               )}
             </div>
@@ -637,37 +750,47 @@ function EkasaReceiptsContent() {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : dailySummaryData?.summary ? (
-              <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">Celková tržba dňa</span>
-                  <p className="mt-1 text-xl font-bold text-foreground">
-                    {dailySummaryData.summary.totalAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.closures.totalToday", "Celková tržba dňa")}
+                  </span>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatAmount(dailySummaryData.summary.totalAmount)}
                   </p>
                   <span className="text-xs text-muted-foreground">
-                    {dailySummaryData.summary.receiptsCount} dokladov
+                    {t("ekasa.page.closures.receiptCount", "{count} dokladov", {
+                      count: dailySummaryData.summary.receiptsCount,
+                    })}
                   </span>
                 </div>
 
                 <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">V hotovosti</span>
-                  <p className="mt-1 text-xl font-bold text-emerald-600">
-                    {dailySummaryData.summary.cashAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.closures.cash", "V hotovosti")}
+                  </span>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-emerald-600">
+                    {formatAmount(dailySummaryData.summary.cashAmount)}
                   </p>
                 </div>
 
                 <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">Platobnou kartou</span>
-                  <p className="mt-1 text-xl font-bold text-blue-600">
-                    {dailySummaryData.summary.cardAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.closures.card", "Platobnou kartou")}
+                  </span>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-blue-600">
+                    {formatAmount(dailySummaryData.summary.cardAmount)}
                   </p>
                 </div>
 
                 <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">DPH 23 % (základ / daň)</span>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
-                    {dailySummaryData.summary.vatBreakdown.vat23.base.toFixed(2)} € /{" "}
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.closures.vat23", "DPH 23 % (základ / daň)")}
+                  </span>
+                  <p className="mt-1 font-mono text-sm font-semibold tabular-nums text-foreground">
+                    {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.base)} /{" "}
                     <span className="text-emerald-600">
-                      {dailySummaryData.summary.vatBreakdown.vat23.vat.toFixed(2)} €
+                      {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.vat)}
                     </span>
                   </p>
                 </div>
@@ -678,9 +801,9 @@ function EkasaReceiptsContent() {
           {/* Past Closures Table */}
           <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
             <div className="border-b border-border/60 px-4 py-3">
-              <h3 className="text-sm font-semibold text-foreground">
-                História denných uzávierok
-              </h3>
+              <PageSectionHeader
+                title={t("ekasa.page.closures.history", "História denných uzávierok")}
+              />
             </div>
 
             {isLoadingClosures ? (
@@ -688,51 +811,59 @@ function EkasaReceiptsContent() {
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : !closures || closures.length === 0 ? (
-              <div className="py-12 text-center text-xs text-muted-foreground">
-                Zatiaľ neboli zaznamenané žiadne denné uzávierky.
-              </div>
+              <EmptyState
+                className="border-0 bg-transparent"
+                icon={Lock}
+                title={t("ekasa.page.closures.emptyTitle", "Žiadne denné uzávierky")}
+                description={t(
+                  "ekasa.page.closures.emptyDesc",
+                  "Po prvej uzávierke sa tu zobrazí história Z-reportov s tržbami po dňoch.",
+                )}
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/30">
-                      {["Dátum", "Číslo Z-reportu", "Dokladov", "Hotovosť", "Karta", "Spolu", "Stav"].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide"
-                          >
-                            {h}
-                          </th>
-                        )
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {closures.map((c) => (
-                      <tr key={c.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 font-medium text-xs">{c.date}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{c.closureNumber}</td>
-                        <td className="px-4 py-3 text-xs">{c.receiptsCount}</td>
-                        <td className="px-4 py-3 text-xs tabular-nums text-emerald-600 font-medium">
-                          {Number(c.cashAmount).toFixed(2)} €
-                        </td>
-                        <td className="px-4 py-3 text-xs tabular-nums text-blue-600 font-medium">
-                          {Number(c.cardAmount).toFixed(2)} €
-                        </td>
-                        <td className="px-4 py-3 text-xs tabular-nums font-bold text-foreground">
-                          {Number(c.totalAmount).toFixed(2)} €
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant="default" className="bg-emerald-600">
-                            Uzavreté
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t("ekasa.page.col.date", "Dátum")}</TableHead>
+                    <TableHead>{t("ekasa.page.closures.colZReport", "Číslo Z-reportu")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.closures.colReceipts", "Dokladov")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.closures.colCash", "Hotovosť")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.closures.colCard", "Karta")}</TableHead>
+                    <TableHead className="text-right">{t("ekasa.page.closures.colTotal", "Spolu")}</TableHead>
+                    <TableHead>{t("ekasa.page.closures.colStatus", "Stav")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {closures.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="px-3 py-2.5 font-mono text-xs font-medium">
+                        {formatDate(c.date, "SK", locale)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 font-mono text-xs">
+                        {c.closureNumber}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
+                        {c.receiptsCount}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs font-medium tabular-nums text-emerald-600">
+                        {formatAmount(c.cashAmount)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs font-medium tabular-nums text-blue-600">
+                        {formatAmount(c.cardAmount)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+                        {formatAmount(c.totalAmount)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5">
+                        <StatusPulseBadge
+                          variant="confirmed"
+                          label={t("ekasa.page.closures.statusClosed", "Uzavreté")}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </div>
@@ -746,29 +877,17 @@ function EkasaReceiptsContent() {
           {/* Controls: Month picker & Download buttons */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border bg-card p-4 shadow-xs">
             <div className="flex items-center gap-3">
-              <CalendarDays className="h-5 w-5 text-muted-foreground" />
+              <CalendarDays className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               <div className="flex items-center gap-2">
                 <select
                   value={exportMonth}
                   onChange={(e) => setExportMonth(Number(e.target.value))}
                   className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  aria-label={t("ekasa.page.accountant.month", "Mesiac")}
                 >
-                  {[
-                    "Január",
-                    "Február",
-                    "Marec",
-                    "Apríl",
-                    "Máj",
-                    "Jún",
-                    "Júl",
-                    "August",
-                    "September",
-                    "Október",
-                    "November",
-                    "December",
-                  ].map((m, idx) => (
+                  {MONTH_KEYS.map((key, idx) => (
                     <option key={idx + 1} value={idx + 1}>
-                      {m}
+                      {t(key, MONTH_FALLBACKS[idx])}
                     </option>
                   ))}
                 </select>
@@ -777,6 +896,7 @@ function EkasaReceiptsContent() {
                   value={exportYear}
                   onChange={(e) => setExportYear(Number(e.target.value))}
                   className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  aria-label={t("ekasa.page.accountant.year", "Rok")}
                 >
                   {[2025, 2026, 2027].map((y) => (
                     <option key={y} value={y}>
@@ -790,10 +910,10 @@ function EkasaReceiptsContent() {
             <Button
               onClick={downloadCsv}
               disabled={isLoadingAccountant || !accountantData?.closures?.length}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
             >
               <Download className="h-4 w-4" />
-              Stiahnuť CSV pre účtovníčku
+              {t("ekasa.page.accountant.download", "Stiahnuť CSV pre účtovníčku")}
             </Button>
           </div>
 
@@ -803,76 +923,136 @@ function EkasaReceiptsContent() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : !accountantData || accountantData.closuresCount === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-              <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-              <p className="font-medium">Pre zvolený mesiac zatiaľ nie sú evidované žiadne uzávierky.</p>
-              <p className="mt-1 text-xs">
-                Denné uzávierky sa automaticky zapisujú o 23:59 každého pracovného dňa.
-              </p>
-            </div>
+            <EmptyState
+              icon={FileSpreadsheet}
+              title={t(
+                "ekasa.page.accountant.emptyTitle",
+                "Pre zvolený mesiac nie sú evidované žiadne uzávierky",
+              )}
+              description={t(
+                "ekasa.page.accountant.emptyDesc",
+                "Denné uzávierky sa automaticky zapisujú o 23:59 každého pracovného dňa.",
+              )}
+              action={{
+                label: t("ekasa.page.accountant.emptyCta", "Prejsť na uzávierky"),
+                onClick: () => setActiveTab("closures"),
+                icon: Lock,
+              }}
+            />
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">Celkové tržby za mesiac</span>
-                  <p className="mt-1 text-2xl font-bold text-foreground">
-                    {accountantData.totals.totalAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.accountant.totalMonth", "Celkové tržby za mesiac")}
+                  </span>
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
+                    {formatAmount(accountantData.totals.totalAmount)}
                   </p>
                   <span className="text-xs text-muted-foreground">
-                    {accountantData.closuresCount} uzávierok / {accountantData.receiptsCount} bločkov
+                    {t("ekasa.page.accountant.closureMix", "{closures} uzávierok / {receipts} bločkov", {
+                      closures: accountantData.closuresCount,
+                      receipts: accountantData.receiptsCount,
+                    })}
                   </span>
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">Tržby v hotovosti</span>
-                  <p className="mt-1 text-2xl font-bold text-emerald-600">
-                    {accountantData.totals.cashAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.accountant.totalCash", "Tržby v hotovosti")}
+                  </span>
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-emerald-600">
+                    {formatAmount(accountantData.totals.cashAmount)}
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">Tržby platobnou kartou</span>
-                  <p className="mt-1 text-2xl font-bold text-blue-600">
-                    {accountantData.totals.cardAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.accountant.totalCard", "Tržby platobnou kartou")}
+                  </span>
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-blue-600">
+                    {formatAmount(accountantData.totals.cardAmount)}
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">Bankové prevody</span>
-                  <p className="mt-1 text-2xl font-bold text-purple-600">
-                    {accountantData.totals.transferAmount.toFixed(2)} €
+                  <span className="text-xs text-muted-foreground">
+                    {t("ekasa.page.accountant.totalTransfer", "Bankové prevody")}
+                  </span>
+                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-violet-600">
+                    {formatAmount(accountantData.totals.transferAmount)}
                   </p>
                 </div>
               </div>
 
               {/* VAT Breakdown Card */}
-              <div className="rounded-xl border border-border bg-card p-5 shadow-xs space-y-3">
-                <h3 className="font-semibold text-sm text-foreground">
-                  Rozpad sadzieb DPH pre daňové priznanie (SR)
-                </h3>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+              <div className="space-y-3 rounded-xl border border-border bg-card p-5 shadow-xs">
+                <PageSectionHeader
+                  title={t(
+                    "ekasa.page.accountant.vatTitle",
+                    "Rozpad sadzieb DPH pre daňové priznanie (SR)",
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                   <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                    <span className="font-medium text-foreground">Základná sadzba 23 %</span>
-                    <p className="mt-1">Základ: <strong>{accountantData.totals.vat23.base.toFixed(2)} €</strong></p>
-                    <p>DPH: <strong className="text-emerald-600">{accountantData.totals.vat23.vat.toFixed(2)} €</strong></p>
+                    <span className="font-medium text-foreground">
+                      {t("ekasa.page.accountant.vat23", "Základná sadzba 23 %")}
+                    </span>
+                    <p className="mt-1 font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatBase", "Základ:")}{" "}
+                      <strong>{formatAmount(accountantData.totals.vat23.base)}</strong>
+                    </p>
+                    <p className="font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatTax", "DPH:")}{" "}
+                      <strong className="text-emerald-600">
+                        {formatAmount(accountantData.totals.vat23.vat)}
+                      </strong>
+                    </p>
                   </div>
 
                   <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                    <span className="font-medium text-foreground">Znížená sadzba 19 %</span>
-                    <p className="mt-1">Základ: <strong>{accountantData.totals.vat19.base.toFixed(2)} €</strong></p>
-                    <p>DPH: <strong className="text-emerald-600">{accountantData.totals.vat19.vat.toFixed(2)} €</strong></p>
+                    <span className="font-medium text-foreground">
+                      {t("ekasa.page.accountant.vat19", "Znížená sadzba 19 %")}
+                    </span>
+                    <p className="mt-1 font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatBase", "Základ:")}{" "}
+                      <strong>{formatAmount(accountantData.totals.vat19.base)}</strong>
+                    </p>
+                    <p className="font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatTax", "DPH:")}{" "}
+                      <strong className="text-emerald-600">
+                        {formatAmount(accountantData.totals.vat19.vat)}
+                      </strong>
+                    </p>
                   </div>
 
                   <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                    <span className="font-medium text-foreground">Znížená sadzba 5 %</span>
-                    <p className="mt-1">Základ: <strong>{accountantData.totals.vat5.base.toFixed(2)} €</strong></p>
-                    <p>DPH: <strong className="text-emerald-600">{accountantData.totals.vat5.vat.toFixed(2)} €</strong></p>
+                    <span className="font-medium text-foreground">
+                      {t("ekasa.page.accountant.vat5", "Znížená sadzba 5 %")}
+                    </span>
+                    <p className="mt-1 font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatBase", "Základ:")}{" "}
+                      <strong>{formatAmount(accountantData.totals.vat5.base)}</strong>
+                    </p>
+                    <p className="font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatTax", "DPH:")}{" "}
+                      <strong className="text-emerald-600">
+                        {formatAmount(accountantData.totals.vat5.vat)}
+                      </strong>
+                    </p>
                   </div>
 
                   <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                    <span className="font-medium text-foreground">Oslobodené od DPH 0 %</span>
-                    <p className="mt-1">Základ: <strong>{accountantData.totals.vat0.base.toFixed(2)} €</strong></p>
-                    <p>DPH: <strong>0.00 €</strong></p>
+                    <span className="font-medium text-foreground">
+                      {t("ekasa.page.accountant.vat0", "Oslobodené od DPH 0 %")}
+                    </span>
+                    <p className="mt-1 font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatBase", "Základ:")}{" "}
+                      <strong>{formatAmount(accountantData.totals.vat0.base)}</strong>
+                    </p>
+                    <p className="font-mono tabular-nums">
+                      {t("ekasa.page.accountant.vatTax", "DPH:")} <strong>{formatAmount(0)}</strong>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -920,28 +1100,36 @@ function EkasaReceiptsContent() {
                 <Ban className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg text-foreground">
-                  Storno pokladničného dokladu
+                <h3 className="font-heading text-lg font-semibold text-foreground">
+                  {t("ekasa.page.storno.title", "Storno pokladničného dokladu")}
                 </h3>
-                <p className="text-xs text-muted-foreground font-mono">
-                  {stornoTarget.receiptNumber} ({Number(stornoTarget.amountTotal).toFixed(2)} €)
+                <p className="font-mono text-xs text-muted-foreground">
+                  {stornoTarget.receiptNumber} ({formatAmount(stornoTarget.amountTotal)})
                 </p>
               </div>
             </div>
 
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
-              V súlade so Zákonom č. 289/2008 Z. z. bude vystavený záporný opravný doklad naviazaný na pôvodný doklad ({stornoTarget.uid ?? stornoTarget.receiptNumber}) a odoslaný do evidencie FS SR.
+              {t(
+                "ekasa.page.storno.legalNotice",
+                "V súlade so Zákonom č. 289/2008 Z. z. bude vystavený záporný opravný doklad naviazaný na pôvodný doklad ({reference}) a odoslaný do evidencie FS SR.",
+                { reference: stornoTarget.uid ?? stornoTarget.receiptNumber },
+              )}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">
-                Dôvod storna <span className="text-destructive">*</span>
+                {t("ekasa.page.storno.reasonLabel", "Dôvod storna")}{" "}
+                <span className="text-destructive">*</span>
               </label>
               <input
                 type="text"
                 value={stornoReason}
                 onChange={(e) => setStornoReason(e.target.value)}
-                placeholder="Napr. Chybná platobná metóda, vrátenie tovaru..."
+                placeholder={t(
+                  "ekasa.page.storno.reasonPlaceholder",
+                  "Napr. Chybná platobná metóda, vrátenie tovaru...",
+                )}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
                 autoFocus
               />
@@ -954,7 +1142,7 @@ function EkasaReceiptsContent() {
                 disabled={stornoMutation.isPending}
                 onClick={() => setStornoTarget(null)}
               >
-                Zrušiť
+                {t("ekasa.page.storno.cancel", "Zrušiť")}
               </Button>
               <Button
                 variant="destructive"
@@ -974,7 +1162,7 @@ function EkasaReceiptsContent() {
                 ) : (
                   <Ban className="h-3.5 w-3.5" />
                 )}
-                Potvrdiť storno
+                {t("ekasa.page.storno.confirm", "Potvrdiť storno")}
               </Button>
             </div>
           </div>

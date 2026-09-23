@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   FileSignature,
@@ -32,22 +32,75 @@ import {
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { useI18n } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/locale/format";
+import { toast } from "sonner";
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  DRAFT: { label: "Rozpracované", className: "bg-muted text-muted-foreground border-border" },
-  VALIDATED: { label: "Validované", className: "bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300" },
-  SIGNED: { label: "Podpísané", className: "bg-violet-50 text-violet-700 border-violet-300 dark:bg-violet-950/40 dark:text-violet-300" },
-  SUBMITTED: { label: "Odoslané", className: "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300" },
-  ACKNOWLEDGED: { label: "Doručenka prijatá", className: "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300" },
-  REJECTED: { label: "Zamietnuté", className: "bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-300" },
+const STATUS_BADGE: Record<
+  string,
+  { labelKey: string; labelFallback: string; className: string }
+> = {
+  DRAFT: {
+    labelKey: "statutory.kvepis.statusDraft",
+    labelFallback: "Draft",
+    className: "bg-muted text-muted-foreground border-border",
+  },
+  VALIDATED: {
+    labelKey: "statutory.kvepis.statusValidated",
+    labelFallback: "Validated",
+    className: "bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300",
+  },
+  SIGNED: {
+    labelKey: "statutory.kvepis.statusSigned",
+    labelFallback: "Signed",
+    className: "bg-violet-50 text-violet-700 border-violet-300 dark:bg-violet-950/40 dark:text-violet-300",
+  },
+  SUBMITTED: {
+    labelKey: "statutory.kvepis.statusSubmitted",
+    labelFallback: "Submitted",
+    className: "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
+  },
+  ACKNOWLEDGED: {
+    labelKey: "statutory.kvepis.statusAcknowledged",
+    labelFallback: "Receipt received",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+  },
+  REJECTED: {
+    labelKey: "statutory.kvepis.statusRejected",
+    labelFallback: "Rejected",
+    className: "bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-300",
+  },
 };
 
-const SUBMISSION_TYPE_LABEL: Record<string, string> = {
-  rabies_notification: "Besnota — hlásenie",
-  treatment_diary_batch: "Ambulantná kniha ošetrení",
-  animal_movement: "Premiestnenie zvieraťa",
-  infectious_disease_alert: "Podozrenie na nebezpečnú nákazu",
+const SUBMISSION_TYPE_LABEL: Record<
+  string,
+  { labelKey: string; labelFallback: string }
+> = {
+  rabies_notification: {
+    labelKey: "statutory.kvepis.typeRabies",
+    labelFallback: "Rabies — notification",
+  },
+  treatment_diary_batch: {
+    labelKey: "statutory.kvepis.typeTreatment",
+    labelFallback: "Outpatient treatment book",
+  },
+  animal_movement: {
+    labelKey: "statutory.kvepis.typeMovement",
+    labelFallback: "Animal movement",
+  },
+  infectious_disease_alert: {
+    labelKey: "statutory.kvepis.typeInfectious",
+    labelFallback: "Infectious disease notification",
+  },
 };
+
+function submissionTypeLabel(
+  t: (key: string, fallback?: string) => string,
+  value: string
+): string {
+  const entry = SUBMISSION_TYPE_LABEL[value];
+  return entry ? t(entry.labelKey, entry.labelFallback) : value;
+}
 
 function downloadTextFile(filename: string, content: string, mime = "text/xml") {
   const blob = new Blob([content], { type: `${mime};charset=utf-8` });
@@ -61,22 +114,16 @@ function downloadTextFile(filename: string, content: string, mime = "text/xml") 
   URL.revokeObjectURL(url);
 }
 
-function formatDate(val: Date | string | null | undefined): string {
-  if (!val) return "—";
-  try {
-    return new Date(val).toLocaleString("sk-SK", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(val);
-  }
+function formatSubmittedAt(
+  val: Date | string | null | undefined,
+  language: string,
+): string {
+  return formatDateTime(val, { language });
 }
 
 export default function KvepisPage() {
+  const { t, locale } = useI18n();
+  const newSubmissionRef = useRef<HTMLDivElement>(null);
   const [newType, setNewType] = useState<string>("rabies_notification");
   const [form, setForm] = useState({
     farmIco: "",
@@ -193,7 +240,12 @@ export default function KvepisPage() {
       const payload = JSON.parse(text);
       receiptMutation.mutate({ submissionId: selected.id, receiptPayload: payload });
     } catch {
-      window.alert("Doručenka musí byť platný JSON súbor z ÚPVS.");
+      toast.error(
+        t(
+          "statutory.kvepis.receiptInvalidJson",
+          "The receipt must be a valid JSON file from ÚPVS."
+        )
+      );
     }
   };
 
@@ -208,7 +260,7 @@ export default function KvepisPage() {
             href="/statutory"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            <ChevronLeft className="h-4 w-4" /> Zákonné registre
+            <ChevronLeft className="h-4 w-4" /> {t("statutory.title", "Zákonné registre")}
           </Link>
         </div>
         <Landmark className="h-6 w-6 text-muted-foreground" />
@@ -217,46 +269,74 @@ export default function KvepisPage() {
       <PageHeader
         title={
           <span className="flex items-center gap-3 flex-wrap">
-            <span>KVEPIS Submission Hub</span>
+            <span>{t("statutory.kvepis.hubTitle", "KVEPIS Submission Hub")}</span>
             <IntegrationModeBanner module="kvepis" size="sm" />
           </span>
         }
-        subtitle="Riadená príprava zákonných hlásení pre ŠVPS SR cez ÚPVS. Validácia schém, generovanie podpisového XML/JSON balíčka a párovanie doručenky so záznamom pacienta."
+        subtitle={t(
+          "statutory.kvepis.hubSubtitle",
+          "Riadená príprava zákonných hlásení pre ŠVPS SR cez ÚPVS. Validácia schém, generovanie podpisového XML/JSON balíčka a párovanie doručenky so záznamom pacienta.",
+        )}
       />
 
       {/* ── Prístup kliniky ─────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Prístup kliniky (IČO · KVL · ÚPVS)</CardTitle>
+          <CardTitle className="text-base">
+            {t("statutory.kvepis.credTitle", "Practice access (IČO · KVL · ÚPVS)")}
+          </CardTitle>
           <CardDescription>
             {credentials
-              ? `Nakonfigurované: IČO ${credentials.ico}${credentials.kvlId ? ` · KVL ${credentials.kvlId}` : ""}${credentials.upvsSchranka ? ` · Schránka ${credentials.upvsSchranka}` : ""}`
-              : "Zadajte identifikačné údaje kliniky pre generovanie podaní."}
+              ? [
+                  t("statutory.kvepis.credConfiguredIco", "Configured: IČO {ico}", {
+                    ico: credentials.ico,
+                  }),
+                  credentials.kvlId
+                    ? t("statutory.kvepis.credKvlShort", "KVL {kvl}", {
+                        kvl: credentials.kvlId,
+                      })
+                    : null,
+                  credentials.upvsSchranka
+                    ? t("statutory.kvepis.credMailbox", "Mailbox {box}", {
+                        box: credentials.upvsSchranka,
+                      })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : t(
+                  "statutory.kvepis.credHint",
+                  "Enter the practice identification data required to generate submissions."
+                )}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-5">
           <div className="space-y-1">
-            <Label>IČO</Label>
+            <Label>{t("statutory.kvepis.credIco", "Company ID (IČO)")}</Label>
             <Input value={credIco} onChange={(e) => setCredIco(e.target.value)} placeholder="12345678" maxLength={8} />
           </div>
           <div className="space-y-1">
-            <Label>KVL ID lekára</Label>
+            <Label>{t("statutory.kvepis.credKvl", "Vet KVL ID")}</Label>
             <Input value={credKvl} onChange={(e) => setCredKvl(e.target.value)} placeholder="LV-0001" />
           </div>
           <div className="space-y-1">
-            <Label>ÚPVS schránka</Label>
+            <Label>{t("statutory.kvepis.credSchranka", "ÚPVS mailbox")}</Label>
             <Input value={credSchranka} onChange={(e) => setCredSchranka(e.target.value)} placeholder="ICO/12345678" />
           </div>
           <div className="space-y-1">
-            <Label>Spôsob podpisu (KEP)</Label>
+            <Label>{t("statutory.kvepis.credSignMethod", "Signature method (QES)")}</Label>
             <select
               className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
               value={signMethod}
               onChange={(e) => setSignMethod(e.target.value as never)}
             >
-              <option value="DSIGNER">D.Signer / Disig (eID čítačka)</option>
-              <option value="CLOUD_SEAL">Cloudová pečať ambulancie</option>
-              <option value="HSM">HSM modul</option>
+              <option value="DSIGNER">
+                {t("statutory.kvepis.signDsigner", "D.Signer / Disig (eID reader)")}
+              </option>
+              <option value="CLOUD_SEAL">
+                {t("statutory.kvepis.signCloudSeal", "Practice cloud seal")}
+              </option>
+              <option value="HSM">{t("statutory.kvepis.signHsm", "HSM module")}</option>
             </select>
           </div>
           <div className="flex items-end">
@@ -272,105 +352,120 @@ export default function KvepisPage() {
               disabled={credIco.length !== 8}
               className="w-full gap-2"
             >
-              <FileSignature className="h-4 w-4" /> Uložiť prístup
+              <FileSignature className="h-4 w-4" />
+              {t("statutory.kvepis.credSave", "Save access")}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* ── Nové podanie ────────────────────────────────────────────── */}
+      <div ref={newSubmissionRef} id="nove-podanie" className="scroll-mt-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Nové podanie</CardTitle>
+          <CardTitle className="text-base">
+            {t("statutory.kvepis.newTitle", "New submission")}
+          </CardTitle>
           <CardDescription>
-            Typ podania určuje povinné polia validačného enginu ŠVPS SR.
+            {t(
+              "statutory.kvepis.newDesc",
+              "The submission type determines the required fields of the ŠVPS SR validation engine."
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1 sm:col-span-1">
-              <Label>Typ podania</Label>
+              <Label>{t("statutory.kvepis.fieldType", "Submission type")}</Label>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
                 value={newType}
                 onChange={(e) => setNewType(e.target.value)}
               >
-                {Object.entries(SUBMISSION_TYPE_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                {Object.keys(SUBMISSION_TYPE_LABEL).map((value) => (
+                  <option key={value} value={value}>
+                    {submissionTypeLabel(t, value)}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
-              <Label>IČO farmy</Label>
+              <Label>{t("statutory.kvepis.fieldFarmIco", "Farm IČO")}</Label>
               <Input value={form.farmIco} onChange={set("farmIco")} placeholder="12345678" maxLength={8} />
             </div>
             <div className="space-y-1">
-              <Label>CEHZ kód chovu</Label>
+              <Label>{t("statutory.kvepis.fieldCehz", "CEHZ herd code")}</Label>
               <Input value={form.cehzCode} onChange={set("cehzCode")} placeholder="SK1234567" />
             </div>
             <div className="space-y-1">
-              <Label>Číslo ušnej známky</Label>
+              <Label>{t("statutory.kvepis.fieldEarTag", "Ear tag number")}</Label>
               <Input value={form.earTagNumber} onChange={set("earTagNumber")} placeholder="SK000123456789" />
             </div>
             <div className="space-y-1">
-              <Label>Transpondér / čip</Label>
-              <Input value={form.transponderNumber} onChange={set("transponderNumber")} placeholder="15 číslic ISO 11784" />
+              <Label>{t("statutory.kvepis.fieldTransponder", "Transponder / chip")}</Label>
+              <Input value={form.transponderNumber} onChange={set("transponderNumber")} placeholder={t("statutory.kvepis.phTransponder", "15 digits per ISO 11784")} />
             </div>
             <div className="space-y-1">
-              <Label>KVL číslo lekára</Label>
+              <Label>{t("statutory.kvepis.fieldKvl", "Vet KVL number")}</Label>
               <Input value={form.kvlNumber} onChange={set("kvlNumber")} placeholder="LV-0001" />
             </div>
             <div className="space-y-1">
-              <Label>Druh zvieraťa</Label>
-              <Input value={form.animalSpecies} onChange={set("animalSpecies")} placeholder="hovädzí dobytok / pes" />
+              <Label>{t("statutory.kvepis.fieldSpecies", "Animal species")}</Label>
+              <Input value={form.animalSpecies} onChange={set("animalSpecies")} placeholder={t("statutory.kvepis.phSpecies", "cattle / dog")} />
             </div>
             <div className="space-y-1">
-              <Label>Diagnóza</Label>
+              <Label>{t("statutory.kvepis.fieldDiagnosis", "Diagnosis")}</Label>
               <Input value={form.diagnosis} onChange={set("diagnosis")} placeholder="Bronchopneumónia" />
             </div>
             <div className="space-y-1">
-              <Label>Názov liečiva</Label>
+              <Label>{t("statutory.kvepis.fieldMedication", "Medication name")}</Label>
               <Input value={form.medicationName} onChange={set("medicationName")} placeholder="Cobactan 2.5%" />
             </div>
             <div className="space-y-1">
-              <Label>Ochranná lehota — mäso (dni)</Label>
+              <Label>{t("statutory.kvepis.fieldMeatWithdrawal", "Withdrawal period — meat (days)")}</Label>
               <Input type="number" min={0} value={form.meatWithdrawalDays} onChange={set("meatWithdrawalDays")} placeholder="5" />
             </div>
             <div className="space-y-1">
-              <Label>Ochranná lehota — mlieko (dni)</Label>
+              <Label>{t("statutory.kvepis.fieldMilkWithdrawal", "Withdrawal period — milk (days)")}</Label>
               <Input type="number" min={0} value={form.milkWithdrawalDays} onChange={set("milkWithdrawalDays")} placeholder="1" />
             </div>
             <div className="space-y-1">
-              <Label>Dátum podania</Label>
+              <Label>{t("statutory.kvepis.fieldAdministeredAt", "Administration date")}</Label>
               <Input type="datetime-local" value={form.administeredAt} onChange={set("administeredAt")} />
             </div>
             <div className="space-y-1">
-              <Label>Koniec ochrannej lehoty</Label>
+              <Label>{t("statutory.kvepis.fieldSafeUntil", "End of withdrawal period")}</Label>
               <Input type="datetime-local" value={form.safeUntil} onChange={set("safeUntil")} />
             </div>
             <div className="space-y-1">
-              <Label>Dátum incidentu (besnota)</Label>
+              <Label>{t("statutory.kvepis.fieldIncidentDate", "Incident date (rabies)")}</Label>
               <Input type="datetime-local" value={form.incidentDate} onChange={set("incidentDate")} />
             </div>
           </div>
           <div className="flex justify-end">
             <Button onClick={handleCreate} disabled={createMutation.isPending} className="gap-2">
               {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Vytvoriť podanie
+              {t("statutory.kvepis.createBtn", "Vytvoriť podanie")}
             </Button>
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* ── Zoznam podaní ───────────────────────────────────────────── */}
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <div>
-            <CardTitle className="text-base">Pripravené podania</CardTitle>
-            <CardDescription>Ambulantná kniha → KVEPIS / ÚPVS.</CardDescription>
+            <CardTitle className="text-base">
+              {t("statutory.kvepis.listTitle", "Prepared submissions")}
+            </CardTitle>
+            <CardDescription>
+              {t("statutory.kvepis.listDesc", "Outpatient book → KVEPIS / ÚPVS.")}
+            </CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Obnoviť
+            <RefreshCw className="h-4 w-4" />
+            {t("statutory.kvepis.listRefresh", "Refresh")}
           </Button>
         </CardHeader>
         <CardContent>
@@ -381,8 +476,20 @@ export default function KvepisPage() {
           ) : !submissions?.items.length ? (
             <EmptyState
               icon={Landmark}
-              title="Žiadne podania"
-              description="Vytvorte prvé KVEPIS podanie z ambulantnej knihy."
+              title={t("statutory.kvepis.emptyTitle", "Žiadne KVEPIS podania")}
+              description={t(
+                "statutory.kvepis.emptyDesc",
+                "Neevidujete žiadne čakajúce ani odoslané podania na ŠVPS SR pre zvolený filter.",
+              )}
+              action={{
+                label: t("statutory.kvepis.emptyCta", "Vytvoriť export KVEPIS"),
+                onClick: () =>
+                  newSubmissionRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  }),
+                icon: Plus,
+              }}
             />
           ) : (
             <div className="space-y-2">
@@ -406,20 +513,25 @@ export default function KvepisPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-sm font-semibold">{s.referenceNumber}</span>
-                          <Badge className={badge.className}>{badge.label}</Badge>
+                          <Badge className={badge.className}>
+                            {t(badge.labelKey, badge.labelFallback)}
+                          </Badge>
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">
-                          {SUBMISSION_TYPE_LABEL[s.submissionType] ?? s.submissionType}
+                          {submissionTypeLabel(t, s.submissionType)}
                           {s.patientName ? ` · ${s.patientName}${s.species ? ` (${s.species})` : ""}` : ""}
                           {s.farmIco ? ` · IČO ${s.farmIco}` : ""}
                         </div>
                         {s.errorCode && (
                           <div className="mt-1 text-xs text-red-600 dark:text-red-400">
-                            Chyba ŠVPS: {s.errorCode} {s.errorMessage ? `— ${s.errorMessage}` : ""}
+                            {t("statutory.kvepis.errSvpsPrefix", "ŠVPS error:")}{" "}
+                            {s.errorCode} {s.errorMessage ? `— ${s.errorMessage}` : ""}
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{formatDate(s.createdAt)}</span>
+                      <span className="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+                          {formatSubmittedAt(s.createdAt, locale)}
+                        </span>
                     </button>
 
                     {isSelected && (
@@ -427,10 +539,12 @@ export default function KvepisPage() {
                         {/* Validácia */}
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" onClick={() => handleValidate(s.id)} className="gap-2">
-                            <ShieldCheck className="h-4 w-4" /> Validovať
+                            <ShieldCheck className="h-4 w-4" />
+                            {t("statutory.kvepis.btnValidate", "Validate")}
                           </Button>
                           <Button size="sm" variant="outline" onClick={handleDownloadXml} className="gap-2">
-                            <Download className="h-4 w-4" /> Stiahnuť XML (D.Signer)
+                            <Download className="h-4 w-4" />
+                            {t("statutory.kvepis.btnDownloadXml", "Download XML (D.Signer)")}
                           </Button>
                           <Button
                             size="sm"
@@ -439,7 +553,8 @@ export default function KvepisPage() {
                             disabled={s.status !== "VALIDATED" && s.status !== "SIGNED"}
                             className="gap-2"
                           >
-                            <FileSignature className="h-4 w-4" /> Označiť podpísané
+                            <FileSignature className="h-4 w-4" />
+                            {t("statutory.kvepis.btnMarkSigned", "Mark as signed")}
                           </Button>
                           <Button
                             size="sm"
@@ -447,10 +562,12 @@ export default function KvepisPage() {
                             disabled={s.status !== "SIGNED" && s.status !== "VALIDATED"}
                             className="gap-2"
                           >
-                            <Landmark className="h-4 w-4" /> Odoslať do ÚPVS
+                            <Landmark className="h-4 w-4" />
+                            {t("statutory.kvepis.btnSubmitUpvs", "Submit to ÚPVS")}
                           </Button>
                           <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted/50">
-                            <Upload className="h-4 w-4" /> Nahrať doručenku
+                            <Upload className="h-4 w-4" />
+                            {t("statutory.kvepis.btnUploadReceipt", "Upload receipt")}
                             <input
                               type="file"
                               accept="application/json,.json"
@@ -469,11 +586,19 @@ export default function KvepisPage() {
                           <div className="space-y-1.5">
                             {validation.valid ? (
                               <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
-                                <CheckCircle2 className="h-4 w-4" /> Podanie je validné a pripravené na podpis.
+                                <CheckCircle2 className="h-4 w-4" />
+                                {t(
+                                  "statutory.kvepis.validationOk",
+                                  "The submission is valid and ready for signature."
+                                )}
                               </div>
                             ) : (
                               <div className="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-300">
-                                <XCircle className="h-4 w-4" /> Podanie obsahuje chyby, ktoré bránia odoslaniu:
+                                <XCircle className="h-4 w-4" />
+                                {t(
+                                  "statutory.kvepis.validationFailed",
+                                  "The submission contains errors that prevent submission:"
+                                )}
                               </div>
                             )}
                             {validation.issues.map((issue, idx) => (
