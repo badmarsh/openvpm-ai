@@ -150,6 +150,11 @@ function VoiceDictationContent() {
   // Human-in-the-loop: AI transcription is saved as a draft unless the
   // clinician explicitly confirms the content for finalization.
   const [clinicianConfirmed, setClinicianConfirmed] = useState(false);
+  // Set when the AI provider was unreachable: the transcript is kept in the
+  // subjective section so the vet can finish the record manually.
+  const [formattingDegraded, setFormattingDegraded] = useState<
+    "not_configured" | "timeout" | "provider_error" | null
+  >(null);
 
   // tRPC mutations
   const uploadAndProcessMutation = trpc.extensions.voice.uploadAndProcess.useMutation();
@@ -207,6 +212,7 @@ function VoiceDictationContent() {
     setRawTranscript("");
     setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
     setSavedNoteId(null);
+    setFormattingDegraded(null);
   }, []);
 
   const handleRecordingComplete = useCallback(
@@ -263,14 +269,43 @@ function VoiceDictationContent() {
         clientSummary: (processed as any).clientSummary ?? "",
       });
 
+      const degraded =
+        (processed as { formattingDegraded?: { reason?: string } | null })
+          .formattingDegraded?.reason ?? null;
+      setFormattingDegraded(
+        degraded as "not_configured" | "timeout" | "provider_error" | null,
+      );
       setStatus("done");
-      toast.success(t("voice.page.processingDone", "Transkripcia a SOAP analýza dokončená"));
+      if (degraded) {
+        toast.warning(
+          t(
+            "voice.page.formattingDegradedToast",
+            "Prepis je hotový, ale AI formátovanie nebolo dostupné. SOAP upravte ručne.",
+          ),
+        );
+      } else {
+        toast.success(t("voice.page.processingDone", "Transkripcia a SOAP analýza dokončená"));
+      }
 
       utils.extensions.voice.listByPatient.invalidate({
         patientId: selectedPatient.id,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("voice.page.processingFailed", "Spracovanie diktovania zlyhalo");
+      const code = (err as { data?: { code?: string } })?.data?.code;
+      const message =
+        code === "PRECONDITION_FAILED"
+          ? t(
+              "voice.page.providerNotConfigured",
+              "AI poskytovateľ nie je nakonfigurovaný. Povoľte ho v Nastaveniach → AI a skúste znova.",
+            )
+          : code === "TIMEOUT"
+            ? t(
+                "voice.page.providerTimeout",
+                "AI poskytovateľ neodpovedal v časovom limite. Skúste znova alebo nastavte rýchlejší model.",
+              )
+            : err instanceof Error
+              ? err.message
+              : t("voice.page.processingFailed", "Spracovanie diktovania zlyhalo");
       toast.error(message);
       setStatus("error");
     }
@@ -309,7 +344,22 @@ function VoiceDictationContent() {
             : style === "detailed"
               ? t("voice.soap.styleDetailed", "Detailný")
               : t("voice.soap.styleConcise", "Stručný");
-        toast.success(t("voice.page.reformatted", "SOAP preformátovaný v štýle: {style}", { style: styleLabel }));
+        const degraded =
+          (formatted as { degraded?: { reason?: string } | null }).degraded ?? null;
+        setFormattingDegraded(
+          (degraded?.reason as "not_configured" | "timeout" | "provider_error" | undefined) ??
+            null,
+        );
+        if (degraded) {
+          toast.warning(
+            t(
+              "voice.page.formattingDegradedToast",
+              "Prepis je hotový, ale AI formátovanie nebolo dostupné. SOAP upravte ručne.",
+            ),
+          );
+        } else {
+          toast.success(t("voice.page.reformatted", "SOAP preformátovaný v štýle: {style}", { style: styleLabel }));
+        }
       } catch {
         toast.error(t("voice.page.reformatFailed", "Preformátovanie zlyhalo"));
       }
@@ -752,6 +802,41 @@ function VoiceDictationContent() {
                     resetState();
                   }}
                 />
+
+                {/* AI provider degraded — the dictation is kept, formatting is manual */}
+                {formattingDegraded ? (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <strong className="mb-0.5 block font-semibold">
+                        {t(
+                          "voice.degraded.title",
+                          "AI formátovanie nebolo dostupné",
+                        )}
+                      </strong>
+                      {formattingDegraded === "not_configured"
+                        ? t(
+                            "voice.degraded.notConfigured",
+                            "Nie je nastavený žiadny AI poskytovateľ. Prepis diktátu je uložený nižšie — SOAP dokončite ručne alebo povoľte poskytovateľa v Nastaveniach.",
+                          )
+                        : formattingDegraded === "provider_error"
+                          ? t(
+                              "voice.degraded.providerError",
+                              "AI poskytovateľ vrátil chybu. Prepis diktátu je uložený nižšie — skúste preformátovať znova alebo SOAP dokončite ručne.",
+                            )
+                          : t(
+                              "voice.degraded.timeout",
+                              "AI poskytovateľ neodpovedal v časovom limite. Prepis je uložený nižšie — skúste preformátovať znova alebo SOAP dokončite ručne.",
+                            )}
+                      <Link
+                        href="/settings/ai"
+                        className="mt-1 inline-block font-medium underline underline-offset-2 hover:text-amber-950 dark:hover:text-amber-100"
+                      >
+                        {t("voice.degraded.openSettings", "Otvoriť Nastavenia → AI")}
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Sympathy Flow Warning Banner */}
                 {isDeceased && (

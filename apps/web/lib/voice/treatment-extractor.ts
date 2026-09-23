@@ -249,13 +249,20 @@ Odpovedz VÝHRADNE JSON objektom v tvare:
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), 20_000);
 
-    const result = await generateText({
-      model: configuredModel(),
-      system: systemPrompt,
-      prompt: `Extrahuj položky na vyúčtovanie z tohto záznamu:\n\n${combinedText}`,
-      abortSignal: ac.signal,
-    });
-    clearTimeout(timeout);
+    let result;
+    try {
+      result = await generateText({
+        model: configuredModel(),
+        system: systemPrompt,
+        prompt: `Extrahuj položky na vyúčtovanie z tohto záznamu:\n\n${combinedText}`,
+        abortSignal: ac.signal,
+      });
+    } finally {
+      // Clear on both paths: the previous code left a pending timer behind
+      // whenever the provider call threw, keeping the event loop busy on a
+      // serverless instance that was supposed to be idle.
+      clearTimeout(timeout);
+    }
 
     let cleaned = result.text.trim();
     if (cleaned.startsWith("```")) {
