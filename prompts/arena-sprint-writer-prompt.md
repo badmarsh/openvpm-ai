@@ -31,6 +31,8 @@ Your output is a single file: `tasks/arena-sprint-<N>-<slug>.md`, plus one row a
 | 6 | Whiteboard + imaging modalities (`/whiteboard`) | written, NOT implemented (page has no page-kit) |
 | 7 | Encounters hub + care reminders | written |
 | 8 | Billing ledger `/billing` | written |
+| 9 | Billing entry: POS + new invoice (`/billing/pos`, `/billing/new`) | written |
+| 10 | Billing — e-Kasa Fiscal Registers (`/billing/ekasa`) | written |
 
 Legacy prompts (`arena-consolidation-sprint.md`, `arena-next-sprint.md`, `ui-consolidation-prompt.md`, `ui-phase2-headings.md`) are history — mine them for style and lessons, do not number after them. Proposed safety/AI tickets live in `tasks/proposed/gt-0xx-*.md` (lifecycle in `tasks/README.md`).
 
@@ -66,7 +68,7 @@ Use Desktop Commander `start_process` with PowerShell, and `read_file` (not `Get
 3. **Independence:** a sprint touches files no other open sprint touches (check 5 and 6 are still unimplemented) and says so in its header.
 4. **Cohesion:** one theme per sprint (e.g. "billing ledger", "encounters + reminders"). Do not bundle unrelated fixes.
 5. **Backlog with sizes at snapshot** (refresh via step 4.3): `billing/pos` 657 · `billing/new` 715 (source-pinned by `billing-ui.test.ts`, `service-picker-ui.test.ts`) · `billing/ekasa` 1 123 (fiscal, pinned by `statutory-ekasa-consolidation.test.ts`) · `reports` 974 · `wellness` 249 · `statutory` 1 634 + `statutory/kvepis` 615 (print surfaces stay untouched) · `patients/new` 501 · `clients/new` 486 · `patients/duplicates` 542 · `migration-archive` 706 · `settings/*` (split per tab) · `field-visits` 1 713 · `agent/imaging` 1 735, `agent/voice` 1 356, `agent/discharge` 1 354 · marketing pages (`reviews` 1 237, `website` 828, `media` 660, `handouts` 520, `consents` 388 — no hardcoded demo competitors/clinics/SK chrome).
-   Suggested next order: 9 = `billing/pos` + `billing/new` · 10 = `billing/ekasa` · 11 = a P0/P1 `tasks/proposed` safety ticket · 12 = `reports` + `wellness` · 13 = `statutory` + `kvepis` · 14 = patient/client creation + duplicates.
+   Suggested next order: 10 = `billing/ekasa` · 11 = a P0/P1 `tasks/proposed` safety ticket (first candidate: `createPosSale` idempotency, see Sprint 9 §11) · 12 = `reports` + `wellness` · 13 = `statutory` + `kvepis` · 14 = patient/client creation + duplicates.
 
 ## 6. Grounding rules (this is what makes a sprint file good)
 
