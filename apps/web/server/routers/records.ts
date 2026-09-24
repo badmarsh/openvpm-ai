@@ -3453,6 +3453,7 @@ export const recordsRouter = createRouter({
           id: labResults.id,
           patientId: labResults.patientId,
           patientName: patients.name,
+          patientSpecies: patients.species,
           appointmentId: labResults.appointmentId,
           appointmentStart: appointments.startTime,
           appointmentStatus: appointments.status,

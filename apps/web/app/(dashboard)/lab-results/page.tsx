@@ -36,6 +36,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/common/empty-state";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+} from "@/components/layout/page-kit";
+import {
+  RANGE_STATUS_BADGE_CLASS,
+  deriveRangeStatus,
+  type RangeStatus,
+} from "@/lib/lab/reference-range-status";
 
 type InboxFilter =
   | "action_required"
@@ -224,6 +239,9 @@ function LabResultsInboxContent() {
   const [followUpDueAt, setFollowUpDueAt] = useState("");
   const [followUpNote, setFollowUpNote] = useState("");
   const [followUpOutcome, setFollowUpOutcome] = useState("");
+  const [search, setSearch] = useState("");
+  const [speciesFilter, setSpeciesFilter] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const reviewOperationIds = useRef(new Map<string, string>());
 
   const reviewOperationId = (resultId: string) => {
@@ -334,9 +352,47 @@ function LabResultsInboxContent() {
     [isFrontDesk, rows],
   );
   const timeZone = settings.data?.timezone;
+  const speciesOptions = useMemo(
+    () =>
+      Array.from(new Set(rows.map((row) => row.patientSpecies))).sort(),
+    [rows],
+  );
+  const filteredRows = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (speciesFilter !== "all" && row.patientSpecies !== speciesFilter) {
+        return false;
+      }
+      if (!needle) return true;
+      return (
+        row.patientName.toLowerCase().includes(needle) ||
+        row.testName.toLowerCase().includes(needle)
+      );
+    });
+  }, [rows, search, speciesFilter]);
+  const activeExpandedId =
+    selectedResultId && rows.some((row) => row.id === selectedResultId)
+      ? (expandedId ?? selectedResultId)
+      : expandedId;
+  const rangeStatusLabel = (status: RangeStatus) => {
+    switch (status) {
+      case "normal":
+        return t("labResults.rangeNormal", "Normal");
+      case "low":
+        return t("labResults.rangeLow", "Low");
+      case "high":
+        return t("labResults.rangeHigh", "High");
+      case "abnormal":
+        return t("labResults.flagAbnormal", "Abnormal");
+      case "critical":
+        return t("labResults.flagCritical", "Critical");
+      default:
+        return t("labResults.rangePending", "Pending");
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         icon={FlaskConical}
         title={t("labResults.title", "Laboratórne výsledky")}
@@ -419,26 +475,52 @@ function LabResultsInboxContent() {
         </div>
       ) : null}
 
-      {!isFrontDesk && !selectedResultId ? (
-        <div
-          className="flex gap-2 overflow-x-auto pb-1"
-          role="group"
-          aria-label={t("labResults.filterGroupAria", "Filter lab results")}
-        >
-          {FILTERS.map((item) => (
-            <Button
-              key={item.value}
-              type="button"
-              size="sm"
-              variant={filter === item.value ? "default" : "outline"}
-              aria-pressed={filter === item.value}
-              onClick={() => setFilter(item.value)}
-              className="shrink-0"
+      {!selectedResultId ? (
+        <PageToolbar>
+          <SearchField
+            value={search}
+            onChange={setSearch}
+            maxLength={100}
+            placeholder={t(
+              "labResults.searchPlaceholder",
+              "Search patient or test…",
+            )}
+          />
+          {!isFrontDesk ? (
+            <select
+              className={filterControlClass}
+              aria-label={t("labResults.filterGroupAria", "Filter lab results")}
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as InboxFilter)}
             >
-              {t(item.labelKey, item.fallbackLabel)}
-            </Button>
-          ))}
-        </div>
+              {FILTERS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {t(item.labelKey, item.fallbackLabel)}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <select
+            className={filterControlClass}
+            aria-label={t("labResults.speciesFilterAria", "Filter by species")}
+            value={speciesFilter}
+            onChange={(event) => setSpeciesFilter(event.target.value)}
+          >
+            <option value="all">
+              {t("labResults.speciesAll", "All species")}
+            </option>
+            {speciesOptions.map((species) => (
+              <option key={species} value={species}>
+                {t(`species.${species}`, species)}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground sm:ml-auto">
+            {t("labResults.resultCount", "{count} results", {
+              count: filteredRows.length,
+            })}
+          </span>
+        </PageToolbar>
       ) : null}
 
       {inbox.error ? (
@@ -448,7 +530,7 @@ function LabResultsInboxContent() {
         </div>
       ) : inbox.isLoading ? (
         <LabResultsLoading />
-      ) : rows.length === 0 ? (
+      ) : filteredRows.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           title={
@@ -489,7 +571,78 @@ function LabResultsInboxContent() {
                   )}
             </div>
           ) : null}
-          {rows.map((row) => {
+          <DataTableFrame>
+            <table className="w-full text-xs">
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  <th className={tableHeadClass}>{t("labResults.colPatient", "Patient")}</th>
+                  <th className={tableHeadClass}>{t("labResults.colSpecies", "Species")}</th>
+                  <th className={tableHeadClass}>{t("labResults.colTest", "Test")}</th>
+                  <th className={cn(tableHeadClass, "text-right")}>{t("labResults.colValue", "Value")}</th>
+                  <th className={tableHeadClass}>{t("labResults.colReferenceRange", "Reference range")}</th>
+                  <th className={tableHeadClass}>{t("labResults.colStatus", "Status")}</th>
+                  <th className={tableHeadClass}>{t("labResults.colDate", "Date")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => {
+                  const status = deriveRangeStatus(row);
+                  const expanded = activeExpandedId === row.id;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={cn(tableRowClass, "cursor-pointer", expanded && "bg-muted/40")}
+                      aria-selected={expanded}
+                      tabIndex={0}
+                      onClick={() => setExpandedId(expanded ? null : row.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setExpandedId(expanded ? null : row.id);
+                        }
+                      }}
+                    >
+                      <td className={cn(tableCellClass, "font-medium")}>{row.patientName}</td>
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
+                        {t(`species.${row.patientSpecies}`, row.patientSpecies)}
+                      </td>
+                      <td className={tableCellClass}>{row.testName}</td>
+                      <td className={cn(tableCellClass, "text-right font-mono tabular-nums text-xs")}>
+                        {row.resultValue ?? "—"}
+                        {row.resultValue && row.unit ? (
+                          <span className="ml-1 text-muted-foreground">{row.unit}</span>
+                        ) : null}
+                      </td>
+                      <td className={cn(tableCellClass, "font-mono tabular-nums text-xs text-muted-foreground")}>
+                        {row.referenceRangeLow != null && row.referenceRangeHigh != null
+                          ? `${row.referenceRangeLow}–${row.referenceRangeHigh}`
+                          : "—"}
+                      </td>
+                      <td className={tableCellClass}>
+                        <Badge variant="outline" className={cn("uppercase", RANGE_STATUS_BADGE_CLASS[status])}>
+                          {isFrontDesk
+                            ? t("labResults.assignedFollowUpBadge", "Assigned follow-up")
+                            : rangeStatusLabel(status)}
+                        </Badge>
+                      </td>
+                      <td className={cn(tableCellClass, "font-mono tabular-nums text-xs text-muted-foreground")}>
+                        {formatEvidenceTime(row.completedAt ?? row.createdAt, timeZone)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </DataTableFrame>
+          {!isFrontDesk ? (
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "labResults.advisoryNote",
+                "Reference range flags are advisory. Clinical interpretation remains with the reviewing veterinarian.",
+              )}
+            </p>
+          ) : null}
+          {filteredRows.filter((row) => row.id === activeExpandedId).map((row) => {
             const isCritical = row.resultFlag === "critical";
             const isAbnormal = row.resultFlag === "abnormal";
             const panelOpen = actionPanel?.id === row.id;
