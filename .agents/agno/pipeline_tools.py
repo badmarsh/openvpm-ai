@@ -4,18 +4,164 @@ import time
 import shutil
 import json
 import glob
+import re
+import tempfile
+import threading
+import urllib.parse
 import subprocess
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass, fields, is_dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+)
 
 AGNO_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.abspath(os.path.join(AGNO_DIR, "../.."))
 TMP_DIR = os.path.join(AGNO_DIR, "tmp")
 ARENA_SESSIONS_FILE = os.path.join(TMP_DIR, "arena_sessions.json")
 
-# Import contracts zo samostatného balíčka openvpm_dev_orchestrator
-try:
-    from openvpm_dev_orchestrator.contracts import (
+def _load_orchestrator_contracts():
+    """Import run contracts, or install a local fallback for unit tests.
+
+    The orchestrator package is optional in this repo. Tests must be able to
+    import the pipeline tools without AgentOS or that package installed.
+    """
+    try:
+        from openvpm_dev_orchestrator.contracts import (
+            RunState as run_state,
+            DevTaskRequest as dev_task_request,
+            RiskClass as risk_class,
+            PolicyDecision as policy_decision,
+            ChangePlan as change_plan,
+            CommandResult as command_result,
+            ReviewReport as review_report,
+            DevelopmentRun as development_run,
+        )
+        return (
+            run_state,
+            dev_task_request,
+            risk_class,
+            policy_decision,
+            change_plan,
+            command_result,
+            review_report,
+            development_run,
+        )
+    except ImportError:
+        sys.path.insert(0, os.path.join(AGNO_DIR, "src"))
+        try:
+            from openvpm_dev_orchestrator.contracts import (
+                RunState as run_state,
+                DevTaskRequest as dev_task_request,
+                RiskClass as risk_class,
+                PolicyDecision as policy_decision,
+                ChangePlan as change_plan,
+                CommandResult as command_result,
+                ReviewReport as review_report,
+                DevelopmentRun as development_run,
+            )
+            return (
+                run_state,
+                dev_task_request,
+                risk_class,
+                policy_decision,
+                change_plan,
+                command_result,
+                review_report,
+                development_run,
+            )
+        except ImportError:
+            return _fallback_orchestrator_contracts()
+
+
+def _fallback_orchestrator_contracts():
+    """Minimal pydantic-shaped stand-ins used when the package is absent."""
+
+    class RunState(str, Enum):
+        IMPLEMENTING = "IMPLEMENTING"
+        VERIFYING = "VERIFYING"
+        READY_FOR_PR = "READY_FOR_PR"
+        REJECTED = "REJECTED"
+        FAILED = "FAILED"
+
+    class RiskClass(str, Enum):
+        LOW = "low"
+        MEDIUM = "medium"
+        HIGH = "high"
+
+    @dataclass
+    class CommandResult:
+        name: str
+        argv: list
+        exit_code: int
+        duration_ms: int
+        output_tail: str = ""
+
+    @dataclass
+    class ReviewReport:
+        approved: bool
+        blocking_findings: list
+        non_blocking_findings: list
+        evidence_summary: str = ""
+
+    @dataclass
+    class DevelopmentRun:
+        task_id: str
+        state: RunState
+        title: str = ""
+        allowed_paths: list = None
+        declared_risk: Any = None
+        created_at: str = ""
+        updated_at: str = ""
+        verification_results: list = None
+        failure_reason: str = ""
+        repair_attempts: int = 0
+        review_report: Any = None
+
+        def __post_init__(self) -> None:
+            if self.allowed_paths is None:
+                self.allowed_paths = []
+            if self.verification_results is None:
+                self.verification_results = []
+
+        def model_dump_json(self, indent: int = 2) -> str:
+            def conv(obj):
+                if isinstance(obj, Enum):
+                    return obj.value
+                if is_dataclass(obj):
+                    return {key: conv(value) for key, value in asdict(obj).items()}
+                if isinstance(obj, list):
+                    return [conv(item) for item in obj]
+                return obj
+            return json.dumps(conv(self), indent=indent, ensure_ascii=False)
+
+        @classmethod
+        def model_validate_json(cls, raw: str) -> "DevelopmentRun":
+            data = json.loads(raw)
+            if "state" in data and not isinstance(data["state"], RunState):
+                data["state"] = RunState(data["state"])
+            known = {item.name for item in fields(cls)}
+            return cls(**{key: value for key, value in data.items() if key in known})
+
+    class DevTaskRequest:
+        pass
+
+    class PolicyDecision:
+        pass
+
+    class ChangePlan:
+        pass
+
+    return (
         RunState,
         DevTaskRequest,
         RiskClass,
@@ -25,18 +171,18 @@ try:
         ReviewReport,
         DevelopmentRun,
     )
-except ImportError:
-    sys.path.insert(0, os.path.join(AGNO_DIR, "src"))
-    from openvpm_dev_orchestrator.contracts import (
-        RunState,
-        DevTaskRequest,
-        RiskClass,
-        PolicyDecision,
-        ChangePlan,
-        CommandResult,
-        ReviewReport,
-        DevelopmentRun,
-    )
+
+
+(
+    RunState,
+    DevTaskRequest,
+    RiskClass,
+    PolicyDecision,
+    ChangePlan,
+    CommandResult,
+    ReviewReport,
+    DevelopmentRun,
+) = _load_orchestrator_contracts()
 
 
 def _get_run_file_path(task_id: str) -> str:
@@ -94,16 +240,27 @@ def _run_pnpm(args: List[str], cwd: str, timeout: int = 120) -> subprocess.Compl
 # =====================================================================
 # FIRECRAWL TOOLKIT (https://firecrawl.dev.significa.sk)
 # =====================================================================
-from agno.tools.firecrawl import FirecrawlTools
+def _build_firecrawl_tools():
+    """Build Firecrawl tools when agno is installed.
 
-firecrawl_tools = FirecrawlTools(
-    api_url="https://firecrawl.dev.significa.sk",
-    api_key="fc-dummy",
-    enable_scrape=True,
-    enable_crawl=True,
-    enable_mapping=True,
-    enable_search=True,
-)
+    Unit tests import this module without the AgentOS stack. A missing
+    optional dependency must not prevent the reliability engine from loading.
+    """
+    try:
+        from agno.tools.firecrawl import FirecrawlTools
+    except ImportError:
+        return None
+    return FirecrawlTools(
+        api_url="https://firecrawl.dev.significa.sk",
+        api_key="fc-dummy",
+        enable_scrape=True,
+        enable_crawl=True,
+        enable_mapping=True,
+        enable_search=True,
+    )
+
+
+firecrawl_tools = _build_firecrawl_tools()
 
 
 # =====================================================================
@@ -178,66 +335,12 @@ Vráť kompletný ucelený kód alebo git diff/patch pripravený na aplikáciu.
     return prompt
 
 
-def dispatch_to_arena_session(module_name: str, prompt_summary: str, target_model: str = "Arena.ai") -> str:
-    """Zaregistruje a odošle novú úlohu do zoznamu relácií Arena.ai a priradí jej jedinečné session ID."""
-    os.makedirs(TMP_DIR, exist_ok=True)
-    sessions = []
-    if os.path.exists(ARENA_SESSIONS_FILE):
-        try:
-            with open(ARENA_SESSIONS_FILE, "r", encoding="utf-8") as f:
-                sessions = json.load(f)
-        except Exception:
-            sessions = []
-
-    clean_target = "Arena.ai"
-
-    import time
-    session_id = f"arena-{int(time.time())}-{module_name.lower().replace(' ', '-')[:12]}"
-    
-    # Skutočné odoslanie do prehliadača ak je prompt zadaný
-    browser_status = ""
-    try:
-        # Skontroluj, či existuje pripravené zadanie v tasks/
-        tasks_dir = os.path.join(_get_repo_path(), "tasks")
-        matching_task = glob.glob(os.path.join(tasks_dir, f"*{module_name.lower()[:8]}*.md"))
-        full_text = prompt_summary
-        if matching_task:
-            with open(matching_task[0], "r", encoding="utf-8") as f:
-                full_text = f.read()
-        
-        browser_status = send_prompt_to_arena_browser(prompt_text=full_text, auto_submit=True)
-    except Exception as e:
-        browser_status = f"Odoslanie cez CDP zlyhalo: {str(e)}"
-
-    new_session = {
-        "session_id": session_id,
-        "module": module_name,
-        "prompt_summary": prompt_summary[:200],
-        "target_model": clean_target,
-        "status": "RUNNING",
-        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "progress": f"Generovanie kódu v Arena.ai... ({browser_status})"
-    }
-    sessions.append(new_session)
-    with open(ARENA_SESSIONS_FILE, "w", encoding="utf-8") as f:
-        json.dump(sessions, f, indent=2)
-
-    return f"Relácia Arena.ai odoslaná!\n• ID: {session_id}\n• Modul: {module_name}\n• Prehliadač: {browser_status}\n• Stav: RUNNING"
 
 
 def list_active_arena_sessions() -> str:
     """Vráti prehľad všetkých aktívnych relácií v Arena.ai zo súborov tasks/ a arena_sessions.json."""
     tasks_dir = os.path.join(_get_repo_path(), "tasks")
-    sessions = []
-    
-    if os.path.exists(ARENA_SESSIONS_FILE):
-        try:
-            with open(ARENA_SESSIONS_FILE, "r", encoding="utf-8") as f:
-                loaded = json.load(f)
-                if isinstance(loaded, list):
-                    sessions = loaded
-        except Exception:
-            sessions = []
+    sessions = _load_sessions()
 
     task_files = glob.glob(os.path.join(tasks_dir, "arena-*.md"))
     registered_ids = {s.get("session_id") for s in sessions if isinstance(s, dict)}
@@ -245,16 +348,17 @@ def list_active_arena_sessions() -> str:
     for tf in task_files:
         tid = os.path.basename(tf).replace(".md", "")
         if tid not in registered_ids:
-            has_patch = (
-                os.path.exists(os.path.join(tasks_dir, f"{tid}.patch")) or
-                os.path.exists(os.path.join(tasks_dir, f"arena-response-{tid}.patch"))
-            )
+            has_patch = _task_has_valid_patch(tasks_dir, tid)
             sessions.append({
                 "session_id": tid,
                 "module": tid,
                 "target_model": "Arena.ai",
                 "status": "COMPLETED" if has_patch else "PENDING",
-                "progress": "Patch pripravený v tasks/" if has_patch else "Zadanie vytvorené v tasks/",
+                "progress": (
+                    "Platný unified diff v tasks/"
+                    if has_patch
+                    else "Zadanie vytvorené v tasks/"
+                ),
             })
 
     if not sessions:
@@ -262,77 +366,50 @@ def list_active_arena_sessions() -> str:
 
     res = f"### Aktívne Arena.ai relácie ({len(sessions)} celkovo):\n"
     for s in sessions:
-        icon = "✅" if s.get("status") == "COMPLETED" else "⏳" if s.get("status") == "RUNNING" else "⚠️"
+        status = s.get("status")
+        if status == "COMPLETED":
+            icon = "✅"
+        elif status in {"RUNNING", "DISPATCHING"}:
+            icon = "⏳"
+        else:
+            icon = "⚠️"
         res += f"{icon} **[{s.get('session_id')}]** {s.get('module')}\n"
         res += f"   Cieľ: `Arena.ai` | Stav: **{s.get('status')}**\n"
         res += f"   Detail: {s.get('progress')}\n\n"
     return res
 
 
-def monitor_arena_health() -> str:
-    """Preverí skutočný stav všetkých relácií Arena.ai a vetiev swarm/agno-* v repozitári."""
-    repo = _get_repo_path()
-    tasks_dir = os.path.join(repo, "tasks")
-    
-    swarm_branches = []
-    try:
-        proc = subprocess.run(
-            [_which("git"), "branch", "--list", "swarm/agno-*"],
-            cwd=repo,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace"
-        )
-        if proc.returncode == 0:
-            swarm_branches = [b.strip().replace("*", "").strip() for b in proc.stdout.splitlines() if b.strip()]
-    except Exception:
-        pass
-
-    task_files = glob.glob(os.path.join(tasks_dir, "arena-*.md"))
-    patch_files = glob.glob(os.path.join(tasks_dir, "*.patch"))
-    repair_files = glob.glob(os.path.join(tasks_dir, "repair-*.md"))
-
-    res = ["### Arena Watcher Health Audit:"]
-    res.append(f"• Celkový počet zadaní v tasks/: {len(task_files)}")
-    res.append(f"• Pripravené patche (*.patch): {len(patch_files)}")
-    res.append(f"• Opravné výzvy (repair-*.md): {len(repair_files)}")
-    res.append(f"• Aktívne swarm vetvy v git: {len(swarm_branches)} ({', '.join(swarm_branches) if swarm_branches else 'žiadne'})")
 
 def _get_cdp_endpoints(custom_ports: str = "9222,60325,9223,9229,9333,5000") -> list:
-    """Zostaví prioritný zoznam CDP endpointov: prioritne lokálny WSL (127.0.0.1:9222), potom lokálne aktívne porty, a ako fallback Windows host."""
+    """Zostaví prioritný zoznam CDP endpointov pre Windows host (192.168.0.100) aj lokálny WSL."""
     endpoints = []
-    
-    # 1. Primárny lokálny WSL Chrome (127.0.0.1:9222 a localhost:9222)
-    endpoints.append("http://127.0.0.1:9222")
-    endpoints.append("http://localhost:9222")
+    win_host = os.getenv("WINDOWS_HOST_IP", "192.168.0.100")
 
-    # 2. Čítanie aktívneho DevTools portu z WSL profilov (/tmp/chrome_debug alebo ~/.config/google-chrome)
+    # 1. Čítanie aktívneho DevTools portu priamo z Windows Chrome profilu
     try:
         from pathlib import Path
         for pth in [
-            Path("/tmp/chrome_debug/DevToolsActivePort"),
-            Path("/home/ubuntu/.config/google-chrome/DevToolsActivePort"),
             Path("/mnt/c/Users/marek/AppData/Local/Google/Chrome/User Data/DevToolsActivePort"),
+            Path("/home/ubuntu/.config/google-chrome/DevToolsActivePort"),
         ]:
             if pth.exists():
                 lines = pth.read_text(encoding="utf-8").strip().splitlines()
                 if lines and lines[0].strip().isdigit():
                     act_port = int(lines[0].strip())
+                    endpoints.append(f"http://{win_host}:{act_port}")
                     endpoints.append(f"http://127.0.0.1:{act_port}")
-                    endpoints.append(f"http://localhost:{act_port}")
     except Exception:
         pass
 
-    # 3. Fallback na Windows host
-    win_host = os.getenv("WINDOWS_HOST_IP", "192.168.0.100")
+    # 2. Windows host bridge (192.168.0.100:9222) a lokálny port 9222
     endpoints.append(f"http://{win_host}:9222")
+    endpoints.append("http://127.0.0.1:9222")
 
-    # 4. Zadané voliteľné porty
+    # 3. Zadané voliteľné porty
     if custom_ports:
         for p in [int(x.strip()) for x in custom_ports.split(",") if x.strip().isdigit()]:
-            endpoints.append(f"http://127.0.0.1:{p}")
             endpoints.append(f"http://{win_host}:{p}")
+            endpoints.append(f"http://127.0.0.1:{p}")
 
     seen = set()
     uniq = []
@@ -364,7 +441,10 @@ def monitor_arena_health() -> str:
         pass
 
     task_files = glob.glob(os.path.join(tasks_dir, "arena-*.md"))
-    patch_files = glob.glob(os.path.join(tasks_dir, "*.patch"))
+    patch_files = [
+        path for path in glob.glob(os.path.join(tasks_dir, "*.patch"))
+        if _patch_file_is_valid(path)
+    ]
     repair_files = glob.glob(os.path.join(tasks_dir, "repair-*.md"))
 
     res = ["### Arena Watcher Health Audit:"]
@@ -655,25 +735,6 @@ def run_shell_command(command: str) -> str:
 # DOMAIN D: ARCHITECTURAL & COMPLIANCE AUDIT
 # =====================================================================
 
-def audit_architectural_boundaries(file_list_comma_separated: str) -> str:
-    """Overí, či zmenené súbory neporušujú pravidlá zero-conflict upstream syncu (nedotýkajú sa vanilla schém ani journalu)."""
-    files = [f.strip() for f in file_list_comma_separated.split(",") if f.strip()]
-    violations = []
-    
-    for f in files:
-        if f.startswith("packages/db/schema/") and not os.path.basename(f).startswith("ext_"):
-            violations.append(f"Porušenie pravidla 3.1: Vanilla schéma `{f}` nesmie byť menená. Použi `packages/db/schema/ext_*.ts`.")
-        if "_journal.json" in f:
-            violations.append("Porušenie pravidla 3.2: `_journal.json` nesmie byť upravovaný ručne.")
-        if f.startswith("apps/web/server/routers/") and not f.startswith("apps/web/server/routers/extensions/") and not f.endswith("_app.ts"):
-            repo_dir = _get_repo_path()
-            upstream_file = os.path.normpath(os.path.join(repo_dir, "..", "OpenVPM", f))
-            if not os.path.exists(upstream_file):
-                violations.append(f"Upozornenie: Nový vlastný tRPC router `{f}` by mal patriť do `extensions/`.")
-
-    if violations:
-        return "❌ ARCHITEKTURÁLNE PORUŠENIA NÁJDENÉ:\n" + "\n".join(f"• {v}" for v in violations)
-    return "✅ ARCHITEKTONICKÝ AUDIT: Všetky zmeny sú v súlade so Zero-Conflict Upstream architektúrou."
 
 
 def audit_clinical_and_safety_gates(text_or_code: str) -> str:
@@ -812,203 +873,8 @@ def validate_prompt_xml(prompt_text: str) -> str:
 # DOMAIN F: ARENA AUTOMATION & PLAYWRIGHT CDP BRIDGE
 # =====================================================================
 
-def send_prompt_to_arena_browser(
-    prompt_text: str,
-    ports: str = "9222,60325,9223,9229,9333,5000",
-    auto_submit: bool = True,
-) -> str:
-    """Odošle pripravený prompt cez CDP priamo do aktívneho tabu Arena.ai v Google Chrome a automaticky ho odošle (Submit)."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return "Chyba: playwright knižnica nie je dostupná v prostredí."
-
-    endpoints = _get_cdp_endpoints(ports)
-    
-    try:
-        with sync_playwright() as p:
-            for endpoint in endpoints:
-                try:
-                    browser = p.chromium.connect_over_cdp(endpoint, timeout=10000)
-                    pages = [page for ctx in browser.contexts for page in ctx.pages]
-                    arena_page = next((page for page in pages if "arena" in page.url.lower()), None)
-                    if arena_page:
-                        url = arena_page.url
-                        textarea = arena_page.locator("textarea, div[contenteditable='true'], input[type='text']").first
-                        if textarea.count() > 0:
-                            textarea.fill(prompt_text)
-                            submitted_msg = ""
-                            if auto_submit:
-                                clicked = False
-                                for sel in [
-                                    "button[type='submit']",
-                                    "button:has-text('Send')",
-                                    "button:has-text('Odoslať')",
-                                    "button[aria-label*='Send']",
-                                    "button[aria-label*='Submit']",
-                                    "button.send-button",
-                                    "form button",
-                                ]:
-                                    btn = arena_page.locator(sel).first
-                                    if btn.count() > 0 and btn.is_visible() and btn.is_enabled():
-                                        try:
-                                            btn.click(timeout=1500)
-                                            clicked = True
-                                            break
-                                        except Exception:
-                                            pass
-                                if not clicked:
-                                    try:
-                                        textarea.press("Enter")
-                                        clicked = True
-                                    except Exception:
-                                        pass
-                                submitted_msg = " [Odoslané/Submit: ÁNO]" if clicked else " [Odoslanie čaká na klik]"
-                            return f"✅ Prompt bol úspešne vložený do aktívneho tabu Arena.ai ({url}) cez {endpoint}!{submitted_msg}"
-                        else:
-                            return f"⚠️ Tab Arena.ai nájdený na {endpoint} ({url}), ale nenašiel sa vstupný formulár. Prompt je uložený v tasks/."
-                except Exception:
-                    continue
-    except Exception as e:
-        return f"Chyba pri hľadaní CDP portu: {str(e)}"
-
-    return "ℹ️ Chrome s Arena.ai a CDP portom nebol detegovaný. Prompt bol bezpečne uložený do tasks/ pre manuálne vloženie do Arena.ai."
 
 
-def collect_code_from_arena_browser(
-    task_id: str,
-    timeout_seconds: int = 180,
-    ports: str = "9222,60325,9223,9229,9333,5000",
-) -> str:
-    """Počká na dokončenie generovania v Arena.ai a automaticky extrahuje git patch alebo kód do tasks/{task_id}.patch."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return "Chyba: playwright knižnica nie je dostupná v prostredí."
-
-    clean_id = task_id.replace("arena-", "").replace(".patch", "")[:25]
-    tasks_dir = os.path.join(_get_repo_path(), "tasks")
-    os.makedirs(tasks_dir, exist_ok=True)
-    patch_path = os.path.join(tasks_dir, f"{clean_id}.patch")
-    response_path = os.path.join(tasks_dir, f"arena-response-{clean_id}.md")
-
-    endpoints = _get_cdp_endpoints(ports)
-
-    try:
-        with sync_playwright() as p:
-            for endpoint in endpoints:
-                try:
-                    browser = p.chromium.connect_over_cdp(endpoint, timeout=10000)
-                    pages = [page for ctx in browser.contexts for page in ctx.pages]
-                    arena_page = next((page for page in pages if "arena" in page.url.lower()), None)
-                    if not arena_page:
-                        continue
-
-                    # Sledovanie generovania: čakaj kým zmizne stop tlačidlo alebo kým sa dĺžka odpovede zastabilizuje
-                    start_time = time.time()
-                    last_len = 0
-                    stable_cycles = 0
-
-                    while time.time() - start_time < timeout_seconds:
-                        stop_btn = arena_page.locator("button:has-text('Stop'), button:has-text('Stop generating')").first
-                        is_generating = stop_btn.count() > 0 and stop_btn.is_visible()
-
-                        # Zisti aktuálny text odpovede
-                        curr_text = arena_page.evaluate("""() => {
-                            const pres = Array.from(document.querySelectorAll('pre code, pre, .prose'));
-                            return pres.map(p => p.innerText || '').join('\\n');
-                        }""")
-                        curr_len = len(curr_text.strip())
-
-                        if is_generating:
-                            stable_cycles = 0
-                        else:
-                            if curr_len > 0 and curr_len == last_len:
-                                stable_cycles += 1
-                                if stable_cycles >= 2:  # 4 sekundy bez zmeny a bez stop tlačidla
-                                    break
-                            else:
-                                stable_cycles = 0
-
-                        last_len = curr_len
-                        time.sleep(2)
-
-                    # Extrakcia kódu z DOM
-                    code_blocks = arena_page.evaluate("""() => {
-                        const blocks = [];
-                        document.querySelectorAll('pre code, pre').forEach(el => {
-                            const txt = el.innerText || el.textContent || '';
-                            if (txt.trim().length > 0) {
-                                blocks.push(txt.trim());
-                            }
-                        });
-                        return blocks;
-                    }""")
-
-                    full_msg = arena_page.evaluate("""() => {
-                        const msgs = document.querySelectorAll('[data-message-author-role=\"assistant\"], div.chat-message, div.prose');
-                        if (msgs.length > 0) {
-                            return msgs[msgs.length - 1].innerText || '';
-                        }
-                        return '';
-                    }""")
-
-                    if not code_blocks and not full_msg:
-                        return f"⚠️ V Arena tabe na {endpoint} sa nenašla žiadna nová odpoveď. Skontrolujte generovanie v prehliadači."
-
-                    # Uloženie plného markdownu
-                    with open(response_path, "w", encoding="utf-8") as rf:
-                        rf.write(full_msg or "\n\n".join(code_blocks))
-
-                    # Hľadanie git diff bloku
-                    patch_content = ""
-                    for block in code_blocks:
-                        if "diff --git" in block or "--- a/" in block or "Index:" in block:
-                            patch_content = block
-                            break
-
-                    if not patch_content:
-                        return f"⚠️ V odpovedi pre {clean_id} sa nenašiel platný git unified diff (chýba 'diff --git'). Odpoveď bola uložená do {response_path}, ale .patch súbor nebol vytvorený."
-
-                    with open(patch_path, "w", encoding="utf-8") as pf:
-                        pf.write(patch_content)
-
-                    # Aktualizácia arena_sessions.json
-                    try:
-                        sessions = []
-                        if os.path.exists(ARENA_SESSIONS_FILE):
-                            with open(ARENA_SESSIONS_FILE, "r", encoding="utf-8") as f:
-                                sessions = json.load(f)
-                        updated = False
-                        for s in sessions:
-                            if clean_id in s.get("session_id", ""):
-                                s["status"] = "COMPLETED"
-                                s["progress"] = f"Patch extrahovaný do tasks/{clean_id}.patch"
-                                updated = True
-                        if not updated:
-                            sessions.append({
-                                "session_id": f"arena-{clean_id}",
-                                "module": clean_id,
-                                "target_model": "arena",
-                                "status": "COMPLETED",
-                                "progress": f"Patch extrahovaný do tasks/{clean_id}.patch",
-                            })
-                        with open(ARENA_SESSIONS_FILE, "w", encoding="utf-8") as f:
-                            json.dump(sessions, f, indent=2)
-                    except Exception:
-                        pass
-
-                    return f"""✅ Kód z Arena.ai bol úspešne extrahovaný!
-• Súbor patchu: `tasks/{clean_id}.patch` ({len(patch_content.splitlines())} riadkov)
-• Celá odpoveď: `tasks/arena-response-{clean_id}.md`
-• Pripravené na aplikovanie: Zavolajte `apply_arena_patch(task_id='{clean_id}', patch_source='tasks/{clean_id}.patch')`"""
-
-                except Exception:
-                    continue
-    except Exception as e:
-        return f"Chyba pri extrakcii kódu z Areny cez CDP: {str(e)}"
-
-    return f"ℹ️ Žiaden tab Arena.ai s dokončenou odpoveďou nebol nájdený na endpointoch {endpoints}."
 
 
 def _extract_patch_files(patch_content: str) -> list[str]:
@@ -1119,13 +985,17 @@ Vráť kompletný kód pre dotknuté súbory alebo ucelený git diff/patch pripr
     )
     save_development_run(run)
 
+    # Single physical dispatch. A second send_prompt call raced the first and
+    # could land the golden ticket in a different sprint tab.
     dispatch_msg = dispatch_to_arena_session(
         module_name=title,
         prompt_summary=requirements[:150],
-        target_model="Arena.ai"
+        target_model="Arena.ai",
+        full_prompt=prompt,
+        task_file=task_file,
+        session_id=task_id,
+        task_slug=slug,
     )
-
-    cdp_msg = send_prompt_to_arena_browser(prompt, auto_submit=auto_submit)
 
     return f"""### 🚀 Úloha vytvorená a odoslaná pre Arena.ai:
 • **Task ID:** `{task_id}`
@@ -1134,7 +1004,7 @@ Vráť kompletný kód pre dotknuté súbory alebo ucelený git diff/patch pripr
 • **Cieľ:** `Arena.ai`
 • **Súbor zadania:** `tasks/{task_id}.md`
 • **Súbor behu (contracts):** `tasks/run-{task_id.replace('arena-', '')[:25]}.json`
-• **Stav odoslania do prehliadača:** {cdp_msg}
+• **Stav odoslania do prehliadača:** {dispatch_msg}
 
 {dispatch_msg}"""
 
@@ -1163,11 +1033,33 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
         except Exception:
             pass
     else:
-        tmp_patch = os.path.join(TMP_DIR, f"{clean_id}.patch")
-        with open(tmp_patch, "w", encoding="utf-8") as pf:
-            pf.write(patch_source)
-        patch_file_path = tmp_patch
         patch_content = patch_source
+        patch_file_path = None
+
+    qualified = extract_unified_diff(patch_content)
+    if not qualified:
+        if patch_file_path and str(patch_file_path).endswith(".patch"):
+            _discard_invalid_patch(patch_file_path)
+        run = get_development_run(task_id)
+        if run:
+            run.state = RunState.REJECTED
+            run.failure_reason = (
+                "Patch neobsahuje unified diff (diff --git alebo --- a/)."
+            )
+            save_development_run(run)
+        return (
+            "❌ PATCH ZAMIETNUTÝ: obsah nie je unified diff. "
+            "Povolené sú len patche začínajúce na `diff --git` alebo `--- a/`. "
+            "Markdown vysvetlenie sa do .patch nezapisuje."
+        )
+    os.makedirs(TMP_DIR, exist_ok=True)
+    clean_patch = os.path.join(
+        TMP_DIR, f"{_safe_artifact_stem(task_id)}.clean.patch"
+    )
+    if not write_unified_patch(clean_patch, qualified):
+        return "❌ PATCH ZAMIETNUTÝ: nepodarilo sa zapísať unified diff."
+    patch_file_path = clean_patch
+    patch_content = qualified
 
     # 2. Architektonický audit dotknutých súborov (Zero-Conflict Upstream Sync & Secrets Safety)
     touched_files = _extract_patch_files(patch_content)
@@ -1312,7 +1204,14 @@ Predchádzajúca implementácia úlohy {task_id} vygenerovala nasledujúce chyby
     with open(repair_file, "w", encoding="utf-8") as rf:
         rf.write(repair_prompt)
 
-    cdp_msg = send_prompt_to_arena_browser(repair_prompt, auto_submit=True)
+    repair_target = _lookup_dispatch_target(task_id)
+    cdp_msg = send_prompt_to_arena_browser(
+        repair_prompt,
+        auto_submit=True,
+        session_id=repair_target["session_id"],
+        task_slug=repair_target["task_slug"],
+        arena_url=repair_target["arena_url"],
+    )
 
     attempt_str = f"(Opravný pokus {run.repair_attempts}/3)" if run else ""
     return f"""### ⚠️ HODNOTENIE LÍDERA: POTREBNÁ OPRAVA (REPAIR REQUIRED) {attempt_str}
@@ -1322,3 +1221,1776 @@ Verifikácia odhalila chyby v kóde. Líder pripravil opravný prompt:
 • Odoslanie do Arena.ai tabu: {cdp_msg}
 
 Opravný prompt bol pripravený a odoslaný. Po vygenerovaní v Arene stiahnite kód cez 'collect_code_from_arena_browser', aplikujte ho a zopakujte verifikáciu."""
+
+
+# =====================================================================
+# ARENA RELIABILITY ENGINE
+# Tab matching, completion detection, physical dispatch, patch gate.
+# =====================================================================
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS = 900
+MIN_ARENA_COLLECT_TIMEOUT_SECONDS = 600
+ARENA_POLL_INTERVAL_SECONDS = 2.0
+ARENA_NAVIGATION_WAIT_SECONDS = 4.0
+DEFAULT_CDP_PORTS = "9222,60325,9223,9229,9333,5000"
+ARENA_AGENT_ORIGIN = os.getenv("ARENA_AGENT_ORIGIN", "https://arena.ai")
+
+# Explicit tokens only. Words like "complete", "done", or a quiet chat are not
+# completion — those fired the premature-COMPLETED bug during pnpm/vitest.
+_COMPLETION_MARKER_RE = re.compile(
+    r"ARENA_TASK_COMPLETE|ARENA_SPRINT_COMPLETE|"
+    r"<!--\s*arena-complete\s*-->|\[arena:complete\]",
+    re.IGNORECASE,
+)
+_TERMINAL_EXIT_RE = re.compile(
+    r"exit(?:\s*|_)code\s*[:=]\s*\d+|"
+    r"process exited|"
+    r"command (?:finished|completed|exited)",
+    re.IGNORECASE,
+)
+_GENERIC_SLUGS = frozenset({
+    "ai",
+    "agent",
+    "arena",
+    "com",
+    "http",
+    "https",
+    "new",
+    "tab",
+    "task",
+    "www",
+    "agent-mode",
+})
+_ID_FIELDS = ("session_id", "task_id", "arena_session_id")
+_SESSION_SEQ_LOCK = threading.Lock()
+_SESSION_SEQ = 0
+
+# Upstream routers from evangauer/openvpm main. Used only when the sibling
+# checkout cannot be located, so records.ts / whiteboard.ts are not false
+# violations in CI or a WSL shell that cannot see C:\\...\\OpenVPM.
+KNOWN_UPSTREAM_ROUTER_FILES = frozenset({
+    "_app.ts",
+    "admin.ts",
+    "agent.ts",
+    "ai.ts",
+    "api-keys.ts",
+    "appointments.ts",
+    "auth.ts",
+    "billing.ts",
+    "booking.ts",
+    "care-reminders.ts",
+    "clients.ts",
+    "communications.ts",
+    "controlled-substances.ts",
+    "dashboard.ts",
+    "data.ts",
+    "dosing.ts",
+    "encounters.ts",
+    "insurance.ts",
+    "inventory.ts",
+    "messaging.ts",
+    "migration-archive.ts",
+    "notifications.ts",
+    "pagination.ts",
+    "patients.ts",
+    "portal.ts",
+    "recent-clinical-items.ts",
+    "records.ts",
+    "reports.ts",
+    "settings.ts",
+    "storage-bounds.ts",
+    "subscription.ts",
+    "templates.ts",
+    "treatment-plans.ts",
+    "visit-treatment-plans.ts",
+    "vitals.ts",
+    "waitlist.ts",
+    "webhooks.ts",
+    "wellness.ts",
+    "whiteboard.ts",
+})
+
+_COMPOSER_SELECTORS = (
+    "textarea",
+    "div[contenteditable='true']",
+    "[role='textbox']",
+    "input[type='text']",
+)
+_SUBMIT_SELECTORS = (
+    "button[type='submit']",
+    "button[data-testid='send-button']",
+    "button[aria-label='Send']",
+    "button[aria-label*='Send']",
+    "form button[type='submit']",
+)
+
+_ARENA_SNAPSHOT_JS = r"""() => {
+  const textOf = (el) => ((el && (el.innerText || el.textContent)) || "").trim();
+  const visible = (el) => {
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const enabled = (el) => {
+    if (!el || el.disabled) return false;
+    const aria = (el.getAttribute("aria-disabled") || "").toLowerCase();
+    return aria !== "true";
+  };
+  const labelOf = (el) => (
+    (el.innerText || "") + " " +
+    (el.getAttribute("aria-label") || "") + " " +
+    (el.getAttribute("title") || "")
+  ).replace(/\s+/g, " ").trim();
+  const isCreatePr = (label) => /create\s+(a\s+)?(pull request|pr)\b/i.test(label);
+  const buttons = Array.from(document.querySelectorAll(
+    "button, a[role='button'], [role='button']"
+  ));
+  const createPr = buttons.find((el) => visible(el) && isCreatePr(labelOf(el))) || null;
+  const stop = buttons.find((el) => {
+    if (!visible(el) || isCreatePr(labelOf(el))) return false;
+    return /\b(stop|cancel)\b/i.test(labelOf(el));
+  }) || null;
+  const terminalNodes = Array.from(document.querySelectorAll(
+    "[data-testid='terminal'], [data-terminal], .terminal, .xterm-rows, pre.terminal"
+  ));
+  const terminalText = terminalNodes.map(textOf).filter(Boolean).join("\n");
+  const toolRunning = !!document.querySelector(
+    "[data-tool-status='running'], [data-terminal-status='running'], " +
+    "[data-state='running'], .tool-running, .terminal-running"
+  );
+  const spinnerInTerminal = terminalNodes.some((node) =>
+    node.querySelector(".animate-spin, [data-running='true']")
+  );
+  const blocks = [];
+  document.querySelectorAll("pre code, pre").forEach((el) => {
+    const txt = textOf(el);
+    if (txt) blocks.push(txt);
+  });
+  const msgs = document.querySelectorAll(
+    "[data-message-author-role='assistant'], div.chat-message, div.prose"
+  );
+  const assistantText = msgs.length ? textOf(msgs[msgs.length - 1]) : "";
+  const bodyText = (document.body && document.body.innerText) || "";
+  const markerRe = /ARENA_TASK_COMPLETE|ARENA_SPRINT_COMPLETE|<!--\s*arena-complete\s*-->|\[arena:complete\]/i;
+  return {
+    createPrVisible: !!createPr,
+    createPrEnabled: !!(createPr && enabled(createPr)),
+    stopVisible: !!stop,
+    thinking: !!document.querySelector(
+      "[data-thinking='true'], [data-state='thinking'], .thinking-indicator"
+    ),
+    bashRunning: toolRunning || spinnerInTerminal,
+    terminalExited: /exit(?:\s*|_)code\s*[:=]\s*\d+|process exited|command (?:finished|completed|exited)/i.test(terminalText),
+    terminalText: terminalText,
+    assistantText: assistantText,
+    codeBlocks: blocks,
+    completionMarker: markerRe.test(bodyText) || !!document.querySelector("[data-arena-status='complete']"),
+    title: document.title || ""
+  };
+}"""
+
+
+@dataclass(frozen=True)
+class ArenaTab:
+    """A browser tab reduced to the fields used for session matching."""
+
+    url: str
+    title: str = ""
+    handle: Any = None
+
+
+@dataclass(frozen=True)
+class ArenaRunObservation:
+    """Result of the completion-state engine.
+
+    ``status`` is only ``RUNNING`` or ``COMPLETED``. Silence, a stable DOM,
+    and a watcher timeout never produce ``COMPLETED``.
+    """
+
+    status: str
+    reason: str
+    timed_out: bool = False
+    patch_text: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.status not in {"RUNNING", "COMPLETED"}:
+            raise ValueError(f"unsupported arena status: {self.status}")
+
+
+@dataclass
+class BrowserDispatchResult:
+    """Structured result of a physical Arena composer dispatch."""
+
+    ok: bool
+    url: str = ""
+    message: str = ""
+    submitted: bool = False
+    opened_new: bool = False
+    arena_session_id: str = ""
+    endpoint: str = ""
+
+
+def _sleep(seconds: float) -> None:
+    """Sleep wrapper so tests can disable real waits."""
+    time.sleep(seconds)
+
+
+def _monotonic() -> float:
+    """Monotonic clock wrapper so tests can advance time."""
+    return time.monotonic()
+
+
+def _now() -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _arena_origin() -> str:
+    return os.getenv("ARENA_AGENT_ORIGIN", ARENA_AGENT_ORIGIN).rstrip("/")
+
+
+def arena_agent_home_url() -> str:
+    """URL of a fresh Arena Agent composer (``/agent``, no session id)."""
+    return _arena_origin() + "/agent"
+
+
+def _slugify(value: str, max_len: int = 40) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
+    if max_len > 0:
+        slug = slug[:max_len].strip("-")
+    return slug
+
+
+def _is_generic_slug(slug: str) -> bool:
+    norm = _slugify(slug, max_len=0)
+    return not norm or norm in _GENERIC_SLUGS or len(norm) < 3
+
+
+def _new_local_session_id(module_name: str) -> str:
+    """Build a collision-resistant local session id.
+
+    ``time.time()`` second resolution used to collide when two sprints were
+    dispatched in the same second and then matched by substring.
+    """
+    global _SESSION_SEQ
+    with _SESSION_SEQ_LOCK:
+        _SESSION_SEQ += 1
+        seq = _SESSION_SEQ
+    slug = _slugify(module_name, 24) or "task"
+    return f"arena-{time.time_ns()}-{seq}-{slug}"
+
+
+def _safe_artifact_stem(task_id: str) -> str:
+    """Filesystem stem that does not collapse distinct sprint ids."""
+    stem = str(task_id or "").strip().replace("\\", "/").split("/")[-1]
+    if stem.endswith(".patch"):
+        stem = stem[:-6]
+    if stem.endswith(".md"):
+        stem = stem[:-3]
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip("-")
+    return (stem or "arena-task")[:80]
+
+
+def _artifact_paths(task_id: str) -> tuple[str, str]:
+    stem = _safe_artifact_stem(task_id)
+    tasks_dir = os.path.join(_get_repo_path(), "tasks")
+    return (
+        os.path.join(tasks_dir, f"{stem}.patch"),
+        os.path.join(tasks_dir, f"arena-response-{stem}.md"),
+    )
+
+
+def _atomic_write(path: str, content: str) -> None:
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=".tmp-", suffix=".writing", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+@contextmanager
+def _sessions_lock() -> Iterator[None]:
+    """Exclusive lock around ``arena_sessions.json`` read-modify-write.
+
+    Dispatch and collect both mutate the same file. Without the lock a
+    concurrent update dropped one sprint or marked ``sprint-1`` complete
+    because its id was a substring of ``sprint-10``.
+    """
+    os.makedirs(os.path.dirname(ARENA_SESSIONS_FILE) or ".", exist_ok=True)
+    lock_path = ARENA_SESSIONS_FILE + ".lock"
+    handle = open(lock_path, "a+", encoding="utf-8")
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0)
+            if handle.read(1) == "":
+                handle.write("0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        handle.close()
+
+
+def _read_sessions_unlocked() -> list[dict[str, Any]]:
+    if not os.path.exists(ARENA_SESSIONS_FILE):
+        return []
+    try:
+        with open(ARENA_SESSIONS_FILE, "r", encoding="utf-8") as handle:
+            loaded = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    return [item for item in loaded if isinstance(item, dict)]
+
+
+def _write_sessions_unlocked(sessions: list[dict[str, Any]]) -> None:
+    _atomic_write(
+        ARENA_SESSIONS_FILE,
+        json.dumps(sessions, indent=2, ensure_ascii=False) + "\n",
+    )
+
+
+def _load_sessions() -> list[dict[str, Any]]:
+    """Return a snapshot of arena sessions under the file lock."""
+    with _sessions_lock():
+        return _read_sessions_unlocked()
+
+
+def _mutate_sessions(
+    mutator: Callable[[list[dict[str, Any]]], list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """Apply ``mutator`` to the session list atomically."""
+    with _sessions_lock():
+        sessions = _read_sessions_unlocked()
+        updated = mutator(sessions)
+        if not isinstance(updated, list):
+            raise TypeError("session mutator must return a list")
+        _write_sessions_unlocked(updated)
+        return updated
+
+
+def _identity_set(record: Mapping[str, Any]) -> set[str]:
+    found = set()
+    for key in _ID_FIELDS:
+        value = str(record.get(key) or "").strip()
+        if value:
+            found.add(value)
+    return found
+
+
+def _find_session_records(wanted: Sequence[str]) -> list[dict[str, Any]]:
+    """Exact-id lookup. ``sprint-1`` must not match ``sprint-10``."""
+    needles = {str(item).strip() for item in wanted if str(item or "").strip()}
+    if not needles:
+        return []
+    matches = []
+    for record in _load_sessions():
+        keys = _identity_set(record)
+        slug = str(record.get("task_slug") or "").strip()
+        if slug:
+            keys.add(slug)
+        if keys & needles:
+            matches.append(record)
+    return matches
+
+
+def _update_sessions_exact(identities: Sequence[str], **changes: Any) -> None:
+    wanted = {str(item).strip() for item in identities if str(item or "").strip()}
+    if not wanted:
+        return
+
+    def mutate(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        found = False
+        for record in sessions:
+            if _identity_set(record) & wanted:
+                record.update(changes)
+                record["updated_at"] = _now()
+                found = True
+        if not found:
+            primary = next(iter(wanted))
+            created = {
+                "session_id": primary,
+                "task_id": primary,
+                "target_model": "Arena.ai",
+                "created_at": _now(),
+                "updated_at": _now(),
+            }
+            created.update(changes)
+            sessions.append(created)
+        return sessions
+
+    _mutate_sessions(mutate)
+
+
+def _upsert_session(record: dict[str, Any]) -> None:
+    identity = str(record.get("session_id") or "").strip()
+    if not identity:
+        raise ValueError("session record requires session_id")
+
+    def mutate(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        for existing in sessions:
+            if identity in _identity_set(existing):
+                existing.update(record)
+                existing["updated_at"] = _now()
+                return sessions
+        stored = dict(record)
+        stored.setdefault("created_at", _now())
+        stored["updated_at"] = _now()
+        sessions.append(stored)
+        return sessions
+
+    _mutate_sessions(mutate)
+
+
+# ---------------------------------------------------------------------------
+# Unified diff validation (bug 5)
+# ---------------------------------------------------------------------------
+
+def _line_starts_diff(line: str) -> bool:
+    """True when a line opens a unified diff, not when prose mentions one."""
+    stripped = line.lstrip()
+    return stripped.startswith("diff --git a/") or stripped.startswith("--- a/")
+
+
+def _is_diff_line(line: str) -> bool:
+    stripped = line.lstrip()
+    if stripped.startswith((
+        "diff --git ",
+        "--- a/",
+        "--- /dev/null",
+        "+++ b/",
+        "+++ /dev/null",
+        "@@",
+        "index ",
+        "new file mode ",
+        "deleted file mode ",
+        "old mode ",
+        "new mode ",
+        "similarity index ",
+        "rename from ",
+        "rename to ",
+        "copy from ",
+        "copy to ",
+        "Binary files ",
+        "GIT binary patch",
+        "literal ",
+        "delta ",
+    )):
+        return True
+    if line.startswith(("+", "-", " ", "\\")):
+        return True
+    if stripped == "\\ No newline at end of file":
+        return True
+    return False
+
+
+def _dedent_diff(lines: list[str]) -> str:
+    if not lines:
+        return ""
+    indent = len(lines[0]) - len(lines[0].lstrip(" "))
+    if indent:
+        dedented = []
+        for line in lines:
+            if line.startswith(" " * indent):
+                dedented.append(line[indent:])
+            else:
+                dedented.append(line)
+        lines = dedented
+    return "\n".join(lines).strip("\n")
+
+
+def _extract_regions(text: str) -> list[str]:
+    lines = text.splitlines()
+    regions: list[str] = []
+    index = 0
+    while index < len(lines):
+        if not _line_starts_diff(lines[index]):
+            index += 1
+            continue
+        start = index
+        index += 1
+        while index < len(lines):
+            line = lines[index]
+            if line.strip() == "" or _is_diff_line(line) or _line_starts_diff(line):
+                index += 1
+                continue
+            break
+        chunk_lines = lines[start:index]
+        while chunk_lines and chunk_lines[-1].strip() == "":
+            chunk_lines.pop()
+        body = _dedent_diff(chunk_lines)
+        if body.startswith("diff --git a/") or body.startswith("--- a/"):
+            regions.append(body)
+    return regions
+
+
+def extract_unified_diff(text: str) -> Optional[str]:
+    """Return a unified diff, or None if ``text`` is not one.
+
+    Qualifying patches start with ``diff --git a/`` or ``--- a/``. Markdown
+    explanations, README setup steps, and ``Index:``-only diffs do not.
+    """
+    if text is None or not str(text).strip():
+        return None
+    regions = _extract_regions(str(text))
+    if not regions:
+        return None
+    git_regions = [item for item in regions if item.startswith("diff --git a/")]
+    chosen = git_regions or regions
+    best = max(chosen, key=len)
+    if not (best.startswith("diff --git a/") or best.startswith("--- a/")):
+        return None
+    if not best.endswith("\n"):
+        best += "\n"
+    return best
+
+
+def is_unified_diff(text: str) -> bool:
+    """Return True when ``text`` contains a qualifying unified diff."""
+    return extract_unified_diff(text) is not None
+
+
+def write_unified_patch(path: str, content: str) -> bool:
+    """Write ``path`` only when ``content`` is a unified diff.
+
+    Non-diff text is never written to a ``.patch`` file. Returns False and
+    leaves the filesystem unchanged when the content does not qualify.
+    """
+    diff = extract_unified_diff(content)
+    if not diff:
+        return False
+    if not (diff.startswith("diff --git a/") or diff.startswith("--- a/")):
+        return False
+    _atomic_write(path, diff)
+    return True
+
+
+def _patch_file_is_valid(path: str) -> bool:
+    if not path or not os.path.isfile(path):
+        return False
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return is_unified_diff(handle.read())
+    except OSError:
+        return False
+
+
+def _discard_invalid_patch(path: str) -> None:
+    """Remove a legacy prose ``.patch`` so it cannot be applied later."""
+    if not os.path.isfile(path):
+        return
+    if _patch_file_is_valid(path):
+        return
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def _task_has_valid_patch(tasks_dir: str, task_id: str) -> bool:
+    stem = _safe_artifact_stem(task_id)
+    candidates = [
+        os.path.join(tasks_dir, f"{stem}.patch"),
+        os.path.join(tasks_dir, f"{task_id}.patch"),
+    ]
+    return any(_patch_file_is_valid(path) for path in candidates)
+
+
+# ---------------------------------------------------------------------------
+# Tab matching (bug 2)
+# ---------------------------------------------------------------------------
+
+def extract_agent_session_id(url: str) -> str:
+    """Return the ``<session_id>`` from ``/agent/<session_id>``, else ``''``."""
+    if not url:
+        return ""
+    parsed = urllib.parse.urlparse(url)
+    parts = [part for part in urllib.parse.unquote(parsed.path or "").split("/") if part]
+    lowered = [part.lower() for part in parts]
+    if "agent" not in lowered:
+        return ""
+    tail = parts[lowered.index("agent") + 1:]
+    return tail[0] if tail else ""
+
+
+def url_matches_session(url: str, session_id: str) -> bool:
+    """True only for an exact ``/agent/<session_id>`` path segment.
+
+    ``/agent/sprint-5`` matches ``sprint-5``. It does not match ``sprint-50``,
+    ``sprint-1``, or a tab whose URL merely contains the word ``arena``.
+    """
+    if not url or not session_id:
+        return False
+    parsed = urllib.parse.urlparse(url)
+    parts = [part for part in urllib.parse.unquote(parsed.path or "").split("/") if part]
+    lowered = [part.lower() for part in parts]
+    if "agent" not in lowered:
+        return False
+    tail = parts[lowered.index("agent") + 1:]
+    return bool(tail) and tail[0] == session_id
+
+
+def slug_in_text(slug: str, text: str) -> bool:
+    """True when ``slug`` is a whole token in ``text``, not a prefix."""
+    norm_slug = _slugify(slug, max_len=0)
+    if _is_generic_slug(norm_slug):
+        return False
+    norm_text = _slugify(text or "", max_len=0)
+    if not norm_text:
+        return False
+    pattern = rf"(?:^|-){re.escape(norm_slug)}(?:-|$)"
+    return re.search(pattern, norm_text) is not None
+
+
+def _as_tab(item: Any) -> ArenaTab:
+    if isinstance(item, ArenaTab):
+        return item
+    if isinstance(item, str):
+        return ArenaTab(url=item, title="")
+    if isinstance(item, (tuple, list)):
+        url = str(item[0]) if item else ""
+        title = str(item[1]) if len(item) > 1 else ""
+        return ArenaTab(url=url, title=title)
+    url = str(getattr(item, "url", "") or "")
+    title_attr = getattr(item, "title", "")
+    title = ""
+    if callable(title_attr):
+        try:
+            title = str(title_attr() or "")
+        except Exception:
+            title = ""
+    else:
+        title = str(title_attr or "")
+    return ArenaTab(url=url, title=title, handle=item)
+
+
+def match_arena_tab(
+    tabs: Sequence[Any],
+    *,
+    session_id: str = "",
+    task_slug: str = "",
+    extra_ids: Sequence[str] = (),
+    arena_url: str = "",
+) -> Optional[ArenaTab]:
+    """Select the tab for this sprint, or None.
+
+    Matching is strict:
+
+    1. URL path ``/agent/<session_id>`` (exact segment, not a prefix).
+    2. Otherwise a unique task slug in the URL or document title.
+
+    The first tab containing ``arena`` is never a match. Ambiguous slug hits
+    return None so Sprint 1 cannot be saved as Sprint 5.
+    """
+    views = [_as_tab(tab) for tab in tabs]
+    ids: list[str] = []
+    for value in (session_id, *extra_ids, extract_agent_session_id(arena_url)):
+        text = str(value or "").strip()
+        if text and text not in ids:
+            ids.append(text)
+    if ids:
+        exact = [
+            tab for tab in views
+            if any(url_matches_session(tab.url, sid) for sid in ids)
+        ]
+        if exact:
+            return exact[-1]
+    slug = str(task_slug or "").strip()
+    if slug and not _is_generic_slug(slug):
+        hits = [
+            tab for tab in views
+            if slug_in_text(slug, tab.url) or slug_in_text(slug, tab.title)
+        ]
+        if len(hits) == 1:
+            return hits[0]
+    return None
+
+
+def select_matching_page(
+    pages: Sequence[Any],
+    *,
+    session_id: str = "",
+    task_slug: str = "",
+    extra_ids: Sequence[str] = (),
+    arena_url: str = "",
+) -> Any:
+    """Return the page object for this session, or None. Never hijacks."""
+    matched = match_arena_tab(
+        pages,
+        session_id=session_id,
+        task_slug=task_slug,
+        extra_ids=extra_ids,
+        arena_url=arena_url,
+    )
+    if matched is None:
+        return None
+    return matched.handle if matched.handle is not None else matched
+
+
+def _list_pages(browser: Any) -> list[Any]:
+    pages: list[Any] = []
+    for context in getattr(browser, "contexts", []) or []:
+        pages.extend(getattr(context, "pages", []) or [])
+    return pages
+
+
+def _page_still_matches(
+    page: Any,
+    session_id: str,
+    task_slug: str,
+    extra_ids: Sequence[str],
+    arena_url: str,
+) -> bool:
+    return select_matching_page(
+        [page],
+        session_id=session_id,
+        task_slug=task_slug,
+        extra_ids=extra_ids,
+        arena_url=arena_url,
+    ) is not None
+
+
+# ---------------------------------------------------------------------------
+# Completion state engine (bug 1)
+# ---------------------------------------------------------------------------
+
+def _pick(signals: Mapping[str, Any], *keys: str, default: Any = None) -> Any:
+    for key in keys:
+        if key in signals and signals[key] is not None:
+            return signals[key]
+    return default
+
+
+def _normalize_signals(signals: Mapping[str, Any]) -> dict[str, Any]:
+    blocks = _pick(signals, "code_blocks", "codeBlocks", default=[]) or []
+    return {
+        "create_pr_visible": bool(_pick(
+            signals, "create_pr_visible", "createPrVisible", default=False
+        )),
+        "create_pr_enabled": bool(_pick(
+            signals, "create_pr_enabled", "createPrEnabled", default=False
+        )),
+        "stop_visible": bool(_pick(signals, "stop_visible", "stopVisible", default=False)),
+        "thinking": bool(_pick(signals, "thinking", default=False)),
+        "bash_running": bool(_pick(signals, "bash_running", "bashRunning", default=False)),
+        "terminal_exited": bool(_pick(
+            signals, "terminal_exited", "terminalExited", default=False
+        )),
+        "terminal_text": str(_pick(signals, "terminal_text", "terminalText", default="") or ""),
+        "assistant_text": str(_pick(
+            signals, "assistant_text", "assistantText", default=""
+        ) or ""),
+        "code_blocks": [str(item) for item in blocks],
+        "completion_marker": bool(_pick(
+            signals, "completion_marker", "completionMarker", default=False
+        )),
+        "title": str(_pick(signals, "title", default="") or ""),
+        "url": str(_pick(signals, "url", default="") or ""),
+    }
+
+
+def _signal_texts(sig: Mapping[str, Any]) -> str:
+    parts = [sig["assistant_text"], sig["terminal_text"], sig["title"], *sig["code_blocks"]]
+    return "\n".join(str(part or "") for part in parts)
+
+
+def _has_explicit_marker(sig: Mapping[str, Any]) -> bool:
+    if sig["completion_marker"]:
+        return True
+    return _COMPLETION_MARKER_RE.search(_signal_texts(sig)) is not None
+
+
+def _in_progress_reason(sig: Mapping[str, Any]) -> Optional[str]:
+    if sig["bash_running"]:
+        return "bash_running"
+    if sig["stop_visible"]:
+        return "generating"
+    if sig["thinking"]:
+        return "thinking"
+    return None
+
+
+def _terminal_has_exited(sig: Mapping[str, Any]) -> bool:
+    if sig["bash_running"] or sig["stop_visible"]:
+        return False
+    if sig["terminal_exited"]:
+        return True
+    return bool(_TERMINAL_EXIT_RE.search(sig["terminal_text"]))
+
+
+def _best_diff(sig: Mapping[str, Any]) -> Optional[str]:
+    chunks = [sig["terminal_text"], sig["assistant_text"], *sig["code_blocks"]]
+    found: list[str] = []
+    seen: set[str] = set()
+    for chunk in chunks:
+        diff = extract_unified_diff(str(chunk or ""))
+        if diff and diff not in seen:
+            seen.add(diff)
+            found.append(diff)
+    if not found:
+        return None
+    git_diffs = [item for item in found if item.startswith("diff --git a/")]
+    return max(git_diffs or found, key=len)
+
+
+def detect_arena_run_state(
+    signals: Mapping[str, Any],
+    *,
+    timed_out: bool = False,
+) -> ArenaRunObservation:
+    """Classify an Arena tab as RUNNING or COMPLETED.
+
+    COMPLETED is returned only for a positive completion signal, and never
+    while the agent is thinking or executing a command:
+
+    * Create PR is visible and enabled
+    * the terminal exited and its output contains a unified diff
+    * an explicit completion marker was reached
+
+    A DOM whose text length is unchanged, a README excerpt, or a watcher
+    timeout are not completion. Those conditions stay RUNNING so a multi-minute
+    ``pnpm install`` / ``vitest`` / ``type-check`` cannot be saved as a patch.
+    """
+    sig = _normalize_signals(signals)
+    in_progress = _in_progress_reason(sig)
+    if in_progress:
+        return ArenaRunObservation(
+            status="RUNNING",
+            reason=in_progress,
+            timed_out=timed_out,
+            patch_text=None,
+        )
+    diff_text = _best_diff(sig)
+    if sig["create_pr_visible"] and sig["create_pr_enabled"]:
+        return ArenaRunObservation(
+            status="COMPLETED",
+            reason="create_pr_active",
+            timed_out=timed_out,
+            patch_text=diff_text,
+        )
+    if _terminal_has_exited(sig):
+        terminal_diff = extract_unified_diff(sig["terminal_text"])
+        if terminal_diff:
+            return ArenaRunObservation(
+                status="COMPLETED",
+                reason="terminal_exited_with_diff",
+                timed_out=timed_out,
+                patch_text=terminal_diff,
+            )
+    if _has_explicit_marker(sig):
+        return ArenaRunObservation(
+            status="COMPLETED",
+            reason="explicit_completion_marker",
+            timed_out=timed_out,
+            patch_text=diff_text,
+        )
+    reason = "watcher_timeout" if timed_out else "awaiting_completion_signal"
+    return ArenaRunObservation(
+        status="RUNNING",
+        reason=reason,
+        timed_out=timed_out,
+        patch_text=None,
+    )
+
+
+def _coerce_collect_timeout(timeout_seconds: Optional[int]) -> int:
+    if timeout_seconds is None:
+        return DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS
+    try:
+        value = int(timeout_seconds)
+    except (TypeError, ValueError):
+        return DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS
+    if value < 0:
+        return DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS
+    return value
+
+
+def _read_page_snapshot(page: Any) -> dict[str, Any]:
+    raw = page.evaluate(_ARENA_SNAPSHOT_JS)
+    if not isinstance(raw, dict):
+        raw = {}
+    raw.setdefault("url", getattr(page, "url", "") or "")
+    if not raw.get("title"):
+        title_attr = getattr(page, "title", "")
+        if callable(title_attr):
+            try:
+                raw["title"] = title_attr() or ""
+            except Exception:
+                raw["title"] = ""
+        else:
+            raw["title"] = title_attr or ""
+    return raw
+
+
+def _format_running(
+    observation: ArenaRunObservation,
+    *,
+    task_id: str,
+    session_id: str,
+    timeout_seconds: int,
+    elapsed: float,
+    endpoint: str,
+    page_url: str,
+) -> str:
+    return "\n".join([
+        "status=RUNNING",
+        f"reason={observation.reason}",
+        f"timeout_seconds={timeout_seconds}",
+        f"elapsed_seconds={int(elapsed)}",
+        f"timed_out={'true' if observation.timed_out else 'false'}",
+        "patch_written=no",
+        "### Arena.ai relácia beží (RUNNING)",
+        "Relácia NIE JE dokončená. Ticho v chate počas pnpm/vitest/type-check",
+        "nie je completion a .patch sa nezapisuje.",
+        f"• Task: {task_id}",
+        f"• Session: {session_id or '-'}",
+        f"• Dôvod: {observation.reason}",
+        f"• Timeout: {timeout_seconds}s (uplynulo {int(elapsed)}s)",
+        f"• Tab: {page_url or '-'}",
+        f"• CDP: {endpoint or '-'}",
+    ])
+
+
+def _format_not_found(
+    task_id: str,
+    session_id: str,
+    task_slug: str,
+    detail: str,
+    skipped: str = "",
+) -> str:
+    lines = [
+        "status=NOT_FOUND",
+        "reason=tab_not_matched",
+        "patch_written=no",
+        "### Arena.ai tab pre túto reláciu nebol nájdený (NOT_FOUND)",
+        "Cudzie sprinty neboli použité. Prvý tab s 'arena' v URL sa nepreberá.",
+        f"• Task: {task_id}",
+        f"• Session: {session_id or '-'}",
+        f"• Slug: {task_slug or '-'}",
+        f"• Detail: {detail}",
+    ]
+    if skipped:
+        lines.append(f"• {skipped}")
+    return "\n".join(lines)
+
+
+def _skipped_tab_summary(pages: Sequence[Any]) -> str:
+    urls = []
+    for page in pages:
+        url = str(getattr(page, "url", "") or "")
+        if "arena" in url.lower() or "/agent" in url.lower():
+            urls.append(url)
+    if not urls:
+        return "žiadne Arena taby na pripojených CDP endpointoch"
+    return "preskočené taby: " + ", ".join(urls[:6])
+
+
+def _resolve_collect_target(
+    task_id: str,
+    session_id: str,
+    task_slug: str,
+) -> dict[str, Any]:
+    primary = (session_id or task_id or "").strip()
+    slug = (task_slug or "").strip()
+    if not slug and not _is_generic_slug(_slugify(task_id)):
+        slug = _slugify(task_id)
+    extra: list[str] = []
+    arena_url = ""
+    for record in _find_session_records([primary, task_id, slug]):
+        remote = str(record.get("arena_session_id") or "").strip()
+        if remote and remote not in extra and remote != primary:
+            extra.append(remote)
+        if not arena_url and record.get("arena_url"):
+            arena_url = str(record["arena_url"])
+        stored_slug = str(record.get("task_slug") or "").strip()
+        if stored_slug and not task_slug:
+            slug = stored_slug
+    return {
+        "task_id": task_id,
+        "session_id": primary,
+        "task_slug": slug,
+        "extra_ids": extra,
+        "arena_url": arena_url,
+    }
+
+
+def _finalize_completed(
+    page: Any,
+    snapshot: Mapping[str, Any],
+    observation: ArenaRunObservation,
+    *,
+    task_id: str,
+    session_id: str,
+    task_slug: str,
+    extra_ids: Sequence[str],
+    arena_url: str,
+    timeout_seconds: int,
+    elapsed: float,
+    endpoint: str,
+) -> str:
+    if not _page_still_matches(page, session_id, task_slug, extra_ids, arena_url):
+        return _format_not_found(
+            task_id,
+            session_id,
+            task_slug,
+            "tab zmenil identitu tesne pred zápisom patchu",
+        )
+    patch_path, response_path = _artifact_paths(task_id)
+    wrote = False
+    if observation.patch_text:
+        wrote = write_unified_patch(patch_path, observation.patch_text)
+    if not wrote:
+        _discard_invalid_patch(patch_path)
+    assistant = str(
+        snapshot.get("assistantText")
+        or snapshot.get("assistant_text")
+        or ""
+    )
+    if assistant:
+        try:
+            _atomic_write(response_path, assistant)
+        except OSError:
+            pass
+    page_url = str(getattr(page, "url", "") or snapshot.get("url") or "")
+    remote_id = extract_agent_session_id(page_url)
+    progress = (
+        f"COMPLETED ({observation.reason}); "
+        + (f"patch tasks/{os.path.basename(patch_path)}" if wrote else "bez unified diff, .patch nezapísaný")
+    )
+    _update_sessions_exact(
+        [session_id, task_id, remote_id],
+        status="COMPLETED",
+        progress=progress,
+        arena_url=page_url,
+        arena_session_id=remote_id,
+        task_slug=task_slug,
+        patch_written=wrote,
+    )
+    lines = [
+        "status=COMPLETED",
+        f"reason={observation.reason}",
+        f"timeout_seconds={timeout_seconds}",
+        f"elapsed_seconds={int(elapsed)}",
+        f"patch_written={'yes' if wrote else 'no'}",
+        "### Arena.ai relácia dokončená (COMPLETED)",
+        f"• Task: {task_id}",
+        f"• Session: {session_id or '-'}",
+        f"• Dôvod: {observation.reason}",
+        f"• Tab: {page_url or '-'}",
+        f"• CDP: {endpoint or '-'}",
+    ]
+    if wrote:
+        lines.append(f"• Súbor patchu: `tasks/{os.path.basename(patch_path)}`")
+        lines.append(
+            "• Pripravené na aplikovanie: "
+            f"`apply_arena_patch(task_id='{task_id}', "
+            f"patch_source='tasks/{os.path.basename(patch_path)}')`"
+        )
+    else:
+        lines.append("• Unified diff sa nenašiel. Súbor .patch nebol vytvorený.")
+    return "\n".join(lines)
+
+
+def _watch_matched_page(
+    page: Any,
+    *,
+    task_id: str,
+    session_id: str,
+    task_slug: str,
+    extra_ids: Sequence[str],
+    arena_url: str,
+    timeout_seconds: int,
+    endpoint: str,
+) -> str:
+    timeout_seconds = _coerce_collect_timeout(timeout_seconds)
+    started = _monotonic()
+    deadline = started + timeout_seconds
+    while True:
+        if not _page_still_matches(page, session_id, task_slug, extra_ids, arena_url):
+            _discard_invalid_patch(_artifact_paths(task_id)[0])
+            return _format_not_found(
+                task_id,
+                session_id,
+                task_slug,
+                "tab už nezodpovedá session id / task slug",
+            )
+        try:
+            snapshot = _read_page_snapshot(page)
+        except Exception as exc:
+            snapshot = {"error": str(exc)}
+        timed_out = _monotonic() >= deadline
+        observation = detect_arena_run_state(snapshot, timed_out=timed_out)
+        elapsed = _monotonic() - started
+        if observation.status == "COMPLETED":
+            return _finalize_completed(
+                page,
+                snapshot,
+                observation,
+                task_id=task_id,
+                session_id=session_id,
+                task_slug=task_slug,
+                extra_ids=extra_ids,
+                arena_url=arena_url,
+                timeout_seconds=timeout_seconds,
+                elapsed=elapsed,
+                endpoint=endpoint,
+            )
+        if timed_out:
+            _discard_invalid_patch(_artifact_paths(task_id)[0])
+            _update_sessions_exact(
+                [session_id, task_id],
+                status="RUNNING",
+                progress=f"RUNNING ({observation.reason}); timeout {timeout_seconds}s",
+                patch_written=False,
+            )
+            return _format_running(
+                observation,
+                task_id=task_id,
+                session_id=session_id,
+                timeout_seconds=timeout_seconds,
+                elapsed=elapsed,
+                endpoint=endpoint,
+                page_url=str(getattr(page, "url", "") or ""),
+            )
+        _sleep(ARENA_POLL_INTERVAL_SECONDS)
+
+
+@contextmanager
+def _cdp_browser_session(ports: str) -> Iterator[list[tuple[Any, str]]]:
+    """Connect to every live CDP endpoint and yield ``(browser, endpoint)``."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise RuntimeError("playwright_unavailable") from exc
+    with sync_playwright() as playwright:
+        connected: list[tuple[Any, str]] = []
+        for endpoint in _get_cdp_endpoints(ports):
+            try:
+                browser = playwright.chromium.connect_over_cdp(endpoint, timeout=10000)
+            except Exception:
+                continue
+            connected.append((browser, endpoint))
+        yield connected
+
+
+def _find_matching_page(
+    connected: Sequence[tuple[Any, str]],
+    *,
+    session_id: str,
+    task_slug: str,
+    extra_ids: Sequence[str],
+    arena_url: str,
+) -> tuple[Any, str, list[Any]]:
+    seen: list[Any] = []
+    for browser, endpoint in connected:
+        pages = _list_pages(browser)
+        seen.extend(pages)
+        page = select_matching_page(
+            pages,
+            session_id=session_id,
+            task_slug=task_slug,
+            extra_ids=extra_ids,
+            arena_url=arena_url,
+        )
+        if page is not None:
+            return page, endpoint, seen
+    return None, "", seen
+
+
+def collect_code_from_arena_browser(
+    task_id: str,
+    timeout_seconds: int = DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS,
+    ports: str = DEFAULT_CDP_PORTS,
+    session_id: str = "",
+    task_slug: str = "",
+) -> str:
+    """Watch one Arena session and extract a unified diff only when it finishes.
+
+    The default timeout is 900 seconds (configurable, intended range 600–900).
+    A session stays ``status=RUNNING`` while the agent is thinking or running
+    bash (``pnpm install``, ``vitest``, ``type-check``), even if the chat text
+    does not change. It becomes ``status=COMPLETED`` only when Create PR is
+    active, the terminal exits with a finished diff, or an explicit completion
+    marker is reached.
+
+    Tabs are matched by ``/agent/<session_id>`` or by task slug in the URL /
+    title. If that tab is absent the call returns ``status=NOT_FOUND`` and
+    does not read another sprint. Non-diff text is never written to ``.patch``.
+    """
+    timeout_seconds = _coerce_collect_timeout(timeout_seconds)
+    target = _resolve_collect_target(task_id, session_id, task_slug)
+    try:
+        with _cdp_browser_session(ports) as connected:
+            if not connected:
+                return _format_running(
+                    ArenaRunObservation("RUNNING", "cdp_unavailable", timed_out=False),
+                    task_id=task_id,
+                    session_id=target["session_id"],
+                    timeout_seconds=timeout_seconds,
+                    elapsed=0,
+                    endpoint="",
+                    page_url="",
+                ) + "\n• Chrome CDP mostík nie je aktívny. Stav COMPLETED sa nehlási."
+            page, endpoint, seen = _find_matching_page(
+                connected,
+                session_id=target["session_id"],
+                task_slug=target["task_slug"],
+                extra_ids=target["extra_ids"],
+                arena_url=target["arena_url"],
+            )
+            if page is None:
+                _discard_invalid_patch(_artifact_paths(task_id)[0])
+                return _format_not_found(
+                    task_id,
+                    target["session_id"],
+                    target["task_slug"],
+                    "žiadny tab s /agent/<session_id> ani s task slug",
+                    _skipped_tab_summary(seen),
+                )
+            return _watch_matched_page(
+                page,
+                task_id=task_id,
+                session_id=target["session_id"],
+                task_slug=target["task_slug"],
+                extra_ids=target["extra_ids"],
+                arena_url=target["arena_url"],
+                timeout_seconds=timeout_seconds,
+                endpoint=endpoint,
+            )
+    except RuntimeError as exc:
+        return (
+            "status=RUNNING\n"
+            "reason=playwright_unavailable\n"
+            "patch_written=no\n"
+            f"timeout_seconds={timeout_seconds}\n"
+            "### Arena.ai stav neznámy (RUNNING)\n"
+            f"• {exc}\n"
+            "• Bez CDP sa relácia nesmie označiť ako COMPLETED."
+        )
+    except Exception as exc:
+        return (
+            "status=RUNNING\n"
+            "reason=cdp_error\n"
+            "patch_written=no\n"
+            f"timeout_seconds={timeout_seconds}\n"
+            "### Arena.ai stav neznámy (RUNNING)\n"
+            f"• Chyba CDP: {exc}\n"
+            "• Bez spoľahlivého signálu sa relácia nesmie označiť ako COMPLETED."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Physical dispatch (bug 3)
+# ---------------------------------------------------------------------------
+
+def _locator_first(page: Any, selector: str) -> Any:
+    located = page.locator(selector)
+    first = getattr(located, "first", located)
+    if callable(first):
+        return first()
+    return first
+
+
+def _first_locator(page: Any, selectors: Sequence[str], *, require_enabled: bool) -> Any:
+    for selector in selectors:
+        try:
+            loc = _locator_first(page, selector)
+            if loc.count() <= 0:
+                continue
+            if require_enabled and (not loc.is_visible() or not loc.is_enabled()):
+                continue
+            return loc
+        except Exception:
+            continue
+    return None
+
+
+def _read_control_text(locator: Any) -> str:
+    try:
+        return str(locator.input_value() or "")
+    except Exception:
+        try:
+            return str(locator.evaluate(
+                "el => el.value || el.innerText || el.textContent || ''"
+            ) or "")
+        except Exception:
+            return ""
+
+
+def _text_matches_prompt(value: str, prompt: str) -> bool:
+    expected = (prompt or "").strip()
+    actual = (value or "").strip()
+    if not expected:
+        return False
+    return actual == expected or expected in actual
+
+
+def _fill_and_submit(page: Any, prompt_text: str, auto_submit: bool) -> tuple[bool, bool, str]:
+    composer = _first_locator(page, _COMPOSER_SELECTORS, require_enabled=False)
+    if composer is None:
+        return False, False, "composer_missing"
+    try:
+        composer.fill("")
+        composer.fill(prompt_text)
+    except Exception as exc:
+        return False, False, f"fill_failed:{exc}"
+    if not _text_matches_prompt(_read_control_text(composer), prompt_text):
+        return False, False, "fill_truncated"
+    if not auto_submit:
+        return True, False, "filled"
+    button = _first_locator(page, _SUBMIT_SELECTORS, require_enabled=True)
+    if button is not None:
+        try:
+            button.click(timeout=1500)
+            return True, True, "submitted_click"
+        except Exception:
+            pass
+    try:
+        composer.press("Enter")
+        return True, True, "submitted_enter"
+    except Exception as exc:
+        return True, False, f"submit_failed:{exc}"
+
+
+def _wait_for_agent_session_url(page: Any) -> str:
+    wait = float(os.getenv(
+        "ARENA_NAVIGATION_WAIT_SECONDS",
+        str(ARENA_NAVIGATION_WAIT_SECONDS),
+    ))
+    deadline = _monotonic() + max(wait, 0.0)
+    last = str(getattr(page, "url", "") or "")
+    while True:
+        last = str(getattr(page, "url", "") or last)
+        if extract_agent_session_id(last):
+            return last
+        if _monotonic() >= deadline:
+            return last
+        _sleep(0.25)
+
+
+def _open_fresh_agent_page(browser: Any, target: str) -> Any:
+    contexts = list(getattr(browser, "contexts", []) or [])
+    context = contexts[0] if contexts else browser.new_context()
+    page = context.new_page()
+    page.goto(target, wait_until="domcontentloaded", timeout=30000)
+    return page
+
+
+def _target_agent_url(arena_url: str) -> str:
+    if arena_url and extract_agent_session_id(arena_url):
+        return arena_url
+    return arena_agent_home_url()
+
+
+def _dispatch_on_browser(
+    browser: Any,
+    prompt_text: str,
+    *,
+    session_id: str,
+    task_slug: str,
+    arena_url: str,
+    auto_submit: bool,
+) -> BrowserDispatchResult:
+    """Fill this Chrome only. Never type into an unrelated sprint tab."""
+    pages = _list_pages(browser)
+    page = select_matching_page(
+        pages,
+        session_id=session_id,
+        task_slug=task_slug,
+        arena_url=arena_url,
+    )
+    opened_new = False
+    if page is None:
+        target = _target_agent_url(arena_url)
+        page = _open_fresh_agent_page(browser, target)
+        opened_new = True
+    filled, submitted, detail = _fill_and_submit(page, prompt_text, auto_submit)
+    if not filled or (auto_submit and not submitted):
+        return BrowserDispatchResult(
+            ok=False,
+            url=str(getattr(page, "url", "") or ""),
+            message=f"DISPATCH_FAILED reason={detail}",
+            submitted=submitted,
+            opened_new=opened_new,
+        )
+    observed = _wait_for_agent_session_url(page)
+    remote = extract_agent_session_id(observed)
+    return BrowserDispatchResult(
+        ok=True,
+        url=observed,
+        message=detail,
+        submitted=submitted,
+        opened_new=opened_new,
+        arena_session_id=remote,
+    )
+
+
+def _format_dispatch_ok(result: BrowserDispatchResult, endpoint: str) -> str:
+    remote = result.arena_session_id or "-"
+    url = result.url or arena_agent_home_url()
+    opened = "/agent" if result.opened_new else "existing"
+    submitted = "yes" if result.submitted else "no"
+    return (
+        f"DISPATCH_OK opened={opened} url={url} submitted={submitted} "
+        f"arena_session_id={remote} endpoint={endpoint}\n"
+        f"✅ Prompt bol úspešne vložený do Arena.ai ({url}) cez {endpoint} a odoslaný."
+    )
+
+
+def _dispatch_succeeded(message: str) -> bool:
+    if "DISPATCH_OK" not in (message or ""):
+        return False
+    return "DISPATCH_FAILED" not in message
+
+
+def _parse_token(message: str, name: str) -> str:
+    match = re.search(rf"(?:^|\s){re.escape(name)}=(\S+)", message or "")
+    return match.group(1) if match else ""
+
+
+def send_prompt_to_arena_browser(
+    prompt_text: str,
+    ports: str = DEFAULT_CDP_PORTS,
+    auto_submit: bool = True,
+    session_id: str = "",
+    task_slug: str = "",
+    arena_url: str = "",
+) -> str:
+    """Open ``/agent`` (or the matching session tab) and submit ``prompt_text``.
+
+    An existing tab is used only when its URL is ``/agent/<session_id>`` or
+    its URL/title contains the task slug. Otherwise a new ``/agent`` tab is
+    opened. Unrelated sprint tabs are never filled.
+    """
+    if not (prompt_text or "").strip():
+        return "DISPATCH_FAILED reason=empty_prompt"
+    try:
+        with _cdp_browser_session(ports) as connected:
+            if not connected:
+                return (
+                    "DISPATCH_FAILED reason=cdp_unavailable "
+                    "detail=Chrome CDP port nie je aktívny. Cudzí tab nebol použitý."
+                )
+            last_failure = "DISPATCH_FAILED reason=cdp_unavailable"
+            for browser, endpoint in connected:
+                try:
+                    result = _dispatch_on_browser(
+                        browser,
+                        prompt_text,
+                        session_id=session_id,
+                        task_slug=task_slug,
+                        arena_url=arena_url,
+                        auto_submit=auto_submit,
+                    )
+                except Exception as exc:
+                    last_failure = f"DISPATCH_FAILED reason=exception detail={exc}"
+                    continue
+                result.endpoint = endpoint
+                if result.ok:
+                    return _format_dispatch_ok(result, endpoint)
+                last_failure = result.message or last_failure
+            return last_failure
+    except RuntimeError as exc:
+        return f"DISPATCH_FAILED reason=playwright_unavailable detail={exc}"
+    except Exception as exc:
+        return f"DISPATCH_FAILED reason=cdp_error detail={exc}"
+
+
+def _resolve_dispatch_prompt(
+    module_name: str,
+    prompt_summary: str,
+    full_prompt: str,
+    task_file: str,
+) -> tuple[str, str]:
+    """Return ``(prompt, source)``. Never glob a prefix of another sprint."""
+    if full_prompt and full_prompt.strip():
+        return full_prompt, "full_prompt"
+    if task_file:
+        path = task_file
+        if not os.path.isabs(path):
+            path = os.path.join(_get_repo_path(), path)
+        if os.path.isfile(path):
+            try:
+                with open(path, "r", encoding="utf-8") as handle:
+                    return handle.read(), "task_file"
+            except OSError:
+                pass
+    return prompt_summary or "", "summary_only"
+
+
+def dispatch_to_arena_session(
+    module_name: str,
+    prompt_summary: str,
+    target_model: str = "Arena.ai",
+    full_prompt: str = "",
+    task_file: str = "",
+    session_id: str = "",
+    task_slug: str = "",
+) -> str:
+    """Register a session and physically dispatch the full task to Arena.ai.
+
+    Calling this opens ``/agent``, fills the composer with the complete task
+    specification (not the 200-character summary), and triggers generation via
+    :func:`send_prompt_to_arena_browser`. The JSON record is bookkeeping.
+    ``RUNNING`` is recorded only after ``DISPATCH_OK``.
+    """
+    del target_model  # external model names are not stored; target is Arena.ai
+    local_id = (session_id or "").strip() or _new_local_session_id(module_name)
+    slug = (task_slug or "").strip() or _slugify(module_name)
+    prompt, source = _resolve_dispatch_prompt(
+        module_name, prompt_summary, full_prompt, task_file
+    )
+    base = {
+        "session_id": local_id,
+        "task_id": local_id,
+        "module": module_name,
+        "task_slug": slug,
+        "prompt_summary": (prompt_summary or "")[:200],
+        "target_model": "Arena.ai",
+        "prompt_source": source,
+    }
+    if not prompt.strip():
+        _upsert_session({
+            **base,
+            "status": "DISPATCH_FAILED",
+            "progress": "Prázdny prompt, prehliadač nebol kontaktovaný.",
+            "dispatch_ok": False,
+        })
+        return (
+            "status=DISPATCH_FAILED\n"
+            "DISPATCH_FAILED reason=empty_prompt\n"
+            f"• ID: {local_id}\n"
+            "• Stav: DISPATCH_FAILED"
+        )
+    _upsert_session({
+        **base,
+        "status": "DISPATCHING",
+        "progress": "Otváranie /agent a vkladanie plnej špecifikácie.",
+        "dispatch_ok": False,
+    })
+    try:
+        browser_status = send_prompt_to_arena_browser(
+            prompt_text=prompt,
+            auto_submit=True,
+            session_id=local_id,
+            task_slug=slug,
+        )
+    except Exception as exc:
+        browser_status = f"DISPATCH_FAILED reason=exception detail={exc}"
+    ok = _dispatch_succeeded(browser_status)
+    arena_url = _parse_token(browser_status, "url")
+    remote_id = _parse_token(browser_status, "arena_session_id")
+    if remote_id in {"", "-"}:
+        remote_id = extract_agent_session_id(arena_url)
+    status = "RUNNING" if ok else "DISPATCH_FAILED"
+    _update_sessions_exact(
+        [local_id],
+        status=status,
+        progress=browser_status[:500],
+        arena_url=arena_url,
+        arena_session_id=remote_id,
+        dispatch_ok=ok,
+        prompt_source=source,
+        module=module_name,
+        task_slug=slug,
+    )
+    if ok:
+        return (
+            "status=RUNNING\n"
+            "DISPATCH_OK\n"
+            "Relácia Arena.ai odoslaná!\n"
+            f"• ID: {local_id}\n"
+            f"• Modul: {module_name}\n"
+            f"• URL: {arena_url or arena_agent_home_url()}\n"
+            f"• Zdroj promptu: {source}\n"
+            f"• Prehliadač: {browser_status}\n"
+            "• Stav: RUNNING"
+        )
+    return (
+        "status=DISPATCH_FAILED\n"
+        "DISPATCH_FAILED\n"
+        "Relácia nebola fyzicky odoslaná do prehliadača. "
+        "JSON záznam nie je dispatch.\n"
+        f"• ID: {local_id}\n"
+        f"• Dôvod: {browser_status}\n"
+        "• Stav: DISPATCH_FAILED"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Architectural audit (bug 4)
+# ---------------------------------------------------------------------------
+
+def _normalize_repo_path(path: str) -> str:
+    norm = (path or "").strip().replace("\\", "/").lstrip("./")
+    for marker in ("apps/", "packages/"):
+        index = norm.find(marker)
+        if index > 0 and ("/" in norm[:index] or ":" in norm[:index]):
+            norm = norm[index:]
+            break
+    return norm
+
+
+def _upstream_root_candidates() -> list[str]:
+    """Locations of the vanilla OpenVPM checkout, most specific first."""
+    candidates = []
+    env = os.getenv("OPENVPM_UPSTREAM_DIR", "").strip()
+    if env:
+        candidates.append(env)
+    repo = _get_repo_path()
+    candidates.append(os.path.normpath(os.path.join(repo, "..", "OpenVPM")))
+    candidates.append(os.path.normpath(os.path.join(repo, "..", "openvpm")))
+    candidates.append(r"C:\Users\marek\Documents\Vet\OpenVPM")
+    candidates.append("/mnt/c/Users/marek/Documents/Vet/OpenVPM")
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in candidates:
+        key = os.path.normcase(os.path.normpath(item))
+        if key not in seen:
+            seen.add(key)
+            unique.append(item)
+    return unique
+
+
+def _upstream_router_dirs() -> list[str]:
+    found = []
+    for root in _upstream_root_candidates():
+        directory = os.path.join(root, "apps", "web", "server", "routers")
+        if os.path.isdir(directory):
+            found.append(directory)
+    return found
+
+
+def _upstream_router_exists(basename: str) -> Optional[bool]:
+    """True/False when an upstream tree was found, else None.
+
+    None means the caller must not treat a missing checkout as proof that a
+    vanilla router is custom.
+    """
+    directories = _upstream_router_dirs()
+    if not directories:
+        return None
+    target = basename.lower()
+    for directory in directories:
+        try:
+            names = set(os.listdir(directory))
+        except OSError:
+            continue
+        if basename in names or target in {name.lower() for name in names}:
+            return True
+    return False
+
+
+def _router_violation(rel_path: str) -> Optional[str]:
+    norm = _normalize_repo_path(rel_path)
+    if not norm.startswith("apps/web/server/routers/"):
+        return None
+    if norm.startswith("apps/web/server/routers/extensions/"):
+        return None
+    base = os.path.basename(norm)
+    if base in {"_app.ts", "_app.tsx"}:
+        return None
+    if not base.endswith((".ts", ".tsx", ".js", ".jsx")):
+        return None
+    upstream = _upstream_router_exists(base)
+    if upstream is True:
+        return None
+    if upstream is None and base in KNOWN_UPSTREAM_ROUTER_FILES:
+        return None
+    return (
+        f"Upozornenie: Nový vlastný tRPC router `{norm}` by mal patriť do "
+        "`extensions/`. Súbor neexistuje v upstream OpenVPM "
+        "(`../OpenVPM/apps/web/server/routers/`)."
+    )
+
+
+def audit_architectural_boundaries(file_list_comma_separated: str) -> str:
+    """Audit changed paths against zero-conflict and backport rules.
+
+    Vanilla schema files and ``_journal.json`` are violations. A tRPC router
+    under ``apps/web/server/routers/`` is a violation only when it is absent
+    from upstream OpenVPM (``../OpenVPM/apps/web/server/routers/``). Generic
+    enhancements of vanilla routers such as ``records.ts`` and
+    ``whiteboard.ts`` are permitted under Upstream-Backport-Aware Coding.
+    Extension routers are always permitted.
+    """
+    files = [item.strip() for item in (file_list_comma_separated or "").split(",") if item.strip()]
+    violations: list[str] = []
+    for rel in files:
+        norm = _normalize_repo_path(rel)
+        base = os.path.basename(norm)
+        if norm.startswith("packages/db/schema/") and not base.startswith("ext_"):
+            violations.append(
+                f"Porušenie pravidla 3.1: Vanilla schéma `{norm}` nesmie byť menená. "
+                "Použi `packages/db/schema/ext_*.ts`."
+            )
+        if "_journal.json" in norm:
+            violations.append(
+                "Porušenie pravidla 3.2: `_journal.json` nesmie byť upravovaný ručne."
+            )
+        router_issue = _router_violation(norm)
+        if router_issue:
+            violations.append(router_issue)
+    if violations:
+        return "❌ ARCHITEKTURÁLNE PORUŠENIA NÁJDENÉ:\n" + "\n".join(
+            f"• {item}" for item in violations
+        )
+    return (
+        "✅ ARCHITEKTONICKÝ AUDIT: Všetky zmeny sú v súlade so Zero-Conflict "
+        "Upstream architektúrou. Generic enhancement vanilla upstream súborov "
+        "(vrátane routerov existujúcich v ../OpenVPM/apps/web/server/routers/) "
+        "je povolený."
+    )
+
+
+def _lookup_dispatch_target(task_id: str) -> dict[str, str]:
+    """Resolve the Arena tab a repair prompt must return to."""
+    clean = _safe_artifact_stem(task_id)
+    records = _find_session_records([task_id, clean])
+    if not records:
+        return {"session_id": task_id, "task_slug": "", "arena_url": ""}
+    record = records[-1]
+    return {
+        "session_id": str(
+            record.get("arena_session_id")
+            or record.get("session_id")
+            or task_id
+        ),
+        "task_slug": str(record.get("task_slug") or ""),
+        "arena_url": str(record.get("arena_url") or ""),
+    }

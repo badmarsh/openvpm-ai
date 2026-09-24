@@ -162,6 +162,7 @@ from pipeline_tools import (
     create_and_dispatch_arena_task,
     send_prompt_to_arena_browser,
     collect_code_from_arena_browser,
+    DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS,
     apply_arena_patch,
     evaluate_verification_and_repair,
 )
@@ -204,7 +205,7 @@ prompt_manager = Agent(
         "Používaj 'list_arena_sprints' a 'read_sprint_assignment' na načítanie existujúcich zadaní.",
         "Pred odoslaním do Arena.ai sformátuj prompt cez 'format_arena_sprint_prompt' alebo 'create_and_dispatch_arena_task' s dodržaním všetkých pravidiel architektúry.",
         "Cez 'firecrawl_tools' môžeš prehľadávať a sťahovať dokumentácie a referencie z webu.",
-        "Po príprave odošli úlohu do Arena.ai relácie cez 'dispatch_to_arena_session'.",
+        "Po príprave odošli úlohu do Arena.ai relácie cez 'dispatch_to_arena_session' alebo 'create_and_dispatch_arena_task'. Obe cesty fyzicky otvoria https://arena.ai/agent, vložia CELÚ špecifikáciu a spustia generovanie. Druhýkrát nevolaj send_prompt_to_arena_browser nad tým istým zadaním.",
     ],
     markdown=True,
     add_history_to_context=True,
@@ -231,6 +232,8 @@ arena_dispatcher = Agent(
     db=db,
     instructions=[
         "Zabezpečuješ paralelné odosielanie úloh do Arena.ai (až 4-5 paralelných relácií naraz).",
+        "dispatch_to_arena_session musí fyzicky otvoriť https://arena.ai/agent, vložiť CELÚ špecifikáciu (nie skrátený summary) a spustiť generovanie cez send_prompt_to_arena_browser. JSON záznam v arena_sessions.json nie je dispatch. Stav RUNNING je platný len pri DISPATCH_OK.",
+        "Nikdy nevkladaj prompt do cudzieho tabu. Ak /agent/<session_id> neexistuje, otvor nový /agent. Sprint 1 sa nesmie použiť pre Sprint 5 alebo Sprint 7.",
         "Cez 'list_active_arena_sessions' udržiavaj neustály prehľad o tom, ktoré relácie bežia a prideľuj nové úlohy podľa roadmapy.",
     ],
     markdown=True,
@@ -261,7 +264,9 @@ arena_watcher = Agent(
         "Si strážca a monitorovací agent pre paralelné Arena.ai relácie.",
         "Cez 'monitor_arena_health' kontroluj stav všetkých paralelných behov a deteguj záseky alebo time-outy.",
         "ZÁKAZ HALUCINOVANIA TELEMETRIE: Ak nemáš aktívny živý Chrome CDP mostík (port 9222) k tabu prehliadača, NIKDY netvrď, že stream beží plynule alebo že relácia nezamrzla. Vždy pravdivo uveď, že skutočný stav v prehliadači nevidíš a stav v evidencii je iba orientačný.",
-        "Akonáhle je modul v Arene hotový, cez 'collect_code_from_arena_browser' automaticky stiahni kód/patch a cez 'list_github_pull_requests' over vytvorenie PR a odovzdaj signál GitHub Manažérovi a Qwen Implementerovi.",
+        f"Zber kódu: collect_code_from_arena_browser(task_id=<presné session_id>, timeout_seconds={DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS}). Dokončenie je VÝHRADNE status=COMPLETED (aktívne tlačidlo Create PR, terminál skončil s unified diffom, alebo explicitný completion marker). status=RUNNING znamená, že agent rozmýšľa alebo spúšťa bash (pnpm, vitest, type-check). Ticho v DOM nie je dokončenie a .patch sa nesmie zapisovať.",
+        "Tab sa páruje striktne podľa URL /agent/<session_id> alebo task slug v URL/titulku. Ak tab neexistuje, výsledok je status=NOT_FOUND a je zakázané čítať iný sprint.",
+        "Akonáhle collect_code_from_arena_browser vráti status=COMPLETED a patch_written=yes, cez 'list_github_pull_requests' over vytvorenie PR a odovzdaj signál GitHub Manažérovi a Qwen Implementerovi.",
         "NIKDY neuvádzaj žiadne konkrétne názvy externých modelov (napr. claude, claude-3-7-sonnet). Vždy referuj výhradne na 'Arena.ai'.",
     ],
     markdown=True,
@@ -293,7 +298,7 @@ github_manager = Agent(
     instructions=[
         "Si GitHub manažér pre repozitár badmarsh/openvpm-ai.",
         "Cez 'list_github_pull_requests' a 'get_pull_request_diff' preveruj diffy prichádzajúcich PR z Arena.ai.",
-        "Cez 'audit_architectural_boundaries' over, že PR neporušuje zero-conflict pravidlá (nemodifikuje vanilla schémy).",
+        "Cez 'audit_architectural_boundaries' over zero-conflict pravidlá. Vanilla schémy a _journal.json sú porušenie. Úprava vanilkového routeru (records.ts, whiteboard.ts a súbory existujúce v ../OpenVPM/apps/web/server/routers/) je povolený generic enhancement, nie porušenie.",
         "Cez 'check_pull_request_ci' skontroluj, či prešli GitHub Actions CI kontroly.",
     ],
     markdown=True,
@@ -328,7 +333,7 @@ qwen_implementer = Agent(
         "Pracuješ výhradne s lokálnym repozitárom na disku. Tvojou úlohou je prevziať patch z Arena.ai a zapracovať ho do lokálnej vetvy repozitára.",
         "Na čítanie lokálnych súborov používaj VÝHRADNE 'read_project_file' (nikdy sa nepokúšaj volať vzdialené GitHub API).",
         "Na zápis a úpravy lokálnych súborov používaj 'write_project_file' alebo 'run_qwen_code_cli'.",
-        "Na aplikáciu patchu z tasks/ používaj 'apply_arena_patch'.",
+        "Na aplikáciu patchu z tasks/ používaj 'apply_arena_patch'. Aplikuj len unified diff (`diff --git` alebo `--- a/`). Markdown vysvetlenie nie je patch a nástroj ho odmietne.",
         "Pri spúšťaní príkazov cez 'run_shell_command' preferuj čisté samostatné príkazy (napr. 'git status', 'pnpm test').",
         "Po zapracovaní zmien VŽDY spusti 'run_openvpm_verification(checks=\"typecheck,lint,test,i18n\")' na overenie kvality.",
         "Ak je všetko zelené, potvrď úspešnú integráciu modulu.",
@@ -364,7 +369,7 @@ gemini_reviewer = Agent(
         "Cez 'audit_clinical_and_safety_gates' overuj Zákon 39/2007 (Human-in-the-Loop) a Zákon 139/1998 (Zero prefill pre omamné látky).",
         "Cez 'audit_i18n_symmetry' kontroluj 100% symetriu medzi slovenským a anglickým prekladovým slovníkom.",
         "Cez 'firecrawl_tools' môžeš overovať legislatívne znenia (KVL, ŠVPS SR).",
-        "Cez 'audit_architectural_boundaries' strážiš hranice monorepa a zero-conflict upstream sync.",
+        "Cez 'audit_architectural_boundaries' strážiš hranice monorepa. Nový router mimo extensions/ a mimo upstreamu je porušenie. Generic enhancement vanilla súborov, ktoré existujú v ../OpenVPM/apps/web/server/routers/ (records.ts, whiteboard.ts), je Upstream-Backport-Aware Coding a NIE JE porušenie.",
     ],
     markdown=True,
     add_history_to_context=True,
@@ -425,7 +430,8 @@ team_instructions = [
     "      • Ak nastali chyby (TypeScript, linter, i18n scan): sformuluje presný Repair Prompt a odošle ho späť do Areny na opravu.",
     "      • Ak je všetko zelené (PASSED): potvrdí úspech, zosumarizuje zmenené súbory a potvrdí pripravenosť vetvy na PR!",
     "Koordinuj agentov a po každom kroku zrozumiteľne reportuj používateľovi stav a diff.",
-    "NIKDY v reportoch neuvádzaj konkrétne názvy externých modelov (napr. claude, claude-3-7-sonnet). Vždy referuj neutrálne na 'Arena.ai'."
+    "NIKDY v reportoch neuvádzaj konkrétne názvy externých modelov (napr. claude, claude-3-7-sonnet). Vždy referuj neutrálne na 'Arena.ai'.",
+    f"Watcher nesmie vyhlásiť hotovo, kým collect_code_from_arena_browser nevráti status=COMPLETED. Predvolený timeout je {DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS}s. Tab sa vyberá podľa /agent/<session_id>, nie podľa prvého tabu s 'arena' v URL. Non-diff text sa do .patch nezapisuje.",
 ]
 
 openvpm_dev_team = Team(
@@ -463,7 +469,48 @@ all_workflows = [arena_dev_workflow]
 # ==========================================
 # 7. SEEDING DO STUDIO DB
 # ==========================================
-def seed_studio_components():
+def seed_studio_components() -> None:
+    """Publish Studio components under an exclusive lock.
+
+    Concurrent AgentOS boots used to delete and reinsert the catalog at the
+    same time. The lock serializes that seed so one process cannot wipe the
+    rows the other is still writing.
+    """
+    lock_path = TMP_DIR / "studio_seed.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_path, "a+", encoding="utf-8")
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            handle.seek(0)
+            if handle.read(1) == "":
+                handle.write("0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        _seed_studio_components_unlocked()
+    finally:
+        try:
+            if sys.platform == "win32":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        handle.close()
+
+
+def _seed_studio_components_unlocked():
     """Zabezpeci, ze nova struktura agentov a workflowu sa ihned zobrazi v Studio UI (/studio/*).
     Garantuje verziu 1 pre vsetky komponenty, stringove instrukcie a konzistentne linky pre Agno Studio.
     """
