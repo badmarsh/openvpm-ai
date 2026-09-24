@@ -300,35 +300,39 @@ def monitor_arena_health() -> str:
     res.append(f"• Aktívne swarm vetvy v git: {len(swarm_branches)} ({', '.join(swarm_branches) if swarm_branches else 'žiadne'})")
 
 def _get_cdp_endpoints(custom_ports: str = "9222,60325,9223,9229,9333,5000") -> list:
-    """Zostaví prioritný zoznam CDP endpointov pre Windows host (192.168.0.100) aj lokálny WSL."""
+    """Zostaví prioritný zoznam CDP endpointov: prioritne lokálny WSL (127.0.0.1:9222), potom lokálne aktívne porty, a ako fallback Windows host."""
     endpoints = []
-    win_host = os.getenv("WINDOWS_HOST_IP", "192.168.0.100")
+    
+    # 1. Primárny lokálny WSL Chrome (127.0.0.1:9222 a localhost:9222)
+    endpoints.append("http://127.0.0.1:9222")
+    endpoints.append("http://localhost:9222")
 
-    # 1. Čítanie aktívneho DevTools portu priamo z Windows Chrome profilu
+    # 2. Čítanie aktívneho DevTools portu z WSL profilov (/tmp/chrome_debug alebo ~/.config/google-chrome)
     try:
         from pathlib import Path
         for pth in [
-            Path("/mnt/c/Users/marek/AppData/Local/Google/Chrome/User Data/DevToolsActivePort"),
+            Path("/tmp/chrome_debug/DevToolsActivePort"),
             Path("/home/ubuntu/.config/google-chrome/DevToolsActivePort"),
+            Path("/mnt/c/Users/marek/AppData/Local/Google/Chrome/User Data/DevToolsActivePort"),
         ]:
             if pth.exists():
                 lines = pth.read_text(encoding="utf-8").strip().splitlines()
                 if lines and lines[0].strip().isdigit():
                     act_port = int(lines[0].strip())
-                    endpoints.append(f"http://{win_host}:{act_port}")
                     endpoints.append(f"http://127.0.0.1:{act_port}")
+                    endpoints.append(f"http://localhost:{act_port}")
     except Exception:
         pass
 
-    # 2. Windows host bridge (192.168.0.100:9222) a lokálny port 9222
+    # 3. Fallback na Windows host
+    win_host = os.getenv("WINDOWS_HOST_IP", "192.168.0.100")
     endpoints.append(f"http://{win_host}:9222")
-    endpoints.append("http://127.0.0.1:9222")
 
-    # 3. Zadané voliteľné porty
+    # 4. Zadané voliteľné porty
     if custom_ports:
         for p in [int(x.strip()) for x in custom_ports.split(",") if x.strip().isdigit()]:
-            endpoints.append(f"http://{win_host}:{p}")
             endpoints.append(f"http://127.0.0.1:{p}")
+            endpoints.append(f"http://{win_host}:{p}")
 
     seen = set()
     uniq = []
