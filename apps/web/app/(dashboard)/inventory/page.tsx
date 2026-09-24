@@ -3,8 +3,9 @@
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { MarkupInput } from "@/components/inventory/markup-input";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import {
   Package,
   Plus,
@@ -1103,6 +1104,31 @@ function EditSupplierRow({
 
 // --- Main Page ---
 
+/**
+ * Opens the dialog requested by a command-palette deep link
+ * (`/inventory?new=1`, `/inventory?import=1`). Kept in its own Suspense
+ * boundary because `useSearchParams()` opts the page into client rendering.
+ */
+function InventoryDeepLink({
+  enabled,
+  onNewProduct,
+  onGoodsReceipt,
+}: {
+  enabled: boolean;
+  onNewProduct: () => void;
+  onGoodsReceipt: () => void;
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (searchParams.get("new") === "1") onNewProduct();
+    if (searchParams.get("import") === "1") onGoodsReceipt();
+  }, [enabled, onGoodsReceipt, onNewProduct, searchParams]);
+
+  return null;
+}
+
 export default function InventoryPage() {
   const { t } = useI18n();
   const { data: session } = useSession();
@@ -1161,6 +1187,16 @@ export default function InventoryPage() {
 
   return (
     <div className={pageShellClass}>
+      {/* Deep links from the command palette ("Nový produkt" / "Príjem tovaru")
+          open the matching dialog instead of landing on a bare product list. */}
+      <Suspense fallback={null}>
+        <InventoryDeepLink
+          enabled={canManageInventory}
+          onNewProduct={() => setShowAddProduct(true)}
+          onGoodsReceipt={() => setShowImportDialog(true)}
+        />
+      </Suspense>
+
       <PageHeader
         icon={Package}
         title={t("inventory.page.title", "Inventory")}

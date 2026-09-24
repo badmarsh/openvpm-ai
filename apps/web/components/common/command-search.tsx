@@ -28,6 +28,10 @@ import {
   Moon,
   Mic,
   ChevronDown,
+  ShoppingCart,
+  Truck,
+  PackagePlus,
+  Pill,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
@@ -139,6 +143,14 @@ const navigationItems: CommandItemConfig[] = [
     searchAliases: ["zaznamy", "karty", "zdravotna dokumentacia", "records", "medical records"],
   },
   {
+    labelKey: "commandSearch.navPrescriptions",
+    fallbackLabel: "Medications & Oversight",
+    href: "/prescriptions",
+    Icon: Pill,
+    roles: ["admin", "veterinarian", "technician"],
+    searchAliases: ["recept", "recepty", "liek", "lieky", "predpis", "prescriptions", "medications"],
+  },
+  {
     labelKey: "commandSearch.navLabInbox",
     fallbackLabel: "Lab Inbox",
     href: "/lab-results",
@@ -152,7 +164,7 @@ const navigationItems: CommandItemConfig[] = [
     href: "/billing",
     Icon: ReceiptEuro,
     roles: allRoles,
-    searchAliases: ["fakturacia", "faktury", "financie", "uctovnictvo", "billing", "invoices"],
+    searchAliases: ["faktúracia", "fakturacia", "faktúry", "faktury", "financie", "uctovnictvo", "účet", "billing", "invoices"],
   },
   {
     labelKey: "commandSearch.navInventory",
@@ -220,7 +232,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/clients/new",
     Icon: Users,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
-    searchAliases: ["majitel", "zakaznik", "owner", "customer"],
+    searchAliases: ["majitel", "majiteľ", "zakaznik", "zákazník", "klient", "owner", "customer"],
   },
   {
     labelKey: "commandSearch.newPatient",
@@ -228,7 +240,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/patients/new",
     Icon: PawPrint,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
-    searchAliases: ["zviera", "pes", "macka", "pet", "animal"],
+    searchAliases: ["zviera", "pes", "macka", "mačka", "pacient", "pet", "animal"],
   },
   {
     labelKey: "commandSearch.newAppointment",
@@ -236,7 +248,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/schedule?new=1",
     Icon: Calendar,
     roles: ["admin", "veterinarian", "technician", "front_desk"],
-    searchAliases: ["termin", "objednavka", "kalendar", "appointment", "booking", "visit"],
+    searchAliases: ["návšteva", "navsteva", "objednať", "objednat", "termín", "termin", "objednavka", "kalendár", "kalendar", "appointment", "booking", "visit", "encounter"],
   },
   {
     labelKey: "commandSearch.newSoapNote",
@@ -244,7 +256,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/records?tab=soap&new=1",
     Icon: FileText,
     roles: ["admin", "veterinarian", "technician"],
-    searchAliases: ["vysetrenie", "zaznam", "dekurz", "anamneza", "soap", "exam", "clinical", "note"],
+    searchAliases: ["vyšetrenie", "vysetrenie", "záznam", "zaznam", "dekurz", "anamnéza", "anamneza", "diktat", "soap", "exam", "clinical", "note"],
   },
   {
     labelKey: "commandSearch.newInvoice",
@@ -252,7 +264,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/billing/new",
     Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
-    searchAliases: ["faktura", "platba", "doklad", "uctenka", "bill", "invoice", "payment"],
+    searchAliases: ["faktúra", "faktura", "účet", "ucet", "platba", "doklad", "účtenka", "uctenka", "bill", "invoice", "payment"],
   },
   {
     labelKey: "commandSearch.issueReceipt",
@@ -260,7 +272,7 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/billing/new",
     Icon: ReceiptEuro,
     roles: ["admin", "front_desk"],
-    searchAliases: ["blocek", "paragon", "pokladna", "receipt"],
+    searchAliases: ["blocek", "paragon", "pokladňa", "pokladna", "receipt"],
   },
   {
     labelKey: "commandSearch.openEkasa",
@@ -268,7 +280,31 @@ const quickActionItems: CommandItemConfig[] = [
     href: "/billing/ekasa",
     Icon: ReceiptEuro,
     roles: ["admin", "veterinarian", "front_desk"],
-    searchAliases: ["ekasa", "pokladna", "terminal", "blocek", "cash register"],
+    searchAliases: ["ekasa", "pokladňa", "pokladna", "terminal", "blocek", "cash register"],
+  },
+  {
+    labelKey: "commandSearch.openPos",
+    fallbackLabel: "POS Register",
+    href: "/billing/pos",
+    Icon: ShoppingCart,
+    roles: ["admin", "veterinarian", "front_desk"],
+    searchAliases: ["pokladňa", "pokladna", "pos", "pultový predaj", "pultovy predaj", "predaj", "kasa", "checkout", "cash register"],
+  },
+  {
+    labelKey: "commandSearch.goodsReceipt",
+    fallbackLabel: "Goods Receipt",
+    href: "/inventory?import=1",
+    Icon: Truck,
+    roles: ["admin", "veterinarian", "technician", "front_desk"],
+    searchAliases: ["príjem tovaru", "prijem tovaru", "príjem", "prijem", "dodací list", "dodaci list", "dodávka", "dodavka", "naskladniť", "naskladnit", "goods receipt", "delivery note", "stock in"],
+  },
+  {
+    labelKey: "commandSearch.newProduct",
+    fallbackLabel: "New Product",
+    href: "/inventory?new=1",
+    Icon: PackagePlus,
+    roles: ["admin", "veterinarian", "technician", "front_desk"],
+    searchAliases: ["produkt", "tovar", "položka", "polozka", "sklad", "new product", "stock item"],
   },
 ];
 
@@ -289,6 +325,99 @@ function resolveI18nLabels(labelKey: string, fallbackLabel: string) {
   const sk = (skMessages.commandSearch as Record<string, string>)[shortKey] ?? "";
   const en = (enMessages.commandSearch as Record<string, string>)[shortKey] ?? fallbackLabel;
   return { sk, en };
+}
+
+/** Hard cap on the matched actions shown above the DB results. */
+const MATCHED_ACTION_LIMIT = 5;
+
+/**
+ * Scores how well a quick action / navigation entry matches the typed query.
+ * Higher is better: exact label > label prefix > label substring > alias hit.
+ * Returns 0 when nothing matches. Labels are resolved in both Slovak and
+ * English so a query typed in either language lands on the same entry, and
+ * both sides are normalized, so diacritics never break a match.
+ */
+function scoreActionMatch(
+  item: CommandItemConfig,
+  queryNorm: string,
+  labels: string[],
+): number {
+  if (!queryNorm) return 0;
+
+  const haystacks = labels.map(normalizeSearchText).filter(Boolean);
+  if (haystacks.some((label) => label === queryNorm)) return 4;
+  if (haystacks.some((label) => label.startsWith(queryNorm))) return 3;
+  if (haystacks.some((label) => label.includes(queryNorm))) return 2;
+
+  const aliases = (item.searchAliases ?? []).map(normalizeSearchText).filter(Boolean);
+  if (aliases.some((alias) => alias === queryNorm)) return 3;
+  if (aliases.some((alias) => alias.startsWith(queryNorm))) return 2;
+  return aliases.some((alias) => alias.includes(queryNorm)) ? 1 : 0;
+}
+
+/**
+ * Route-aware boost rules for the no-query Quick Actions list: while the user
+ * works inside one of these sections, the follow-up actions they are most
+ * likely to need next float to the top of the palette.
+ */
+const ROUTE_QUICK_ACTION_BOOSTS: {
+  paths: string[];
+  /** Sub-routes where the boost no longer applies (the user is already there). */
+  exclude?: string[];
+  labelKeys: string[];
+}[] = [
+  {
+    paths: ["/patients", "/clients"],
+    exclude: ["/patients/new", "/clients/new"],
+    labelKeys: ["commandSearch.newPatient", "commandSearch.newClient"],
+  },
+  {
+    paths: ["/schedule", "/encounters"],
+    labelKeys: ["commandSearch.newAppointment"],
+  },
+  {
+    // `/billing/pos` is the full-screen POS register inside the billing section.
+    paths: ["/billing", "/billing/pos"],
+    exclude: ["/billing/new"],
+    labelKeys: ["commandSearch.openPos", "commandSearch.newInvoice"],
+  },
+  {
+    paths: ["/inventory"],
+    labelKeys: ["commandSearch.goodsReceipt", "commandSearch.newProduct"],
+  },
+];
+
+/** True when the active route is the section itself or a page inside it. */
+function isWithinSection(pathname: string, section: string): boolean {
+  return pathname === section || pathname.startsWith(`${section}/`);
+}
+
+/**
+ * Moves the actions boosted for the active route to the front of the list,
+ * preserving the configured order and the original order of everything else.
+ */
+function boostQuickActionsForRoute(
+  items: CommandItemConfig[],
+  pathname: string,
+  extraLabelKeys: string[] = [],
+): CommandItemConfig[] {
+  const boostedLabelKeys = [
+    ...ROUTE_QUICK_ACTION_BOOSTS.filter(
+      (rule) =>
+        rule.paths.some((section) => isWithinSection(pathname, section)) &&
+        !(rule.exclude ?? []).some((section) => isWithinSection(pathname, section)),
+    ).flatMap((rule) => rule.labelKeys),
+    ...extraLabelKeys,
+  ];
+  if (boostedLabelKeys.length === 0) return items;
+
+  const remaining = [...items];
+  const boosted: CommandItemConfig[] = [];
+  for (const labelKey of boostedLabelKeys) {
+    const index = remaining.findIndex((item) => item.labelKey === labelKey);
+    if (index >= 0) boosted.push(...remaining.splice(index, 1));
+  }
+  return [...boosted, ...remaining];
 }
 
 export function CommandSearch({
@@ -394,30 +523,32 @@ export function CommandSearch({
       ...visibleNavigationItems.map((item) => item),
     ];
 
-    const results: CommandItemConfig[] = [];
+    const scored: { item: CommandItemConfig; score: number }[] = [];
     const seenHrefs = new Set<string>();
 
     for (const item of searchableItems) {
-      if (seenHrefs.has(item.href + item.labelKey)) continue;
+      // One entry per destination keeps the list short and predictable.
+      if (seenHrefs.has(item.href)) continue;
 
       const { sk, en } = resolveI18nLabels(item.labelKey, item.fallbackLabel);
-      const activeLabel = itemLabel(item);
-      const candidates = [sk, en, activeLabel, item.fallbackLabel, ...(item.searchAliases ?? [])];
+      const score = scoreActionMatch(item, queryNorm, [
+        sk,
+        en,
+        itemLabel(item),
+        item.fallbackLabel,
+      ]);
 
-      const isMatch = candidates.some((candidate) => {
-        if (!candidate) return false;
-        const norm = normalizeSearchText(candidate);
-        return norm.includes(queryNorm);
-      });
+      if (score === 0) continue;
 
-      if (isMatch) {
-        seenHrefs.add(item.href + item.labelKey);
-        results.push(item);
-        if (results.length >= 5) break;
-      }
+      seenHrefs.add(item.href);
+      scored.push({ item, score });
     }
 
-    return results;
+    // Best matches first; equal scores keep quick actions ahead of navigation.
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MATCHED_ACTION_LIMIT)
+      .map((entry) => entry.item);
   }, [
     hasQuery,
     debouncedSearch,
@@ -438,8 +569,6 @@ export function CommandSearch({
 
   const encounterMatch = pathname.match(/^\/encounters\/([^/]+)$/);
   const encounterId = encounterMatch ? encounterMatch[1] : null;
-
-  const isSchedulePage = pathname === "/schedule" || pathname.startsWith("/schedule/");
 
   const contextItems: ContextActionItem[] = useMemo(() => {
     const items: ContextActionItem[] = [];
@@ -501,18 +630,17 @@ export function CommandSearch({
     return contextItems.filter((item) => item.roles.includes(role));
   }, [contextItems, role]);
 
-  // Quick actions boosting when on /clients/:uuid or /schedule
-  const orderedQuickActionItems = useMemo(() => {
-    const items = [...visibleQuickActionItems];
-    if (clientId || isSchedulePage) {
-      const apptIdx = items.findIndex((i) => i.labelKey === "commandSearch.newAppointment");
-      if (apptIdx > 0) {
-        const [appt] = items.splice(apptIdx, 1);
-        items.unshift(appt);
-      }
-    }
-    return items;
-  }, [visibleQuickActionItems, clientId, isSchedulePage]);
+  // Quick actions boosting when the active route implies a next step
+  // (e.g. booking a visit from a client record).
+  const orderedQuickActionItems = useMemo(
+    () =>
+      boostQuickActionsForRoute(
+        visibleQuickActionItems,
+        pathname,
+        clientId ? ["commandSearch.newAppointment"] : [],
+      ),
+    [visibleQuickActionItems, pathname, clientId],
+  );
 
   // Section 3: Navigation tiering (Primary always, Secondary behind toggle)
   const primaryNavigationItems = useMemo(() => {
@@ -612,10 +740,14 @@ export function CommandSearch({
                 </Command.Empty>
               )}
 
-            {/* Section 1: Matching quick actions & navigation ABOVE DB results when typing */}
+            {/* Section 1: Matching quick actions & navigation ABOVE DB results when typing.
+                The heading reuses the shared nav.actions label so the palette speaks the
+                same vocabulary as the rest of the app, while the group keeps an explicit
+                accessible name of its own. */}
             {hasQuery && matchingActions.length > 0 && (
               <Command.Group
-                heading={t("commandSearch.headingMatchedActions", "Actions")}
+                heading={t("nav.actions", "Akcie")}
+                aria-label={t("commandSearch.headingMatchedActions", "Actions")}
                 className="mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
               >
                 {matchingActions.map((item) => (

@@ -17,6 +17,14 @@ as described in `docs/production-readiness/VERSIONING.md`.
   - Cross-cutting analysis: AI value chain per surface (voice, Clinical Guardian, imaging, recalls, marketing), AI failure scenarios (false positive/negative/unavailability), trust-building curve, compliance maturity model (Z0–Z3), multi-actor handoff maps and a KPI/instrumentation register.
   - Product discovery risk register R-01…R-11 (pricing vs. code mismatch, missing AI provenance on the most-used AI surface, fabricated lab confidence scores, data residency panel, missing hospitalization/surgery/urgent/telemedicine modules, multi-location UI status and agent prescription bypass) with explicit recommendations for roadmap prioritization.
 
+### Changed
+
+- **Command Palette: Smart Ranking & Contextual Actions (F1 / Cmd+K):**
+  - Quick Actions and Navigation entries stay searchable while typing. Matches are ranked in JavaScript (exact label > label prefix > label substring > search alias) and rendered in an "Akcie / Actions" group above the patient and client results, capped at five entries with a single entry per destination.
+  - Cross-lingual, diacritic-insensitive matching: every entry is resolved in both Slovak and English, so queries such as "návšteva", "objednať", "termín", "vyšetrenie", "faktúra", "pokladňa" or "recept" land on the right action regardless of case or accents.
+  - Route-aware ordering when the query is empty: patients/clients → "Nový pacient" / "Nový klient", schedule/encounters → "Nová návšteva", billing (including the POS register) → "Pokladňa POS" / "Nová faktúra", inventory → "Príjem tovaru" / "Nový produkt".
+  - New quick actions "Pokladňa POS", "Príjem tovaru" and "Nový produkt" — the inventory actions deep-link straight into the matching dialog — plus a "Medications & Oversight" navigation entry.
+
 ## [0.6.1] - 2026-09-18
 
 ### Added
