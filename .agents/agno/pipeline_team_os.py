@@ -32,7 +32,7 @@ except ImportError:
     class Settings:
         database_url: str = os.getenv("AGNO_DATABASE_URL", f"sqlite:///{TMP_DIR}/pipeline_team.db")
         telemetry: bool = os.getenv("AGNO_TELEMETRY", "true").lower() in ("true", "1", "yes")
-        bind_host: str = os.getenv("AGNO_BIND_HOST", "127.0.0.1")
+        bind_host: str = os.getenv("AGNO_BIND_HOST", "0.0.0.0")
         bind_port: int = int(os.getenv("AGNO_BIND_PORT", "7777"))
 
         @classmethod

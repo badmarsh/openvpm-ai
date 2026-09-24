@@ -237,31 +237,70 @@ function loadTasks(repoRoot: string): SwarmTask[] {
   }
 }
 
-async function checkAgentOsHealth(url: string): Promise<{
+async function checkAgentOsHealth(preferredUrl?: string): Promise<{
+  url: string;
   online: boolean;
   statusText: string;
   statusCode?: number;
   responseTimeMs?: number;
 }> {
-  const startTime = Date.now();
-  try {
-    const res = await fetch(`${url}/health`, {
-      method: "GET",
-      signal: AbortSignal.timeout(2000),
-    });
-    return {
-      online: res.ok,
-      statusText: res.ok ? "Healthy" : `HTTP ${res.status}`,
-      statusCode: res.status,
-      responseTimeMs: Date.now() - startTime,
-    };
-  } catch (err) {
-    return {
-      online: false,
-      statusText: err instanceof Error ? err.message : "Connection refused",
-      responseTimeMs: Date.now() - startTime,
-    };
+  const candidates = [
+    preferredUrl,
+    "http://127.0.0.1:7777",
+    "http://192.168.0.100:7777",
+    "http://localhost:7777",
+  ].filter(Boolean) as string[];
+
+  const uniqueCandidates = Array.from(new Set(candidates));
+
+  let lastFailure: {
+    url: string;
+    online: boolean;
+    statusText: string;
+    statusCode?: number;
+    responseTimeMs: number;
+  } = {
+    url: uniqueCandidates[0] || "http://127.0.0.1:7777",
+    online: false,
+    statusText: "Connection refused",
+    statusCode: undefined,
+    responseTimeMs: 0,
+  };
+
+  for (const url of uniqueCandidates) {
+    const startTime = Date.now();
+    try {
+      const res = await fetch(`${url}/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(800),
+      });
+      if (res.ok) {
+        return {
+          url,
+          online: true,
+          statusText: "Healthy",
+          statusCode: res.status,
+          responseTimeMs: Date.now() - startTime,
+        };
+      }
+      lastFailure = {
+        url,
+        online: false,
+        statusText: `HTTP ${res.status}`,
+        statusCode: res.status,
+        responseTimeMs: Date.now() - startTime,
+      };
+    } catch (err) {
+      lastFailure = {
+        url,
+        online: false,
+        statusText: err instanceof Error ? err.message : "Connection refused",
+        responseTimeMs: Date.now() - startTime,
+      };
+    }
   }
+
+  return lastFailure;
 }
 
 export const aiSwarmRouter = createRouter({
@@ -269,11 +308,15 @@ export const aiSwarmRouter = createRouter({
    * Get full telemetry, status, sessions, and fleet metadata for AI Swarm.
    */
   getStatus: protectedProcedure.query(async () => {
-    const agentOsUrl = process.env.AGENT_OS_URL || "http://127.0.0.1:7777";
-    const agentUiUrl = process.env.AGENT_UI_URL || "http://localhost:3007";
+    const preferredOsUrl = process.env.AGENT_OS_URL;
+    const osHealth = await checkAgentOsHealth(preferredOsUrl);
+    const agentOsUrl = osHealth.url;
+    const agentUiUrl =
+      process.env.AGENT_UI_URL ||
+      (agentOsUrl.includes("192.168.0.100")
+        ? "http://192.168.0.100:3007"
+        : "http://localhost:3007");
     const repoRoot = findRepoRoot();
-
-    const osHealth = await checkAgentOsHealth(agentOsUrl);
     const sessions = loadArenaSessions(repoRoot);
     const tasks = loadTasks(repoRoot);
 
