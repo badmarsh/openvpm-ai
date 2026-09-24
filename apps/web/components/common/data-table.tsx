@@ -130,8 +130,8 @@ export interface DataTableRowProps
 
 const rowToneStyles: Record<NonNullable<DataTableRowProps["tone"]>, string> = {
   none: "",
-  active: "bg-emerald-500/5",
-  waiting: "bg-amber-500/5",
+  active: "bg-success/5",
+  waiting: "bg-warning/5",
   danger: "bg-destructive/5",
 };
 
@@ -300,9 +300,9 @@ export function CountPill({
   const tones: Record<string, string> = {
     neutral: "bg-muted text-muted-foreground",
     accent: "bg-primary/15 text-primary",
-    warning: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    warning: "bg-warning-muted text-warning-muted-foreground",
     danger: "bg-destructive/15 text-destructive",
-    success: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+    success: "bg-success-muted text-success-muted-foreground",
   };
   return (
     <span

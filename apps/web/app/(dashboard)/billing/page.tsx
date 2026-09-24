@@ -891,7 +891,7 @@ function DispenseChargeQueuePanel({
         </div>
       ) : (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-          <CheckCircle className="h-4 w-4 text-green-600" />
+          <CheckCircle className="h-4 w-4 text-success" />
           {t(
             "billing.dispense.noDispensesWaiting",
             "No clinic-stock dispenses are waiting for billing."
@@ -1570,21 +1570,21 @@ function InvoiceRow({
                       </span>
                       <span>
                         {t("billing.row.summaryPaid", "Paid:")}{" "}
-                        <span className="font-semibold text-green-600">
+                        <span className="font-semibold text-success">
                           {formatCurrency(detail.data.paidAmount)}
                         </span>
                       </span>
                       {Number(detail.data.adjustedAmount ?? 0) > 0 && (
                         <span>
                           {t("billing.row.summaryAdjusted", "Adjusted:")}{" "}
-                          <span className="font-semibold text-teal-600">
+                          <span className="font-semibold text-info-muted-foreground">
                             {formatCurrency(detail.data.adjustedAmount)}
                           </span>
                         </span>
                       )}
                       <span>
                         {t("billing.row.summaryBalance", "Balance:")}{" "}
-                        <span className="font-semibold text-red-600">
+                        <span className="font-semibold text-destructive">
                           {formatCurrency(detail.data.balanceDue)}
                         </span>
                       </span>
@@ -1729,7 +1729,7 @@ function PaymentEkasaBadge({
         className="inline-flex items-center gap-1 rounded bg-success-muted/60 px-2 py-0.5 text-xs font-medium text-success-muted-foreground hover:bg-success-muted/80 border border-success-muted/40 transition-colors"
         title="Zobraziť a vytlačiť e-Kasa doklad"
       >
-        <ReceiptText className="h-3 w-3 text-emerald-600" />
+        <ReceiptText className="h-3 w-3 text-brand" />
         e-Kasa #{receipt.receiptNumber.split("-")[1] ?? receipt.receiptNumber}
       </button>
 
@@ -2127,13 +2127,13 @@ function PaymentSection({
               id="auto-ekasa"
               checked={autoEkasa}
               onChange={(e) => setAutoEkasa(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-input text-brand focus:ring-ring"
             />
             <label
               htmlFor="auto-ekasa"
               className="text-xs font-medium text-foreground cursor-pointer flex items-center gap-1.5"
             >
-              <ReceiptText className="h-3.5 w-3.5 text-emerald-600" />
+              <ReceiptText className="h-3.5 w-3.5 text-brand" />
               {t(
                 "billing.payments.autoEkasaLabel",
                 "Automaticky zaevidovať v e-Kasa (Finančná správa SR)"
@@ -2299,7 +2299,7 @@ function PaymentSection({
                   className={`py-2 text-right tabular-nums font-medium ${
                     Number(payment.amount) < 0
                       ? "text-destructive"
-                      : "text-green-600"
+                      : "text-success"
                   }`}
                 >
                   {formatCurrency(payment.amount)}
@@ -2395,7 +2395,7 @@ function PaymentSection({
                 <td className="py-2 capitalize text-muted-foreground">
                   {adjustment.type.replace(/_/g, " ")}
                 </td>
-                <td className="py-2 text-right tabular-nums font-medium text-teal-600">
+                <td className="py-2 text-right tabular-nums font-medium text-foreground">
                   {formatCurrency(adjustment.amount)}
                 </td>
                 <td className="py-2 text-muted-foreground">

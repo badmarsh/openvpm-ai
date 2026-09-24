@@ -253,15 +253,15 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
       )}
 
       {duplicateCheck?.found && duplicateCheck.client && (
-        <div className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50 p-4 shadow-2xs dark:border-amber-700/50 dark:bg-amber-950/30">
+        <div className="mt-4 rounded-xl border border-warning/40 bg-warning-muted/40 p-4 shadow-2xs">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                <p className="text-sm font-semibold text-warning-muted-foreground">
                   {t("clients.duplicateWarningTitle", "Pozor: Našiel sa existujúci záznam")}
                 </p>
-                <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                <p className="text-xs text-warning-muted-foreground/80 mt-0.5">
                   {t(
                     "clients.duplicateWarningDesc",
                     "V systéme už existuje klient {name} ({contact}). Želáte si prepojiť existujúcu kartu?",
@@ -278,7 +278,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
               size="sm"
               variant="outline"
               onClick={() => router.push(`/clients/${duplicateCheck.client!.id}`)}
-              className="shrink-0 border-amber-400 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/40 text-xs font-semibold"
+              className="shrink-0 border-warning/40 text-warning-muted-foreground hover:bg-warning-muted text-xs font-semibold"
             >
               {t("clients.openExistingCard", "Otvoriť existujúcu kartu")}
             </Button>
@@ -388,7 +388,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
             )}
           </p>
           {preferredContactMethod === "sms" && !smsConsent ? (
-            <p className="mt-2 text-xs font-medium text-amber-700">
+            <p className="mt-2 text-xs font-medium text-warning-muted-foreground">
               {t(
                 "clients.form.smsConsentRequiredForPref",
                 "Read the disclosure below and confirm consent before saving text reminders as the preference.",

@@ -187,7 +187,7 @@ export function AgentCapabilitiesView({
                     {t("agent.capabilities.safeWrite.title", "Bezpečný režim zápisu")}
                   </CardTitle>
                 </div>
-                <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
+                <Badge variant="outline" className="text-xs border-warning/40 bg-warning/10 text-warning-muted-foreground">
                   {t("agent.capabilities.badgeDataProtection", "Ochrana dát")}
                 </Badge>
               </div>

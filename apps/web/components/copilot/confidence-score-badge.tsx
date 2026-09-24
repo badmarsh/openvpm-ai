@@ -44,17 +44,17 @@ export function ConfidenceScoreBadge({
     high: {
       label: "Vysoká spoľahlivosť",
       icon: CheckCircle2,
-      style: "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+      style: "bg-success-muted text-success-muted-foreground border-success/30",
     },
     medium: {
       label: "Stredná spoľahlivosť",
       icon: AlertCircle,
-      style: "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
+      style: "bg-warning-muted text-warning-muted-foreground border-warning/30",
     },
     low: {
       label: "Nízka spoľahlivosť",
       icon: AlertTriangle,
-      style: "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
+      style: "bg-destructive/10 text-destructive border-destructive/20",
     },
   }[tier];
 

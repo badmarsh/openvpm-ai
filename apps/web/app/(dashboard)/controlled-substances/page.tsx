@@ -72,11 +72,11 @@ const UNITS = [
  */
 const MOVEMENT_BADGE_STYLES: Record<string, string> = {
   received:
-    "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    "border-success/40 bg-success-muted text-success-muted-foreground",
   administered:
     "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-  returned: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  wasted: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
+  returned: "border-info/40 bg-info-muted text-info-muted-foreground",
+  wasted: "border-destructive/40 bg-destructive/10 text-destructive",
 };
 
 const MOVEMENT_KIND: Record<string, "income" | "issue" | "disposal"> = {
@@ -543,16 +543,16 @@ function SummarySection() {
                         {t(`controlledSubstances.units.${drug.unit}`, drug.unit)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-emerald-600">
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-success">
                       {drug.totalReceived}
                     </TableCell>
                     <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-violet-600">
                       {drug.totalAdministered}
                     </TableCell>
-                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-red-600">
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-destructive">
                       {drug.totalWasted}
                     </TableCell>
-                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-blue-600">
+                    <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums text-info">
                       {drug.totalReturned}
                     </TableCell>
                     <TableCell className="px-3 py-2.5 text-right font-mono font-semibold tabular-nums">
@@ -880,7 +880,7 @@ function ControlledSubstancesLogPage() {
                         ) : (
                           <span
                             className={
-                              balance <= 0 ? "text-red-600" : "font-medium"
+                              balance <= 0 ? "text-destructive" : "font-medium"
                             }
                           >
                             {formatBalance(balance)}

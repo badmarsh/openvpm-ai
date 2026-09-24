@@ -268,7 +268,7 @@ function PatientAssignmentPanel({
   });
 
   return (
-    <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+    <div className="rounded-lg border border-warning/40 bg-warning-muted/40 p-4 text-warning-muted-foreground">
       <div className="flex items-start gap-3">
         <UserRound className="mt-0.5 h-5 w-5 shrink-0" />
         <div>
@@ -283,7 +283,7 @@ function PatientAssignmentPanel({
       </div>
 
       {selectedPatient ? (
-        <div className="mt-4 rounded-md border border-amber-300 bg-background/80 p-3 text-sm text-foreground dark:border-amber-800">
+        <div className="mt-4 rounded-md border border-warning/30 bg-background/80 p-3 text-sm text-foreground">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-medium">{selectedPatient.name}</p>
@@ -360,7 +360,7 @@ function PatientAssignmentPanel({
               {t("encounters.patientPanel.returnToVisit", "and then return to this visit.")}
             </p>
           ) : patientSearch.data?.length ? (
-            <div className="mt-2 overflow-hidden rounded-md border border-amber-300 bg-background text-foreground dark:border-amber-800">
+            <div className="mt-2 overflow-hidden rounded-md border border-warning/30 bg-background text-foreground">
               {patientSearch.data.map((patient) => (
                 <button
                   type="button"
@@ -2031,7 +2031,7 @@ function VisitCloseout({
         </CardHeader>
         <CardContent className="space-y-4">
           {compactPendingActions.length > 0 ? (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-muted-foreground">
               <p className="text-sm font-medium">
                 {compactPendingActions.length === 1
                   ? t("encounters.closeout.decisionSingular", "1 decision still needed")
@@ -2051,7 +2051,7 @@ function VisitCloseout({
               </ul>
             </div>
           ) : (
-            <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+            <div className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success-muted-foreground">
               {isCompleted
                 ? t(
                     "encounters.closeout.fieldCompletedNotice",
@@ -2739,7 +2739,7 @@ function VisitCloseout({
         ) : null}
 
         {isCompleted ? (
-          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm">
+          <div className="rounded-md border border-success/40 bg-success/10 p-4 text-sm text-success-muted-foreground">
             <p className="font-medium">
               {t(
                 "encounters.closeout.completedWithDurableCloseout",
@@ -3006,7 +3006,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
       <div
         className={`rounded-md border px-3 py-2 text-xs ${
           !props.isOnline || props.saveState === "error"
-            ? "border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-100"
+            ? "border-warning/40 bg-warning/10 text-warning-muted-foreground"
             : props.saveState === "conflict"
               ? "border-destructive/40 bg-destructive/10 text-destructive"
               : "border-border bg-muted/20 text-muted-foreground"
@@ -3090,9 +3090,9 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
           className={`mt-2 rounded-md border px-3 py-2 text-xs ${
             props.planCopyState === "copied" ||
             props.planCopyState === "plan_changed"
-              ? "border-amber-500/40 bg-amber-500/10"
+              ? "border-warning/40 bg-warning/10 text-warning-muted-foreground"
               : props.planCopyState === "instructions_edited"
-                ? "border-emerald-500/40 bg-emerald-500/10"
+                ? "border-success/40 bg-success/10 text-success-muted-foreground"
                 : "border-border bg-muted/20 text-muted-foreground"
           }`}
           role="status"
@@ -3399,7 +3399,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
         </div>
       ) : null}
       {props.soapDraft ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-muted-foreground">
           <p className="text-sm font-medium">
             {t(
               "encounters.clinicalForm.soapDraftInProgressTitle",
@@ -3424,7 +3424,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
           </Button>
         </div>
       ) : props.missingSoapReplacement ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-muted-foreground">
           <p className="text-sm font-medium">
             {t(
               "encounters.clinicalForm.soapVoidedTitle",
@@ -3463,7 +3463,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
           />
         </div>
       ) : props.linkedSoapCount === 0 ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-muted-foreground">
           <p className="text-sm font-medium">
             {t(
               "encounters.clinicalForm.noSoapLinkedTitle",
@@ -3495,7 +3495,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
       ) : null}
       {finalizationIssues.length > 0 ? (
         <div
-          className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3"
+          className="rounded-md border border-warning/40 bg-warning/10 p-3 text-warning-muted-foreground"
           role="status"
         >
           <p className="text-sm font-medium">
@@ -3596,7 +3596,7 @@ function FollowUpResolutionPanel({
   );
 
   return (
-    <div className="space-y-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-4">
+    <div className="space-y-4 rounded-md border border-warning/40 bg-warning/10 p-4 text-warning-muted-foreground">
       <div>
         <h3 className="font-medium">
           {t("encounters.followUpPanel.title", "Follow-up obligation")}
@@ -3620,7 +3620,7 @@ function FollowUpResolutionPanel({
         </p>
       </div>
       {resolvedAt && resolution ? (
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+        <div className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success-muted-foreground">
           <p className="font-medium">
             {t("encounters.followUpPanel.resolvedAs", "Resolved as {resolution}", {
               resolution: resolution.replace("_", " "),
@@ -3968,7 +3968,7 @@ function OperationalCloseoutForm({
         </div>
       ) : null}
       {chargeDisposition === "accounts_receivable" ? (
-        <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-3">
+        <div className="rounded-md border border-info/30 bg-info/5 p-3">
           <label
             className="text-sm font-medium"
             htmlFor="closeout-invoice-due-date"
@@ -4039,7 +4039,7 @@ function OperationalCloseoutForm({
           </Button>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-muted-foreground">
           <p>
             {t(
               "encounters.operationalForm.noActiveInvoiceNotice",
@@ -5053,7 +5053,7 @@ function ChargeCapture({
           <div className="flex flex-col gap-4">
             {!isOnline ? (
               <div
-                className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
+                className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning-muted-foreground"
                 role="status"
               >
                 {t(
@@ -5129,7 +5129,7 @@ function ChargeCapture({
             ) : null}
             {prescriptionChargesNeedingUnitReview.length > 0 ? (
               <div
-                className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+                className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-muted-foreground"
                 role="alert"
               >
                 <p className="font-medium">

@@ -751,8 +751,8 @@ function DischargeContent() {
 
                 {/* Sympathy Flow Warning Banner */}
                 {isDeceased && (
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning-muted-foreground text-xs leading-relaxed">
+                    <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                     <div>
                       <strong className="font-semibold block mb-0.5">{t("discharge.sympathyFlow", "Režim sústrasti")}</strong>
                       {t(
@@ -969,7 +969,7 @@ function DischargeContent() {
                       className="h-8 px-2.5 text-xs gap-1"
                     >
                       {copied ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        <Check className="h-3.5 w-3.5 text-success" />
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
@@ -1085,7 +1085,7 @@ function DischargeContent() {
                     <Megaphone className="h-3.5 w-3.5" />
                     {t("discharge.tabs.marketing", "Educational Post (Ethics)")}
                     {marketingPostData && (
-                      <Badge className="bg-emerald-600 text-white text-[10px] px-1 py-0 h-4">
+                      <Badge variant="success" className="text-[10px] px-1 py-0 h-4">
                         ✓
                       </Badge>
                     )}
@@ -1164,12 +1164,12 @@ function DischargeContent() {
                               toast.success(t("discharge.smsCopied", "SMS skopírovaná do schránky"));
                               setTimeout(() => setSmsCopied(false), 2000);
                             }}
-                          >
-                            {smsCopied ? (
-                              <Check className="h-3.5 w-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
+                            >
+                              {smsCopied ? (
+                                <Check className="h-3.5 w-3.5 text-success" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
                             {smsCopied
                               ? t("discharge.copiedShort", "Skopírované")
                               : t("discharge.copySms", "Kopírovať SMS")}
@@ -1212,7 +1212,7 @@ function DischargeContent() {
                                     </td>
                                     <td className="py-2 px-2 text-center">
                                       {item.morning ? (
-                                        <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] px-1.5 py-0">
+                                        <Badge variant="warning" className="text-[10px] px-1.5 py-0">
                                           {t("discharge.yes", "Áno")}
                                         </Badge>
                                       ) : (
@@ -1221,7 +1221,7 @@ function DischargeContent() {
                                     </td>
                                     <td className="py-2 px-2 text-center">
                                       {item.noon ? (
-                                        <Badge className="bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30 text-[10px] px-1.5 py-0">
+                                        <Badge variant="info" className="text-[10px] px-1.5 py-0">
                                           {t("discharge.yes", "Áno")}
                                         </Badge>
                                       ) : (
@@ -1248,7 +1248,7 @@ function DischargeContent() {
                                     </td>
                                     <td className="py-2 px-2.5 text-muted-foreground">
                                       {item.withFood ? (
-                                        <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-300 mr-1">
+                                        <Badge variant="outline" className="text-[10px] border-success/30 bg-success-muted text-success-muted-foreground mr-1">
                                           {t("discharge.withFood", "S krmivom")}
                                         </Badge>
                                       ) : null}
@@ -1284,14 +1284,14 @@ function DischargeContent() {
                   ) : (
                     /* Marketing Post Tab */
                     <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-1.5">
-                        <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
-                          <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 space-y-1.5">
+                        <div className="flex items-center gap-2 text-warning-muted-foreground">
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-warning" />
                           <h4 className="text-xs font-bold">
                             {t("discharge.marketingTitle", "Autonomous Marketing Brain from Clinical Case")}
                           </h4>
                         </div>
-                        <p className="text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                        <p className="text-xs text-warning-muted-foreground/90 leading-relaxed">
                           {t(
                             "discharge.marketingSubtitle",
                             "Generate an anonymized educational social post compliant with veterinary ethics."
@@ -1346,8 +1346,8 @@ function DischargeContent() {
                               }
                               className={
                                 marketingPostData.validationReport?.verdict === "pass"
-                                  ? "bg-emerald-600 text-white text-[10px]"
-                                  : "bg-amber-600 text-white text-[10px]"
+                                  ? "bg-success text-success-foreground text-[10px]"
+                                  : "bg-warning text-warning-foreground text-[10px]"
                               }
                             >
                               KVL SR: {marketingPostData.validationReport?.verdict?.toUpperCase() ?? "PASS"}

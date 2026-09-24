@@ -290,7 +290,7 @@ export default function ClientDetailPage() {
               </p>
             )}
             {confirmRotatePortal ? (
-              <p className="mt-2 text-xs text-amber-700">
+              <p className="mt-2 text-xs text-warning-muted-foreground">
                 {t(
                   "clients.detail.portalConfirmWarning",
                   "Resetting access invalidates the previous link and signs this client out of every active portal session.",
@@ -391,10 +391,10 @@ export default function ClientDetailPage() {
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                       patient.status === "active"
-                        ? "bg-emerald-100 text-emerald-700"
+                        ? "bg-success-muted text-success-muted-foreground"
                         : patient.status === "deceased"
-                          ? "bg-gray-100 text-gray-600"
-                          : "bg-amber-100 text-amber-700"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-warning-muted text-warning-muted-foreground"
                     }`}
                   >
                     {patient.status === "active"

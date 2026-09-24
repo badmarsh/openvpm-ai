@@ -144,31 +144,31 @@ className="bg-brand/15 text-brand"
 ## Migration Checklist for Remaining Files
 
 ### Phase 1: High-Impact Pages (batch find-replace)
-- [ ] `admin/page.tsx` — Done ✓
-- [ ] `billing/ekasa/page.tsx` — ~20 `emerald-*` instances
-- [ ] `billing/page.tsx` — ~5 `teal-*` and `emerald-*` instances
-- [ ] `billing/pos/page.tsx` — ~5 `emerald-*` instances
-- [ ] `agent/components/agent-sidebar.tsx` — ~15 `amber-*` and `emerald-*` instances
-- [ ] `agent/discharge/page.tsx` — ~10 `amber-*`, `emerald-*`, `sky-*`, `indigo-*` instances
-- [ ] `encounters/[appointmentId]/page.tsx` — ~10 `amber-*` and `emerald-*` instances
-- [ ] `clients/[id]/page.tsx` — ~3 `emerald-*` and `amber-*` instances
-- [ ] `clients/new/page.tsx` — ~5 `amber-*` instances
-- [ ] `controlled-substances/page.tsx` — ~2 `amber-*` instances
-- [ ] `marketing/handouts/page.tsx` — ~8 `teal-*` instances
-- [ ] `marketing/media/page.tsx` — ~8 `teal-*` instances
+- [x] `admin/page.tsx` — Done ✓
+- [x] `billing/ekasa/page.tsx` — Migrated to brand/success/warning tokens ✓
+- [x] `billing/page.tsx` — Migrated to brand/success/destructive tokens ✓
+- [x] `billing/pos/page.tsx` — Migrated to brand/success/secondary tokens ✓
+- [x] `agent/components/agent-sidebar.tsx` — Migrated to success/warning tokens ✓
+- [x] `agent/discharge/page.tsx` — Migrated to warning/success/info tokens ✓
+- [x] `encounters/[appointmentId]/page.tsx` — Migrated to warning/success/info tokens ✓
+- [x] `clients/[id]/page.tsx` — Migrated to warning/success tokens ✓
+- [x] `clients/new/page.tsx` — Migrated to warning tokens ✓
+- [x] `controlled-substances/page.tsx` — Migrated to success/info/destructive tokens ✓
+- [x] `marketing/handouts/page.tsx` — Migrated to primary/brand/success/warning tokens ✓
+- [x] `marketing/media/page.tsx` — Migrated to primary/brand/success/warning tokens ✓
 
 ### Phase 2: Agent & Voice Components
-- [ ] `agent/components/agent-capabilities.tsx` — `amber-*` badge
-- [ ] `agent/components/agent-composer.tsx` — `amber-*` warning
-- [ ] `agent/components/agent-export-dialog.tsx` — `emerald-*` check
-- [ ] `agent/components/agent-message-bubble.tsx` — `emerald-*` check
-- [ ] `agent/components/prescription-proposal-card.tsx` — `emerald-*` and `amber-*`
-- [ ] `agent/voice/components/voice-commands.tsx` — `teal-*` badge
+- [x] `agent/components/agent-capabilities.tsx` — Migrated warning badge ✓
+- [x] `agent/components/agent-composer.tsx` — Migrated warning box ✓
+- [x] `agent/components/agent-export-dialog.tsx` — Migrated success check icon ✓
+- [x] `agent/components/agent-message-bubble.tsx` — Migrated success check icon ✓
+- [x] `agent/components/prescription-proposal-card.tsx` — Migrated success and warning styles ✓
+- [x] `agent/voice/components/voice-commands.tsx` — Migrated command category badges and check icon ✓
 
 ### Phase 3: Utility Components
-- [ ] `copilot/confidence-score-badge.tsx`
-- [ ] `copilot/clinical-status-badge.tsx`
-- [ ] `common/species-badge.tsx`
+- [x] `copilot/confidence-score-badge.tsx` — Migrated high/medium/low confidence badges ✓
+- [x] `copilot/clinical-status-badge.tsx` — Verified (already references clinical-status-badge) ✓
+- [x] `common/species-badge.tsx` — Verified (clean, uses semantic classes) ✓
 
 ### Replacement Rules
 When migrating, follow these rules:
