@@ -1546,7 +1546,8 @@
     },
     "ledger": {
       "title": "Kniha pohybov omamných látok",
-      "subtitle": "Dátum, pacient, lekár, šarža, prijaté a vydané množstvo so zostatkom sa evidujú pri každom pohybe."
+      "subtitle": "Dátum, pacient, lekár, šarža, prijaté a vydané množstvo so zostatkom sa evidujú pri každom pohybe.",
+      "count": "Záznamy: {count}"
     },
     "movementKinds": {
       "income": "Príjem (dodací list)",
@@ -3779,7 +3780,9 @@
       "seededDemoData": "Demo pacienti nemôžu prijímať skutočné pripomienky.",
       "reservedContact": "Vyhradené testovacie telefónne čísla nemôžu prijímať skutočné pripomienky."
     },
-    "channelFallbackEmail": "Odosielanie SMS je momentálne nedostupné; táto pripomienka bude odoslaná na e-mail."
+    "channelFallbackEmail": "Odosielanie SMS je momentálne nedostupné; táto pripomienka bude odoslaná na e-mail.",
+    "recipientCount": "Príjemcovia: {count}",
+    "overdueDays": "{count} d po termíne"
   },
   "records": {
     "encounterVitals": {
@@ -8868,7 +8871,11 @@
     "colSpeciesBreed": "Druh & Plemeno",
     "colMicrochip": "Mikročip",
     "expiryPrefix": "Expirácia:",
-    "lotPrefix": "Šarža:"
+    "lotPrefix": "Šarža:",
+    "vaccineFallback": "Vakcína",
+    "notMicrochipped": "Nečipovaný",
+    "openRecordAria": "Otvoriť záznam očkovania",
+    "openVaccinations": "Otvoriť očkovania"
   },
   "fieldVisits": {
     "title": "Terénna prax & Farmy",

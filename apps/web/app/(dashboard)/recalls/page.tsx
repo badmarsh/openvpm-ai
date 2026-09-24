@@ -20,10 +20,20 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  KpiCard,
+  KpiGrid,
+  PageToolbar,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+} from "@/components/layout/page-kit";
+import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import type { VaccinationRecallRecipient } from "@/lib/vaccination-recalls";
@@ -102,11 +112,29 @@ function clinicalDate(value: string): string {
   return formatDateYmdToDisplay(value) || value;
 }
 
-/** Dense-dashboard table tokens shared with /clients and /patients. */
-const TH =
-  "h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80";
-const TD = "px-4 py-2.5 align-middle";
+/**
+ * Whole days between a YYYY-MM-DD due date and today (local calendar day).
+ * Returns null when the date is unparseable or not yet overdue.
+ */
+function overdueDays(value: string, today: Date): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return null;
+  const due = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.floor((now - due) / 86_400_000);
+  return days > 0 ? days : null;
+}
+
+/**
+ * UI-kit table tokens (docs/UIKIT.md). Recall rows carry multi-line vaccine
+ * and eligibility detail, so cells use the dense operator padding
+ * `px-4 py-2.5`; headers share the same horizontal inset to stay aligned.
+ */
+const TH = cn(tableHeadClass, "px-4");
+const TD = cn(tableCellClass, "px-4 py-2.5");
 const BADGE = "px-2 py-0.5 text-[11px]";
+/** Dates and day counts: monospaced tabular numerals. */
+const NUMERIC_META = "font-mono text-[11px] tabular-nums";
 
 export default function VaccinationRecallsPage() {
   const { t } = useI18n();
@@ -242,8 +270,9 @@ export default function VaccinationRecallsPage() {
   }
 
   const data = preview.data;
+  const today = new Date();
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         icon={Syringe}
         title={t("recalls.title", "Vaccination recalls")}
@@ -260,273 +289,274 @@ export default function VaccinationRecallsPage() {
             disabled={preview.isFetching || sendReminders.isPending}
           >
             <RefreshCw
-              className={`h-4 w-4 ${preview.isFetching ? "animate-spin" : ""}`}
+              className={cn("h-4 w-4", preview.isFetching && "animate-spin")}
             />
             {t("recalls.refreshPreview", "Refresh preview")}
           </Button>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <RecallMetric
+      <KpiGrid>
+        <KpiCard
           label={t("recalls.metricOverdue", "Overdue patients")}
           value={data.total}
-          icon={Syringe}
+          icon={<Syringe className="h-3.5 w-3.5" />}
         />
-        <RecallMetric
+        <KpiCard
           label={t("recalls.metricReady", "Ready to send")}
           value={data.eligible}
-          icon={CheckCircle2}
+          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
         />
-        <RecallMetric
+        <KpiCard
           label={t("recalls.metricBlocked", "Blocked")}
           value={data.blocked}
-          icon={AlertTriangle}
+          icon={<AlertTriangle className="h-3.5 w-3.5" />}
         />
-        <RecallMetric
+        <KpiCard
           label={t("recalls.metricAlreadyReminded", "Already reminded")}
           value={data.alreadySent}
-          icon={Clock3}
+          icon={<Clock3 className="h-3.5 w-3.5" />}
         />
-      </div>
+      </KpiGrid>
 
-      <Card>
-        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <div>
-            <CardTitle>{t("recalls.previewTitle", "Recipient preview")}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t(
-                "recalls.previewDesc",
-                "Select up to {max} eligible patients. Sending is always a deliberate action and requires confirmation. The same exact overdue-vaccine set can only be sent once; a newly overdue or newly recorded vaccine creates a new recall snapshot.",
-                { max: MAX_BATCH_SIZE }
-              )}
-            </p>
-          </div>
-          <Button
-            className="gap-2"
-            disabled={selectedEligibleIds.length === 0 || sendReminders.isPending}
-            onClick={() => sendPatients(selectedEligibleIds)}
-          >
-            {sendReminders.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
+      <PageToolbar>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground">
+            {t("recalls.previewTitle", "Recipient preview")}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t(
+              "recalls.previewDesc",
+              "Select up to {max} eligible patients. Sending is always a deliberate action and requires confirmation. The same exact overdue-vaccine set can only be sent once; a newly overdue or newly recorded vaccine creates a new recall snapshot.",
+              { max: MAX_BATCH_SIZE }
             )}
-            {t("recalls.sendSelected", "Send selected ({count})", {
-              count: selectedEligibleIds.length,
-            })} {/* Send selected ({selectedEligibleIds.length}) */}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {data.recipients.length === 0 ? (
-            <EmptyState
-              icon={CheckCircle2}
-              title={t(
-                "recalls.emptyTitle",
-                "No overdue vaccination recalls"
-              )}
-              description={t(
-                "recalls.emptyDesc",
-                "Active patients with a latest vaccination due date in the past will appear here."
-              )}
-            />
+          </p>
+        </div>
+        <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
+          {t("recalls.recipientCount", "Recipients: {count}", {
+            count: data.recipients.length,
+          })}
+        </p>
+        <Button
+          size="sm"
+          className="gap-2 text-xs sm:shrink-0"
+          disabled={selectedEligibleIds.length === 0 || sendReminders.isPending}
+          onClick={() => sendPatients(selectedEligibleIds)}
+        >
+          {sendReminders.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[860px] text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className={`${TH} w-10`}>
+            <Send className="h-4 w-4" />
+          )}
+          {t("recalls.sendSelected", "Send selected ({count})", {
+            count: selectedEligibleIds.length,
+          })} {/* Send selected ({selectedEligibleIds.length}) */}
+        </Button>
+      </PageToolbar>
+
+      {data.recipients.length === 0 ? (
+        <EmptyState
+          icon={CheckCircle2}
+          title={t(
+            "recalls.emptyTitle",
+            "No overdue vaccination recalls"
+          )}
+          description={t(
+            "recalls.emptyDesc",
+            "Active patients with a latest vaccination due date in the past will appear here."
+          )}
+        />
+      ) : (
+        <DataTableFrame>
+          <table className="w-full min-w-[860px] text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className={cn(TH, "w-10")}>
+                  <Checkbox
+                    aria-label={t(
+                      "recalls.selectAllAria",
+                      "Select all eligible recall recipients"
+                    )}
+                    checked={allEligibleSelected}
+                    disabled={eligibleRecipients.length === 0}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        setSelected(
+                          new Set(
+                            eligibleRecipients
+                              .slice(0, MAX_BATCH_SIZE)
+                              .map((recipient) => recipient.patientId)
+                          )
+                        );
+                      } else {
+                        setSelected(new Set());
+                      }
+                    }}
+                  />
+                </th>
+                <th className={TH}>
+                  {t("recalls.colPatientClient", "Patient / client")}
+                </th>
+                <th className={TH}>
+                  {t("recalls.colOverdueVaccines", "Overdue vaccines")}
+                </th>
+                <th className={TH}>
+                  {t("recalls.colDelivery", "Delivery")}
+                </th>
+                <th className={TH}>
+                  {t("recalls.colEligibility", "Eligibility")}
+                </th>
+                <th className={cn(TH, "text-right")}>
+                  {t("recalls.colAction", "Action")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.recipients.map((recipient) => {
+                const eligible = recipient.status === "eligible";
+                return (
+                  <tr key={recipient.patientId} className={tableRowClass}>
+                    <td className={cn(TD, "w-10")}>
                       <Checkbox
                         aria-label={t(
-                          "recalls.selectAllAria",
-                          "Select all eligible recall recipients"
+                          "recalls.selectPatientAria",
+                          "Select {name}",
+                          { name: recipient.patientName }
                         )}
-                        checked={allEligibleSelected}
-                        disabled={eligibleRecipients.length === 0}
-                        onChange={(event) => {
-                          if (event.target.checked) {
-                            setSelected(
-                              new Set(
-                                eligibleRecipients
-                                  .slice(0, MAX_BATCH_SIZE)
-                                  .map((recipient) => recipient.patientId)
-                              )
-                            );
-                          } else {
-                            setSelected(new Set());
-                          }
-                        }}
+                        checked={eligible && selected.has(recipient.patientId)}
+                        disabled={!eligible || sendReminders.isPending}
+                        onChange={(event) =>
+                          setSelected((current) => {
+                            const next = new Set(current);
+                            if (event.target.checked) next.add(recipient.patientId);
+                            else next.delete(recipient.patientId);
+                            return next;
+                          })
+                        }
                       />
-                    </th>
-                    <th className={TH}>
-                      {t("recalls.colPatientClient", "Patient / client")}
-                    </th>
-                    <th className={TH}>
-                      {t("recalls.colOverdueVaccines", "Overdue vaccines")}
-                    </th>
-                    <th className={TH}>
-                      {t("recalls.colDelivery", "Delivery")}
-                    </th>
-                    <th className={TH}>
-                      {t("recalls.colEligibility", "Eligibility")}
-                    </th>
-                    <th className={`${TH} text-right`}>
-                      {t("recalls.colAction", "Action")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recipients.map((recipient) => {
-                    const eligible = recipient.status === "eligible";
-                    return (
-                      <tr
-                        key={recipient.patientId}
-                        className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors"
-                      >
-                        <td className={`${TD} w-10`}>
-                          <Checkbox
-                            aria-label={t(
-                              "recalls.selectPatientAria",
-                              "Select {name}",
-                              { name: recipient.patientName }
-                            )}
-                            checked={eligible && selected.has(recipient.patientId)}
-                            disabled={!eligible || sendReminders.isPending}
-                            onChange={(event) =>
-                              setSelected((current) => {
-                                const next = new Set(current);
-                                if (event.target.checked) next.add(recipient.patientId);
-                                else next.delete(recipient.patientId);
-                                return next;
-                              })
-                            }
-                          />
-                        </td>
-                        <td className={`${TD} max-w-[220px]`}>
-                          <div className="min-w-0">
-                            <Link
-                              href={`/patients/${recipient.patientId}`}
-                              className="block truncate text-sm font-medium text-foreground hover:underline"
-                              title={recipient.patientName}
+                    </td>
+                    <td className={cn(TD, "max-w-[220px]")}>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/patients/${recipient.patientId}`}
+                          className="block truncate font-medium text-foreground hover:underline"
+                          title={recipient.patientName}
+                        >
+                          {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
+                        </Link>
+                        <p
+                          className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                          title={recipient.clientName}
+                        >
+                          {recipient.clientName}
+                        </p>
+                      </div>
+                    </td>
+                    <td className={TD}>
+                      <ul className="space-y-0.5">
+                        {recipient.vaccines.map((vaccine) => {
+                          const days = overdueDays(vaccine.nextDueDate, today);
+                          return (
+                            <li
+                              key={vaccine.recordId}
+                              className="flex min-w-0 items-baseline gap-1.5"
                             >
-                              {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
-                            </Link>
-                            <p
-                              className="mt-0.5 truncate text-xs text-muted-foreground"
-                              title={recipient.clientName}
-                            >
-                              {recipient.clientName}
-                            </p>
-                          </div>
-                        </td>
-                        <td className={TD}>
-                          <ul className="space-y-0.5">
-                            {recipient.vaccines.map((vaccine) => (
-                              <li key={vaccine.recordId} className="flex min-w-0 items-baseline gap-1.5">
-                                <span className="truncate text-xs font-medium text-foreground">
-                                  {vaccine.vaccineName}
-                                </span>
-                                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                                  {t("recalls.duePrefix", "due {date}", {
-                                    date: clinicalDate(vaccine.nextDueDate),
+                              <span className="truncate font-medium text-foreground">
+                                {vaccine.vaccineName}
+                              </span>
+                              <span
+                                className={cn(
+                                  NUMERIC_META,
+                                  "shrink-0 text-muted-foreground"
+                                )}
+                              >
+                                {t("recalls.duePrefix", "due {date}", {
+                                  date: clinicalDate(vaccine.nextDueDate),
+                                })}
+                              </span>
+                              {days !== null ? (
+                                <span
+                                  className={cn(
+                                    NUMERIC_META,
+                                    "shrink-0 text-warning-muted-foreground"
+                                  )}
+                                >
+                                  {t("recalls.overdueDays", "{count} d overdue", {
+                                    count: days,
                                   })}
                                 </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-                        <td className={TD}>
-                          {recipient.channel === "sms" ? (
-                            <Badge variant="info" className={`${BADGE} gap-1`}>
-                              <MessageSquare className="h-3 w-3" />{" "}
-                              {t("recalls.channelSms", "SMS")}
-                            </Badge>
-                          ) : recipient.channel === "email" ? (
-                            <Badge variant="secondary" className={`${BADGE} gap-1`}>
-                              <Mail className="h-3 w-3" />{" "}
-                              {t("recalls.channelEmail", "Email")}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                          {eligible && recipient.blockMessage ? (
-                            <p className="mt-1 max-w-xs text-xs leading-snug text-muted-foreground">
-                              {getRecallBlockMessage(recipient, t)}
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </td>
+                    <td className={TD}>
+                      {recipient.channel === "sms" ? (
+                        <Badge variant="info" className={cn(BADGE, "gap-1")}>
+                          <MessageSquare className="h-3 w-3" />{" "}
+                          {t("recalls.channelSms", "SMS")}
+                        </Badge>
+                      ) : recipient.channel === "email" ? (
+                        <Badge variant="secondary" className={cn(BADGE, "gap-1")}>
+                          <Mail className="h-3 w-3" />{" "}
+                          {t("recalls.channelEmail", "Email")}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                      {eligible && recipient.blockMessage ? (
+                        <p className="mt-1 max-w-xs text-[11px] leading-snug text-muted-foreground">
+                          {getRecallBlockMessage(recipient, t)}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className={TD}>
+                      {eligible ? (
+                        <Badge variant="success" className={BADGE}>
+                          {t("recalls.badgeReady", "Ready")}
+                        </Badge>
+                      ) : recipient.status === "already_sent" ? (
+                        <div>
+                          <Badge variant="outline" className={BADGE}>
+                            {t("recalls.badgeAlreadyReminded", "Already reminded")}
+                          </Badge>
+                          {recipient.lastSentAt ? (
+                            <p className={cn(NUMERIC_META, "mt-1 text-muted-foreground")}>
+                              {formatDateTimeToDisplay(recipient.lastSentAt)}
                             </p>
                           ) : null}
-                        </td>
-                        <td className={TD}>
-                          {eligible ? (
-                            <Badge variant="success" className={BADGE}>
-                              {t("recalls.badgeReady", "Ready")}
-                            </Badge>
-                          ) : recipient.status === "already_sent" ? (
-                            <div>
-                              <Badge variant="outline" className={BADGE}>
-                                {t("recalls.badgeAlreadyReminded", "Already reminded")}
-                              </Badge>
-                              {recipient.lastSentAt ? (
-                                <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-                                  {formatDateTimeToDisplay(recipient.lastSentAt)}
-                                </p>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="max-w-xs">
-                              <Badge variant="warning" className={BADGE}>
-                                {t("recalls.badgeBlocked", "Blocked")}
-                              </Badge>
-                              <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                                {getRecallBlockMessage(recipient, t)}
-                              </p>
-                            </div>
-                          )}
-                        </td>
-                        <td className={`${TD} text-right`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs"
-                            disabled={!eligible || sendReminders.isPending}
-                            onClick={() => sendPatients([recipient.patientId])}
-                          >
-                            {t("recalls.sendButton", "Send")}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        </div>
+                      ) : (
+                        <div className="max-w-xs">
+                          <Badge variant="warning" className={BADGE}>
+                            {t("recalls.badgeBlocked", "Blocked")}
+                          </Badge>
+                          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                            {getRecallBlockMessage(recipient, t)}
+                          </p>
+                        </div>
+                      )}
+                    </td>
+                    <td className={cn(TD, "text-right")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs"
+                        disabled={!eligible || sendReminders.isPending}
+                        onClick={() => sendPatients([recipient.patientId])}
+                      >
+                        {t("recalls.sendButton", "Send")}
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </DataTableFrame>
+      )}
       <ConfirmDialog {...dialogProps} />
     </div>
-  );
-}
-
-function RecallMetric({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-          <Icon className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold tracking-tight">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
