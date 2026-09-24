@@ -28,7 +28,7 @@ try:
 except ImportError:
     class Settings:
         database_url: str = os.getenv("AGNO_DATABASE_URL", f"sqlite:///{TMP_DIR}/pipeline_team.db")
-        telemetry: bool = os.getenv("AGNO_TELEMETRY", "false").lower() in ("true", "1", "yes")
+        telemetry: bool = os.getenv("AGNO_TELEMETRY", "true").lower() in ("true", "1", "yes")
         bind_host: str = os.getenv("AGNO_BIND_HOST", "127.0.0.1")
         bind_port: int = int(os.getenv("AGNO_BIND_PORT", "7777"))
 
@@ -59,6 +59,13 @@ if settings.database_url.startswith("postgresql"):
     db = PostgresDb(db_url=settings.database_url)
 else:
     db = SqliteDb(db_file=str(TMP_DIR / "pipeline_team.db"))
+
+# Zapnutie OpenTelemetry Tracing pre export do databázy (zobrazenie v Agno OS Traces)
+try:
+    from agno.tracing import setup_tracing
+    setup_tracing(db=db)
+except Exception as _tr_err:
+    pass
 
 # Zabezpečenie správnej IP adresy pre AliProxy z WSL (Windows host je 192.168.0.100)
 ALIPROXY_BASE = os.getenv("ALIPROXY_BASE_URL", "http://192.168.0.100:8080/v1")
