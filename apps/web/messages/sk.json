@@ -8884,6 +8884,13 @@
       "refresh": "Obnoviť",
       "newVisit": "Nový výjazd na farmu"
     },
+    "mic": {
+      "unsupported": "Hlasové zadávanie nie je v tomto prehliadači dostupné",
+      "permissionDenied": "Prístup k mikrofónu bol zamietnutý",
+      "listening": "Zastaviť nahrávanie",
+      "processing": "Spúšťam mikrofón…",
+      "dictate": "Diktovať hlasom (slovenčina)"
+    },
     "earTagSearch": {
       "title": "Rýchle vyhľadávanie ušných známok (CEHZ)",
       "placeholder": "SK 000801452101, 000801452101 alebo meno zvieraťa…",

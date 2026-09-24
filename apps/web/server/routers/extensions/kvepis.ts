@@ -54,7 +54,7 @@ export const kvepisRouter = createRouter({
   upsertCredentials: vetProcedure
     .input(
       z.object({
-        ico: z.string().refine(isValidFarmIco, "IČO musí mať 8 číslic a platnú kontrolnú číslicu."),
+        ico: z.string().refine(isValidFarmIco, "Invalid farm or practice IČO format or checksum."),
         kvlId: z.string().optional(),
         upvsSchranka: z.string().optional(),
         integrationMode: z.enum(["GUIDED", "B2G"]).default("GUIDED"),

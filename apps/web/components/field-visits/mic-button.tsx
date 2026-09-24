@@ -3,6 +3,7 @@
 import { Loader2, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpeechInput } from "@/lib/hooks/use-speech-input";
+import { useI18n } from "@/lib/i18n";
 
 interface MicButtonProps {
   getValue: () => string;
@@ -22,6 +23,7 @@ export function MicButton({
   lang = "sk-SK",
   className,
 }: MicButtonProps) {
+  const { t } = useI18n();
   const { state, interim, error, toggle, supported } = useSpeechInput(
     setValue,
     getValue,
@@ -36,14 +38,14 @@ export function MicButton({
         disabled={!supported || state === "processing"}
         title={
           !supported
-            ? "Hlasové zadávanie nie je v tomto prehliadači dostupné"
+            ? t("fieldVisits.mic.unsupported", "Hlasové zadávanie nie je v tomto prehliadači dostupné")
             : error === "microphone-denied"
-              ? "Prístup k mikrofónu bol zamietnutý"
+              ? t("fieldVisits.mic.permissionDenied", "Prístup k mikrofónu bol zamietnutý")
               : state === "listening"
-                ? "Zastaviť nahrávanie"
+                ? t("fieldVisits.mic.listening", "Zastaviť nahrávanie")
                 : state === "processing"
-                  ? "Spúšťam mikrofón…"
-                  : "Diktovať hlasom (slovenčina)"
+                  ? t("fieldVisits.mic.processing", "Spúšťam mikrofón…")
+                  : t("fieldVisits.mic.dictate", "Diktovať hlasom (slovenčina)")
         }
         className={cn(
           "inline-flex items-center justify-center rounded-md border h-8 w-8 transition-all",

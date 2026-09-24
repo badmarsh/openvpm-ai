@@ -19,12 +19,13 @@ import {
   formatCehzEarTag,
   hasControlledSubstanceConflict,
   isValidCehzEarTag,
+  isValidFarmIco,
   isValidWithdrawalDays,
   normalizeCehzEarTag,
 } from "../field-visits/policy";
 
 // ---------------------------------------------------------------------------
-// 1. CEHZ ušné známky
+// 1. CEHZ ušné známky & Farm IČO
 // ---------------------------------------------------------------------------
 
 describe("CEHZ ear tag format validation", () => {
@@ -62,6 +63,41 @@ describe("CEHZ ear tag format validation", () => {
     expect(formatCehzEarTag("SK000801452101")).toBe("SK 000801452101");
     expect(formatCehzEarTag("000801452101")).toBe("SK 000801452101");
     expect(formatCehzEarTag("not-a-tag")).toBe(null);
+  });
+});
+
+describe("Slovak farm/practice IČO validation (modulo 11)", () => {
+  it("validates official Slovak IČO with standard check digit", () => {
+    // Slovenská pošta a.s.
+    expect(isValidFarmIco("36631124")).toBe(true);
+  });
+
+  it("handles edge cases: remainder === 0 (checkDigit = 1) and remainder === 1 (checkDigit = 0)", () => {
+    // remainder === 0 (sum = 22 => (11 - 0) % 10 = 1)
+    expect(isValidFarmIco("10000071")).toBe(true);
+    expect(isValidFarmIco("30000131")).toBe(true);
+
+    // remainder === 1 (sum = 12 => (11 - 1) % 10 = 0)
+    expect(isValidFarmIco("10000020")).toBe(true);
+
+    // remainder === 7 (sum = 18 => (11 - 7) % 10 = 4)
+    expect(isValidFarmIco("10000054")).toBe(true);
+  });
+
+  it("rejects invalid check digits and malformed strings", () => {
+    // Zlé kontrolné číslice
+    expect(isValidFarmIco("10000070")).toBe(false); // očakáva 1
+    expect(isValidFarmIco("30000130")).toBe(false); // očakáva 1
+    expect(isValidFarmIco("36631125")).toBe(false); // očakáva 4
+    expect(isValidFarmIco("10000021")).toBe(false); // očakáva 0
+
+    // Neplatná dĺžka a formát
+    expect(isValidFarmIco("1234567")).toBe(false); // 7 číslic
+    expect(isValidFarmIco("123456789")).toBe(false); // 9 číslic
+    expect(isValidFarmIco("1234567A")).toBe(false); // nečíselné
+    expect(isValidFarmIco("")).toBe(false);
+    expect(isValidFarmIco(null)).toBe(false);
+    expect(isValidFarmIco(undefined)).toBe(false);
   });
 });
 
