@@ -25,6 +25,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
+import { DataTableFrame } from "@/components/layout/page-kit";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
@@ -352,7 +353,7 @@ export function KvepisPanel() {
           }}
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-card">
+        <DataTableFrame>
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -482,7 +483,7 @@ export function KvepisPanel() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </DataTableFrame>
       )}
 
       {/* Modálne okno pre zadanie doručenky z ÚPVS */}

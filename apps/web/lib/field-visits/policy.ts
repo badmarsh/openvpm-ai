@@ -5,7 +5,7 @@
  * `extensions.fieldVisits`. Žiadne I/O, deterministicky testovateľné:
  *
  *  1. CEHZ ušné známky — normalizácia a validácia slovenského formátu
- *     (SK + 12 číslic, napr. `SK 000801452101` / `SK000801452101`).
+ *     (SK + 8 číslic alebo ISO kód krajiny + 12 číslic).
  *  2. Ochranné lehoty (Zákon č. 39/2007 Z. z. a nariadenia EÚ) — výpočet
  *     zostávajúcich dní pre mäso/mlieko a ohraničenie MAX_WITHDRAWAL_DAYS.
  *  3. Kontrolované látky (Zákon č. 139/1998 Z. z.) — detekcia a blokovanie
@@ -20,8 +20,8 @@ import { calculateStatutoryWithdrawal } from "@/lib/statutory/withdrawal";
 /** Horná hranica evidovanej ochrannej lehoty v dňoch (garbage bound). */
 export const MAX_WITHDRAWAL_DAYS = 365;
 
-/** Ušná známka CEHZ: presne "SK" + 12 číslic (bez medzier). */
-export const CEHZ_EAR_TAG_PATTERN = /^SK\d{12}$/i;
+/** CEHZ: slovenské SK + 8 číslic alebo ISO kód + 12 číslic. */
+export const CEHZ_EAR_TAG_PATTERN = /^(?:SK\d{8}|[A-Z]{2}\d{12})$/i;
 
 /** Dni v milisekundách (výpočty zostávajúcich dní lehoty). */
 const DAY_MS = 86_400_000;
@@ -42,12 +42,14 @@ export function normalizeCehzEarTag(raw: string | null | undefined): string | nu
   const compact = raw.trim().toUpperCase().replace(/[\s-]+/g, "");
   if (compact.length === 0) return null;
 
-  const digitsOnly = compact.startsWith("SK") ? compact.slice(2) : compact;
-  if (!/^\d{12}$/.test(digitsOnly)) return null;
-  // Číselný rozsah: 12 číslic, ale nie "všetko nuly" (neexistujúca známka).
-  if (/^0{12}$/.test(digitsOnly)) return null;
+  const prefix = /^[A-Z]{2}/.test(compact) ? compact.slice(0, 2) : "SK";
+  const digitsOnly = prefix === "SK" && !/^[A-Z]{2}/.test(compact) ? compact : compact.slice(2);
+  const validLength = prefix === "SK" ? digitsOnly.length === 8 || digitsOnly.length === 12 : digitsOnly.length === 12;
+  if (!validLength || !/^\d+$/.test(digitsOnly)) return null;
+  // Číselný rozsah: nie "všetko nuly" (neexistujúca známka).
+  if (/^0+$/.test(digitsOnly)) return null;
 
-  return `SK${digitsOnly}`;
+  return `${prefix}${digitsOnly}`;
 }
 
 /** True, ak vstup predstavuje platnú slovenskú ušnú známku CEHZ. */
@@ -58,7 +60,16 @@ export function isValidCehzEarTag(raw: string | null | undefined): boolean {
 /** Zobraziteľný tvar známky (`SK 000801452101`) alebo null pri neplatnosti. */
 export function formatCehzEarTag(raw: string | null | undefined): string | null {
   const normalized = normalizeCehzEarTag(raw);
-  return normalized ? `SK ${normalized.slice(2)}` : null;
+  return normalized ? `${normalized.slice(0, 2)} ${normalized.slice(2)}` : null;
+}
+
+/** Slovenské IČO: osem číslic, posledná je kontrolná číslica modulo 11. */
+export function isValidFarmIco(raw: string | null | undefined): boolean {
+  if (typeof raw !== "string" || !/^\d{8}$/.test(raw)) return false;
+  const sum = raw.slice(0, 7).split("").reduce((total, digit, index) => total + Number(digit) * (8 - index), 0);
+  const remainder = sum % 11;
+  const checkDigit = remainder === 0 || remainder === 1 ? 0 : 11 - remainder;
+  return Number(raw[7]) === checkDigit;
 }
 
 // ---------------------------------------------------------------------------
