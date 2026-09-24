@@ -790,6 +790,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3007",
         "https://agno.com",
         "https://www.agno.com",
         "https://app.agno.com",

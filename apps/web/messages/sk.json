@@ -28,7 +28,8 @@
       "journeyCohorts": "Kohorty produkčnej cesty (30 dní)",
       "messagingCarrier": "Registrácia operátora správ",
       "practices": "Veterinárne praxe",
-      "simulation": "Klinická simulácia & Journey Discovery"
+      "simulation": "Klinická simulácia & Journey Discovery",
+      "aiSwarm": "AI Swarm & AgentOS Centrála"
     },
     "table": {
       "practice": "Prax",
@@ -377,6 +378,97 @@
       "viewDocs": "Product Discovery dokumentácia",
       "statusActive": "Aktívny simulačný engine",
       "lastUpdated": "Aktualizované: 21.09.2026"
+    },
+    "aiSwarm": {
+      "title": "AI Swarm & AgentOS Centrála",
+      "subtitle": "Správa, telemetria a monitoring autonómneho vývojového roja, lokálneho AgentOS runtime (:7777) a priame prepojenie na Agent UI.",
+      "badge": "SWARM",
+      "badgeActive": "Aktívna flotila",
+      "actions": {
+        "openAgentUi": "Otvoriť Agent UI",
+        "openAgentUiDesc": "Spustiť vizuálne rozhranie Agent UI na porte 3007",
+        "refresh": "Obnoviť stav",
+        "refreshing": "Obnovuje sa...",
+        "backToAdmin": "Platform Admin",
+        "runCliCommand": "Spustiť AgentOS CLI",
+        "copied": "Skopírované"
+      },
+      "runtime": {
+        "title": "Stav runtime AgentOS",
+        "endpoint": "Backend endpoint",
+        "agentUi": "Rozhranie Agent UI",
+        "statusOnline": "Online (Pripravený)",
+        "statusOffline": "Offline (Pohotovosť)",
+        "checking": "Overuje sa...",
+        "responseTime": "Čas odozvy",
+        "models": "Konfigurované modely",
+        "knowledge": "Vektorová znalostná báza",
+        "offlineNotice": "AgentOS aktuálne nebeží na porte 7777. Pre spustenie runtime na pozadí spustite v termináli: python .agents/agno/pipeline_team_os.py."
+      },
+      "kpi": {
+        "fleetAgents": "Flotila agentov",
+        "fleetAgentsDesc": "Špecializovaní agenti",
+        "activeSessions": "Relácie vývoja",
+        "activeSessionsDesc": "Celkovo behov pipeline",
+        "teamsAndWorkflows": "Tímy & Pipeline",
+        "teamsAndWorkflowsDesc": "Autonómne workflowy",
+        "runtimeHealth": "Zdravie AgentOS",
+        "runtimeHealthDesc": "FastAPI port 7777"
+      },
+      "tabs": {
+        "fleet": "Flotila agentov a tímov",
+        "sessions": "Relácie a úlohy",
+        "guardrails": "Architektúra a bezpečnosť"
+      },
+      "toolbar": {
+        "searchPlaceholder": "Filtrovať agentov, relácie alebo úlohy...",
+        "allStatuses": "Všetky stavy",
+        "completed": "Dokončené",
+        "running": "Bežiace",
+        "failed": "Zlyhané",
+        "pending": "Čakajúce",
+        "allCategories": "Všetky kategórie",
+        "orchestrator": "Orchestrátor",
+        "developer": "Vývojár (Coder)",
+        "qa": "QA & Review",
+        "operations": "Operácie & Git"
+      },
+      "table": {
+        "name": "Názov agenta / tímu",
+        "role": "Rola a zodpovednosť",
+        "model": "Model a poskytovateľ",
+        "category": "Kategória",
+        "tools": "Kľúčové nástroje",
+        "status": "Stav",
+        "actions": "Akcie",
+        "chatInAgentUi": "Otvoriť v Agent UI"
+      },
+      "sessionsTable": {
+        "sessionId": "ID relácie / úlohy",
+        "module": "Úloha / Modul",
+        "targetModel": "Engine / Model",
+        "status": "Stav",
+        "created": "Vytvorené",
+        "progress": "Priebeh / Výstup",
+        "inspect": "Zobraziť detail"
+      },
+      "guardrails": {
+        "title": "Klinické bezpečnostné brány & architektonické invarianty",
+        "subtitle": "Autonómni agenti pracujú striktne v súlade so slovenskou legislatívou a pravidlami OpenVPM.",
+        "humanInTheLoopTitle": "Human-in-the-Loop brána (Zákon 39/2007 Z. z.)",
+        "humanInTheLoopDesc": "Všetky klinické návrhy AI ostávajú v stave draft až do autorizácie atestovaným veterinárnym lekárom cez ClinicalDiffConfirmModal.",
+        "controlledSubstancesTitle": "Brána omamných a psychotropných látok (Zákon 139/1998 Z. z.)",
+        "controlledSubstancesDesc": "Nulové automatické predvypĺňanie opiátov, ketamínu, propofolu a fentanylu. Vyžaduje sa manuálne zadanie lekárom.",
+        "sympathyGateTitle": "Sympatická brána pietneho kľudu",
+        "sympathyGateDesc": "Pri úhyne alebo eutanázii pacienta sa okamžite potláča akákoľvek automatizovaná SMS a marketingová komunikácia s majiteľom.",
+        "zeroConflictTitle": "Zero-Conflict Upstream architektúra",
+        "zeroConflictDesc": "Vanilkové schémy (packages/db/schema/*.ts) sú nemenné. Všetky rozšírenia idú cez ext_* a izolovaný extensionsRouter."
+      },
+      "empty": {
+        "noAgents": "Nenašli sa žiadni agenti zodpovedajúci filtru.",
+        "noSessions": "Nenašli sa žiadne relácie zodpovedajúce filtru.",
+        "clearFilters": "Zrušiť filtre"
+      }
     }
   },
   "agent": {
@@ -3110,7 +3202,8 @@
     "v2Import": "V2 Migrácia",
     "ekasaClosures": "Denné uzávierky (Z-report)",
     "imaging": "RTG & zobrazovacia AI",
-    "medications": "Lieky & dohľad"
+    "medications": "Lieky & dohľad",
+    "aiSwarm": "AI Swarm & AgentOS"
   },
   "newSoap": {
     "loadingEditor": "Načítavam editor...",

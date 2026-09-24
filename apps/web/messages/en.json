@@ -28,7 +28,8 @@
       "journeyCohorts": "Production journey cohorts (30 days)",
       "messagingCarrier": "Messaging carrier registration",
       "practices": "Practices",
-      "simulation": "Clinical Simulation & Journey Discovery"
+      "simulation": "Clinical Simulation & Journey Discovery",
+      "aiSwarm": "AI Swarm & AgentOS Central"
     },
     "table": {
       "practice": "Practice",
@@ -377,6 +378,97 @@
       "viewDocs": "Product Discovery Docs",
       "statusActive": "Active simulation engine",
       "lastUpdated": "Updated: 2026-09-21"
+    },
+    "aiSwarm": {
+      "title": "AI Swarm & AgentOS Central",
+      "subtitle": "Management, telemetry, and monitoring for autonomous multi-agent dev fleet, local AgentOS runtime (:7777), and direct link to Agent UI.",
+      "badge": "SWARM",
+      "badgeActive": "Active Fleet",
+      "actions": {
+        "openAgentUi": "Open Agent UI",
+        "openAgentUiDesc": "Launch visual Agent UI on port 3007",
+        "refresh": "Refresh Status",
+        "refreshing": "Refreshing...",
+        "backToAdmin": "Platform Admin",
+        "runCliCommand": "Start AgentOS CLI",
+        "copied": "Copied"
+      },
+      "runtime": {
+        "title": "AgentOS Runtime Status",
+        "endpoint": "Backend Endpoint",
+        "agentUi": "Agent UI Interface",
+        "statusOnline": "Online (Ready)",
+        "statusOffline": "Offline (Standby)",
+        "checking": "Checking...",
+        "responseTime": "Response time",
+        "models": "Configured Models",
+        "knowledge": "Vector Knowledge Base",
+        "offlineNotice": "AgentOS is not running on port 7777. To launch the background runtime, execute: python .agents/agno/pipeline_team_os.py in terminal."
+      },
+      "kpi": {
+        "fleetAgents": "Agent Fleet",
+        "fleetAgentsDesc": "Specialized agents",
+        "activeSessions": "Active Sessions",
+        "activeSessionsDesc": "Total pipeline runs",
+        "teamsAndWorkflows": "Teams & Pipelines",
+        "teamsAndWorkflowsDesc": "Autonomous workflows",
+        "runtimeHealth": "AgentOS Health",
+        "runtimeHealthDesc": "FastAPI port 7777"
+      },
+      "tabs": {
+        "fleet": "Agent Fleet & Teams",
+        "sessions": "Sessions & Tasks",
+        "guardrails": "Architecture & Guardrails"
+      },
+      "toolbar": {
+        "searchPlaceholder": "Filter agents, sessions or tasks...",
+        "allStatuses": "All statuses",
+        "completed": "Completed",
+        "running": "Running",
+        "failed": "Failed",
+        "pending": "Pending",
+        "allCategories": "All categories",
+        "orchestrator": "Orchestrator",
+        "developer": "Developer",
+        "qa": "QA & Review",
+        "operations": "Operations"
+      },
+      "table": {
+        "name": "Agent / Team Name",
+        "role": "Role & Function",
+        "model": "Model & Provider",
+        "category": "Category",
+        "tools": "Key Tools",
+        "status": "Status",
+        "actions": "Actions",
+        "chatInAgentUi": "Open in Agent UI"
+      },
+      "sessionsTable": {
+        "sessionId": "Session / Task ID",
+        "module": "Task / Module",
+        "targetModel": "Engine / Model",
+        "status": "Status",
+        "created": "Created",
+        "progress": "Progress / Output",
+        "inspect": "Inspect Task"
+      },
+      "guardrails": {
+        "title": "Clinical Safety & Architectural Invariants",
+        "subtitle": "Autonomous agents operate strictly within legislative and architectural boundaries.",
+        "humanInTheLoopTitle": "Human-in-the-Loop Gate (Zákon 39/2007 Z. z.)",
+        "humanInTheLoopDesc": "AI outputs remain strictly in draft status until reviewed and confirmed by a licensed KVL veterinarian via ClinicalDiffConfirmModal.",
+        "controlledSubstancesTitle": "Controlled Substances Gate (Zákon 139/1998 Z. z.)",
+        "controlledSubstancesDesc": "Zero AI prefill for opiates, ketamine, propofol, butorphanol, and fentanyl. Requires manual, authenticated doctor entry.",
+        "sympathyGateTitle": "Sympathy Outreach Gate",
+        "sympathyGateDesc": "When a patient status is deceased or euthanized, automated SMS, review, and marketing outreach is immediately suppressed.",
+        "zeroConflictTitle": "Zero-Conflict Upstream Sync",
+        "zeroConflictDesc": "Vanilla upstream schemas (packages/db/schema/*.ts) are immutable. Extensions use ext_* schemas and isolated extensionsRouter."
+      },
+      "empty": {
+        "noAgents": "No matching agents found.",
+        "noSessions": "No sessions found matching your filter.",
+        "clearFilters": "Clear filters"
+      }
     }
   },
   "agent": {
@@ -3110,7 +3202,8 @@
     "v2Import": "V2 Migration",
     "ekasaClosures": "Daily closures (Z-report)",
     "imaging": "X-ray & imaging AI",
-    "medications": "Medications & oversight"
+    "medications": "Medications & oversight",
+    "aiSwarm": "AI Swarm & AgentOS"
   },
   "newSoap": {
     "loadingEditor": "Loading editor...",

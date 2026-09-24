@@ -16,6 +16,7 @@ import {
   Tractor,
   ScanLine,
   Pill,
+  Bot,
 } from "lucide-react";
 
 export type UserRole =
@@ -113,6 +114,15 @@ export const customNavItems: CustomNavItem[] = [
     icon: Zap,
     roles: ['admin', 'veterinarian'],
     section: 'admin',
+  },
+  {
+    href: "/admin/ai-swarm",
+    label: "AI Swarm & AgentOS",
+    i18nKey: "nav.aiSwarm",
+    icon: Bot,
+    roles: ["admin"],
+    section: "admin",
+    badge: "SWARM",
   },
   {
     href: '/marketing/consents',

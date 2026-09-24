@@ -126,6 +126,7 @@ packages/db/seed-comprehensive-sk.sql
 .agents/agno/tmp/
 .agents/agno/tmp/worktrees/
 .agents/agno/tmp/logs/
+.agents/agno/agent-ui/
 __pycache__/
 *.pyc
 .pytest_cache/
