@@ -15,9 +15,26 @@ import {
   settleManagedUploadAttempt,
   type ManagedUploadAttempt,
 } from "@/lib/managed-upload-attempt";
+import {
+  IMAGING_FILE_CATEGORY,
+  IMAGING_MODALITY_CODES,
+  clinicalBadgeLabelKey,
+  type ImagingModality,
+} from "@/lib/imaging/modality";
 
-type DocumentCategory = "documents" | "lab-results";
-type DocumentAttempt = ManagedUploadAttempt & { category: DocumentCategory };
+/**
+ * Upload categories. Diagnostic studies use the strict `"imaging"` category:
+ * the API stores them under the imaging namespace and never writes
+ * `patients.photoUrl` (only `"patient-photos"` may do that).
+ */
+type DocumentCategory = "documents" | "lab-results" | typeof IMAGING_FILE_CATEGORY;
+type DocumentAttempt = ManagedUploadAttempt & {
+  category: DocumentCategory;
+  modality: ImagingModality | null;
+};
+
+const DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
+const IMAGING_ACCEPT = "image/jpeg,image/png,image/webp";
 
 export function PatientDocumentUpload({ patientId }: { patientId: string }) {
   const { t } = useI18n();
@@ -26,6 +43,7 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const [category, setCategory] = useState<DocumentCategory>("documents");
+  const [modality, setModality] = useState<ImagingModality | "">("");
   const [file, setFile] = useState<File | null>(null);
   const [attempt, setAttempt] = useState<DocumentAttempt | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -33,13 +51,36 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
 
   if (!session?.user || session.user.role === "viewer") return null;
 
+  const isImaging = category === IMAGING_FILE_CATEGORY;
+
   async function upload() {
     if (!file || busyRef.current) return;
-    if (!isAllowedUploadMimeType(file.type) || file.size > PATIENT_DOCUMENT_MAX_BYTES || file.size === 0) {
-      setError(t("patients.documentsTab.uploadValidation", "Choose a PDF, JPG, PNG, or WebP file up to 4 MB. Compress or split large records into smaller PDFs."));
+    if (isImaging && !modality) {
+      setError(
+        t(
+          "patients.documentsTab.imagingModalityRequired",
+          "Select the diagnostic modality (RTG, USG, CT, or endoscopy) before uploading.",
+        ),
+      );
       return;
     }
-    const current = attempt ?? { ...selectManagedUploadFile(null, file), category };
+    if (!isAllowedUploadMimeType(file.type) || file.size > PATIENT_DOCUMENT_MAX_BYTES || file.size === 0) {
+      setError(
+        isImaging
+          ? t(
+              "patients.documentsTab.imagingUploadValidation",
+              "Choose a JPG, PNG, or WebP image up to 4 MB.",
+            )
+          : t("patients.documentsTab.uploadValidation", "Choose a PDF, JPG, PNG, or WebP file up to 4 MB. Compress or split large records into smaller PDFs."),
+      );
+      return;
+    }
+    const current: DocumentAttempt =
+      attempt ?? {
+        ...selectManagedUploadFile(null, file),
+        category,
+        modality: isImaging ? (modality as ImagingModality) : null,
+      };
     busyRef.current = true;
     setUploading(true);
     setAttempt(current);
@@ -49,6 +90,7 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
       body.append("file", current.file);
       body.append("category", current.category);
       body.append("patientId", patientId);
+      if (current.modality) body.append("modality", current.modality);
       const response = await fetchWithClientTimeout("/api/upload", {
         method: "POST",
         headers: { "Idempotency-Key": current.idempotencyKey },
@@ -67,7 +109,9 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
       toast.success(
         current.category === "lab-results"
           ? t("patients.documentsTab.labReportAttached", "Lab report attached")
-          : t("patients.documentsTab.documentUploaded", "Document uploaded"),
+          : current.category === IMAGING_FILE_CATEGORY
+            ? t("patients.documentsTab.imagingUploaded", "Imaging study attached")
+            : t("patients.documentsTab.documentUploaded", "Document uploaded"),
       );
       void utils.records.listPatientFiles.invalidate({ patientId });
     } catch {
@@ -85,10 +129,15 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
         {t("patients.documentsTab.uploadTitle", "Add a patient document")}
       </h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        {t(
-          "patients.documentsTab.uploadDesc",
-          "Attach previous records, referrals, scans, or external lab reports. PDF, JPG, PNG, or WebP; up to 4 MB per file. Compress or split larger files.",
-        )}
+        {isImaging
+          ? t(
+              "patients.documentsTab.uploadImagingDesc",
+              "Attach a diagnostic study (RTG, USG, CT, endoscopy). Studies are stored separately as imaging and never replace the patient profile photo.",
+            )
+          : t(
+              "patients.documentsTab.uploadDesc",
+              "Attach previous records, referrals, scans, or external lab reports. PDF, JPG, PNG, or WebP; up to 4 MB per file. Compress or split larger files.",
+            )}
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="space-y-1 text-xs font-medium">
@@ -100,7 +149,12 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
             className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             value={category}
             disabled={uploading || !!attempt}
-            onChange={(event) => setCategory(event.target.value as DocumentCategory)}
+            onChange={(event) => {
+              const next = event.target.value as DocumentCategory;
+              setCategory(next);
+              if (next !== IMAGING_FILE_CATEGORY) setModality("");
+              setError(null);
+            }}
           >
             <option value="documents">
               {t("patients.documentsTab.externalRecord", "External record")}
@@ -108,14 +162,44 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
             <option value="lab-results">
               {t("patients.documentsTab.labReport", "Lab report")}
             </option>
+            <option value={IMAGING_FILE_CATEGORY}>
+              {t("patients.documentsTab.imagingStudy", "Imaging study")}
+            </option>
           </select>
         </label>
+        {isImaging && (
+          <label className="space-y-1 text-xs font-medium">
+            <span className="block">
+              {t("patients.documentsTab.modalityLabel", "Diagnostic modality")}
+            </span>
+            <select
+              aria-label={t("patients.documentsTab.modalityLabel", "Diagnostic modality")}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={modality}
+              required
+              disabled={uploading || !!attempt}
+              onChange={(event) => {
+                setModality(event.target.value as ImagingModality | "");
+                setError(null);
+              }}
+            >
+              <option value="">
+                {t("patients.documentsTab.modalityPlaceholder", "Select modality...")}
+              </option>
+              {IMAGING_MODALITY_CODES.map((code) => (
+                <option key={code} value={code}>
+                  {t(clinicalBadgeLabelKey(code), code.toUpperCase())}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="min-w-0 flex-1 space-y-1 text-xs font-medium">
           <span className="block">{t("patients.documentsTab.fileLabel", "File")}</span>
           <input
             ref={inputRef}
             type="file"
-            accept="application/pdf,image/jpeg,image/png,image/webp"
+            accept={isImaging ? IMAGING_ACCEPT : DOCUMENT_ACCEPT}
             disabled={uploading || !!attempt}
             className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-2"
             onChange={(event) => { setFile(event.target.files?.[0] ?? null); setError(null); }}
@@ -127,12 +211,22 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
             ? t("patients.documentsTab.uploading", "Uploading…")
             : attempt
               ? t("patients.documentsTab.retryUpload", "Retry upload")
-              : t("patients.documentsTab.uploadDocument", "Upload document")}
+              : isImaging
+                ? t("patients.documentsTab.uploadImaging", "Upload imaging study")
+                : t("patients.documentsTab.uploadDocument", "Upload document")}
         </Button>
       </div>
       {category === "lab-results" && (
         <p className="mt-2 text-xs text-muted-foreground">
           {t("patients.documentsTab.labNotice", "The original report is saved in Documents. Results are not automatically entered into lab values.")}
+        </p>
+      )}
+      {isImaging && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t(
+            "patients.documentsTab.imagingNotice",
+            "The study is filed under the imaging category and tagged with its modality for the clinical whiteboard.",
+          )}
         </p>
       )}
       {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}

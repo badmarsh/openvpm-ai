@@ -76,6 +76,12 @@ export type ManagedUploadReservationInput = {
   entityId: string;
   patientId?: string | null;
   appointmentId?: string | null;
+  /**
+   * Diagnostic modality for `category: "imaging"` uploads (RTG / USG / CT /
+   * endoscopy). Persisted in the existing `files.document_type` column so the
+   * whiteboard can badge the study without a schema change.
+   */
+  documentType?: string | null;
 };
 
 const reservationSelection = {
@@ -268,6 +274,7 @@ export async function reserveManagedUpload(
       entityId: input.entityId,
       patientId: input.patientId ?? null,
       appointmentId: input.appointmentId ?? null,
+      documentType: input.documentType ?? null,
     })
     .onConflictDoNothing()
     .returning(reservationSelection);

@@ -71,7 +71,7 @@ describe("whiteboard appointment workflow UI", () => {
     expect(source).toContain("verifiedActiveAppointments ?? []");
     expect(source).toContain("{pageError || pageMissing ? (");
     expect(source).toContain(
-      '{pageError?.message ?? "Unable to load whiteboard. Please retry."}'
+      'pageError?.message ?? t("whiteboard.errorFallback", "Unable to load whiteboard. Please retry.")'
     );
     expect(source).toContain(") : isPageLoading ? (");
     expect(source).toContain("practiceClockReady && currentTime && verifiedPracticeSettings");
@@ -91,5 +91,60 @@ describe("whiteboard appointment workflow UI", () => {
     expect(source).not.toContain('practiceName: ""');
     expect(source).not.toContain("start.toLocaleTimeString");
     expect(source).not.toContain("new Date(appointment.startTime).toLocaleDateString()");
+  });
+
+  it("uses the dashboard UI kit for the header, toolbar and card frames", () => {
+    const source = readFileSync("app/(dashboard)/whiteboard/page.tsx", "utf8");
+
+    expect(source).toContain('from "@/components/layout/page-kit"');
+    expect(source).toContain("pageShellClass");
+    expect(source).toContain("PageToolbar");
+    expect(source).toContain("SearchField");
+    expect(source).toContain("filterControlClass");
+    expect(source).toContain("icon={ClipboardList}");
+    // Active patient count badge + date navigation live in the header.
+    expect(source).toContain("const totalBoardPatients = verifiedActiveAppointments?.length ?? 0");
+    expect(source).toContain('t("whiteboard.activeCount", "{count} active"');
+    expect(source).toContain("shiftDateInput(boardDateInput, -1)");
+    expect(source).toContain("shiftDateInput(boardDateInput, 1)");
+    expect(source).toContain('t("whiteboard.date.today", "Today")');
+    // Department filter for the three care units.
+    expect(source).toContain("WHITEBOARD_DEPARTMENTS.map");
+    expect(source).toContain('t("whiteboard.toolbar.departmentFilter", "Department")');
+    // Tokenized card frames.
+    expect(source).toContain("rounded-lg border border-border bg-card");
+    expect(source).not.toContain("border-border/70");
+  });
+
+  it("tags diagnostic modalities and evidence-based condition states", () => {
+    const source = readFileSync("app/(dashboard)/whiteboard/page.tsx", "utf8");
+
+    expect(source).toContain('from "@/components/imaging/modality-badge"');
+    expect(source).toContain("ModalityBadgeRow");
+    expect(source).toContain("signals?.imagingModalities ?? []");
+    expect(source).toContain("conditionTagsFor(appointment, department, signals)");
+    expect(source).toContain("ConditionTag");
+    expect(source).toContain("departmentOfAppointment(appointment)");
+    expect(source).toContain("trpc.whiteboard.clinicalSignals.useQuery(");
+    // Modality tag contract: RTG = info, USG = purple, CT = amber, LAB = teal.
+    const badge = readFileSync("components/imaging/modality-badge.tsx", "utf8");
+    expect(badge).toContain("bg-info-muted text-info-muted-foreground");
+    expect(badge).toContain("bg-purple-500/15");
+    expect(badge).toContain("bg-amber-500/15");
+    expect(badge).toContain("bg-teal-500/15");
+  });
+
+  it("renders clinical times with the monospaced tabular token", () => {
+    const source = readFileSync("app/(dashboard)/whiteboard/page.tsx", "utf8");
+
+    expect(source).toContain("CLINICAL_NUMERIC_CLASS");
+    expect(source).toContain('t("whiteboard.times.checkIn", "Check-in")');
+    expect(source).toContain('t("whiteboard.times.fasting", "Fasting")');
+    expect(source).toContain('t("whiteboard.times.procedure", "Procedure")');
+    expect(source).toContain("formatClinicalDuration(fasting.elapsedMs)");
+    const board = readFileSync("lib/whiteboard/clinical-board.ts", "utf8");
+    expect(board).toContain(
+      'export const CLINICAL_NUMERIC_CLASS = "font-mono tabular-nums text-xs"'
+    );
   });
 });

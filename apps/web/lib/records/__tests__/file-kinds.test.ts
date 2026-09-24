@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CONSENT_FILE_CATEGORY,
+  IMAGING_CATEGORY,
   PATIENT_PHOTO_CATEGORY,
   patientFileKind,
   patientFileLabel,
@@ -79,6 +80,28 @@ describe("patientFileLabel", () => {
         fileName: "wound-day-3.jpg",
       })
     ).toBe("wound-day-3.jpg");
+  });
+});
+
+describe("diagnostic imaging files", () => {
+  it("keeps imaging studies out of the photo grid", () => {
+    expect(
+      patientFileKind({ category: IMAGING_CATEGORY, mimeType: "image/jpeg" })
+    ).toBe("imaging");
+    expect(
+      patientFileKind({ category: IMAGING_CATEGORY, mimeType: "application/pdf" })
+    ).toBe("imaging");
+  });
+
+  it("prefers the study title over the storage file name", () => {
+    expect(
+      patientFileLabel({
+        category: IMAGING_CATEGORY,
+        mimeType: "image/jpeg",
+        fileName: "study-1a2b3c4d.jpg",
+        title: "RTG hrudníka",
+      })
+    ).toBe("RTG hrudníka");
   });
 });
 

@@ -12,9 +12,22 @@ import {
   rooms,
   locations,
   visitCloseouts,
+  files,
+  labResults,
+  procedures,
+  vitalSigns,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
-import { dateInputUtcRangeForTimeZone } from "@/lib/date-input";
+import {
+  dateInputDayUtcRange,
+  dateInputUtcRangeForTimeZone,
+} from "@/lib/date-input";
+import { clinicalDateInput } from "@/lib/records/clinical-inputs";
+import {
+  IMAGING_FILE_CATEGORY,
+  normalizeModalityList,
+  type ImagingModality,
+} from "@/lib/imaging/modality";
 import {
   appointmentStatusValues,
   canTransitionAppointmentStatus,
@@ -76,112 +89,320 @@ async function practiceTimeZone(ctx: WhiteboardContext): Promise<string | null> 
 }
 
 async function practiceDayRange(
-  ctx: WhiteboardContext
+  ctx: WhiteboardContext,
+  dateInput?: string,
 ): Promise<{ date: string; start: Date; end: Date }> {
-  return dateInputUtcRangeForTimeZone(new Date(), await practiceTimeZone(ctx));
+  const timeZone = await practiceTimeZone(ctx);
+  // An explicit board date is resolved in the practice timezone too, so the
+  // previous/next-day navigation matches the clinic's wall clock.
+  if (dateInput) return dateInputDayUtcRange(dateInput, timeZone);
+  return dateInputUtcRangeForTimeZone(new Date(), timeZone);
 }
+
+/** Lab-results attachment categories counted next to the imaging chips. */
+const LAB_REPORT_CATEGORY = "lab-results";
+/** Visits that are clinically done while the patient may still be admitted. */
+const CLOSED_CLOSEOUT_STATUSES = ["clinical_finalized", "completed"] as const;
 
 export const whiteboardRouter = createRouter({
   settings: protectedProcedure.query(async ({ ctx }) => practiceSettings(ctx)),
 
-  getActive: protectedProcedure.query(async ({ ctx }) => {
-    const today = await practiceDayRange(ctx);
+  getActive: protectedProcedure
+    .input(z.object({ date: clinicalDateInput("Date").optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const today = await practiceDayRange(ctx, input?.date);
 
-    return ctx.db
-      .select({
-        id: appointments.id,
-        status: appointments.status,
-        startTime: appointments.startTime,
-        notes: appointments.notes,
-        patientId: patients.id,
-        clientId: clients.id,
-        patientName: patients.name,
-        patientSpecies: patients.species,
-        patientPhotoUrl: patients.photoUrl,
-        clientFirstName: clients.firstName,
-        clientLastName: clients.lastName,
-        doctorName: users.name,
-        roomName: rooms.name,
-        locationName: locations.name,
-        locationId: appointments.locationId,
-        typeName: appointmentTypes.name,
-        typeColor: appointmentTypes.color,
-        doctorId: appointments.doctorId,
-        typeRequiresDoctor: appointmentTypes.requiresDoctor,
-      })
-      .from(appointments)
-      .leftJoin(
-        patients,
-        and(
-          eq(appointments.patientId, patients.id),
-          eq(patients.clientId, appointments.clientId),
-          eq(patients.practiceId, ctx.practiceId),
-          eq(patients.status, "active"),
-          activePracticePredicate(ctx.practiceId),
-          isNull(patients.deletedAt)
+      return ctx.db
+        .select({
+          id: appointments.id,
+          status: appointments.status,
+          startTime: appointments.startTime,
+          endTime: appointments.endTime,
+          notes: appointments.notes,
+          patientId: patients.id,
+          clientId: clients.id,
+          patientName: patients.name,
+          patientSpecies: patients.species,
+          patientPhotoUrl: patients.photoUrl,
+          clientFirstName: clients.firstName,
+          clientLastName: clients.lastName,
+          doctorName: users.name,
+          roomName: rooms.name,
+          roomType: rooms.type,
+          locationName: locations.name,
+          locationId: appointments.locationId,
+          typeName: appointmentTypes.name,
+          typeColor: appointmentTypes.color,
+          typeDefaultRoomType: appointmentTypes.defaultRoomType,
+          doctorId: appointments.doctorId,
+          typeRequiresDoctor: appointmentTypes.requiresDoctor,
+        })
+        .from(appointments)
+        .leftJoin(
+          patients,
+          and(
+            eq(appointments.patientId, patients.id),
+            eq(patients.clientId, appointments.clientId),
+            eq(patients.practiceId, ctx.practiceId),
+            eq(patients.status, "active"),
+            activePracticePredicate(ctx.practiceId),
+            isNull(patients.deletedAt)
+          )
         )
-      )
-      .leftJoin(
-        clients,
-        and(
-          eq(appointments.clientId, clients.id),
-          eq(clients.practiceId, ctx.practiceId),
-          activePracticePredicate(ctx.practiceId),
-          isNull(clients.deletedAt)
+        .leftJoin(
+          clients,
+          and(
+            eq(appointments.clientId, clients.id),
+            eq(clients.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(clients.deletedAt)
+          )
         )
-      )
-      .leftJoin(
-        users,
-        and(
-          eq(appointments.doctorId, users.id),
-          eq(users.practiceId, ctx.practiceId),
-          activePracticePredicate(ctx.practiceId),
-          isNull(users.deletedAt)
+        .leftJoin(
+          users,
+          and(
+            eq(appointments.doctorId, users.id),
+            eq(users.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(users.deletedAt)
+          )
         )
-      )
-      .leftJoin(
-        appointmentTypes,
-        and(
-          eq(appointments.typeId, appointmentTypes.id),
-          eq(appointmentTypes.practiceId, ctx.practiceId),
-          activePracticePredicate(ctx.practiceId),
-          isNull(appointmentTypes.deletedAt)
+        .leftJoin(
+          appointmentTypes,
+          and(
+            eq(appointments.typeId, appointmentTypes.id),
+            eq(appointmentTypes.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(appointmentTypes.deletedAt)
+          )
         )
-      )
-      .leftJoin(
-        rooms,
-        and(
-          eq(appointments.roomId, rooms.id),
-          eq(rooms.practiceId, ctx.practiceId),
-          activePracticePredicate(ctx.practiceId),
-          isNull(rooms.deletedAt)
+        .leftJoin(
+          rooms,
+          and(
+            eq(appointments.roomId, rooms.id),
+            eq(rooms.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(rooms.deletedAt)
+          )
         )
-      )
-      .leftJoin(
-        locations,
-        and(
-          eq(appointments.locationId, locations.id),
-          eq(locations.practiceId, ctx.practiceId),
-        ),
-      )
-      .where(
-        and(
-          eq(appointments.practiceId, ctx.practiceId),
-          activePracticePredicate(ctx.practiceId),
-          isNull(appointments.deletedAt),
-          gte(appointments.startTime, today.start),
-          lt(appointments.startTime, today.end),
-          inArray(appointments.status, [
-            "confirmed",
-            "checked_in",
-            "in_exam",
-            "checked_out",
-          ])
+        .leftJoin(
+          locations,
+          and(
+            eq(appointments.locationId, locations.id),
+            eq(locations.practiceId, ctx.practiceId),
+          ),
         )
-      )
-      .orderBy(appointments.startTime)
-      .limit(100);
-  }),
+        .where(
+          and(
+            eq(appointments.practiceId, ctx.practiceId),
+            activePracticePredicate(ctx.practiceId),
+            isNull(appointments.deletedAt),
+            gte(appointments.startTime, today.start),
+            lt(appointments.startTime, today.end),
+            inArray(appointments.status, [
+              "confirmed",
+              "checked_in",
+              "in_exam",
+              "checked_out",
+            ])
+          )
+        )
+        .orderBy(appointments.startTime)
+        .limit(100);
+    }),
+
+  /**
+   * Clinical signals for the patients on today's board: imaging modalities,
+   * lab reports, critical lab flags, procedures, vitals and discharge state.
+   *
+   * Read-only aggregation over the practice's own rows; it never writes, and
+   * imaging attachments are read from category `"imaging"` only so a
+   * diagnostic scan can never be presented as a patient profile photo.
+   */
+  clinicalSignals: protectedProcedure
+    .input(
+      z.object({
+        date: clinicalDateInput("Date").optional(),
+        patientIds: z.array(z.string().uuid()).min(1).max(100),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const day = await practiceDayRange(ctx, input.date);
+      const patientIds = [...new Set(input.patientIds)];
+      const dayWindow = and(
+        eq(files.practiceId, ctx.practiceId),
+        inArray(files.patientId, patientIds),
+        eq(files.storageStatus, "available"),
+        isNull(files.deletedAt),
+        gte(files.createdAt, day.start),
+        lt(files.createdAt, day.end),
+      );
+
+      const [attachmentRows, labRows, procedureRows, vitalsRows] =
+        await Promise.all([
+          ctx.db
+            .select({
+              patientId: files.patientId,
+              category: files.category,
+              documentType: files.documentType,
+            })
+            .from(files)
+            .where(
+              and(
+                dayWindow,
+                inArray(files.category, [
+                  IMAGING_FILE_CATEGORY,
+                  LAB_REPORT_CATEGORY,
+                ]),
+              ),
+            )
+            .limit(500),
+          ctx.db
+            .select({
+              patientId: labResults.patientId,
+              resultFlag: labResults.resultFlag,
+            })
+            .from(labResults)
+            .where(
+              and(
+                eq(labResults.practiceId, ctx.practiceId),
+                inArray(labResults.patientId, patientIds),
+                isNull(labResults.deletedAt),
+                gte(labResults.createdAt, day.start),
+                lt(labResults.createdAt, day.end),
+              ),
+            )
+            .limit(500),
+          ctx.db
+            .select({
+              patientId: procedures.patientId,
+              id: procedures.id,
+            })
+            .from(procedures)
+            .where(
+              and(
+                eq(procedures.practiceId, ctx.practiceId),
+                inArray(procedures.patientId, patientIds),
+                isNull(procedures.deletedAt),
+                gte(procedures.createdAt, day.start),
+                lt(procedures.createdAt, day.end),
+              ),
+            )
+            .limit(500),
+          ctx.db
+            .select({
+              patientId: vitalSigns.patientId,
+              id: vitalSigns.id,
+            })
+            .from(vitalSigns)
+            .where(
+              and(
+                eq(vitalSigns.practiceId, ctx.practiceId),
+                inArray(vitalSigns.patientId, patientIds),
+                isNull(vitalSigns.deletedAt),
+                gte(vitalSigns.recordedAt, day.start),
+                lt(vitalSigns.recordedAt, day.end),
+              ),
+            )
+            .limit(500),
+        ]);
+
+      // A closed visit stays on the board as "awaiting discharge" while the
+      // patient is still admitted to a boarding room.
+      const boardingRows = await ctx.db
+        .select({
+          patientId: appointments.patientId,
+          status: visitCloseouts.status,
+        })
+        .from(visitCloseouts)
+        .innerJoin(
+          appointments,
+          and(
+            eq(visitCloseouts.appointmentId, appointments.id),
+            eq(appointments.practiceId, ctx.practiceId),
+          ),
+        )
+        .leftJoin(
+          rooms,
+          and(
+            eq(appointments.roomId, rooms.id),
+            eq(rooms.practiceId, ctx.practiceId),
+          ),
+        )
+        .leftJoin(
+          appointmentTypes,
+          and(
+            eq(appointments.typeId, appointmentTypes.id),
+            eq(appointmentTypes.practiceId, ctx.practiceId),
+          ),
+        )
+        .where(
+          and(
+            eq(visitCloseouts.practiceId, ctx.practiceId),
+            isNull(visitCloseouts.deletedAt),
+            inArray(appointments.patientId, patientIds),
+            isNull(appointments.deletedAt),
+            inArray(visitCloseouts.status, [...CLOSED_CLOSEOUT_STATUSES]),
+            sql`coalesce(${rooms.type}::text, ${appointmentTypes.defaultRoomType}::text) = 'boarding'`,
+          ),
+        )
+        .limit(200);
+
+      const signals = new Map(
+        patientIds.map((patientId) => [
+          patientId,
+          {
+            patientId,
+            imagingModalities: [] as ImagingModality[],
+            labReports: 0,
+            criticalLabs: 0,
+            procedures: 0,
+            vitalsRecorded: 0,
+            awaitingDischarge: false,
+          },
+        ]),
+      );
+
+      const imagingDocuments = new Map<string, string[]>();
+      for (const row of attachmentRows) {
+        if (!row.patientId) continue;
+        const entry = signals.get(row.patientId);
+        if (!entry) continue;
+        if (row.category === IMAGING_FILE_CATEGORY) {
+          const documents = imagingDocuments.get(row.patientId) ?? [];
+          documents.push(row.documentType ?? "");
+          imagingDocuments.set(row.patientId, documents);
+        } else if (row.category === LAB_REPORT_CATEGORY) {
+          entry.labReports += 1;
+        }
+      }
+
+      for (const [patientId, documents] of imagingDocuments) {
+        const entry = signals.get(patientId);
+        if (entry) entry.imagingModalities = normalizeModalityList(documents);
+      }
+
+      for (const row of labRows) {
+        if (row.resultFlag !== "critical") continue;
+        const entry = signals.get(row.patientId);
+        if (entry) entry.criticalLabs += 1;
+      }
+      for (const row of procedureRows) {
+        const entry = signals.get(row.patientId);
+        if (entry) entry.procedures += 1;
+      }
+      for (const row of vitalsRows) {
+        const entry = signals.get(row.patientId);
+        if (entry) entry.vitalsRecorded += 1;
+      }
+      for (const row of boardingRows) {
+        if (!row.patientId) continue;
+        const entry = signals.get(row.patientId);
+        if (entry) entry.awaitingDischarge = true;
+      }
+
+      return [...signals.values()];
+    }),
 
   updateStatus: protectedProcedure
     .use(requireRole("admin", "veterinarian", "technician", "front_desk"))

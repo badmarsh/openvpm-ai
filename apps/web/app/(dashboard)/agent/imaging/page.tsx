@@ -33,6 +33,7 @@ import {
   Square,
 } from "lucide-react";
 import { calculateVhs, type VhsResult } from "@/lib/imaging/vhs-calculator";
+import type { ImagingUploadModality } from "@/lib/imaging/modality";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -113,6 +114,20 @@ const IMAGE_TYPES = [
 ] as const;
 
 type ImageType = (typeof IMAGE_TYPES)[number]["value"];
+
+/**
+ * Every upload from this module is stored with the strict `"imaging"`
+ * category, so it has to carry a modality tag too. The AI image types map
+ * onto the shared vocabulary (a clinical photo keeps its own code so it is
+ * never mistaken for a diagnostic study).
+ */
+const IMAGE_TYPE_MODALITY: Record<ImageType, ImagingUploadModality> = {
+  xray: "rtg",
+  ct: "ct",
+  mri: "mri",
+  ultrasound: "usg",
+  photo: "photo",
+};
 
 interface ImagingPreset {
   key: string;
@@ -423,6 +438,7 @@ function ImagingContent() {
     formData.append("file", selectedFile);
     formData.append("category", "imaging");
     formData.append("patientId", selectedPatient.id);
+    formData.append("modality", IMAGE_TYPE_MODALITY[imageType]);
 
     setUploading(true);
     try {
@@ -465,7 +481,7 @@ function ImagingContent() {
     } finally {
       setUploading(false);
     }
-  }, [selectedFile, selectedPatient, t]);
+  }, [imageType, selectedFile, selectedPatient, t]);
 
   const handleAnalyze = useCallback(async () => {
     if (analyzeMutation.isPending || uploading) return;
@@ -492,6 +508,7 @@ function ImagingContent() {
         formData.append("file", selectedFile);
         formData.append("category", "imaging");
         formData.append("patientId", selectedPatient.id);
+        formData.append("modality", IMAGE_TYPE_MODALITY[imageType]);
 
         if (!uploadAttemptRef.current) {
           uploadAttemptRef.current = selectManagedUploadFile(null, selectedFile);
