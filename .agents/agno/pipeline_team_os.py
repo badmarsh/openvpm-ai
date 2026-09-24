@@ -22,8 +22,21 @@ sys.path.insert(0, "/mnt/c/Users/marek/Documents/Vet/openvpm-ai/.agents/agno")
 load_dotenv(str(REPO_DIR / ".env"))
 load_dotenv(str(AGNO_DIR / ".env"))
 
-from openvpm_dev_orchestrator.config import Settings
-settings = Settings.from_env()
+try:
+    from openvpm_dev_orchestrator.config import Settings
+    settings = Settings.from_env()
+except ImportError:
+    class Settings:
+        database_url: str = os.getenv("AGNO_DATABASE_URL", f"sqlite:///{TMP_DIR}/pipeline_team.db")
+        telemetry: bool = os.getenv("AGNO_TELEMETRY", "false").lower() in ("true", "1", "yes")
+        bind_host: str = os.getenv("AGNO_BIND_HOST", "127.0.0.1")
+        bind_port: int = int(os.getenv("AGNO_BIND_PORT", "7777"))
+
+        @classmethod
+        def from_env(cls):
+            return cls()
+
+    settings = Settings.from_env()
 
 from agno.agent import Agent
 from agno.team.team import Team
