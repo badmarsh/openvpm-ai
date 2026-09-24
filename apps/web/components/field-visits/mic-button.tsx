@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, MicOff } from "lucide-react";
+import { Loader2, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpeechInput } from "@/lib/hooks/use-speech-input";
 
@@ -22,33 +22,42 @@ export function MicButton({
   lang = "sk-SK",
   className,
 }: MicButtonProps) {
-  const { state, interim, toggle, supported } = useSpeechInput(
+  const { state, interim, error, toggle, supported } = useSpeechInput(
     setValue,
     getValue,
     { lang }
   );
-
-  if (!supported) return null;
 
   return (
     <span className="relative inline-flex shrink-0">
       <button
         type="button"
         onClick={toggle}
+        disabled={!supported || state === "processing"}
         title={
-          state === "listening"
-            ? "Zastaviť nahrávanie"
-            : "Diktovať hlasom (slovenčina)"
+          !supported
+            ? "Hlasové zadávanie nie je v tomto prehliadači dostupné"
+            : error === "microphone-denied"
+              ? "Prístup k mikrofónu bol zamietnutý"
+              : state === "listening"
+                ? "Zastaviť nahrávanie"
+                : state === "processing"
+                  ? "Spúšťam mikrofón…"
+                  : "Diktovať hlasom (slovenčina)"
         }
         className={cn(
           "inline-flex items-center justify-center rounded-md border h-8 w-8 transition-all",
           state === "listening"
             ? "bg-red-500 border-red-400 text-white shadow-sm shadow-red-200 animate-pulse"
-            : "bg-muted border-border text-muted-foreground hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700",
+            : !supported || state === "error"
+              ? "bg-muted border-border text-muted-foreground opacity-60"
+              : "bg-muted border-border text-muted-foreground hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700",
           className
         )}
       >
-        {state === "listening" ? (
+        {state === "processing" ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : state === "listening" ? (
           <MicOff className="h-3.5 w-3.5" />
         ) : (
           <Mic className="h-3.5 w-3.5" />

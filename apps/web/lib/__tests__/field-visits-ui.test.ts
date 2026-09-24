@@ -37,16 +37,19 @@ describe("CEHZ ear tag format validation", () => {
     expect(normalizeCehzEarTag("000801452101")).toBe("SK000801452101");
     expect(isValidCehzEarTag("SK 000801452101")).toBe(true);
     expect(CEHZ_EAR_TAG_PATTERN.test("SK000801452101")).toBe(true);
+    expect(normalizeCehzEarTag("SK12345678")).toBe("SK12345678");
+    expect(isValidCehzEarTag("SK 12345678")).toBe(true);
   });
 
-  it("enforces the 12-digit numeric range and rejects bad prefixes", () => {
+  it("enforces the CEHZ numeric ranges and accepts ISO country prefixes", () => {
     // Príliš málo / príliš veľa číslic
     expect(isValidCehzEarTag("SK00080145210")).toBe(false); // 11 číslic
     expect(isValidCehzEarTag("SK0008014521012")).toBe(false); // 13 číslic
     expect(isValidCehzEarTag("12345")).toBe(false);
-    // Cudzí štátny prefix
-    expect(isValidCehzEarTag("AT000801452101")).toBe(false);
-    expect(isValidCehzEarTag("DE000801452101")).toBe(false);
+    // ISO prefix + 12 číslic je platný cezhraničný formát.
+    expect(isValidCehzEarTag("AT000801452101")).toBe(true);
+    expect(isValidCehzEarTag("DE000801452101")).toBe(true);
+    expect(isValidCehzEarTag("AT00080145210")).toBe(false);
     // Neexistujúca známka (samé nuly) a prázdny vstup
     expect(isValidCehzEarTag("SK000000000000")).toBe(false);
     expect(isValidCehzEarTag("")).toBe(false);

@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
 
-type SpeechState = "idle" | "listening" | "unsupported";
+export type SpeechState = "idle" | "listening" | "processing" | "error" | "unsupported";
 
 interface UseSpeechInputOptions {
   /** Jazyk rozpoznávania, predvolene sk-SK */
@@ -23,6 +23,7 @@ export function useSpeechInput(
   const { lang = "sk-SK", append = true } = options;
   const [state, setState] = useState<SpeechState>("idle");
   const [interim, setInterim] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const recRef = useRef<unknown>(null);
 
   const supported =
@@ -41,7 +42,8 @@ export function useSpeechInput(
   }, []);
 
   const start = useCallback(() => {
-    if (!supported) return;
+    if (!supported || state === "processing") return;
+    setError(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SR =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -57,10 +59,14 @@ export function useSpeechInput(
       setInterim("");
       recRef.current = null;
     };
-    rec.onerror = () => {
-      setState("idle");
+    rec.onerror = (event: { error?: string }) => {
+      // Permission/network errors are expected on farm visits. Keep the field
+      // usable and expose a short-lived, actionable state instead of throwing.
+      setError(event.error === "not-allowed" ? "microphone-denied" : "microphone-unavailable");
+      setState("error");
       setInterim("");
       recRef.current = null;
+      window.setTimeout(() => setState("idle"), 2500);
     };
 
     rec.onresult = (ev: unknown) => {
@@ -85,13 +91,20 @@ export function useSpeechInput(
     };
 
     recRef.current = rec as unknown;
-    (rec as any).start();
-  }, [supported, lang, append, getValue, setValue]);
+    try {
+      (rec as any).start();
+      setState("processing");
+    } catch {
+      setError("microphone-unavailable");
+      setState("error");
+      recRef.current = null;
+    }
+  }, [supported, state, lang, append, getValue, setValue]);
 
   const toggle = useCallback(() => {
     if (state === "listening") stop();
     else start();
   }, [state, start, stop]);
 
-  return { state, interim, toggle, supported };
+  return { state, interim, error, toggle, supported };
 }
