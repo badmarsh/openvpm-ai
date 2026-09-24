@@ -8,6 +8,67 @@
 import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 import { IMPORT_ERRORS } from "./import-errors";
 import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
+
+// Polyfill DOMMatrix for pdfjs-dist 5.x in Node.js server environments if not already present.
+if (typeof (globalThis as any).DOMMatrix === "undefined") {
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    m11 = 1; m12 = 0; m13 = 0; m14 = 0;
+    m21 = 0; m22 = 1; m23 = 0; m24 = 0;
+    m31 = 0; m32 = 0; m33 = 1; m34 = 0;
+    m41 = 0; m42 = 0; m43 = 0; m44 = 1;
+    isIdentity = true;
+    is2D = true;
+    constructor(_init?: string | number[]) {}
+    scale() { return this; }
+    translate() { return this; }
+    rotate() { return this; }
+    multiply() { return this; }
+    inverse() { return this; }
+    toFloat32Array() { return new Float32Array(16); }
+    toFloat64Array() { return new Float64Array(16); }
+    toString() { return "matrix(1,0,0,1,0,0)"; }
+    static fromMatrix() { return new (globalThis as any).DOMMatrix(); }
+    static fromFloat32Array() { return new (globalThis as any).DOMMatrix(); }
+    static fromFloat64Array() { return new (globalThis as any).DOMMatrix(); }
+  };
+}
+
+export function resolvePdfjsAssetDirs(): { standardFontDataUrl?: string; cMapUrl?: string } {
+  // Strategy 1: Try resolving via createRequire if package.json or exports are available
+  try {
+    const nodeRequire = process.getBuiltinModule("module").createRequire(import.meta.url);
+    const root = dirname(nodeRequire.resolve("pdfjs-dist/package.json"));
+    if (existsSync(join(root, "standard_fonts"))) {
+      return {
+        standardFontDataUrl: join(root, "standard_fonts").replace(/\\/g, "/") + "/",
+        cMapUrl: join(root, "cmaps").replace(/\\/g, "/") + "/",
+      };
+    }
+  } catch {
+    // Fall back to known candidate paths in Next.js standalone and monorepo environments
+  }
+
+  // Strategy 2: Check common filesystem locations in monorepo and standalone Docker (/app)
+  const candidateRoots = [
+    join(process.cwd(), "apps/web/node_modules/pdfjs-dist"),
+    join(process.cwd(), "node_modules/pdfjs-dist"),
+    join(process.cwd(), ".next/standalone/apps/web/node_modules/pdfjs-dist"),
+    "/app/apps/web/node_modules/pdfjs-dist",
+    "/app/node_modules/pdfjs-dist",
+  ];
+
+  for (const root of candidateRoots) {
+    if (existsSync(join(root, "standard_fonts"))) {
+      return {
+        standardFontDataUrl: join(root, "standard_fonts").replace(/\\/g, "/") + "/",
+        cMapUrl: join(root, "cmaps").replace(/\\/g, "/") + "/",
+      };
+    }
+  }
+
+  return {};
+}
 
 import {
   parseWholesalerDeliveryNote,
@@ -54,18 +115,14 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   if (pdfBuffer.length > 5 * 1024 * 1024) throw new Error(IMPORT_ERRORS.tooLarge);
   // External ESM keeps the worker's relative import resolvable in Next's Node runtime.
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  // Resolve at runtime; webpack rewrites a statically imported createRequire.resolve
-  // into a relative bundle ID, which is not a usable filesystem font directory.
-  const nodeRequire = process.getBuiltinModule("module").createRequire(import.meta.url);
-  const root = dirname(nodeRequire.resolve("pdfjs-dist/package.json"));
+  const assetDirs = resolvePdfjsAssetDirs();
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
-    standardFontDataUrl: join(root, "standard_fonts").replace(/\\/g, "/") + "/",
-    cMapUrl: join(root, "cmaps").replace(/\\/g, "/") + "/",
-    cMapPacked: true,
+    ...(assetDirs.standardFontDataUrl ? { standardFontDataUrl: assetDirs.standardFontDataUrl } : {}),
+    ...(assetDirs.cMapUrl ? { cMapUrl: assetDirs.cMapUrl, cMapPacked: true } : {}),
     isEvalSupported: false,
     useWasm: false,
-    stopAtErrors: true,
+    stopAtErrors: false,
   });
   try {
     const doc = await loadingTask.promise;
@@ -118,6 +175,8 @@ export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   } catch (error) {
     if (error instanceof Error && Object.values(IMPORT_ERRORS).some(v => v === error.message)) throw error;
     const name = error && typeof error === "object" && "name" in error ? error.name : "";
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[extractPdfText] Extraction failed (${name || "unknown"}): ${msg}`);
     throw new Error(name === "PasswordException" ? IMPORT_ERRORS.password : IMPORT_ERRORS.corrupted);
   } finally {
     // Also releases the worker when loading rejects (password/corruption).

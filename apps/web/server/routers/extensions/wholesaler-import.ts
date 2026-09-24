@@ -268,6 +268,7 @@ async function parsePdfForImport(buffer: Buffer, ctx: { db: any; practiceId: str
   let extraction;
   try { extraction = await parsePdfInvoice(buffer, config); }
   catch (error) {
+    console.error("[wholesaler-import] parsePdfForImport failed:", error);
     throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error && Object.values(IMPORT_ERRORS).some(v => v === error.message) ? error.message : IMPORT_ERRORS.corrupted });
   }
   if (!extraction.items.length) throw new TRPCError({ code: "BAD_REQUEST", message: IMPORT_ERRORS.noItems });

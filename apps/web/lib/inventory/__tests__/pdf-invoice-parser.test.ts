@@ -4,6 +4,7 @@ import {
   extractPdfText,
   parsePdfInvoice,
   sanitizeInvoiceText,
+  resolvePdfjsAssetDirs,
   MAX_AI_INVOICE_ITEMS,
   type InvoiceParserAiConfig,
 } from "../pdf-invoice-parser";
@@ -263,5 +264,12 @@ describe("PDF delivery-note regression", () => {
       const results = await Promise.all([extractPdfText(pdf), extractPdfText(pdf)]);
       expect(results.every(text => text.includes("repeated"))).toBe(true);
     }
+  });
+  it("resolves asset directories with valid standard_fonts and cmaps", () => {
+    const assets = resolvePdfjsAssetDirs();
+    expect(assets.standardFontDataUrl).toBeDefined();
+    expect(assets.cMapUrl).toBeDefined();
+    expect(assets.standardFontDataUrl?.endsWith("/")).toBe(true);
+    expect(assets.cMapUrl?.endsWith("/")).toBe(true);
   });
 });

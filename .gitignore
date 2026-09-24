@@ -119,4 +119,10 @@ apps/web/scripts/verify-migration.ts
 apps/web/scripts/import-services-and-diagnoses.ts
 packages/db/seed-comprehensive-sk.sql
 
-
+# Agno Local State & Telemetry
+.agents/agno/.env
+.agents/agno/.pytest_cache/
+.agents/agno/.venv/
+.agents/agno/tmp/
+.agents/agno/tmp/worktrees/
+.agents/agno/tmp/logs/
