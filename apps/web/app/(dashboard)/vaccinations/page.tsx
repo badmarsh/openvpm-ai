@@ -10,8 +10,6 @@ import {
   BookOpen,
   Search,
   CheckCircle2,
-  AlertTriangle,
-  Clock3,
   Loader2,
   Mail,
   MessageSquare,
@@ -19,27 +17,37 @@ import {
   ExternalLink,
   Plus,
   PawPrint,
-  FileSpreadsheet,
   ShieldCheck,
-  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/common/empty-state";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 
 const MAX_BATCH_SIZE = 100;
 
-/** Dense registry table header — same token grid as /clients and /patients (px-3 for 12px content). */
-const TH =
-  "h-9 px-3 py-2 text-left align-middle text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
+/** Tab panel rhythm: section header → toolbar → table card. */
+const TAB_PANEL = "mt-0 space-y-4";
+
+/** Microchips, batch (lot) numbers and dates: monospaced tabular numerals. */
+const NUMERIC = "font-mono text-[11px] tabular-nums";
 
 function canOperateRecalls(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "front_desk";
@@ -154,7 +162,7 @@ export default function VaccinationsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         icon={Syringe}
         title={t("nav.vaccinations", "Očkovania & Imunizácia")}
@@ -163,7 +171,7 @@ export default function VaccinationsPage() {
           "Kompletný register očkovaní, automatický výpočet revakcinácií, zákaznícke SMS pripomienky a zákonná evidencia besnoty (Zákon č. 39/2007 Z. z.).",
         )}
         actions={
-          <div className="flex items-center gap-2">
+          <>
             <Button asChild variant="outline" size="sm" className="gap-2">
               <Link href="/statutory?tab=rabies">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -176,401 +184,401 @@ export default function VaccinationsPage() {
                 <span>{t("vaccinations.recordNew", "Nové očkovanie")}</span>
               </Link>
             </Button>
-          </div>
+          </>
         }
       />
 
-      {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as "recalls" | "rabies" | "search")}
         className="space-y-4"
       >
-        <TabsList className="grid h-auto w-full max-w-lg grid-cols-3 rounded-none border-b bg-transparent p-0">
-          <TabsTrigger
-            value="recalls"
-            className="gap-2 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
-          >
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="recalls" className={underlineTabsTriggerClass}>
             <BellRing className="h-3.5 w-3.5" />
             <span>{t("vaccinations.tabs.recalls", "Revakcinácie")}</span>
             {eligibleRecipients.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
+              <Badge
+                variant="secondary"
+                className="ml-1 px-1.5 py-0 text-[10px] tabular-nums"
+              >
                 {eligibleRecipients.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="rabies" className="gap-2 text-xs">
+          <TabsTrigger value="rabies" className={underlineTabsTriggerClass}>
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>{t("vaccinations.tabs.rabies", "Register besnoty")}</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="search"
-            className="gap-2 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
-          >
+          <TabsTrigger value="search" className={underlineTabsTriggerClass}>
             <Search className="h-3.5 w-3.5" />
             <span>{t("vaccinations.tabs.search", "Preukaz pacienta")}</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Recalls / Revakcinácie */}
-        <TabsContent value="recalls" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 gap-2">
-              <div>
-                <CardTitle className="text-base font-semibold">
-                  {t("vaccinations.recallsTitle", "Pripomienky termínov revakcinácie")}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {t(
-                    "vaccinations.recallsDesc",
-                    "Pacienti s exspirovaným alebo blížiacim sa termínom revakcinácie pripravení na odoslanie SMS alebo e-mailu.",
-                  )}
-                </CardDescription>
-              </div>
-              {selectedEligibleIds.length > 0 && (
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    sendReminders.mutate({ patientIds: selectedEligibleIds })
-                  }
-                  disabled={sendReminders.isPending}
-                  className="gap-2"
-                >
-                  {sendReminders.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  <span>
-                    {t(
-                      "recalls.sendSelected",
-                      "Odoslať pripomienky ({count})",
-                      { count: selectedEligibleIds.length },
-                    )}
-                  </span>
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {preview.isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : !preview.data?.recipients.length ? (
-                <EmptyState
-                  icon={CheckCircle2}
-                  title={t("vaccinations.recallsEmptyTitle", "Všetky očkovania sú aktuálne")}
-                  description={t(
-                    "vaccinations.recallsEmptyDesc",
-                    "Žiadny pacient nemá exspirované očkovanie vyžadujúce zaslanie pripomienky.",
-                  )}
-                />
+        <TabsContent value="recalls" className={TAB_PANEL}>
+          <PageSectionHeader
+            title={t("vaccinations.recallsTitle", "Pripomienky termínov revakcinácie")}
+            subtitle={t(
+              "vaccinations.recallsDesc",
+              "Pacienti s exspirovaným alebo blížiacim sa termínom revakcinácie pripravení na odoslanie SMS alebo e-mailu.",
+            )}
+          />
+
+          <PageToolbar>
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground">
+              <Checkbox
+                checked={allEligibleSelected}
+                disabled={eligibleRecipients.length === 0}
+                onChange={handleToggleAll}
+              />
+              <span>
+                {t("vaccinations.selectAllEligible", "Vybrať všetkých oprávnených ({count})", {
+                  count: eligibleRecipients.length,
+                })}
+              </span>
+            </label>
+            <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
+              {t("vaccinations.totalRecipients", "Celkovo {total} záznamov", {
+                total: preview.data?.recipients.length ?? 0,
+              })}
+            </p>
+            <Button
+              size="sm"
+              onClick={() =>
+                sendReminders.mutate({ patientIds: selectedEligibleIds })
+              }
+              disabled={selectedEligibleIds.length === 0 || sendReminders.isPending}
+              className="gap-2 text-xs sm:shrink-0"
+            >
+              {sendReminders.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b pb-2 text-xs text-muted-foreground">
-                    <label className="flex items-center gap-2 cursor-pointer font-medium">
-                      <Checkbox
-                        checked={allEligibleSelected}
-                        onChange={handleToggleAll}
-                      />
-                      <span>
-                        {t("vaccinations.selectAllEligible", "Vybrať všetkých oprávnených ({count})", {
-                          count: eligibleRecipients.length,
-                        })}
-                      </span>
-                    </label>
-                    <span>
-                      {t("vaccinations.totalRecipients", "Celkovo {total} záznamov", {
-                        total: preview.data.recipients.length,
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/50">
-                          <th className={`${TH} w-10`} />
-                          <th className={TH}>{t("vaccinations.colPatient", "Pacient")}</th>
-                          <th className={TH}>{t("vaccinations.colOwner", "Majiteľ")}</th>
-                          <th className={TH}>{t("vaccinations.colVaccineDate", "Vakcína & Dátum")}</th>
-                          <th className={TH}>{t("vaccinations.colChannel", "Kanál")}</th>
-                          <th className={TH}>{t("vaccinations.colStatus", "Stav")}</th>
-                          <th className={`${TH} text-right`}>{t("vaccinations.colAction", "Akcia")}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {preview.data.recipients.map((r) => {
-                          const isEligible = r.status === "eligible";
-                          const isChecked = selected.has(r.patientId);
-                          const firstVaccine = r.vaccines[0];
-
-                          return (
-                            <tr
-                              key={r.patientId}
-                              className="hover:bg-muted/40 transition-colors"
-                            >
-                              <td className="w-10 px-3 py-2 align-middle">
-                                <Checkbox
-                                  checked={isChecked}
-                                  disabled={!isEligible}
-                                  onChange={() => handleToggleOne(r.patientId)}
-                                />
-                              </td>
-                              <td className="px-3 py-2 font-medium text-foreground">
-                                <Link
-                                  href={`/patients/${r.patientId}`}
-                                  className="hover:underline flex items-center gap-1.5"
-                                >
-                                  <PawPrint className="h-3 w-3 text-primary/70" />
-                                  <span>{r.patientName}</span>
-                                </Link>
-                              </td>
-                              <td className="max-w-[180px] px-3 py-2 text-muted-foreground">
-                                <span className="block truncate" title={r.clientName}>{r.clientName}</span>
-                              </td>
-                              <td className="px-3 py-2">
-                                <span className="font-medium text-foreground">
-                                  {firstVaccine?.vaccineName ?? "Vakcína"}
-                                </span>
-                                <span className="block text-[10px] text-muted-foreground">
-                                  {t("vaccinations.expiryPrefix", "Expirácia:")}{" "}
-                                  <span className="tabular-nums">{formatDateToDisplay(firstVaccine?.nextDueDate)}</span>
-                                </span>
-                              </td>
-                              <td className="px-3 py-2">
-                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                  {r.channel === "sms" ? (
-                                    <MessageSquare className="h-3 w-3 text-emerald-600" />
-                                  ) : (
-                                    <Mail className="h-3 w-3 text-blue-600" />
-                                  )}
-                                  <span className="uppercase text-[10px] font-semibold">
-                                    {r.channel ?? "—"}
-                                  </span>
-                                </span>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge
-                                  variant={
-                                    r.status === "eligible"
-                                      ? "default"
-                                      : r.status === "already_sent"
-                                        ? "secondary"
-                                        : "destructive"
-                                  }
-                                  className="text-[10px] px-1.5 py-0 capitalize"
-                                >
-                                  {r.status === "eligible"
-                                    ? "Pripravené"
-                                    : r.status === "already_sent"
-                                      ? "Už odoslané"
-                                      : "Blokované"}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <Button asChild variant="ghost" size="sm" className="h-7 text-xs px-2">
-                                  <Link href={`/records?patientId=${r.patientId}&tab=vaccinations`}>
-                                    <span>Záznam</span>
-                                    <ExternalLink className="h-3 w-3 ml-1" />
-                                  </Link>
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <Send className="h-4 w-4" />
               )}
-            </CardContent>
-          </Card>
+              <span>
+                {t(
+                  "recalls.sendSelected",
+                  "Odoslať pripomienky ({count})",
+                  { count: selectedEligibleIds.length },
+                )}
+              </span>
+            </Button>
+          </PageToolbar>
+
+          {preview.isLoading ? (
+            <LoadingFrame />
+          ) : !preview.data?.recipients.length ? (
+            <EmptyState
+              icon={CheckCircle2}
+              title={t("vaccinations.recallsEmptyTitle", "Všetky očkovania sú aktuálne")}
+              description={t(
+                "vaccinations.recallsEmptyDesc",
+                "Žiadny pacient nemá exspirované očkovanie vyžadujúce zaslanie pripomienky.",
+              )}
+            />
+          ) : (
+            <DataTableFrame>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className={cn(tableHeadClass, "w-10")} />
+                    <th className={tableHeadClass}>{t("vaccinations.colPatient", "Pacient")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colOwner", "Majiteľ")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colVaccineDate", "Vakcína & Dátum")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colChannel", "Kanál")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colStatus", "Stav")}</th>
+                    <th className={cn(tableHeadClass, "text-right")}>{t("vaccinations.colAction", "Akcia")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.data.recipients.map((r) => {
+                    const isEligible = r.status === "eligible";
+                    const isChecked = selected.has(r.patientId);
+                    const firstVaccine = r.vaccines[0];
+
+                    return (
+                      <tr key={r.patientId} className={tableRowClass}>
+                        <td className={cn(tableCellClass, "w-10")}>
+                          <Checkbox
+                            aria-label={t("recalls.selectPatientAria", "Vybrať {name}", {
+                              name: r.patientName,
+                            })}
+                            checked={isChecked}
+                            disabled={!isEligible}
+                            onChange={() => handleToggleOne(r.patientId)}
+                          />
+                        </td>
+                        <td className={cn(tableCellClass, "font-medium text-foreground")}>
+                          <Link
+                            href={`/patients/${r.patientId}`}
+                            className="flex items-center gap-1.5 hover:underline"
+                          >
+                            <PawPrint className="h-3 w-3 text-primary/70" />
+                            <span>{r.patientName}</span>
+                          </Link>
+                        </td>
+                        <td className={cn(tableCellClass, "max-w-[180px] text-muted-foreground")}>
+                          <span className="block truncate" title={r.clientName}>{r.clientName}</span>
+                        </td>
+                        <td className={tableCellClass}>
+                          <span className="font-medium text-foreground">
+                            {firstVaccine?.vaccineName ??
+                              t("vaccinations.vaccineFallback", "Vakcína")}
+                          </span>
+                          <span className="block text-[10px] text-muted-foreground">
+                            {t("vaccinations.expiryPrefix", "Expirácia:")}{" "}
+                            <span className={NUMERIC}>
+                              {formatDateToDisplay(firstVaccine?.nextDueDate)}
+                            </span>
+                          </span>
+                        </td>
+                        <td className={tableCellClass}>
+                          {r.channel ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                              {r.channel === "sms" ? (
+                                <MessageSquare className="h-3 w-3 text-success" />
+                              ) : (
+                                <Mail className="h-3 w-3 text-info" />
+                              )}
+                              <span className="text-[10px] font-semibold uppercase">
+                                {r.channel === "sms"
+                                  ? t("recalls.channelSms", "SMS")
+                                  : t("recalls.channelEmail", "E-mail")}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className={tableCellClass}>
+                          <Badge
+                            variant={
+                              r.status === "eligible"
+                                ? "success"
+                                : r.status === "already_sent"
+                                  ? "outline"
+                                  : "warning"
+                            }
+                            className="px-1.5 py-0 text-[10px]"
+                          >
+                            {r.status === "eligible"
+                              ? t("recalls.badgeReady", "Pripravené")
+                              : r.status === "already_sent"
+                                ? t("recalls.badgeAlreadyReminded", "Už odoslané")
+                                : t("recalls.badgeBlocked", "Blokované")}
+                          </Badge>
+                        </td>
+                        <td className={cn(tableCellClass, "text-right")}>
+                          <Button asChild variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
+                            <Link href={`/records?patientId=${r.patientId}&tab=vaccinations`}>
+                              <span>{t("vaccinations.colRecord", "Záznam")}</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </DataTableFrame>
+          )}
         </TabsContent>
 
-        {/* Tab 2: Rabies statutory register */}
-        <TabsContent value="rabies" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 gap-2">
-              <div>
-                <CardTitle className="text-base font-semibold">
-                  {t("vaccinations.rabiesTitle", "Zákonná evidencia očkovania proti besnote")}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {t(
-                    "vaccinations.rabiesDesc",
-                    "Povinný register vakcinácie mäsožravcov proti besnote podľa Zákona č. 39/2007 Z. z. s 3-dňovou lehotou hlásenia na RVPS.",
-                  )}
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder={t("common.search", "Hľadať pacienta, čip...")}
-                  value={rabiesSearch}
-                  onChange={(e) => setRabiesSearch(e.target.value)}
-                  className="w-48 h-8 text-xs"
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {rabiesQuery.isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : !rabiesQuery.data?.items?.length ? (
-                <EmptyState
-                  icon={ShieldCheck}
-                  title={t("vaccinations.rabiesEmptyTitle", "Žiadne záznamy o besnote")}
-                  description={t(
-                    "vaccinations.rabiesEmptyDesc",
-                    "Neboli nájdené žiadne záznamy o aplikovanom očkovaní proti besnote.",
-                  )}
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className={TH}>{t("vaccinations.colDate", "Dátum")}</th>
-                        <th className={TH}>{t("vaccinations.colPatient", "Pacient")}</th>
-                        <th className={TH}>{t("vaccinations.colMicrochipNumber", "Číslo mikročipu")}</th>
-                        <th className={TH}>{t("vaccinations.colVaccineLot", "Vakcína & Šarža")}</th>
-                        <th className={TH}>{t("vaccinations.colRevaccination", "Revakcinácia")}</th>
-                        <th className={TH}>{t("vaccinations.colOwner", "Majiteľ")}</th>
-                        <th className={`${TH} text-right`}>{t("vaccinations.colRecord", "Záznam")}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {rabiesQuery.data.items.map((r) => (
-                        <tr key={r.id} className="hover:bg-muted/40 transition-colors">
-                          <td className="whitespace-nowrap px-3 py-2 tabular-nums text-muted-foreground">
-                            {formatDateToDisplay(r.administeredAt)}
-                          </td>
-                          <td className="px-3 py-2 font-medium text-foreground">
-                            <Link href={`/patients/${r.patientId}`} className="hover:underline">
-                              {r.patientName}
-                            </Link>
-                            <span className="block text-[10px] text-muted-foreground capitalize">
-                              {r.species} {r.breed ? `· ${r.breed}` : ""}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 font-mono text-[11px] tabular-nums text-foreground">
-                            {r.microchipNumber || "Nečipovaný"}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="font-medium text-foreground">{r.vaccineName}</span>
-                            {r.lotNumber && (
-                              <span className="block text-[10px] text-muted-foreground">
-                                {t("vaccinations.lotPrefix", "Šarža:")}{" "}
-                                <span className="font-mono text-[11px] tabular-nums">{r.lotNumber}</span>
-                              </span>
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums text-foreground">
-                            {formatDateToDisplay(r.nextDueDate)}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {`${r.clientFirstName || ""} ${r.clientLastName}`.trim()}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <Button asChild variant="ghost" size="sm" className="h-7 text-xs px-2">
-                              <Link href={`/records?patientId=${r.patientId}&tab=vaccinations`}>
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Link>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+        {/* Tab 2: Rabies register */}
+        <TabsContent value="rabies" className={TAB_PANEL}>
+          <PageSectionHeader
+            title={t("vaccinations.rabiesTitle", "Zákonná evidencia očkovania proti besnote")}
+            subtitle={t(
+              "vaccinations.rabiesDesc",
+              "Povinný register vakcinácie mäsožravcov proti besnote podľa Zákona č. 39/2007 Z. z. s 3-dňovou lehotou hlásenia na RVPS.",
+            )}
+          />
+
+          <PageToolbar>
+            <SearchField
+              value={rabiesSearch}
+              onChange={setRabiesSearch}
+              placeholder={t("common.search", "Hľadať pacienta, čip...")}
+            />
+            {rabiesQuery.data && (
+              <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
+                {t("vaccinations.totalRecipients", "Celkovo {total} záznamov", {
+                  total: rabiesQuery.data.totalCount,
+                })}
+              </p>
+            )}
+          </PageToolbar>
+
+          {rabiesQuery.isLoading ? (
+            <LoadingFrame />
+          ) : !rabiesQuery.data?.items?.length ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title={t("vaccinations.rabiesEmptyTitle", "Žiadne záznamy o besnote")}
+              description={t(
+                "vaccinations.rabiesEmptyDesc",
+                "Neboli nájdené žiadne záznamy o aplikovanom očkovaní proti besnote.",
               )}
-            </CardContent>
-          </Card>
+            />
+          ) : (
+            <DataTableFrame>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className={tableHeadClass}>{t("vaccinations.colDate", "Dátum")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colPatient", "Pacient")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colMicrochipNumber", "Číslo mikročipu")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colVaccineLot", "Vakcína & Šarža")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colRevaccination", "Revakcinácia")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colOwner", "Majiteľ")}</th>
+                    <th className={cn(tableHeadClass, "text-right")}>{t("vaccinations.colRecord", "Záznam")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rabiesQuery.data.items.map((r) => (
+                    <tr key={r.id} className={tableRowClass}>
+                      <td className={cn(tableCellClass, NUMERIC, "whitespace-nowrap text-muted-foreground")}>
+                        {formatDateToDisplay(r.administeredAt)}
+                      </td>
+                      <td className={cn(tableCellClass, "font-medium text-foreground")}>
+                        <Link href={`/patients/${r.patientId}`} className="hover:underline">
+                          {r.patientName}
+                        </Link>
+                        <span className="block text-[10px] capitalize text-muted-foreground">
+                          {r.species} {r.breed ? `· ${r.breed}` : ""}
+                        </span>
+                      </td>
+                      <td className={cn(tableCellClass, NUMERIC, "text-foreground")}>
+                        {r.microchipNumber || (
+                          <span className="font-sans text-muted-foreground">
+                            {t("vaccinations.notMicrochipped", "Nečipovaný")}
+                          </span>
+                        )}
+                      </td>
+                      <td className={tableCellClass}>
+                        <span className="font-medium text-foreground">{r.vaccineName}</span>
+                        {r.lotNumber && (
+                          <span className="block text-[10px] text-muted-foreground">
+                            {t("vaccinations.lotPrefix", "Šarža:")}{" "}
+                            <span className={NUMERIC}>{r.lotNumber}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className={cn(tableCellClass, NUMERIC, "whitespace-nowrap font-medium text-foreground")}>
+                        {formatDateToDisplay(r.nextDueDate)}
+                      </td>
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
+                        {`${r.clientFirstName || ""} ${r.clientLastName}`.trim()}
+                      </td>
+                      <td className={cn(tableCellClass, "text-right")}>
+                        <Button asChild variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <Link
+                            href={`/records?patientId=${r.patientId}&tab=vaccinations`}
+                            aria-label={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
+                            title={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </DataTableFrame>
+          )}
         </TabsContent>
 
         {/* Tab 3: Patient search for vaccination card */}
-        <TabsContent value="search" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">
-                {t("vaccinations.searchTitle", "Vyhľadať digitálny očkovací preukaz")}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {t(
-                  "vaccinations.searchDesc",
-                  "Zadajte meno pacienta, číslo mikročipu alebo majiteľa pre zobrazenie celej histórie vakcinácií a vytlačenie digitálneho preukazu.",
-                )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("patients.searchPlaceholder", "Meno pacienta, mikročip, majiteľ...")}
-                  value={patientQueryText}
-                  onChange={(e) => setPatientQueryText(e.target.value)}
-                  className="pl-9 text-xs"
-                />
-              </div>
+        <TabsContent value="search" className={TAB_PANEL}>
+          <PageSectionHeader
+            title={t("vaccinations.searchTitle", "Vyhľadať digitálny očkovací preukaz")}
+            subtitle={t(
+              "vaccinations.searchDesc",
+              "Zadajte meno pacienta, číslo mikročipu alebo majiteľa pre zobrazenie celej histórie vakcinácií a vytlačenie digitálneho preukazu.",
+            )}
+          />
 
-              {patientSearch.isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : patientQueryText.trim().length >= 2 && !patientSearch.data?.length ? (
-                <EmptyState
-                  icon={Search}
-                  title={t("patients.noResults", "Pacient nebol nájdený")}
-                  description={t("patients.noResultsDesc", "Skontrolujte správnosť zadaného mena alebo mikročipu.")}
-                />
-              ) : patientSearch.data && patientSearch.data.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className={TH}>{t("vaccinations.colPatient", "Pacient")}</th>
-                        <th className={TH}>{t("vaccinations.colSpeciesBreed", "Druh & Plemeno")}</th>
-                        <th className={TH}>{t("vaccinations.colMicrochip", "Mikročip")}</th>
-                        <th className={TH}>{t("vaccinations.colOwner", "Majiteľ")}</th>
-                        <th className={`${TH} text-right`}>{t("vaccinations.colAction", "Akcia")}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {patientSearch.data.map((p) => (
-                        <tr key={p.id} className="hover:bg-muted/40 transition-colors">
-                          <td className="px-3 py-2 font-semibold text-foreground">
-                            <Link href={`/patients/${p.id}`} className="hover:underline">
-                              {p.name}
-                            </Link>
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground capitalize">
-                            {p.species} {p.breed ? `· ${p.breed}` : ""}
-                          </td>
-                          <td className="px-3 py-2 font-mono text-[11px] tabular-nums text-muted-foreground">
-                            {p.microchipNumber || "—"}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {[p.clientFirstName, p.clientLastName].filter(Boolean).join(" ")}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1">
-                              <Link href={`/records?patientId=${p.id}&tab=vaccinations`}>
-                                <Syringe className="h-3 w-3 text-primary" />
-                                <span>Otvoriť očkovania</span>
-                              </Link>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
+          <PageToolbar>
+            <SearchField
+              value={patientQueryText}
+              onChange={setPatientQueryText}
+              placeholder={t("patients.searchPlaceholder", "Meno pacienta, mikročip, majiteľ...")}
+            />
+            {patientSearch.data && patientQueryText.trim().length >= 2 && (
+              <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
+                {t("vaccinations.totalRecipients", "Celkovo {total} záznamov", {
+                  total: patientSearch.data.length,
+                })}
+              </p>
+            )}
+          </PageToolbar>
+
+          {patientSearch.isLoading ? (
+            <LoadingFrame />
+          ) : patientQueryText.trim().length >= 2 && !patientSearch.data?.length ? (
+            <EmptyState
+              icon={Search}
+              title={t("patients.noResults", "Pacient nebol nájdený")}
+              description={t("patients.noResultsDesc", "Skontrolujte správnosť zadaného mena alebo mikročipu.")}
+            />
+          ) : patientSearch.data && patientSearch.data.length > 0 ? (
+            <DataTableFrame>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className={tableHeadClass}>{t("vaccinations.colPatient", "Pacient")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colSpeciesBreed", "Druh & Plemeno")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colMicrochip", "Mikročip")}</th>
+                    <th className={tableHeadClass}>{t("vaccinations.colOwner", "Majiteľ")}</th>
+                    <th className={cn(tableHeadClass, "text-right")}>{t("vaccinations.colAction", "Akcia")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientSearch.data.map((p) => (
+                    <tr key={p.id} className={tableRowClass}>
+                      <td className={cn(tableCellClass, "font-semibold text-foreground")}>
+                        <Link href={`/patients/${p.id}`} className="hover:underline">
+                          {p.name}
+                        </Link>
+                      </td>
+                      <td className={cn(tableCellClass, "capitalize text-muted-foreground")}>
+                        {p.species} {p.breed ? `· ${p.breed}` : ""}
+                      </td>
+                      <td className={cn(tableCellClass, NUMERIC, "text-muted-foreground")}>
+                        {p.microchipNumber || "—"}
+                      </td>
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
+                        {[p.clientFirstName, p.clientLastName].filter(Boolean).join(" ")}
+                      </td>
+                      <td className={cn(tableCellClass, "text-right")}>
+                        <Button asChild size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs">
+                          <Link href={`/records?patientId=${p.id}&tab=vaccinations`}>
+                            <Syringe className="h-3 w-3 text-primary" />
+                            <span>{t("vaccinations.openVaccinations", "Otvoriť očkovania")}</span>
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </DataTableFrame>
+          ) : null}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+/** Loading placeholder sized like a table card so the layout does not jump. */
+function LoadingFrame() {
+  return (
+    <div className="flex items-center justify-center rounded-lg border border-border bg-card py-12 shadow-xs">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
   );
 }

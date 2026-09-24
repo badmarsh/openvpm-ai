@@ -1546,7 +1546,8 @@
     },
     "ledger": {
       "title": "Controlled substance movement ledger",
-      "subtitle": "Date, patient, veterinarian, batch, received and issued quantity with the running balance are captured for every movement."
+      "subtitle": "Date, patient, veterinarian, batch, received and issued quantity with the running balance are captured for every movement.",
+      "count": "Entries: {count}"
     },
     "movementKinds": {
       "income": "Income (delivery note)",
@@ -3779,7 +3780,9 @@
       "seededDemoData": "Seeded demo patients cannot receive real reminders.",
       "reservedContact": "Reserved fixture phone numbers cannot receive real reminders."
     },
-    "channelFallbackEmail": "Texting is unavailable right now; this reminder will use email."
+    "channelFallbackEmail": "Texting is unavailable right now; this reminder will use email.",
+    "recipientCount": "Recipients: {count}",
+    "overdueDays": "{count} d overdue"
   },
   "records": {
     "encounterVitals": {
@@ -8868,7 +8871,11 @@
     "colSpeciesBreed": "Species & breed",
     "colMicrochip": "Microchip",
     "expiryPrefix": "Expires:",
-    "lotPrefix": "Lot:"
+    "lotPrefix": "Lot:",
+    "vaccineFallback": "Vaccine",
+    "notMicrochipped": "Not microchipped",
+    "openRecordAria": "Open vaccination record",
+    "openVaccinations": "Open vaccinations"
   },
   "fieldVisits": {
     "title": "Field Visits & Farms",

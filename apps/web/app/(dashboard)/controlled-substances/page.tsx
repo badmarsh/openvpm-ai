@@ -8,7 +8,6 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
-  Search,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
@@ -22,6 +21,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  pageShellClass,
+} from "@/components/layout/page-kit";
 import {
   Table,
   TableBody,
@@ -257,7 +262,7 @@ function LogEntryForm({ onClose, onRecorded }: { onClose: () => void; onRecorded
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-4 rounded-lg border border-border bg-card p-4 space-y-3"
+      className="rounded-lg border border-border bg-card p-4 space-y-3 shadow-xs"
     >
       <h3 className="font-heading text-base font-semibold">
         {t("controlledSubstances.newLogEntry", "New Log Entry")}
@@ -483,8 +488,9 @@ function SummarySection() {
   const summaryMissing = !isLoading && !error && !data;
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-lg border border-border bg-card shadow-xs">
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/30 transition-colors"
       >
@@ -594,7 +600,7 @@ function PendingImportReviews() {
     onSuccess: () => { setSelected(null); setEntryId(""); void reviews.refetch(); },
     onError: () => toast.error(t("inventory.wholesalerImport.reviewLinkError")),
   });
-  return <section className="mt-4 space-y-2 rounded-md border border-purple-500/30 p-3">
+  return <section className="space-y-2 rounded-lg border border-border bg-card p-3 shadow-xs">
     <h2 className="text-sm font-semibold">{t("inventory.wholesalerImport.pendingTitle")}</h2>
     <p className="text-xs text-muted-foreground">{t("inventory.wholesalerImport.manualOnly")}</p>
     {reviews.error && <p role="alert">{t("inventory.wholesalerImport.reviewLoadError")}</p>}
@@ -704,7 +710,7 @@ function ControlledSubstancesLogPage() {
   }, [canRecordControlledSubstance, showForm]);
 
   return (
-    <div>
+    <div className={pageShellClass}>
       <PageHeader
         icon={ShieldAlert}
         title={t("controlledSubstances.title", "Kniha omamných látok (OPK)")}
@@ -714,6 +720,7 @@ function ControlledSubstancesLogPage() {
         )}
         actions={
           <Button
+            size="sm"
             disabled={!canRecordControlledSubstance}
             onClick={() => {
               if (!canRecordControlledSubstance) return;
@@ -733,12 +740,10 @@ function ControlledSubstancesLogPage() {
       {canRecordControlledSubstance && <PendingImportReviews />}
 
       {/* Summary Section */}
-      <div className="mt-6">
-        <SummarySection />
-      </div>
+      <SummarySection />
 
-      {/* Ledger toolbar */}
-      <div className="mt-6 space-y-3">
+      {/* Ledger: section header → toolbar → DataTableFrame */}
+      <section className="space-y-4">
         <PageSectionHeader
           title={t("controlledSubstances.ledger.title", "Kniha pohybov omamných látok")}
           subtitle={t(
@@ -746,236 +751,238 @@ function ControlledSubstancesLogPage() {
             "Každý príjem, výdaj, likvidácia exspirácie a kontrola zostatku sa eviduje nezmazateľne v poradí podľa dátumu.",
           )}
         />
-        <div className="flex items-center gap-2">
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name...")}
-              value={search}
-              maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setOffset(0);
-              }}
-              className="h-9 pl-9"
-            />
-          </div>
-        </div>
-      </div>
+        <PageToolbar>
+          <SearchField
+            value={search}
+            placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name...")}
+            maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
+            onChange={(value) => {
+              setSearch(value);
+              setOffset(0);
+            }}
+          />
+          {verifiedLogPayload && (
+            <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
+              {t("controlledSubstances.ledger.count", "Entries: {count}", {
+                count: verifiedLogPayload.log.total,
+              })}
+            </p>
+          )}
+        </PageToolbar>
 
-      {logError || controlledSubstanceLogMissing ? (
-        <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {logError?.message ??
-            t(
+        {logError || controlledSubstanceLogMissing ? (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            {logError?.message ??
+              t(
+                "controlledSubstances.errors.loadEntriesError",
+                "Unable to load controlled-substance entries. Please retry.",
+              )}
+          </div>
+        ) : isLogLoading ? (
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card py-12 text-sm text-muted-foreground shadow-xs">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t("controlledSubstances.loadingEntries", "Loading controlled-substance entries...")}
+          </div>
+        ) : !verifiedLogPayload ? (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            {t(
               "controlledSubstances.errors.loadEntriesError",
               "Unable to load controlled-substance entries. Please retry.",
             )}
-        </div>
-      ) : isLogLoading ? (
-        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t("controlledSubstances.loadingEntries", "Loading controlled-substance entries...")}
-        </div>
-      ) : !verifiedLogPayload ? (
-        <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {t(
-            "controlledSubstances.errors.loadEntriesError",
-            "Unable to load controlled-substance entries. Please retry.",
-          )}
-        </div>
-      ) : verifiedLogPayload.log.items.length > 0 ? (
-        <>
-          <div className="mt-4 rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>
-                    {t("controlledSubstances.table.dateTime", "Date & time")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.drugName", "Drug name")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.schedule", "Schedule")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.action", "Movement type")}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {t("controlledSubstances.table.received", "Received")}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {t("controlledSubstances.table.issued", "Issued")}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {t("controlledSubstances.table.balance", "Balance")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.patient", "Patient")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.performedBy", "Veterinarian")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.witness", "Witness")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.lotNumber", "Batch (lot)")}
-                  </TableHead>
-                  <TableHead>
-                    {t("controlledSubstances.table.notes", "Notes")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {verifiedLogPayload.log.items.map((entry) => {
-                  const movementKind =
-                    MOVEMENT_KIND[entry.action] ?? "issue";
-                  const balance = balanceByDrug.get(entry.drugName);
-                  return (
-                    <TableRow key={entry.id}>
-                      <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {entry.performedAt
-                          ? formatControlledSubstanceDateTime(
-                              entry.performedAt,
-                              verifiedLogPayload.settings.timezone,
-                              locale
-                            )
-                          : "\u2014"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 font-medium">
-                        {entry.drugName}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-xs text-muted-foreground">
-                        {entry.deaSchedule}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5">
-                        <div className="flex flex-col items-start gap-1">
-                          <Badge
-                            variant="outline"
-                            className={`h-5 px-2 text-[11px] font-medium ${
-                              MOVEMENT_BADGE_STYLES[entry.action] ??
-                              "border-border bg-muted/50 text-muted-foreground"
-                            }`}
-                          >
-                            {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
-                          </Badge>
-                          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
-                            {t(
-                              `controlledSubstances.movementKinds.${movementKind}`,
-                              movementKind,
-                            )}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
-                        {sumReceivedAction(entry.action) ? entry.quantity : "\u2014"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
-                        {sumReceivedAction(entry.action) ? "\u2014" : entry.quantity}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
-                        {balance === undefined ? (
-                          "\u2014"
-                        ) : (
-                          <span
-                            className={
-                              balance <= 0 ? "text-destructive" : "font-medium"
-                            }
-                          >
-                            {formatBalance(balance)}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-muted-foreground">
-                        {entry.patientName || "\u2014"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-muted-foreground">
-                        {entry.performerName || "\u2014"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 text-muted-foreground">
-                        {entry.witnessName || "\u2014"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 font-mono text-xs text-muted-foreground">
-                        {entry.lotNumber || "\u2014"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5 max-w-[220px] truncate text-muted-foreground">
-                        {entry.notes || "\u2014"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
           </div>
+        ) : verifiedLogPayload.log.items.length > 0 ? (
+          <>
+            <DataTableFrame>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>
+                      {t("controlledSubstances.table.dateTime", "Date & time")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.drugName", "Drug name")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.schedule", "Schedule")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.action", "Movement type")}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t("controlledSubstances.table.received", "Received")}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t("controlledSubstances.table.issued", "Issued")}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t("controlledSubstances.table.balance", "Balance")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.patient", "Patient")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.performedBy", "Veterinarian")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.witness", "Witness")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.lotNumber", "Batch (lot)")}
+                    </TableHead>
+                    <TableHead>
+                      {t("controlledSubstances.table.notes", "Notes")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {verifiedLogPayload.log.items.map((entry) => {
+                    const movementKind =
+                      MOVEMENT_KIND[entry.action] ?? "issue";
+                    const balance = balanceByDrug.get(entry.drugName);
+                    return (
+                      <TableRow key={entry.id}>
+                        <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-[11px] tabular-nums text-muted-foreground">
+                          {entry.performedAt
+                            ? formatControlledSubstanceDateTime(
+                                entry.performedAt,
+                                verifiedLogPayload.settings.timezone,
+                                locale
+                              )
+                            : "\u2014"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 font-medium">
+                          {entry.drugName}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-xs text-muted-foreground">
+                          {entry.deaSchedule}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5">
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge
+                              variant="outline"
+                              className={`h-5 px-2 text-[11px] font-medium ${
+                                MOVEMENT_BADGE_STYLES[entry.action] ??
+                                "border-border bg-muted/50 text-muted-foreground"
+                              }`}
+                            >
+                              {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
+                            </Badge>
+                            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                              {t(
+                                `controlledSubstances.movementKinds.${movementKind}`,
+                                movementKind,
+                              )}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
+                          {sumReceivedAction(entry.action) ? entry.quantity : "\u2014"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
+                          {sumReceivedAction(entry.action) ? "\u2014" : entry.quantity}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-right font-mono tabular-nums">
+                          {balance === undefined ? (
+                            "\u2014"
+                          ) : (
+                            <span
+                              className={
+                                balance <= 0 ? "text-destructive" : "font-medium"
+                              }
+                            >
+                              {formatBalance(balance)}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-muted-foreground">
+                          {entry.patientName || "\u2014"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-muted-foreground">
+                          {entry.performerName || "\u2014"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 text-muted-foreground">
+                          {entry.witnessName || "\u2014"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 font-mono text-[11px] tabular-nums text-muted-foreground">
+                          {entry.lotNumber || "\u2014"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 max-w-[220px] truncate text-muted-foreground">
+                          {entry.notes || "\u2014"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </DataTableFrame>
 
-          {/* Pagination */}
-          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <p>
-              {t(
-                "controlledSubstances.pagination.showing",
-                `Showing ${offset + 1}–${Math.min(offset + limit, verifiedLogPayload.log.total)} of ${verifiedLogPayload.log.total}`,
-                {
-                  start: offset + 1,
-                  end: Math.min(offset + limit, verifiedLogPayload.log.total),
-                  total: verifiedLogPayload.log.total,
-                }
-              )}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={offset === 0}
-                onClick={() => setOffset(Math.max(0, offset - limit))}
-              >
-                {t("controlledSubstances.pagination.previous", "Previous")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={offset + limit >= verifiedLogPayload.log.total}
-                onClick={() => setOffset(offset + limit)}
-              >
-                {t("controlledSubstances.pagination.next", "Next")}
-              </Button>
+            {/* Pagination */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <p className="tabular-nums">
+                {t(
+                  "controlledSubstances.pagination.showing",
+                  `Showing ${offset + 1}–${Math.min(offset + limit, verifiedLogPayload.log.total)} of ${verifiedLogPayload.log.total}`,
+                  {
+                    start: offset + 1,
+                    end: Math.min(offset + limit, verifiedLogPayload.log.total),
+                    total: verifiedLogPayload.log.total,
+                  }
+                )}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={offset === 0}
+                  onClick={() => setOffset(Math.max(0, offset - limit))}
+                >
+                  {t("controlledSubstances.pagination.previous", "Previous")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={offset + limit >= verifiedLogPayload.log.total}
+                  onClick={() => setOffset(offset + limit)}
+                >
+                  {t("controlledSubstances.pagination.next", "Next")}
+                </Button>
+              </div>
             </div>
-          </div>
-        </>
-      ) : (
-        <EmptyState
-          className="mt-6"
-          icon={ShieldAlert}
-          title={
-            search
-              ? t("controlledSubstances.empty.filterTitle", "No entries match your filter")
-              : t("controlledSubstances.empty.noEntriesTitle", "No controlled substance entries yet")
-          }
-          description={
-            search
-              ? t("controlledSubstances.empty.filterDesc", "Try a different drug name or clear the filter.")
-              : t(
-                  "controlledSubstances.empty.noEntriesDesc",
-                  "Record each received, administered, wasted, or returned scheduled-drug event here.",
-                )
-          }
-          action={
-            search
-              ? undefined
-              : {
-                  label: t(
-                    "controlledSubstances.empty.logFirst",
-                    "Zaznamenať príjem omamnej látky",
-                  ),
-                  onClick: () => {
-                    if (!canRecordControlledSubstance) return;
-                    setShowForm(true);
-                  },
-                  icon: Plus,
-                }
-          }
-        />
-      )}
+          </>
+        ) : (
+          <EmptyState
+            icon={ShieldAlert}
+            title={
+              search
+                ? t("controlledSubstances.empty.filterTitle", "No entries match your filter")
+                : t("controlledSubstances.empty.noEntriesTitle", "No controlled substance entries yet")
+            }
+            description={
+              search
+                ? t("controlledSubstances.empty.filterDesc", "Try a different drug name or clear the filter.")
+                : t(
+                    "controlledSubstances.empty.noEntriesDesc",
+                    "Record each received, administered, wasted, or returned scheduled-drug event here.",
+                  )
+            }
+            action={
+              search
+                ? undefined
+                : {
+                    label: t(
+                      "controlledSubstances.empty.logFirst",
+                      "Zaznamenať príjem omamnej látky",
+                    ),
+                    onClick: () => {
+                      if (!canRecordControlledSubstance) return;
+                      setShowForm(true);
+                    },
+                    icon: Plus,
+                  }
+            }
+          />
+        )}
+      </section>
     </div>
   );
 }
