@@ -1,6 +1,7 @@
 # Arena Sprint: Agno Pipeline Architecture, CDP Reliability & Self-Healing Hardening
 
 > **Mission for Arena Agent:**
+> **Repo:** `badmarsh/openvpm-ai` | **Branch:** `main`
 > Review and harden the OpenVPM AI autonomous pipeline orchestrator located in `.agents/agno/pipeline_team_os.py` and `.agents/agno/pipeline_tools.py`.
 > Eliminate race conditions, premature completion heuristics, tab-selection blindness, mock stubs, and false-positive architectural audits.
 > Provide clean, robust Python code with comprehensive unit tests in `.agents/agno/tests/test_pipeline_tools.py`.
