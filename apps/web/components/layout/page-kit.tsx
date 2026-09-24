@@ -63,7 +63,7 @@ export const filterControlClass =
   "h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground shadow-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 export const underlineTabsListClass =
-  "inline-flex h-auto w-full max-w-lg gap-0 rounded-none border-b bg-transparent p-0";
+  "inline-flex h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0";
 
 export const underlineTabsTriggerClass =
   "gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none";

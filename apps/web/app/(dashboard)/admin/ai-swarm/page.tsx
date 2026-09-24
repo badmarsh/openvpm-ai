@@ -152,7 +152,7 @@ export default function AiSwarmAdminPage() {
   };
 
   return (
-    <div className={cn(pageShellClass, "w-full max-w-full overflow-hidden")}>
+    <div className={pageShellClass}>
       {/* 1. PageHeader */}
       <PageHeader
         icon={Bot}
