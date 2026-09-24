@@ -1,8 +1,11 @@
 import os
 import sys
 import subprocess
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
+
+logger = logging.getLogger("agno.pipeline")
 
 # Priečinky projektu a lokálneho behu
 AGNO_DIR = Path(__file__).resolve().parent

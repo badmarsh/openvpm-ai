@@ -323,6 +323,10 @@ export default function AiSwarmAdminPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="agent-ui" className={underlineTabsTriggerClass}>
+            <Sparkles className="mr-1.5 h-4 w-4" />
+            {t("admin.aiSwarm.tabs.agentUi", "Živá Agent UI Konzola")}
+          </TabsTrigger>
           <TabsTrigger value="guardrails" className={underlineTabsTriggerClass}>
             <ShieldCheck className="mr-1.5 h-4 w-4" />
             {t("admin.aiSwarm.tabs.guardrails", "Architektúra a bezpečnosť")}
@@ -773,6 +777,48 @@ export default function AiSwarmAdminPage() {
                 )}
               </p>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* Tab 4: Live Embedded Agent UI */}
+        <TabsContent value="agent-ui" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {t("admin.aiSwarm.agentUiView.title", "Živá Agent UI Konzola (:3007)")}
+                </h3>
+                <Badge variant={isOnline ? "default" : "secondary"} className="text-[10px]">
+                  {isOnline ? "AgentOS :7777 Ready" : "AgentOS Standby"}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(
+                  "admin.aiSwarm.agentUiView.subtitle",
+                  "Interaktívne webové rozhranie pre komunikáciu s lokálnym AgentOS tímom a sledovanie behov v reálnom čase."
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenAgentUi()}
+                className="gap-1.5 text-xs"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t("admin.aiSwarm.agentUiView.openExternal", "Otvoriť v plnom okne")}
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-border bg-background shadow-xs">
+            <iframe
+              src={agentUiUrl}
+              className="h-[750px] w-full border-0"
+              title="Agent UI"
+              allow="clipboard-read; clipboard-write"
+            />
           </div>
         </TabsContent>
       </Tabs>

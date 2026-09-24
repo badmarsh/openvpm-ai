@@ -418,7 +418,17 @@
       "tabs": {
         "fleet": "Flotila agentov a tímov",
         "sessions": "Relácie a úlohy",
+        "agentUi": "Živá Agent UI Konzola",
         "guardrails": "Architektúra a bezpečnosť"
+      },
+      "agentUiView": {
+        "title": "Živá Agent UI Konzola (:3007)",
+        "subtitle": "Interaktívne webové rozhranie pre komunikáciu s lokálnym AgentOS tímom a sledovanie behov v reálnom čase.",
+        "openExternal": "Otvoriť v plnom okne",
+        "startCommand": "Príkaz na spustenie servera: pnpm agent-ui",
+        "portInfo": "Lokálny Next.js port: 3007 → AgentOS REST: http://localhost:7777",
+        "offlineTitle": "Agent UI server nebeží na porte 3007",
+        "offlineDesc": "Pre spustenie Agent UI rozhrania otvorte terminál a zadajte: pnpm agent-ui (alebo pnpm --dir .agents/agno/agent-ui dev)."
       },
       "toolbar": {
         "searchPlaceholder": "Filtrovať agentov, relácie alebo úlohy...",

@@ -418,7 +418,17 @@
       "tabs": {
         "fleet": "Agent Fleet & Teams",
         "sessions": "Sessions & Tasks",
+        "agentUi": "Live Agent UI Console",
         "guardrails": "Architecture & Guardrails"
+      },
+      "agentUiView": {
+        "title": "Live Agent UI Console (:3007)",
+        "subtitle": "Interactive web interface for communicating with local AgentOS team and monitoring live runs.",
+        "openExternal": "Open Full Window",
+        "startCommand": "Command to start dev server: pnpm agent-ui",
+        "portInfo": "Local Next.js port: 3007 → AgentOS REST: http://localhost:7777",
+        "offlineTitle": "Agent UI server is not running on port 3007",
+        "offlineDesc": "To launch the Agent UI interface, open a terminal and run: pnpm agent-ui (or pnpm --dir .agents/agno/agent-ui dev)."
       },
       "toolbar": {
         "searchPlaceholder": "Filter agents, sessions or tasks...",
