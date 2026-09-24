@@ -1323,8 +1323,9 @@ KNOWN_UPSTREAM_ROUTER_FILES = frozenset({
 })
 
 _COMPOSER_SELECTORS = (
-    "textarea",
     "div[contenteditable='true']",
+    "textarea:not([name*='recaptcha']):not([class*='recaptcha'])",
+    "textarea",
     "[role='textbox']",
     "input[type='text']",
 )
@@ -2445,6 +2446,20 @@ def _watch_matched_page(
         _sleep(ARENA_POLL_INTERVAL_SECONDS)
 
 
+def _probe_cdp_endpoint(endpoint: str, timeout: float = 0.2) -> bool:
+    """Rýchly TCP socket check či je CDP port otvorený (eliminuje 2-10s timeouty Playwrightu)."""
+    try:
+        from urllib.parse import urlparse
+        import socket
+        u = urlparse(endpoint)
+        host = u.hostname or "127.0.0.1"
+        port = u.port or 9222
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 @contextmanager
 def _cdp_browser_session(ports: str) -> Iterator[list[tuple[Any, str]]]:
     """Connect to every live CDP endpoint and yield ``(browser, endpoint)``."""
@@ -2455,8 +2470,10 @@ def _cdp_browser_session(ports: str) -> Iterator[list[tuple[Any, str]]]:
     with sync_playwright() as playwright:
         connected: list[tuple[Any, str]] = []
         for endpoint in _get_cdp_endpoints(ports):
+            if not _probe_cdp_endpoint(endpoint):
+                continue
             try:
-                browser = playwright.chromium.connect_over_cdp(endpoint, timeout=2500)
+                browser = playwright.chromium.connect_over_cdp(endpoint, timeout=2000)
             except Exception:
                 continue
             connected.append((browser, endpoint))
@@ -2581,13 +2598,15 @@ def _locator_first(page: Any, selector: str) -> Any:
     return first
 
 
-def _first_locator(page: Any, selectors: Sequence[str], *, require_enabled: bool) -> Any:
+def _first_locator(page: Any, selectors: Sequence[str], *, require_enabled: bool, require_visible: bool = True) -> Any:
     for selector in selectors:
         try:
             loc = _locator_first(page, selector)
             if loc.count() <= 0:
                 continue
-            if require_enabled and (not loc.is_visible() or not loc.is_enabled()):
+            if require_visible and not loc.is_visible():
+                continue
+            if require_enabled and not loc.is_enabled():
                 continue
             return loc
         except Exception:
@@ -2612,11 +2631,16 @@ def _text_matches_prompt(value: str, prompt: str) -> bool:
     actual = (value or "").strip()
     if not expected:
         return False
-    return actual == expected or expected in actual
+    if actual == expected or expected in actual:
+        return True
+    import re
+    norm_expected = re.sub(r"\s+", " ", expected)
+    norm_actual = re.sub(r"\s+", " ", actual)
+    return norm_expected == norm_actual or norm_expected in norm_actual
 
 
 def _fill_and_submit(page: Any, prompt_text: str, auto_submit: bool) -> tuple[bool, bool, str]:
-    composer = _first_locator(page, _COMPOSER_SELECTORS, require_enabled=False)
+    composer = _first_locator(page, _COMPOSER_SELECTORS, require_enabled=False, require_visible=True)
     if composer is None:
         return False, False, "composer_missing"
     try:

@@ -58,7 +58,17 @@ if settings.database_url.startswith("postgresql"):
     from agno.db.postgres import PostgresDb
     db = PostgresDb(db_url=settings.database_url)
 else:
-    db = SqliteDb(db_file=str(TMP_DIR / "pipeline_team.db"))
+    _sqlite_path = str(TMP_DIR / "pipeline_team.db")
+    db = SqliteDb(db_file=_sqlite_path)
+    try:
+        import sqlite3
+        _conn = sqlite3.connect(_sqlite_path)
+        _conn.execute("PRAGMA journal_mode=WAL;")
+        _conn.execute("PRAGMA busy_timeout=5000;")
+        _conn.execute("PRAGMA synchronous=NORMAL;")
+        _conn.close()
+    except Exception:
+        pass
 
 # Zapnutie OpenTelemetry Tracing pre export do databázy (zobrazenie v Agno OS Traces)
 try:
@@ -283,7 +293,12 @@ arena_watcher = Agent(
     db=db,
     instructions=[
         "Si strážca a monitorovací agent pre paralelné Arena.ai relácie.",
-        "Cez 'monitor_arena_health' kontroluj stav všetkých paralelných behov a deteguj záseky alebo time-outy.",
+        "PRI DOPYTOCH NA STAV (status check, 'čo nové?', 'zisti stav uloh', 'aký je stav?'):",
+        "• Okamžite použi 'list_active_arena_sessions' a 'monitor_arena_health'. Tieto funkcie zistia stav bleskovo (< 0.1s) z evidencie a súborov tasks/.",
+        "• PRÍSNY ZÁKAZ: Pri bežnom dopyte na stav NIKDY nevolaj 'collect_code_from_arena_browser' v cykle pre všetky bežiace relácie naraz! To zablokuje tím na celé minúty a nechá používateľa bez odpovede.",
+        "• Okamžite po načítaní evidencie zostav prehľadný, štruktúrovaný report pre používateľa v slovenskom jazyku (aktívne bežiace, dokončené s patchmi, zlyhané, pripravené v tasks/).",
+        "ZBER KÓDU ('collect_code_from_arena_browser'):",
+        "• Volaj LEN vtedy, keď si explicitne požiadaný o stiahnutie kódu konkrétneho task_id (napr. keď má relácia status=COMPLETED alebo vygenerovaný diff).",
         "ZÁKAZ HALUCINOVANIA TELEMETRIE: Ak nemáš aktívny živý Chrome CDP mostík (port 9222) k tabu prehliadača, NIKDY netvrď, že stream beží plynule alebo že relácia nezamrzla. Vždy pravdivo uveď, že skutočný stav v prehliadači nevidíš a stav v evidencii je iba orientačný.",
         f"Zber kódu: collect_code_from_arena_browser(task_id=<presné session_id>, timeout_seconds={DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS}). Dokončenie je VÝHRADNE status=COMPLETED (aktívne tlačidlo Create PR, terminál skončil s unified diffom, explicitný completion marker, alebo unifikovaný diff .patch po predchádzajúcom PR/v repair cykle). status=RUNNING znamená, že agent rozmýšľa alebo spúšťa bash (pnpm, vitest, type-check). Ticho v DOM nie je dokončenie a .patch sa nesmie zapisovať.",
         "Tab sa páruje striktne podľa URL /agent/<session_id> alebo task slug v URL/titulku. Ak tab neexistuje, výsledok je status=NOT_FOUND a je zakázané čítať iný sprint.",
@@ -442,7 +457,19 @@ all_agents = [
 team_members = [prompt_manager, arena_dispatcher, arena_watcher, github_manager, qwen_implementer]
 team_instructions = [
     "Vedieš autonómnu vývojovú linku OpenVPM AI (Líder -> Arena.ai -> Kód -> Verifier -> Líder Review):",
-    "1. Keď používateľ zadá 'Implementujte XY':",
+    "",
+    "STRIKTNÝ ZÁKAZ TICHÉHO BEHU A POVINNOSŤ PRIEBEŽNEJ KOMUNIKÁCIE:",
+    "• Nikdy nenechávaj používateľa čakať bez priamej odpovede! Po každom delegovaní, zistení stavu alebo akcii VŽDY napíš zrozumiteľnú správu používateľovi v slovenčine.",
+    "• Keď používateľ zadá 'lets go sprint X', 'ideme na sprint X' alebo 'Implementujte XY':",
+    "   1. Okamžite potvrď prijatie: 'Rozumiem, spúšťam Sprint X. Pripravujem kompletný Golden Ticket a odosielam do Arena.ai...'",
+    "   2. Deleguj na prompt-manager, ktorý vytvorí Golden Ticket a odošle ho cez Chrome CDP.",
+    "   3. Ihneď informuj používateľa o úspešnom odoslaní a URL relácie.",
+    "• Keď sa používateľ pýta 'čo nové?', 'zisti stav úloh', 'aký je stav?', 'prečo neodpisuješ?':",
+    "   1. Deleguj na arena-watcher pre rýchle overenie cez 'list_active_arena_sessions' a 'monitor_arena_health'.",
+    "   2. Okamžite napíš používateľovi prehľadný report (bežiace úlohy, hotové patche, zlyhania, ďalší krok).",
+    "• Zákaz nekonečného tool loopu bez odpovede: Ak si vykonal delegovanie, ihneď zosumarizuj výsledok a odovzdaj správu používateľovi.",
+    "",
+    "1. Keď používateľ zadá 'Implementujte XY' alebo 'lets go sprint X':",
     "   a) Líder (Prompt Manager) preskúma požiadavku, pravidlá OpenVPM (AGENTS.md, UIKIT.md, i18n, zero-conflict) a vytvorí kompletný GOLDEN TICKET podľa .agents/skills/new-task/SKILL.md cez 'create_and_dispatch_arena_task' (Context/Why, Scope In/Out, Acceptance Criteria/DoD, Architecture, Verification Plan, Definition of Ready).",
     "   b) Nástroj automaticky odošle prompt do Arena.ai tabu cez Chrome CDP (port 9222) a uloží súbor do tasks/arena-sprint-<task_id>.md.",
     "   c) Arena generuje kód. Po získaní patchu alebo PR vetvy Qwen Implementer zapracuje zmeny do izolovanej vetvy swarm/agno-<task_id> pomocou 'apply_arena_patch'.",
@@ -465,6 +492,7 @@ openvpm_dev_team = Team(
     db=db,
     session_summary_manager=session_summary_manager,
     enable_session_summaries=True,
+    show_members_responses=True,
     markdown=True,
     add_history_to_context=True,
 )
@@ -774,6 +802,41 @@ app.add_middleware(
     expose_headers=["*"],
     allow_private_network=True,
 )
+
+def _start_autonomous_heartbeat_monitor(interval_seconds: float = 45.0) -> None:
+    """Spustí daemon vlákno na pozadí, ktoré proaktívne sleduje prechody stavov
+    v arena_sessions.json a tasks/ a loguje zmeny bez blokovania AgentOS."""
+    import threading
+    import time
+    from pipeline_tools import _load_sessions
+
+    def _monitor_loop():
+        time.sleep(5)
+        prev_states: dict[str, str] = {}
+        while True:
+            try:
+                sessions = _load_sessions()
+                for s in sessions:
+                    sid = s.get("session_id") or s.get("task_id")
+                    if not sid:
+                        continue
+                    curr_status = s.get("status", "UNKNOWN")
+                    prev_status = prev_states.get(sid)
+                    if prev_status and curr_status != prev_status:
+                        logger.info(
+                            f"[AUTONOMOUS HEARTBEAT] Arena relácia '{sid}' zmenila stav: {prev_status} -> {curr_status} ({s.get('progress') or ''})"
+                        )
+                    prev_states[sid] = curr_status
+            except Exception as e:
+                logger.debug(f"[AUTONOMOUS HEARTBEAT] Monitor error: {e}")
+            time.sleep(interval_seconds)
+
+    thread = threading.Thread(target=_monitor_loop, daemon=True, name="ArenaHeartbeatMonitor")
+    thread.start()
+
+
+_start_autonomous_heartbeat_monitor(interval_seconds=45.0)
+
 
 if __name__ == "__main__":
     agent_os.serve(app=app, host=settings.bind_host, port=settings.bind_port, reload=False)
