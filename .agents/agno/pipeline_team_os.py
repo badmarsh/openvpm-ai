@@ -461,6 +461,8 @@ openvpm_dev_team = Team(
     members=team_members,
     instructions=team_instructions,
     db=db,
+    session_summary_manager=session_summary_manager,
+    enable_session_summaries=True,
     markdown=True,
     add_history_to_context=True,
 )
