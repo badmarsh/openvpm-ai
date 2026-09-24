@@ -63,3 +63,18 @@ export function parseDisplayToDateYmd(display: string): string | null {
   return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
+/** Format a Date or date-time string as HH:mm using the app locale ("sk" | "en"). */
+export function formatTimeToDisplay(
+  value: Date | string | number | null | undefined,
+  locale: string = "sk",
+): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  const bcp47 = locale.toLowerCase().startsWith("sk") ? "sk-SK" : "en-US";
+  return d.toLocaleTimeString(bcp47, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}

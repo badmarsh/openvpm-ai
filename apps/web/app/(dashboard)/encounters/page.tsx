@@ -12,31 +12,50 @@ import {
   FileText,
   HeartHandshake,
   Layers,
-  Loader2,
   MapPin,
   RefreshCw,
-  Search,
   Stethoscope,
   User,
+  X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { formatDateInputLocal } from "@/lib/date-input";
-import { PATIENT_SPECIES_EMOJI, type PatientSpecies } from "@/lib/patients/species";
+import {
+  formatDateYmdToDisplay,
+  formatTimeToDisplay,
+} from "@/lib/date-display";
+import {
+  PATIENT_SPECIES_EMOJI,
+  type PatientSpecies,
+} from "@/lib/patients/species";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/empty-state";
-import { StatusPulseBadge, type StatusPulseVariant } from "@/components/ui/status-pulse-badge";
+import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
 import { TableSkeleton } from "@/components/common/loading";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import {
+  DataTableFrame,
+  KpiCard,
+  KpiGrid,
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 
 type TabKey = "today" | "active" | "followUps" | "all";
 
 export default function EncountersPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const todayStr = useMemo(() => formatDateInputLocal(), []);
 
@@ -69,7 +88,7 @@ export default function EncountersPage() {
     [appointmentsQuery.data]
   );
   const followUps = useMemo(() => followUpsQuery.data ?? [], [followUpsQuery.data]);
-  const doctors = doctorsQuery.data ?? [];
+  const doctors = useMemo(() => doctorsQuery.data ?? [], [doctorsQuery.data]);
 
   // KPI Calculations
   const todayAppointments = useMemo(() => {
@@ -139,15 +158,20 @@ export default function EncountersPage() {
     });
   }, [followUps, searchQuery]);
 
-  const formatTime = (timeVal: string | Date | null | undefined) => {
-    if (!timeVal) return "—";
-    try {
-      const d = new Date(timeVal);
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    } catch {
-      return "—";
-    }
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 ||
+    doctorFilter !== "all" ||
+    (activeTab === "all" && (statusFilter !== "all" || selectedDate !== todayStr));
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDoctorFilter("all");
+    setSelectedDate(todayStr);
   };
+
+  const formatTime = (timeVal: string | Date | null | undefined) =>
+    formatTimeToDisplay(timeVal, locale);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -209,12 +233,15 @@ export default function EncountersPage() {
     }
   };
 
+  const countChipClass =
+    "ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground";
+
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       {/* Header */}
       <PageHeader
         icon={Stethoscope}
-        title={t("encounters.hub.title", "Vyšetrenia a klinické návštevy")}
+        title={t("encounters.hub.title", "Vyšetrenia")}
         subtitle={t(
           "encounters.hub.subtitle",
           "Klinické vyšetrenia, príjem pacientov a následná starostlivosť"
@@ -258,248 +285,237 @@ export default function EncountersPage() {
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card className="border-border bg-card/60 shadow-xs">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("encounters.hub.kpiToday", "Dnes celkovo")}
+      {/* Underline tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as TabKey)}
+      >
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="today" className={underlineTabsTriggerClass}>
+            <Calendar className="h-3.5 w-3.5" />
+            <span>{t("encounters.hub.tabToday", "Dnešné vyšetrenia")}</span>
+            <span className={countChipClass}>{todayAppointments.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="active" className={underlineTabsTriggerClass}>
+            <Activity className="h-3.5 w-3.5" />
+            <span>{t("encounters.hub.tabActive", "V ambulancii a čakárni")}</span>
+            {inClinicCount > 0 && (
+              <span className="ml-1 animate-pulse rounded-full bg-success px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-success-foreground">
+                {inClinicCount}
               </span>
-              <Calendar className="h-4 w-4 text-primary/70" />
-            </div>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-              {todayAppointments.length}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card/60 shadow-xs">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("encounters.hub.kpiInClinic", "V ambulancii / čakárni")}
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="followUps" className={underlineTabsTriggerClass}>
+            <HeartHandshake className="h-3.5 w-3.5" />
+            <span>{t("encounters.hub.tabFollowUps", "Čakajúce kontroly")}</span>
+            {followUps.length > 0 && (
+              <span className="ml-1 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-warning-foreground">
+                {followUps.length}
               </span>
-              <Activity className="h-4 w-4 text-emerald-500" />
-            </div>
-            <p className={cn(
-              "mt-2 text-2xl font-bold tracking-tight",
-              inClinicCount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/60"
-            )}>
-              {inClinicCount}
-            </p>
-          </CardContent>
-        </Card>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="all" className={underlineTabsTriggerClass}>
+            <FileText className="h-3.5 w-3.5" />
+            <span>{t("encounters.hub.tabAll", "Všetky vyšetrenia")}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        <Card className="border-border bg-card/60 shadow-xs">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("encounters.hub.kpiFollowUps", "Čakajúce kontroly")}
-              </span>
-              <HeartHandshake className="h-4 w-4 text-amber-500" />
-            </div>
-            <p className={cn(
-              "mt-2 text-2xl font-bold tracking-tight",
-              followUps.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground/60"
-            )}>
-              {followUps.length}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card/60 shadow-xs">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("encounters.hub.kpiCompleted", "Ukončené dnes")}
-              </span>
-              <CheckCircle2 className="h-4 w-4 text-primary/70" />
-            </div>
-            <p className={cn(
-              "mt-2 text-2xl font-bold tracking-tight",
-              completedTodayCount > 0 ? "text-foreground" : "text-muted-foreground/60"
-            )}>
-              {completedTodayCount}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs & Controls */}
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card/50 p-4 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Main Navigation Tabs */}
-          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted/40 p-1 border border-border/50">
-            <button
-              type="button"
-              onClick={() => setActiveTab("today")}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                activeTab === "today"
-                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              {t("encounters.hub.tabToday", "Dnešné vyšetrenia")}
-              <span className="ml-1 rounded-full bg-primary-foreground/20 px-1.5 py-0.2 text-[10px]">
-                {todayAppointments.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("active")}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                activeTab === "active"
-                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <Activity className="h-3.5 w-3.5" />
-              {t("encounters.hub.tabActive", "V ambulancii a čakárni")}
-              {inClinicCount > 0 && (
-                <span className="ml-1 rounded-full bg-emerald-500 text-white px-1.5 py-0.2 text-[10px] font-bold animate-pulse">
-                  {inClinicCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("followUps")}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                activeTab === "followUps"
-                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <HeartHandshake className="h-3.5 w-3.5" />
-              {t("encounters.hub.tabFollowUps", "Čakajúce kontroly")}
-              {followUps.length > 0 && (
-                <span className="ml-1 rounded-full bg-amber-500 text-white px-1.5 py-0.2 text-[10px] font-bold">
-                  {followUps.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("all")}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                activeTab === "all"
-                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              {t("encounters.hub.tabAll", "Všetky vyšetrenia")}
-            </button>
-          </div>
-
-          {/* Quick Date Control for "all" tab */}
-          {activeTab === "all" && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-medium">
-                {t("encounters.hub.dateLabel", "Dátum")}:
-              </span>
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="h-8 text-xs w-36"
-              />
-            </div>
+      {/* One toolbar: search + filters + count */}
+      <PageToolbar>
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder={t(
+            "encounters.hub.searchPlaceholder",
+            "Hľadať podľa mena pacienta, majiteľa, čipu alebo lekára..."
           )}
-        </div>
-
-        {/* Filter and Search row */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t(
-                "encounters.hub.searchPlaceholder",
-                "Hľadať podľa mena pacienta, majiteľa, čipu alebo lekára..."
-              )}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-xs"
+        />
+        {activeTab === "all" ? (
+          <>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              aria-label={t("encounters.hub.dateLabel", "Dátum")}
+              className={cn(filterControlClass, "w-40")}
             />
-          </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={filterControlClass}
+              aria-label={t("encounters.hub.allStatuses", "Všetky stavy")}
+            >
+              <option value="all">
+                {t("encounters.hub.allStatuses", "Všetky stavy")}
+              </option>
+              <option value="scheduled">
+                {t("dashboard.upcoming.status.scheduled", "Naplánované")}
+              </option>
+              <option value="confirmed">
+                {t("dashboard.upcoming.status.confirmed", "Potvrdené")}
+              </option>
+              <option value="checked_in">
+                {t("dashboard.upcoming.status.checked_in", "Príchod")}
+              </option>
+              <option value="in_exam">
+                {t("dashboard.upcoming.status.in_exam", "Vyšetruje sa")}
+              </option>
+              <option value="checked_out">
+                {t("dashboard.upcoming.status.completed", "Dokončené")}
+              </option>
+              <option value="cancelled">
+                {t("dashboard.upcoming.status.cancelled", "Zrušené")}
+              </option>
+              <option value="no_show">
+                {t("dashboard.upcoming.status.no_show", "Nedostavil sa")}
+              </option>
+            </select>
+          </>
+        ) : null}
 
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-            {activeTab === "all" && (
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground shadow-xs focus:outline-hidden focus:ring-2 focus:ring-primary"
-                aria-label={t("encounters.hub.allStatuses", "Všetky stavy")}
-              >
-                <option value="all">
-                  {t("encounters.hub.allStatuses", "Všetky stavy")}
-                </option>
-                <option value="scheduled">
-                  {t("dashboard.upcoming.status.scheduled", "Naplánované")}
-                </option>
-                <option value="confirmed">
-                  {t("dashboard.upcoming.status.confirmed", "Potvrdené")}
-                </option>
-                <option value="checked_in">
-                  {t("dashboard.upcoming.status.checked_in", "Príchod")}
-                </option>
-                <option value="in_exam">
-                  {t("dashboard.upcoming.status.in_exam", "Vyšetruje sa")}
-                </option>
-                <option value="checked_out">
-                  {t("dashboard.upcoming.status.completed", "Dokončené")}
-                </option>
-                <option value="cancelled">
-                  {t("dashboard.upcoming.status.cancelled", "Zrušené")}
-                </option>
-                <option value="no_show">
-                  {t("dashboard.upcoming.status.no_show", "Nedostavil sa")}
-                </option>
-              </select>
-            )}
+        {doctors.length > 0 ? (
+          <select
+            value={doctorFilter}
+            onChange={(e) => setDoctorFilter(e.target.value)}
+            className={filterControlClass}
+            aria-label={t("encounters.hub.allDoctors", "Všetci lekári")}
+          >
+            <option value="all">
+              {t("encounters.hub.allDoctors", "Všetci lekári")}
+            </option>
+            {doctors.map((doc) => (
+              <option key={doc.id} value={doc.id}>
+                {doc.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
 
-            {doctors.length > 0 && (
-              <select
-                value={doctorFilter}
-                onChange={(e) => setDoctorFilter(e.target.value)}
-                className="h-9 rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground shadow-xs focus:outline-hidden focus:ring-2 focus:ring-primary"
-                aria-label={t("encounters.hub.allDoctors", "Všetci lekári")}
-              >
-                <option value="all">
-                  {t("encounters.hub.allDoctors", "Všetci lekári")}
-                </option>
-                {doctors.map((doc) => (
-                  <option key={doc.id} value={doc.id}>
-                    {doc.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
-      </div>
+        {hasActiveFilters ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={clearFilters}
+          >
+            <X className="h-3.5 w-3.5" />
+            {t("encounters.hub.clearFilters", "Zrušiť filtre")}
+          </Button>
+        ) : null}
 
-      {/* Main Content Area */}
+        <span className="text-xs text-muted-foreground sm:ml-auto">
+          {activeTab === "followUps"
+            ? t("encounters.hub.resultCount", "{count} výsledkov", {
+                count: filteredFollowUps.length,
+              })
+            : t("encounters.hub.resultCount", "{count} výsledkov", {
+                count: filteredAppointments.length,
+              })}
+        </span>
+      </PageToolbar>
+
+      {/* KPI row */}
+      <KpiGrid>
+        <KpiCard
+          label={t("encounters.hub.kpiToday", "Dnes celkovo")}
+          value={
+            <span
+              className={
+                todayAppointments.length > 0
+                  ? "text-foreground"
+                  : "text-muted-foreground/60"
+              }
+            >
+              {todayAppointments.length}
+            </span>
+          }
+          icon={<Calendar className="h-4 w-4 text-primary/70" />}
+        />
+        <KpiCard
+          label={t("encounters.hub.kpiInClinic", "V ambulancii / čakárni")}
+          value={
+            <span className={inClinicCount > 0 ? "text-success" : "text-muted-foreground/60"}>
+              {inClinicCount}
+            </span>
+          }
+          icon={
+            <Activity
+              className={cn(
+                "h-4 w-4",
+                inClinicCount > 0 ? "text-success" : "text-muted-foreground"
+              )}
+            />
+          }
+          active={activeTab === "active"}
+          onClick={() => setActiveTab("active")}
+        />
+        <KpiCard
+          label={t("encounters.hub.kpiFollowUps", "Čakajúce kontroly")}
+          value={
+            <span className={followUps.length > 0 ? "text-warning" : "text-muted-foreground/60"}>
+              {followUps.length}
+            </span>
+          }
+          icon={
+            <HeartHandshake
+              className={cn(
+                "h-4 w-4",
+                followUps.length > 0 ? "text-warning" : "text-muted-foreground"
+              )}
+            />
+          }
+          active={activeTab === "followUps"}
+          onClick={() => setActiveTab("followUps")}
+        />
+        <KpiCard
+          label={t("encounters.hub.kpiCompleted", "Ukončené dnes")}
+          value={
+            <span
+              className={
+                completedTodayCount > 0
+                  ? "text-foreground"
+                  : "text-muted-foreground/60"
+              }
+            >
+              {completedTodayCount}
+            </span>
+          }
+          icon={<CheckCircle2 className="h-4 w-4 text-primary/70" />}
+        />
+      </KpiGrid>
+
+      {/* Main content */}
       {activeTab === "followUps" ? (
-        /* Follow-ups Queue View */
-        <div className="rounded-xl border border-border bg-card shadow-xs">
+        <DataTableFrame>
           {followUpsQuery.isLoading ? (
-            <div className="p-4">
-              <TableSkeleton rows={4} cols={5} />
-            </div>
+            <TableSkeleton
+              rows={4}
+              cols={5}
+              className="rounded-none border-0 shadow-none"
+            />
           ) : filteredFollowUps.length === 0 ? (
-            <div className="p-8">
+            hasActiveFilters ? (
               <EmptyState
+                className="rounded-none border-0"
+                icon={HeartHandshake}
+                title={t(
+                  "encounters.hub.emptyFilteredTitle",
+                  "Žiadne výsledky pre zvolené filtre"
+                )}
+                description={t(
+                  "encounters.hub.emptyFilteredDesc",
+                  "Upravte alebo zrušte filtre a zobrazíte ďalšie vyšetrenia."
+                )}
+                action={{
+                  label: t("encounters.hub.clearFilters", "Zrušiť filtre"),
+                  onClick: clearFilters,
+                  icon: X,
+                }}
+              />
+            ) : (
+              <EmptyState
+                className="rounded-none border-0"
                 icon={HeartHandshake}
                 title={t(
                   "encounters.hub.emptyFollowUpsTitle",
@@ -510,88 +526,119 @@ export default function EncountersPage() {
                   "Všetky pooperačné kontroly a následná starostlivosť sú aktuálne vybavené."
                 )}
               />
-            </div>
+            )
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="py-2 px-3">
-                      {t("encounters.hub.tableDueDate", "Termín kontroly")}
+              <table className="w-full text-xs">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>
+                    <th className={tableHeadClass}>
+                      {t("encounters.hub.tableDueDate", "Dátum kontroly")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tablePatient", "Pacient")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableClient", "Majiteľ")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableAssignee", "Zodpovedný riešiteľ")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableNotes", "Poznámky")}
                     </th>
-                    <th className="py-2 px-3 text-right">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("encounters.hub.tableActions", "Akcie")}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody>
                   {filteredFollowUps.map((item) => {
-                    const isOverdue =
-                      item.dueDate &&
-                      new Date(item.dueDate).getTime() < new Date().setHours(0, 0, 0, 0);
-
+                    const isOverdue = Boolean(item.dueDate && item.dueDate < todayStr);
+                    const isDueToday = item.dueDate === todayStr;
+  
                     return (
                       <tr
                         key={item.closeoutId}
-                        className="cursor-pointer hover:bg-muted/40 transition-colors"
+                        className={cn(tableRowClass, "cursor-pointer")}
                         onClick={() =>
                           router.push(`/encounters/${item.appointmentId}#visit-closeout`)
                         }
                       >
-                        <td className="py-2 px-3 whitespace-nowrap font-medium">
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
                           <div className="flex items-center gap-1.5">
                             <Clock
                               className={cn(
-                                "h-4 w-4",
-                                isOverdue ? "text-destructive" : "text-amber-500"
+                                "h-3.5 w-3.5",
+                                isOverdue
+                                  ? "text-destructive"
+                                  : isDueToday
+                                    ? "text-warning"
+                                    : "text-muted-foreground"
                               )}
                             />
-                            <span className={cn(isOverdue && "text-destructive font-bold")}>
-                              {item.dueDate || "—"}
+                            <span
+                              className={cn(
+                                "font-mono tabular-nums text-xs",
+                                isOverdue
+                                  ? "font-semibold text-destructive"
+                                  : "font-medium text-foreground"
+                              )}
+                            >
+                              {item.dueDate
+                                ? formatDateYmdToDisplay(item.dueDate)
+                                : "—"}
                             </span>
                           </div>
-                        </td>
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          {item.patientId ? (
-                            <Link
-                              href={`/patients/${item.patientId}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
+                          {isOverdue ? (
+                            <Badge
+                              variant="outline"
+                              className="mt-1 border-destructive/30 bg-destructive/10 text-destructive"
                             >
-                              <span>{item.patientName || "—"}</span>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {item.patientName || "—"}
-                            </span>
-                          )}
+                              {t("encounters.hub.overdue", "Omeškané")}
+                            </Badge>
+                          ) : isDueToday ? (
+                            <Badge variant="warning" className="mt-1">
+                              {t("encounters.hub.dueToday", "Dnes")}
+                            </Badge>
+                          ) : null}
                         </td>
-                        <td className="py-2 px-3 whitespace-nowrap text-muted-foreground">
-                          {item.clientFirstName} {item.clientLastName}
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                          <div className="flex items-center gap-1.5">
+                            {item.patientId ? (
+                              <Link
+                                href={`/patients/${item.patientId}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-medium text-foreground transition-colors hover:text-primary"
+                              >
+                                <span>{item.patientName || "—"}</span>
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {item.patientName || "—"}
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="py-2 px-3 whitespace-nowrap">
+                        <td className={cn(tableCellClass, "whitespace-nowrap text-muted-foreground")}>
+                          <div className="min-w-0 max-w-[12rem] truncate">
+                            {item.clientFirstName} {item.clientLastName}
+                          </div>
+                        </td>
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                             <User className="h-3.5 w-3.5" />
-                            {item.assigneeName || "—"}
+                            <span className="max-w-[10rem] truncate">
+                              {item.assigneeName || "—"}
+                            </span>
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-xs text-muted-foreground max-w-xs truncate">
-                          {item.followUpNotes || "—"}
+                        <td className={cn(tableCellClass, "max-w-xs")}>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {item.followUpNotes || "—"}
+                          </div>
                         </td>
-                        <td className="py-2 px-3 text-right whitespace-nowrap">
+                        <td className={cn(tableCellClass, "whitespace-nowrap text-right")}>
                           <Button size="sm" asChild className="gap-1.5">
                             <Link
                               href={`/encounters/${item.appointmentId}#visit-closeout`}
@@ -609,93 +656,119 @@ export default function EncountersPage() {
               </table>
             </div>
           )}
-        </div>
+        </DataTableFrame>
       ) : (
-        /* Encounters & Visits Table View */
-        <div className="rounded-xl border border-border bg-card shadow-xs">
+        <DataTableFrame>
           {appointmentsQuery.isLoading ? (
-            <div className="p-4">
-              <TableSkeleton rows={5} cols={6} />
-            </div>
+            <TableSkeleton
+              rows={5}
+              cols={6}
+              className="rounded-none border-0 shadow-none"
+            />
           ) : filteredAppointments.length === 0 ? (
-            <div className="p-8">
+            hasActiveFilters ? (
               <EmptyState
+                className="rounded-none border-0"
+                icon={Stethoscope}
+                title={t(
+                  "encounters.hub.emptyFilteredTitle",
+                  "Žiadne výsledky pre zvolené filtre"
+                )}
+                description={t(
+                  "encounters.hub.emptyFilteredDesc",
+                  "Upravte alebo zrušte filtre a zobrazíte ďalšie vyšetrenia."
+                )}
+                action={{
+                  label: t("encounters.hub.clearFilters", "Zrušiť filtre"),
+                  onClick: clearFilters,
+                  icon: X,
+                }}
+              />
+            ) : (
+              <EmptyState
+                className="rounded-none border-0"
                 icon={Stethoscope}
                 title={t("encounters.hub.emptyTitle", "Žiadne vyšetrenia")}
                 description={t(
                   "encounters.hub.emptyDescription",
-                  "Pre zvolené filtre sa nenašli žiadne klinické záznamy ani objednávky."
+                  "Žiadne vyšetrenia na tomto výhľade. Nové vyšetrenie vytvoríte v rozvrhu."
                 )}
                 action={{
-                  label: t("encounters.hub.newAppointment", "Objednať vyšetrenie"),
+                  label: t("encounters.hub.newEncounter", "Nové vyšetrenie"),
                   onClick: () => {
-                    window.location.assign("/schedule");
+                    router.push("/schedule");
                   },
                   icon: CalendarPlus,
                 }}
               />
-            </div>
+            )
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="py-2 px-3">
+              <table className="w-full text-xs">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableTime", "Čas")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tablePatient", "Pacient")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableClient", "Majiteľ")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableType", "Typ úkonu")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableDoctor", "Lekár")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableLocation", "Miestnosť / Pobočka")}
                     </th>
-                    <th className="py-2 px-3">
+                    <th className={tableHeadClass}>
                       {t("encounters.hub.tableStatus", "Stav")}
                     </th>
-                    <th className="py-2 px-3 text-right">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("encounters.hub.tableActions", "Akcie")}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody>
                   {filteredAppointments.map((apt) => {
                     const species = (apt.patientSpecies ?? "other") as PatientSpecies;
                     const emoji = PATIENT_SPECIES_EMOJI[species] || "🐾";
                     const isInExam = apt.status === "in_exam";
                     const isCheckedIn = apt.status === "checked_in";
                     const isCheckedOut = apt.status === "checked_out";
-
+  
                     return (
                       <tr
                         key={apt.id}
                         className={cn(
-                          "cursor-pointer transition-colors hover:bg-muted/40",
-                          isInExam && "bg-emerald-500/5",
-                          isCheckedIn && "bg-amber-500/5"
+                          tableRowClass,
+                          "cursor-pointer",
+                          isInExam && "bg-success/5",
+                          isCheckedIn && "bg-warning/5"
                         )}
                         onClick={() => router.push(`/encounters/${apt.id}`)}
                       >
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          <div className="font-semibold tabular-nums text-foreground">
+                        <td
+                          className={cn(
+                            tableCellClass,
+                            "whitespace-nowrap font-mono tabular-nums text-xs"
+                          )}
+                        >
+                          <div className="font-semibold text-foreground">
                             {formatTime(apt.startTime)}
                           </div>
-                          <div className="text-[11px] tabular-nums text-muted-foreground">
+                          <div className="text-[11px] text-muted-foreground">
                             {t("encounters.hub.until", "do {time}", {
                               time: formatTime(apt.endTime),
                             })}
                           </div>
                         </td>
-
-                        <td className="py-2 px-3 whitespace-nowrap">
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
                           <div className="flex items-center gap-1.5">
                             <span className="text-base" aria-hidden="true">
                               {emoji}
@@ -704,31 +777,35 @@ export default function EncountersPage() {
                               <Link
                                 href={`/patients/${apt.patientId}`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                                className="flex items-center gap-1 font-medium text-foreground transition-colors hover:text-primary"
                               >
-                                <span>{apt.patientName || t("dashboard.upcoming.unknownPatient", "Neznámy")}</span>
+                                <span>
+                                  {apt.patientName ||
+                                    t("dashboard.upcoming.unknownPatient", "Neznámy")}
+                                </span>
                                 <ExternalLink className="h-3 w-3 text-muted-foreground opacity-60" />
                               </Link>
                             ) : (
                               <span className="text-muted-foreground">
-                                {apt.patientName || t("dashboard.upcoming.unknownPatient", "Neznámy")}
+                                {apt.patientName ||
+                                  t("dashboard.upcoming.unknownPatient", "Neznámy")}
                               </span>
                             )}
                           </div>
                         </td>
-
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          <div className="font-medium text-foreground text-xs">
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                          <div className="min-w-0 max-w-[12rem] truncate font-medium text-foreground">
                             {apt.clientFirstName} {apt.clientLastName}
                           </div>
-                          {apt.clientPhone && (
-                            <div className="text-[11px] text-muted-foreground">
+                          {apt.clientPhone ? (
+                            <div className="truncate text-[11px] text-muted-foreground">
                               {apt.clientPhone}
                             </div>
-                          )}
+                          ) : null}
                         </td>
-
-                        <td className="py-2 px-3 whitespace-nowrap">
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
                           {apt.typeName ? (
                             <span
                               className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
@@ -749,34 +826,36 @@ export default function EncountersPage() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
-
-                        <td className="py-2 px-3 whitespace-nowrap text-xs text-foreground">
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap text-xs text-foreground")}>
                           {apt.doctorName ? (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>{apt.doctorName}</span>
+                            <div className="flex min-w-0 items-center gap-1">
+                              <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <span className="max-w-[9rem] truncate">
+                                {apt.doctorName}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-
-                        <td className="py-2 px-3 whitespace-nowrap text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-muted-foreground/60" />
-                            <span>
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap text-xs text-muted-foreground")}>
+                          <div className="flex min-w-0 items-center gap-1">
+                            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                            <span className="max-w-[9rem] truncate">
                               {apt.roomName ||
                                 apt.locationName ||
                                 t("encounters.hub.examRoomFallback", "Ambulancia")}
                             </span>
                           </div>
                         </td>
-
-                        <td className="py-2 px-3 whitespace-nowrap">
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap")}>
                           {getStatusBadge(apt.status)}
                         </td>
-
-                        <td className="py-2 px-3 text-right whitespace-nowrap">
+  
+                        <td className={cn(tableCellClass, "whitespace-nowrap text-right")}>
                           {isInExam || isCheckedIn ? (
                             <Button size="sm" asChild className="gap-1.5 shadow-xs">
                               <Link
@@ -826,7 +905,7 @@ export default function EncountersPage() {
               </table>
             </div>
           )}
-        </div>
+        </DataTableFrame>
       )}
     </div>
   );

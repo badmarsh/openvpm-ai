@@ -1203,7 +1203,15 @@
     "relativeTomorrow": "Zajtra",
     "relativeYesterday": "Včera",
     "relativeInDays": "o {count} d.",
-    "relativeOverdueDays": "pred {count} d."
+    "relativeOverdueDays": "pred {count} d.",
+    "searchPlaceholder": "Hľadať podľa pacienta, majiteľa alebo pripomienky...",
+    "resultCount": "{count} záznamov",
+    "clearFilters": "Zrušiť filtre",
+    "dueFilterAria": "Filtrovať podľa dátumu splatnosti",
+    "emptyFilteredTitle": "Žiadne záznamy pre zvolené filtre",
+    "emptyFilteredDesc": "Upravte alebo zrušte vyhľadávanie a filtre, aby ste videli zvyšok frontu.",
+    "metricDueToday": "Dnes",
+    "metricOverdue": "Omeškané"
   },
   "chrome": {
     "searchPlaceholder": "Hľadať…",
@@ -8278,7 +8286,7 @@
       "writeSoapNote": "Napísať záznam SOAP"
     },
     "hub": {
-      "title": "Vyšetrenia a klinické návštevy",
+      "title": "Vyšetrenia",
       "subtitle": "Klinické vyšetrenia, príjem pacientov a následná starostlivosť",
       "tabToday": "Dnešné vyšetrenia",
       "tabActive": "V ambulancii a čakárni",
@@ -8303,7 +8311,7 @@
       "tableLocation": "Miestnosť / Pobočka",
       "tableStatus": "Stav",
       "tableActions": "Akcie",
-      "tableDueDate": "Termín kontroly",
+      "tableDueDate": "Dátum kontroly",
       "tableNotes": "Poznámky",
       "tableAssignee": "Zodpovedný riešiteľ",
       "searchPlaceholder": "Hľadať pacienta, majiteľa, čip...",
@@ -8311,12 +8319,19 @@
       "allStatuses": "Všetky stavy",
       "allDoctors": "Všetci lekári",
       "emptyTitle": "Žiadne vyšetrenia",
-      "emptyDescription": "Pre zvolené filtre sa nenašli žiadne klinické záznamy ani objednávky.",
+      "emptyDescription": "Žiadne vyšetrenia na tomto výhľade. Nové vyšetrenie vytvoríte v rozvrhu.",
       "emptyFollowUpsTitle": "Žiadne čakajúce kontroly",
       "emptyFollowUpsDescription": "Všetky pooperačné kontroly a následná starostlivosť sú aktuálne vybavené.",
       "error": "Nepodarilo sa načítať zoznam vyšetrení. Skúste to prosím znova.",
       "until": "do {time}",
-      "examRoomFallback": "Ambulancia"
+      "examRoomFallback": "Ambulancia",
+      "clearFilters": "Zrušiť filtre",
+      "resultCount": "{count} výsledkov",
+      "newEncounter": "Nové vyšetrenie",
+      "emptyFilteredTitle": "Žiadne výsledky pre zvolené filtre",
+      "emptyFilteredDesc": "Upravte alebo zrušte filtre a zobrazíte ďalšie vyšetrenia.",
+      "dueToday": "Dnes",
+      "overdue": "Omeškané"
     }
   },
   "records.labResults.actorUnavailableLegacy": "vykonávateľ nedostupný (starší záznam)",
