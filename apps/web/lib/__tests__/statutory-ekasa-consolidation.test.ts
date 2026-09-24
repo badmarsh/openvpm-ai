@@ -71,9 +71,9 @@ describe("statutory & e-Kasa GUI consolidation", () => {
   it("keeps controlled-substance movements chromatically distinct", () => {
     const src = source(FILES.controlledSubstances);
     // Príjem (dodací list) = green, Výdaj = violet/blue, Likvidácia = red.
-    expect(src).toMatch(/received:\s*\n?\s*"border-emerald/);
+    expect(src).toMatch(/received:\s*\n?\s*"(?:border-emerald|border-success)/);
     expect(src).toMatch(/administered:\s*\n?\s*"border-violet/);
-    expect(src).toMatch(/wasted:\s*\n?\s*"border-red/);
+    expect(src).toMatch(/wasted:\s*\n?\s*"(?:border-red|border-destructive)/);
     // Movement kinds (income / issue / disposal) are resolved per action.
     expect(src).toContain("controlledSubstances.movementKinds.${movementKind}");
     expect(src).toMatch(/received:\s*"income"/);
