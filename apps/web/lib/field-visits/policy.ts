@@ -63,12 +63,12 @@ export function formatCehzEarTag(raw: string | null | undefined): string | null 
   return normalized ? `${normalized.slice(0, 2)} ${normalized.slice(2)}` : null;
 }
 
-/** Slovenské IČO: osem číslic, posledná je kontrolná číslica modulo 11. */
+/** Slovenské IČO: osem číslic, posledná je kontrolná číslica modulo 11 ((11 - zvyšok) % 10). */
 export function isValidFarmIco(raw: string | null | undefined): boolean {
   if (typeof raw !== "string" || !/^\d{8}$/.test(raw)) return false;
   const sum = raw.slice(0, 7).split("").reduce((total, digit, index) => total + Number(digit) * (8 - index), 0);
   const remainder = sum % 11;
-  const checkDigit = remainder === 0 || remainder === 1 ? 0 : 11 - remainder;
+  const checkDigit = (11 - remainder) % 10;
   return Number(raw[7]) === checkDigit;
 }
 

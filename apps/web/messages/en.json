@@ -8884,6 +8884,13 @@
       "refresh": "Refresh",
       "newVisit": "New farm visit"
     },
+    "mic": {
+      "unsupported": "Speech recognition is not available in this browser",
+      "permissionDenied": "Microphone access was denied",
+      "listening": "Stop recording",
+      "processing": "Starting microphone…",
+      "dictate": "Dictate speech (Slovak)"
+    },
     "earTagSearch": {
       "title": "Quick ear tag search (CEHZ)",
       "placeholder": "SK 000801452101, 000801452101 or animal name…",
