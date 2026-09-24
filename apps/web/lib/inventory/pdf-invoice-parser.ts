@@ -111,10 +111,30 @@ export interface PdfInvoiceExtraction {
   parseMethod: "ai" | "rule-based" | "fallback";
 }
 
+async function loadPdfjsLib() {
+  try {
+    return await import("pdfjs-dist/legacy/build/pdf.mjs");
+  } catch (err) {
+    const candidatePaths = [
+      join(process.cwd(), "apps/web/node_modules/pdfjs-dist/legacy/build/pdf.mjs"),
+      join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.mjs"),
+      "/app/apps/web/node_modules/pdfjs-dist/legacy/build/pdf.mjs",
+      "/app/node_modules/pdfjs-dist/legacy/build/pdf.mjs",
+    ];
+    for (const p of candidatePaths) {
+      if (existsSync(p)) {
+        const { pathToFileURL } = await import("node:url");
+        return await import(pathToFileURL(p).href);
+      }
+    }
+    throw err;
+  }
+}
+
 export async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   if (pdfBuffer.length > 5 * 1024 * 1024) throw new Error(IMPORT_ERRORS.tooLarge);
   // External ESM keeps the worker's relative import resolvable in Next's Node runtime.
-  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfjsLib = await loadPdfjsLib();
   const assetDirs = resolvePdfjsAssetDirs();
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
