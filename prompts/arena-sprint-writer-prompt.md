@@ -23,10 +23,10 @@ Your output is a single file: `tasks/arena-sprint-<N>-<slug>.md`, plus one row a
 
 | # | Sprint | Status at snapshot |
 |---|--------|--------------------|
-| 1 | Command palette ranking | file untracked; merge status not verified |
+| 1 | Command palette ranking | merged (#42) |
 | 2 | UI kit: recalls / vaccinations / controlled substances | merged (#38) |
 | 3 | Field practice, CEHZ, IČO checksum | merged (#39, #40) |
-| 4 | Lab results + reference-range badges | merged (`c9702aba`); `lib/lab/reference-range-status.ts` + test were left staged/uncommitted |
+| 4 | Lab results + reference-range badges | merged (#41) |
 | 5 | Prescriptions (`/prescriptions`) | written, NOT implemented (page has no page-kit) |
 | 6 | Whiteboard + imaging modalities (`/whiteboard`) | written, NOT implemented (page has no page-kit) |
 | 7 | Encounters hub + care reminders | written |
