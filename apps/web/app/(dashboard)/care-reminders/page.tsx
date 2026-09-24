@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Plus,
   RotateCcw,
+  SearchX,
   Send,
   Trash2,
   X,
@@ -20,7 +21,10 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
-import { formatDateYmdToDisplay } from "@/lib/date-display";
+import {
+  formatDateYmdToDisplay,
+  formatDateTimeToDisplay,
+} from "@/lib/date-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +32,23 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { TableSkeleton } from "@/components/common/loading";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import {
+  DataTableFrame,
+  KpiCard,
+  KpiGrid,
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 
 type ReminderStatusFilter = "open" | "completed" | "dismissed";
 type ReminderDueFilter = "all" | "overdue" | "upcoming";
@@ -72,6 +93,7 @@ export default function CareRemindersPage() {
   const utils = trpc.useUtils();
   const [status, setStatus] = useState<ReminderStatusFilter>("open");
   const [due, setDue] = useState<ReminderDueFilter>("all");
+  const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [patientQuery, setPatientQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<{
@@ -92,6 +114,13 @@ export default function CareRemindersPage() {
     useState<OutreachChannel>("email");
   const outreachRequestId = useRef<string | null>(null);
   const query = trpc.careReminders.list.useQuery({ status, due, limit: 1000 });
+  // KPI source: the full open queue. Same endpoint as above; shares the cache
+  // with the default view, so no extra request happens there.
+  const openQueueQuery = trpc.careReminders.list.useQuery({
+    status: "open",
+    due: "all",
+    limit: 1000,
+  });
   const patientSearch = trpc.patients.search.useQuery(
     { query: patientQuery, status: "active" },
     {
@@ -184,37 +213,51 @@ export default function CareRemindersPage() {
     setDismissalReason("");
   }, [status, due]);
 
-  if (query.isLoading) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />{" "}
-        {t("careReminders.loading", "Loading care reminders...")}
-      </div>
+  const data = query.data;
+  const items = useMemo(() => data?.items ?? [], [data]);
+  const counts = data?.counts;
+  const today = data?.today ?? "";
+  const openQueueItems = useMemo(
+    () => openQueueQuery.data?.items ?? [],
+    [openQueueQuery.data],
+  );
+  const openQueueToday = openQueueQuery.data?.today ?? today;
+  const dueTodayCount = useMemo(
+    () =>
+      openQueueItems.filter(
+        (item) => item.status === "open" && item.dueDate === openQueueToday,
+      ).length,
+    [openQueueItems, openQueueToday],
+  );
+  const overdueCount = useMemo(
+    () =>
+      openQueueItems.filter(
+        (item) => item.status === "open" && openQueueToday > item.dueDate,
+      ).length,
+    [openQueueItems, openQueueToday],
+  );
+  const filteredItems = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter(
+      (item) =>
+        (item.patientName ?? "").toLowerCase().includes(needle) ||
+        (item.clientName ?? "").toLowerCase().includes(needle) ||
+        item.title.toLowerCase().includes(needle) ||
+        (item.notes ?? "").toLowerCase().includes(needle),
     );
-  }
+  }, [items, search]);
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedIds.has(item.id)),
+    [items, selectedIds],
+  );
+  const hasActiveFilters =
+    search.trim().length > 0 || (status === "open" && due !== "all");
+  const clearFilters = () => {
+    setSearch("");
+    setDue("all");
+  };
 
-  if (query.error || !query.data) {
-    return (
-      <EmptyState
-        icon={AlertTriangle}
-        title={t(
-          "careReminders.errorTitle",
-          "Could not load care reminders",
-        )}
-        description={
-          query.error?.message ??
-          t("careReminders.noData", "The reminder queue returned no data.")
-        }
-        action={{
-          label: t("careReminders.retry", "Retry"),
-          onClick: () => query.refetch(),
-        }}
-      />
-    );
-  }
-
-  const { counts, items, today } = query.data;
-  const selectedItems = items.filter((item) => selectedIds.has(item.id));
   const canSendOutreach =
     Boolean(outreachTarget) &&
     (outreachChannel === "email"
@@ -261,8 +304,35 @@ export default function CareRemindersPage() {
     outreachRequestId.current = null;
   }
 
+  function dueStateBadge(item: (typeof items)[number]) {
+    if (item.status === "completed") {
+      return <Badge variant="success">{t("careReminders.tabCompleted", "Completed")}</Badge>;
+    }
+    if (item.status === "dismissed") {
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          {t("careReminders.tabDismissed", "Dismissed")}
+        </Badge>
+      );
+    }
+    if (item.dueDate < today) {
+      return (
+        <Badge
+          variant="outline"
+          className="border-destructive/30 bg-destructive/10 text-destructive"
+        >
+          {t("careReminders.metricOverdue", "Overdue")}
+        </Badge>
+      );
+    }
+    if (item.dueDate === today) {
+      return <Badge variant="warning">{t("careReminders.metricDueToday", "Due today")}</Badge>;
+    }
+    return null;
+  }
+
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         icon={BellRing}
         title={t("careReminders.title", "Care reminders")}
@@ -272,18 +342,18 @@ export default function CareRemindersPage() {
         )}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" asChild>
               <Link href="/recalls">
                 {t("careReminders.navVaccinationRecalls", "Vaccination recalls")}
               </Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" asChild>
               <Link href="/schedule">
                 {t("careReminders.navAppointmentReminders", "Appointment reminders")}
               </Link>
             </Button>
             {manageable ? (
-              <Button className="gap-2" onClick={() => setShowCreate(true)}>
+              <Button className="gap-2" size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4" />{" "}
                 {t("careReminders.addReminder", "Add reminder")}
               </Button>
@@ -539,7 +609,7 @@ export default function CareRemindersPage() {
                   value={dismissalReason}
                   onChange={(event) => setDismissalReason(event.target.value)}
                   minLength={3}
-                  maxLength={500}
+                  maxLength={100}
                   required
                   placeholder={t(
                     "careReminders.whyInvalidPlaceholder",
@@ -700,121 +770,186 @@ export default function CareRemindersPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric
-          label={t("careReminders.metricOpen", "Open")}
-          value={counts.open}
-          icon={BellRing}
-        />
-        <Metric
-          label={t("careReminders.metricDueOrOverdue", "Due or overdue")}
-          value={counts.overdue}
-          icon={Clock3}
-        />
-        <Metric
-          label={t("careReminders.metricUpcoming", "Upcoming")}
-          value={counts.upcoming}
-          icon={CheckCircle2}
-        />
-        <Metric
-          label={t("careReminders.metricDismissed", "Dismissed")}
-          value={counts.dismissed}
-          icon={Trash2}
-        />
-      </div>
+      {/* Status tabs */}
+      <Tabs
+        value={status}
+        onValueChange={(value) => {
+          setStatus(value as ReminderStatusFilter);
+          if (value !== "open") setDue("all");
+        }}
+      >
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="open" className={underlineTabsTriggerClass}>
+            {t("careReminders.tabOpen", "Open")}
+          </TabsTrigger>
+          <TabsTrigger value="completed" className={underlineTabsTriggerClass}>
+            {t("careReminders.tabCompleted", "Completed")}
+          </TabsTrigger>
+          <TabsTrigger value="dismissed" className={underlineTabsTriggerClass}>
+            {t("careReminders.tabDismissed", "Dismissed")}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      <Card>
-        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <div>
-            <CardTitle>
-              {t("careReminders.queueTitle", "Patient follow-up queue")}
-            </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t(
-                "careReminders.queueSubtitle",
-                "Due dates use the practice day. Imported tasks retain source identity so retrying a migration cannot duplicate them.",
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={status === "open" ? "default" : "outline"}
-              onClick={() => setStatus("open")}
-            >
-              {t("careReminders.tabOpen", "Open")}
-            </Button>
-            <Button
-              size="sm"
-              variant={status === "completed" ? "default" : "outline"}
-              onClick={() => {
-                setStatus("completed");
-                setDue("all");
-              }}
-            >
-              {t("careReminders.tabCompleted", "Completed")}
-            </Button>
-            <Button
-              size="sm"
-              variant={status === "dismissed" ? "default" : "outline"}
-              onClick={() => {
-                setStatus("dismissed");
-                setDue("all");
-              }}
-            >
-              {t("careReminders.tabDismissed", "Dismissed")}
-            </Button>
-            {status === "open" ? (
-              <>
-                {(["all", "overdue", "upcoming"] as const).map((value) => (
-                  <Button
-                    key={value}
-                    size="sm"
-                    variant={due === value ? "secondary" : "ghost"}
-                    onClick={() => setDue(value)}
-                    className="capitalize"
-                  >
-                    {value === "all"
-                      ? t("careReminders.filterAll", "All")
-                      : value === "overdue"
-                        ? t("careReminders.filterOverdue", "Overdue")
-                        : t("careReminders.filterUpcoming", "Upcoming")}
-                  </Button>
-                ))}
-              </>
-            ) : null}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {status === "open" && manageable && items.length > 0 ? (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/30 p-3">
-              <span className="text-sm text-muted-foreground">
-                {selectedIds.size === 0
-                  ? t(
-                      "careReminders.selectToDismissPrompt",
-                      "Select up to 100 invalid reminders to dismiss them safely.",
-                    )
-                  : selectedIds.size === 1
-                    ? t("careReminders.selectedOne", "1 reminder selected")
-                    : t(
-                        "careReminders.selectedMany",
-                        "{count} reminders selected",
-                        { count: selectedIds.size },
-                      )}
-              </span>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={selectedIds.size === 0}
-                onClick={() => setShowDismiss(true)}
+      {/* Toolbar: search + due filter + count */}
+      <PageToolbar>
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          placeholder={t(
+            "careReminders.searchPlaceholder",
+            "Search by patient, owner, or reminder...",
+          )}
+        />
+        {status === "open" ? (
+          <select
+            className={filterControlClass}
+            aria-label={t(
+              "careReminders.dueFilterAria",
+              "Filter by due date",
+            )}
+            value={due}
+            onChange={(event) =>
+              setDue(event.target.value as ReminderDueFilter)
+            }
+          >
+            <option value="all">{t("careReminders.filterAll", "All")}</option>
+            <option value="overdue">
+              {t("careReminders.filterOverdue", "Overdue")}
+            </option>
+            <option value="upcoming">
+              {t("careReminders.filterUpcoming", "Upcoming")}
+            </option>
+          </select>
+        ) : null}
+        {hasActiveFilters ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={clearFilters}
+          >
+            <X className="h-3.5 w-3.5" />
+            {t("careReminders.clearFilters", "Clear filters")}
+          </Button>
+        ) : null}
+        <span className="text-xs text-muted-foreground sm:ml-auto">
+          {t("careReminders.resultCount", "{count} records", {
+            count: filteredItems.length,
+          })}
+        </span>
+      </PageToolbar>
+
+      {/* KPI row */}
+      {data ? (
+        <KpiGrid className="sm:grid-cols-3">
+          <KpiCard
+            label={t("careReminders.metricOpen", "Open")}
+            value={counts?.open ?? 0}
+            icon={<BellRing className="h-4 w-4 text-primary/70" />}
+          />
+          <KpiCard
+            label={t("careReminders.metricDueToday", "Due today")}
+            value={dueTodayCount}
+            icon={<Clock3 className="h-4 w-4 text-warning" />}
+          />
+          <KpiCard
+            label={t("careReminders.metricOverdue", "Overdue")}
+            value={
+              <span
+                className={
+                  overdueCount > 0 ? "text-destructive" : undefined
+                }
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("careReminders.btnDismissSelected", "Dismiss selected")}
-              </Button>
-            </div>
-          ) : null}
-          {items.length === 0 ? (
+                {overdueCount}
+              </span>
+            }
+            icon={
+              <AlertTriangle
+                className={cn(
+                  "h-4 w-4",
+                  overdueCount > 0 ? "text-destructive" : "text-muted-foreground",
+                )}
+              />
+            }
+          />
+        </KpiGrid>
+      ) : null}
+
+      {status === "open" && manageable && filteredItems.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/30 p-3">
+          <span className="text-sm text-muted-foreground">
+            {selectedIds.size === 0
+              ? t(
+                  "careReminders.selectToDismissPrompt",
+                  "Select up to 100 invalid reminders to dismiss them safely.",
+                )
+              : selectedIds.size === 1
+                ? t("careReminders.selectedOne", "1 reminder selected")
+                : t(
+                    "careReminders.selectedMany",
+                    "{count} reminders selected",
+                    { count: selectedIds.size },
+                  )}
+          </span>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={selectedIds.size === 0}
+            onClick={() => setShowDismiss(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t("careReminders.btnDismissSelected", "Dismiss selected")}
+          </Button>
+        </div>
+      ) : null}
+
+      <DataTableFrame>
+        {query.isLoading ? (
+          <TableSkeleton
+            rows={5}
+            cols={6}
+            className="rounded-none border-0 shadow-none"
+          />
+        ) : query.error || !data ? (
+          <EmptyState
+            className="rounded-none border-0"
+            icon={AlertTriangle}
+            title={t(
+              "careReminders.errorTitle",
+              "Could not load care reminders",
+            )}
+            description={
+              query.error?.message ??
+              t("careReminders.noData", "The reminder queue returned no data.")
+            }
+            action={{
+              label: t("careReminders.retry", "Retry"),
+              onClick: () => query.refetch(),
+            }}
+          />
+        ) : filteredItems.length === 0 ? (
+          hasActiveFilters ? (
             <EmptyState
+              className="rounded-none border-0"
+              icon={SearchX}
+              title={t(
+                "careReminders.emptyFilteredTitle",
+                "No records match the current filters",
+              )}
+              description={t(
+                "careReminders.emptyFilteredDesc",
+                "Adjust or clear the search and filters to see the rest of the queue.",
+              )}
+              action={{
+                label: t("careReminders.clearFilters", "Clear filters"),
+                onClick: clearFilters,
+                icon: X,
+              }}
+            />
+          ) : (
+            <EmptyState
+              className="rounded-none border-0"
               icon={
                 status === "open"
                   ? BellRing
@@ -855,122 +990,123 @@ export default function CareRemindersPage() {
                       )
               }
             />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    {status === "open" && manageable ? (
-                      <th className="w-10 py-3 pr-3 font-medium">
-                        <input
-                          type="checkbox"
-                          aria-label={t(
-                            "careReminders.selectAllAria",
-                            "Select all reminders",
-                          )}
-                          checked={
-                            items.length > 0 &&
-                            selectedIds.size ===
-                              Math.min(items.length, MAX_DISMISS_SELECTION)
-                          }
-                          onChange={(event) =>
-                            setSelectedIds(
-                              event.target.checked
-                                ? new Set(
-                                    items
-                                      .slice(0, MAX_DISMISS_SELECTION)
-                                      .map((item) => item.id),
-                                  )
-                                : new Set(),
-                            )
-                          }
-                          className="h-4 w-4 rounded border-border"
-                        />
-                      </th>
-                    ) : null}
-                    <th className="py-3 pr-4 font-medium">
-                      {t("careReminders.colDue", "Due")}
+          )
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  {status === "open" && manageable ? (
+                    <th className={cn(tableHeadClass, "w-10")}>
+                      <input
+                        type="checkbox"
+                        aria-label={t(
+                          "careReminders.selectAllAria",
+                          "Select all reminders",
+                        )}
+                        checked={
+                          filteredItems.length > 0 &&
+                          selectedIds.size ===
+                            Math.min(filteredItems.length, MAX_DISMISS_SELECTION)
+                        }
+                        onChange={(event) =>
+                          setSelectedIds(
+                            event.target.checked
+                              ? new Set(
+                                  filteredItems
+                                    .slice(0, MAX_DISMISS_SELECTION)
+                                    .map((item) => item.id),
+                                )
+                              : new Set(),
+                          )
+                        }
+                        className="h-4 w-4 rounded border-border"
+                      />
                     </th>
-                    <th className="py-3 pr-4 font-medium">
-                      {t("careReminders.colPatientClient", "Patient / client")}
-                    </th>
-                    <th className="py-3 pr-4 font-medium">
-                      {t("careReminders.colReminder", "Reminder")}
-                    </th>
-                    <th className="py-3 pr-4 font-medium">
-                      {t("careReminders.colSource", "Source")}
-                    </th>
-                    <th className="py-3 text-right font-medium">
-                      {t("careReminders.colAction", "Action")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => {
-                    const overdue =
-                      item.status === "open" && item.dueDate <= today;
-                    return (
-                      <tr
-                        key={item.id}
-                        className="border-b border-border align-top last:border-0"
-                      >
-                        {status === "open" && manageable ? (
-                          <td className="py-4 pr-3">
-                            <input
-                              type="checkbox"
-                              aria-label={t(
-                                "careReminders.selectItemAria",
-                                "Select {title} for {patientName}",
-                                {
-                                  title: item.title,
-                                  patientName: item.patientName,
-                                },
-                              )}
-                              checked={selectedIds.has(item.id)}
-                              disabled={
-                                !selectedIds.has(item.id) &&
-                                selectedIds.size >= MAX_DISMISS_SELECTION
-                              }
-                              onChange={(event) => {
-                                const next = new Set(selectedIds);
-                                if (event.target.checked) next.add(item.id);
-                                else next.delete(item.id);
-                                setSelectedIds(next);
-                              }}
-                              className="h-4 w-4 rounded border-border"
-                            />
-                          </td>
-                        ) : null}
-                        <td className="py-4 pr-4">
-                          <span
-                            className={
-                              overdue
-                                ? "font-medium text-destructive"
-                                : "font-medium"
+                  ) : null}
+                  <th className={tableHeadClass}>
+                    {t("careReminders.colDue", "Due")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("careReminders.colPatientClient", "Patient / client")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("careReminders.colReminder", "Reminder")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("careReminders.colSource", "Source")}
+                  </th>
+                  <th className={cn(tableHeadClass, "text-right")}>
+                    {t("careReminders.colAction", "Action")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item) => {
+                  const overdue =
+                    item.status === "open" && item.dueDate < today;
+                  return (
+                    <tr
+                      key={item.id}
+                      className={cn(tableRowClass, "align-top")}
+                    >
+                      {status === "open" && manageable ? (
+                        <td className={tableCellClass}>
+                          <input
+                            type="checkbox"
+                            aria-label={t(
+                              "careReminders.selectItemAria",
+                              "Select {title} for {patientName}",
+                              {
+                                title: item.title,
+                                patientName: item.patientName,
+                              },
+                            )}
+                            checked={selectedIds.has(item.id)}
+                            disabled={
+                              !selectedIds.has(item.id) &&
+                              selectedIds.size >= MAX_DISMISS_SELECTION
                             }
+                            onChange={(event) => {
+                              const next = new Set(selectedIds);
+                              if (event.target.checked) next.add(item.id);
+                              else next.delete(item.id);
+                              setSelectedIds(next);
+                            }}
+                            className="h-4 w-4 rounded border-border"
+                          />
+                        </td>
+                      ) : null}
+                      <td
+                        className={cn(
+                          tableCellClass,
+                          "whitespace-nowrap align-top",
+                        )}
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={cn(
+                              "font-medium tabular-nums",
+                              overdue ? "text-destructive" : "text-foreground",
+                            )}
                           >
                             {displayDate(item.dueDate)}
                           </span>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {relativeDay(item.dueDate, today, t)}
-                          </p>
-                          {overdue ? (
-                            <p className="mt-1 text-xs text-destructive">
-                              {t(
-                                "careReminders.dueOrOverdueBadge",
-                                "Due or overdue",
-                              )}
-                            </p>
-                          ) : null}
-                        </td>
-                        <td className="py-4 pr-4">
+                          {dueStateBadge(item)}
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {relativeDay(item.dueDate, today, t)}
+                        </p>
+                      </td>
+                      <td className={cn(tableCellClass, "align-top")}>
+                        <div className="min-w-0">
                           <Link
                             href={`/patients/${item.patientId}`}
-                            className="font-bold text-foreground hover:underline"
+                            className="font-medium text-foreground hover:underline"
                           >
                             {item.patientName}
                           </Link>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
+                          <p className="mt-0.5 max-w-[14rem] truncate text-xs text-muted-foreground">
                             {item.clientName}
                           </p>
                           {item.patientStatus !== "active" ? (
@@ -981,147 +1117,128 @@ export default function CareRemindersPage() {
                               {item.patientStatus}
                             </Badge>
                           ) : null}
-                        </td>
-                        <td className="py-4 pr-4">
-                          <p className="font-medium">{item.title}</p>
-                          {item.notes ? (
-                            <p className="mt-1 max-w-xl whitespace-pre-wrap text-xs text-muted-foreground">
-                              {item.notes}
-                            </p>
-                          ) : null}
-                          {item.status === "dismissed" &&
-                          item.dismissalReason ? (
-                            <div className="mt-2 rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
-                              <span className="font-medium text-foreground">
-                                {t("careReminders.labelDismissed", "Dismissed:")}
-                              </span>{" "}
-                              {item.dismissalReason}
-                              <span className="mt-1 block">
-                                {item.dismissedByName ??
-                                  t(
-                                    "careReminders.unknownStaffMember",
-                                    "Unknown staff member",
-                                  )}
-                                {item.dismissedAt
-                                  ? ` • ${item.dismissedAt.toLocaleString()}`
-                                  : ""}
-                              </span>
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="py-4 pr-4">
-                          <Badge
-                            variant={item.imported ? "secondary" : "outline"}
-                          >
-                            {item.imported
-                              ? t("careReminders.sourceImported", "Imported")
-                              : "OpenVPM"}
-                          </Badge>
-                        </td>
-                        <td className="py-4 text-right">
-                          {manageable ? (
-                            <div className="flex flex-col items-end gap-2">
-                              {item.status === "dismissed" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={dismiss.isPending}
-                                  onClick={() =>
-                                    dismiss.mutate({
-                                      dismissed: false,
-                                      items: [
-                                        {
-                                          id: item.id,
-                                          expectedUpdatedAt:
-                                            item.updatedAt.toISOString(),
-                                        },
-                                      ],
-                                    })
-                                  }
-                                >
-                                  <RotateCcw className="mr-2 h-4 w-4" />
-                                  {t("careReminders.btnRestore", "Restore")}
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant={
-                                    item.status === "open"
-                                      ? "default"
-                                      : "outline"
-                                  }
-                                  disabled={update.isPending}
-                                  onClick={() =>
-                                    update.mutate({
-                                      id: item.id,
-                                      completed: item.status === "open",
-                                      expectedUpdatedAt:
-                                        item.updatedAt.toISOString(),
-                                    })
-                                  }
-                                >
-                                  {item.status === "open"
-                                    ? t(
-                                        "careReminders.btnComplete",
-                                        "Complete",
-                                      )
-                                    : t("careReminders.btnReopen", "Reopen")}
-                                </Button>
-                              )}
-                              {item.status === "open" &&
-                              item.patientStatus === "active" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openOutreach(item)}
-                                >
-                                  <Send className="mr-2 h-4 w-4" />
-                                  {t(
-                                    "careReminders.btnContactClient",
-                                    "Contact client",
-                                  )}
-                                </Button>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              {t("careReminders.readOnly", "Read only")}
+                        </div>
+                      </td>
+                      <td className={cn(tableCellClass, "align-top")}>
+                        <p className="font-medium">{item.title}</p>
+                        {item.notes ? (
+                          <p className="mt-1 max-w-xl whitespace-pre-wrap text-xs text-muted-foreground">
+                            {item.notes}
+                          </p>
+                        ) : null}
+                        {item.status === "dismissed" &&
+                        item.dismissalReason ? (
+                          <div className="mt-2 rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">
+                              {t("careReminders.labelDismissed", "Dismissed:")}
+                            </span>{" "}
+                            {item.dismissalReason}
+                            <span className="mt-1 block">
+                              {item.dismissedByName ??
+                                t(
+                                  "careReminders.unknownStaffMember",
+                                  "Unknown staff member",
+                                )}
+                              {item.dismissedAt
+                                ? ` • ${formatDateTimeToDisplay(item.dismissedAt)}`
+                                : ""}
                             </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className={cn(tableCellClass, "align-top")}>
+                        <Badge
+                          variant={item.imported ? "secondary" : "outline"}
+                        >
+                          {item.imported
+                            ? t("careReminders.sourceImported", "Imported")
+                            : "OpenVPM"}
+                        </Badge>
+                      </td>
+                      <td
+                        className={cn(
+                          tableCellClass,
+                          "text-right align-top",
+                        )}
+                      >
+                        {manageable ? (
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            {item.status === "dismissed" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={dismiss.isPending}
+                                onClick={() =>
+                                  dismiss.mutate({
+                                    dismissed: false,
+                                    items: [
+                                      {
+                                        id: item.id,
+                                        expectedUpdatedAt:
+                                          item.updatedAt.toISOString(),
+                                      },
+                                    ],
+                                  })
+                                }
+                              >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                {t("careReminders.btnRestore", "Restore")}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant={
+                                  item.status === "open"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                disabled={update.isPending}
+                                onClick={() =>
+                                  update.mutate({
+                                    id: item.id,
+                                    completed: item.status === "open",
+                                    expectedUpdatedAt:
+                                      item.updatedAt.toISOString(),
+                                  })
+                                }
+                              >
+                                {item.status === "open"
+                                  ? t(
+                                      "careReminders.btnComplete",
+                                      "Complete",
+                                    )
+                                  : t("careReminders.btnReopen", "Reopen")}
+                              </Button>
+                            )}
+                            {item.status === "open" &&
+                            item.patientStatus === "active" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openOutreach(item)}
+                              >
+                                <Send className="mr-2 h-4 w-4" />
+                                {t(
+                                  "careReminders.btnContactClient",
+                                  "Contact client",
+                                )}
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {t("careReminders.readOnly", "Read only")}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DataTableFrame>
     </div>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 pt-6">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Icon className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-2xl font-semibold">{value}</p>
-          <p className="text-xs text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
