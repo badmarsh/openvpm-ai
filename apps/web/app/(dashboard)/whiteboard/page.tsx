@@ -5,25 +5,60 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
+  Activity,
+  AlertTriangle,
+  BedDouble,
   CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Clock,
+  HeartPulse,
   Loader2,
   MapPin,
   RotateCw,
+  Scissors,
+  SearchX,
+  Stethoscope,
   User,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+} from "@/components/layout/page-kit";
+import { Badge } from "@/components/ui/badge";
+import { ModalityBadgeRow } from "@/components/imaging/modality-badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDoctorName } from "@/lib/locale/format";
 import { useI18n } from "@/lib/i18n";
 import { useWhiteboardStream } from "@/lib/whiteboard/use-whiteboard-stream";
+import { formatDateInputForTimeZone } from "@/lib/date-input";
+import {
+  CLINICAL_NUMERIC_CLASS,
+  WHITEBOARD_DEPARTMENTS,
+  conditionTagsFor,
+  departmentOfAppointment,
+  elapsedSince,
+  fastingWindowForAppointment,
+  formatClinicalDuration,
+  matchesBoardSearch,
+  matchesDepartment,
+  shiftDateInput,
+  type BoardDepartmentFilter,
+  type ClinicalSignals,
+  type ConditionTag,
+  type WhiteboardDepartment,
+} from "@/lib/whiteboard/clinical-board";
 
 // --- Types ---
 
@@ -40,6 +75,7 @@ type WhiteboardAppointment = {
   id: string;
   status: string;
   startTime: Date | string;
+  endTime?: Date | string | null;
   notes: string | null;
   patientId: string | null;
   clientId: string | null;
@@ -50,13 +86,17 @@ type WhiteboardAppointment = {
   clientLastName: string | null;
   doctorName: string | null;
   roomName: string | null;
+  roomType?: string | null;
   locationName: string | null;
   locationId: string | null;
   typeName: string | null;
   typeColor: string | null;
+  typeDefaultRoomType?: string | null;
   doctorId?: string | null;
   typeRequiresDoctor?: number | null;
 };
+
+type ClinicalSignalMap = Map<string, ClinicalSignals>;
 
 const DIALOG_FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -80,33 +120,6 @@ function focusElementAfterNavigation(elementId: string) {
 
 // --- Constants ---
 
-const COLUMNS = [
-  {
-    key: "waiting",
-    label: "Waiting",
-    statuses: ["confirmed"],
-    color: "bg-blue-500",
-    headerBg: "bg-blue-500/10",
-    headerText: "text-blue-700 dark:text-blue-400",
-  },
-  {
-    key: "in_progress",
-    label: "In Progress",
-    statuses: ["checked_in", "in_exam"],
-    color: "bg-amber-500",
-    headerBg: "bg-amber-500/10",
-    headerText: "text-amber-700 dark:text-amber-400",
-  },
-  {
-    key: "completed",
-    label: "Completed",
-    statuses: ["checked_out"],
-    color: "bg-green-500",
-    headerBg: "bg-green-500/10",
-    headerText: "text-green-700 dark:text-green-400",
-  },
-] as const;
-
 const STATUS_LABELS: Record<AppointmentStatus, string> = {
   scheduled: "Scheduled",
   confirmed: "Confirmed",
@@ -125,6 +138,41 @@ const STATUS_COLORS: Record<AppointmentStatus, string> = {
   checked_out: "bg-green-500",
   no_show: "bg-red-500",
   cancelled: "bg-red-500",
+};
+
+/** Departments are a room-type projection: no new column, no new concept. */
+const DEPARTMENT_ICON: Record<WhiteboardDepartment, LucideIcon> = {
+  ambulancia: Stethoscope,
+  chirurgia: Scissors,
+  hospitalizacia: BedDouble,
+};
+
+/**
+ * High-contrast clinical condition tags: the critical state is the only
+ * solid-red chip on the board, post-op is solid amber, and the calmer states
+ * use the muted token palette so the board reads hierarchy at a glance.
+ */
+const CONDITION_TAG_CLASS: Record<ConditionTag, string> = {
+  critical: "border-transparent bg-destructive text-destructive-foreground",
+  postOp: "border-transparent bg-amber-500 text-amber-950",
+  awaitingDischarge:
+    "border-indigo-500/40 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
+  stable:
+    "border-success-muted-foreground/30 bg-success-muted text-success-muted-foreground",
+};
+
+const CONDITION_TAG_ICON: Record<ConditionTag, LucideIcon> = {
+  critical: AlertTriangle,
+  postOp: Activity,
+  awaitingDischarge: Clock,
+  stable: HeartPulse,
+};
+
+const CONDITION_TAG_LABEL_KEY: Record<ConditionTag, string> = {
+  critical: "whiteboard.conditions.critical",
+  postOp: "whiteboard.conditions.postOp",
+  awaitingDischarge: "whiteboard.conditions.awaitingDischarge",
+  stable: "whiteboard.conditions.stable",
 };
 
 const SPECIES_EMOJI: Record<string, string> = PATIENT_SPECIES_EMOJI;
@@ -267,7 +315,7 @@ function SyncStatusIndicator({
 
   return (
     <div
-      className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground shadow-2xs transition-colors hover:bg-muted/50"
+      className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground shadow-xs transition-colors hover:bg-muted/50"
       title={tooltipText}
     >
       {isLive ? (
@@ -278,7 +326,7 @@ function SyncStatusIndicator({
       ) : (
         <span className="flex h-2 w-2 rounded-full bg-emerald-500/80 shrink-0" />
       )}
-      <span className="font-medium text-[11px]">
+      <span className="text-[11px] font-medium">
         {isLive
           ? t("whiteboard.sync.live", "Live")
           : t("whiteboard.sync.interval", "Auto-refreshes every 30s")}
@@ -289,7 +337,7 @@ function SyncStatusIndicator({
         disabled={isFetching}
         aria-label={t("whiteboard.sync.refreshNow", "Refresh now")}
         title={tooltipText}
-        className="rounded-full p-0.5 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+        className="rounded-full p-0.5 transition-colors hover:text-foreground cursor-pointer disabled:opacity-50"
       >
         <RotateCw
           className={cn(
@@ -306,35 +354,105 @@ function StatusDot({ status }: { status: string }) {
   const colorClass = STATUS_COLORS[status as AppointmentStatus] || "bg-gray-400";
   return (
     <span
-      className={cn("inline-block h-2 w-2 rounded-full shrink-0", colorClass)}
+      className={cn("inline-block h-2 w-2 shrink-0 rounded-full", colorClass)}
     />
+  );
+}
+
+function DepartmentChip({ department }: { department: WhiteboardDepartment }) {
+  const { t } = useI18n();
+  const Icon = DEPARTMENT_ICON[department];
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {t(`whiteboard.departments.${department}`, department)}
+    </span>
+  );
+}
+
+function ConditionTag({ tag }: { tag: ConditionTag }) {
+  const { t } = useI18n();
+  const Icon = CONDITION_TAG_ICON[tag];
+  return (
+    <span
+      data-condition={tag}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        CONDITION_TAG_CLASS[tag],
+      )}
+    >
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {t(CONDITION_TAG_LABEL_KEY[tag], tag)}
+    </span>
+  );
+}
+
+/** One clinical time/duration row: label + monospaced tabular value. */
+function ClinicalTimeRow({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <span className={cn("flex items-center justify-between gap-2", className)}>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <span className={cn(CLINICAL_NUMERIC_CLASS, "text-foreground")}>
+        {value}
+      </span>
+    </span>
   );
 }
 
 function WhiteboardCard({
   appointment,
+  signals,
+  now,
+  timeZone,
   onClick,
 }: {
   appointment: WhiteboardAppointment;
+  signals?: ClinicalSignals;
+  now: Date | null;
+  timeZone?: string | null;
   onClick: () => void;
 }) {
   const { t } = useI18n();
   const clientName = [appointment.clientFirstName, appointment.clientLastName]
     .filter(Boolean)
     .join(" ");
+  const department = departmentOfAppointment(appointment);
+  const conditionTags = conditionTagsFor(appointment, department, signals);
+  const start = new Date(appointment.startTime);
+  const end = appointment.endTime ? new Date(appointment.endTime) : null;
+  const hasArrived =
+    appointment.status === "checked_in" ||
+    appointment.status === "in_exam" ||
+    appointment.status === "checked_out";
+  const waitingMs = now ? elapsedSince(start, now) : null;
+  const fasting = now
+    ? fastingWindowForAppointment(start, department, now)
+    : null;
+  const scheduledWindow =
+    end && (department === "chirurgia" || department === "hospitalizacia");
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-lg border border-border bg-card p-3 text-left transition-all hover:shadow-md hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+      className="w-full rounded-lg border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
     >
       {/* Patient name + species */}
       <div className="flex items-center gap-2">
         <span className="text-base leading-none">
           {getSpeciesEmoji(appointment.patientSpecies)}
         </span>
-        <span className="font-medium text-sm truncate">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
           {appointment.patientName || t("whiteboard.unknownPatient", "Unknown Patient")}
         </span>
         <StatusDot status={appointment.status} />
@@ -342,22 +460,39 @@ function WhiteboardCard({
 
       {/* Owner */}
       {clientName && (
-        <p className="mt-1.5 text-xs text-muted-foreground truncate">
+        <p className="mt-1 truncate text-xs text-muted-foreground">
           {clientName}
         </p>
       )}
 
-      {/* Details row */}
+      {/* Clinical condition tags (evidence-based only) */}
+      {conditionTags.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {conditionTags.map((tag) => (
+            <ConditionTag key={tag} tag={tag} />
+          ))}
+        </div>
+      )}
+
+      {/* Diagnostic modality badges: RTG / USG / CT / endoscopy + LAB */}
+      <ModalityBadgeRow
+        className="mt-2"
+        modalities={signals?.imagingModalities ?? []}
+        labReports={signals?.labReports ?? 0}
+      />
+
+      {/* Department + doctor + room */}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <DepartmentChip department={department} />
         {appointment.doctorName && (
           <span className="inline-flex items-center gap-1">
-            <User className="h-3 w-3" />
+            <User className="h-3 w-3" aria-hidden="true" />
             {formatDoctorName(appointment.doctorName, t, "whiteboard.doctor")}
           </span>
         )}
         {(appointment.locationName || appointment.roomName) && (
           <span className="inline-flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
+            <MapPin className="h-3 w-3" aria-hidden="true" />
             {[appointment.locationName, appointment.roomName]
               .filter(Boolean)
               .join(" · ")}
@@ -365,33 +500,64 @@ function WhiteboardCard({
         )}
       </div>
 
-      {/* Type + time */}
-      <div className="mt-2 flex items-center justify-between">
-        {appointment.typeName && (
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-            style={{
-              backgroundColor: appointment.typeColor
-                ? `${appointment.typeColor}20`
-                : undefined,
-              color: appointment.typeColor || undefined,
-            }}
-          >
-            {appointment.typeName}
-          </span>
+      {/* Clinical times: check-in, waiting, fasting, procedure window */}
+      <div className="mt-2 space-y-1 border-t border-border pt-2">
+        <ClinicalTimeRow
+          label={
+            hasArrived
+              ? t("whiteboard.times.checkIn", "Check-in")
+              : t("whiteboard.times.scheduled", "Scheduled")
+          }
+          value={formatAppointmentTime(start, timeZone)}
+        />
+        {waitingMs != null && hasArrived && (
+          <ClinicalTimeRow
+            label={t("whiteboard.times.waiting", "Waiting")}
+            value={formatClinicalDuration(waitingMs)}
+          />
         )}
-        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-          <Clock className="h-2.5 w-2.5" />
+        {fasting && (
+          <ClinicalTimeRow
+            label={t("whiteboard.times.fasting", "Fasting")}
+            value={
+              fasting.active
+                ? formatClinicalDuration(fasting.elapsedMs)
+                : t("whiteboard.times.fastingStartsIn", "starts in {duration}", {
+                    duration: formatClinicalDuration(-fasting.elapsedMs),
+                  })
+            }
+          />
+        )}
+        {scheduledWindow && end && (
+          <ClinicalTimeRow
+            label={t("whiteboard.times.procedure", "Procedure")}
+            value={`${formatAppointmentTime(start, timeZone)}–${formatAppointmentTime(end, timeZone)}`}
+          />
+        )}
+      </div>
+
+      {/* Type + elapsed time */}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="truncate text-[10px] text-muted-foreground">
+          {appointment.typeName ?? ""}
+        </span>
+        <span
+          className={cn(
+            CLINICAL_NUMERIC_CLASS,
+            "flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground",
+          )}
+        >
+          <Clock className="h-2.5 w-2.5" aria-hidden="true" />
           {getTimeAgo(appointment.startTime, t)}
         </span>
       </div>
 
       {/* Invoice pending badge for checked_out appointments */}
       {appointment.status === "checked_out" && (
-        <div className="mt-2 flex items-center gap-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-1">
+        <div className="mt-2 flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1">
           <ClipboardList className="h-3 w-3 text-amber-600 dark:text-amber-400" />
           <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
-            {t("whiteboard.invoicePending", "Čaká na faktúru")}
+            {t("whiteboard.invoicePending", "Invoice pending")}
           </span>
         </div>
       )}
@@ -401,6 +567,8 @@ function WhiteboardCard({
 
 function AppointmentDetailModal({
   appointment,
+  signals,
+  now,
   timeZone,
   onClose,
   onStatusChange,
@@ -408,6 +576,8 @@ function AppointmentDetailModal({
   isUpdating,
 }: {
   appointment: WhiteboardAppointment;
+  signals?: ClinicalSignals;
+  now: Date | null;
   timeZone?: string | null;
   onClose: () => void;
   onStatusChange: (id: string, status: AppointmentStatus, doctorId?: string) => void;
@@ -422,6 +592,12 @@ function AppointmentDetailModal({
   const restoreFocusRef = useRef(true);
   const dialogTitleId = useId();
   const start = new Date(appointment.startTime);
+  const end = appointment.endTime ? new Date(appointment.endTime) : null;
+  const department = departmentOfAppointment(appointment);
+  const conditionTags = conditionTagsFor(appointment, department, signals);
+  const fasting = now
+    ? fastingWindowForAppointment(start, department, now)
+    : null;
   const needsDoctorAssignment =
     appointment.typeRequiresDoctor === 1 && !appointment.doctorId;
 
@@ -534,7 +710,7 @@ function AppointmentDetailModal({
   const visibleStatusActions = canUpdateStatus ? statusActions : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div
         ref={modalRef}
         role="dialog"
@@ -555,52 +731,109 @@ function AppointmentDetailModal({
             type="button"
             aria-label={t("whiteboard.closeDetails", "Close appointment details")}
             onClick={onClose}
-            className="rounded-md p-1 hover:bg-muted transition-colors"
+            className="rounded-md p-1 transition-colors hover:bg-muted"
           >
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-4 py-3 space-y-3">
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">
               {getSpeciesEmoji(appointment.patientSpecies)}
             </span>
-            <div>
-              <h3 id={dialogTitleId} className="font-semibold text-base">
+            <div className="min-w-0">
+              <h3 id={dialogTitleId} className="truncate text-base font-semibold">
                 {appointment.patientName || t("whiteboard.unknownPatient", "Unknown Patient")}
               </h3>
-              {appointment.patientSpecies && (
-                <p className="text-xs text-muted-foreground capitalize">
-                  {appointment.patientSpecies}
-                </p>
-              )}
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs capitalize text-muted-foreground">
+                  {appointment.patientSpecies ?? ""}
+                </span>
+                <DepartmentChip department={department} />
+              </div>
             </div>
           </div>
 
+          {conditionTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              {conditionTags.map((tag) => (
+                <ConditionTag key={tag} tag={tag} />
+              ))}
+            </div>
+          )}
+
+          {/* Diagnostic study badges for today */}
+          {(signals?.imagingModalities.length ?? 0) > 0 ||
+          (signals?.labReports ?? 0) > 0 ? (
+            <div className="rounded-lg border border-border bg-muted/30 p-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {t("whiteboard.times.imaging", "Imaging today")}
+              </p>
+              <ModalityBadgeRow
+                className="mt-1.5"
+                modalities={signals?.imagingModalities ?? []}
+                labReports={signals?.labReports ?? 0}
+              />
+            </div>
+          ) : null}
+
+          {now && (
+            <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-2">
+              <ClinicalTimeRow
+                label={
+                  current === "checked_in" ||
+                  current === "in_exam" ||
+                  current === "checked_out"
+                    ? t("whiteboard.times.checkIn", "Check-in")
+                    : t("whiteboard.times.scheduled", "Scheduled")
+                }
+                value={`${formatAppointmentTime(start, timeZone)} (${getTimeAgo(appointment.startTime, t)})`}
+              />
+              {fasting && (
+                <ClinicalTimeRow
+                  label={t("whiteboard.times.fasting", "Fasting")}
+                  value={
+                    fasting.active
+                      ? formatClinicalDuration(fasting.elapsedMs)
+                      : t("whiteboard.times.fastingStartsIn", "starts in {duration}", {
+                          duration: formatClinicalDuration(-fasting.elapsedMs),
+                        })
+                  }
+                />
+              )}
+              {end && (
+                <ClinicalTimeRow
+                  label={t("whiteboard.times.procedure", "Procedure")}
+                  value={`${formatAppointmentTime(start, timeZone)}–${formatAppointmentTime(end, timeZone)}`}
+                />
+              )}
+            </div>
+          )}
+
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <User className="h-3.5 w-3.5" />
+              <User className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{t("whiteboard.clientPrefix", "Client: {name}", { name: clientName })}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span>
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className={CLINICAL_NUMERIC_CLASS}>
                 {formatAppointmentTime(start, timeZone)}{" "}
                 ({getTimeAgo(appointment.startTime, t)})
               </span>
             </div>
             {appointment.doctorName && (
               <div className="flex items-center gap-2 text-muted-foreground">
-                <User className="h-3.5 w-3.5" />
+                <User className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>{formatDoctorName(appointment.doctorName, t, "whiteboard.doctor")}</span>
               </div>
             )}
             {appointment.typeName && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span
-                  className="ml-0.5 h-3 w-3 rounded-full inline-block"
+                  className="ml-0.5 inline-block h-3 w-3 rounded-full"
                   style={{
                     backgroundColor: appointment.typeColor || "#6b7280",
                   }}
@@ -610,7 +843,7 @@ function AppointmentDetailModal({
             )}
             {(appointment.locationName || appointment.roomName) && (
               <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>
                   {[appointment.locationName, appointment.roomName]
                     .filter(Boolean)
@@ -619,7 +852,7 @@ function AppointmentDetailModal({
               </div>
             )}
             {appointment.notes && (
-              <p className="text-muted-foreground text-xs mt-1 bg-muted/50 rounded-lg p-2">
+              <p className="mt-1 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
                 {appointment.notes}
               </p>
             )}
@@ -720,6 +953,9 @@ export default function WhiteboardPage() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<WhiteboardAppointment | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [dateInput, setDateInput] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState<BoardDepartmentFilter>("all");
 
   // Set initial time on client mount and update every second to avoid
   // SSR/client hydration mismatch from Date() evaluating differently.
@@ -733,6 +969,7 @@ export default function WhiteboardPage() {
   const { isConnected: isLive } = useWhiteboardStream({
     onUpdate: () => {
       void utils.whiteboard.getActive.invalidate();
+      void utils.whiteboard.clinicalSignals.invalidate();
     },
   });
 
@@ -742,9 +979,12 @@ export default function WhiteboardPage() {
     isFetching,
     dataUpdatedAt,
     error,
-  } = trpc.whiteboard.getActive.useQuery(undefined, {
-    refetchInterval: isLive ? false : 30000,
-  });
+  } = trpc.whiteboard.getActive.useQuery(
+    dateInput ? { date: dateInput } : undefined,
+    {
+      refetchInterval: isLive ? false : 30000,
+    },
+  );
   const settingsQuery = trpc.whiteboard.settings.useQuery();
   const practiceSettings = settingsQuery.data;
   const pageError = error ?? settingsQuery.error;
@@ -769,6 +1009,43 @@ export default function WhiteboardPage() {
   const practiceClockReady = Boolean(
     currentTime && verifiedPracticeSettings && !pageError
   );
+
+  // Practice-local day used by the date navigation, derived from the clock
+  // that already respects the practice timezone.
+  const practiceTodayInput = useMemo(
+    () =>
+      formatDateInputForTimeZone(
+        currentTime ?? new Date(),
+        verifiedPracticeSettings?.timezone,
+      ),
+    [currentTime, verifiedPracticeSettings?.timezone],
+  );
+  const boardDateInput = dateInput ?? practiceTodayInput;
+  const isBoardToday = boardDateInput === practiceTodayInput;
+
+  const patientIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (verifiedActiveAppointments ?? [])
+            .map((appt) => appt.patientId)
+            .filter((patientId): patientId is string => Boolean(patientId)),
+        ),
+      ),
+    [verifiedActiveAppointments],
+  );
+
+  const signalsQuery = trpc.whiteboard.clinicalSignals.useQuery(
+    { date: boardDateInput, patientIds },
+    { enabled: patientIds.length > 0 },
+  );
+  const signalsByPatient = useMemo<ClinicalSignalMap>(() => {
+    const map: ClinicalSignalMap = new Map();
+    for (const signal of signalsQuery.data ?? []) {
+      map.set(signal.patientId, signal);
+    }
+    return map;
+  }, [signalsQuery.data]);
 
   const updateStatus = trpc.whiteboard.updateStatus.useMutation({
     onSuccess: () => {
@@ -809,6 +1086,17 @@ export default function WhiteboardPage() {
     verifiedActiveAppointments,
   ]);
 
+  // Search + department filter run before grouping, so the toolbar count and
+  // the columns always describe the same set of patients.
+  const visibleAppointments = useMemo(
+    () =>
+      (verifiedActiveAppointments ?? []).filter(
+        (appt) =>
+          matchesBoardSearch(appt, search) && matchesDepartment(appt, department),
+      ),
+    [verifiedActiveAppointments, search, department],
+  );
+
   // Group appointments into columns
   const columnData = useMemo(() => {
     const columns = [
@@ -839,22 +1127,71 @@ export default function WhiteboardPage() {
     ] as const;
 
     return columns.map((col) => {
-      const items = (verifiedActiveAppointments ?? []).filter((appt) =>
+      const items = (visibleAppointments ?? []).filter((appt) =>
         (col.statuses as readonly string[]).includes(appt.status as string)
       );
       return { ...col, items };
     });
-  }, [t, verifiedActiveAppointments]);
+  }, [t, visibleAppointments]);
 
+  const totalBoardPatients = verifiedActiveAppointments?.length ?? 0;
+  const visibleBoardPatients = visibleAppointments.length;
+  const hasActiveFilters = search.trim().length > 0 || department !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setDepartment("all");
+  };
   const hasWhiteboardPatients = columnData.some((col) => col.items.length > 0);
 
   return (
-    <div>
+    <div className={pageShellClass}>
       <PageHeader
         icon={ClipboardList}
         title={
-          <span className="inline-flex items-center gap-3">
+          <span className="inline-flex flex-wrap items-center gap-3">
             {t("whiteboard.title", "Practice Whiteboard")}
+            <Badge
+              variant="secondary"
+              className={cn(CLINICAL_NUMERIC_CLASS, "font-medium")}
+            >
+              {t("whiteboard.activeCount", "{count} active", {
+                count: totalBoardPatients,
+              })}
+            </Badge>
+          </span>
+        }
+        subtitle={t("whiteboard.subtitle", "Live patient status board")}
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* Date navigation */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label={t("whiteboard.date.previous", "Previous day")}
+                onClick={() => setDateInput(shiftDateInput(boardDateInput, -1))}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                variant={isBoardToday ? "secondary" : "outline"}
+                size="sm"
+                className="h-9"
+                onClick={() => setDateInput(null)}
+              >
+                {t("whiteboard.date.today", "Today")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label={t("whiteboard.date.next", "Next day")}
+                onClick={() => setDateInput(shiftDateInput(boardDateInput, 1))}
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
             <SyncStatusIndicator
               isFetching={isFetching}
               lastSyncedAt={dataUpdatedAt}
@@ -862,34 +1199,68 @@ export default function WhiteboardPage() {
               timeZone={verifiedPracticeSettings?.timezone}
               isLive={isLive}
             />
-          </span>
-        }
-        subtitle={t("whiteboard.subtitle", "Live patient status board")}
-        actions={
-          <div className="text-right">
-            <p className="text-sm font-medium">
-              {practiceClockReady && currentTime && verifiedPracticeSettings
-                ? formatCurrentTime(currentTime, verifiedPracticeSettings.timezone)
-                : "\u00A0"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {practiceClockReady && currentTime && verifiedPracticeSettings
-                ? formatCurrentDate(currentTime, verifiedPracticeSettings.timezone)
-                : "\u00A0"}
-            </p>
+            <div className="text-right">
+              <p className={cn(CLINICAL_NUMERIC_CLASS, "font-medium text-foreground")}>
+                {practiceClockReady && currentTime && verifiedPracticeSettings
+                  ? formatCurrentTime(currentTime, verifiedPracticeSettings.timezone)
+                  : "\u00A0"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {practiceClockReady && currentTime && verifiedPracticeSettings
+                  ? formatCurrentDate(currentTime, verifiedPracticeSettings.timezone)
+                  : "\u00A0"}
+              </p>
+            </div>
           </div>
         }
       />
 
       {/* Board area (the "your day" guide spotlights this region) */}
-      <div data-tour="whiteboard-board">
+      <div data-tour="whiteboard-board" className="space-y-6">
+      <PageToolbar>
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          placeholder={t(
+            "whiteboard.toolbar.searchPlaceholder",
+            "Search patient, owner, doctor, or room",
+          )}
+          maxLength={120}
+        />
+        <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          {t("whiteboard.toolbar.departmentFilter", "Department")}
+          <select
+            className={filterControlClass}
+            value={department}
+            onChange={(event) =>
+              setDepartment(event.target.value as BoardDepartmentFilter)
+            }
+            aria-label={t("whiteboard.toolbar.departmentFilter", "Department")}
+          >
+            <option value="all">
+              {t("whiteboard.toolbar.allDepartments", "All departments")}
+            </option>
+            {WHITEBOARD_DEPARTMENTS.map((option) => (
+              <option key={option} value={option}>
+                {t(`whiteboard.departments.${option}`, option)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto">
+          {t("whiteboard.toolbar.visibleCount", "{visible} of {total} patients", {
+            visible: visibleBoardPatients,
+            total: totalBoardPatients,
+          })}
+        </p>
+      </PageToolbar>
+
       {pageError || pageMissing ? (
-        <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-          {/* {pageError?.message ?? "Unable to load whiteboard. Please retry."} */}
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
           {pageError?.message ?? t("whiteboard.errorFallback", "Unable to load whiteboard. Please retry.")}
         </div>
       ) : isPageLoading ? (
-        <div className="mt-6 space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
             <span>{t("whiteboard.loading", "Loading whiteboard...")}</span>
@@ -898,21 +1269,21 @@ export default function WhiteboardPage() {
             {[1, 2, 3].map((colIdx) => (
               <div
                 key={colIdx}
-                className="rounded-lg border border-border/70 bg-muted/20 overflow-hidden"
+                className="overflow-hidden rounded-lg border border-border bg-muted/20"
               >
-                <div className="flex items-center justify-between border-b border-border/50 bg-muted/40 px-4 py-3">
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30 animate-pulse" />
-                    <span className="h-4 w-20 rounded bg-muted animate-pulse" />
+                    <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-muted-foreground/30" />
+                    <span className="h-4 w-20 animate-pulse rounded bg-muted" />
                   </div>
-                  <span className="h-4 w-6 rounded-full bg-muted animate-pulse" />
+                  <span className="h-4 w-6 animate-pulse rounded-full bg-muted" />
                 </div>
-                <div className="space-y-3 p-3 min-h-[140px]">
-                  <div className="h-20 rounded-lg border border-border/50 bg-card p-3 shadow-2xs animate-pulse space-y-2">
+                <div className="min-h-[140px] space-y-3 p-3">
+                  <div className="h-20 animate-pulse space-y-2 rounded-lg border border-border bg-card p-3 shadow-xs">
                     <div className="h-4 w-3/4 rounded bg-muted" />
                     <div className="h-3 w-1/2 rounded bg-muted" />
                   </div>
-                  <div className="h-20 rounded-lg border border-border/50 bg-card p-3 shadow-2xs animate-pulse space-y-2">
+                  <div className="h-20 animate-pulse space-y-2 rounded-lg border border-border bg-card p-3 shadow-xs">
                     <div className="h-4 w-2/3 rounded bg-muted" />
                     <div className="h-3 w-1/3 rounded bg-muted" />
                   </div>
@@ -923,16 +1294,16 @@ export default function WhiteboardPage() {
         </div>
       ) : hasWhiteboardPatients ? (
         /* Kanban columns */
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {columnData.map((col) => (
             <div
               key={col.key}
-              className="rounded-lg border border-border bg-muted/30"
+              className="rounded-lg border border-border bg-card"
             >
               {/* Column header */}
               <div
                 className={cn(
-                  "flex items-center justify-between rounded-t-lg px-4 py-3",
+                  "flex items-center justify-between rounded-t-lg border-b border-border px-4 py-3",
                   col.headerBg
                 )}
               >
@@ -951,7 +1322,7 @@ export default function WhiteboardPage() {
                 </div>
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-xs font-medium",
+                    "rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
                     col.headerBg,
                     col.headerText
                   )}
@@ -971,6 +1342,9 @@ export default function WhiteboardPage() {
                     <WhiteboardCard
                       key={appt.id}
                       appointment={appt}
+                      signals={appt.patientId ? signalsByPatient.get(appt.patientId) : undefined}
+                      now={currentTime}
+                      timeZone={verifiedPracticeSettings?.timezone}
                       onClick={() => setSelectedAppointment(appt)}
                     />
                   ))
@@ -979,15 +1353,41 @@ export default function WhiteboardPage() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : totalBoardPatients > 0 && hasActiveFilters ? (
         <EmptyState
-          className="mt-6"
+          icon={SearchX}
+          title={t("whiteboard.noMatches.title", "No patients match")}
+          description={t(
+            "whiteboard.noMatches.description",
+            "Adjust the search or the department filter to see the rest of the board.",
+          )}
+          action={{
+            label: t("whiteboard.noMatches.action", "Clear filters"),
+            onClick: clearFilters,
+          }}
+        />
+      ) : isBoardToday ? (
+        <EmptyState
           icon={ClipboardList}
           title={t("whiteboard.emptyState.title", "No patients on the whiteboard")}
           description={t("whiteboard.emptyState.description", "Checked-in and in-progress appointments will appear here as the day moves.")}
           action={{
             label: t("whiteboard.emptyState.action", "Open schedule"),
             onClick: () => router.push("/schedule"),
+            icon: CalendarPlus,
+          }}
+        />
+      ) : (
+        <EmptyState
+          icon={CalendarPlus}
+          title={t("whiteboard.otherDate.emptyTitle", "No patients on this date")}
+          description={t(
+            "whiteboard.otherDate.emptyDescription",
+            "Use the date navigation to move to another day of the board.",
+          )}
+          action={{
+            label: t("whiteboard.otherDate.backToToday", "Back to today"),
+            onClick: () => setDateInput(null),
             icon: CalendarPlus,
           }}
         />
@@ -1001,6 +1401,12 @@ export default function WhiteboardPage() {
         selectedAppointmentStillActive && (
           <AppointmentDetailModal
             appointment={selectedAppointmentFromList}
+            signals={
+              selectedAppointmentFromList.patientId
+                ? signalsByPatient.get(selectedAppointmentFromList.patientId)
+                : undefined
+            }
+            now={currentTime}
             timeZone={verifiedPracticeSettings.timezone}
             onClose={() => setSelectedAppointment(null)}
             onStatusChange={handleStatusChange}

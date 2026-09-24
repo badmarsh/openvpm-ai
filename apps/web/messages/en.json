@@ -3573,7 +3573,18 @@
       "uploadFailed": "Upload failed. Please try again.",
       "uploadUnconfirmed": "The upload could not be confirmed. Retry to safely check and finish the same upload.",
       "labReportAttached": "Lab report attached",
-      "documentUploaded": "Document uploaded"
+      "documentUploaded": "Document uploaded",
+      "filterImaging": "Imaging",
+      "imagingTitle": "Imaging studies",
+      "imagingStudy": "Imaging study",
+      "imagingUploaded": "Imaging study attached",
+      "uploadImaging": "Upload imaging study",
+      "uploadImagingDesc": "Attach a diagnostic study (RTG, USG, CT, endoscopy). Studies are stored under the imaging category and never replace the patient profile photo.",
+      "modalityLabel": "Diagnostic modality",
+      "modalityPlaceholder": "Select modality...",
+      "imagingModalityRequired": "Select the diagnostic modality (RTG, USG, CT, or endoscopy) before uploading.",
+      "imagingUploadValidation": "Choose a JPG, PNG, or WebP image up to 4 MB.",
+      "imagingNotice": "The study is filed under the imaging category and tagged with its modality for the clinical whiteboard."
     },
     "appointmentsTab": {
       "title": "Appointments & Visits",
@@ -5618,6 +5629,49 @@
       "live": "Live",
       "lastSynced": "Last synced: {time}",
       "refreshNow": "Refresh now"
+    },
+    "activeCount": "{count} active",
+    "date": {
+      "previous": "Previous day",
+      "next": "Next day",
+      "today": "Today",
+      "jumpAria": "Board date"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search patient, owner, doctor, or room",
+      "departmentFilter": "Department",
+      "allDepartments": "All departments",
+      "visibleCount": "{visible} of {total} patients"
+    },
+    "departments": {
+      "ambulancia": "Outpatient clinic",
+      "chirurgia": "Surgery",
+      "hospitalizacia": "Hospitalisation"
+    },
+    "conditions": {
+      "critical": "Critical",
+      "postOp": "Post-operative",
+      "awaitingDischarge": "Awaiting discharge",
+      "stable": "Stabilised"
+    },
+    "times": {
+      "checkIn": "Check-in",
+      "scheduled": "Scheduled",
+      "waiting": "Waiting",
+      "fasting": "Fasting",
+      "fastingStartsIn": "starts in {duration}",
+      "procedure": "Procedure",
+      "imaging": "Imaging today"
+    },
+    "noMatches": {
+      "title": "No patients match",
+      "description": "Adjust the search or the department filter to see the rest of the board.",
+      "action": "Clear filters"
+    },
+    "otherDate": {
+      "emptyTitle": "No patients on this date",
+      "emptyDescription": "Use the date navigation to move to another day of the board.",
+      "backToToday": "Back to today"
     }
   },
   "activation": {
@@ -6514,6 +6568,15 @@
       "colActions": "Actions",
       "unknownPatient": "Unknown",
       "revision": "rev. {count}"
+    },
+    "modality": {
+      "rtg": "X-ray",
+      "usg": "Ultrasound",
+      "ct": "CT",
+      "endoscopy": "Endoscopy",
+      "lab": "Lab",
+      "mri": "MRI",
+      "photo": "Clinical photo"
     }
   },
   "discharge": {

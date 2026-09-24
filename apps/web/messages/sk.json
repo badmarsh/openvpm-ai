@@ -3573,7 +3573,18 @@
       "uploadFailed": "Nahrávanie zlyhalo. Skúste to znova.",
       "uploadUnconfirmed": "Nahrávanie sa nepodarilo potvrdiť. Skúste to znova, aby sa bezpečne overilo a dokončilo rovnaké nahrávanie.",
       "labReportAttached": "Laboratórna správa priložená",
-      "documentUploaded": "Dokument bol nahraný"
+      "documentUploaded": "Dokument bol nahraný",
+      "filterImaging": "Zobrazovanie",
+      "imagingTitle": "Zobrazovacie vyšetrenia",
+      "imagingStudy": "Zobrazovacie vyšetrenie",
+      "imagingUploaded": "Snímka bola priložená",
+      "uploadImaging": "Nahrať snímku",
+      "uploadImagingDesc": "Priložte diagnostickú snímku (RTG, USG, CT, endoskopia). Snímky sa ukladajú v kategórii zobrazovania a nikdy nenahradia fotografiu pacienta.",
+      "modalityLabel": "Diagnostická modalita",
+      "modalityPlaceholder": "Vyberte modalitu...",
+      "imagingModalityRequired": "Pred nahratím vyberte diagnostickú modalitu (RTG, USG, CT alebo endoskopia).",
+      "imagingUploadValidation": "Vyberte obrázok JPG, PNG alebo WebP do 4 MB.",
+      "imagingNotice": "Snímka sa uloží v kategórii zobrazovania a označí sa modalitou pre klinickú tabuľu."
     },
     "appointmentsTab": {
       "title": "Termíny a návštevy",
@@ -5618,6 +5629,49 @@
       "live": "Naživo",
       "lastSynced": "Posledná synchronizácia: {time}",
       "refreshNow": "Obnoviť teraz"
+    },
+    "activeCount": "{count} aktívnych",
+    "date": {
+      "previous": "Predchádzajúci deň",
+      "next": "Nasledujúci deň",
+      "today": "Dnes",
+      "jumpAria": "Dátum tabule"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Hľadať pacienta, majiteľa, lekára alebo miestnosť",
+      "departmentFilter": "Oddelenie",
+      "allDepartments": "Všetky oddelenia",
+      "visibleCount": "{visible} z {total} pacientov"
+    },
+    "departments": {
+      "ambulancia": "Ambulancia",
+      "chirurgia": "Chirurgia",
+      "hospitalizacia": "Hospitalizácia"
+    },
+    "conditions": {
+      "critical": "Kritický",
+      "postOp": "Pooperačný",
+      "awaitingDischarge": "Čaká na prepustenie",
+      "stable": "Stabilizovaný"
+    },
+    "times": {
+      "checkIn": "Príchod",
+      "scheduled": "Termín",
+      "waiting": "Čakanie",
+      "fasting": "Lačnenie",
+      "fastingStartsIn": "začína o {duration}",
+      "procedure": "Zákrok",
+      "imaging": "Zobrazovanie dnes"
+    },
+    "noMatches": {
+      "title": "Žiadni pacienti nezodpovedajú",
+      "description": "Upravte vyhľadávanie alebo filter oddelenia a zobrazia sa ďalší pacienti.",
+      "action": "Zrušiť filtre"
+    },
+    "otherDate": {
+      "emptyTitle": "V tento dátum nie sú žiadni pacienti",
+      "emptyDescription": "Použite navigáciu dátumom a prejdite na iný deň tabule.",
+      "backToToday": "Späť na dnes"
     }
   },
   "activation": {
@@ -6514,6 +6568,15 @@
       "colActions": "Akcie",
       "unknownPatient": "Neznámy",
       "revision": "rev. {count}"
+    },
+    "modality": {
+      "rtg": "RTG",
+      "usg": "USG",
+      "ct": "CT",
+      "endoscopy": "Endoskopia",
+      "lab": "LAB",
+      "mri": "MRI",
+      "photo": "Klinická fotka"
     }
   },
   "discharge": {

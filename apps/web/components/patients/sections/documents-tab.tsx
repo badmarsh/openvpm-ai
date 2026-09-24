@@ -1,16 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, ExternalLink, FileText, Loader2, Paperclip } from "lucide-react";
+import { Download, ExternalLink, FileText, Paperclip, ScanLine } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/empty-state";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatClinicalDateTime } from "@/lib/records/clinical-dates";
 import { PatientDocumentUpload } from "@/components/records/patient-document-upload";
+import { ModalityBadge } from "@/components/imaging/modality-badge";
 import { patientFileKind, patientFileLabel, type PatientFileKind } from "@/lib/records/file-kinds";
-import { PatientHeaderSkeleton, PatientSnapshotSkeleton } from "@/components/ui/content-skeletons";
+import { resolveImagingModality } from "@/lib/imaging/modality";
 
 function PatientDetailErrorPanel({ message }: { message: string }) {
   return (
@@ -23,6 +23,7 @@ function PatientDetailErrorPanel({ message }: { message: string }) {
 function PatientDetailLoadingPanel({ label }: { label: string }) {
   return (
     <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
       <div className="h-8 w-48 animate-pulse rounded bg-muted" />
       <div className="h-32 w-full animate-pulse rounded bg-muted" />
     </div>
@@ -36,6 +37,8 @@ type PatientFile = {
   mimeType: string | null;
   fileSizeBytes: number | null;
   category: string | null;
+  title: string | null;
+  documentType: string | null;
   appointmentId: string | null;
   createdAt: Date;
   consentTitle: string | null;
@@ -63,6 +66,84 @@ function PatientPhotoGrid({ photos }: { photos: PatientFile[] }) {
         </a>
       ))}
     </div>
+  );
+}
+
+/**
+ * Diagnostic studies get their own grid: an RTG/USG/CT scan is evidence, not
+ * an owner-facing photo, and it must never be presented as the patient photo.
+ */
+function PatientImagingGrid({
+  studies,
+  timeZone,
+}: {
+  studies: PatientFile[];
+  timeZone?: string | null;
+}) {
+  const { t } = useI18n();
+  return (
+    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {studies.map((file) => {
+        const modality = resolveImagingModality(file.documentType);
+        return (
+          <li
+            key={file.id}
+            className="flex gap-3 rounded-md border border-border bg-card p-2"
+          >
+            <a
+              href={file.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0"
+              title={file.fileName}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={file.fileUrl}
+                alt={file.fileName}
+                loading="lazy"
+                decoding="async"
+                className="h-16 w-16 rounded-md border border-border object-cover transition-opacity hover:opacity-80"
+              />
+            </a>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {modality ? (
+                  <ModalityBadge code={modality} />
+                ) : null}
+                <span className="truncate text-xs font-medium">
+                  {patientFileLabel(file)}
+                </span>
+              </div>
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                {t("patients.documentsTab.imagingStudy", "Imaging study")}
+                {" · "}
+                {formatClinicalDateTime(file.createdAt, timeZone, "Unknown")}
+              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <a
+                  href={file.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t("patients.documentsTab.view", "View")}
+                </a>
+                <a
+                  href={file.fileUrl}
+                  download={file.fileName}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                >
+                  <Download className="h-3 w-3" />
+                  {t("patients.documentsTab.download", "Download")}
+                </a>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -142,6 +223,11 @@ const documentFilters: {
     defaultLabel: "Photos",
   },
   {
+    id: "imaging",
+    labelKey: "patients.documentsTab.filterImaging",
+    defaultLabel: "Imaging",
+  },
+  {
     id: "consent",
     labelKey: "patients.documentsTab.filterConsents",
     defaultLabel: "Consents",
@@ -173,7 +259,7 @@ export function DocumentsTab({
   const filesMissing = !isLoading && !error && !data;
 
   const counts = useMemo(() => {
-    const next = { all: 0, photo: 0, consent: 0, document: 0, lab: 0 };
+    const next = { all: 0, photo: 0, consent: 0, imaging: 0, document: 0, lab: 0 };
     for (const file of data ?? []) {
       next.all += 1;
       next[patientFileKind(file)] += 1;
@@ -230,7 +316,14 @@ export function DocumentsTab({
         : patientFileKind(file) === filter),
   );
   const photos = visible.filter((file) => patientFileKind(file) === "photo");
-  const documents = visible.filter((file) => patientFileKind(file) !== "photo");
+  const imagingStudies = visible.filter(
+    (file) => patientFileKind(file) === "imaging",
+  );
+  const documents = visible.filter(
+    (file) =>
+      patientFileKind(file) !== "photo" &&
+      patientFileKind(file) !== "imaging",
+  );
 
   return (
     <div className="space-y-4">
@@ -268,6 +361,18 @@ export function DocumentsTab({
                 {t("patients.documentsTab.photosTitle", "Photos")}
               </h3>
               <PatientPhotoGrid photos={photos} />
+            </div>
+          )}
+          {imagingStudies.length > 0 && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
+                <ScanLine className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                {t("patients.documentsTab.imagingTitle", "Imaging studies")}
+                <span className="text-xs font-normal tabular-nums text-muted-foreground">
+                  ({imagingStudies.length})
+                </span>
+              </h3>
+              <PatientImagingGrid studies={imagingStudies} timeZone={timeZone} />
             </div>
           )}
           {documents.length > 0 && (

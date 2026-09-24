@@ -163,7 +163,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
         icon: "📸",
         title: "Zobrazovacie vyšetrenia (RTG/USG)",
         description:
-          "Záložka „Zobrazovanie\" umožňuje nahrávať RTG a DICOM snímky. Nahraná snímka sa bezpečne uloží v karte bez prepísania profilovej fotky.",
+          "V karte pacienta v záložke „Dokumenty\" nájdete sekciu „Zobrazovacie vyšetrenia\". Nahrajte RTG, USG, CT či endoskopiu s diagnostickou modalitou – snímka sa uloží do kategórie imaging a nikdy neprepíše profilovú fotografiu zvieraťa.",
       },
       {
         icon: "📄",
@@ -382,7 +382,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
     ],
     tips: [
       "Funkcia Charge Capture zabraňuje únikom tržieb – personál nezabudne zaúčtovať spotrebný materiál (rukavice, striekačky, ihly).",
-      "Ak počas vizity nahráte RTG snímku cez záložku Zobrazovanie, okamžite môžete spustiť AI analýzu a VHS kalkulačku.",
+      "Ak počas vizity nahráte RTG snímku cez záložku Dokumenty (sekcia Zobrazovacie vyšetrenia), okamžite môžete spustiť AI analýzu a VHS kalkulačku.",
       "V prípade eutanázie systém automaticky aktivuje kondolenčný režim a zablokuje akékoľvek marketingové správy.",
     ],
     practicalExample: {
@@ -1110,7 +1110,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
     tips: [
       "Systém plne podporuje DICOM súbory priamo v prehliadači s možnosťou úpravy jasu, kontrastu a priblíženia bez drahej PACS stanice.",
       "Kalkulačka VHS obsahuje referenčné normy upravené pre jednotlivé plemená (jazvečík, buldog, nemecká doga).",
-      "Snímka sa uloží do karty pacienta v kategórii 'Zobrazovanie' a neprepíše profilovú fotografiu zvieraťa.",
+      "Snímka sa uloží do karty pacienta v kategórii „imaging\" (sekcia Zobrazovacie vyšetrenia) a neprepíše profilovú fotografiu zvieraťa.",
     ],
     practicalExample: {
       title: "Posúdenie kardiomegálie a pľúcneho edému na laterálnom RTG hrudníka",

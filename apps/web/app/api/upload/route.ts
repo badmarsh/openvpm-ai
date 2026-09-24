@@ -36,6 +36,11 @@ import {
   lockPracticeForExternalSideEffects,
   RECOVERY_HOLD_BLOCK_MESSAGE,
 } from "@/lib/recovery-hold";
+import {
+  UPLOAD_MODALITY_CODES,
+  resolveImagingModality,
+  type ImagingUploadModality,
+} from "@/lib/imaging/modality";
 
 const MAX_FILE_NAME_LENGTH = 255;
 const DASHBOARD_UPLOAD_CATEGORIES = [
@@ -210,6 +215,7 @@ export async function POST(req: NextRequest) {
       const file = formData.get("file");
       const category = formData.get("category");
       const patientIdValue = formData.get("patientId");
+      const modalityValue = formData.get("modality");
       const idempotencyKey = req.headers.get("idempotency-key")?.trim() ?? "";
 
       if (!IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
@@ -261,6 +267,25 @@ export async function POST(req: NextRequest) {
           { error: "A canonical patientId is required for patient uploads" },
           { status: 400 },
         );
+      }
+
+      // ---------- Validate diagnostic modality (imaging only) ----------
+      // Every diagnostic study is tagged with its modality. The value is
+      // stored in `files.document_type`; it never touches patients.photoUrl.
+      let imagingModality: ImagingUploadModality | null = null;
+      if (dashboardCategory === "imaging") {
+        const resolvedModality = resolveImagingModality(
+          typeof modalityValue === "string" ? modalityValue : null,
+        );
+        if (!resolvedModality) {
+          return NextResponse.json(
+            {
+              error: `A supported modality is required for imaging uploads. Allowed: ${UPLOAD_MODALITY_CODES.join(", ")}`,
+            },
+            { status: 400 },
+          );
+        }
+        imagingModality = resolvedModality;
       }
 
       // ---------- Validate size ----------
@@ -362,6 +387,7 @@ export async function POST(req: NextRequest) {
           entityType: dashboardCategory === "branding" ? "practice" : "patient",
           entityId: dashboardCategory === "branding" ? practiceId : patientId!,
           patientId: dashboardCategory !== "branding" ? patientId : null,
+          documentType: imagingModality,
         });
       });
       if (!reservation) {

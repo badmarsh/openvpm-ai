@@ -19,6 +19,7 @@ const { whiteboardRouter } = await import("../routers/whiteboard");
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const APPOINTMENT_ID = "00000000-0000-0000-0000-000000000002";
+const PATIENT_ID = "00000000-0000-0000-0000-000000000010";
 
 function callerWithDb(db: Record<string, unknown>) {
   const session = {
@@ -46,6 +47,7 @@ function createSelectDb(selectResults: unknown[][]) {
     };
     const builder = {
       from: vi.fn(() => builder),
+      innerJoin: vi.fn(() => builder),
       leftJoin: vi.fn(() => builder),
       where: vi.fn(() => builder),
       orderBy: vi.fn(() => terminal),
@@ -593,16 +595,135 @@ describe("whiteboard query scoping", () => {
   it("uses the practice timezone for the active whiteboard day", () => {
     expect(source).toContain("async function practiceTimeZone");
     expect(source).toContain("async function practiceDayRange");
+    expect(source).toContain("const timeZone = await practiceTimeZone(ctx)");
     expect(source).toContain(
-      "dateInputUtcRangeForTimeZone(new Date(), await practiceTimeZone(ctx))"
+      "if (dateInput) return dateInputDayUtcRange(dateInput, timeZone)"
+    );
+    expect(source).toContain(
+      "return dateInputUtcRangeForTimeZone(new Date(), timeZone)"
     );
     expect(source).toContain("async function practiceSettings");
     expect(source).toContain("settings: protectedProcedure.query");
     expect(source).toContain("settings: protectedProcedure.query(async ({ ctx }) => practiceSettings(ctx))");
-    expect(source).toContain("const today = await practiceDayRange(ctx)");
+    expect(source).toContain("const today = await practiceDayRange(ctx, input?.date)");
     expect(source).toContain("gte(appointments.startTime, today.start)");
     expect(source).toContain("lt(appointments.startTime, today.end)");
     expect(source).not.toContain("setHours(0, 0, 0, 0)");
     expect(source).not.toContain("setHours(23, 59, 59, 999)");
+  });
+
+  it("keeps diagnostic imaging reads inside the imaging category", () => {
+    expect(source).toContain('const LAB_REPORT_CATEGORY = "lab-results"');
+    expect(source).toContain(
+      "inArray(files.category, [\n                  IMAGING_FILE_CATEGORY,\n                  LAB_REPORT_CATEGORY,\n                ])"
+    );
+    expect(source).toContain('eq(files.storageStatus, "available")');
+    // Imaging aggregation never writes, so it can never touch patients.photoUrl.
+    expect(source).not.toContain("photoUrl: files.fileUrl");
+  });
+});
+
+describe("whiteboard clinical signals", () => {
+  it("derives imaging modalities, critical labs and discharge state per patient", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T02:30:00.000Z"));
+    const OTHER_PATIENT_ID = "00000000-0000-0000-0000-000000000021";
+    const { db, select } = createSelectDb([
+      [
+        {
+          name: "Neighborhood Veterinary",
+          phone: "555-0100",
+          timezone: "America/Los_Angeles",
+        },
+      ],
+      [
+        { patientId: PATIENT_ID, category: "imaging", documentType: "RTG" },
+        { patientId: PATIENT_ID, category: "imaging", documentType: "usg" },
+        { patientId: PATIENT_ID, category: "lab-results", documentType: null },
+        { patientId: OTHER_PATIENT_ID, category: "imaging", documentType: "CT" },
+      ],
+      [
+        { patientId: PATIENT_ID, resultFlag: "critical" },
+        { patientId: PATIENT_ID, resultFlag: "normal" },
+      ],
+      [{ patientId: PATIENT_ID, id: "procedure-1" }],
+      [{ patientId: PATIENT_ID, id: "vitals-1" }],
+      [{ patientId: PATIENT_ID, status: "clinical_finalized" }],
+    ]);
+
+    const signals = await callerWithDb(db).clinicalSignals({
+      patientIds: [PATIENT_ID, OTHER_PATIENT_ID],
+    });
+
+    expect(select).toHaveBeenCalledTimes(6);
+    expect(signals).toEqual([
+      {
+        patientId: PATIENT_ID,
+        imagingModalities: ["rtg", "usg"],
+        labReports: 1,
+        criticalLabs: 1,
+        procedures: 1,
+        vitalsRecorded: 1,
+        awaitingDischarge: true,
+      },
+      {
+        patientId: OTHER_PATIENT_ID,
+        imagingModalities: ["ct"],
+        labReports: 0,
+        criticalLabs: 0,
+        procedures: 0,
+        vitalsRecorded: 0,
+        awaitingDischarge: false,
+      },
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("returns empty signals instead of inventing clinical state", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T02:30:00.000Z"));
+    const { db } = createSelectDb([
+      [
+        {
+          name: "Neighborhood Veterinary",
+          phone: "555-0100",
+          timezone: "America/Los_Angeles",
+        },
+      ],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ]);
+
+    await expect(
+      callerWithDb(db).clinicalSignals({ patientIds: [PATIENT_ID] }),
+    ).resolves.toEqual([
+      {
+        patientId: PATIENT_ID,
+        imagingModalities: [],
+        labReports: 0,
+        criticalLabs: 0,
+        procedures: 0,
+        vitalsRecorded: 0,
+        awaitingDischarge: false,
+      },
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("rejects empty or oversized patient lists", async () => {
+    const { db } = createSelectDb([[]]);
+    await expect(
+      callerWithDb(db).clinicalSignals({ patientIds: [] }),
+    ).rejects.toBeTruthy();
+    await expect(
+      callerWithDb(db).clinicalSignals({
+        patientIds: Array.from({ length: 101 }, (_, index) =>
+          `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        ),
+      }),
+    ).rejects.toBeTruthy();
   });
 });

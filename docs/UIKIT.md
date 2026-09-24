@@ -22,6 +22,14 @@ Page wrapper: `pageShellClass` (`space-y-6`). Do not mix `mt-4` / `mt-6` / no-ga
 - Sections: `rounded-lg border border-border bg-card`. KPI / filter / table are separate cards, not one undifferentiated wall.
 - i18n: every string through `t()`. Keep `sk.json` / `en.json` leaf-symmetric.
 
+## Clinical status & diagnostic modality badges
+
+- Modality badges come from `ModalityBadge` / `ModalityBadgeRow` (`@/components/imaging/modality-badge`). Colour contract: RTG → info (blue), USG → purple, CT → amber, MRI → rose, endoscopy → indigo, LAB → teal. Never hand-roll a modality colour.
+- Condition tags (`kritický`, `pooperačný`, `čaká na prepustenie`, `stabilizovaný`) are evidence-based: render a tag only when the data proves it, never as a default state.
+- Clinical times (check-in, waiting, fasting window, procedure start/end) always use `font-mono tabular-nums text-xs` — `CLINICAL_NUMERIC_CLASS` in `@/lib/whiteboard/clinical-board`.
+- Kanban boards (e.g. `/whiteboard`) keep the same shell: `PageHeader` with the active-count badge and date navigation, `PageToolbar` with search + department filter, then one `rounded-lg border border-border bg-card` frame per column.
+- Imaging attachments upload under category `"imaging"` with a modality, live in their own bucket in the patient documents tab and never touch `patient.photoUrl`.
+
 ## Clinical language
 
 Doctor CoG is **vyšetrenie**. CTAs: Otvoriť vyšetrenie / Nové vyšetrenie. Do not mix návšteva / termín / stretnutie / exam room.

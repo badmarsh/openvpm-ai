@@ -4706,6 +4706,9 @@ export const recordsRouter = createRouter({
           mimeType: files.mimeType,
           fileSizeBytes: files.fileSizeBytes,
           category: files.category,
+          title: files.title,
+          // Diagnostic modality for imaging rows (RTG / USG / CT / endoscopy).
+          documentType: files.documentType,
           appointmentId: files.appointmentId,
           createdAt: files.createdAt,
           consentTitle: consentRequests.title,
