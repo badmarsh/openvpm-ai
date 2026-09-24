@@ -5,6 +5,7 @@ import {
   parsePdfInvoice,
   sanitizeInvoiceText,
   resolvePdfjsAssetDirs,
+  loadPdfjsLib,
   MAX_AI_INVOICE_ITEMS,
   type InvoiceParserAiConfig,
 } from "../pdf-invoice-parser";
@@ -273,3 +274,44 @@ describe("PDF delivery-note regression", () => {
     expect(assets.cMapUrl?.endsWith("/")).toBe(true);
   });
 });
+
+describe("pdfjs resolution and container fallback", () => {
+  it("loadPdfjsLib successfully resolves pdf.mjs with getDocument API", async () => {
+    const lib = await loadPdfjsLib();
+    expect(lib).toBeDefined();
+    expect(typeof lib.getDocument).toBe("function");
+  });
+
+  it("extractPdfText succeeds even if globalThis.DOMMatrix was undefined", async () => {
+    const originalDOMMatrix = (globalThis as any).DOMMatrix;
+    try {
+      delete (globalThis as any).DOMMatrix;
+      const pdf = buildMinimalPdf(["RESILIENT TEST INVOICE"]);
+      const text = await extractPdfText(pdf);
+      expect(text).toContain("RESILIENT TEST INVOICE");
+    } finally {
+      (globalThis as any).DOMMatrix = originalDOMMatrix;
+    }
+  });
+
+  it("resolvePdfjsAssetDirs returns directories that exist on disk", async () => {
+    const { existsSync } = await import("node:fs");
+    const assets = resolvePdfjsAssetDirs();
+    expect(assets.standardFontDataUrl).toBeDefined();
+    expect(assets.cMapUrl).toBeDefined();
+
+    const fontDir = assets.standardFontDataUrl!.replace(/\/$/, "");
+    const cmapDir = assets.cMapUrl!.replace(/\/$/, "");
+    expect(existsSync(fontDir)).toBe(true);
+    expect(existsSync(cmapDir)).toBe(true);
+  });
+
+  it("extracts text with stopAtErrors: false without throwing on minor stream anomalies", async () => {
+    const cleanPdf = buildMinimalPdf(["LINE ONE", "LINE TWO"]);
+    const dirtyPdf = Buffer.concat([cleanPdf, Buffer.from("\n%trailing comment garbage\n")]);
+    const text = await extractPdfText(dirtyPdf);
+    expect(text).toContain("LINE ONE");
+    expect(text).toContain("LINE TWO");
+  });
+});
+

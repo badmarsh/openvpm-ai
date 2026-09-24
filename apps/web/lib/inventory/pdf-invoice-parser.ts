@@ -111,7 +111,7 @@ export interface PdfInvoiceExtraction {
   parseMethod: "ai" | "rule-based" | "fallback";
 }
 
-async function loadPdfjsLib() {
+export async function loadPdfjsLib() {
   try {
     return await import("pdfjs-dist/legacy/build/pdf.mjs");
   } catch (err) {
