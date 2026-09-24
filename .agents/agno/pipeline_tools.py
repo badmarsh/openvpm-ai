@@ -381,35 +381,35 @@ def list_active_arena_sessions() -> str:
 
 
 def _get_cdp_endpoints(custom_ports: str = "9222,60325,9223,9229,9333,5000") -> list:
-    """Zostaví prioritný zoznam CDP endpointov pre Windows host (192.168.0.100) aj lokálny WSL."""
+    """Zostaví prioritný zoznam CDP endpointov pre lokálny WSL/Linux aj Windows host (192.168.0.100)."""
     endpoints = []
     win_host = os.getenv("WINDOWS_HOST_IP", "192.168.0.100")
 
-    # 1. Čítanie aktívneho DevTools portu priamo z Windows Chrome profilu
+    # 1. Lokálny port 9222 má najvyššiu prioritu (Linux Chrome bežiaci v WSL)
+    endpoints.append("http://127.0.0.1:9222")
+    endpoints.append(f"http://{win_host}:9222")
+
+    # 2. Čítanie aktívneho DevTools portu priamo z Chrome profilu
     try:
         from pathlib import Path
         for pth in [
-            Path("/mnt/c/Users/marek/AppData/Local/Google/Chrome/User Data/DevToolsActivePort"),
             Path("/home/ubuntu/.config/google-chrome/DevToolsActivePort"),
+            Path("/mnt/c/Users/marek/AppData/Local/Google/Chrome/User Data/DevToolsActivePort"),
         ]:
             if pth.exists():
                 lines = pth.read_text(encoding="utf-8").strip().splitlines()
                 if lines and lines[0].strip().isdigit():
                     act_port = int(lines[0].strip())
-                    endpoints.append(f"http://{win_host}:{act_port}")
                     endpoints.append(f"http://127.0.0.1:{act_port}")
+                    endpoints.append(f"http://{win_host}:{act_port}")
     except Exception:
         pass
-
-    # 2. Windows host bridge (192.168.0.100:9222) a lokálny port 9222
-    endpoints.append(f"http://{win_host}:9222")
-    endpoints.append("http://127.0.0.1:9222")
 
     # 3. Zadané voliteľné porty
     if custom_ports:
         for p in [int(x.strip()) for x in custom_ports.split(",") if x.strip().isdigit()]:
-            endpoints.append(f"http://{win_host}:{p}")
             endpoints.append(f"http://127.0.0.1:{p}")
+            endpoints.append(f"http://{win_host}:{p}")
 
     seen = set()
     uniq = []
@@ -1185,7 +1185,15 @@ Vyžaduje sa manuálny zásah developera."""
         save_development_run(run)
 
     repair_prompt = f"""<system_prompt>
-Si Arena.ai expert.
+Si Arena.ai expert pracujúci na projekte OpenVPM AI.
+KRITICKÉ UPOZORNENIE K RELÁCII (SESSION INVARIANT):
+Táto Arena relácia už v predchádzajúcom kroku vytvorila vetvu alebo Pull Request. Arena.ai v tej istej relácii technicky NEDOKÁŽE a NEUMOŽŇUJE vytvoriť nový Pull Request ani novú vetvu druhýkrát!
+Preto striktne dodržuj tieto pravidlá:
+1. NEPOKÚŠAJ SA vytvoriť nový Pull Request ani novú vetvu cez UI alebo git.
+2. NESTLAČAJ tlačidlo 'Create PR'.
+3. Všetky opravy vykonaj priamo v súboroch repozitára v tvojom sandboxe.
+4. Výstup MUSÍŠ poskytnúť VÝHRADNE AKO ČISTÝ UNIFIKOVANÝ .patch SÚBOR (unified diff začínajúci na `diff --git a/...`). Naša orchestrácia tento patch automaticky prevezme cez CDP a aplikuje lokálne cez git apply.
+
 Predchádzajúca implementácia úlohy {task_id} vygenerovala nasledujúce chyby pri kompilácii a testoch OpenVPM:
 
 <chybovy_vystup_z_testov>
@@ -1194,8 +1202,8 @@ Predchádzajúca implementácia úlohy {task_id} vygenerovala nasledujúce chyby
 
 <poziadavka_na_opravu>
 1. Presne oprav identifikované TypeScript chyby, chýbajúce importy alebo nesymetrické i18n preklady (sk.json / en.json).
-2. Dodrž zero-conflict pravidlá a PageKit komponenty.
-3. Vráť opravený git diff/patch.
+2. Dodrž zero-conflict pravidlá a PageKit komponenty (docs/UIKIT.md).
+3. Vráť opravený čistý unifikovaný git diff/patch.
 </poziadavka_na_opravu>
 </system_prompt>"""
 
@@ -1348,10 +1356,13 @@ _ARENA_SNAPSHOT_JS = r"""() => {
     (el.getAttribute("title") || "")
   ).replace(/\s+/g, " ").trim();
   const isCreatePr = (label) => /create\s+(a\s+)?(pull request|pr)\b/i.test(label);
+  const isPrCreated = (label) => /(?:pr|pull\s+request|branch)\s+(?:created|opened|pushed)|view\s+(?:pr|pull\s+request)\b/i.test(label);
   const buttons = Array.from(document.querySelectorAll(
-    "button, a[role='button'], [role='button']"
+    "button, a[role='button'], [role='button'], a[href]"
   ));
   const createPr = buttons.find((el) => visible(el) && isCreatePr(labelOf(el))) || null;
+  const hasPrCreatedButton = buttons.some((el) => visible(el) && isPrCreated(labelOf(el)));
+  const hasPrLink = !!document.querySelector("a[href*='/pull/'], a[href*='/tree/'], a[href*='/compare/']");
   const stop = buttons.find((el) => {
     if (!visible(el) || isCreatePr(labelOf(el))) return false;
     return /\b(stop|cancel)\b/i.test(labelOf(el));
@@ -1378,9 +1389,12 @@ _ARENA_SNAPSHOT_JS = r"""() => {
   const assistantText = msgs.length ? textOf(msgs[msgs.length - 1]) : "";
   const bodyText = (document.body && document.body.innerText) || "";
   const markerRe = /ARENA_TASK_COMPLETE|ARENA_SPRINT_COMPLETE|<!--\s*arena-complete\s*-->|\[arena:complete\]/i;
+  const prAlreadyCreated = hasPrCreatedButton || hasPrLink ||
+    /(?:pull\s+request|pr|branch)\s+(?:created|opened|pushed)|view\s+(?:pr|pull\s+request)/i.test(bodyText);
   return {
     createPrVisible: !!createPr,
     createPrEnabled: !!(createPr && enabled(createPr)),
+    prAlreadyCreated: prAlreadyCreated,
     stopVisible: !!stop,
     thinking: !!document.querySelector(
       "[data-thinking='true'], [data-state='thinking'], .thinking-indicator"
@@ -2005,6 +2019,12 @@ def _normalize_signals(signals: Mapping[str, Any]) -> dict[str, Any]:
         "create_pr_enabled": bool(_pick(
             signals, "create_pr_enabled", "createPrEnabled", default=False
         )),
+        "pr_already_created": bool(_pick(
+            signals, "pr_already_created", "prAlreadyCreated", "has_pr", "hasPr", default=False
+        )),
+        "has_prior_pr": bool(_pick(
+            signals, "has_prior_pr", "hasPriorPr", default=False
+        )),
         "stop_visible": bool(_pick(signals, "stop_visible", "stopVisible", default=False)),
         "thinking": bool(_pick(signals, "thinking", default=False)),
         "bash_running": bool(_pick(signals, "bash_running", "bashRunning", default=False)),
@@ -2096,6 +2116,18 @@ def detect_arena_run_state(
             patch_text=None,
         )
     diff_text = _best_diff(sig)
+
+    # Invariant: If a PR or branch was already created by this Arena session,
+    # Arena cannot create a second PR. In that state, a clean unified diff (.patch)
+    # is the exclusive valid delivery mechanism and marks completion.
+    if (sig["pr_already_created"] or sig["has_prior_pr"]) and diff_text:
+        return ArenaRunObservation(
+            status="COMPLETED",
+            reason="prior_pr_unified_diff",
+            timed_out=timed_out,
+            patch_text=diff_text,
+        )
+
     if sig["create_pr_visible"] and sig["create_pr_enabled"]:
         return ArenaRunObservation(
             status="COMPLETED",
@@ -2119,6 +2151,17 @@ def detect_arena_run_state(
             timed_out=timed_out,
             patch_text=diff_text,
         )
+
+    # When no Create PR button is visible (e.g. consumed, disabled or non-interactive mode)
+    # and the agent finished generating a valid unified diff:
+    if diff_text and not sig["create_pr_visible"]:
+        return ArenaRunObservation(
+            status="COMPLETED",
+            reason="unified_diff_produced",
+            timed_out=timed_out,
+            patch_text=diff_text,
+        )
+
     reason = "watcher_timeout" if timed_out else "awaiting_completion_signal"
     return ArenaRunObservation(
         status="RUNNING",
@@ -2353,6 +2396,18 @@ def _watch_matched_page(
             snapshot = _read_page_snapshot(page)
         except Exception as exc:
             snapshot = {"error": str(exc)}
+
+        # Propagate prior PR / completed session history so watcher recognizes patch-only delivery
+        try:
+            prior_records = _find_session_records([task_id, session_id])
+            if any(r.get("patch_written") or r.get("has_pr") or r.get("status") == "COMPLETED" for r in prior_records):
+                snapshot["has_prior_pr"] = True
+            run = get_development_run(task_id)
+            if run and run.repair_attempts > 0:
+                snapshot["has_prior_pr"] = True
+        except Exception:
+            pass
+
         timed_out = _monotonic() >= deadline
         observation = detect_arena_run_state(snapshot, timed_out=timed_out)
         elapsed = _monotonic() - started
@@ -2401,7 +2456,7 @@ def _cdp_browser_session(ports: str) -> Iterator[list[tuple[Any, str]]]:
         connected: list[tuple[Any, str]] = []
         for endpoint in _get_cdp_endpoints(ports):
             try:
-                browser = playwright.chromium.connect_over_cdp(endpoint, timeout=10000)
+                browser = playwright.chromium.connect_over_cdp(endpoint, timeout=2500)
             except Exception:
                 continue
             connected.append((browser, endpoint))

@@ -301,6 +301,40 @@ def test_completion_requires_create_pr_terminal_diff_or_marker() -> None:
     assert marker.patch_text is None
 
 
+def test_prior_pr_accepts_unified_diff_as_completed() -> None:
+    # When a session already created a PR/branch, it cannot create PR second time; unified diff is completed
+    prior_pr = pt.detect_arena_run_state({
+        "prAlreadyCreated": True,
+        "codeBlocks": [DIFF],
+    })
+    assert prior_pr.status == "COMPLETED"
+    assert prior_pr.reason == "prior_pr_unified_diff"
+    assert prior_pr.patch_text is not None
+
+    has_prior = pt.detect_arena_run_state({
+        "hasPriorPr": True,
+        "assistantText": DIFF,
+    })
+    assert has_prior.status == "COMPLETED"
+    assert has_prior.reason == "prior_pr_unified_diff"
+
+    # When no Create PR button is visible on page and diff is provided
+    no_btn = pt.detect_arena_run_state({
+        "createPrVisible": False,
+        "codeBlocks": [DIFF],
+    })
+    assert no_btn.status == "COMPLETED"
+    assert no_btn.reason == "unified_diff_produced"
+
+    # Without diff, prior PR state still awaits real work
+    empty_prior = pt.detect_arena_run_state({
+        "prAlreadyCreated": True,
+        "assistantText": "Working on it...",
+    })
+    assert empty_prior.status == "RUNNING"
+    assert empty_prior.reason == "awaiting_completion_signal"
+
+
 def test_collect_reports_running_while_bash_and_writes_no_patch(
     isolated: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -623,6 +657,8 @@ def test_repair_prompt_targets_the_stored_session(
     assert seen["session_id"] == "remote-9"
     assert str(seen["arena_url"]).endswith("/agent/remote-9")
     assert "TS2322" in str(seen["prompt"])
+    assert "NEDOKÁŽE" in str(seen["prompt"]) or "druhýkrát" in str(seen["prompt"])
+    assert ".patch" in str(seen["prompt"])
 
 
 def test_session_updates_are_exact_and_lock_safe(isolated: Path) -> None:

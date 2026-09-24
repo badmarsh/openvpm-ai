@@ -105,13 +105,13 @@ model_qwen = OpenAILike(
     api_key=ALIPROXY_KEY,
 )
 
-# 2. Antigravity Proxy (Port 8045) -> Gemini 3.8 Pro
+# 2. Antigravity Proxy (Port 8045) -> Gemini 3.8 Flash
 ANTIGRAVITY_BASE = os.getenv("ANTIGRAVITY_BASE_URL", "http://192.168.0.100:8045/v1")
 ANTIGRAVITY_KEY = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("AGNO_PROXY_API_KEY") or os.getenv("AI_API_KEY", "")
 GEMINI_MODEL_ID = os.getenv("GEMINI_MODEL_ID", "gemini-3.8-flash-high")
 model_gemini_38 = OpenAILike(
     id=GEMINI_MODEL_ID,
-    name="Gemini 3.8 Pro",
+    name="Gemini 3.8 Flash",
     provider="Antigravity Proxy",
     base_url=ANTIGRAVITY_BASE,
     api_key=ANTIGRAVITY_KEY,
@@ -255,6 +255,7 @@ arena_dispatcher = Agent(
         "dispatch_to_arena_session musí fyzicky otvoriť https://arena.ai/agent, vložiť CELÚ špecifikáciu (nie skrátený summary) a spustiť generovanie cez send_prompt_to_arena_browser. JSON záznam v arena_sessions.json nie je dispatch. Stav RUNNING je platný len pri DISPATCH_OK.",
         "Nikdy nevkladaj prompt do cudzieho tabu. Ak /agent/<session_id> neexistuje, otvor nový /agent. Sprint 1 sa nesmie použiť pre Sprint 5 alebo Sprint 7.",
         "Cez 'list_active_arena_sessions' udržiavaj neustály prehľad o tom, ktoré relácie bežia a prideľuj nové úlohy podľa roadmapy.",
+        "INVARIANT ARENA RELÁCIÍ: Ak relácia už v prvom kroku vytvorila vetvu alebo PR, druhýkrát v tej istej relácii PR vytvoriť NEDOKÁŽE. Preto v repair/pokračujúcich promptoch vyžaduj výhradne unifikovaný .patch súbor.",
     ],
     markdown=True,
     add_history_to_context=True,
@@ -284,7 +285,7 @@ arena_watcher = Agent(
         "Si strážca a monitorovací agent pre paralelné Arena.ai relácie.",
         "Cez 'monitor_arena_health' kontroluj stav všetkých paralelných behov a deteguj záseky alebo time-outy.",
         "ZÁKAZ HALUCINOVANIA TELEMETRIE: Ak nemáš aktívny živý Chrome CDP mostík (port 9222) k tabu prehliadača, NIKDY netvrď, že stream beží plynule alebo že relácia nezamrzla. Vždy pravdivo uveď, že skutočný stav v prehliadači nevidíš a stav v evidencii je iba orientačný.",
-        f"Zber kódu: collect_code_from_arena_browser(task_id=<presné session_id>, timeout_seconds={DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS}). Dokončenie je VÝHRADNE status=COMPLETED (aktívne tlačidlo Create PR, terminál skončil s unified diffom, alebo explicitný completion marker). status=RUNNING znamená, že agent rozmýšľa alebo spúšťa bash (pnpm, vitest, type-check). Ticho v DOM nie je dokončenie a .patch sa nesmie zapisovať.",
+        f"Zber kódu: collect_code_from_arena_browser(task_id=<presné session_id>, timeout_seconds={DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS}). Dokončenie je VÝHRADNE status=COMPLETED (aktívne tlačidlo Create PR, terminál skončil s unified diffom, explicitný completion marker, alebo unifikovaný diff .patch po predchádzajúcom PR/v repair cykle). status=RUNNING znamená, že agent rozmýšľa alebo spúšťa bash (pnpm, vitest, type-check). Ticho v DOM nie je dokončenie a .patch sa nesmie zapisovať.",
         "Tab sa páruje striktne podľa URL /agent/<session_id> alebo task slug v URL/titulku. Ak tab neexistuje, výsledok je status=NOT_FOUND a je zakázané čítať iný sprint.",
         "Akonáhle collect_code_from_arena_browser vráti status=COMPLETED a patch_written=yes, cez 'list_github_pull_requests' over vytvorenie PR a odovzdaj signál GitHub Manažérovi a Qwen Implementerovi.",
         "NIKDY neuvádzaj žiadne konkrétne názvy externých modelov (napr. claude, claude-3-7-sonnet). Vždy referuj výhradne na 'Arena.ai'.",
@@ -362,11 +363,11 @@ qwen_implementer = Agent(
     add_history_to_context=True,
 )
 
-# 6. GEMINI 3.8 PRO REVIEWER (formerly GLM 5.3)
+# 6. GEMINI 3.8 FLASH REVIEWER (formerly GLM 5.3)
 gemini_reviewer = Agent(
     id="gemini-reviewer",
-    name="Gemini 3.8 Pro Reviewer",
-    role="Senior architect and reviewer powered by Gemini 3.8 Pro",
+    name="Gemini 3.8 Flash Reviewer",
+    role="Senior architect and reviewer powered by Gemini 3.8 Flash",
     model=model_gemini_38,
     tools=[
         audit_clinical_and_safety_gates,
@@ -385,7 +386,7 @@ gemini_reviewer = Agent(
     session_summary_manager=session_summary_manager,
     db=db,
     instructions=[
-        "Si Gemini 3.8 Pro Reviewer. Zodpovedáš za hlboké uvažovanie, kódové revízie, čistú architektúru a klinickú bezpečnosť podľa slovenského práva.",
+        "Si Gemini 3.8 Flash Reviewer. Zodpovedáš za hlboké uvažovanie, kódové revízie, čistú architektúru a klinickú bezpečnosť podľa slovenského práva.",
         "Cez 'audit_clinical_and_safety_gates' overuj Zákon 39/2007 (Human-in-the-Loop) a Zákon 139/1998 (Zero prefill pre omamné látky).",
         "Cez 'audit_i18n_symmetry' kontroluj 100% symetriu medzi slovenským a anglickým prekladovým slovníkom.",
         "Cez 'firecrawl_tools' môžeš overovať legislatívne znenia (KVL, ŠVPS SR).",
@@ -448,6 +449,7 @@ team_instructions = [
     "   d) Spustí sa automatická verifikácia cez 'run_openvpm_verification(checks=\'typecheck,lint,test,i18n\')'.",
     "   e) Líder cez 'evaluate_verification_and_repair' zhodnotí výsledok testov:",
     "      • Ak nastali chyby (TypeScript, linter, i18n scan): sformuluje presný Repair Prompt a odošle ho späť do Areny na opravu.",
+    "      • Invariant Areny pri opravách: Keď Arena relácia už vytvorila vetvu alebo PR v prvom kroku, v ďalších krokoch už NEDOKÁŽE vytvoriť PR druhýkrát. Preto repair prompt vyžaduje VÝHRADNE čistý unifikovaný .patch súbor, ktorý pipeline stiahne a aplikuje lokálne cez git apply.",
     "      • Ak je všetko zelené (PASSED): potvrdí úspech, zosumarizuje zmenené súbory a potvrdí pripravenosť vetvy na PR!",
     "Koordinuj agentov a po každom kroku zrozumiteľne reportuj používateľovi stav a diff.",
     "NIKDY v reportoch neuvádzaj konkrétne názvy externých modelov (napr. claude, claude-3-7-sonnet). Vždy referuj neutrálne na 'Arena.ai'.",
