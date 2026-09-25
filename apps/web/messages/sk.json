@@ -875,6 +875,137 @@
       "parserActive": "aktivny",
       "parserPartial": "ciastocny",
       "parserInactive": "neaktivny"
+    },
+    "kpi": {
+      "activeJourneys": "Aktívne cesty",
+      "enrolledPatients": "Zaradení pacienti",
+      "sentThisWeek": "Odoslané tento týždeň",
+      "suppressedSympathy": "Potlačené Sympathy Gate",
+      "sympathyHint": "Zákon 39/2007 Z. z. – úmrtie"
+    },
+    "tabs": {
+      "journeys": "CRM Cesty & Automatizácie",
+      "suppression": "Audit potlačenia & Sympathy Gate",
+      "clinical": "Klinický strážca",
+      "aiAgents": "AI Agenti & Workflow"
+    },
+    "filters": {
+      "allTypes": "Všetky typy udalostí",
+      "allStatuses": "Všetky stavy",
+      "searchPlaceholder": "Hľadať cesty podľa názvu alebo popisu...",
+      "searchSuppression": "Hľadať v záznamoch potlačenia...",
+      "allReasons": "Všetky dôvody potlačenia"
+    },
+    "status": {
+      "active": "Aktívna",
+      "paused": "Pozastavená",
+      "draft": "Koncept",
+      "completed": "Dokončená",
+      "failed": "Zlyhala"
+    },
+    "table": {
+      "journeyName": "Názov cesty",
+      "trigger": "Spúšťacia udalosť",
+      "status": "Stav",
+      "enrollments": "Zaradení",
+      "lastTriggered": "Posledné spustenie",
+      "actions": "Akcie",
+      "stepsCount": "{count} krokov",
+      "frequencyCap": "Limit: {max} / {days}d",
+      "pause": "Pozastaviť",
+      "activate": "Aktivovať",
+      "edit": "Upraviť",
+      "delete": "Vymazať",
+      "confirmDelete": "Naozaj chcete odstrániť túto zákaznícku cestu?",
+      "noJourneys": "Žiadne nakonfigurované cesty",
+      "noJourneysDesc": "Vytvorte svoju prvú zákaznícku cestu alebo upravte filtre.",
+      "loading": "Načítavam zákaznícke cesty..."
+    },
+    "builder": {
+      "newJourneyTitle": "Nová zákaznícka cesta",
+      "editJourneyTitle": "Úprava zákazníckej cesty",
+      "newJourneyBtn": "Nová cesta",
+      "journeyName": "Názov cesty",
+      "journeyNamePlaceholder": "napr. Pooperačná starostlivosť a kontrola",
+      "journeyKey": "Unikátny kľúč",
+      "journeyKeyPlaceholder": "napr. post_op_care",
+      "description": "Popis cesty",
+      "descriptionPlaceholder": "Popíšte cieľ a časovanie tejto automatizovanej cesty...",
+      "triggerEvent": "Klinická spúšťacia udalosť",
+      "frequencyCapWindow": "Okno limitu (dni)",
+      "frequencyCapMax": "Max. správ v okne",
+      "stepsTitle": "Sekvencia krokov",
+      "addStep": "Pridať krok",
+      "removeStep": "Odstrániť krok",
+      "stepNumber": "Krok {num}",
+      "stepLabel": "Názov kroku",
+      "stepLabelPlaceholder": "napr. Kontrolná SMS 24h po prepustení",
+      "channel": "Kanál",
+      "delayHours": "Oneskorenie (hodiny)",
+      "immediate": "Ihneď (0 hod.)",
+      "legalBasis": "Právny základ (GDPR)",
+      "saveJourney": "Uložiť cestu",
+      "saving": "Ukladám...",
+      "cancel": "Zrušiť",
+      "journeyCreated": "Zákaznícka cesta bola úspešne vytvorená",
+      "journeyUpdated": "Zákaznícka cesta bola úspešne aktualizovaná"
+    },
+    "suppression": {
+      "title": "Auditný denník potlačených správ & Sympathy Gate",
+      "subtitle": "Zákonná ochrana klientov a etické blokovanie správ (Zákon 39/2007 Z. z., GDPR Čl. 9).",
+      "readOnlyNotice": "Záznamy potlačenia sú striktne na čítanie pre účely auditovateľnosti a zákonného dozoru.",
+      "colPatient": "Pacient & Klient",
+      "colReason": "Dôvod potlačenia",
+      "colSuppressedAt": "Čas potlačenia",
+      "colAction": "Blokovaná akcia / Kanál",
+      "colStatus": "Stav potlačenia",
+      "colDetail": "Auditný detail",
+      "activeHold": "Aktívne potlačené",
+      "cleared": "Odblokované",
+      "reasons": {
+        "deceased_patient": "Sympathy Gate (Zosnulý pacient)",
+        "quiet_hours": "Nočný kľud (20:00 - 08:00)",
+        "frequency_cap": "Prekročený frekvenčný limit",
+        "no_consent": "Chýba marketingový súhlas",
+        "opt_out": "Klient odhlásený z odberu",
+        "recovery_hold": "Pooperačný kľudový režim",
+        "manual_block": "Manuálne zablokované personálom",
+        "sms_rate_limit": "Prekročený SMS limit (1 správa / 14d)",
+        "cooldown": "Ochranná lehota (Cooldown)",
+        "sensitivity_period": "Obdobie citlivosti",
+        "unknown_contact": "Neznámy kontakt"
+      },
+      "emptyTitle": "Žiadne záznamy potlačenia",
+      "emptyDescription": "Neboli zaznamenané žiadne potlačené správy ani zlyhania sympathy gate.",
+      "loading": "Načítavam auditné záznamy..."
+    },
+    "triggers": {
+      "visit_completed": "Ukončenie vyšetrenia",
+      "vaccine_due": "Termín očkovania",
+      "appointment_booked": "Objednávka termínu",
+      "appointment_reminder": "Pripomienka termínu",
+      "appointment_no_show": "Nedostavenie sa na termín",
+      "surgery_completed": "Ukončenie operácie",
+      "wellness_enrolled": "Zápis do wellness programu",
+      "inactive_recall": "Dlhodobo neaktívny pacient",
+      "dental_detected": "Indikácia dentálnej hygieny",
+      "patient_deceased": "Úmrtie pacienta (Sympathy Gate)"
+    },
+    "legal": {
+      "contract": "Plnenie zmluvy (Zákonná starostlivosť)",
+      "consent": "Výslovný súhlas klienta (GDPR)",
+      "legitimate_interest": "Oprávnený záujem kliniky"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "E-mail",
+      "task": "Úloha pre personál",
+      "content_brief": "Obsahový návrh"
+    },
+    "empty": {
+      "title": "Žiadne zákaznícke cesty",
+      "description": "Vytvorte svoju prvú zákaznícku cestu pre automatizáciu pripomienok a starostlivosti o pacientov.",
+      "action": "Nová cesta"
     }
   },
   "auth": {
