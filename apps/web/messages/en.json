@@ -1006,6 +1006,13 @@
       "title": "No CRM journeys found",
       "description": "Create your first customer journey to automate patient follow-ups and reminders.",
       "action": "New Journey"
+    },
+    "delete": {
+      "title": "Delete journey?",
+      "description": "Journey \"{name}\" will be removed. New clients will no longer enroll; in-flight runs finish against their pinned version.",
+      "confirm": "Delete",
+      "success": "Journey \"{name}\" was deleted.",
+      "error": "Failed to delete the journey."
     }
   },
   "auth": {
@@ -1622,7 +1629,14 @@
     "newPatient": "New Patient",
     "newAppointment": "New encounter",
     "newInvoice": "New Invoice",
-    "openSearch": "Open search"
+    "openSearch": "Open search",
+    "fontScale": {
+      "label": "Font size",
+      "standard": "Standard",
+      "large": "Large",
+      "xl": "Extra large",
+      "buttonAria": "Change font size"
+    }
   },
   "clients": {
     "title": "Clients",
@@ -2798,7 +2812,15 @@
       "copyInstagram": "Copy for Instagram",
       "copyGoogle": "Copy for Google Profile",
       "copiedToast": "Post text copied to clipboard.",
-      "sympathyGateActive": "Sympathy Gate protocol active — marketing is isolated from deceased patient data."
+      "sympathyGateActive": "Sympathy Gate protocol active — marketing is isolated from deceased patient data.",
+      "copyGoogleCta": "Reservations and info at our clinic.",
+      "sympathyGateShort": "Sympathy Gate active",
+      "providerGoogle": "Google Business Profile",
+      "providerFacebook": "Facebook Page",
+      "providerInstagram": "Instagram Feed",
+      "noChannelsDesc": "No publishing channel connected yet. Connect Facebook, Instagram or a Google profile to publish approved content.",
+      "manageChannels": "Connect channels",
+      "manageChannelsShort": "Manage"
     },
     "briefModal": {
       "title": "New Content Brief",
@@ -3526,7 +3548,9 @@
       "simPatientLabel": "Assign patient (optional)",
       "simPayloadJson": "Event payload (JSON)",
       "simProcessImmediately": "Immediately run worker and evaluate rules",
-      "btnRunSimulation": "Run simulation"
+      "btnRunSimulation": "Run simulation",
+      "invalidJsonPayload": "Invalid JSON payload format",
+      "queuePending": "{count} pending"
     },
     "competitors": {
       "title": "Competitor & Market Intelligence",
@@ -3546,7 +3570,9 @@
       "description": "Benchmarking regional veterinary practices, services, Google ratings, and market trends.",
       "analyzeAction": "Analyze Market",
       "emptyTitle": "Competitor monitoring is not connected",
-      "emptyDescription": "No demo clinics. Connect a market source when it is available."
+      "emptyDescription": "No demo clinics. Connect a market source when it is available.",
+      "openIntel": "Open Vet Intelligence",
+      "summaryDesc": "Clinic reputation from your own data plus an overview of official sources."
     },
     "tabCalendar": "Content Calendar",
     "tabQueue": "Approval Queue",
@@ -3765,7 +3791,14 @@
       "emailSubject": "Subject:",
       "emailFrom": "From:",
       "emailReady": "Ready for a bulk email newsletter",
-      "copyEmail": "Copy email"
+      "copyEmail": "Copy email",
+      "smsHint": "You can send the SMS to selected clients from",
+      "smsHintSection": "Care reminders",
+      "tvSlideTitle": "Add this campaign as a waiting-room TV slide",
+      "resetVisualTitle": "Reset visual",
+      "downloadVideoTitle": "Download video file",
+      "downloadImageTitle": "Download image",
+      "fbJustNow": "Just now • Public"
     }
   },
   "nav": {
@@ -7957,6 +7990,71 @@
         "title": "SAVLMZ geriatric protocol — semi-annual check-up",
         "desc": "Education on preventive geriatric care for dogs and cats over 7 years"
       }
+    },
+    "pageTitle": "Vet Intelligence",
+    "tabs": {
+      "overview": "Overview",
+      "reputation": "Reputation",
+      "official": "Official sources"
+    },
+    "kpi": {
+      "avgRating": "Average rating",
+      "totalReviews": "Total reviews",
+      "unanswered": "Unanswered",
+      "pendingBriefs": "Awaiting approval"
+    },
+    "table": {
+      "reviewer": "Author",
+      "platform": "Platform",
+      "rating": "Rating",
+      "sentiment": "Sentiment",
+      "received": "Received",
+      "reply": "Reply",
+      "platformInternal": "Internal",
+      "anonymous": "Anonymous"
+    },
+    "sentiment": {
+      "positive": "Positive",
+      "neutral": "Neutral",
+      "negative": "Negative",
+      "mixed": "Mixed",
+      "unknown": "Unclassified"
+    },
+    "overview": {
+      "openReviews": "Open reviews",
+      "replyDone": "Replied",
+      "replyMissing": "No reply",
+      "emptyTitle": "No reviews yet",
+      "emptyDesc": "Reviews from Google and Facebook will appear here after the first import or sync."
+    },
+    "ops": {
+      "briefs": "Briefs awaiting vet review",
+      "openQueue": "Open approval",
+      "channels": "Connected channels",
+      "manageChannels": "Manage channels",
+      "journeys": "Active journeys",
+      "openAutomations": "Open automations"
+    },
+    "reputation": {
+      "title": "Sentiment by platform",
+      "desc": "Breakdown of the last 100 reviews by sentiment and source.",
+      "empty": "All reviews have a reply."
+    },
+    "official": {
+      "title": "Official sources & registers",
+      "desc": "Direct links to state and chamber portals. Automatic gazette monitoring is on the roadmap — open sources manually for now.",
+      "svpsName": "ŠVPS SR",
+      "svpsDesc": "State Veterinary and Food Administration — gazettes, disease situation, registrations.",
+      "kvlName": "KVL SR",
+      "kvlDesc": "Chamber of Veterinary Surgeons — chamber rules, SVL register, CRSZ.",
+      "slovlexName": "Slov-Lex",
+      "slovlexDesc": "Collection of Laws of the SR — full wording of legislation.",
+      "internalTitle": "Internal registers",
+      "statutory": "Statutory registers",
+      "statutoryDesc": "Rabies, treatments, withdrawal periods, controlled substances and protocols.",
+      "kvepis": "KVEPIS submissions",
+      "kvepisDesc": "Reports and submissions to ŠVPS via KVEPIS.",
+      "openInternal": "Open"
     }
   },
   "migrationArchive": {
