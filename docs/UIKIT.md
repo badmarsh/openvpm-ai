@@ -36,6 +36,41 @@ Doctor CoG is **vyšetrenie**. CTAs: Otvoriť vyšetrenie / Nové vyšetrenie. D
 
 `/records` is the clinical chart. `/patients/[id]` is identity + owner. Link both ways; do not make records search-only.
 
+## Buttons — one primary per zone
+
+- Exactly one `variant="default"` (green) action per toolbar, card header or
+  dialog footer — the zone's main CTA (e.g. "Nová cesta", "Uložiť",
+  "Pripojiť nový kanál").
+- Everything else: `outline` for secondary actions, `secondary` for neutral
+  emphasis, `ghost` for icon-only row actions (`h-7 w-7 p-0`), `destructive`
+  only for irreversible deletes (via `ConfirmDialog`).
+- Dialog footers: cancel is `outline size="sm"`, confirm is `size="sm"`.
+- Never render two green buttons side by side — demote or move the weaker
+  action. Reference: `/automations` hub (toolbar, row actions, builder
+  footer) and `/marketing/automations` console.
+
+## Layout width — full vs boxed
+
+- Full width (no `max-w`, page fills `<main>`): hubs, tables, boards,
+  calendars, consoles (e.g. `/automations`, `/marketing`, `/vet-intel`,
+  `/marketing/automations`).
+- Boxed `mx-auto max-w-3xl/5xl`: single-column forms, wizards, import flows
+  (e.g. `/billing/new`, `/marketing/brand-kit`, `/settings/import-v2`).
+- Boxed `mx-auto max-w-6xl/7xl`: dense detail workspaces that need
+  line-length control (e.g. `/encounters/[id]`, `/statutory/kvepis`,
+  `/agent/imaging`).
+- When in doubt, stay full-width; add a box only with a readability reason
+  noted in the PR.
+
+## Font size
+
+- Root font is 16px; users can switch to Large (17.5px) / Extra large (19px)
+  via the TopBar `FontScaleSwitcher` (per-device localStorage preference,
+  applied as `data-font-scale` on `<html>`, see
+  `apps/web/styles/globals.css` and `@/lib/font-scale`).
+- Build with rem-based utilities so text scales; never hardcode pixel font
+  sizes in CSS for body text.
+
 ## Do not
 
 - Hardcoded demo competitors, fake clinics, or SK chrome in Marketing Studio.
