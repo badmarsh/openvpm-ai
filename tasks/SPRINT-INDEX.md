@@ -9,12 +9,12 @@ Update this table whenever a sprint is written or merged. Planner prompt: `promp
 | 2 | `arena-sprint-2-uikit-harmonization.md` | `/recalls`, `/vaccinations`, `/controlled-substances` | merged (#38) |
 | 3 | `arena-sprint-3-field-practice.md` | Field visits, CEHZ, KVEPIS panel | merged (#39, #40) |
 | 4 | `arena-sprint-4-lab-results.md` | `/lab-results` | merged (#41) |
-| 5 | `arena-sprint-5-prescriptions.md` | `/prescriptions` | written |
-| 6 | `arena-sprint-6-whiteboard-imaging.md` | `/whiteboard` + imaging modality tags | written |
-| 7 | `arena-sprint-7-encounters-care-reminders.md` | `/encounters`, `/care-reminders` | written |
-| 8 | `arena-sprint-8-billing-ledger.md` | `/billing` (list, detail row, panels) | written |
-| 9 | `arena-sprint-9-billing-entry-pos-new-invoice.md` | `/billing/pos`, `/billing/new` (role gate, i18n, a11y, money display) | written |
-| 10 | `arena-sprint-10-billing-ekasa-pagekit.md` | `/billing/ekasa` (presentation, page-kit, i18n) | written |
+| 5 | `arena-sprint-5-prescriptions.md` | `/prescriptions` | merged (#45) |
+| 6 | `arena-sprint-6-whiteboard-imaging.md` | `/whiteboard` + imaging modality tags | merged (#43) |
+| 7 | `arena-sprint-7-encounters-care-reminders.md` | `/encounters`, `/care-reminders` | merged (#44) |
+| 8 | `arena-sprint-8-billing-ledger.md` | `/billing` (list, detail row, panels) | merged (#46) |
+| 9 | `arena-sprint-9-billing-entry-pos-new-invoice.md` | `/billing/pos`, `/billing/new` (role gate, i18n, a11y, money display) | merged (#48) |
+| 10 | `arena-sprint-10-billing-ekasa-pagekit.md` | `/billing/ekasa` (presentation, page-kit, i18n) | merged (#47) |
 | 11 | `arena-sprint-11-reports-wellness.md` | `/reports`, `/wellness` (reporting reliability, page-kit, NaN guards) | written |
 | 12 | `arena-sprint-12-statutory-kvepis.md` | `/statutory`, `/statutory/kvepis` (regulatory registers, KVEPIS, page-kit) | written |
 | 13 | `arena-sprint-13-patient-client-intake-duplicates.md` | `/patients/new`, `/clients/new`, `/patients/duplicates` (onboarding, deduplication) | written |
