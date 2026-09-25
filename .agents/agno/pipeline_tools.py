@@ -3060,7 +3060,15 @@ def _dispatch_on_browser(
     page_url = str(getattr(page, "url", "") or "")
     if opened_new or (not extract_agent_session_id(page_url) and "arena.ai" in page_url):
         target_repo = os.getenv("ARENA_DEFAULT_GITHUB_REPO", "badmarsh/openvpm-ai")
-        _ensure_arena_repository_selected(page, target_repo=target_repo, max_attempts=2)
+        repo_locked = _ensure_arena_repository_selected(page, target_repo=target_repo, max_attempts=2)
+        if not repo_locked:
+            return BrowserDispatchResult(
+                ok=False,
+                url=str(getattr(page, "url", "") or ""),
+                message=f"DISPATCH_ABORTED: Nepodarilo sa uzamknúť repozitár {target_repo} v Arena UI. Prompt NEBOL odoslaný.",
+                submitted=False,
+                opened_new=opened_new,
+            )
 
     filled, submitted, detail = _fill_and_submit(page, prompt_text, auto_submit)
     if not filled or (auto_submit and not submitted):
