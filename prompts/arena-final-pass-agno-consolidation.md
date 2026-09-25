@@ -291,9 +291,23 @@ These fixes were landed in commits on `arena/01a0d91b-openvpm-ai`. Treat them as
 | Sprint truth derived from index | `.agents/agno/pipeline_team_os.py` | `_parse_sprint_index()` / `_merged_sprints_from_index()` / `merged_sprint_clause()` replace the hardcoded `"Sprinty 1, 2, 3, 4 a 7"` claim at all four sites. `seed_sprint_entities()` now seeds from `tasks/SPRINT-INDEX.md` (16 merged, not 5), with a logged fallback if the index is missing. Authority order is now stated as **git log > SPRINT-INDEX.md > seeded memory**. |
 | Runtime drift addressed | `start-agno.bat` | Now syncs `.agents/agno/*.{py,ts}` into `WSL:/home/ubuntu/agno` before restarting, so a repo patch actually reaches the running process; adds a loopback health check and the correct dial reminder. The dead 0-byte `.agents/agno/fix-agno-config.patch` was deleted. |
 | tasks/ contract documented | `.agents/skills/new-task/SKILL.md` | States that the prompt library is versioned and that swarm runtime output is gitignored — the rule that prevents a repeat of the 300-file commit. |
+| Repo root resolved robustly | `.agents/agno/pipeline_team_os.py` | Replaced the fragile `/mnt/c → env → Path.cwd()` chain with a validated candidate search (`_looks_like_repo_root()`, `_candidate_repo_roots()`, `_resolve_repo_root()`), and exported `OPENVPM_REPO_PATH` so `pipeline_tools._get_repo_path()` reads the same tree. **Without this, a missing WSL mount silently disabled the index-derived sprint truth** — verified: bogus root now still yields 30 rows / 16 merged, where the old code yielded 0 rows. `_parse_sprint_index()` likewise searches all candidates. |
+| Service token persisted | `.agents/agno/pipeline_team_os.py` | A per-boot random token invalidated in-flight scheduler triggers and HITL approvals on every restart. Now persisted to `.agents/agno/tmp/internal_service_token` (mode 600, gitignored) and reused; precedence is env → fallback env → file → generate+write, with a distinct warning if persistence fails. Verified identical across two simulated boots. |
+| Health probe timeout budgeted | `apps/web/server/routers/extensions/ai-swarm.ts` | Flat 800 ms → 800 ms loopback / 2500 ms remote, per candidate. A cold tunnel could not answer inside 800 ms, so a healthy AgentOS showed as offline on the admin page. |
 
 **Verification actually performed** (report this honestly, and re-run it):
-`pytest -q test_pipeline_tools.py test_prompt_templates.py` → **40 passed** (29 pre-existing + 11 new), up from a 29-passed baseline. The new code paths were exercised directly: a missing sprint (`ASSIGNMENT_NOT_FOUND` + available list), a deleted `tasks/` (`GROUND_TRUTH_MISSING`), the normal read path, and sanitisation of the real sprint-8 file. `python -m py_compile` clean on both edited modules. `test_dev_orchestrator_and_security.py` was **not** run — it imports `pipeline_team_os`, which needs `dotenv` and `agno`, neither installed in the audit sandbox. Flag that as an owner/CI action, do not claim it passed. Likewise `start-agno.bat` could not be executed (Windows/WSL) — its sync command shape was dry-run only.
+`pytest -q test_pipeline_tools.py test_prompt_templates.py` → **40 passed** (29 pre-existing + 11 new), up from a 29-passed baseline. The new code paths were exercised directly: a missing sprint (`ASSIGNMENT_NOT_FOUND` + available list), a deleted `tasks/` (`GROUND_TRUTH_MISSING`), the normal read path, and sanitisation of the real sprint-8 file. `python -m py_compile` clean on both edited modules.
+
+Config-layer verification (executed by loading the runtime's config prelude in isolation, since the module itself needs `agno`):
+- repo-root resolution → `/home/user/openvpm-ai`, `_looks_like_repo_root` true, `OPENVPM_REPO_PATH` exported; a bogus `OPENVPM_REPO_ROOT` is skipped rather than trusted
+- `_parse_sprint_index()` → **30 rows, 16 merged**; `merged_sprint_clause()` produces a non-empty clause
+- token persistence → written with mode `600`, and **identical across two simulated boots**; file confirmed gitignored
+- `probeTimeoutMs()` → typechecked with `tsc 5.9 --strict` and asserted against five URLs (`127.0.0.1` 800, `localhost` 800, LAN 2500, tunnel 2500, malformed 2500)
+
+**Not verified — do not claim these passed:**
+- `test_dev_orchestrator_and_security.py` — imports `pipeline_team_os`, which needs `dotenv` and `agno`; neither is installed in the audit sandbox. **Owner/CI action.**
+- `start-agno.bat` — Windows batch + WSL; only its command shape was dry-run. **Owner action: run it once and confirm the sync.**
+- The full monorepo `type-check` — no `node_modules` in the sandbox, and it is the documented OOM risk anyway (§8). The probe change was isolated-checked with `tsc` instead.
 
 ### 5.2 Stale sprint memory — FIXED on this branch (verify the fix, do not re-argue the problem)
 
@@ -324,18 +338,17 @@ internal_service_token=INTERNAL_SERVICE_TOKEN,
 
 If `OPENVPM_AGENTOS_BASE_URL` is set to `https://agentos-tunnel.significa.sk` (as `CLOUDFLARE_TUNNEL.md` instructs for both local `.env` and Dokploy), the scheduler makes its own callbacks **out through the public internet and back through Cloudflare** instead of hitting loopback. Quantify the consequence: tunnel down ⇒ scheduler dies; Cloudflare hiccup ⇒ missed cron; added latency on a 15 s poll. Propose an internal-vs-external base-URL split (loopback for scheduler, public URL only for the web app), and note which env var names to introduce.
 
-### 5.5 Internal service token lifecycle (verify)
+### 5.5 Internal service token lifecycle — FIXED on this branch (verify the fix)
 
-```python
-INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "")
-if not INTERNAL_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN == "openvpm-service-secret":
-    INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK") or secrets.token_urlsafe(32)
-    logger.warning(...)
-```
+**Historical defect:** the token was `os.getenv(...) or secrets.token_urlsafe(32)` — a **fresh value on every boot**. The removal of the hardcoded default secret was right, but the consequence was that any restart invalidated in-flight signed callbacks (scheduler triggers, HITL approvals), silently breaking approval gates mid-sprint.
 
-The fail-safe is good (it removed a hardcoded secret), but a **random token per boot** means every restart invalidates in-flight signed callbacks (scheduler triggers, HITL approvals). Confirm whether the token is persisted anywhere and whether restarts during a sprint are routine. Recommend persistence or a documented rotation contract.
+**Current state:** the generated token is persisted to `.agents/agno/tmp/internal_service_token` (mode `600`, gitignored via `.agents/agno/tmp/`) and reused on subsequent boots. Precedence is: `OPENVPM_INTERNAL_SERVICE_TOKEN` → `OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK` → persisted file → newly generated + written. A one-off warning fires when a token is generated, and a distinct warning if persistence itself fails (so "token only valid until restart" is never silent). Multi-instance deployments are told explicitly to set the token.
 
-### 5.6 Runtime drift: the repo is not what runs (verify — this one matters)
+**Verify:** restart the runtime twice and confirm the token is identical across boots; confirm the file mode is `600`; confirm the file is not tracked by git (`git check-ignore -v`).
+
+**Still open for you to judge:** whether a persisted-but-permissive-default token is the right security trade. Note the file lives under `TMP_DIR`, which points at Linux ext4 inside WSL precisely to avoid SQLite/LanceDB locking problems. If your threat model wants rotation, propose a rotation contract rather than reverting to per-boot randomness.
+
+### 5.6 Runtime drift: the repo is not what runs (partly fixed — verify the rest)
 
 `start-agno.bat` launches, inside WSL:
 
@@ -343,17 +356,21 @@ The fail-safe is good (it removed a hardcoded secret), but a **random token per 
 tmux new-session -d -s agno 'cd /home/ubuntu/agno && .venv/bin/python pipeline_team_os.py 2>&1 | tee /tmp/agno_os.log'
 ```
 
-That is `/home/ubuntu/agno/pipeline_team_os.py` — a **separate copy** from this repo's `.agents/agno/pipeline_team_os.py`, and the runtime also adds `/home/ubuntu/agno` to `sys.path`. Commit `deae63e` ("chore(agno): sync pipeline_tools.py …") is evidence that drift has already occurred. Determine:
+That is `/home/ubuntu/agno/pipeline_team_os.py` — a **separate copy** from this repo's `.agents/agno/pipeline_team_os.py`, and the runtime also adds `/home/ubuntu/agno` to `sys.path`. Commit `deae63e` ("chore(agno): sync pipeline_tools.py …") is evidence that drift has already occurred.
 
-- Which file is authoritative, and how a repo patch reaches the running process today.
-- Whether the running WSL copy can be diffed from here (if not reachable, list the exact command the owner must run to diff it, and mark the finding `UNVERIFIED — owner action`).
-- Also note `.agents/agno/fix-agno-config.patch` is **0 bytes** — a dead artifact. Recommend archive or delete.
+**Fixed on this branch:**
+- `start-agno.bat` now **syncs** `.agents/agno/*.{py,ts}` into `WSL:/home/ubuntu/agno` before restarting, so a repo patch actually reaches the running process. It also runs a loopback health check and prints the correct cloudflared reminder.
+- `REPO_ROOT` resolution was fragile in exactly the way this drift causes. The old chain was `/mnt/c/… → OPENVPM_REPO_ROOT → Path.cwd()`, and since the launcher does `cd /home/ubuntu/agno`, a missing WSL mount made the root resolve to the **copy** — so `tasks/SPRINT-INDEX.md` was never found and the leader lost sprint state entirely. It is now a validated candidate search (`_looks_like_repo_root()` + `_candidate_repo_roots()`): env vars → historical paths → module ancestry → cwd ancestry. The resolved root is exported as `OPENVPM_REPO_PATH` so `pipeline_tools._get_repo_path()` reads the same tree. `_parse_sprint_index()` also searches all candidates rather than trusting one root.
+- The dead 0-byte `.agents/agno/fix-agno-config.patch` was deleted.
 
-Propose a one-command deploy path (symlink, `rsync`, or an explicit sync step in `start-agno.bat`) so "repo = runtime" becomes structurally true.
+**Still open — and this is a real owner action:** the sync is **unverified on real hardware**. It could not be executed in the audit sandbox (Windows batch + WSL). Dry-running the command shape confirms it copies exactly `pipeline_team_os.py`, `pipeline_tools.py`, `arena-dispatcher.ts` — but the `wslpath` quoting is untested. **Run `start-agno.bat` once and confirm the sync output**, then confirm the running process reports the expected `REPO_ROOT`.
+
+**Longer term, for your judgement:** decide whether `sync → separate copy` is acceptable at all, versus pointing the WSL launch at the repo directly (`/mnt/c/...` is slow for SQLite, which is why the copy exists) or a symlink. Document the choice — ambiguity here is what produced the drift.
 
 ### 5.7 CORS, observability, checkpointing (assess, don't over-engineer)
 
-- `cors_allowed_origins` lists loopback ports 3000/3001/3007/3008, `192.168.0.100:*`, `http://192.168.0.100:7777` and `https://os.agno.com` — but **not** `https://agentos-tunnel.significa.sk` and **not** the production web origin. State whether any browser-initiated call crosses that boundary (server-side tRPC fetches are CORS-exempt; only browser fetches are affected). Do not add origins speculatively.
+- **CORS — partly fixed.** `https://agentos-tunnel.significa.sk` was added to `cors_allowed_origins` (it is the service's own origin, so a browser opening the AgentOS UI there would otherwise be blocked). **Still open:** the production web origin is *not* listed. Determine whether any browser-initiated call actually crosses that boundary before adding it — server-side tRPC fetches are CORS-exempt, only browser fetches are affected. Do not add origins speculatively.
+- **Health probe — fixed.** `checkAgentOsHealth()` in `apps/web/server/routers/extensions/ai-swarm.ts` used a flat `AbortSignal.timeout(800)` for **every** candidate, including remote ones. A tunnel URL must complete DNS + TLS + a Cloudflare round trip, so a healthy cold tunnel reported "offline". It now budgets **800 ms for loopback / 2500 ms for remote**, chosen per candidate by hostname. The pinned source-contract literal `http://127.0.0.1:7777` in `admin/ai-swarm/page.tsx` was left untouched (see §2.2).
 - `checkpoint="tool-batch"` on SQLite with `PRAGMA journal_mode=WAL` and `OPENVPM_SQLITE_BUSY_TIMEOUT_MS=30000`: assess behaviour under a long tool batch, and note what happens to approvals if the process is killed mid-batch.
 - Metrics/evals: the team's `post_hooks=[collect_run_metrics, make_uikit_adherence_judge(), make_report_quality_judge()]` — verify the judges exist and fail soft if a model call fails, because a throwing post-hook would fail an otherwise good run.
 
