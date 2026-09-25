@@ -57,12 +57,52 @@ ingress:
 Validate the file before restarting the tunnel:
 
 ```powershell
-cloudflared tunnel ingress validate
-cloudflared tunnel ingress rule https://agentos-tunnel.significa.sk/health
+# --config is REQUIRED: this file is not in a default discovery location, so a bare
+# `cloudflared tunnel ingress validate` fails with "No configuration file was found."
+cloudflared tunnel ingress validate --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml
+cloudflared tunnel ingress rule --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml https://agentos-tunnel.significa.sk/health
 ```
 
 The second command prints the rule that will match and the `service:` it targets —
 confirm it says `http://127.0.0.1:7777`.
+
+### Where does the ingress config actually live?
+
+`cloudflared` only auto-discovers `%USERPROFILE%\.cloudflared\config.yml`,
+`%USERPROFILE%\.cloudflared\config.yaml`, and `/etc/cloudflared/config.yml`. **Any
+other path requires `--config`**, which is why a bare `ingress validate` reports
+*"No configuration file was found"* even when a valid config exists.
+
+There are two ways a Cloudflare tunnel can be configured, and you must know which
+one you have before hunting for a `0.0.0.0` to fix:
+
+| | **Locally managed** | **Remotely managed (dashboard)** |
+|---|---|---|
+| Ingress rules live in | the YAML file on disk | Cloudflare Zero Trust dashboard |
+| Local YAML required | yes | **no** — often absent entirely |
+| `ingress validate` works | with `--config <path>` | never (nothing local to validate) |
+| Fix the dial target in | the `service:` field in the YAML | **Zero Trust → Networks → Tunnels → `agentos-tunnel` → Public Hostnames → the hostname's `Service` field** |
+| Applied by | restarting `cloudflared` | saving in the dashboard (no restart) |
+
+Determine which you have:
+
+```powershell
+# Does a local config exist at all?
+Test-Path C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml
+Get-ChildItem C:\Users\marek\.cloudflared -Recurse -Include *.yml,*.yaml |
+  Select-Object -ExpandProperty FullName
+
+# Local ("Config" is a path) or remote ("Config" is `config_src: cloudflare`)?
+cloudflared tunnel info agentos-tunnel
+```
+
+If the file does **not** exist, do not go looking for it — the tunnel is
+dashboard-managed, and `http://0.0.0.0:7777` is sitting in the `Service` field of
+the public hostname entry in the Zero Trust dashboard. Change it there.
+
+> **If the ingress is remotely managed, the "local YAML" instructions in this
+> document do not apply to your setup.** They describe the locally-managed layout
+> only. Check the dashboard first; it is the faster path when the file is absent.
 
 ---
 
@@ -136,7 +176,7 @@ Invoke-RestMethod http://127.0.0.1:7777/health
 ```powershell
 Get-Process cloudflared
 cloudflared tunnel info agentos-tunnel
-cloudflared tunnel ingress rule https://agentos-tunnel.significa.sk/health
+cloudflared tunnel ingress rule --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml https://agentos-tunnel.significa.sk/health
 ```
 
 **4. Public HTTPS path:**
