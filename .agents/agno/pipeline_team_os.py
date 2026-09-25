@@ -132,10 +132,11 @@ MODEL_PRICING: Dict[str, Dict[str, float]] = {
 
 KNOWLEDGE_SOURCES: List[Dict[str, str]] = [
     {"path": str(REPO_ROOT / "AGENTS.md"), "kind": "repo", "area": "agents", "lang": "sk"},
-    {"path": str(REPO_ROOT / "UIKIT.md"), "kind": "repo", "area": "uikit", "lang": "sk"},
+    {"path": str(REPO_ROOT / "docs" / "UIKIT.md"), "kind": "repo", "area": "uikit", "lang": "sk"},
     {"path": str(REPO_ROOT / "docs" / "architecture" / "AGNO-ENTERPRISE-SPECIFICATION.md"), "kind": "arch", "area": "agno-spec", "lang": "sk"},
-    {"path": str(REPO_ROOT / "docs" / "legal" / "zakon-39-2007-zz-veterinarna-starostlivost.md"), "kind": "law", "area": "zakon-39-2007", "lang": "sk"},
-    {"path": str(REPO_ROOT / "docs" / "legal" / "zakon-139-1998-zz-opl.md"), "kind": "law", "area": "zakon-139-1998-opl", "lang": "sk"},
+    {"path": str(REPO_ROOT / ".agents" / "skills" / "openvpm-ai" / "SKILL.md"), "kind": "compliance", "area": "openvpm-compliance-skill", "lang": "sk"},
+    {"path": str(REPO_ROOT / "docs" / "wiki" / "02-slovenska-legislativa-a-integracie" / "1. e-Kasa integrácia (Zákon č. 289-2008 Z. z.).md"), "kind": "law", "area": "ekasa-289-2008", "lang": "sk"},
+    {"path": str(REPO_ROOT / "docs" / "wiki" / "03-klinicka-ai-a-datova-bezpecnost" / "2. Povinné potvrdenie lekárom (Human-in-the-Loop).md"), "kind": "law", "area": "hitl-safety-gate", "lang": "sk"},
 ]
 
 VANILLA_SCHEMA_GLOBS: Tuple[str, ...] = (
@@ -364,15 +365,29 @@ knowledge_base: Knowledge = Knowledge(
         search_type=SearchType.hybrid,
         embedder=kb_embedder,
     ),
+    contents_db=db,
 )
 
 def reindex_repo_knowledge(force: bool = False) -> Dict[str, str]:
     report: Dict[str, str] = {}
+    existing_names: set[str] = set()
+    if not force:
+        try:
+            with pipeline_engine.connect() as conn:
+                from sqlalchemy import text
+                res = conn.execute(text("SELECT name FROM agno_knowledge WHERE status = 'completed'"))
+                existing_names = {row[0] for row in res}
+        except Exception:
+            pass
+
     for source in KNOWLEDGE_SOURCES:
         path = Path(source["path"])
         key = source["area"]
         if not path.exists():
             report[key] = f"missing: {path}"
+            continue
+        if not force and key in existing_names:
+            report[key] = "already_indexed"
             continue
         try:
             knowledge_base.insert(
@@ -1252,42 +1267,37 @@ openvpm_dev_team = Team(
 
 def seed_schedules() -> None:
     try:
-        from agno.db.models import Schedule
         manager = ScheduleManager(db=db)
         health_cron = "*/5 * * * *"
         audit_cron = "0 3 * * *"
 
-        if not manager.get_schedule("arena-health-check"):
-            manager.create_schedule(
-                Schedule(
-                    id="arena-health-check",
-                    name="Arena 5-min Health Check",
-                    cron=health_cron,
-                    timezone=SCHEDULE_TIMEZONE,
-                    agent_id="arena_watcher",
-                    message="Vykonaj health check aktívnych Arena relácií a zaloguj stav.",
-                    enabled=True,
-                    max_retries=2,
-                    retry_delay_seconds=60,
-                )
-            )
+        manager.create(
+            name="Arena 5-min Health Check",
+            cron=health_cron,
+            endpoint="/agents/arena_watcher/runs",
+            method="POST",
+            description="Vykonaj health check aktívnych Arena relácií a zaloguj stav.",
+            payload={"message": "Vykonaj health check aktívnych Arena relácií a zaloguj stav."},
+            timezone=SCHEDULE_TIMEZONE,
+            max_retries=2,
+            retry_delay_seconds=60,
+            if_exists="update",
+        )
 
-        if not manager.get_schedule("nightly-db-audit"):
-            manager.create_schedule(
-                Schedule(
-                    id="nightly-db-audit",
-                    name="Nightly SQLite & Compliance Audit",
-                    cron=audit_cron,
-                    timezone=SCHEDULE_TIMEZONE,
-                    team_id=TEAM_ID,
-                    message="Spusti nočný audit integrity DB, i18n symetrie a reindexáciu knowledge.",
-                    enabled=True,
-                    max_retries=2,
-                    retry_delay_seconds=120,
-                )
-            )
+        manager.create(
+            name="Nightly SQLite & Compliance Audit",
+            cron=audit_cron,
+            endpoint=f"/teams/{TEAM_ID}/runs",
+            method="POST",
+            description="Spusti nočný audit integrity DB, i18n symetrie a reindexáciu knowledge.",
+            payload={"message": "Spusti nočný audit integrity DB, i18n symetrie a reindexáciu knowledge."},
+            timezone=SCHEDULE_TIMEZONE,
+            max_retries=2,
+            retry_delay_seconds=120,
+            if_exists="update",
+        )
     except Exception as e:
-        logger.debug("Schedule initialization notice: %s", e)
+        logger.warning("Schedule initialization notice: %s", e)
 
 @asynccontextmanager
 async def lifespan(app: AgentOS):
@@ -1299,6 +1309,11 @@ async def lifespan(app: AgentOS):
     sprint_count = seed_sprint_entities()
     logger.info("Seeded %d sprint entities into entity_memory_store", sprint_count)
     seed_schedules()
+    try:
+        kb_report = reindex_repo_knowledge(force=False)
+        logger.info("Knowledge base sync report: %s", kb_report)
+    except Exception as e:
+        logger.warning("Knowledge base initial sync notice: %s", e)
     logger.info("Enterprise AgentOS ready on %s", AGENTOS_BASE_URL)
     yield
     logger.info("Shutting down OpenVPM Enterprise AgentOS...")
