@@ -12,29 +12,63 @@ function tsxFiles(dir: string): string[] {
 }
 
 const TABLE_PAGE_ROOTS = ["app/(dashboard)", "app/portal"];
-const WRAPPER_TAGS = new Set(["DataTableFrame", "TableScroll"]);
 
-function isWrapperOpeningTag(
-  opening: ts.JsxOpeningElement | ts.JsxSelfClosingElement,
-  sourceFile: ts.SourceFile
-): boolean {
-  const tagName = opening.tagName.getText(sourceFile);
-  if (WRAPPER_TAGS.has(tagName)) return true;
-  return opening.attributes.properties.some(
-    (attr) =>
-      ts.isJsxAttribute(attr) &&
-      attr.name.getText(sourceFile) === "className" &&
-      attr.initializer !== undefined &&
-      attr.initializer.getText(sourceFile).includes("overflow-x-auto")
-  );
+/**
+ * Components that render their children inside a horizontal-scroll container.
+ * `DataTableFrame` (components/layout/page-kit.tsx) nests `TableScroll`
+ * (components/common/table-scroll.tsx), whose inner element carries
+ * `overflow-x-auto`, so any of these three signals counts as a wrapper.
+ */
+const SCROLL_WRAPPER_COMPONENTS = new Set(["DataTableFrame", "TableScroll"]);
+
+const HORIZONTAL_SCROLL_CLASS = "overflow-x-auto";
+
+interface JsxTable {
+  /** 0-based line of the `<table>` tag. */
+  line: number;
+  /** Whether a horizontal-scroll ancestor encloses the table. */
+  wrapped: boolean;
 }
 
-// Walks the JSX tree tracking whether a <table> is structurally nested inside
-// a DataTableFrame/TableScroll/overflow-x-auto ancestor, rather than checking
-// nearby source lines. A <table> can be legitimately wrapped many lines above
-// its own tag when separated by conditional (loading/empty-state) branches —
-// line-proximity checks produce false positives in that case.
-function findUnwrappedTableLines(filePath: string, content: string): number[] {
+/** True when the element's own `className` mentions `overflow-x-auto`, e.g.
+ *  `className="overflow-x-auto"`, `` className={`${cls} overflow-x-auto`} ``
+ *  or `className={cn("overflow-x-auto")}`. */
+function hasHorizontalScrollClass(
+  attributes: ts.JsxAttributes,
+  sourceFile: ts.SourceFile,
+): boolean {
+  return attributes.properties.some((property) => {
+    if (!ts.isJsxAttribute(property)) return false;
+    if (property.name.getText(sourceFile) !== "className") return false;
+    return (
+      property.initializer?.getText(sourceFile).includes(HORIZONTAL_SCROLL_CLASS) ?? false
+    );
+  });
+}
+
+function describeElement(
+  element: ts.JsxOpeningLikeElement,
+  sourceFile: ts.SourceFile,
+): { name: string; scrollWrapper: boolean } {
+  const name = element.tagName.getText(sourceFile);
+  return {
+    name,
+    scrollWrapper:
+      SCROLL_WRAPPER_COMPONENTS.has(name) ||
+      hasHorizontalScrollClass(element.attributes, sourceFile),
+  };
+}
+
+/**
+ * Walks the JSX tree with an ancestor stack: entering a JSX element pushes it,
+ * leaving pops it. A `<table>` is "wrapped" only when one of the elements
+ * currently on the stack provides horizontal scrolling — i.e. the wrapper is a
+ * real ancestor, however many lines (and however many conditional branches)
+ * sit between the two tags. Proximity heuristics missed cases like
+ * `prescriptions/page.tsx`, where `<table>` lives three ternary branches below
+ * its `<DataTableFrame>`.
+ */
+function findJsxTableLineNumbers(filePath: string, content: string): JsxTable[] {
   const sourceFile = ts.createSourceFile(
     filePath,
     content,
@@ -43,38 +77,43 @@ function findUnwrappedTableLines(filePath: string, content: string): number[] {
     ts.ScriptKind.TSX
   );
 
-  const offendingLines: number[] = [];
+  const tables: JsxTable[] = [];
+  const ancestors: { name: string; scrollWrapper: boolean }[] = [];
 
-  function reportIfUnwrapped(node: ts.Node, tagName: string, wrapped: boolean) {
-    if (tagName === "table" && !wrapped) {
-      const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-      offendingLines.push(line);
-    }
-  }
+  const lineOf = (node: ts.Node): number =>
+    sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line;
 
-  function walk(node: ts.Node, wrapped: boolean) {
+  const isWrapped = (): boolean => ancestors.some((ancestor) => ancestor.scrollWrapper);
+
+  function visit(node: ts.Node) {
     if (ts.isJsxElement(node)) {
-      const nested = wrapped || isWrapperOpeningTag(node.openingElement, sourceFile);
-      reportIfUnwrapped(node.openingElement, node.openingElement.tagName.getText(sourceFile), wrapped);
-      node.children.forEach((child) => walk(child, nested));
+      const element = describeElement(node.openingElement, sourceFile);
+      if (element.name === "table") {
+        tables.push({ line: lineOf(node.openingElement), wrapped: isWrapped() });
+      }
+      ancestors.push(element);
+      ts.forEachChild(node, visit);
+      ancestors.pop();
       return;
     }
 
+    // A self-closing element cannot contain JSX children, but `<table />`
+    // itself still needs a scrolling ancestor — and attribute expressions may
+    // hold JSX (`<Foo render={<table />} />`), so keep walking them.
     if (ts.isJsxSelfClosingElement(node)) {
-      reportIfUnwrapped(node, node.tagName.getText(sourceFile), wrapped);
+      const element = describeElement(node, sourceFile);
+      if (element.name === "table") {
+        tables.push({ line: lineOf(node), wrapped: isWrapped() });
+      }
+      ts.forEachChild(node, visit);
       return;
     }
 
-    if (ts.isJsxFragment(node)) {
-      node.children.forEach((child) => walk(child, wrapped));
-      return;
-    }
-
-    ts.forEachChild(node, (child) => walk(child, wrapped));
+    ts.forEachChild(node, visit);
   }
 
-  walk(sourceFile, false);
-  return offendingLines;
+  visit(sourceFile);
+  return tables;
 }
 
 describe("responsive dashboard and portal tables", () => {
@@ -85,11 +124,50 @@ describe("responsive dashboard and portal tables", () => {
       const content = readFileSync(file, "utf8");
       if (!content.includes("<table")) continue;
 
-      for (const lineIndex of findUnwrappedTableLines(file, content)) {
-        offenders.push(`${file}:${lineIndex + 1}`);
+      for (const table of findJsxTableLineNumbers(file, content)) {
+        if (!table.wrapped) {
+          offenders.push(`${file}:${table.line + 1}`);
+        }
       }
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it("detects unwrapped tables through conditionals and rejects bare tables", () => {
+    const wrapped = [
+      "export function Page() {",
+      "  return (",
+      "    <DataTableFrame>",
+      "      {isLoading ? <TableSkeleton rows={10} /> : <table><tbody /></table>}",
+      "    </DataTableFrame>",
+      "  );",
+      "}",
+    ].join("\n");
+    const wrappedByClass = [
+      "export function Page() {",
+      '  return <div className="overflow-x-auto"><table><tbody /></table></div>;',
+      "}",
+    ].join("\n");
+    const wrappedByTableScroll = [
+      "export function Page() {",
+      "  return <TableScroll><table><tbody /></table></TableScroll>;",
+      "}",
+    ].join("\n");
+    const unwrapped = [
+      "export function Page() {",
+      "  return <div className=\"rounded border\"><table><tbody /></table></div>;",
+      "}",
+    ].join("\n");
+
+    for (const fixture of [wrapped, wrappedByClass, wrappedByTableScroll]) {
+      const tables = findJsxTableLineNumbers("fixture.tsx", fixture);
+      expect(tables).toHaveLength(1);
+      expect(tables[0].wrapped).toBe(true);
+    }
+
+    expect(findJsxTableLineNumbers("fixture.tsx", unwrapped)).toEqual([
+      { line: 1, wrapped: false },
+    ]);
   });
 });

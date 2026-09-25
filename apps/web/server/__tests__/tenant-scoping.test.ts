@@ -18,6 +18,19 @@ const ALLOWLIST: Record<string, string> = {
   "extensions/index.ts": "router aggregation only",
 };
 
+/**
+ * Signals that a router issues a database query.
+ *
+ * `.from(` alone is NOT a DB signal: JavaScript's built-in `Array.from(...)`
+ * (e.g. `Array.from(new Set(candidates))` in AiSwarm telemetry) was matching
+ * the old substring probe and flagging routers that never import a database
+ * client at all. The negative lookbehind rejects only the built-in `Array`
+ * receiver — `db.select().from(...)`, `ctx.db....from(...)`,
+ * `tx....from(table)` and any other receiver still count as DB access, so the
+ * guard keeps catching a router that ships queries without a tenant filter.
+ */
+const DB_QUERY_PATTERN = /(?<!\bArray)\.from\(|\.insert\(|\.update\(|\.delete\(/;
+
 function getRouterFiles(dir: string, baseDir = dir): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
   const files: string[] = [];
@@ -47,15 +60,7 @@ describe("tenant scoping", () => {
   for (const file of files) {
     it(`${file}: DB queries are scoped by practiceId`, () => {
       const src = readFileSync(`${ROUTERS_DIR}/${file}`, "utf8");
-      // Excludes JS's built-in Array.from(...), which is not a Drizzle table
-      // query and previously produced false positives (e.g. extensions/ai-swarm.ts).
-      const dbFromPattern = /(?<!Array)\.from\(/;
-      const touchesDb =
-        dbFromPattern.test(src) ||
-        src.includes(".insert(") ||
-        src.includes(".update(") ||
-        src.includes(".delete(");
-      if (!touchesDb) return; // no DB access, nothing to scope
+      if (!DB_QUERY_PATTERN.test(src)) return; // no DB access, nothing to scope
       if (ALLOWLIST[file]) return;
       expect(
         src.includes("practiceId"),
@@ -63,6 +68,17 @@ describe("tenant scoping", () => {
       ).toBe(true);
     });
   }
+
+  it("recognises real Drizzle queries and ignores Array.from", () => {
+    // Real database access must still trip the guard...
+    expect(DB_QUERY_PATTERN.test("const rows = await db.select().from(patients);")).toBe(true);
+    expect(DB_QUERY_PATTERN.test("await ctx.db.update(invoices).set(v);")).toBe(true);
+    expect(DB_QUERY_PATTERN.test("await db.delete(sessions);")).toBe(true);
+    // ...while the built-in collection helper must not.
+    expect(DB_QUERY_PATTERN.test("const ids = Array.from(new Set(candidates));")).toBe(false);
+    expect(DB_QUERY_PATTERN.test("const rows = Array.from(input).filter(Boolean);")).toBe(false);
+    expect(DB_QUERY_PATTERN.test("return Array.from({ length: n }, (_, i) => i);")).toBe(false);
+  });
 
   it("keeps the allowlist small and intentional", () => {
     expect(Object.keys(ALLOWLIST).length).toBeLessThanOrEqual(3);
