@@ -27,3 +27,14 @@ Update this table whenever a sprint is written or merged. Planner prompt: .
 | 20 | arena-sprint-20-settings-ekasa-diagnostic-hardware.md | /settings/ekasa, /settings/ai, /settings/simulation | dispatched — running in Arena |
 
 Legacy (not numbered): arena-consolidation-sprint.md, arena-next-sprint.md, ui-consolidation-prompt.md, ui-phase2-headings.md.
+
+| 21 | arena-sprint-21-settings-master-hub.md | Practice Settings Master Hub /settings | written |
+| 22 | arena-sprint-22-clinical-records-soap.md | Clinical Records and SOAP Workspace /records | written |
+| 23 | arena-sprint-23-appointment-scheduler.md | Appointment Scheduler and Calendar /schedule | written |
+| 24 | arena-sprint-24-admin-panel-swarm.md | Admin Panel and AI Swarm Hub /admin /admin/ai-swarm | written |
+| 25 | arena-sprint-25-encounter-detail-soap-editor.md | Encounter Detail and SOAP Editor /encounters/appointmentId | written |
+| 26 | arena-sprint-26-marketing-studio-reviews-website.md | Marketing Studio Part 2 Reviews and Website /marketing/reviews /marketing/website | written |
+| 27 | arena-sprint-27-inventory-hardening.md | Inventory Hardening and Supplier Integration /inventory | written |
+| 28 | arena-sprint-28-ai-agent-hub.md | AI Agent Hub /agent | written |
+| 29 | arena-sprint-29-patient-detail-clinical-card.md | Patient Detail and Clinical Card /patients/id /patients | written |
+| 30 | arena-sprint-30-automations-crm-journeys.md | Automations and CRM Journey Builder /automations | written |
