@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ShieldAlert,
+  ShieldCheck,
   Building2,
   Euro,
   Clock,
@@ -11,11 +13,30 @@ import {
   TrendingUp,
   MessageSquare,
   RefreshCw,
+  Bot,
+  Workflow,
+  Activity,
+  Rocket,
+  Radio,
+  ExternalLink,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  pageShellClass,
+  KpiGrid,
+  KpiCard,
+  DataTableFrame,
+  tableHeadClass,
+  tableCellClass,
+  tableRowClass,
+} from "@/components/layout/page-kit";
 import { PageLoading } from "@/components/common/loading";
 import { SmsRecoveryConsole } from "@/components/admin/sms-recovery-console";
 import { ClinicPilotConsole } from "@/components/admin/clinic-pilot-console";
@@ -212,6 +233,39 @@ export default function AdminPage() {
       },
       onError: (err) => setMessagingError(err.message),
     });
+  const {
+    data: swarmHealth,
+    error: swarmHealthError,
+  } = trpc.extensions.aiSwarm.getStatus.useQuery(undefined, {
+    retry: false,
+    refetchInterval: 30000,
+  });
+
+  // Read-only derivation of the AI swarm system-health KPIs and sprint log.
+  const swarmDerived = useMemo(() => {
+    const fleet = swarmHealth?.fleet ?? [];
+    const sessions = swarmHealth?.sessions ?? [];
+    const stats = swarmHealth?.stats;
+    const lastDeployAt = sessions
+      .filter((session) => session.status === "COMPLETED")
+      .map((session) => session.createdAt)
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1);
+    return {
+      totalAgents: stats?.totalAgents ?? fleet.length,
+      activeAgents: fleet.filter(
+        (agent) => agent.status === "ready" || agent.status === "busy",
+      ).length,
+      totalSessions: stats?.totalSessions ?? sessions.length,
+      completedSessions: stats?.completedSessions ?? 0,
+      failedSessions: stats?.failedSessions ?? 0,
+      runningSessions: stats?.runningSessions ?? 0,
+      pendingSessions: stats?.pendingSessions ?? 0,
+      sessions,
+      lastDeployAt: lastDeployAt ?? null,
+    };
+  }, [swarmHealth]);
 
   if (error?.data?.code === "FORBIDDEN") {
     return (
@@ -260,7 +314,13 @@ export default function AdminPage() {
     );
   }
 
-  const kpis = [
+  const kpis: {
+    label: string;
+    displayLabel: string;
+    value: string;
+    icon: LucideIcon;
+    tone?: "primary" | "warning" | "destructive" | "muted";
+  }[] = [
     {
       label: "Practices",
       displayLabel: t("admin.kpi.practices", "Practices"),
@@ -290,33 +350,236 @@ export default function AdminPage() {
       displayLabel: t("admin.kpi.pastDue", "Past due"),
       value: String(data.totals.pastDue),
       icon: AlertTriangle,
+      tone: data.totals.pastDue > 0 ? "destructive" : undefined,
     },
   ];
 
   return (
-    <div>
+    <div className={pageShellClass}>
       <PageHeader
-        title={t("admin.header.title", "Platform Admin")}
+        icon={ShieldCheck}
+        title={
+          <span className="inline-flex flex-wrap items-center gap-3">
+            {t("admin.header.title", "Platform Admin")}
+            <Badge
+              variant="outline"
+              className="border-primary/30 bg-primary/10 font-semibold text-primary"
+            >
+              {t("admin.header.badge", "ADMIN")}
+            </Badge>
+          </span>
+        }
         subtitle={t("admin.header.subtitle", "Cross-tenant operations overview")}
       />
 
       {/* KPIs */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          return (
-            <div
-              key={k.label}
-              className="rounded-lg border border-border bg-card p-5"
-            >
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Icon className="h-4 w-4" />
-                <span className="text-sm">{k.displayLabel ?? k.label}</span>
-              </div>
-              <p className="mt-2 font-heading text-2xl font-bold">{k.value}</p>
+      <KpiGrid className="sm:grid-cols-3 lg:grid-cols-5">
+        {kpis.map((k) => (
+          <KpiCard
+            key={k.label}
+            label={k.displayLabel ?? k.label}
+            value={k.value}
+            icon={k.icon}
+            tone={k.tone}
+            className="p-4"
+          />
+        ))}
+      </KpiGrid>
+
+      {/* AI swarm system health */}
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Bot className="h-4 w-4" />
+              <span className="text-sm">
+                {t("admin.systemHealth.title", "AI swarm system health")}
+              </span>
             </div>
-          );
-        })}
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t(
+                "admin.systemHealth.desc",
+                "Read-only status of the Arena agent fleet, dispatched sprints, arena sessions, and the last deployment. Full controls live in the AI Swarm hub.",
+              )}
+            </p>
+          </div>
+          <Link href="/admin/ai-swarm" className="shrink-0">
+            <Button variant="outline" size="sm">
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              {t("admin.systemHealth.openHub", "Open AI Swarm hub")}
+            </Button>
+          </Link>
+        </div>
+        {swarmHealth ? (
+          <>
+            <KpiGrid className="mt-4">
+              <KpiCard
+                icon={Bot}
+                tone="primary"
+                label={t("admin.systemHealth.activeAgents", "Active agents")}
+                value={`${swarmDerived.activeAgents}/${swarmDerived.totalAgents}`}
+              />
+              <KpiCard
+                icon={Workflow}
+                label={t("admin.systemHealth.sprintsDispatched", "Sprints dispatched")}
+                value={String(swarmDerived.totalSessions)}
+                hint={
+                  swarmDerived.failedSessions > 0
+                    ? t(
+                        "admin.systemHealth.sprintsHint",
+                        "{merged} merged · {failed} failed",
+                        {
+                          merged: swarmDerived.completedSessions,
+                          failed: swarmDerived.failedSessions,
+                        },
+                      )
+                    : undefined
+                }
+              />
+              <KpiCard
+                icon={Activity}
+                label={t("admin.systemHealth.arenaSessions", "Arena sessions")}
+                value={String(swarmDerived.runningSessions)}
+                hint={
+                  swarmDerived.runningSessions === 0 &&
+                  swarmDerived.pendingSessions > 0
+                    ? t(
+                        "admin.systemHealth.sessionsHint",
+                        "{pending} pending · {total} total",
+                        {
+                          pending: swarmDerived.pendingSessions,
+                          total: swarmDerived.totalSessions,
+                        },
+                      )
+                    : undefined
+                }
+              />
+              <KpiCard
+                icon={Rocket}
+                label={t("admin.systemHealth.lastDeploy", "Last deploy")}
+                value={
+                  swarmDerived.lastDeployAt
+                    ? formatDateTime(swarmDerived.lastDeployAt)
+                    : "—"
+                }
+                hint={
+                  swarmDerived.lastDeployAt
+                    ? undefined
+                    : t("admin.systemHealth.noDeployYet", "No merged sprints yet")
+                }
+              />
+            </KpiGrid>
+
+            {/* Sprint log */}
+            <div className="mt-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Workflow className="h-4 w-4" />
+                <span className="text-sm">
+                  {t("admin.systemHealth.sprintLogTitle", "Sprint log")}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(
+                  "admin.systemHealth.sprintLogDesc",
+                  "Most recently dispatched Arena sprints and their merge state.",
+                )}
+              </p>
+              <DataTableFrame className="mt-3">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className={tableHeadClass}>
+                        {t("admin.systemHealth.sprint", "Sprint / module")}
+                      </th>
+                      <th className={tableHeadClass}>
+                        {t("admin.systemHealth.status", "Status")}
+                      </th>
+                      <th className={tableHeadClass}>
+                        {t("admin.systemHealth.progress", "Progress")}
+                      </th>
+                      <th className={tableHeadClass}>
+                        {t("admin.systemHealth.started", "Started")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {swarmDerived.sessions.map((session) => (
+                      <tr key={session.sessionId} className={tableRowClass}>
+                        <td className={cn(tableCellClass, "font-medium")}>
+                          <div className="max-w-sm">
+                            <div className="truncate">{session.module}</div>
+                            {session.promptSummary ? (
+                              <div className="truncate text-[11px] text-muted-foreground">
+                                {session.promptSummary}
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className={tableCellClass}>
+                          {session.status === "COMPLETED" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-success-muted px-2 py-0.5 text-[11px] font-medium text-success-muted-foreground">
+                              <CheckCircle className="h-3 w-3" />
+                              {t("admin.systemHealth.merged", "Merged")}
+                            </span>
+                          ) : session.status === "RUNNING" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-info-muted px-2 py-0.5 text-[11px] font-medium text-info-muted-foreground">
+                              <Radio className="h-3 w-3 animate-pulse" />
+                              {t("admin.systemHealth.running", "Running")}
+                            </span>
+                          ) : session.status === "FAILED" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                              <AlertTriangle className="h-3 w-3" />
+                              {t("admin.systemHealth.failed", "Failed")}
+                            </span>
+                          ) : session.status === "PENDING" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-[11px] font-medium text-warning-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {t("admin.systemHealth.pending", "Pending")}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                              {t("admin.systemHealth.unknown", "Unknown")}
+                            </span>
+                          )}
+                        </td>
+                        <td className={tableCellClass}>
+                          <div className="max-w-xs truncate text-[11px] text-muted-foreground">
+                            {session.progress || "—"}
+                          </div>
+                        </td>
+                        <td className={cn(tableCellClass, "font-mono text-[11px] text-muted-foreground")}>
+                          {session.createdAt || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                    {swarmDerived.sessions.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-3 py-6 text-center text-xs text-muted-foreground"
+                        >
+                          {t("admin.systemHealth.sprintLogEmpty", "No sprints dispatched yet.")}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </DataTableFrame>
+            </div>
+          </>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {swarmHealthError
+              ? t(
+                  "admin.systemHealth.loadError",
+                  "Could not load AI swarm system health.",
+                )
+              : t(
+                  "admin.systemHealth.loading",
+                  "Loading AI swarm system health…",
+                )}
+          </p>
+        )}
       </div>
 
       <ClinicPilotConsole practices={data.practices} />
@@ -325,7 +588,7 @@ export default function AdminPage() {
       <ClinicalSimulationAdminCard />
 
       {/* SMS operations health */}
-      <div className="mt-6 rounded-lg border border-border bg-card p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -495,27 +758,35 @@ export default function AdminPage() {
               {smsOperations.counts.providerEventsStale} stale
             </p>
             {smsOperations.items.length > 0 ? (
-              <div className="mt-4 overflow-x-auto rounded-md border border-border">
-                <table className="w-full text-sm">
+              <DataTableFrame className="mt-4">
+                <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                      <th className="px-3 py-2 font-medium">Priority</th>
-                      <th className="px-3 py-2 font-medium">
-                        Clinic / location
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className={tableHeadClass}>
+                        {t("admin.smsHealth.priority", "Priority")}
                       </th>
-                      <th className="px-3 py-2 font-medium">Category</th>
-                      <th className="px-3 py-2 font-medium">Age</th>
-                      <th className="px-3 py-2 font-medium">Reason</th>
-                      <th className="px-3 py-2 font-medium">{t("admin.table.nextAction", "Next action")}</th>
+                      <th className={tableHeadClass}>
+                        {t("admin.smsHealth.clinicLocation", "Clinic / location")}
+                      </th>
+                      <th className={tableHeadClass}>
+                        {t("admin.smsHealth.category", "Category")}
+                      </th>
+                      <th className={tableHeadClass}>
+                        {t("admin.smsHealth.age", "Age")}
+                      </th>
+                      <th className={tableHeadClass}>
+                        {t("admin.smsHealth.reason", "Reason")}
+                      </th>
+                      <th className={tableHeadClass}>{t("admin.table.nextAction", "Next action")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {smsOperations.items.map((item, index) => (
                       <tr
                         key={`${item.severity}-${item.category}-${item.practiceName}-${item.locationName ?? "practice"}-${index}`}
-                        className="align-top"
+                        className={cn(tableRowClass, "align-top")}
                       >
-                        <td className="px-3 py-2">
+                        <td className={tableCellClass}>
                           <span
                             className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${
                               item.severity === "p0"
@@ -526,27 +797,27 @@ export default function AdminPage() {
                             {item.severity}
                           </span>
                         </td>
-                        <td className="px-3 py-2">
+                        <td className={tableCellClass}>
                           <p className="font-medium">{item.practiceName}</p>
                           <p className="text-xs text-muted-foreground">
                             {item.locationName ?? "Practice-wide"}
                           </p>
                         </td>
-                        <td className="px-3 py-2 capitalize text-muted-foreground">
+                        <td className={cn(tableCellClass, "capitalize text-muted-foreground")}>
                           {item.category.replaceAll("_", " ")}
                         </td>
-                        <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                        <td className={cn(tableCellClass, "tabular-nums text-muted-foreground")}>
                           {formatAgeMinutes(item.ageMinutes)}
                         </td>
-                        <td className="px-3 py-2">{item.reason}</td>
-                        <td className="px-3 py-2 font-medium">
+                        <td className={tableCellClass}>{item.reason}</td>
+                        <td className={cn(tableCellClass, "font-medium")}>
                           {item.nextAction}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTableFrame>
             ) : (
               <div className="mt-4 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
                 {t(
@@ -576,7 +847,7 @@ export default function AdminPage() {
       <SmsRecoveryConsole />
 
       {/* Activation recovery queue */}
-      <div className="mt-6 rounded-lg border border-border bg-card p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
           <span className="text-sm">{t("admin.sections.activationRecovery", "Clinic activation recovery")}</span>
@@ -588,41 +859,41 @@ export default function AdminPage() {
           )}
         </p>
         {recoveryQueue ? (
-          <div className="mt-4 overflow-x-auto rounded-md border border-border">
-            <table className="w-full text-sm">
+          <DataTableFrame className="mt-4">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">
+                <tr className="border-b border-border bg-muted/30">
+                  <th className={tableHeadClass}>
                     {t("admin.recovery.rank", "Rank")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.recovery.clinicContact", "Clinic contact")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.recovery.trial", "Trial")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.recovery.setup", "Setup")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.recovery.realActivity", "Real activity")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.recovery.stage", "Stage")}
                   </th>
-                  <th className="px-3 py-2 font-medium">{t("admin.table.nextAction", "Next action")}</th>
+                  <th className={tableHeadClass}>{t("admin.table.nextAction", "Next action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {recoveryQueue.map((clinic) => (
                   <tr
                     key={clinic.practiceId}
-                    className="align-top hover:bg-muted/20"
+                    className={cn(tableRowClass, "align-top")}
                   >
-                    <td className="px-3 py-2 font-medium tabular-nums">
+                    <td className={cn(tableCellClass, "font-medium tabular-nums")}>
                       {clinic.queueRank}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className={tableCellClass}>
                       <p className="font-medium">{clinic.practiceName}</p>
                       {clinic.verifiedAdminEmail &&
                       clinic.verifiedAdminEmailAt ? (
@@ -641,7 +912,7 @@ export default function AdminPage() {
                         </p>
                       )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className={tableCellClass}>
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
                           recoveryTrialStyles[clinic.trialState] ??
@@ -656,7 +927,7 @@ export default function AdminPage() {
                           : t("admin.recovery.noTrialEnd", "No trial end")}
                       </p>
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       <p>{clinic.setupStage}</p>
                       {clinic.setupHelpRequestedAt ? (
                         <p className="mt-0.5 text-xs font-medium text-success">
@@ -673,7 +944,7 @@ export default function AdminPage() {
                         </p>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className={tableCellClass}>
                       <p className="tabular-nums">
                         {t(
                           "admin.recovery.clientsAndVisits",
@@ -698,10 +969,10 @@ export default function AdminPage() {
                         )}
                       </p>
                     </td>
-                    <td className="px-3 py-2 capitalize text-muted-foreground">
+                    <td className={cn(tableCellClass, "capitalize text-muted-foreground")}>
                       {recoveryLabel(clinic.authoritativeStage)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className={tableCellClass}>
                       <p className="font-medium">{clinic.nextAction}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {t(
@@ -719,7 +990,7 @@ export default function AdminPage() {
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-3 py-6 text-center text-muted-foreground"
+                      className="px-3 py-6 text-center text-xs text-muted-foreground"
                     >
                       {t("admin.recovery.empty", "No clinic workspaces need activation recovery.")}
                     </td>
@@ -727,7 +998,7 @@ export default function AdminPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </DataTableFrame>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             {recoveryError
@@ -738,7 +1009,7 @@ export default function AdminPage() {
       </div>
 
       {/* Messaging carrier operations */}
-      <div className="mt-6 rounded-lg border border-border bg-card p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <MessageSquare className="h-4 w-4" />
           <span className="text-sm">{t("admin.sections.messagingCarrier", "Messaging carrier registrations")}</span>
@@ -755,29 +1026,29 @@ export default function AdminPage() {
           </div>
         ) : null}
         {messagingQueue ? (
-          <div className="mt-4 overflow-x-auto rounded-md border border-border">
-            <table className="w-full text-sm">
+          <DataTableFrame className="mt-4">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">
+                <tr className="border-b border-border bg-muted/30">
+                  <th className={tableHeadClass}>
                     {t("admin.messaging.clinic", "Clinic")}
                   </th>
-                  <th className="px-3 py-2 font-medium">{t("admin.table.status", "Status")}</th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>{t("admin.table.status", "Status")}</th>
+                  <th className={tableHeadClass}>
                     {t("admin.messaging.brand", "Brand")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.messaging.campaign", "Campaign")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.messaging.numbers", "Numbers")}
                   </th>
-                  <th className="px-3 py-2 font-medium">
+                  <th className={tableHeadClass}>
                     {t("admin.messaging.operatorAction", "Operator action")}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {messagingQueue.map((registration) => {
                   const busy = Boolean(registration.submissionLockAt);
                   const lockIsStale =
@@ -795,8 +1066,8 @@ export default function AdminPage() {
                     clearStaleMessagingSubmissionLock.isPending ||
                     reconcileMessagingRegistration.isPending;
                   return (
-                    <tr key={registration.id}>
-                      <td className="px-3 py-2">
+                    <tr key={registration.id} className={tableRowClass}>
+                      <td className={tableCellClass}>
                         <p className="font-medium">
                           {registration.practiceName}
                         </p>
@@ -810,19 +1081,19 @@ export default function AdminPage() {
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className={tableCellClass}>
                         {t(
                           `admin.messaging.status_${registration.status}`,
                           registration.status.replace("_", " "),
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {registration.providerBrandStatus ?? t("admin.messaging.notSubmitted", "Not submitted")}
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {registration.providerCampaignStatus ?? t("admin.messaging.notSubmitted", "Not submitted")}
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {registration.senders.length === 0
                           ? t("admin.messaging.noNumber", "No number")
                           : registration.senders
@@ -844,7 +1115,7 @@ export default function AdminPage() {
                               )
                               .join(", ")}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className={tableCellClass}>
                         <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
@@ -1108,7 +1379,7 @@ export default function AdminPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </DataTableFrame>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             {messagingQueueError
@@ -1120,7 +1391,7 @@ export default function AdminPage() {
 
       {/* Messaging carrier history */}
       {messagingHistorySelection ? (
-        <div className="mt-4 rounded-lg border border-border bg-card p-5">
+        <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">{t("admin.messaging.historyTitle", "Carrier lifecycle history")}</p>
@@ -1143,18 +1414,18 @@ export default function AdminPage() {
             </p>
           ) : messagingHistory ? (
             <>
-              <div className="mt-4 overflow-x-auto rounded-md border border-border">
-                <table className="w-full text-xs">
+              <DataTableFrame className="mt-4">
+                <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                      <th className="px-3 py-2 font-medium">
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className={tableHeadClass}>
                         {t("admin.messaging.recorded", "Recorded")}
                       </th>
-                      <th className="px-3 py-2 font-medium">
+                      <th className={tableHeadClass}>
                         {t("admin.messaging.lifecycleEvent", "Lifecycle event")}
                       </th>
-                      <th className="px-3 py-2 font-medium">{t("admin.table.status", "Status")}</th>
-                      <th className="px-3 py-2 font-medium">
+                      <th className={tableHeadClass}>{t("admin.table.status", "Status")}</th>
+                      <th className={tableHeadClass}>
                         {t(
                           "admin.messaging.operationalEvidence",
                           "Operational evidence",
@@ -1162,19 +1433,19 @@ export default function AdminPage() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {messagingHistory.events.map((event) => (
-                      <tr key={event.id} className="align-top">
-                        <td className="px-3 py-2">
+                      <tr key={event.id} className={cn(tableRowClass, "align-top")}>
+                        <td className={tableCellClass}>
                           {formatDateTime(event.createdAt)}
                         </td>
-                        <td className="px-3 py-2 capitalize">
+                        <td className={cn(tableCellClass, "capitalize")}>
                           <p>{recoveryLabel(event.eventType)}</p>
                           <p className="mt-1 text-muted-foreground">
                             {recoveryLabel(event.operation)} · {event.provider}
                           </p>
                         </td>
-                        <td className="px-3 py-2 capitalize">
+                        <td className={cn(tableCellClass, "capitalize")}>
                           <p>
                             {recoveryLabel(
                               event.statusBefore ?? "not recorded",
@@ -1187,7 +1458,7 @@ export default function AdminPage() {
                             {event.providerCampaignStatus ?? "—"}
                           </p>
                         </td>
-                        <td className="px-3 py-2 font-mono text-[11px]">
+                        <td className={cn(tableCellClass, "font-mono text-[11px]")}>
                           <p className="break-all">event {event.id}</p>
                           <p className="mt-1 break-all text-muted-foreground">
                             operation {event.operationId}
@@ -1217,7 +1488,7 @@ export default function AdminPage() {
                     ) : null}
                   </tbody>
                 </table>
-              </div>
+              </DataTableFrame>
               {messagingHistory.truncated ? (
                 <p className="mt-2 text-xs font-medium text-warning-muted-foreground">
                   {t(
@@ -1242,7 +1513,7 @@ export default function AdminPage() {
       ) : null}
 
       {/* Trial funnel */}
-      <div className="mt-6 rounded-lg border border-border bg-card p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
           <span className="text-sm">{t("admin.sections.journeyCohorts", "Production journey cohorts (30 days)")}</span>
@@ -1324,39 +1595,39 @@ export default function AdminPage() {
               <p>Client errors: {journey.totals.clientErrors}</p>
             </div>
 
-            <div className="mt-5 overflow-x-auto rounded-md border border-border">
-              <table className="w-full text-sm">
+            <DataTableFrame className="mt-5">
+              <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">{t("admin.table.cohortWeek", "Cohort week")}</th>
-                    <th className="px-3 py-2 font-medium">{t("admin.journey.visit", "Visit")}</th>
-                    <th className="px-3 py-2 font-medium">{t("admin.journey.demo", "Demo")}</th>
-                    <th className="px-3 py-2 font-medium">{t("admin.journey.registered", "Registered")}</th>
-                    <th className="px-3 py-2 font-medium">{t("admin.journey.activated", "Activated")}</th>
-                    <th className="px-3 py-2 font-medium">{t("admin.journey.paymentMethod", "Payment method")}</th>
-                    <th className="px-3 py-2 font-medium">{t("admin.journey.positivePayment", "Positive payment")}</th>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className={tableHeadClass}>{t("admin.table.cohortWeek", "Cohort week")}</th>
+                    <th className={tableHeadClass}>{t("admin.journey.visit", "Visit")}</th>
+                    <th className={tableHeadClass}>{t("admin.journey.demo", "Demo")}</th>
+                    <th className={tableHeadClass}>{t("admin.journey.registered", "Registered")}</th>
+                    <th className={tableHeadClass}>{t("admin.journey.activated", "Activated")}</th>
+                    <th className={tableHeadClass}>{t("admin.journey.paymentMethod", "Payment method")}</th>
+                    <th className={tableHeadClass}>{t("admin.journey.positivePayment", "Positive payment")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody>
                   {journey.weeks.map((week) => (
-                    <tr key={week.weekStart}>
-                      <td className="px-3 py-2 font-medium">
+                    <tr key={week.weekStart} className={tableRowClass}>
+                      <td className={cn(tableCellClass, "font-medium")}>
                         {week.weekStart}
                       </td>
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className={cn(tableCellClass, "tabular-nums")}>
                         {week.visitors}
                       </td>
-                      <td className="px-3 py-2 tabular-nums">{week.demos}</td>
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className={cn(tableCellClass, "tabular-nums")}>{week.demos}</td>
+                      <td className={cn(tableCellClass, "tabular-nums")}>
                         {week.registrations}
                       </td>
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className={cn(tableCellClass, "tabular-nums")}>
                         {week.activated}
                       </td>
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className={cn(tableCellClass, "tabular-nums")}>
                         {week.paymentMethodCollected}
                       </td>
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className={cn(tableCellClass, "tabular-nums")}>
                         {week.firstPositivePayment}
                       </td>
                     </tr>
@@ -1365,7 +1636,7 @@ export default function AdminPage() {
                     <tr>
                       <td
                         colSpan={7}
-                        className="px-3 py-6 text-center text-muted-foreground"
+                        className="px-3 py-6 text-center text-xs text-muted-foreground"
                       >
                         {t("admin.journey.empty", "No first-party journey cohorts recorded yet.")}
                       </td>
@@ -1373,7 +1644,7 @@ export default function AdminPage() {
                   ) : null}
                 </tbody>
               </table>
-            </div>
+            </DataTableFrame>
             <p className="mt-3 text-xs text-muted-foreground">
               Anonymous first touch is carried across openvpm.com, demo, and
               signup. Rates are visit-to-step for demo and registration, then
@@ -1396,7 +1667,7 @@ export default function AdminPage() {
         )}
       </div>
 
-      <div className="mt-6 rounded-lg border border-border bg-card p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
           <span className="text-sm">{t("admin.sections.trialFunnel", "Trial funnel (30 days)")}</span>
@@ -1604,40 +1875,40 @@ export default function AdminPage() {
 
       {/* Practices table */}
       {extendTrialError && (
-        <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {t("admin.practices.extendTrialError", "Nepodarilo sa predĺžiť skúšobnú verziu")}: {extendTrialError}
         </div>
       )}
       {analyticsError && (
-        <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {t("admin.practices.analyticsError", "Nepodarilo sa zmeniť zahrnutie do lievika")}: {analyticsError}
         </div>
       )}
-      <div className="mt-8 overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-border bg-muted/30 text-left text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.practice", "Practice")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.tier", "Plan")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.status", "Status")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.source", "Source")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.intent", "Intent")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.setup", "Setup")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.metrics", "Metrics")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.trialEnds", "Trial ends")}</th>
-              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.locations", "Locations")}</th>
-              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.staff", "Staff")}</th>
-              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.baseMrr", "Base MRR")}</th>
-              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.clients", "Clients")}</th>
-              <th className="px-4 py-2.5 font-medium text-right">{t("admin.table.patients", "Patients")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.country", "Country")}</th>
-              <th className="px-4 py-2.5 font-medium">{t("admin.table.joined", "Joined")}</th>
+            <tr className="border-b border-border bg-muted/30">
+              <th className={tableHeadClass}>{t("admin.table.practice", "Practice")}</th>
+              <th className={tableHeadClass}>{t("admin.table.tier", "Plan")}</th>
+              <th className={tableHeadClass}>{t("admin.table.status", "Status")}</th>
+              <th className={tableHeadClass}>{t("admin.table.source", "Source")}</th>
+              <th className={tableHeadClass}>{t("admin.table.intent", "Intent")}</th>
+              <th className={tableHeadClass}>{t("admin.table.setup", "Setup")}</th>
+              <th className={tableHeadClass}>{t("admin.table.metrics", "Metrics")}</th>
+              <th className={tableHeadClass}>{t("admin.table.trialEnds", "Trial ends")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("admin.table.locations", "Locations")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("admin.table.staff", "Staff")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("admin.table.baseMrr", "Base MRR")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("admin.table.clients", "Clients")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("admin.table.patients", "Patients")}</th>
+              <th className={tableHeadClass}>{t("admin.table.country", "Country")}</th>
+              <th className={tableHeadClass}>{t("admin.table.joined", "Joined")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {data.practices.map((p) => (
-              <tr key={p.id} className="hover:bg-muted/20">
-                <td className="px-4 py-2.5">
+              <tr key={p.id} className={tableRowClass}>
+                <td className={tableCellClass}>
                   <p className="font-medium">{p.name}</p>
                   {p.adminEmail ? (
                     <a
@@ -1656,8 +1927,8 @@ export default function AdminPage() {
                     </p>
                   )}
                 </td>
-                <td className="px-4 py-2.5 capitalize">{p.tier}</td>
-                <td className="px-4 py-2.5">
+                <td className={cn(tableCellClass, "capitalize")}>{p.tier}</td>
+                <td className={tableCellClass}>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
                       statusStyles[p.billingStatus] ||
@@ -1667,22 +1938,30 @@ export default function AdminPage() {
                     {p.billingStatus.replace("_", " ")}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   {p.acquisitionSource}
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   {p.onboardingIntent}
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   <p>{p.setupStage}</p>
                   {p.setupHelpRequestedAt ? (
                     <p className="mt-0.5 text-xs font-medium text-success">
-                      Help requested{" "}
-                      {formatDate(p.setupHelpRequestedAt, p.timezone)}
+                      {t(
+                        "admin.recovery.helpRequested",
+                        "Help requested {date}",
+                        {
+                          date: formatDate(
+                            p.setupHelpRequestedAt,
+                            p.timezone,
+                          ),
+                        },
+                      )}
                     </p>
                   ) : null}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className={tableCellClass}>
                   <button
                     type="button"
                     title={
@@ -1709,7 +1988,7 @@ export default function AdminPage() {
                       : t("admin.practices.exclude", "Exclude")}
                   </button>
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   <span className="inline-flex items-center gap-2">
                     {formatDate(p.trialEndsAt, p.timezone)}
                     {p.billingStatus === "trialing" && (
@@ -1727,25 +2006,25 @@ export default function AdminPage() {
                     )}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                <td className={cn(tableCellClass, "text-right tabular-nums")}>
                   {p.locationCount}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                <td className={cn(tableCellClass, "text-right tabular-nums")}>
                   {p.userCount}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                <td className={cn(tableCellClass, "text-right tabular-nums")}>
                   {formatUsd(p.estimatedMrr)}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                <td className={cn(tableCellClass, "text-right tabular-nums")}>
                   {p.clientCount}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
+                <td className={cn(tableCellClass, "text-right tabular-nums")}>
                   {p.patientCount}
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   {p.country}
                 </td>
-                <td className="px-4 py-2.5 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   {formatDate(p.createdAt, p.timezone)}
                 </td>
               </tr>
@@ -1754,7 +2033,7 @@ export default function AdminPage() {
               <tr>
                 <td
                   colSpan={15}
-                  className="px-4 py-8 text-center text-muted-foreground"
+                  className="px-4 py-8 text-center text-xs text-muted-foreground"
                 >
                   {t("admin.practices.empty", "No practices yet.")}
                 </td>
@@ -1762,7 +2041,7 @@ export default function AdminPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
       <ConfirmDialog {...dialogProps} />
     </div>
   );

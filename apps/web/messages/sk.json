@@ -2,7 +2,8 @@
   "admin": {
     "header": {
       "title": "Správa platformy",
-      "subtitle": "Prehľad operácií naprieč organizáciami"
+      "subtitle": "Prehľad operácií naprieč organizáciami",
+      "badge": "ADMIN"
     },
     "accessDenied": {
       "title": "Prístup odmietnutý",
@@ -30,6 +31,32 @@
       "practices": "Veterinárne praxe",
       "simulation": "Klinická simulácia & Journey Discovery",
       "aiSwarm": "AI Swarm & AgentOS Centrála"
+    },
+    "systemHealth": {
+      "title": "Zdravie systému AI Swarm",
+      "desc": "Stav len na čítanie: flotila agentov Arena, vyslané sprinty, relácie Arena a posledné nasadenie. Plné ovládanie nájdete v centrále AI Swarm.",
+      "loadError": "Nepodarilo sa načítať zdravie systému AI Swarm.",
+      "loading": "Načítavam zdravie systému AI Swarm…",
+      "openHub": "Otvoriť centrálu AI Swarm",
+      "activeAgents": "Aktívni agenti",
+      "sprintsDispatched": "Vyslané sprinty",
+      "arenaSessions": "Relácie Arena",
+      "lastDeploy": "Posledné nasadenie",
+      "noDeployYet": "Zatiaľ žiadny mergovaný sprint",
+      "sprintsHint": "{merged} mergovaných · {failed} zlyhaných",
+      "sessionsHint": "{pending} čaká · {total} celkom",
+      "sprintLogTitle": "Evidencia sprintov",
+      "sprintLogDesc": "Najnovšie vyslané sprinty Arena a stav ich merge.",
+      "sprintLogEmpty": "Zatiaľ nebol vyslaný žiadny sprint.",
+      "sprint": "Sprint / modul",
+      "status": "Stav",
+      "progress": "Priebeh",
+      "started": "Spustené",
+      "merged": "Mergované",
+      "running": "Beží",
+      "failed": "Zlyhané",
+      "pending": "Čaká",
+      "unknown": "Neznámy"
     },
     "table": {
       "practice": "Prax",
@@ -84,7 +111,12 @@
       "deliveryExceptions": "Výnimky doručenia",
       "providerEvents": "Udalosti poskytovateľa",
       "noExceptions": "Žiadne prevádzkové SMS výnimky nevyžadujú pozornosť.",
-      "bounded": "Výsledky sú ohraničené. Vyriešte najstaršie položky a obnovte zvyšok frontu."
+      "bounded": "Výsledky sú ohraničené. Vyriešte najstaršie položky a obnovte zvyšok frontu.",
+      "priority": "Priorita",
+      "category": "Kategória",
+      "age": "Vek",
+      "reason": "Dôvod",
+      "clinicLocation": "Klinika / lokácia"
     },
     "recovery": {
       "noVerifiedContact": "Žiadny overený kontakt administrátora",
@@ -429,7 +461,8 @@
         "startCommand": "Príkaz na spustenie servera: pnpm agent-ui",
         "portInfo": "Lokálny Next.js port: 3007 → AgentOS REST: http://localhost:7777",
         "offlineTitle": "Agent UI server nebeží na porte 3007",
-        "offlineDesc": "Pre spustenie Agent UI rozhrania otvorte terminál a zadajte: pnpm agent-ui (alebo pnpm --dir .agents/agno/agent-ui dev)."
+        "offlineDesc": "Pre spustenie Agent UI rozhrania otvorte terminál a zadajte: pnpm agent-ui (alebo pnpm --dir .agents/agno/agent-ui dev).",
+        "iframeTitle": "Agent UI"
       },
       "toolbar": {
         "searchPlaceholder": "Filtrovať agentov, relácie alebo úlohy...",
@@ -452,7 +485,11 @@
         "tools": "Kľúčové nástroje",
         "status": "Stav",
         "actions": "Akcie",
-        "chatInAgentUi": "Otvoriť v Agent UI"
+        "chatInAgentUi": "Otvoriť v Agent UI",
+        "health": "Zdravie",
+        "status_ready": "Pripravený",
+        "status_busy": "Zaneprázdnený",
+        "status_standby": "Pohotovosť"
       },
       "sessionsTable": {
         "sessionId": "ID relácie / úlohy",
@@ -499,7 +536,10 @@
         "gateGitPush": "Git Push na origin/main",
         "gatePrMerge": "PR Merge do main",
         "gateDeploy": "Deploy do produkcie",
-        "gateOpl": "Klinický audit OPL (Zákon 139/1998)"
+        "gateOpl": "Klinický audit OPL (Zákon 139/1998)",
+        "required": "Povinné (@approval)",
+        "auditLog": "Audit denník (@approval)",
+        "tableId": "ID"
       }
     }
   },

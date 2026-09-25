@@ -2,7 +2,8 @@
   "admin": {
     "header": {
       "title": "Platform Admin",
-      "subtitle": "Cross-tenant operations overview"
+      "subtitle": "Cross-tenant operations overview",
+      "badge": "ADMIN"
     },
     "accessDenied": {
       "title": "Access Denied",
@@ -30,6 +31,32 @@
       "practices": "Practices",
       "simulation": "Clinical Simulation & Journey Discovery",
       "aiSwarm": "AI Swarm & AgentOS Central"
+    },
+    "systemHealth": {
+      "title": "AI swarm system health",
+      "desc": "Read-only status of the Arena agent fleet, dispatched sprints, arena sessions, and the last deployment. Full controls live in the AI Swarm hub.",
+      "loadError": "Could not load AI swarm system health.",
+      "loading": "Loading AI swarm system health…",
+      "openHub": "Open AI Swarm hub",
+      "activeAgents": "Active agents",
+      "sprintsDispatched": "Sprints dispatched",
+      "arenaSessions": "Arena sessions",
+      "lastDeploy": "Last deploy",
+      "noDeployYet": "No merged sprints yet",
+      "sprintsHint": "{merged} merged · {failed} failed",
+      "sessionsHint": "{pending} pending · {total} total",
+      "sprintLogTitle": "Sprint log",
+      "sprintLogDesc": "Most recently dispatched Arena sprints and their merge state.",
+      "sprintLogEmpty": "No sprints dispatched yet.",
+      "sprint": "Sprint / module",
+      "status": "Status",
+      "progress": "Progress",
+      "started": "Started",
+      "merged": "Merged",
+      "running": "Running",
+      "failed": "Failed",
+      "pending": "Pending",
+      "unknown": "Unknown"
     },
     "table": {
       "practice": "Practice",
@@ -84,7 +111,12 @@
       "deliveryExceptions": "Delivery exceptions",
       "providerEvents": "Provider events",
       "noExceptions": "No SMS operational exceptions need attention.",
-      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue."
+      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue.",
+      "priority": "Priority",
+      "category": "Category",
+      "age": "Age",
+      "reason": "Reason",
+      "clinicLocation": "Clinic / location"
     },
     "recovery": {
       "noVerifiedContact": "No verified admin contact",
@@ -429,7 +461,8 @@
         "startCommand": "Command to start dev server: pnpm agent-ui",
         "portInfo": "Local Next.js port: 3007 → AgentOS REST: http://localhost:7777",
         "offlineTitle": "Agent UI server is not running on port 3007",
-        "offlineDesc": "To launch the Agent UI interface, open a terminal and run: pnpm agent-ui (or pnpm --dir .agents/agno/agent-ui dev)."
+        "offlineDesc": "To launch the Agent UI interface, open a terminal and run: pnpm agent-ui (or pnpm --dir .agents/agno/agent-ui dev).",
+        "iframeTitle": "Agent UI"
       },
       "toolbar": {
         "searchPlaceholder": "Filter agents, sessions or tasks...",
@@ -452,7 +485,11 @@
         "tools": "Key Tools",
         "status": "Status",
         "actions": "Actions",
-        "chatInAgentUi": "Open in Agent UI"
+        "chatInAgentUi": "Open in Agent UI",
+        "health": "Health",
+        "status_ready": "Ready",
+        "status_busy": "Busy",
+        "status_standby": "Standby"
       },
       "sessionsTable": {
         "sessionId": "Session / Task ID",
@@ -499,7 +536,10 @@
         "gateGitPush": "Git Push to origin/main",
         "gatePrMerge": "PR Merge to main",
         "gateDeploy": "Production Deployment",
-        "gateOpl": "Clinical OPL Audit (Act 139/1998)"
+        "gateOpl": "Clinical OPL Audit (Act 139/1998)",
+        "required": "Required (@approval)",
+        "auditLog": "Audit Log (@approval)",
+        "tableId": "ID"
       }
     }
   },
