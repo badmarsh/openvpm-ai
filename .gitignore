@@ -137,3 +137,19 @@ packages/db/seed-comprehensive-sk.sql
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# ─── tasks/ runtime churn (see prompts/arena-final-pass-agno-consolidation.md §5.1) ───
+# Ground truth stays versioned: tasks/*.md, tasks/proposed/*.md, tasks/SPRINT-INDEX.md.
+# Runtime artifacts the Agno swarm writes/dispatches are NOT ground truth and must
+# never be committed — this is what produced the 300-file commit (dab4d05).
+tasks/run-*.json
+tasks/repair-*.md
+tasks/**/*.patch
+tasks/**/*.diff
+tasks/web-test.json
+tasks/web-test-output.txt
+tasks/workspace-*.zip
+tasks/sprint*/**/files/**
+tasks-ARCHIVED-*.tgz
+arena_sessions.json
+tasks/**/files/**
