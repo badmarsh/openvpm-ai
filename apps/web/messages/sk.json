@@ -6522,7 +6522,7 @@
       "hintSelectPatient": "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania.",
       "playerTitle": "Záznam diktátu ({seconds} sekúnd)",
       "recordAgain": "Nahrať znova",
-      "process": "Spracovať cez Gemini AI",
+      "process": "Spracovať cez AI",
       "processing": "AI analyzuje a štruktúruje veterinárne diktovanie...",
       "processingHint": "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.",
       "micPermissionDenied": "Prístup k mikrofónu bol zamietnutý. Ak ste mikrofón práve povolili, obnovte stránku (F5 / Reload), alebo skontrolujte povolenia v Nastaveniach Windows.",
@@ -6530,7 +6530,11 @@
       "micNotFound": "Nebol nájdený žiadny mikrofón. Skontrolujte pripojenie mikrofónu a skúste znova.",
       "micBusy": "Mikrofón je obsadený inou aplikáciou.",
       "micGenericError": "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.",
-      "dictatePrompt": "Diktujte klinický nález..."
+      "dictatePrompt": "Diktujte klinický nález...",
+      "hintLive": "Spustite ambientný zápis vyšetrenia a hovorte prirodzene — AI štruktúruje reč do SOAP poznámky.",
+      "hintUpload": "Zvoľte audio súbor s diktovaním a potom ho spracujte rovnako ako živú nahrávku.",
+      "retentionNote": "Surový audio záznam sa podľa GDPR pravidiel do 24 hodín automaticky vymaže zo servera; v karte pacienta ostáva iba klinický text.",
+      "recordingFailed": "Nahrávanie zlyhalo počas zápisu. Čiastočný záznam bol zahodený — skúste diktovať znova."
     },
     "transcript": {
       "title": "Surový prepis diktátu",
@@ -6541,7 +6545,10 @@
     "soapCard": {
       "title": "Klinický SOAP záznam",
       "empty": "Žiadny vygenerovaný SOAP záznam",
-      "emptyHint": "Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo."
+      "emptyHint": "Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo.",
+      "draftBadge": "Koncept — čaká na podpis veterinára",
+      "finalizedBadge": "Finalizované veterinárom",
+      "draftStatutoryNote": "Podľa zákona č. 39/2007 Z. z. zostáva AI návrh konceptom, kým ho nepotvrdí a nepodpíše veterinár v kartotéke."
     },
     "save": {
       "confirmAria": "Potvrdzujem, že som skontroloval(a) AI prepis a finalizujem záznam",
@@ -6589,6 +6596,46 @@
       "timeout": "AI poskytovateľ neodpovedal v časovom limite. Prepis je uložený nižšie — skúste preformátovať znova alebo SOAP dokončite ručne.",
       "openSettings": "Otvoriť Nastavenia → AI",
       "providerError": "AI poskytovateľ vrátil chybu. Prepis diktátu je uložený nižšie — skúste preformátovať znova alebo SOAP dokončite ručne."
+    },
+    "status": {
+      "idle": "Pripravené",
+      "recording": "Nahrávanie…",
+      "processing": "Spracúva sa…",
+      "done": "Spracované",
+      "saved": "Uložené",
+      "error": "Chyba spracovania"
+    },
+    "modes": {
+      "label": "Režim nahrávania",
+      "live": "Ambientný zápis naživo",
+      "dictation": "Diktovanie poznámky",
+      "upload": "Nahrať audio súbor"
+    },
+    "micError": {
+      "title": "Mikrofón nie je dostupný",
+      "instructions": "Povoľte mikrofón cez ikonu zámku vľavo od adresného riadku prehliadača (Povolenia → Mikrofón), potom obnovte stránku. Vo Windows skontrolujte Nastavenia → Súkromie → Mikrofón.",
+      "retry": "Skúsiť mikrofón znova",
+      "dismiss": "Zavrieť upozornenie"
+    },
+    "processError": {
+      "title": "Spracovanie diktátu zlyhalo",
+      "preservedNote": "Nahrávka zostala zachovaná — nič sa nestratilo. Skontrolujte pripojenie na internet a skúste spracovanie znova.",
+      "retry": "Skúsiť spracovanie znova"
+    },
+    "kpi": {
+      "total": "Diktáty celkom",
+      "processed": "Spracované",
+      "savedInChart": "Uložené v karte",
+      "drafts": "Koncepty do podpisu"
+    },
+    "controlled": {
+      "title": "Rozpoznaná omamná / psychotropná látka (Zákon č. 139/1998 Z. z.)",
+      "description": "Dávky, jednotkové ceny ani fakturačné položky týchto látok sa automaticky nepredvypĺňajú. Zadajte ich ručne a zapíšte do Knihy OPL (kontrolovaných látok)."
+    },
+    "upload": {
+      "invalidType": "Vybraný súbor nie je audio nahrávka. Zvoľte audio súbor (mp3, webm, m4a...).",
+      "hint": "Zvoľte audio nahrávku diktovania (mp3, webm, m4a, wav). Súbor zostáva vo vašom prehliadači až do odoslania na spracovanie.",
+      "button": "Vybrať audio súbor"
     }
   },
   "imaging": {

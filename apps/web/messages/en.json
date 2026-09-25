@@ -6522,7 +6522,7 @@
       "hintSelectPatient": "Select a patient above first to enable recording.",
       "playerTitle": "Dictation recording ({seconds} seconds)",
       "recordAgain": "Record again",
-      "process": "Process with Gemini AI",
+      "process": "Process with AI",
       "processing": "AI is analysing and structuring the veterinary dictation...",
       "processingHint": "Converting audio to text and categorising it into the SOAP structure.",
       "micPermissionDenied": "Microphone access was denied. If you just allowed it, reload the page (F5 / Reload), or check microphone permissions in Windows Settings.",
@@ -6530,7 +6530,11 @@
       "micNotFound": "No microphone found. Check your microphone connection and try again.",
       "micBusy": "Microphone is busy with another application.",
       "micGenericError": "Could not access microphone. Check browser permissions.",
-      "dictatePrompt": "Dictate clinical findings..."
+      "dictatePrompt": "Dictate clinical findings...",
+      "hintLive": "Start the ambient consult recording and speak naturally — AI structures the speech into a SOAP note.",
+      "hintUpload": "Choose an audio file with the dictation and then process it the same way as a live recording.",
+      "retentionNote": "The raw audio recording is automatically deleted from the server within 24 hours under GDPR rules; only the clinical text remains in the patient chart.",
+      "recordingFailed": "Recording failed while capturing. The partial recording was discarded — please dictate again."
     },
     "transcript": {
       "title": "Raw dictation transcript",
@@ -6541,7 +6545,10 @@
     "soapCard": {
       "title": "Clinical SOAP record",
       "empty": "No generated SOAP record",
-      "emptyHint": "Select a patient, record audio or choose a clinical template from the menu on the left."
+      "emptyHint": "Select a patient, record audio or choose a clinical template from the menu on the left.",
+      "draftBadge": "Draft — awaiting veterinarian signature",
+      "finalizedBadge": "Finalized by a veterinarian",
+      "draftStatutoryNote": "Under Act No. 39/2007 Coll., the AI proposal remains a draft until it is reviewed and signed by a veterinarian in the chart."
     },
     "save": {
       "confirmAria": "I confirm that I have reviewed the AI transcript and am finalizing the record",
@@ -6589,6 +6596,46 @@
       "timeout": "The AI provider did not answer in time. The transcript is kept below — try reformatting again or finish the SOAP manually.",
       "openSettings": "Open Settings → AI",
       "providerError": "The AI provider returned an error. The transcript is saved below — try formatting again or complete the SOAP note manually."
+    },
+    "status": {
+      "idle": "Ready",
+      "recording": "Recording…",
+      "processing": "Processing…",
+      "done": "Processed",
+      "saved": "Saved",
+      "error": "Processing error"
+    },
+    "modes": {
+      "label": "Recording mode",
+      "live": "Live ambient scribe",
+      "dictation": "Note dictation",
+      "upload": "Upload audio file"
+    },
+    "micError": {
+      "title": "Microphone unavailable",
+      "instructions": "Allow the microphone using the lock icon next to the browser address bar (Permissions → Microphone), then reload the page. On Windows check Settings → Privacy → Microphone.",
+      "retry": "Try the microphone again",
+      "dismiss": "Dismiss warning"
+    },
+    "processError": {
+      "title": "Dictation processing failed",
+      "preservedNote": "The recording was preserved — nothing was lost. Check your internet connection and try processing again.",
+      "retry": "Retry processing"
+    },
+    "kpi": {
+      "total": "Total dictations",
+      "processed": "Processed",
+      "savedInChart": "Saved in chart",
+      "drafts": "Drafts awaiting signature"
+    },
+    "controlled": {
+      "title": "Narcotic / psychotropic substance detected (Act No. 139/1998 Coll.)",
+      "description": "Dosages, unit prices and billing items for these substances are never auto-prefilled. Enter them manually and record them in the controlled substances register (OPL)."
+    },
+    "upload": {
+      "invalidType": "The selected file is not an audio recording. Choose an audio file (mp3, webm, m4a...).",
+      "hint": "Choose a dictation audio recording (mp3, webm, m4a, wav). The file stays in your browser until it is sent for processing.",
+      "button": "Choose audio file"
     }
   },
   "imaging": {

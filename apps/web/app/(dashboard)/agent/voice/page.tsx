@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -19,14 +19,32 @@ import {
   Copy,
   Check,
   AlertTriangle,
-  Volume2,
+  ShieldAlert,
+  Upload,
+  Info,
   ReceiptEuro,
   CreditCard,
   Trash2,
+  CheckCircle2,
+  PencilLine,
+  Layers,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
-import { PageHeader } from "@/components/layout/page-header";
+import { cn } from "@/lib/utils";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+import {
+  DataTableFrame,
+  EmptyState,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageToolbar,
+  filterControlClass,
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +72,12 @@ type DictationStatus =
   | "saved"
   | "error";
 
+/** Recording capture mode for the PageToolbar selector. */
+type RecordingMode = "live" | "dictation" | "upload";
+
+/** History filter driven by the KPI cards. */
+type HistoryFilter = "all" | "COMPLETED" | "SAVED" | "DRAFT";
+
 const QUICK_TEMPLATES = [
   {
     key: "preventive",
@@ -72,6 +96,34 @@ const QUICK_TEMPLATES = [
   },
 ];
 
+/**
+ * Probe the duration of an uploaded audio file via its metadata. The object
+ * URL is created purely in-memory and revoked immediately — the raw audio
+ * buffer itself never leaves client memory before the STT upload (GDPR §7).
+ */
+function probeAudioDuration(blob: Blob): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const audio = document.createElement("audio");
+    audio.preload = "metadata";
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      audio.removeAttribute("src");
+    };
+    audio.onloadedmetadata = () => {
+      const duration = audio.duration;
+      cleanup();
+      if (Number.isFinite(duration) && duration > 0) resolve(duration);
+      else reject(new Error("duration-unavailable"));
+    };
+    audio.onerror = () => {
+      cleanup();
+      reject(new Error("metadata-unavailable"));
+    };
+    audio.src = url;
+  });
+}
+
 function VoiceDictationContent() {
   const { t } = useI18n();
   const router = useRouter();
@@ -81,9 +133,13 @@ function VoiceDictationContent() {
   const simulateMicParam = searchParams.get("simulateMic");
   const isSimulateMicRequested = simulateMicParam === "true" || simulateMicParam === "1";
   const recordingButtonRef = useRef<RecordingButtonHandle>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<"editor" | "history">("editor");
+  // Recording capture mode (toolbar): ambient live scribe, push-to-dictate,
+  // or an existing audio file upload (all feed the same STT pipeline).
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>("dictation");
 
   // Patient
   const [selectedPatient, setSelectedPatient] = useState<{
@@ -129,6 +185,12 @@ function VoiceDictationContent() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  // Persistent microphone failure (permission denial / no hardware) rendered
+  // as an informative alert card with browser permission instructions.
+  const [micError, setMicError] = useState<string | null>(null);
+  // Transcription/AI pipeline failure — the recorded buffer is preserved so
+  // the clinician can retry without re-dictating.
+  const [processError, setProcessError] = useState<string | null>(null);
 
   // Processing state
   const [status, setStatus] = useState<DictationStatus>("idle");
@@ -142,11 +204,14 @@ function VoiceDictationContent() {
   });
   const [activeStyle, setActiveStyle] = useState<SoapStyle>("standard");
   const [copied, setCopied] = useState(false);
+  // History tab: KPI counts also act as the status filter.
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
 
   // UI modals
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
+  const [savedFinalized, setSavedFinalized] = useState(false);
   // Human-in-the-loop: AI transcription is saved as a draft unless the
   // clinician explicitly confirms the content for finalization.
   const [clinicianConfirmed, setClinicianConfirmed] = useState(false);
@@ -193,7 +258,8 @@ function VoiceDictationContent() {
     },
   });
 
-  // Create object URL for audio preview
+  // Create object URL for audio preview (revoked on replace/unmount — the raw
+  // audio buffer lives only in client memory until the STT upload).
   useEffect(() => {
     if (audioBlob) {
       const url = URL.createObjectURL(audioBlob);
@@ -212,7 +278,9 @@ function VoiceDictationContent() {
     setRawTranscript("");
     setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
     setSavedNoteId(null);
+    setSavedFinalized(false);
     setFormattingDegraded(null);
+    setProcessError(null);
   }, []);
 
   const handleRecordingComplete = useCallback(
@@ -223,8 +291,47 @@ function VoiceDictationContent() {
       setRawTranscript("");
       setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
       setSavedNoteId(null);
+      setSavedFinalized(false);
+      setProcessError(null);
+      // A finished recording proves the microphone works again — clear the
+      // persistent permission alert if it was still visible.
+      setMicError(null);
     },
     [],
+  );
+
+  // File-upload capture mode: validate, probe duration, and feed the SAME
+  // STT pipeline as a mic recording (no new endpoints), keeping the buffer
+  // strictly in client memory (never persisted to storage — GDPR §7).
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith("audio/")) {
+        toast.error(
+          t(
+            "voice.upload.invalidType",
+            "Vybraný súbor nie je audio nahrávka. Zvoľte audio súbor (mp3, webm, m4a...).",
+          ),
+        );
+        return;
+      }
+      setMicError(null);
+      setProcessError(null);
+      setStatus("idle");
+      setDictationId(null);
+      setRawTranscript("");
+      setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
+      setSavedNoteId(null);
+      setSavedFinalized(false);
+      setAudioBlob(file);
+      setAudioDuration(0);
+      try {
+        const duration = await probeAudioDuration(file);
+        setAudioDuration(Math.max(1, Math.round(duration)));
+      } catch {
+        // Metadata probing is best-effort; the process step does not depend on it.
+      }
+    },
+    [t],
   );
 
   // Blob to base64 helper
@@ -247,6 +354,7 @@ function VoiceDictationContent() {
     if (!selectedPatient || !audioBlob) return;
 
     setStatus("processing");
+    setProcessError(null);
     try {
       const audioBase64 = await blobToBase64(audioBlob);
 
@@ -307,6 +415,9 @@ function VoiceDictationContent() {
               ? err.message
               : t("voice.page.processingFailed", "Spracovanie diktovania zlyhalo");
       toast.error(message);
+      // Keep the recorded buffer intact: the clinician can retry processing
+      // from the error card (or the process button) without re-dictating.
+      setProcessError(message);
       setStatus("error");
     }
   }, [
@@ -409,6 +520,7 @@ function VoiceDictationContent() {
 
       setStatus("saved");
       setSavedNoteId(note.id);
+      setSavedFinalized(note.status === "finalized");
       toast.success(
         note.status === "finalized"
           ? t("voice.page.savedFinalized", "SOAP záznam bol potvrdený a uložený do kartotéky")
@@ -459,6 +571,10 @@ function VoiceDictationContent() {
       plan: item.plan ?? "",
     });
     setStatus(item.status === "COMPLETED" ? "done" : "idle");
+    setProcessError(null);
+    setMicError(null);
+    setSavedNoteId(null);
+    setSavedFinalized(false);
     setActiveTab("editor");
     toast.info(t("voice.page.loadedToEditor", "Diktát načítaný do editora"));
   };
@@ -615,7 +731,9 @@ function VoiceDictationContent() {
 
   const isProcessing = status === "processing";
   const canRecord = !!selectedPatient && !isProcessing;
-  const hasRecording = !!audioBlob && status === "idle";
+  // Keep the recorded buffer visible in the error state so the retry action
+  // (or a repeated process attempt) never loses the dictation.
+  const hasRecording = !!audioBlob && (status === "idle" || status === "error");
   const hasSoapContent = Boolean(
     soapSections.subjective ||
     soapSections.objective ||
@@ -623,135 +741,270 @@ function VoiceDictationContent() {
     soapSections.plan,
   );
 
+  // Zákon č. 139/1998 Z. z. marker: when the dictated text mentions a
+  // controlled (narcotic/psychotropic) substance, dosages, prices and billing
+  // items must NOT be auto-prefilled — the vet enters them manually and logs
+  // them into the controlled register (Kniha OPL).
+  const controlledSubstanceDetected = useMemo(() => {
+    const clinicalText = [
+      rawTranscript,
+      soapSections.assessment,
+      soapSections.plan,
+    ].join(" ");
+    if (!clinicalText.trim()) return false;
+    return isControlledSubstanceName(clinicalText);
+  }, [rawTranscript, soapSections.assessment, soapSections.plan]);
+
+  // History KPIs + filter
+  const historyItems = useMemo(
+    () => (historyQuery.data ?? []) as any[],
+    [historyQuery.data],
+  );
+  const historyCounts = useMemo(() => {
+    const counts = { total: 0, completed: 0, saved: 0, drafts: 0 };
+    for (const item of historyItems) {
+      counts.total += 1;
+      if (item.status === "COMPLETED") counts.completed += 1;
+      else if (item.status === "SAVED") counts.saved += 1;
+      else counts.drafts += 1;
+    }
+    return counts;
+  }, [historyItems]);
+  const filteredHistoryItems = useMemo(() => {
+    if (historyFilter === "all") return historyItems;
+    if (historyFilter === "COMPLETED")
+      return historyItems.filter((i) => i.status === "COMPLETED");
+    if (historyFilter === "SAVED")
+      return historyItems.filter((i) => i.status === "SAVED");
+    return historyItems.filter(
+      (i) => i.status !== "COMPLETED" && i.status !== "SAVED",
+    );
+  }, [historyItems, historyFilter]);
+
+  const statusLabels: Record<DictationStatus, string> = {
+    idle: t("voice.status.idle", "Pripravené"),
+    recording: t("voice.status.recording", "Nahrávanie…"),
+    processing: t("voice.status.processing", "Spracúva sa…"),
+    done: t("voice.status.done", "Spracované"),
+    saved: t("voice.status.saved", "Uložené"),
+    error: t("voice.status.error", "Chyba spracovania"),
+  };
+
+  const recordingCardHint = !selectedPatient
+    ? t("voice.recording.hintSelectPatient", "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania.")
+    : recordingMode === "live"
+      ? t(
+          "voice.recording.hintLive",
+          "Spustite ambientný zápis vyšetrenia a hovorte prirodzene — AI štruktúruje reč do SOAP poznámky.",
+        )
+      : recordingMode === "upload"
+        ? t(
+            "voice.recording.hintUpload",
+            "Zvoľte audio súbor s diktovaním a potom ho spracujte rovnako ako živú nahrávku.",
+          )
+        : t("voice.recording.hintReady", "Stlačte mikrofón a diktujte anamnézu, klinický nález a medikáciu.");
+
   return (
-    <div className="flex flex-col gap-6 p-2 sm:p-4 w-full max-w-[1800px] mx-auto">
+    <div className={pageShellClass}>
       {/* Page Header */}
-      <div className="border-b border-border pb-4">
-        <PageHeader
-          title={
-            <span className="flex items-center gap-2">
-              {t("voice.page.title", "Hlasové diktovanie")}
-              <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
-                <Sparkles className="h-3 w-3" />
-                {t("voice.page.badge", "Klinický AI prepis")}
-              </Badge>
-            </span>
-          }
-          subtitle={t(
-            "voice.page.subtitle",
-            "Diktujte záznamy hlasom — AI prepíše a štrukturuje SOAP poznámku.",
-          )}
-          actions={
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="grid grid-cols-2 w-[280px]">
-            <TabsTrigger value="editor" className="gap-1.5">
+      <PageHeader
+        icon={Mic}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            {t("voice.page.title", "Hlasové diktovanie")}
+            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+              <Sparkles className="h-3 w-3" />
+              {t("voice.page.badge", "Klinický AI prepis")}
+            </Badge>
+          </span>
+        }
+        subtitle={t(
+          "voice.page.subtitle",
+          "Diktujte záznamy hlasom — AI prepíše a štrukturuje SOAP poznámku.",
+        )}
+      />
+
+      {/* Section tabs (editor / dictation history) */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "editor" | "history")}>
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="editor" className={underlineTabsTriggerClass}>
             <Mic className="h-4 w-4" />
             {t("voice.page.tabEditor", "Diktovanie")}
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-1.5">
+          </TabsTrigger>
+          <TabsTrigger value="history" className={underlineTabsTriggerClass}>
             <History className="h-4 w-4" />
             {t("voice.page.tabHistory", "História diktátov")}
-            </TabsTrigger>
-            </TabsList>
-            </Tabs>
-          }
-        />
-      </div>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {activeTab === "editor" && (
+        /* Recording mode toolbar */
+        <PageToolbar>
+          <label
+            htmlFor="voice-recording-mode"
+            className="text-xs font-medium text-muted-foreground"
+          >
+            {t("voice.modes.label", "Režim nahrávania")}
+          </label>
+          <select
+            id="voice-recording-mode"
+            className={filterControlClass}
+            value={recordingMode}
+            onChange={(e) => {
+              setRecordingMode(e.target.value as RecordingMode);
+              setMicError(null);
+            }}
+            data-testid="voice-recording-mode"
+          >
+            <option value="live">
+              {t("voice.modes.live", "Ambientný zápis naživo")}
+            </option>
+            <option value="dictation">
+              {t("voice.modes.dictation", "Diktovanie poznámky")}
+            </option>
+            <option value="upload">
+              {t("voice.modes.upload", "Nahrať audio súbor")}
+            </option>
+          </select>
+          <Badge
+            variant={status === "error" ? "destructive" : "secondary"}
+            className="text-xs"
+            data-testid="voice-status-pill"
+          >
+            {statusLabels[status]}
+          </Badge>
+          <span className="text-xs text-muted-foreground sm:ml-auto">
+            {selectedPatient
+              ? `${selectedPatient.name} · ${selectedPatient.clientName}`
+              : t("voice.history.noPatient", "Nie je vybraný žiadny pacient")}
+          </span>
+        </PageToolbar>
+      )}
 
       {activeTab === "history" ? (
         /* History View */
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              {t("voice.history.title", "História hlasových diktovaní")}
-            </CardTitle>
-            <CardDescription>
-              {selectedPatient
-                ? t("voice.history.forPatient", "Zoznam predchádzajúcich diktovaní pre pacienta {name}.", { name: selectedPatient.name })
-                : t("voice.history.selectPatientHint", "Vyberte pacienta v editore pre zobrazenie histórie jeho diktovaní.")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!selectedPatient ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm font-medium">{t("voice.history.noPatient", "Nie je vybraný žiadny pacient")}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("voice.history.noPatientHint", "Vráťte sa do editora a vyberte pacienta, ktorého históriu si prajete zobraziť.")}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveTab("editor")}
-                  className="mt-4 text-xs"
-                >
-                  {t("voice.history.goToEditor", "Prejsť do editora")}
-                </Button>
+        <>
+          <KpiGrid>
+            <KpiCard
+              label={t("voice.kpi.total", "Diktáty celkom")}
+              value={historyCounts.total}
+              icon={Layers}
+              active={historyFilter === "all"}
+              onClick={() => setHistoryFilter("all")}
+            />
+            <KpiCard
+              label={t("voice.kpi.processed", "Spracované")}
+              value={historyCounts.completed}
+              icon={CheckCircle2}
+              tone="primary"
+              active={historyFilter === "COMPLETED"}
+              onClick={() => setHistoryFilter("COMPLETED")}
+            />
+            <KpiCard
+              label={t("voice.kpi.savedInChart", "Uložené v karte")}
+              value={historyCounts.saved}
+              icon={Save}
+              active={historyFilter === "SAVED"}
+              onClick={() => setHistoryFilter("SAVED")}
+            />
+            <KpiCard
+              label={t("voice.kpi.drafts", "Koncepty do podpisu")}
+              value={historyCounts.drafts}
+              icon={PencilLine}
+              tone="warning"
+              active={historyFilter === "DRAFT"}
+              onClick={() => setHistoryFilter("DRAFT")}
+            />
+          </KpiGrid>
+
+          <DataTableFrame>
+            <div className="border-b border-border px-4 py-3">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold">
+                  {t("voice.history.title", "História hlasových diktovaní")}
+                </h2>
               </div>
-            ) : historyQuery.isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : !historyQuery.data || historyQuery.data.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">
-                  {t("voice.history.empty", "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne diktáty.", { name: selectedPatient.name })}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {historyQuery.data.map((item: any) => (
-                  <Card key={item.id} className="hover:border-primary/50 transition-colors">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base font-semibold">
-                          {t("voice.history.itemTitle", "Diktát")} — {new Date(item.createdAt).toLocaleDateString("sk-SK")}
-                        </CardTitle>
-                        <Badge
-                          variant={
-                            item.status === "COMPLETED"
-                              ? "default"
+              <p className="mt-1 text-xs text-muted-foreground">
+                {selectedPatient
+                  ? t("voice.history.forPatient", "Zoznam predchádzajúcich diktovaní pre pacienta {name}.", { name: selectedPatient.name })
+                  : t("voice.history.selectPatientHint", "Vyberte pacienta v editore pre zobrazenie histórie jeho diktovaní.")}
+              </p>
+            </div>
+            <div className="p-4">
+              {!selectedPatient ? (
+                <EmptyState
+                  icon={Stethoscope}
+                  title={t("voice.history.noPatient", "Nie je vybraný žiadny pacient")}
+                  description={t("voice.history.noPatientHint", "Vráťte sa do editora a vyberte pacienta, ktorého históriu si prajete zobraziť.")}
+                  action={{
+                    label: t("voice.history.goToEditor", "Prejsť do editora"),
+                    onClick: () => setActiveTab("editor"),
+                  }}
+                />
+              ) : historyQuery.isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredHistoryItems.length === 0 ? (
+                <EmptyState
+                  icon={FileText}
+                  title={t("voice.history.empty", "Pre pacienta {name} zatiaľ neboli zaznamenané žiadne diktáty.", { name: selectedPatient.name })}
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {filteredHistoryItems.map((item: any) => (
+                    <Card key={item.id} className="hover:border-primary/50 transition-colors">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-semibold">
+                            {t("voice.history.itemTitle", "Diktát")}{" — "}{new Date(item.createdAt).toLocaleDateString("sk-SK")}
+                          </CardTitle>
+                          <Badge
+                            variant={
+                              item.status === "COMPLETED"
+                                ? "default"
+                                : item.status === "SAVED"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                            className="text-xs"
+                          >
+                            {item.status === "COMPLETED"
+                              ? t("voice.history.statusCompleted", "Spracované")
                               : item.status === "SAVED"
-                                ? "secondary"
-                                : "outline"
-                          }
-                          className="text-xs"
+                                ? t("voice.history.statusSaved", "Uložené v karte")
+                                : t("voice.history.statusDraft", "Koncept")}
+                          </Badge>
+                        </div>
+                        <CardDescription className="line-clamp-2 text-xs mt-1">
+                          {item.assessment || item.rawTranscript || t("voice.history.noDescription", "Bez popisu nálezu")}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-2 flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {item.audioDurationSeconds
+                            ? t("voice.history.audioSeconds", "{seconds} s audia", { seconds: item.audioDurationSeconds })
+                            : t("voice.history.itemTitle", "Diktát")}
+                        </span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleSelectHistoryItem(item)}
+                          className="gap-1.5 text-xs"
                         >
-                          {item.status === "COMPLETED"
-                            ? t("voice.history.statusCompleted", "Spracované")
-                            : item.status === "SAVED"
-                              ? t("voice.history.statusSaved", "Uložené v karte")
-                              : t("voice.history.statusDraft", "Koncept")}
-                        </Badge>
-                      </div>
-                      <CardDescription className="line-clamp-2 text-xs mt-1">
-                        {item.assessment || item.rawTranscript || t("voice.history.noDescription", "Bez popisu nálezu")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {item.audioDurationSeconds
-                          ? t("voice.history.audioSeconds", "{seconds} s audia", { seconds: item.audioDurationSeconds })
-                          : t("voice.history.itemTitle", "Diktát")}
-                      </span>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleSelectHistoryItem(item)}
-                        className="gap-1.5 text-xs"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        {t("voice.history.loadToEditor", "Načítať do editora")}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          {t("voice.history.loadToEditor", "Načítať do editora")}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DataTableFrame>
+        </>
       ) : (
         /* Main 2-Column Editor Layout */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -915,25 +1168,108 @@ function VoiceDictationContent() {
                   )}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {selectedPatient
-                    ? t("voice.recording.hintReady", "Stlačte mikrofón a diktujte anamnézu, klinický nález a medikáciu.")
-                    : t("voice.recording.hintSelectPatient", "Najprv zvoľte pacienta vyššie pre aktiváciu nahrávania.")}
+                  {recordingCardHint}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                <RecordingButton
-                  ref={recordingButtonRef}
-                  onRecordingComplete={handleRecordingComplete}
-                  onCommandDetected={(actionKey, phrase) => {
-                    handleExecuteVoiceCommand(actionKey, phrase);
-                  }}
-                  disabled={!canRecord}
-                  size="large"
-                  initialSimulated={isSimulateMicRequested}
-                  onSimulationModeChange={(simulated) => setIsSimulatedMicMode(simulated)}
-                />
+                {/* Persistent microphone permission / hardware alert card with
+                    browser permission instructions and an actionable retry. */}
+                {micError && (
+                  <div
+                    className="w-full flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs leading-relaxed text-foreground"
+                    data-testid="voice-mic-error-card"
+                    role="alert"
+                  >
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                    <div className="flex-1 space-y-2">
+                      <strong className="block font-semibold">
+                        {t("voice.micError.title", "Mikrofón nie je dostupný")}
+                      </strong>
+                      <p>{micError}</p>
+                      <p className="text-muted-foreground">
+                        {t(
+                          "voice.micError.instructions",
+                          "Povoľte mikrofón cez ikonu zámku vľavo od adresného riadku prehliadača (Povolenia → Mikrofón), potom obnovte stránku. Vo Windows skontrolujte Nastavenia → Súkromie → Mikrofón.",
+                        )}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => {
+                            setMicError(null);
+                            void recordingButtonRef.current?.start();
+                          }}
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          {t("voice.micError.retry", "Skúsiť mikrofón znova")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-muted-foreground"
+                          onClick={() => setMicError(null)}
+                        >
+                          {t("voice.micError.dismiss", "Zavrieť upozornenie")}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                {!isSimulatedMicMode && (
+                {recordingMode === "upload" ? (
+                  /* File-upload capture mode */
+                  <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-5 text-center">
+                    <Upload className="h-8 w-8 text-primary" />
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "voice.upload.hint",
+                        "Zvoľte audio nahrávku diktovania (mp3, webm, m4a, wav). Súbor zostáva vo vašom prehliadači až do odoslania na spracovanie.",
+                      )}
+                    </p>
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      data-testid="voice-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleUploadFile(file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!selectedPatient || isProcessing}
+                      onClick={() => uploadInputRef.current?.click()}
+                      className="gap-2 text-xs font-semibold"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      {t("voice.upload.button", "Vybrať audio súbor")}
+                    </Button>
+                  </div>
+                ) : (
+                  <RecordingButton
+                    ref={recordingButtonRef}
+                    onRecordingComplete={handleRecordingComplete}
+                    onCommandDetected={(actionKey, phrase) => {
+                      handleExecuteVoiceCommand(actionKey, phrase);
+                    }}
+                    onMicError={(message) => setMicError(message)}
+                    disabled={!canRecord}
+                    size="large"
+                    initialSimulated={isSimulateMicRequested}
+                    onSimulationModeChange={(simulated) => setIsSimulatedMicMode(simulated)}
+                  />
+                )}
+
+                {recordingMode !== "upload" && !isSimulatedMicMode && (
                   <Button
                     type="button"
                     variant="outline"
@@ -951,6 +1287,46 @@ function VoiceDictationContent() {
                   </Button>
                 )}
 
+                {/* Transcription/processing failure — recorded buffer kept. */}
+                {processError && status === "error" && (
+                  <div
+                    className="w-full flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs leading-relaxed text-foreground"
+                    data-testid="voice-process-error-card"
+                    role="alert"
+                  >
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                    <div className="flex-1 space-y-2">
+                      <strong className="block font-semibold">
+                        {t("voice.processError.title", "Spracovanie diktátu zlyhalo")}
+                      </strong>
+                      <p>{processError}</p>
+                      <p className="text-muted-foreground">
+                        {t(
+                          "voice.processError.preservedNote",
+                          "Nahrávka zostala zachovaná — nič sa nestratilo. Skontrolujte pripojenie na internet a skúste spracovanie znova.",
+                        )}
+                      </p>
+                      <div className="pt-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          disabled={uploadAndProcessMutation.isPending}
+                          onClick={() => void handleProcess()}
+                          data-testid="voice-process-retry"
+                        >
+                          {uploadAndProcessMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-3 w-3" />
+                          )}
+                          {t("voice.processError.retry", "Skúsiť spracovanie znova")}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Recorded Audio Preview */}
                 {hasRecording && audioUrl && (
                   <div className="w-full space-y-3 pt-2">
@@ -958,6 +1334,14 @@ function VoiceDictationContent() {
                       src={audioUrl}
                       title={t("voice.recording.playerTitle", "Záznam diktátu ({seconds} sekúnd)", { seconds: audioDuration })}
                     />
+
+                    <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                      <Info className="mt-0.5 h-3 w-3 shrink-0" />
+                      {t(
+                        "voice.recording.retentionNote",
+                        "Surový audio záznam sa podľa GDPR pravidiel do 24 hodín automaticky vymaže zo servera; v karte pacienta ostáva iba klinický text.",
+                      )}
+                    </p>
 
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <Button
@@ -967,6 +1351,8 @@ function VoiceDictationContent() {
                         onClick={() => {
                           setAudioBlob(null);
                           setAudioDuration(0);
+                          setProcessError(null);
+                          setStatus("idle");
                         }}
                         className="text-xs gap-1"
                       >
@@ -976,11 +1362,12 @@ function VoiceDictationContent() {
 
                       <Button
                         type="button"
+                        size="sm"
                         onClick={handleProcess}
-                        className="gap-2 py-4 text-xs font-semibold shadow-sm"
+                        className="gap-2 text-xs font-semibold shadow-sm"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
-                        {t("voice.recording.process", "Spracovať cez Gemini AI")}
+                        {t("voice.recording.process", "Spracovať cez AI")}
                       </Button>
                     </div>
                   </div>
@@ -1044,15 +1431,26 @@ function VoiceDictationContent() {
             )}
           </div>
 
-          {/* Right Column: SOAP Preview & Actions */}
+          {/* Right Column: SOAP Extraction Preview & Actions */}
           <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 flex flex-col gap-4">
-            <Card className="flex flex-col h-full min-h-[550px] shadow-sm">
-              <CardHeader className="pb-3 border-b border-border flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-2">
+            <DataTableFrame className="flex flex-col h-full min-h-[550px]">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-base font-semibold">
+                  <h2 className="text-base font-semibold">
                     {t("voice.soapCard.title", "Klinický SOAP záznam")}
-                  </CardTitle>
+                  </h2>
+                  {hasSoapContent && (
+                    <Badge
+                      variant={savedFinalized ? "default" : "outline"}
+                      className="text-[10px]"
+                      data-testid="voice-soap-draft-badge"
+                    >
+                      {savedFinalized
+                        ? t("voice.soapCard.finalizedBadge", "Finalizované veterinárom")
+                        : t("voice.soapCard.draftBadge", "Koncept — čaká na podpis veterinára")}
+                    </Badge>
+                  )}
                 </div>
 
                 {hasSoapContent && (
@@ -1072,11 +1470,18 @@ function VoiceDictationContent() {
                     </Button>
                   </div>
                 )}
-              </CardHeader>
+              </div>
 
-              <CardContent className="flex-1 flex flex-col p-4 space-y-4">
+              <div className={cn("flex-1 flex flex-col p-4 space-y-4", !hasSoapContent && "justify-center")}>
                 {hasSoapContent ? (
                   <div className="flex-1 flex flex-col space-y-4">
+                    <p className="text-[11px] text-muted-foreground">
+                      {t(
+                        "voice.soapCard.draftStatutoryNote",
+                        "Podľa zákona č. 39/2007 Z. z. zostáva AI návrh konceptom, kým ho nepotvrdí a nepodpíše veterinár v kartotéke.",
+                      )}
+                    </p>
+
                     <SoapPreview
                       sections={soapSections}
                       editable
@@ -1085,6 +1490,32 @@ function VoiceDictationContent() {
                       onReformat={handleReformat}
                       isReformatting={formatTextMutation.isPending}
                     />
+
+                    {/* Controlled substances marker (Zákon č. 139/1998 Z. z.)
+                        — dosage, price and billing fields must stay blank for
+                        manual entry when a narcotic/psychotropic agent is
+                        detected in the dictated text (zero AI prefill). */}
+                    {controlledSubstanceDetected && (
+                      <div
+                        className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200"
+                        data-testid="voice-controlled-substance-warning"
+                        role="alert"
+                      >
+                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <div>
+                          <strong className="mb-0.5 block font-semibold">
+                            {t(
+                              "voice.controlled.title",
+                              "Rozpoznaná omamná / psychotropná látka (Zákon č. 139/1998 Z. z.)",
+                            )}
+                          </strong>
+                          {t(
+                            "voice.controlled.description",
+                            "Dávky, jednotkové ceny ani fakturačné položky týchto látok sa automaticky nepredvypĺňajú. Zadajte ich ručne a zapíšte do Knihy OPL (kontrolovaných látok).",
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Footer Save CTA */}
                     <div className="pt-3 border-t space-y-3">
@@ -1156,18 +1587,14 @@ function VoiceDictationContent() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center flex-1 py-16 text-muted-foreground text-center">
-                    <Mic className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm font-medium text-foreground">
-                      {t("voice.soapCard.empty", "Žiadny vygenerovaný SOAP záznam")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                      {t("voice.soapCard.emptyHint", "Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo.")}
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={Mic}
+                    title={t("voice.soapCard.empty", "Žiadny vygenerovaný SOAP záznam")}
+                    description={t("voice.soapCard.emptyHint", "Vyberte pacienta, nahrajte hlasový záznam alebo zvoľte klinický vzor z ponuky vľavo.")}
+                  />
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </DataTableFrame>
           </div>
         </div>
       )}
