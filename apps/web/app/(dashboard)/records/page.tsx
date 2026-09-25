@@ -6,9 +6,10 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Search,
+  BookOpen,
   FileText,
   PawPrint,
+  Paperclip,
   Syringe,
   Pill,
   ClipboardList,
@@ -29,6 +30,7 @@ import {
   Scale,
   Activity,
   Stethoscope,
+  ArrowUpRight,
 } from "lucide-react";
 import { StatusPulseBadge } from "@/components/ui/status-pulse-badge";
 import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
@@ -42,7 +44,20 @@ import { soapSectionText } from "@/lib/records/soap-content";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageToolbar,
+  SearchField,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
@@ -59,6 +74,12 @@ import {
   PATIENT_SEARCH_MAX_LENGTH,
   isPatientSearchInputValid,
 } from "@/lib/patients/policy";
+import {
+  PATIENT_SPECIES_EMOJI,
+  PATIENT_SPECIES_OPTIONS,
+  formatSpecies,
+  type PatientSpecies,
+} from "@/lib/patients/species";
 import type { PrescriptionSafetyWarning } from "@/lib/records/prescription-safety";
 import { buildLabTrends } from "@/lib/records/clinical-trends";
 import {
@@ -128,6 +149,51 @@ function isTab(value: string | null): value is Tab {
   return tabs.some((tab) => tab.id === value);
 }
 
+/**
+ * Top-level underline sections of the clinical chart. The seven historical
+ * record tabs stay addressable through `?tab=` (encounter deep links rely on
+ * `tab=prescriptions&new=1` etc.); every non-SOAP tab lives under "records".
+ */
+type Section = "soap" | "records" | "history" | "attachments";
+
+const sections: { id: Section; icon: React.ElementType }[] = [
+  { id: "soap", icon: FileText },
+  { id: "records", icon: ClipboardList },
+  { id: "history", icon: History },
+  { id: "attachments", icon: Paperclip },
+];
+
+function isSection(value: string | null): value is Section {
+  return sections.some((section) => section.id === value);
+}
+
+function sectionForTab(tab: Tab): Section {
+  return tab === "soap" ? "soap" : "records";
+}
+
+/** Sections hidden from front_desk (SOAP content is clinician-only). */
+const frontDeskRestrictedSections: Section[] = ["soap"];
+
+type HistoryEntry = {
+  id: string;
+  tab: Tab;
+  date: Date | string | null;
+  sortKey: number;
+  title: string;
+  detail: string | null;
+  actor: string | null;
+  enteredInError: boolean;
+};
+
+function historySortKey(value: Date | string | null | undefined): number {
+  if (!value) return 0;
+  const time = (value instanceof Date ? value : new Date(value)).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+/** Visits that actually happened — cancelled / no-show slots are not visits. */
+const NON_VISIT_APPOINTMENT_STATUSES = new Set(["cancelled", "no_show"]);
+
 function RecordsChartChunkLoading() {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -150,6 +216,26 @@ const LabTrendCharts = dynamic(
     ssr: false,
     loading: RecordsChartChunkLoading,
   }
+);
+
+function RecordsAttachmentsChunkLoading() {
+  return (
+    <div className="space-y-3">
+      <div className="h-9 w-64 animate-pulse rounded bg-muted" />
+      <div className="h-32 w-full animate-pulse rounded bg-muted" />
+    </div>
+  );
+}
+
+const RecordsAttachments = dynamic(
+  () =>
+    import("@/components/patients/sections/documents-tab").then(
+      (mod) => mod.DocumentsTab,
+    ),
+  {
+    ssr: false,
+    loading: RecordsAttachmentsChunkLoading,
+  },
 );
 
 const PrescriptionLifecycleControl = dynamic(
@@ -645,6 +731,8 @@ function RecordsPageContent() {
     clientLastName: string | null;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("soap");
+  const [activeSection, setActiveSection] = useState<Section>("soap");
+  const [speciesFilter, setSpeciesFilter] = useState<PatientSpecies | "">("");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [showVaccinationForm, setShowVaccinationForm] = useState(false);
   const [showProblemForm, setShowProblemForm] = useState(false);
@@ -707,6 +795,9 @@ function RecordsPageContent() {
     const linkedTab = requestedTab;
     if (isTab(linkedTab)) {
       setActiveTab(linkedTab);
+      setActiveSection(sectionForTab(linkedTab));
+    } else if (isSection(linkedTab)) {
+      setActiveSection(linkedTab);
     }
     setShowVaccinationForm(false);
     setVaccinationForm(initialVaccinationForm());
@@ -754,7 +845,7 @@ function RecordsPageContent() {
     { enabled: canSearchReplacementPatients }
   );
   const recentPatientsQuery = trpc.patients.list.useQuery(
-    { limit: 25 },
+    { limit: 25, species: speciesFilter || undefined },
     { enabled: !selectedPatient && !canSearchPatients }
   );
 
@@ -848,6 +939,7 @@ function RecordsPageContent() {
     }
     appliedSoapHash.current = noteId;
     setActiveTab("soap");
+    setActiveSection("soap");
     setExpandedNoteId(noteId);
     window.requestAnimationFrame(() =>
       document
@@ -997,6 +1089,7 @@ function RecordsPageContent() {
     );
     if (!source || !source.correctionId || source.replacementLabResultId) return;
     setActiveTab("labResults");
+    setActiveSection("records");
     setLabForm({
       testName: source.testName,
       resultValue: "",
@@ -1062,9 +1155,195 @@ function RecordsPageContent() {
     (tab) =>
       userRole !== "front_desk" || !frontDeskRestrictedTabs.includes(tab.id)
   );
-  const currentTab = visibleTabs.some((tab) => tab.id === activeTab)
+  const visibleRecordTabs = visibleTabs.filter((tab) => tab.id !== "soap");
+  // Clamped record tab (never "soap", never a tab the role cannot see).
+  const currentTab = visibleTabs.some(
+    (tab) => tab.id === activeTab && tab.id !== "soap"
+  )
     ? activeTab
-    : visibleTabs[0]?.id;
+    : visibleRecordTabs[0]?.id;
+  const visibleSections = sections.filter(
+    (section) =>
+      userRole !== "front_desk" ||
+      !frontDeskRestrictedSections.includes(section.id)
+  );
+  const currentSection = visibleSections.some(
+    (section) => section.id === activeSection
+  )
+    ? activeSection
+    : visibleSections[0]?.id;
+
+  function openRecordTab(tab: Tab) {
+    setActiveTab(tab);
+    setActiveSection(sectionForTab(tab));
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    history.replaceState(null, "", url.toString());
+  }
+
+  // KPI strip: total visits, average visit duration, open diagnoses.
+  const patientVisitsQuery = trpc.appointments.listByPatient.useQuery(
+    {
+      patientId: patientId || "00000000-0000-0000-0000-000000000000",
+      limit: 100,
+    },
+    { enabled: Boolean(patientId), staleTime: 60_000 }
+  );
+  const visitKpis = useMemo(() => {
+    const visits = (patientVisitsQuery.data ?? []).filter(
+      (visit) => !NON_VISIT_APPOINTMENT_STATUSES.has(visit.status)
+    );
+    const durations = visits
+      .map(
+        (visit) =>
+          (historySortKey(visit.endTime) - historySortKey(visit.startTime)) /
+          60_000
+      )
+      .filter((minutes) => Number.isFinite(minutes) && minutes > 0);
+    const avgMinutes = durations.length
+      ? Math.round(
+          durations.reduce((sum, minutes) => sum + minutes, 0) /
+            durations.length
+        )
+      : null;
+    return { total: visits.length, avgMinutes };
+  }, [patientVisitsQuery.data]);
+  const openDiagnosesCount = (problems ?? []).filter(
+    (problem) => problem.status !== "resolved"
+  ).length;
+
+  // History: one chronological timeline across every record type the
+  // current role may see. Retained "entered in error" rows stay visible.
+  const historyEntries = useMemo<HistoryEntry[]>(() => {
+    const allowed = new Set(
+      tabs
+        .filter(
+          (tab) =>
+            userRole !== "front_desk" ||
+            !frontDeskRestrictedTabs.includes(tab.id)
+        )
+        .map((tab) => tab.id)
+    );
+    const entries: HistoryEntry[] = [];
+    if (allowed.has("soap")) {
+      for (const note of soapNotes ?? []) {
+        entries.push({
+          id: `soap-${note.id}`,
+          tab: "soap",
+          date: note.createdAt,
+          sortKey: historySortKey(note.createdAt),
+          title:
+            soapSectionText(note.assessment || note.subjective) ||
+            t("records.soap.noNoteRecorded", "No note recorded"),
+          detail: soapSectionText(note.plan) || null,
+          actor: note.finalizerName ?? note.authorName ?? null,
+          enteredInError: Boolean(note.correctionId),
+        });
+      }
+    }
+    if (allowed.has("vaccinations")) {
+      for (const vax of vaccinations ?? []) {
+        entries.push({
+          id: `vaccinations-${vax.id}`,
+          tab: "vaccinations",
+          date: vax.administeredAt,
+          sortKey: historySortKey(vax.administeredAt),
+          title: vax.vaccineName,
+          detail: vax.productName ?? vax.lotNumber ?? null,
+          actor: vax.administeredByName ?? null,
+          enteredInError: Boolean(vax.correctionId),
+        });
+      }
+    }
+    if (allowed.has("prescriptions")) {
+      for (const rx of prescriptionsList ?? []) {
+        entries.push({
+          id: `prescriptions-${rx.id}`,
+          tab: "prescriptions",
+          date: rx.createdAt ?? rx.startDate,
+          sortKey: historySortKey(rx.createdAt ?? rx.startDate),
+          title: rx.medicationName,
+          detail: [rx.dosage, rx.frequency].filter(Boolean).join(" · ") || null,
+          actor: rx.prescriberName ?? null,
+          enteredInError: false,
+        });
+      }
+    }
+    if (allowed.has("problems")) {
+      for (const problem of problems ?? []) {
+        entries.push({
+          id: `problems-${problem.id}`,
+          tab: "problems",
+          date: problem.onsetDate ?? problem.createdAt,
+          sortKey: historySortKey(problem.onsetDate ?? problem.createdAt),
+          title: problem.description,
+          detail:
+            problem.status === "active"
+              ? t("records.problems.statusActive", "Active")
+              : problem.status === "chronic"
+                ? t("records.problems.statusChronic", "Chronic")
+                : t("records.problems.statusResolved", "Resolved"),
+          actor: null,
+          enteredInError: false,
+        });
+      }
+    }
+    if (allowed.has("labResults")) {
+      for (const lab of labResultsList ?? []) {
+        entries.push({
+          id: `labResults-${lab.id}`,
+          tab: "labResults",
+          date: lab.createdAt,
+          sortKey: historySortKey(lab.createdAt),
+          title: lab.testName,
+          detail: lab.resultValue
+            ? `${lab.resultValue}${lab.unit ? ` ${lab.unit}` : ""}`
+            : null,
+          actor: lab.orderedByName ?? null,
+          enteredInError: Boolean(lab.correctionId),
+        });
+      }
+    }
+    if (allowed.has("procedures")) {
+      for (const proc of proceduresList ?? []) {
+        entries.push({
+          id: `procedures-${proc.id}`,
+          tab: "procedures",
+          date: proc.createdAt,
+          sortKey: historySortKey(proc.createdAt),
+          title: proc.name,
+          detail: proc.description ?? null,
+          actor: proc.performedByName ?? null,
+          enteredInError: false,
+        });
+      }
+    }
+    return entries.sort((a, b) => b.sortKey - a.sortKey);
+  }, [
+    labResultsList,
+    prescriptionsList,
+    problems,
+    proceduresList,
+    soapNotes,
+    t,
+    userRole,
+    vaccinations,
+  ]);
+  const historyLoading =
+    isLoadingSoapNotes ||
+    isLoadingVaccinations ||
+    isLoadingPrescriptions ||
+    isLoadingProblems ||
+    isLoadingLabResults ||
+    isLoadingProcedures;
+  const historyHasError = Boolean(
+    soapNotesError ||
+      vaccinationsError ||
+      prescriptionsError ||
+      problemsError ||
+      labResultsError ||
+      proceduresError
+  );
 
   async function refreshLinkedVisit() {
     if (!linkedAppointmentId) return;
@@ -1291,245 +1570,363 @@ function RecordsPageContent() {
     dental: t("records.tabs.dental", "Dental Chart"),
   };
 
+  const sectionLabels: Record<Section, string> = {
+    soap: t("records.sections.soap", "SOAP"),
+    records: t("records.sections.records", "Records"),
+    history: t("records.sections.history", "History"),
+    attachments: t("records.sections.attachments", "Attachments"),
+  };
+
+  function resetRecordForms() {
+    setShowVaccinationForm(false);
+    setVaccinationForm(initialVaccinationForm());
+    setShowProblemForm(false);
+    setProblemForm(initialProblemForm());
+    setShowLabForm(false);
+    setLabForm(initialLabResultForm());
+    setShowProcedureForm(false);
+    setProcedureForm(initialProcedureForm());
+    setShowPrescriptionForm(false);
+    setPrescriptionForm(initialPrescriptionForm());
+  }
+
+  function selectPatient(patient: {
+    id: string;
+    name: string;
+    species: string | null;
+    breed: string | null;
+    clientFirstName: string | null;
+    clientLastName: string | null;
+  }) {
+    setSelectedPatient({
+      id: patient.id,
+      name: patient.name,
+      species: patient.species,
+      breed: patient.breed,
+      clientFirstName: patient.clientFirstName,
+      clientLastName: patient.clientLastName,
+    });
+    setSearchQuery(patient.name);
+    resetRecordForms();
+  }
+
+  const showRecentPatients = !selectedPatient && !canSearchPatients;
+  const recentPatientsTotal = recentPatientsQuery.data?.total ?? 0;
+
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
-        icon={FileText}
-        title={t("records.title", "Clinical Record")}
+        icon={BookOpen}
+        title={t("records.title", "Clinical records")}
         subtitle={t(
           "records.subtitle",
           "Clinical documentation. Identity and owner stay on the patient card.",
         )}
+        actions={
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <Link href="/encounters">
+              <Stethoscope className="h-3.5 w-3.5 text-primary" />
+              {t("records.register.toEncounters", "Vyšetrenia dnes")}
+            </Link>
+          </Button>
+        }
       />
 
-      {/* Patient Search */}
-      <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("records.searchPlaceholder", "Search patients by patient or owner name...")}
+      {/* Toolbar: patient search (+ species filter chips on the register) */}
+      <PageToolbar>
+        <div className="relative w-full min-w-48 flex-1 sm:max-w-md">
+          <SearchField
             value={searchQuery}
             maxLength={PATIENT_SEARCH_MAX_LENGTH}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              if (!e.target.value) setSelectedPatient(null);
+            placeholder={t("records.searchPlaceholder", "Search patients by patient or owner name...")}
+            className="sm:max-w-none"
+            onChange={(value) => {
+              setSearchQuery(value);
+              if (!value) setSelectedPatient(null);
             }}
-            className="h-11 pl-10 sm:h-10"
           />
+
+          {/* Search Dropdown */}
+          {canSearchPatients &&
+            !selectedPatient &&
+            (isSearchingPatients ||
+              patientSearchError ||
+              patientSearchMissing ||
+              searchResults) && (
+            <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">
+              {patientSearchError || patientSearchMissing ? (
+                <div className="px-3 py-2 text-xs text-destructive">
+                  {patientSearchError?.message ??
+                    t("records.searchError", "Unable to search patients. Please retry.")}
+                </div>
+              ) : isSearchingPatients ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t("records.searchingPatients", "Searching patients...")}
+                </div>
+              ) : searchResults && searchResults.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-muted-foreground">
+                  {t("records.noPatientsFound", "No patients found")}
+                </div>
+              ) : (
+                searchResults?.map((patient) => (
+                  <button
+                    key={patient.id}
+                    type="button"
+                    onClick={() => selectPatient(patient)}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-muted/50 first:rounded-t-lg last:rounded-b-lg transition-colors"
+                  >
+                    <div>
+                      <span className="font-medium">{patient.name}</span>
+                      <span className="ml-2 text-muted-foreground">
+                        {patient.species ? formatSpecies(patient.species, t) : ""}
+                        {patient.breed ? ` - ${patient.breed}` : ""}
+                      </span>
+                    </div>
+                    {patient.clientFirstName && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {t("records.ownerLabel", "Owner: {firstName} {lastName}", {
+                          firstName: patient.clientFirstName,
+                          lastName: patient.clientLastName ?? "",
+                        })}
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Search Dropdown */}
-        {canSearchPatients &&
-          !selectedPatient &&
-          (isSearchingPatients ||
-            patientSearchError ||
-            patientSearchMissing ||
-            searchResults) && (
-          <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">
-            {patientSearchError || patientSearchMissing ? (
-              <div className="px-3 py-2 text-sm text-destructive">
-                {patientSearchError?.message ??
-                  t("records.searchError", "Unable to search patients. Please retry.")}
-              </div>
-            ) : isSearchingPatients ? (
-              <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {t("records.searchingPatients", "Searching patients...")}
-              </div>
-            ) : searchResults && searchResults.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-muted-foreground">
-                {t("records.noPatientsFound", "No patients found")}
-              </div>
-            ) : (
-              searchResults?.map((patient) => (
+        {showRecentPatients ? (
+          <>
+            <div
+              role="group"
+              aria-label={t("records.hub.speciesFilterAria", "Filter by species")}
+              className="flex max-w-full items-center gap-1.5 overflow-x-auto pb-0.5 sm:flex-1"
+            >
+              <button
+                type="button"
+                aria-pressed={speciesFilter === ""}
+                onClick={() => setSpeciesFilter("")}
+                className={cn(
+                  "inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 text-[11px] font-medium transition-colors",
+                  speciesFilter === ""
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                )}
+              >
+                {t("records.register.allSpecies", "Všetky druhy")}
+              </button>
+              {PATIENT_SPECIES_OPTIONS.map((option) => (
                 <button
-                  key={patient.id}
-                  onClick={() => {
-                    setSelectedPatient(patient);
-                    setSearchQuery(patient.name);
-                    setShowVaccinationForm(false);
-                    setVaccinationForm(initialVaccinationForm());
-                    setShowProblemForm(false);
-                    setProblemForm(initialProblemForm());
-                    setShowLabForm(false);
-                    setLabForm(initialLabResultForm());
-                    setShowProcedureForm(false);
-                    setProcedureForm(initialProcedureForm());
-                    setShowPrescriptionForm(false);
-                    setPrescriptionForm(initialPrescriptionForm());
-                  }}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted/50 first:rounded-t-lg last:rounded-b-lg transition-colors"
-                >
-                  <div>
-                    <span className="font-medium">{patient.name}</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {patient.species
-                        ? patient.species.charAt(0).toUpperCase() +
-                          patient.species.slice(1)
-                        : ""}
-                      {patient.breed ? ` - ${patient.breed}` : ""}
-                    </span>
-                  </div>
-                  {patient.clientFirstName && (
-                    <span className="text-xs text-muted-foreground">
-                      {t("records.ownerLabel", "Owner: {firstName} {lastName}", {
-                        firstName: patient.clientFirstName,
-                        lastName: patient.clientLastName ?? "",
-                      })}
-                    </span>
+                  key={option.value}
+                  type="button"
+                  aria-pressed={speciesFilter === option.value}
+                  onClick={() =>
+                    setSpeciesFilter((current) =>
+                      current === option.value ? "" : option.value,
+                    )
+                  }
+                  className={cn(
+                    "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition-colors",
+                    speciesFilter === option.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
                   )}
+                >
+                  <span aria-hidden="true">{PATIENT_SPECIES_EMOJI[option.value]}</span>
+                  {formatSpecies(option.value, t)}
                 </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+            <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+              {t("records.hub.patientCount", "{count} patients", {
+                count: recentPatientsTotal,
+              })}
+            </span>
+          </>
+        ) : null}
+      </PageToolbar>
 
-      {/* Selected Patient Banner */}
-      {selectedPatient && (
-        <div className="mt-4 flex flex-col items-stretch gap-3 rounded-lg border border-border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 text-sm">
-            <span className="block truncate font-medium sm:inline">
-              {selectedPatient.name}
-            </span>
-            <span className="block truncate text-muted-foreground sm:ml-2 sm:inline">
-              {selectedPatient.species
-                ? selectedPatient.species.charAt(0).toUpperCase() +
-                  selectedPatient.species.slice(1)
-                : ""}
-              {selectedPatient.breed ? ` - ${selectedPatient.breed}` : ""}
-            </span>
-            {selectedPatient.clientFirstName && (
-              <span className="block truncate text-muted-foreground sm:ml-3 sm:inline">
-                {t("records.ownerLabel", "Owner: {firstName} {lastName}", {
-                  firstName: selectedPatient.clientFirstName,
-                  lastName: selectedPatient.clientLastName ?? "",
-                })}
+      {/* Selected patient context: identity strip + visit / offline banners */}
+      {selectedPatient ? (
+        <div
+          className="space-y-3"
+          aria-label={t("records.hub.selectedPatientAria", "Selected patient")}
+          role="region"
+        >
+          <div className="flex flex-col items-stretch gap-3 rounded-lg border border-border bg-card px-3 py-2 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 text-sm">
+              <span className="block truncate font-medium sm:inline">
+                {selectedPatient.name}
               </span>
-            )}
+              <span className="block truncate text-xs text-muted-foreground sm:ml-2 sm:inline">
+                {selectedPatient.species
+                  ? formatSpecies(selectedPatient.species, t)
+                  : ""}
+                {selectedPatient.breed ? ` - ${selectedPatient.breed}` : ""}
+              </span>
+              {selectedPatient.clientFirstName && (
+                <span className="block truncate text-xs text-muted-foreground sm:ml-3 sm:inline">
+                  {t("records.ownerLabel", "Owner: {firstName} {lastName}", {
+                    firstName: selectedPatient.clientFirstName,
+                    lastName: selectedPatient.clientLastName ?? "",
+                  })}
+                </span>
+              )}
+            </div>
+            {!linkedAppointmentId ? (
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  asChild
+                >
+                  <Link href={`/patients/${selectedPatient.id}`}>
+                    {t("records.openIdentity", "Otvoriť kartu pacienta")}
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setSelectedPatient(null);
+                    setSearchQuery("");
+                    resetRecordForms();
+                    router.replace("/records");
+                  }}
+                >
+                  {t("records.register.backToRegister", "Card list")}
+                </Button>
+              </div>
+            ) : null}
           </div>
-          {!linkedAppointmentId ? (
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-11 w-full sm:h-9 sm:w-auto"
-                asChild
-              >
-                <Link href={`/patients/${selectedPatient.id}`}>
-                  {t("records.openIdentity", "Otvoriť kartu pacienta")}
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-11 w-full sm:h-9 sm:w-auto"
-                onClick={() => {
-                  setSelectedPatient(null);
-                  setSearchQuery("");
-                  setShowVaccinationForm(false);
-                  setVaccinationForm(initialVaccinationForm());
-                  setShowProblemForm(false);
-                  setProblemForm(initialProblemForm());
-                  setShowLabForm(false);
-                  setLabForm(initialLabResultForm());
-                  setShowProcedureForm(false);
-                  setProcedureForm(initialProcedureForm());
-                  setShowPrescriptionForm(false);
-                  setPrescriptionForm(initialPrescriptionForm());
-                  router.replace("/records");
-                }}
-              >
-                {t("records.register.backToRegister", "Card list")}
-              </Button>
+
+          {linkedAppointmentId && linkedPatientId === selectedPatient.id ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-sm text-teal-950 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-100 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{t("records.recordingForThisVisit", "Recording for this visit")}</p>
+                <p className="mt-0.5 text-xs">
+                  {t("records.recordingForThisVisitDesc", "New clinical work created here will stay attached to the active appointment and appear in checkout reconciliation.")}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 sm:flex-none"
+                  asChild
+                >
+                  <Link href={`/encounters/${linkedAppointmentId}`}>
+                    {t("records.backToVisit", "Back to visit")}
+                  </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="flex-1 sm:flex-none"
+                  asChild
+                >
+                  <Link
+                    href={`/records?patientId=${encodeURIComponent(linkedPatientId)}&tab=${encodeURIComponent(requestedTab ?? "soap")}`}
+                  >
+                    {t("records.leaveVisitContext", "Leave visit context")}
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {!isOnline ? (
+            <div
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
+              role="status"
+            >
+              {t("records.offlineBanner", "Offline — clinical forms stay only on this device. Keep this page open and reconnect before saving a record.")}
             </div>
           ) : null}
         </div>
-      )}
-
-      {selectedPatient &&
-      linkedAppointmentId &&
-      linkedPatientId === selectedPatient.id ? (
-        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-sm text-teal-950 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-100 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-medium">{t("records.recordingForThisVisit", "Recording for this visit")}</p>
-            <p className="mt-0.5 text-xs">
-              {t("records.recordingForThisVisitDesc", "New clinical work created here will stay attached to the active appointment and appear in checkout reconciliation.")}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-11 flex-1 sm:h-9 sm:flex-none"
-              asChild
-            >
-              <Link href={`/encounters/${linkedAppointmentId}`}>
-                {t("records.backToVisit", "Back to visit")}
-              </Link>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-11 flex-1 sm:h-9 sm:flex-none"
-              asChild
-            >
-              <Link
-                href={`/records?patientId=${encodeURIComponent(linkedPatientId)}&tab=${encodeURIComponent(requestedTab ?? "soap")}`}
-              >
-                {t("records.leaveVisitContext", "Leave visit context")}
-              </Link>
-            </Button>
-          </div>
-        </div>
       ) : null}
 
-      {selectedPatient && !isOnline ? (
-        <div
-          className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
-          role="status"
-        >
-          {t("records.offlineBanner", "Offline — clinical forms stay only on this device. Keep this page open and reconnect before saving a record.")}
-        </div>
+      {/* KPI strip for the open chart */}
+      {selectedPatient ? (
+        <KpiGrid className="sm:grid-cols-3">
+          <KpiCard
+            icon={Stethoscope}
+            tone="primary"
+            label={t("records.kpi.totalVisits", "Total visits")}
+            value={patientVisitsQuery.isLoading ? "…" : visitKpis.total}
+          />
+          <KpiCard
+            icon={History}
+            label={t("records.kpi.avgDuration", "Avg. visit duration")}
+            value={
+              <span className="font-mono tabular-nums">
+                {patientVisitsQuery.isLoading
+                  ? "…"
+                  : visitKpis.avgMinutes === null
+                    ? "—"
+                    : t("records.kpi.avgDurationValue", "{minutes} min", {
+                        minutes: visitKpis.avgMinutes,
+                      })}
+              </span>
+            }
+          />
+          <KpiCard
+            icon={AlertTriangle}
+            tone={openDiagnosesCount > 0 ? "warning" : "muted"}
+            label={t("records.kpi.openDiagnoses", "Open diagnoses")}
+            value={isLoadingProblems ? "…" : openDiagnosesCount}
+            active={
+              currentSection === "records" && currentTab === "problems"
+            }
+            onClick={() => openRecordTab("problems")}
+          />
+        </KpiGrid>
       ) : null}
 
-      {/* Tabs */}
-      {selectedPatient && (
+      {/* Underline section tabs: SOAP / Records / History / Attachments */}
+      {selectedPatient && currentSection && (
         <Tabs
-          value={currentTab}
+          value={currentSection}
           onValueChange={(value) => {
-            setActiveTab(value as Tab);
+            if (!isSection(value)) return;
+            setActiveSection(value);
             const url = new URL(window.location.href);
-            url.searchParams.set("tab", value);
+            url.searchParams.set(
+              "tab",
+              value === "records" && currentTab ? currentTab : value,
+            );
             history.replaceState(null, "", url.toString());
           }}
-          className="mt-6"
+          className="space-y-4"
         >
-          <div className="max-w-full overflow-x-auto border-b border-border">
+          <div className="max-w-full overflow-x-auto">
             <TabsList
-              aria-label={t("records.chartSectionsAria", "Sekcie zdravotnej dokumentácie")}
-              className="inline-flex h-auto w-auto min-w-max gap-0 rounded-none bg-transparent p-0"
+              aria-label={t("records.hub.sectionsAria", "Clinical record sections")}
+              className={underlineTabsListClass}
             >
-              {visibleTabs.map((tab) => {
-                const Icon = tab.icon;
+              {visibleSections.map((section) => {
+                const Icon = section.icon;
                 return (
                   <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
-                    className={cn(
-                      "relative flex min-h-11 shrink-0 items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium shadow-none transition-colors data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none",
-                    )}
+                    key={section.id}
+                    value={section.id}
+                    className={cn(underlineTabsTriggerClass, "min-h-11 shrink-0 sm:min-h-0")}
                   >
-                    <Icon className="h-4 w-4" />
-                    {tabLabels[tab.id]}
+                    <Icon className="h-3.5 w-3.5" />
+                    {sectionLabels[section.id]}
                   </TabsTrigger>
                 );
               })}
             </TabsList>
           </div>
 
-          {/* Tab Content */}
-          <div className="mt-6">
+          {/* Section Content */}
+          <div>
             {recordsSettingsError || recordsSettingsMissing ? (
               <RecordsErrorPanel
                 message={
@@ -1546,8 +1943,8 @@ function RecordsPageContent() {
               </>
             ) : (
               <>
-            {/* SOAP Notes Tab */}
-            <TabsContent value="soap" className="mt-6">
+            {/* SOAP Section */}
+            <TabsContent value="soap" className="mt-0">
               <section aria-labelledby="records-section-soap">
               <h2 id="records-section-soap" className="sr-only">{tabLabels.soap}</h2>
               <div>
@@ -1736,35 +2133,35 @@ function RecordsPageContent() {
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Thermometer className="h-4 w-4 text-amber-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Temp</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.temperature", "Temp")}</p>
                                             <p className="font-semibold">{noteVitals.temperatureC ? `${noteVitals.temperatureC} °C` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Heart className="h-4 w-4 text-rose-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Heart Rate</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.heartRate", "Heart Rate")}</p>
                                             <p className="font-semibold">{noteVitals.heartRateBpm ? `${noteVitals.heartRateBpm} bpm` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Wind className="h-4 w-4 text-sky-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Resp. Rate</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.respiratoryRate", "Resp. Rate")}</p>
                                             <p className="font-semibold">{noteVitals.respiratoryRateBpm ? `${noteVitals.respiratoryRateBpm} /min` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Scale className="h-4 w-4 text-emerald-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">Weight</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.weight", "Weight")}</p>
                                             <p className="font-semibold">{noteVitals.weightKg ? `${noteVitals.weightKg} kg` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Activity className="h-4 w-4 text-violet-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">BCS Score</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.bodyCondition", "BCS Score")}</p>
                                             <p className="font-semibold">{noteVitals.bodyConditionScore ? `${noteVitals.bodyConditionScore}/${noteVitals.bodyConditionScale ?? 9}` : "—"}</p>
                                           </div>
                                         </div>
@@ -2020,8 +2417,39 @@ function RecordsPageContent() {
               </section>
             </TabsContent>
 
+            {/* Records Section — record types switch inside one card */}
+            <TabsContent value="records" className="mt-0">
+            {currentTab ? (
+            <Tabs
+              value={currentTab}
+              onValueChange={(value) => {
+                if (isTab(value)) openRecordTab(value);
+              }}
+              className="space-y-4"
+            >
+              <div className="max-w-full overflow-x-auto">
+                <TabsList
+                  aria-label={t("records.hub.recordTypesAria", "Clinical record types")}
+                  className="h-auto w-max min-w-0 justify-start gap-0.5"
+                >
+                  {visibleRecordTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <TabsTrigger
+                        key={tab.id}
+                        value={tab.id}
+                        className="min-h-9 shrink-0 gap-1.5 px-2.5 py-1 text-xs sm:min-h-0"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {tabLabels[tab.id]}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </div>
+
             {/* Vaccinations Tab */}
-            <TabsContent value="vaccinations" className="mt-6">
+            <TabsContent value="vaccinations" className="mt-0">
               <section aria-labelledby="records-section-vaccinations">
               <h2 id="records-section-vaccinations" className="sr-only">{tabLabels.vaccinations}</h2>
               <div>
@@ -2121,26 +2549,26 @@ function RecordsPageContent() {
                 ) : isLoadingVaccinations ? (
                   <RecordsLoadingPanel label={t("records.vaccinations.loading", "Loading vaccinations...")} />
                 ) : vaccinations && vaccinations.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <DataTableFrame>
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.vaccinations.colVaccine", "Vaccine")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.vaccinations.colDateAdministered", "Date Administered")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.vaccinations.colNextDue", "Next Due")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.vaccinations.colAdministeredBy", "Administered By")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.vaccinations.colStatus", "Status")}
                           </th>
-                          <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                          <th className={cn(tableHeadClass, "text-right")}>
                             {t("records.vaccinations.colActions", "Actions")}
                           </th>
                         </tr>
@@ -2155,15 +2583,15 @@ function RecordsPageContent() {
                                 <tr
                                   key={vax.id}
                                   className={cn(
-                                    "border-b border-border last:border-0",
+                                    tableRowClass,
                                     vax.correctionId &&
                                       "bg-destructive/5 text-muted-foreground",
                                   )}
                                 >
-                                  <td className="px-3 py-2 font-medium align-middle">
+                                  <td className={cn(tableCellClass, "font-medium")}>
                                     {vax.vaccineName}
                                   </td>
-                                  <td className="px-3 py-2 whitespace-nowrap align-middle">
+                                  <td className={cn(tableCellClass, "whitespace-nowrap")}>
                                     {vax.administeredAt
                                       ? formatClinicalDate(
                                           vax.administeredAt,
@@ -2171,7 +2599,7 @@ function RecordsPageContent() {
                                         )
                                       : "--"}
                                   </td>
-                                  <td className="px-3 py-2 whitespace-nowrap align-middle">
+                                  <td className={cn(tableCellClass, "whitespace-nowrap")}>
                                     {vax.nextDueDate
                                       ? formatClinicalDate(
                                           vax.nextDueDate,
@@ -2179,10 +2607,10 @@ function RecordsPageContent() {
                                         )
                                       : "--"}
                                   </td>
-                                  <td className="px-3 py-2 text-muted-foreground align-middle">
+                                  <td className={cn(tableCellClass, "text-muted-foreground")}>
                                     {vax.administeredByName ?? "--"}
                                   </td>
-                                  <td className="px-3 py-2 whitespace-nowrap align-middle">
+                                  <td className={cn(tableCellClass, "whitespace-nowrap")}>
                                     {vax.correctionId ? (
                                       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
                                         {t("records.enteredInError", "Entered in error")}
@@ -2204,7 +2632,7 @@ function RecordsPageContent() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-3 py-2 text-right align-middle whitespace-nowrap">
+                                  <td className={cn(tableCellClass, "text-right whitespace-nowrap")}>
                                     <ClinicalCorrectionControl
                                       className="flex justify-end"
                                       timeZone={recordsTimeZone}
@@ -2241,7 +2669,7 @@ function RecordsPageContent() {
                             })}
                       </tbody>
                     </table>
-                  </div>
+                  </DataTableFrame>
                 ) : (
                   <EmptyState
                     icon={Syringe}
@@ -2253,7 +2681,7 @@ function RecordsPageContent() {
             </TabsContent>
 
             {/* Prescriptions Tab */}
-            <TabsContent value="prescriptions" className="mt-6">
+            <TabsContent value="prescriptions" className="mt-0">
               <section aria-labelledby="records-section-prescriptions">
               <h2 id="records-section-prescriptions" className="sr-only">{tabLabels.prescriptions}</h2>
               <div>
@@ -2582,29 +3010,29 @@ function RecordsPageContent() {
                 ) : isLoadingPrescriptions ? (
                   <RecordsLoadingPanel label={t("records.prescriptions.loading", "Loading prescriptions...")} />
                 ) : prescriptionsList && prescriptionsList.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <DataTableFrame>
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.prescriptions.colMedication", "Medication")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.prescriptions.colDosage", "Dosage")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.prescriptions.colFrequency", "Frequency")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.prescriptions.colInventory", "Inventory")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.prescriptions.colStatus", "Status")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.prescriptions.colRefills", "Refills")}
                           </th>
-                          <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                          <th className={cn(tableHeadClass, "text-right")}>
                             {t("records.prescriptions.colActions", "Actions")}
                           </th>
                         </tr>
@@ -2613,16 +3041,16 @@ function RecordsPageContent() {
                         {prescriptionsList.map((rx) => (
                           <tr
                             key={rx.id}
-                            className="border-b border-border last:border-0"
+                            className={tableRowClass}
                           >
-                            <td className="px-3 py-2 font-medium">
+                            <td className={cn(tableCellClass, "font-medium")}>
                               {rx.medicationName}
                             </td>
-                            <td className="px-3 py-2">{rx.dosage ?? "--"}</td>
-                            <td className="px-3 py-2">
+                            <td className={tableCellClass}>{rx.dosage ?? "--"}</td>
+                            <td className={tableCellClass}>
                               {rx.frequency ?? "--"}
                             </td>
-                            <td className="px-3 py-2 text-muted-foreground">
+                            <td className={cn(tableCellClass, "text-muted-foreground")}>
                               {rx.productName ? (
                                 <span>
                                   {rx.productName}
@@ -2636,7 +3064,7 @@ function RecordsPageContent() {
                                 "--"
                               )}
                             </td>
-                            <td className="px-3 py-2">
+                            <td className={tableCellClass}>
                               <span
                                 className={cn(
                                   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
@@ -2652,10 +3080,10 @@ function RecordsPageContent() {
                                       : (rx.effectiveStatus ?? "unknown")}
                               </span>
                             </td>
-                            <td className="px-3 py-2">
+                            <td className={tableCellClass}>
                               {rx.refillsRemaining ?? 0}
                             </td>
-                            <td className="space-y-2 px-3 py-2 text-right align-top">
+                            <td className={cn(tableCellClass, "space-y-2 text-right align-top")}>
                               <div>
                                 <Button
                                   variant="ghost"
@@ -2734,7 +3162,7 @@ function RecordsPageContent() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </DataTableFrame>
                 ) : (
                   <EmptyState icon={Pill} title={t("records.prescriptions.emptyTitle", "No prescriptions yet")} />
                 )}
@@ -2743,7 +3171,7 @@ function RecordsPageContent() {
             </TabsContent>
 
             {/* Problems Tab */}
-            <TabsContent value="problems" className="mt-6">
+            <TabsContent value="problems" className="mt-0">
               <section aria-labelledby="records-section-problems">
               <h2 id="records-section-problems" className="sr-only">{tabLabels.problems}</h2>
               <div>
@@ -2999,7 +3427,7 @@ function RecordsPageContent() {
             </TabsContent>
 
             {/* Lab Results Tab */}
-            <TabsContent value="labResults" className="mt-6">
+            <TabsContent value="labResults" className="mt-0">
               <section aria-labelledby="records-section-labResults">
               <h2 id="records-section-labResults" className="sr-only">{tabLabels.labResults}</h2>
               <div>
@@ -3336,35 +3764,35 @@ function RecordsPageContent() {
                     {labTrendGroups.length > 0 && (
                       <LabTrendCharts groups={labTrendGroups} />
                     )}
-                    <div className="overflow-x-auto rounded-lg border border-border">
+                    <DataTableFrame>
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-border bg-muted/50">
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colTestName", "Test Name")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colResult", "Result")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colUnit", "Unit")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colReferenceRange", "Reference Range")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colStatus", "Status")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colReviewEvidence", "Review evidence")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colOrderedBy", "Ordered By")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colDate", "Date")}
                             </th>
-                            <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <th className={tableHeadClass}>
                               {t("records.labResults.colActions", "Actions")}
                             </th>
                           </tr>
@@ -3381,12 +3809,12 @@ function RecordsPageContent() {
                                 key={lab.id}
                                 id={`lab-result-${lab.id}`}
                                 className={cn(
-                                  "border-b border-border last:border-0",
+                                  tableRowClass,
                                   lab.correctionId &&
                                     "bg-destructive/5 text-muted-foreground"
                                 )}
                               >
-                                <td className="px-3 py-2 font-medium">
+                                <td className={cn(tableCellClass, "font-medium")}>
                                   {lab.testName}
                                   {lab.replacesLabResultId ? (
                                     <a
@@ -3407,7 +3835,7 @@ function RecordsPageContent() {
                                 </td>
                                 <td
                                   className={cn(
-                                    "px-3 py-2",
+                                    tableCellClass,
                                     outOfRange
                                       ? "text-red-600 font-semibold dark:text-red-400"
                                       : ""
@@ -3415,16 +3843,16 @@ function RecordsPageContent() {
                                 >
                                   {lab.resultValue ?? "--"}
                                 </td>
-                                <td className="px-3 py-2 text-muted-foreground">
+                                <td className={cn(tableCellClass, "text-muted-foreground")}>
                                   {lab.unit ?? "--"}
                                 </td>
-                                <td className="px-3 py-2 text-muted-foreground">
+                                <td className={cn(tableCellClass, "text-muted-foreground")}>
                                   {lab.referenceRangeLow != null &&
                                   lab.referenceRangeHigh != null
                                     ? `${lab.referenceRangeLow} - ${lab.referenceRangeHigh}`
                                     : "--"}
                                 </td>
-                                <td className="px-3 py-2">
+                                <td className={tableCellClass}>
                                   <div className="flex flex-col items-start gap-1">
                                     <span
                                       className={cn(
@@ -3460,7 +3888,7 @@ function RecordsPageContent() {
                                     ) : null}
                                   </div>
                                 </td>
-                                <td className="px-3 py-2 text-xs text-muted-foreground">
+                                <td className={cn(tableCellClass, "text-muted-foreground")}>
                                   {lab.completedAt ? (
                                     <span className="block">
                                       {t("records.labResults.completedBy", "Completed {date} · {actor}", {
@@ -3491,10 +3919,10 @@ function RecordsPageContent() {
                                     </span>
                                   ) : null}
                                 </td>
-                                <td className="px-3 py-2 text-muted-foreground">
+                                <td className={cn(tableCellClass, "text-muted-foreground")}>
                                   {lab.orderedByName ?? "--"}
                                 </td>
-                                <td className="px-3 py-2 text-muted-foreground">
+                                <td className={cn(tableCellClass, "text-muted-foreground")}>
                                   {lab.createdAt
                                     ? formatClinicalDate(
                                         lab.createdAt,
@@ -3502,7 +3930,7 @@ function RecordsPageContent() {
                                       )
                                     : "--"}
                                 </td>
-                                <td className="px-3 py-2">
+                                <td className={tableCellClass}>
                                   {lab.correctionId ? (
                                     <div className="min-w-64">
                                       <ClinicalCorrectionControl
@@ -3646,7 +4074,7 @@ function RecordsPageContent() {
                           })}
                         </tbody>
                       </table>
-                    </div>
+                    </DataTableFrame>
                   </div>
                 ) : (
                   <>
@@ -3659,7 +4087,7 @@ function RecordsPageContent() {
             </TabsContent>
 
             {/* Procedures Tab */}
-            <TabsContent value="procedures" className="mt-6">
+            <TabsContent value="procedures" className="mt-0">
               <section aria-labelledby="records-section-procedures">
               <h2 id="records-section-procedures" className="sr-only">{tabLabels.procedures}</h2>
               <div>
@@ -3836,23 +4264,23 @@ function RecordsPageContent() {
                 ) : isLoadingProcedures ? (
                   <RecordsLoadingPanel label={t("records.procedures.loading", "Loading procedures...")} />
                 ) : proceduresList && proceduresList.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <DataTableFrame>
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-muted/50">
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.procedures.colName", "Name")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.procedures.colPerformedBy", "Performed By")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.procedures.colDuration", "Duration")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.procedures.colAnesthesia", "Anesthesia")}
                           </th>
-                          <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className={tableHeadClass}>
                             {t("records.procedures.colDate", "Date")}
                           </th>
                         </tr>
@@ -3861,9 +4289,9 @@ function RecordsPageContent() {
                         {proceduresList.map((proc) => (
                           <tr
                             key={proc.id}
-                            className="border-b border-border last:border-0"
+                            className={tableRowClass}
                           >
-                            <td className="px-3 py-2">
+                            <td className={tableCellClass}>
                               <p className="font-medium">{proc.name}</p>
                               {proc.description && (
                                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -3871,18 +4299,18 @@ function RecordsPageContent() {
                                 </p>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-muted-foreground">
+                            <td className={cn(tableCellClass, "text-muted-foreground")}>
                               {proc.performedByName ?? "--"}
                             </td>
-                            <td className="px-3 py-2 text-muted-foreground">
+                            <td className={cn(tableCellClass, "text-muted-foreground")}>
                               {proc.durationMinutes
                                 ? t("records.procedures.minutesValue", "{minutes} min", { minutes: proc.durationMinutes })
                                 : "--"}
                             </td>
-                            <td className="px-3 py-2 text-muted-foreground">
+                            <td className={cn(tableCellClass, "text-muted-foreground")}>
                               {proc.anesthesiaUsed ?? "--"}
                             </td>
-                            <td className="px-3 py-2 text-muted-foreground">
+                            <td className={cn(tableCellClass, "text-muted-foreground")}>
                               {proc.createdAt
                                 ? formatClinicalDate(
                                     proc.createdAt,
@@ -3894,7 +4322,7 @@ function RecordsPageContent() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </DataTableFrame>
                 ) : (
                   <EmptyState icon={Scissors} title={t("records.procedures.emptyTitle", "No procedures recorded")} />
                 )}
@@ -3903,23 +4331,162 @@ function RecordsPageContent() {
             </TabsContent>
 
             {/* Dental Chart Tab */}
-            <TabsContent value="dental" className="mt-6">
+            <TabsContent value="dental" className="mt-0">
               <section aria-labelledby="records-section-dental">
               <h2 id="records-section-dental" className="sr-only">{tabLabels.dental}</h2>
               <DentalChartTab patientId={patientId} />
               </section>
            </TabsContent>
+            </Tabs>
+            ) : null}
+            </TabsContent>
+
+            {/* History Section — chronological timeline across record types */}
+            <TabsContent value="history" className="mt-0">
+              <section aria-labelledby="records-section-history">
+              <h2 id="records-section-history" className="sr-only">{sectionLabels.history}</h2>
+              <div className="space-y-3">
+                {historyHasError ? (
+                  <RecordsErrorPanel
+                    message={t("records.history.loadError", "Some clinical records could not be loaded. The history may be incomplete.")}
+                  />
+                ) : null}
+                {historyLoading ? (
+                  <RecordsTimelineSkeleton />
+                ) : historyEntries.length > 0 ? (
+                  <DataTableFrame>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className={tableHeadClass}>
+                            {t("records.history.colDate", "Date")}
+                          </th>
+                          <th className={tableHeadClass}>
+                            {t("records.history.colType", "Type")}
+                          </th>
+                          <th className={tableHeadClass}>
+                            {t("records.history.colRecord", "Record")}
+                          </th>
+                          <th className={tableHeadClass}>
+                            {t("records.history.colAuthor", "Author")}
+                          </th>
+                          <th className={tableHeadClass}>
+                            {t("records.history.colStatus", "Status")}
+                          </th>
+                          <th className={cn(tableHeadClass, "text-right")}>
+                            <span className="sr-only">{t("records.history.open", "Open record")}</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historyEntries.map((entry) => {
+                          const EntryIcon =
+                            tabs.find((tab) => tab.id === entry.tab)?.icon ?? FileText;
+                          const openEntry = () => {
+                            openRecordTab(entry.tab);
+                            if (entry.tab === "soap") {
+                              const noteId = entry.id.slice("soap-".length);
+                              setExpandedNoteId(noteId);
+                              window.requestAnimationFrame(() =>
+                                document
+                                  .getElementById(`soap-note-${noteId}`)
+                                  ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+                              );
+                            }
+                          };
+                          return (
+                            <tr
+                              key={entry.id}
+                              className={cn(
+                                tableRowClass,
+                                "cursor-pointer",
+                                entry.enteredInError && "bg-destructive/5 text-muted-foreground",
+                              )}
+                              onClick={openEntry}
+                            >
+                              <td className={cn(tableCellClass, "whitespace-nowrap font-mono tabular-nums")}>
+                                {formatClinicalDate(entry.date, recordsTimeZone)}
+                              </td>
+                              <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                  <EntryIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                                  {tabLabels[entry.tab]}
+                                </span>
+                              </td>
+                              <td className={cn(tableCellClass, "max-w-md")}>
+                                <p className="truncate font-medium text-foreground">{entry.title}</p>
+                                {entry.detail ? (
+                                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                                    {entry.detail}
+                                  </p>
+                                ) : null}
+                              </td>
+                              <td className={cn(tableCellClass, "text-muted-foreground")}>
+                                {entry.actor ?? "—"}
+                              </td>
+                              <td className={tableCellClass}>
+                                {entry.enteredInError ? (
+                                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                    {t("records.enteredInError", "Entered in error")}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {t("records.history.current", "Current")}
+                                  </span>
+                                )}
+                              </td>
+                              <td className={cn(tableCellClass, "text-right")}>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  aria-label={t("records.history.open", "Open record")}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openEntry();
+                                  }}
+                                >
+                                  <ArrowUpRight className="h-3.5 w-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </DataTableFrame>
+                ) : (
+                  <EmptyState
+                    icon={History}
+                    title={t("records.history.emptyTitle", "No clinical history yet")}
+                    description={t("records.history.emptyDescription", "SOAP notes, vaccinations, prescriptions, problems, lab results and procedures will appear here in chronological order.")}
+                  />
+                )}
+              </div>
+              </section>
+            </TabsContent>
+
+            {/* Attachments Section — patient files, imaging, consents */}
+            <TabsContent value="attachments" className="mt-0">
+              <section aria-labelledby="records-section-attachments">
+              <h2 id="records-section-attachments" className="sr-only">{sectionLabels.attachments}</h2>
+              {currentSection === "attachments" ? (
+                <RecordsAttachments patientId={patientId} timeZone={recordsTimeZone} />
+              ) : null}
+              </section>
+            </TabsContent>
               </>
             )}
           </div>
         </Tabs>
       )}
 
-      {/* Recent patients landing — clinical chart, not search-only */}
-      {!selectedPatient && !canSearchPatients && (
-        <div className="mt-6 space-y-3">
+      {/* Recent patients register — clinical chart, not search-only */}
+      {showRecentPatients && (
+        <section aria-labelledby="records-recent-patients" className="space-y-3">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2 id="records-recent-patients" className="text-sm font-semibold text-foreground">
               {t("records.recentPatientsTitle", "Nedávni pacienti")}
             </h2>
             <p className="text-xs text-muted-foreground">
@@ -3934,20 +4501,20 @@ function RecordsPageContent() {
           ) : recentPatientsQuery.error ? (
             <RecordsErrorPanel message={recentPatientsQuery.error.message} />
           ) : recentPatientsQuery.data?.items.length ? (
-            <div className="overflow-x-auto rounded-lg border border-border">
+            <DataTableFrame>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="h-9 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className={tableHeadClass}>
                       {t("records.colPatient", "Pacient")}
                     </th>
-                    <th className="h-9 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className={tableHeadClass}>
                       {t("records.colSpecies", "Druh")}
                     </th>
-                    <th className="h-9 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className={tableHeadClass}>
                       {t("records.colOwner", "Majiteľ")}
                     </th>
-                    <th className="h-9 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className={cn(tableHeadClass, "text-right")}>
                       {t("records.openChart", "Otvoriť klinickú kartu")}
                     </th>
                   </tr>
@@ -3956,49 +4523,45 @@ function RecordsPageContent() {
                   {recentPatientsQuery.data.items.map((patient) => (
                     <tr
                       key={patient.id}
-                      className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                      onClick={() => {
-                        setSelectedPatient({
-                          id: patient.id,
-                          name: patient.name,
-                          species: patient.species,
-                          breed: patient.breed,
-                          clientFirstName: patient.clientFirstName,
-                          clientLastName: patient.clientLastName,
-                        });
-                        setSearchQuery(patient.name);
-                        setShowVaccinationForm(false);
-                        setVaccinationForm(initialVaccinationForm());
-                        setShowProblemForm(false);
-                        setProblemForm(initialProblemForm());
-                        setShowLabForm(false);
-                        setLabForm(initialLabResultForm());
-                        setShowProcedureForm(false);
-                        setProcedureForm(initialProcedureForm());
-                        setShowPrescriptionForm(false);
-                        setPrescriptionForm(initialPrescriptionForm());
-                      }}
+                      className={cn(tableRowClass, "cursor-pointer")}
+                      onClick={() => selectPatient(patient)}
                     >
-                      <td className="px-3 py-2 font-medium">
+                      <td className={cn(tableCellClass, "font-medium")}>
                         {patient.name}
                         {patient.breed ? (
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          <p className="mt-0.5 text-[11px] font-normal text-muted-foreground">
                             {patient.breed}
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2 capitalize text-muted-foreground">
-                        {patient.species
-                          ? t(`patients.species_${patient.species}`, patient.species)
-                          : "—"}
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
+                        {patient.species ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span aria-hidden="true">
+                              {PATIENT_SPECIES_EMOJI[patient.species as PatientSpecies] ?? PATIENT_SPECIES_EMOJI.other}
+                            </span>
+                            {formatSpecies(patient.species, t)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
                         {patient.clientFirstName && patient.clientLastName
                           ? `${patient.clientFirstName} ${patient.clientLastName}`
                           : t("patients.profile.noOwner", "Owner not listed")}
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        <Button size="sm" variant="ghost" className="h-8 text-xs">
+                      <td className={cn(tableCellClass, "text-right")}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            selectPatient(patient);
+                          }}
+                        >
                           {t("records.openChart", "Otvoriť klinickú kartu")}
                         </Button>
                       </td>
@@ -4006,10 +4569,9 @@ function RecordsPageContent() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DataTableFrame>
           ) : (
             <EmptyState
-              className="mt-2"
               icon={PawPrint}
               title={t("records.emptyPatientsTitle", "Žiadni pacienti")}
               description={t(
@@ -4018,7 +4580,7 @@ function RecordsPageContent() {
               )}
             />
           )}
-        </div>
+        </section>
       )}
     </div>
   );

@@ -4271,7 +4271,7 @@
       "qrAlt": "QR code for the consent signing link",
       "waitingForSignature": "Waiting for a signature…"
     },
-    "title": "Clinical Record",
+    "title": "Clinical records",
     "subtitle": "Clinical documentation. Identity and owner stay on the patient card.",
     "new_record": "New Record",
     "search_placeholder": "Search records...",
@@ -4660,6 +4660,37 @@
       "openCard": "Card",
       "newSoap": "New SOAP",
       "backToRegister": "Card list"
+    },
+    "hub": {
+      "sectionsAria": "Clinical record sections",
+      "recordTypesAria": "Clinical record types",
+      "patientCount": "{count} patients",
+      "speciesFilterAria": "Filter by species",
+      "selectedPatientAria": "Selected patient"
+    },
+    "sections": {
+      "soap": "SOAP",
+      "records": "Records",
+      "history": "History",
+      "attachments": "Attachments"
+    },
+    "kpi": {
+      "totalVisits": "Total visits",
+      "avgDuration": "Avg. visit duration",
+      "avgDurationValue": "{minutes} min",
+      "openDiagnoses": "Open diagnoses"
+    },
+    "history": {
+      "colDate": "Date",
+      "colType": "Type",
+      "colRecord": "Record",
+      "colAuthor": "Author",
+      "colStatus": "Status",
+      "open": "Open record",
+      "emptyTitle": "No clinical history yet",
+      "emptyDescription": "SOAP notes, vaccinations, prescriptions, problems, lab results and procedures will appear here in chronological order.",
+      "loadError": "Some clinical records could not be loaded. The history may be incomplete.",
+      "current": "Current"
     }
   },
   "reports": {
@@ -4893,6 +4924,7 @@
     "viewDay": "Day",
     "viewWeek": "Week",
     "viewMonth": "Month",
+    "viewList": "List",
     "firstVisitStep": "First clinic day · Step 3 of 3",
     "firstVisitTitle": "Book the pet's first real appointment.",
     "firstVisitDesc": "Choose the pet, time, location, and visit type. Your current PIMS can stay in place while the team validates this visit end to end.",
@@ -4911,6 +4943,19 @@
     "noAppointmentsWeekDesc": "The selected schedule is clear for this week.",
     "noAppointmentsMonthTitle": "No appointments in this month",
     "noAppointmentsMonthDesc": "The selected schedule is clear for this month.",
+    "rangeStart": "From",
+    "rangeEnd": "To",
+    "filterDoctorAria": "Filter schedule by doctor",
+    "noAppointmentsListTitle": "No appointments in list",
+    "noAppointmentsListDesc": "No appointments found for the selected period and filters.",
+    "listColTime": "Time",
+    "listColPatient": "Patient",
+    "listColClient": "Client",
+    "listColType": "Type",
+    "listColDoctor": "Doctor",
+    "listColLocation": "Room / Location",
+    "listColStatus": "Status",
+    "listColActions": "Actions",
     "calendarSubscribe": {
       "button": "Add to your calendar",
       "title": "Your schedule, in your calendar",
@@ -5412,7 +5457,10 @@
           "few": "{count} legacy practice-wide working windows",
           "other": "{count} legacy practice-wide working windows"
         }
-      }
+      },
+      "retired": "Location retired",
+      "noPhone": "No phone",
+      "primaryBadge": "Primary"
     },
     "billing": {
       "checkoutUnavailable": "Billing checkout is unavailable. Please try again.",
@@ -5502,7 +5550,10 @@
       "featureIntegrations": "Supported integrations",
       "currentPlan": "Current plan",
       "choosePlan": "Choose {name}",
-      "contactSales": "Contact sales"
+      "contactSales": "Contact sales",
+      "checkoutCanceledDetail": "Nothing changed. Choose a schedule whenever you are ready.",
+      "continueToCheckout": "Continue to secure checkout",
+      "pastDueNotice": "Stripe is retrying this payment. Your clinic remains writable during the retry window; review billing to avoid an unpaid, read-only account."
     },
     "staff": {
       "updated": "Staff member updated",
@@ -5534,7 +5585,15 @@
       "roleViewer": "Viewer (read-only)",
       "roleTechnician": "Technician",
       "roleVeterinarian": "Veterinarian",
-      "roleAdmin": "Admin"
+      "roleAdmin": "Admin",
+      "title": "Staff & working hours",
+      "description": "Invite teammates, set their roles and manage provider working hours.",
+      "memberAdded": "Staff member added",
+      "memberDeactivated": "Staff member deactivated",
+      "inviteSent": "Invite sent",
+      "inviteDescription": "They'll get an email to set their own password and activate their account.",
+      "inviteLinkHint": "Invite link (shown in dev/preview so you can test the flow):",
+      "providerLabel": "Veterinarian"
     },
     "appointmentTypes": {
       "created": "Appointment type created",
@@ -5553,7 +5612,9 @@
       "colRoomType": "Room Type",
       "colActions": "Actions",
       "emptyTitle": "No appointment types configured",
-      "emptyDescription": "Add appointment types so scheduling can use default durations, colors, and room types."
+      "emptyDescription": "Add appointment types so scheduling can use default durations, colors, and room types.",
+      "title": "Appointment types",
+      "description": "Default duration, colour and room type used when scheduling appointments."
     },
     "rooms": {
       "created": "Room created",
@@ -5573,7 +5634,11 @@
       "typeTreatment": "Treatment",
       "typeBoarding": "Boarding",
       "colLocation": "Location",
-      "colActions": "Actions"
+      "colActions": "Actions",
+      "title": "Rooms",
+      "description": "Exam rooms, theatres and boarding spaces that appointments can book.",
+      "unassigned": "Unassigned",
+      "deleted": "Room deleted"
     },
     "wellness": {
       "created": "Wellness plan created",
@@ -5602,7 +5667,9 @@
       "invoiceSchedule": "Invoice schedule",
       "active": "Active",
       "deactivate": "Deactivate",
-      "reactivate": "Reactivate"
+      "reactivate": "Reactivate",
+      "reactivated": "Wellness plan reactivated",
+      "deactivated": "Wellness plan deactivated"
     },
     "templates": {
       "created": "Template created",
@@ -5649,7 +5716,18 @@
       "searchFailed": "Catalog search failed. Edit the query to retry.",
       "noActiveServicesMatch": "No active services match \"{query}\".",
       "noActiveProductsMatch": "No active products match \"{query}\".",
-      "noCodeOrCategory": "No code or category"
+      "noCodeOrCategory": "No code or category",
+      "title": "Treatment templates",
+      "description": "Reusable bundles of services and products for common procedures.",
+      "itemQuantityPlaceholder": "Qty",
+      "categories": {
+        "surgery": "Surgery",
+        "wellness": "Wellness",
+        "dental": "Dental",
+        "preventive": "Preventive care",
+        "emergency": "Emergency",
+        "other": "Other"
+      }
     },
     "data": {
       "backupMissingSections": "Backup is missing required sections",
@@ -5734,7 +5812,17 @@
       "step_clients": "Clients (pet owners)",
       "step_patients": "Patients (pets)",
       "step_vaccinations": "Vaccine history",
-      "step_soapNotes": "Medical history (visit notes)"
+      "step_soapNotes": "Medical history (visit notes)",
+      "checkAgain": "Check again",
+      "expectedColumns": "Expected columns:",
+      "selectedFile": "Selected file:",
+      "deletionContactEmailPlaceholder": "owner@example.com",
+      "backupInvalidRestoreData": "Backup has invalid restore data",
+      "backupVerified": "Backup verified",
+      "vaccinationCsvChecked": "Vaccination CSV checked",
+      "deletionRequestSent": "Account deletion request sent",
+      "sampleDataRemoved": "Sample data removed",
+      "sampleDataAdded": "Sample data added"
     },
     "simulation": {
       "title": "Clinical Simulation & Journey Discovery",
@@ -5812,7 +5900,8 @@
       "uploadFailed": "Upload failed",
       "tryAgain": "Try again",
       "accentColor": "Accent color",
-      "updated": "Branding updated"
+      "updated": "Branding updated",
+      "logoAlt": "Practice logo"
     },
     "emails": {
       "title": "Emails from OpenVPM",
@@ -7508,6 +7597,13 @@
       "conflict": "SOAP changed in another session. Refresh before saving again.",
       "alreadyFinalized": "SOAP was already finalized in another session.",
       "finalized": "SOAP note finalized"
+    },
+    "vitals": {
+      "temperature": "Temp",
+      "heartRate": "Heart Rate",
+      "respiratoryRate": "Resp. Rate",
+      "weight": "Weight",
+      "bodyCondition": "BCS Score"
     }
   },
   "copilot": {

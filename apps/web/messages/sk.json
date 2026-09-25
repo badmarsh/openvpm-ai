@@ -4271,7 +4271,7 @@
       "qrAlt": "QR kód pre odkaz na podpis súhlasu",
       "waitingForSignature": "Čaká sa na podpis klienta…"
     },
-    "title": "Klinická karta",
+    "title": "Klinické záznamy",
     "subtitle": "Klinická dokumentácia. Identita a majiteľ ostávajú na karte pacienta.",
     "new_record": "Nový záznam",
     "search_placeholder": "Hľadať v záznamoch...",
@@ -4660,6 +4660,37 @@
       "openCard": "Karta",
       "newSoap": "Nový SOAP",
       "backToRegister": "Zoznam kariet"
+    },
+    "hub": {
+      "sectionsAria": "Sekcie klinických záznamov",
+      "recordTypesAria": "Typy klinických záznamov",
+      "patientCount": "{count} pacientov",
+      "speciesFilterAria": "Filtrovať podľa druhu",
+      "selectedPatientAria": "Vybraný pacient"
+    },
+    "sections": {
+      "soap": "SOAP",
+      "records": "Záznamy",
+      "history": "História",
+      "attachments": "Prílohy"
+    },
+    "kpi": {
+      "totalVisits": "Vyšetrenia celkom",
+      "avgDuration": "Priemerná dĺžka vyšetrenia",
+      "avgDurationValue": "{minutes} min",
+      "openDiagnoses": "Otvorené diagnózy"
+    },
+    "history": {
+      "colDate": "Dátum",
+      "colType": "Typ",
+      "colRecord": "Záznam",
+      "colAuthor": "Autor",
+      "colStatus": "Stav",
+      "open": "Otvoriť záznam",
+      "emptyTitle": "Zatiaľ žiadna klinická história",
+      "emptyDescription": "SOAP záznamy, vakcinácie, predpisy, diagnózy, laboratórne výsledky a zákroky sa tu zobrazia chronologicky.",
+      "loadError": "Niektoré klinické záznamy sa nepodarilo načítať. História môže byť neúplná.",
+      "current": "Platný"
     }
   },
   "reports": {
@@ -4893,6 +4924,7 @@
     "viewDay": "Deň",
     "viewWeek": "Týždeň",
     "viewMonth": "Mesiac",
+    "viewList": "Zoznam",
     "firstVisitStep": "Prvý deň na klinike · Krok 3 z 3",
     "firstVisitTitle": "Objednajte prvý skutočný termín zvieratka.",
     "firstVisitDesc": "Vyberte zviera, čas, pobočku a typ návštevy. Váš súčasný veterinárny softvér môže zostať zachovaný, kým tím overí celé vyšetrenie od začiatku do konca.",
@@ -4911,6 +4943,19 @@
     "noAppointmentsWeekDesc": "Vybraný rozvrh je na tento týždeň prázdny.",
     "noAppointmentsMonthTitle": "Tento mesiac žiadne termíny",
     "noAppointmentsMonthDesc": "Vybraný rozvrh je na tento mesiac prázdny.",
+    "rangeStart": "Od",
+    "rangeEnd": "Do",
+    "filterDoctorAria": "Filtrovať rozvrh podľa lekára",
+    "noAppointmentsListTitle": "Žiadne termíny v zozname",
+    "noAppointmentsListDesc": "Pre zvolené obdobie a filtre neboli nájdené žiadne termíny.",
+    "listColTime": "Čas",
+    "listColPatient": "Pacient",
+    "listColClient": "Klient",
+    "listColType": "Typ úkonu",
+    "listColDoctor": "Lekár",
+    "listColLocation": "Miestnosť / Pobočka",
+    "listColStatus": "Stav",
+    "listColActions": "Akcie",
     "calendarSubscribe": {
       "button": "Pridať do kalendára",
       "title": "Váš rozvrh vo vašom kalendári",
@@ -5412,7 +5457,10 @@
           "few": "{count} pôvodné ordinačné okná kliniky",
           "other": "{count} pôvodných ordinačných okien kliniky"
         }
-      }
+      },
+      "retired": "Pobočka vyradená",
+      "noPhone": "Bez telefónu",
+      "primaryBadge": "Hlavná"
     },
     "billing": {
       "checkoutUnavailable": "Platobná brána je nedostupná. Skúste to prosím znova.",
@@ -5502,7 +5550,10 @@
       "featureIntegrations": "Podporované integrácie",
       "currentPlan": "Aktuálny plán",
       "choosePlan": "Vybrať {name}",
-      "contactSales": "Kontaktovať obchodné oddelenie"
+      "contactSales": "Kontaktovať obchodné oddelenie",
+      "checkoutCanceledDetail": "Nič sa nezmenilo. Vyberte si cyklus, keď budete pripravení.",
+      "continueToCheckout": "Pokračovať k zabezpečenej platbe",
+      "pastDueNotice": "Stripe sa pokúša o opätovné spracovanie platby. Vaša klinika zostáva počas tejto lehoty zapisovateľná; skontrolujte fakturáciu, aby účet neskončil ako neuhradený a iba na čítanie."
     },
     "staff": {
       "updated": "Člen tímu aktualizovaný",
@@ -5534,7 +5585,15 @@
       "roleViewer": "Pozorovateľ (iba čítanie)",
       "roleTechnician": "Technik",
       "roleVeterinarian": "Veterinárny lekár",
-      "roleAdmin": "Administrátor"
+      "roleAdmin": "Administrátor",
+      "title": "Personál & pracovné hodiny",
+      "description": "Pozvite kolegov, nastavte im roly a spravujte pracovné okná lekárov.",
+      "memberAdded": "Člen tímu pridaný",
+      "memberDeactivated": "Člen tímu deaktivovaný",
+      "inviteSent": "Pozvánka odoslaná",
+      "inviteDescription": "Dostanú e-mail, v ktorom si nastavia vlastné heslo a aktivujú účet.",
+      "inviteLinkHint": "Odkaz na pozvánku (zobrazuje sa v dev/náhľade, aby ste mohli otestovať postup):",
+      "providerLabel": "Veterinárny lekár"
     },
     "appointmentTypes": {
       "created": "Typ návštevy vytvorený",
@@ -5553,7 +5612,9 @@
       "colRoomType": "Typ miestnosti",
       "colActions": "Akcie",
       "emptyTitle": "Žiadne typy návštev",
-      "emptyDescription": "Pridajte typy návštev, aby plánovanie mohlo používať predvolené trvania, farby a typy miestností."
+      "emptyDescription": "Pridajte typy návštev, aby plánovanie mohlo používať predvolené trvania, farby a typy miestností.",
+      "title": "Typy návštev",
+      "description": "Predvolené trvanie, farby a typy miestností pre plánovanie termínov."
     },
     "rooms": {
       "created": "Miestnosť vytvorená",
@@ -5573,7 +5634,11 @@
       "typeTreatment": "Ošetrovňa",
       "typeBoarding": "Hospitalizácia",
       "colLocation": "Pobočka",
-      "colActions": "Akcie"
+      "colActions": "Akcie",
+      "title": "Miestnosti",
+      "description": "Vyšetrovne, sály a hospitalizačné priestory, ktoré si termíny môžu rezervovať.",
+      "unassigned": "Nepriradené",
+      "deleted": "Miestnosť zmazaná"
     },
     "wellness": {
       "created": "Wellness plán vytvorený",
@@ -5602,7 +5667,9 @@
       "invoiceSchedule": "Plán fakturácie",
       "active": "Aktívny",
       "deactivate": "Deaktivovať",
-      "reactivate": "Znovu aktivovať"
+      "reactivate": "Znovu aktivovať",
+      "reactivated": "Wellness plán obnovený",
+      "deactivated": "Wellness plán deaktivovaný"
     },
     "templates": {
       "created": "Šablóna vytvorená",
@@ -5649,7 +5716,18 @@
       "searchFailed": "Vyhľadávanie v katalógu zlyhalo. Upravte text a skúste to znova.",
       "noActiveServicesMatch": "Žiadne aktívne služby nezodpovedajú výrazu „{query}“.",
       "noActiveProductsMatch": "Žiadne aktívne produkty nezodpovedajú výrazu „{query}“.",
-      "noCodeOrCategory": "Bez kódu a kategórie"
+      "noCodeOrCategory": "Bez kódu a kategórie",
+      "title": "Liečebné šablóny",
+      "description": "Opakovane použiteľné balíky služieb a produktov pre bežné výkony.",
+      "itemQuantityPlaceholder": "Množ.",
+      "categories": {
+        "surgery": "Chirurgia",
+        "wellness": "Wellness",
+        "dental": "Stomatológia",
+        "preventive": "Preventívna starostlivosť",
+        "emergency": "Pohotovosť",
+        "other": "Iné"
+      }
     },
     "data": {
       "backupMissingSections": "V zálohe chýbajú povinné sekcie",
@@ -5734,7 +5812,17 @@
       "step_clients": "klientov (majiteľov zvierat)",
       "step_patients": "pacientov (zvieratá)",
       "step_vaccinations": "históriu očkovaní",
-      "step_soapNotes": "zdravotnú históriu (záznamy návštev)"
+      "step_soapNotes": "zdravotnú históriu (záznamy návštev)",
+      "checkAgain": "Skontrolovať znova",
+      "expectedColumns": "Očakávané stĺpce:",
+      "selectedFile": "Vybraný súbor:",
+      "deletionContactEmailPlaceholder": "majitel@priklad.sk",
+      "backupInvalidRestoreData": "Záloha obsahuje neplatné dáta na obnovu",
+      "backupVerified": "Záloha overená",
+      "vaccinationCsvChecked": "CSV očkovaní skontrolované",
+      "deletionRequestSent": "Žiadosť o zmazanie účtu odoslaná",
+      "sampleDataRemoved": "Ukážkové dáta odstránené",
+      "sampleDataAdded": "Ukážkové dáta pridané"
     },
     "simulation": {
       "title": "Klinická simulácia & Journey Discovery",
@@ -5812,7 +5900,8 @@
       "uploadFailed": "Nahrávanie zlyhalo",
       "tryAgain": "Skúsiť znova",
       "accentColor": "Akcentová farba",
-      "updated": "Branding bol aktualizovaný"
+      "updated": "Branding bol aktualizovaný",
+      "logoAlt": "Logo praxe"
     },
     "emails": {
       "title": "E-maily od OpenVPM",
@@ -7508,6 +7597,13 @@
       "conflict": "SOAP bol zmenený v inej relácii. Pred opätovným uložením obnovte stránku.",
       "alreadyFinalized": "SOAP bol už autorizovaný v inej relácii.",
       "finalized": "SOAP záznam bol úspešne autorizovaný"
+    },
+    "vitals": {
+      "temperature": "Teplota",
+      "heartRate": "Tep",
+      "respiratoryRate": "Dych. frekvencia",
+      "weight": "Hmotnosť",
+      "bodyCondition": "BCS skóre"
     }
   },
   "copilot": {
