@@ -304,6 +304,16 @@ def make_qwen_model():
             base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
             api_key=os.getenv("DASHSCOPE_API_KEY"),
         )
+    # Ak je dostupný Antigravity Proxy a Dashscope nie je nastavený, použijeme proxy namiesto nefunkčného portu 8080
+    if ANTIGRAVITY_KEY and not os.getenv("ALIPROXY_API_KEY"):
+        return OpenAILike(
+            id=GEMINI_MODEL_ID,
+            name="Gemini 3.8 Flash (Qwen Fallback)",
+            provider="Antigravity Proxy",
+            base_url=ANTIGRAVITY_BASE,
+            api_key=ANTIGRAVITY_KEY,
+            timeout=90.0,
+        )
     return OpenAILike(
         id="qwen-coder-plus",
         name="AliProxy Qwen Coder Plus",
@@ -346,17 +356,46 @@ USER_PROFILE_ROLE_MODEL = (
 # 5. Knowledge — LanceDb Hybridné Sémantické Vyhľadávanie
 # =============================================================================
 
-if os.getenv("OPENAI_API_KEY"):
+kb_embedder = None
+kb_table = "openvpm_knowledge_bge_m3_1024"
+
+# 1. Priorita: Lokálny GPU Sémantický Embedder na RTX 3090 (BAAI/bge-m3, 1024-dim, ~90ms latency)
+try:
+    import torch
+    from sentence_transformers import SentenceTransformer
+    from agno.knowledge.embedder.sentence_transformer import SentenceTransformerEmbedder
+    embedder_device = "cuda" if torch.cuda.is_available() else "cpu"
+    st_client = SentenceTransformer("BAAI/bge-m3", device=embedder_device)
+    kb_embedder = SentenceTransformerEmbedder(
+        id="BAAI/bge-m3",
+        dimensions=1024,
+        sentence_transformer_client=st_client,
+    )
+    logger.info("Local CUDA embedder initialized on %s (BAAI/bge-m3, 1024 dims)", embedder_device)
+except Exception as e:
+    logger.warning("Local BAAI/bge-m3 embedder initialization notice: %s", e)
+
+# 2. Fallback: OpenAI Embedder ak je nastavený OPENAI_API_KEY
+if kb_embedder is None and os.getenv("OPENAI_API_KEY"):
     kb_embedder = OpenAIEmbedder(id="text-embedding-3-small")
     kb_table = "openvpm_knowledge"
-else:
-    kb_embedder = OpenAIEmbedder(
-        id="text-embedding-v3",
-        dimensions=1024,
-        base_url=ALIPROXY_BASE,
-        api_key=ALIPROXY_KEY,
-    )
-    kb_table = "openvpm_knowledge_qwen_1024"
+
+# 3. Fallback: Lightweight lokálny SentenceTransformer (384-dim)
+if kb_embedder is None:
+    try:
+        from agno.knowledge.embedder.sentence_transformer import SentenceTransformerEmbedder
+        kb_embedder = SentenceTransformerEmbedder(id="sentence-transformers/all-MiniLM-L6-v2", dimensions=384)
+        kb_table = "openvpm_knowledge_384"
+        logger.info("Fallback local embedder initialized (all-MiniLM-L6-v2, 384 dims)")
+    except Exception as e:
+        logger.warning("Fallback sentence transformer notice: %s", e)
+        kb_embedder = OpenAIEmbedder(
+            id="text-embedding-v3",
+            dimensions=1024,
+            base_url=ALIPROXY_BASE,
+            api_key=ALIPROXY_KEY,
+        )
+        kb_table = "openvpm_knowledge_qwen_1024"
 
 # Lokálny GPU Cross-Encoder Reranker na RTX 3090 (24 GB VRAM)
 kb_reranker = None
@@ -389,6 +428,15 @@ knowledge_base: Knowledge = Knowledge(
     reranker=kb_reranker,
 )
 
+# Kompatibilita pre staršie relácie rehydratované z pipeline_team.db pod pôvodným názvom "OpenVPM Knowledge"
+openvpm_knowledge_legacy: Knowledge = Knowledge(
+    name="OpenVPM Knowledge",
+    description=knowledge_base.description,
+    vector_db=knowledge_base.vector_db,
+    contents_db=knowledge_base.contents_db,
+    reranker=knowledge_base.reranker,
+)
+
 def reindex_repo_knowledge(force: bool = False) -> Dict[str, str]:
     report: Dict[str, str] = {}
     existing_names: set[str] = set()
@@ -396,7 +444,7 @@ def reindex_repo_knowledge(force: bool = False) -> Dict[str, str]:
         try:
             with pipeline_engine.connect() as conn:
                 from sqlalchemy import text
-                res = conn.execute(text("SELECT name FROM agno_knowledge WHERE status = 'completed'"))
+                res = conn.execute(text("SELECT name FROM agno_knowledge WHERE status = 'completed' AND linked_to = 'OpenVPM Enterprise Knowledge'"))
                 existing_names = {row[0] for row in res}
         except Exception:
             pass
@@ -1055,10 +1103,13 @@ try:
         apply_arena_patch,
         evaluate_verification_and_repair,
         verify_arena_repository_lock,
+        click_create_pr_in_arena,
     )
 except ImportError as _e:
     logger.warning("Could not import full pipeline_tools: %s. Defining fallback stubs.", _e)
     DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS = 900
+    def click_create_pr_in_arena(session_id: str = "", task_id: str = "") -> str:
+        return "click_create_pr_in_arena fallback stub"
 
 @tool()
 def recall_learnings_tool(query: str) -> str:
@@ -1170,7 +1221,8 @@ arena_dispatcher = Agent(
         "Pri Marekovi: dispatch OKAMŽITE (dispatch_mode=immediate), ale VŽDY po LOCK_OK.",
         "Každý dispatch zaloguj ako rozhodnutie (decision log cez tím).",
     ],
-    add_history_to_context=True,
+    add_history_to_context=False,
+    num_history_runs=0,  # stateless worker — historia kontaminuje dispatch rozhodnutia
     markdown=True,
 )
 
@@ -1184,6 +1236,7 @@ arena_watcher = Agent(
         list_active_arena_sessions,
         monitor_arena_health,
         collect_code_from_arena_browser,
+        click_create_pr_in_arena,
         apply_arena_patch,
         audit_db_integrity_tool,
         reindex_knowledge_tool,
@@ -1291,13 +1344,15 @@ openvpm_dev_team = Team(
     store_member_responses=True,
     show_members_responses=True,
     add_history_to_context=True,
-    num_history_runs=5,
+    num_history_runs=2,  # znizene z 5: menej historickeho sumu, nova uloha ma vzdy prednost
     markdown=True,
     instructions=[
         "Si koordinátor vývojového tímu OpenVPM AI (Agno 3.0.11 AgentOS).",
         "Deleguj: prompt_manager → prompt/knowledge, arena_dispatcher → dispatch, "
         "arena_watcher → monitoring/patche, github_manager → git/PR/deploy (schvaľovacie brány), "
         "qwen_implementer → kód.",
+        "POZOR NA HISTORIU: Ak nová správa obsahuje explicitný zoznam úloh (napr. 'dispatchi sprint X, Y, Z'), "
+        "vykonaj PRESNE tieto úlohy — neopakuj úlohy z predchádzajúcich runov v histórii.",
         "Pravidlo autority: SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy. "
         "Sprinty 1, 2, 3, 4 a 7 sú už dokončené a zlúčené v main. NIKDY ich nepovažuj za nezačaté.",
         "Pred retrospektívou sprintu (PASSED/FAILED) zavolaj record_sprint_learnings.",
@@ -1388,7 +1443,7 @@ agent_os: AgentOS = AgentOS(
         qwen_implementer,
     ],
     teams=[openvpm_dev_team],
-    knowledge=[knowledge_base],
+    knowledge=[knowledge_base, openvpm_knowledge_legacy],
     cors_allowed_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
