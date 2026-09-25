@@ -86,6 +86,11 @@ ARENA_API_BASE = os.getenv("ARENA_API_BASE", "")
 ARENA_API_TOKEN = os.getenv("ARENA_API_TOKEN", "")
 DEPLOY_COMMAND = os.getenv("OPENVPM_DEPLOY_COMMAND", "")
 AGENTOS_BASE_URL = os.getenv("OPENVPM_AGENTOS_BASE_URL", "http://127.0.0.1:7777")
+# The scheduler calls back into THIS process (cron triggers, HITL approvals). Those
+# self-calls must stay on loopback: if they are pointed at the public tunnel URL they
+# travel out to Cloudflare and back, so a tunnel or DNS hiccup silently kills the
+# scheduler. Deliberately independent of AGENTOS_BASE_URL — see CLOUDFLARE_TUNNEL.md.
+AGENTOS_INTERNAL_URL = os.getenv("OPENVPM_AGENTOS_INTERNAL_URL", "http://127.0.0.1:7777")
 INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "")
 if not INTERNAL_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN == "openvpm-service-secret":
     import secrets
@@ -1502,7 +1507,7 @@ agent_os: AgentOS = AgentOS(
     ],
     scheduler=True,
     scheduler_poll_interval=15,
-    scheduler_base_url=AGENTOS_BASE_URL,
+    scheduler_base_url=AGENTOS_INTERNAL_URL,
     internal_service_token=INTERNAL_SERVICE_TOKEN,
     lifespan=lifespan,
     tracing=True,

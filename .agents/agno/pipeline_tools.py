@@ -312,13 +312,26 @@ def list_arena_sprints() -> str:
     """Vráti zoznam všetkých Arena sprintov zo súboru tasks/SPRINT-INDEX.md vrátane ich stavu (merged, written, unverified)."""
     index_file = os.path.join(_get_repo_path(), "tasks", "SPRINT-INDEX.md")
     if not os.path.exists(index_file):
-        return "Chyba: Súbor tasks/SPRINT-INDEX.md nebol nájdený."
+        # Fail LOUD. A prose error string is indistinguishable from data to a model
+        # caller, which is how sprint state previously got confabulated instead of
+        # reported as unknown (tasks/ was deleted from main in commit dab4d05).
+        return (
+            f"GROUND_TRUTH_MISSING: {index_file} does not exist.\n"
+            "NEPREDPOKLADAJ stav sprintov! Re-derive it from the repository instead:\n"
+            "  git log --oneline -200\n"
+            "  gh pr list --state all --limit 60\n"
+            "A sprint counts as MERGED only if its target files changed in a commit "
+            "reachable from main. A sprint .md existing is NOT evidence."
+        )
     try:
         with open(index_file, "r", encoding="utf-8") as f:
             content = f.read()
         return f"### Arena Sprint Index\n\n{content}"
     except Exception as e:
-        return f"Chyba pri čítaní tasks/SPRINT-INDEX.md: {str(e)}"
+        return (
+            f"GROUND_TRUTH_UNREADABLE: tasks/SPRINT-INDEX.md exists but could not be read: {e}\n"
+            "Do NOT infer sprint status from memory. Use `git log --oneline -200`."
+        )
 
 
 def read_sprint_assignment(sprint_number: int) -> str:
@@ -327,21 +340,35 @@ def read_sprint_assignment(sprint_number: int) -> str:
     pattern = os.path.join(tasks_dir, f"arena-sprint-{sprint_number}-*.md")
     matches = glob.glob(pattern)
     if not matches:
-        return f"Sprint {sprint_number} nebol nájdený v tasks/. Skontroluj zoznam cez list_arena_sprints()."
-    
+        available = sorted(
+            os.path.basename(p)
+            for p in glob.glob(os.path.join(tasks_dir, "arena-sprint-*.md"))
+        )
+        hint = (
+            "Dostupné zadania: " + ", ".join(available) if available
+            else "V tasks/ nie je žiadne zadanie typu arena-sprint-*.md."
+        )
+        return (
+            f"ASSIGNMENT_NOT_FOUND: sprint {sprint_number} nemá zadanie "
+            f"(hľadané: {os.path.basename(pattern)}). {hint}"
+        )
+
     file_path = matches[0]
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         return f"### Zadanie Sprintu {sprint_number} ({os.path.basename(file_path)})\n\n{content[:4000]}"
     except Exception as e:
-        return f"Chyba pri čítaní súboru {file_path}: {str(e)}"
+        return f"ASSIGNMENT_UNREADABLE: {file_path} sa nepodarilo prečítať: {e}"
 
 
 def format_arena_sprint_prompt(sprint_number: int, target_model: str = "arena") -> str:
     """Sformátuje zadanie sprintu do hotového promptu pre Arena.ai ako striktný GOLDEN TICKET."""
     assignment = read_sprint_assignment(sprint_number)
-    if "nebol nájdený" in assignment or "Chyba" in assignment:
+    # Error results are prefixed with an ALL-CAPS sentinel so they can never be
+    # mistaken for a real assignment body. Keep this in sync with
+    # read_sprint_assignment().
+    if assignment.startswith(("ASSIGNMENT_NOT_FOUND", "ASSIGNMENT_UNREADABLE", "GROUND_TRUTH_")):
         return assignment
 
     prompt = f"""<system_prompt>
