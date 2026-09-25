@@ -3410,6 +3410,7 @@
     "imaging": "RTG & zobrazovacia AI",
     "medications": "Lieky & dohľad",
     "aiSwarm": "AI Swarm & AgentOS",
+    "interopBridge": "Interop most v1 → v2",
     "schemaValidation": "Validácia schém"
   },
   "newSoap": {
@@ -9989,6 +9990,161 @@
       "aiDraftOnly": "AI obsah musí zostať v stave návrhu, kým ho veterinár nepodpíše (zákon 39/2007 Z. z.)",
       "narcoticAiPrefill": "AI predvyplnenie je zakázané pre omamné látky: {substances} (zákon 139/1998 Z. z.). Povolený je iba manuálny zápis.",
       "sympathyGate": "Brána súcitu: pri zosnulom pacientovi sú automatické pripomienky potlačené"
+    }
+  },
+  "interopBridge": {
+    "title": "Zabezpečený interop most v1 → v2",
+    "subtitle": "Šifrovaná a schémou validovaná výmena správ medzi runtime VPM v1 a v2.",
+    "actions": {
+      "refresh": "Obnoviť",
+      "selfTest": "Overiť obojsmernú cestu"
+    },
+    "gates": {
+      "clinicalDraft": "Návrhy AI zostávajú v stave draft, kým ich nepodpíše veterinár (Zákon č. 39/2007 Z. z.).",
+      "controlledSubstances": "Omamné látky (ketamín, opioidy, propofol) sa nikdy neprenášajú s AI prefillom — iba manuálny zápis so ShieldAlert (Zákon č. 139/1998 Z. z.).",
+      "sympathyGate": "Sympathy Gate: pri stave deceased sa automatické pripomienky okamžite potláčajú."
+    },
+    "selfTest": {
+      "refused": "Most odmietol odoslať testovaciu správu",
+      "result": "Výsledok testu",
+      "failed": "Test mosta zlyhal"
+    },
+    "kpi": {
+      "endpoints": "Partnerské endpointy",
+      "endpointsHint": "Registrované: {count}",
+      "traffic": "Správy (24 h)",
+      "trafficHint": "dnu {inbound} / von {outbound}",
+      "validated": "Podiel validovaných",
+      "validatedHint": "Prijaté: {count}",
+      "attention": "V karanténe / zamietnuté",
+      "rotationDue": "Rotácia kľúča je potrebná",
+      "rotationOk": "Kľúče sú v poriadku"
+    },
+    "tabs": {
+      "endpoints": "Endpointy",
+      "messages": "Správy",
+      "contracts": "Kontrakty",
+      "keys": "Kľúče",
+      "events": "Udalosti",
+      "ariaLabel": "Plochy mosta"
+    },
+    "search": {
+      "placeholder": "Hľadať správu alebo partnera",
+      "statusFilter": "Filter stavu",
+      "allStatuses": "Všetky stavy"
+    },
+    "results": "Výsledky: {count}",
+    "empty": {
+      "title": "Zatiaľ niet čo zobraziť",
+      "description": "Zaregistrujte partnerský runtime a jeho kľúč; každá prenesená správa sa zobrazí tu."
+    },
+    "endpoints": {
+      "name": "Endpoint",
+      "runtime": "Runtime",
+      "direction": "Smer",
+      "baseUrl": "Základná URL",
+      "key": "Aktívny kľúč",
+      "status": "Stav",
+      "lastSeen": "Naposledy videný"
+    },
+    "runtime": {
+      "v1": "VPM v1",
+      "v2": "VPM v2"
+    },
+    "direction": {
+      "v1_to_v2": "v1 → v2",
+      "v2_to_v1": "v2 → v1"
+    },
+    "endpointStatus": {
+      "active": "Aktívny",
+      "paused": "Pozastavený",
+      "revoked": "Zrušený"
+    },
+    "messages": {
+      "created": "Prijaté",
+      "type": "Typ správy",
+      "direction": "Smer",
+      "externalId": "Zdrojový záznam",
+      "status": "Stav",
+      "gates": "Klinické brány",
+      "size": "Veľkosť",
+      "bytes": "{count} B"
+    },
+    "status": {
+      "validated": "Validovaná",
+      "processed": "Odoslaná",
+      "quarantined": "V karanténe",
+      "rejected": "Zamietnutá",
+      "acknowledged": "Potvrdená",
+      "received": "Prijatá",
+      "failed": "Zlyhala"
+    },
+    "badge": {
+      "draft": "Draft — podpíše veterinár",
+      "controlled": "OPL — manuálny zápis",
+      "sympathy": "Pripomienky potlačené"
+    },
+    "reason": {
+      "malformed_envelope": "Poškodená obálka",
+      "unsupported_schema_version": "Nepodporovaná verzia schémy",
+      "unsupported_algorithm": "Nepodporovaný algoritmus",
+      "payload_too_large": "Príliš veľký obsah",
+      "direction_not_allowed": "Nepovolený smer",
+      "message_type_not_allowed": "Nepovolený typ správy",
+      "stale_timestamp": "Stará časová pečiatka (možný replay)",
+      "replay_detected": "Zachytený replay",
+      "unknown_key_id": "Neznámy kľúč",
+      "payload_hash_mismatch": "Nesúhlasný hash obsahu",
+      "signature_invalid": "Neplatný podpis",
+      "decryption_failed": "Dešifrovanie zlyhalo",
+      "payload_invalid": "Obsah nezodpovedá kontraktu",
+      "safety_gate_blocked": "Zablokované klinickou bránou"
+    },
+    "contracts": {
+      "type": "Typ správy",
+      "direction": "Smer",
+      "schema": "Schéma",
+      "strict": "Prísnosť",
+      "strictYes": "Neznáme polia zamietnuté",
+      "strictNo": "Neznáme polia povolené",
+      "status": "Stav",
+      "approved": "Schválené",
+      "default": "Predvolené z katalógu"
+    },
+    "contractStatus": {
+      "active": "Aktívny",
+      "disabled": "Vypnutý"
+    },
+    "keys": {
+      "runtime": "Runtime",
+      "keyId": "ID kľúča",
+      "fingerprint": "Fingerprint",
+      "age": "Vek",
+      "ageDays": "{days} d",
+      "status": "Stav",
+      "rotation": "Rotácia",
+      "rotationDue": "Rotácia potrebná",
+      "rotationOk": "V rámci politiky"
+    },
+    "keyStatus": {
+      "active": "Aktívny",
+      "rotated": "Rotovaný",
+      "revoked": "Zrušený"
+    },
+    "events": {
+      "at": "Kedy",
+      "type": "Udalosť",
+      "severity": "Závažnosť",
+      "actor": "Aktér",
+      "detail": "Detail"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Upozornenie",
+      "critical": "Kritická"
+    },
+    "legal": {
+      "note": "Každá správa je zapečatená AES-256-GCM, podpísaná HMAC-SHA256 a pred zápisom do klinických dát validovaná proti striktnej schéme. Tajomstvá mosta žijú len v deployment secret store — databáza uchováva iba fingerprinty."
     }
   }
 }

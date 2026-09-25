@@ -3410,6 +3410,7 @@
     "imaging": "X-ray & imaging AI",
     "medications": "Medications & oversight",
     "aiSwarm": "AI Swarm & AgentOS",
+    "interopBridge": "Interop Bridge v1 → v2",
     "schemaValidation": "Schema validation"
   },
   "newSoap": {
@@ -9989,6 +9990,161 @@
       "aiDraftOnly": "AI content must stay in draft state until a veterinarian signs it (Act 39/2007 Coll.)",
       "narcoticAiPrefill": "AI prefill is forbidden for narcotic substances: {substances} (Act 139/1998 Coll.). Manual entry only.",
       "sympathyGate": "Sympathy gate: automated reminders are suppressed for a deceased patient"
+    }
+  },
+  "interopBridge": {
+    "title": "Secure Interop Bridge v1 → v2",
+    "subtitle": "Encrypted, schema-validated message exchange between the VPM v1 and v2 runtimes.",
+    "actions": {
+      "refresh": "Refresh",
+      "selfTest": "Verify round trip"
+    },
+    "gates": {
+      "clinicalDraft": "AI drafts stay in draft until a veterinarian signs them (Act No. 39/2007 Coll.).",
+      "controlledSubstances": "Controlled substances (ketamine, opioids, propofol) never arrive with an AI prefill — manual entry with the ShieldAlert gate only (Act No. 139/1998 Coll.).",
+      "sympathyGate": "Sympathy Gate: automated reminders are suppressed immediately for deceased patients."
+    },
+    "selfTest": {
+      "refused": "The bridge refused to seal the test message",
+      "result": "Self-test result",
+      "failed": "Bridge self-test failed"
+    },
+    "kpi": {
+      "endpoints": "Peer endpoints",
+      "endpointsHint": "{count} registered",
+      "traffic": "Messages (24 h)",
+      "trafficHint": "in {inbound} / out {outbound}",
+      "validated": "Validated share",
+      "validatedHint": "{count} accepted",
+      "attention": "Quarantined / rejected",
+      "rotationDue": "Key rotation is due",
+      "rotationOk": "Keys are current"
+    },
+    "tabs": {
+      "endpoints": "Endpoints",
+      "messages": "Messages",
+      "contracts": "Contracts",
+      "keys": "Keys",
+      "events": "Events",
+      "ariaLabel": "Bridge surfaces"
+    },
+    "search": {
+      "placeholder": "Search messages or peers",
+      "statusFilter": "Status filter",
+      "allStatuses": "All statuses"
+    },
+    "results": "Results: {count}",
+    "empty": {
+      "title": "Nothing to show yet",
+      "description": "Register the peer runtime and its key — every bridged message will be listed here."
+    },
+    "endpoints": {
+      "name": "Endpoint",
+      "runtime": "Runtime",
+      "direction": "Direction",
+      "baseUrl": "Base URL",
+      "key": "Active key",
+      "status": "Status",
+      "lastSeen": "Last seen"
+    },
+    "runtime": {
+      "v1": "VPM v1",
+      "v2": "VPM v2"
+    },
+    "direction": {
+      "v1_to_v2": "v1 → v2",
+      "v2_to_v1": "v2 → v1"
+    },
+    "endpointStatus": {
+      "active": "Active",
+      "paused": "Paused",
+      "revoked": "Revoked"
+    },
+    "messages": {
+      "created": "Received",
+      "type": "Message type",
+      "direction": "Direction",
+      "externalId": "Source record",
+      "status": "Status",
+      "gates": "Clinical gates",
+      "size": "Size",
+      "bytes": "{count} B"
+    },
+    "status": {
+      "validated": "Validated",
+      "processed": "Dispatched",
+      "quarantined": "Quarantined",
+      "rejected": "Rejected",
+      "acknowledged": "Acknowledged",
+      "received": "Received",
+      "failed": "Failed"
+    },
+    "badge": {
+      "draft": "Draft — vet signs",
+      "controlled": "OPL — manual entry",
+      "sympathy": "Outreach suppressed"
+    },
+    "reason": {
+      "malformed_envelope": "Malformed envelope",
+      "unsupported_schema_version": "Unsupported schema version",
+      "unsupported_algorithm": "Unsupported algorithm",
+      "payload_too_large": "Payload too large",
+      "direction_not_allowed": "Direction not allowed",
+      "message_type_not_allowed": "Message type not allowed",
+      "stale_timestamp": "Stale timestamp (possible replay)",
+      "replay_detected": "Replay detected",
+      "unknown_key_id": "Unknown key",
+      "payload_hash_mismatch": "Payload hash mismatch",
+      "signature_invalid": "Invalid signature",
+      "decryption_failed": "Decryption failed",
+      "payload_invalid": "Payload violates its contract",
+      "safety_gate_blocked": "Blocked by a clinical gate"
+    },
+    "contracts": {
+      "type": "Message type",
+      "direction": "Direction",
+      "schema": "Schema",
+      "strict": "Strictness",
+      "strictYes": "Unknown fields rejected",
+      "strictNo": "Unknown fields allowed",
+      "status": "Status",
+      "approved": "Approved",
+      "default": "Catalogue default"
+    },
+    "contractStatus": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "keys": {
+      "runtime": "Runtime",
+      "keyId": "Key id",
+      "fingerprint": "Fingerprint",
+      "age": "Age",
+      "ageDays": "{days} d",
+      "status": "Status",
+      "rotation": "Rotation",
+      "rotationDue": "Rotation due",
+      "rotationOk": "Within policy"
+    },
+    "keyStatus": {
+      "active": "Active",
+      "rotated": "Rotated",
+      "revoked": "Revoked"
+    },
+    "events": {
+      "at": "When",
+      "type": "Event",
+      "severity": "Severity",
+      "actor": "Actor",
+      "detail": "Detail"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "legal": {
+      "note": "Every payload is sealed with AES-256-GCM, signed with HMAC-SHA256 and validated against a strict schema before it reaches clinical data. Bridge secrets live only in the deployment secret store — the database keeps fingerprints."
     }
   }
 }

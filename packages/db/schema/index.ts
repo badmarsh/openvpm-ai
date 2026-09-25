@@ -69,3 +69,4 @@ export * from "./ext_clinical_guardian";
 export * from "./ext_schema_validation";
 
 export * from "./ext_inventory";
+export * from "./ext_bridge_v1v2";
