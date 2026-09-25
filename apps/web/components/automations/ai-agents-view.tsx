@@ -9,12 +9,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import {
+  readAiAgentEnabled,
+  writeAiAgentEnabled,
+} from "@/lib/ai-agent-modules";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "openvpm_ai_agents_enabled";
 
 interface AgentModule {
   id: string;
@@ -84,22 +86,11 @@ const AGENT_MODULES: AgentModule[] = [
 ];
 
 function loadEnabledState(): Record<string, boolean> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
-  } catch {
-    return {};
+  const state: Record<string, boolean> = {};
+  for (const mod of AGENT_MODULES) {
+    state[mod.id] = readAiAgentEnabled(mod.id);
   }
-}
-
-function saveEnabledState(state: Record<string, boolean>) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
-  }
+  return state;
 }
 
 type TFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
@@ -135,7 +126,7 @@ export function AiAgentsView() {
   function handleToggle(id: string, value: boolean) {
     const next = { ...enabled, [id]: value };
     setEnabled(next);
-    saveEnabledState(next);
+    writeAiAgentEnabled({ [id]: value });
   }
 
   const inboxModules = AGENT_MODULES.filter((m) => m.category === "inbox");
