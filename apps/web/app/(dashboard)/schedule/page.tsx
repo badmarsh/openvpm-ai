@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  CalendarDays,
   Clock,
   User,
   Filter,
@@ -38,7 +39,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
 import { CalendarSubscribe } from "@/components/schedule/calendar-subscribe";
-import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageHeader,
+  PageToolbar,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { formatDoctorName, formatSpecies } from "@/lib/locale/format";
 import { dateInputTimeUtcInstant } from "@/lib/date-input";
@@ -53,6 +66,8 @@ import {
   type CalendarDay,
   type CalendarView,
 } from "@/lib/scheduling/calendar-views";
+
+export type ScheduleView = CalendarView | "list";
 import {
   APPOINTMENT_DURATION_MAX_MINUTES,
   APPOINTMENT_DURATION_MIN_MINUTES,
@@ -165,6 +180,16 @@ const SCHEDULE_DAY_KEYS = [
   "sat",
 ] as const;
 
+const SCHEDULE_DAY_TRANSLATION_KEYS = {
+  sun: "schedule.daysShort.sun",
+  mon: "schedule.daysShort.mon",
+  tue: "schedule.daysShort.tue",
+  wed: "schedule.daysShort.wed",
+  thu: "schedule.daysShort.thu",
+  fri: "schedule.daysShort.fri",
+  sat: "schedule.daysShort.sat",
+} as const;
+
 function formatDayShort(
   date: Date,
   t: (key: string, fallback?: string) => string,
@@ -174,7 +199,7 @@ function formatDayShort(
   const key = SCHEDULE_DAY_KEYS[date.getDay()]!;
   const dateLocale = locale === "sk" ? "sk-SK" : "en-US";
   const defaultShort = date.toLocaleDateString(dateLocale, { weekday: "short" });
-  return t("schedule.daysShort." + key, defaultShort);
+  return t(SCHEDULE_DAY_TRANSLATION_KEYS[key], defaultShort);
 }
 
 function formatDate(date: Date, locale = "sk-SK"): string {
@@ -385,7 +410,7 @@ function buildDayLanes(
   return lanes;
 }
 
-function formatToolbarDate(date: Date, view: CalendarView, locale = "sk-SK"): string {
+function formatToolbarDate(date: Date, view: CalendarView | "list", locale = "sk-SK"): string {
   if (view === "month") {
     const formatted = date.toLocaleDateString(locale, {
       month: "long",
@@ -759,7 +784,7 @@ function PhoneAgenda({
 }: {
   appointments: Appointment[];
   timeZone?: string | null;
-  view: CalendarView;
+  view: CalendarView | "list";
   onAppointmentClick: (appointment: Appointment) => void;
 }) {
   const { t, locale } = useI18n();
@@ -781,7 +806,9 @@ function PhoneAgenda({
       ? t("schedule.viewDay", "Day")
       : view === "week"
         ? t("schedule.viewWeek", "Week")
-        : t("schedule.viewMonth", "Month");
+        : view === "month"
+          ? t("schedule.viewMonth", "Month")
+          : t("schedule.viewList", "List");
 
   return (
     <section
@@ -1171,6 +1198,268 @@ function MonthCalendar({
         })}
       </div>
     </div>
+  );
+}
+
+function AppointmentStatusBadge({
+  status,
+  appointment,
+  t,
+}: {
+  status: string;
+  appointment?: Appointment;
+  t: (key: string, fallback?: string, params?: Record<string, string | number>) => string;
+}) {
+  const label = appointment ? appointmentStatusLabel(appointment, t) : status;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border shadow-2xs whitespace-nowrap",
+        status === "scheduled" &&
+          "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800",
+        status === "confirmed" &&
+          "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800",
+        status === "checked_in" &&
+          "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800",
+        status === "in_exam" &&
+          "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800",
+        status === "checked_out" &&
+          "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800",
+        status === "no_show" &&
+          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800",
+        status === "cancelled" &&
+          "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/60 dark:text-gray-400 dark:border-gray-800"
+      )}
+    >
+      <StatusDot status={status} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
+function ScheduleListView({
+  appointments,
+  timeZone,
+  onAppointmentClick,
+  canCreate,
+  onNewClick,
+}: {
+  appointments: Appointment[];
+  timeZone?: string | null;
+  onAppointmentClick: (appointment: Appointment) => void;
+  canCreate: boolean;
+  onNewClick: () => void;
+}) {
+  const { t } = useI18n();
+
+  if (appointments.length === 0) {
+    return (
+      <EmptyState
+        icon={CalendarDays}
+        title={t("schedule.noAppointmentsListTitle", "No appointments in list")}
+        description={t(
+          "schedule.noAppointmentsListDesc",
+          "No appointments found for the selected period and filters."
+        )}
+        action={
+          canCreate
+            ? {
+                label: t("schedule.btnNewAppointment", "New Appointment"),
+                onClick: onNewClick,
+                icon: Plus,
+              }
+            : undefined
+        }
+      />
+    );
+  }
+
+  return (
+    <DataTableFrame>
+      <table className="w-full text-xs">
+        <thead className="border-b border-border bg-muted/30">
+          <tr>
+            <th className={tableHeadClass}>
+              {t("schedule.listColTime", "Time")}
+            </th>
+            <th className={tableHeadClass}>
+              {t("schedule.listColPatient", "Patient")}
+            </th>
+            <th className={tableHeadClass}>
+              {t("schedule.listColClient", "Client")}
+            </th>
+            <th className={tableHeadClass}>
+              {t("schedule.listColType", "Type")}
+            </th>
+            <th className={tableHeadClass}>
+              {t("schedule.listColDoctor", "Doctor")}
+            </th>
+            <th className={tableHeadClass}>
+              {t("schedule.listColLocation", "Room / Location")}
+            </th>
+            <th className={tableHeadClass}>
+              {t("schedule.listColStatus", "Status")}
+            </th>
+            <th className={cn(tableHeadClass, "text-right")}>
+              {t("schedule.listColActions", "Actions")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {appointments.map((appointment) => {
+            const start = new Date(appointment.startTime);
+            const end = new Date(appointment.endTime);
+            const clientFullName = [
+              appointment.clientFirstName,
+              appointment.clientLastName,
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return (
+              <tr
+                key={appointment.id}
+                className={cn(tableRowClass, "cursor-pointer")}
+                onClick={() => onAppointmentClick(appointment)}
+              >
+                <td
+                  className={cn(
+                    tableCellClass,
+                    "whitespace-nowrap font-mono tabular-nums text-xs"
+                  )}
+                >
+                  <div className="font-semibold text-foreground">
+                    {formatTime(start, timeZone)}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    – {formatTime(end, timeZone)}
+                  </div>
+                </td>
+                <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                  <div className="flex items-center gap-1.5">
+                    {appointment.patientId ? (
+                      <Link
+                        href={`/patients/${appointment.patientId}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 font-medium text-foreground transition-colors hover:text-primary"
+                      >
+                        <span>
+                          {appointment.patientName ||
+                            t("schedule.unknownPatient", "Unknown Patient")}
+                        </span>
+                        <ArrowUpRight className="h-3 w-3 text-muted-foreground opacity-60" />
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-foreground">
+                        {appointment.patientName ||
+                          t("schedule.unknownPatient", "Unknown Patient")}
+                      </span>
+                    )}
+                    {appointment.patientSpecies && (
+                      <span className="text-[11px] text-muted-foreground">
+                        ({formatSpecies(appointment.patientSpecies, t)})
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                  <div className="min-w-0 max-w-[12rem] truncate font-medium text-foreground">
+                    {clientFullName ||
+                      t("schedule.clientNotListed", "Client not listed")}
+                  </div>
+                  {appointment.clientPhone && (
+                    <div className="truncate text-[11px] text-muted-foreground">
+                      {appointment.clientPhone}
+                    </div>
+                  )}
+                </td>
+                <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                  {appointment.typeName ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
+                      style={{
+                        backgroundColor: `${getAppointmentColor(appointment)}20`,
+                        color: getAppointmentColor(appointment),
+                        borderColor: `${getAppointmentColor(appointment)}40`,
+                        borderWidth: 1,
+                      }}
+                    >
+                      {appointment.typeName}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    "whitespace-nowrap text-xs text-foreground"
+                  )}
+                >
+                  {appointment.doctorName ? (
+                    <div className="flex min-w-0 items-center gap-1">
+                      <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="max-w-[9rem] truncate">
+                        {formatDoctorName(appointment.doctorName, t)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {t("schedule.teamLane", "Team")}
+                    </span>
+                  )}
+                </td>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    "whitespace-nowrap text-xs text-muted-foreground"
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-1">
+                    <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                    <span className="max-w-[9rem] truncate">
+                      {[appointment.roomName, appointment.locationName]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </span>
+                  </div>
+                </td>
+                <td className={cn(tableCellClass, "whitespace-nowrap")}>
+                  <AppointmentStatusBadge
+                    status={appointment.status}
+                    appointment={appointment}
+                    t={t}
+                  />
+                </td>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    "whitespace-nowrap text-right"
+                  )}
+                >
+                  <div
+                    className="flex items-center justify-end gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      asChild
+                    >
+                      <Link href={`/encounters/${appointment.id}`}>
+                        <Stethoscope className="mr-1 h-3 w-3" />
+                        {t("schedule.btnOpenVisit", "Open visit")}
+                      </Link>
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </DataTableFrame>
   );
 }
 
@@ -2884,7 +3173,9 @@ function SchedulePageContent() {
   const [currentDate, setCurrentDate] = useState(() =>
     startOfCalendarDay(new Date())
   );
-  const [view, setView] = useState<CalendarView>("day");
+  const [view, setView] = useState<ScheduleView>("day");
+  const [listStartDate, setListStartDate] = useState<string>("");
+  const [listEndDate, setListEndDate] = useState<string>("");
   const [doctorFilter, setDoctorFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -2933,9 +3224,17 @@ function SchedulePageContent() {
       };
     }
 
+    if (view === "list") {
+      const start = listStartDate || toISODate(currentDate);
+      const end = listEndDate || start;
+      const s = start <= end ? start : end;
+      const e = start <= end ? end : start;
+      return { startDate: s, endDate: e };
+    }
+
     const dateKey = toISODate(currentDate);
     return { startDate: dateKey, endDate: dateKey };
-  }, [currentDate, monthDays, view, weekDays]);
+  }, [currentDate, listEndDate, listStartDate, monthDays, view, weekDays]);
 
   const { data: appointmentsData, isLoading, error } =
     trpc.appointments.list.useQuery(
@@ -3127,19 +3426,45 @@ function SchedulePageContent() {
     setShowBookingForm(true);
   }, [canUseScheduleInteractions, firstClinicDay]);
 
-  const goToday = () => setCurrentDate(startOfCalendarDay(new Date()));
+  const goToday = () => {
+    const today = startOfCalendarDay(new Date());
+    setCurrentDate(today);
+    const key = toISODate(today, calendarTimeZone);
+    setListStartDate(key);
+    setListEndDate(key);
+  };
   const goPrev = () =>
-    setCurrentDate((d) =>
-      view === "month"
-        ? addCalendarMonths(d, -1)
-        : addCalendarDays(d, view === "week" ? -7 : -1)
-    );
+    setCurrentDate((d) => {
+      if (view === "month") {
+        return addCalendarMonths(d, -1);
+      }
+      if (view === "week") {
+        return addCalendarDays(d, -7);
+      }
+      const next = addCalendarDays(d, -1);
+      if (view === "list") {
+        const key = toISODate(next);
+        setListStartDate(key);
+        setListEndDate(key);
+      }
+      return next;
+    });
   const goNext = () =>
-    setCurrentDate((d) =>
-      view === "month"
-        ? addCalendarMonths(d, 1)
-        : addCalendarDays(d, view === "week" ? 7 : 1)
-    );
+    setCurrentDate((d) => {
+      if (view === "month") {
+        return addCalendarMonths(d, 1);
+      }
+      if (view === "week") {
+        return addCalendarDays(d, 7);
+      }
+      const next = addCalendarDays(d, 1);
+      if (view === "list") {
+        const key = toISODate(next);
+        setListStartDate(key);
+        setListEndDate(key);
+      }
+      return next;
+    });
 
   useEffect(() => {
     if (scheduleError || scheduleMissing) {
@@ -3162,10 +3487,11 @@ function SchedulePageContent() {
     verifiedAppointmentsData,
   ]);
 
-  const viewOptions: { id: CalendarView; label: string }[] = [
+  const viewOptions: { id: ScheduleView; label: string }[] = [
     { id: "day", label: t("schedule.viewDay", "Day") },
     { id: "week", label: t("schedule.viewWeek", "Week") },
     { id: "month", label: t("schedule.viewMonth", "Month") },
+    { id: "list", label: t("schedule.viewList", "List") },
   ];
 
   // Current time indicator position
@@ -3174,12 +3500,12 @@ function SchedulePageContent() {
   const currentDateKey = toISODate(currentDate);
   const isToday = currentDateKey === todayKey;
   const nowParts = getZonedHourMinute(now, calendarTimeZone);
-  const showNowLine = nowParts.hour >= START_HOUR && nowParts.hour < END_HOUR;
+  const showNowLine = (nowParts.hour >= START_HOUR) && (END_HOUR > nowParts.hour);
   const showDayNowLine = isToday && showNowLine;
   const nowTop = getTopOffset(now, calendarTimeZone);
 
   return (
-    <div>
+    <div className={pageShellClass}>
       {firstClinicDay ? (
         <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
@@ -3197,15 +3523,32 @@ function SchedulePageContent() {
         </div>
       ) : null}
       <PageHeader
-        icon={Calendar}
-        title={t("schedule.title", "Schedule")}
-        subtitle={t("schedule.subtitle", "Appointment calendar")}
+        icon={CalendarDays}
+        title={t("schedule.title", "Rozvrh")}
+        subtitle={t("schedule.subtitle", "Kalendár termínov")}
         actions={<CalendarSubscribe />}
-        className="mb-6"
       />
 
+      {/* Underline tabs: Den / Tyzden / Mesiac / Zoznam */}
+      <Tabs
+        value={view}
+        onValueChange={(val) => setView(val as ScheduleView)}
+      >
+        <TabsList className={cn(underlineTabsListClass, "w-full")}>
+          {viewOptions.map((option) => (
+            <TabsTrigger
+              key={option.id}
+              value={option.id}
+              className={underlineTabsTriggerClass}
+            >
+              {option.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <PageToolbar>
         {/* Date navigation */}
         <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-start">
           <div className="flex shrink-0 items-center gap-1">
@@ -3237,40 +3580,47 @@ function SchedulePageContent() {
             </Button>
           </div>
 
-          <h3 className="min-w-0 truncate text-right text-sm font-medium sm:text-left">
-            {formatToolbarDate(currentDate, view, locale === "sk" ? "sk-SK" : "en-US")}
-          </h3>
+          {view === "list" ? (
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="schedule-range-start" className="sr-only">
+                {t("schedule.rangeStart", "Od")}
+              </label>
+              <DatePicker
+                id="schedule-range-start"
+                value={listStartDate || toISODate(currentDate)}
+                onChange={(val) => {
+                  setListStartDate(val);
+                  if (val && isAppointmentDateInputValid(val)) {
+                    setCurrentDate(startOfCalendarDay(new Date(val + "T00:00:00")));
+                  }
+                }}
+                className="h-9 w-32 text-xs"
+              />
+              <span className="text-muted-foreground text-xs">—</span>
+              <label htmlFor="schedule-range-end" className="sr-only">
+                {t("schedule.rangeEnd", "Do")}
+              </label>
+              <DatePicker
+                id="schedule-range-end"
+                value={listEndDate || listStartDate || toISODate(currentDate)}
+                onChange={(val) => setListEndDate(val)}
+                className="h-9 w-32 text-xs"
+              />
+            </div>
+          ) : (
+            <h3 className="min-w-0 truncate text-right text-sm font-medium sm:text-left">
+              {formatToolbarDate(currentDate, view, locale === "sk" ? "sk-SK" : "en-US")}
+            </h3>
+          )}
         </div>
 
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
-          {/* View toggle */}
-          <div className="grid h-11 w-full grid-cols-3 rounded-md border border-border sm:flex sm:h-9 sm:w-auto">
-            {viewOptions.map((option, index) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => setView(option.id)}
-                className={cn(
-                  "min-h-11 px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0",
-                  index > 0 && "border-l border-border",
-                  index === 0 && "rounded-l-md",
-                  index === viewOptions.length - 1 && "rounded-r-md",
-                  view === option.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
           {/* Doctor filter */}
           {scheduleLocations.length > 1 && (
             <div className="relative min-w-0 flex-1 sm:flex-none">
               <MapPin className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select
-                aria-label={t("schedule.filterLocationAria", "Filter schedule by clinic location")} /* aria-label="Filter schedule by clinic location" */
+                aria-label={t("schedule.filterLocationAria", "Filter schedule by clinic location")}
                 value={locationFilter}
                 onChange={(event) => {
                   setLocationFilter(event.target.value);
@@ -3293,6 +3643,7 @@ function SchedulePageContent() {
             <select
               value={doctorFilter}
               onChange={(e) => setDoctorFilter(e.target.value)}
+              aria-label={t("schedule.filterDoctorAria", "Filter schedule by doctor")}
               className="h-11 w-full min-w-0 appearance-none rounded-md border border-input bg-background pl-8 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-ring sm:h-9 sm:w-auto"
             >
               <option value="all">{t("schedule.allDoctors", "All Doctors")}</option>
@@ -3319,7 +3670,7 @@ function SchedulePageContent() {
             </Button>
           )}
         </div>
-      </div>
+      </PageToolbar>
 
       {/* Calendar area (the "your day" guide spotlights this region) */}
       <div data-tour="schedule-calendar">
@@ -3427,6 +3778,14 @@ function SchedulePageContent() {
             />
           </>
         )
+      ) : view === "list" ? (
+        <ScheduleListView
+          appointments={appointments}
+          timeZone={calendarTimeZone}
+          onAppointmentClick={setSelectedAppointment}
+          canCreate={canUseScheduleInteractions}
+          onNewClick={() => openBookingForm(currentDate)}
+        />
       ) : (
         <DayCalendar
           appointments={appointments}
