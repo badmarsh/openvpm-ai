@@ -18,6 +18,7 @@ import {
   Pill,
   Bot,
   Waypoints,
+  Radar,
 } from "lucide-react";
 
 export type UserRole =
@@ -140,6 +141,15 @@ export const customNavItems: CustomNavItem[] = [
     icon: ImageIcon,
     roles: ['admin', 'veterinarian', 'front_desk'],
     section: 'marketing',
+  },
+  {
+    href: '/vet-intel',
+    label: 'Vet Intelligence',
+    i18nKey: 'nav.vetIntel',
+    icon: Radar,
+    roles: ['admin', 'veterinarian'],
+    section: 'marketing',
+    badge: 'AI',
   },
   // AI imaging (RTG / USG / CT / MRI) — radiology work needs a nav entry of
   // its own; it used to be reachable only from the /agent hub.
