@@ -1033,20 +1033,65 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
     # 1. Získanie obsahu patchu a súboru
     patch_file_path = None
     patch_content = ""
+    tasks_dir = os.path.join(repo, "tasks")
+
+    target_path = None
     if os.path.exists(patch_source):
-        patch_file_path = patch_source
-        try:
-            with open(patch_file_path, "r", encoding="utf-8") as pf:
-                patch_content = pf.read()
-        except Exception:
-            pass
+        target_path = patch_source
     elif os.path.exists(os.path.join(repo, patch_source)):
-        patch_file_path = os.path.join(repo, patch_source)
+        target_path = os.path.join(repo, patch_source)
+    elif os.path.exists(os.path.join(tasks_dir, patch_source)):
+        target_path = os.path.join(tasks_dir, patch_source)
+
+    if target_path and os.path.isdir(target_path):
+        import glob
+        found_patches = glob.glob(os.path.join(target_path, "**/*.patch"), recursive=True)
+        if found_patches:
+            patch_file_path = found_patches[0]
+            try:
+                with open(patch_file_path, "r", encoding="utf-8", errors="replace") as pf:
+                    patch_content = pf.read()
+            except Exception:
+                pass
+        else:
+            return f"❌ V priečinku `{patch_source}` sa nenašiel žiadny .patch súbor."
+    elif target_path and os.path.isfile(target_path):
+        patch_file_path = target_path
         try:
-            with open(patch_file_path, "r", encoding="utf-8") as pf:
+            with open(patch_file_path, "r", encoding="utf-8", errors="replace") as pf:
                 patch_content = pf.read()
         except Exception:
             pass
+    elif any(sep in patch_source for sep in ["/", "\\"]) or patch_source.endswith((".patch", ".diff", ".md", ".txt")) or patch_source.startswith("tasks"):
+        import glob
+        base_name = os.path.basename(patch_source).lower().replace(".patch", "").replace(".md", "").replace(".diff", "")
+        clean_task = task_id.lower().replace("arena-", "").replace(".patch", "")
+        candidates = []
+        if os.path.isdir(tasks_dir):
+            all_patches = glob.glob(os.path.join(tasks_dir, "**/*.patch"), recursive=True)
+            for p in all_patches:
+                p_lower = os.path.basename(p).lower()
+                if base_name and (base_name in p_lower or p_lower in base_name):
+                    candidates.append(p)
+                elif clean_task and (clean_task in p_lower or p_lower in clean_task):
+                    candidates.append(p)
+                elif "sprint" in base_name and any(num in base_name and num in p_lower for num in ["5", "8", "9", "10", "11"]):
+                    candidates.append(p)
+
+        if candidates:
+            patch_file_path = candidates[0]
+            try:
+                with open(patch_file_path, "r", encoding="utf-8", errors="replace") as pf:
+                    patch_content = pf.read()
+            except Exception:
+                pass
+        else:
+            avail = [f for f in os.listdir(tasks_dir) if f.endswith(".patch")] if os.path.isdir(tasks_dir) else []
+            return (
+                f"❌ Súbor patchu nebol nájdený: `{patch_source}`.\n"
+                f"Dostupné patch súbory v `tasks/`:\n" +
+                ("\n".join(f"• `tasks/{f}`" for f in avail) if avail else "• (žiadne .patch súbory v tasks/)")
+            )
     else:
         patch_content = patch_source
         patch_file_path = None
@@ -1097,7 +1142,7 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
 
     # 3. Deterministický pre-flight: git apply --check (overenie pred prepnutím vetvy)
     check_proc = subprocess.run(
-        [_which("git"), "apply", "--check", "--ignore-whitespace", patch_file_path],
+        [_which("git"), "apply", "--check", "--recount", "--ignore-whitespace", patch_file_path],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -1120,9 +1165,9 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
         return f"Chyba pri vytváraní vetvy {branch_name}: {e.stderr}"
 
     # 5. Aplikovanie patchu
-    proc = subprocess.run([_which("git"), "apply", "--ignore-whitespace", "--3way", patch_file_path], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    proc = subprocess.run([_which("git"), "apply", "--recount", "--ignore-whitespace", "--3way", patch_file_path], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
-        proc2 = subprocess.run([_which("git"), "apply", "--ignore-whitespace", patch_file_path], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        proc2 = subprocess.run([_which("git"), "apply", "--recount", "--ignore-whitespace", patch_file_path], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc2.returncode != 0:
             run = get_development_run(task_id)
             if run:
@@ -1797,11 +1842,25 @@ def extract_unified_diff(text: str) -> Optional[str]:
     """
     if text is None or not str(text).strip():
         return None
-    regions = _extract_regions(str(text))
+    raw_str = str(text)
+    if "```" in raw_str:
+        import re
+        blocks = re.findall(r"```(?:diff|patch)?\s*\n(.*?)\n```", raw_str, flags=re.DOTALL)
+        if blocks:
+            joined_blocks = "\n".join(b for b in blocks if "diff --git" in b or "--- a/" in b)
+            if joined_blocks.strip():
+                raw_str = joined_blocks
+
+    regions = _extract_regions(raw_str)
     if not regions:
         return None
-    git_regions = [item for item in regions if item.startswith("diff --git a/")]
-    chosen = git_regions or regions
+    git_regions = [item for item in regions if item.startswith("diff --git a/") or item.startswith("--- a/")]
+    if git_regions:
+        combined = "\n".join(item.rstrip() for item in git_regions)
+        if not combined.endswith("\n"):
+            combined += "\n"
+        return combined
+    chosen = regions
     best = max(chosen, key=len)
     if not (best.startswith("diff --git a/") or best.startswith("--- a/")):
         return None
