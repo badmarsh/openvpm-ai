@@ -796,6 +796,137 @@
       "parserActive": "active",
       "parserPartial": "partial",
       "parserInactive": "inactive"
+    },
+    "kpi": {
+      "activeJourneys": "Active journeys",
+      "enrolledPatients": "Enrolled patients",
+      "sentThisWeek": "Sent this week",
+      "suppressedSympathy": "Suppressed by sympathy gate",
+      "sympathyHint": "Veterinary Act 39/2007 — deceased"
+    },
+    "tabs": {
+      "journeys": "CRM Journeys & Automations",
+      "suppression": "Suppression Log & Sympathy Gate",
+      "clinical": "Clinical Guardian",
+      "aiAgents": "AI Agents & Workflow"
+    },
+    "filters": {
+      "allTypes": "All event types",
+      "allStatuses": "All statuses",
+      "searchPlaceholder": "Search journeys by name or description...",
+      "searchSuppression": "Search suppression logs...",
+      "allReasons": "All suppression reasons"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "draft": "Draft",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "table": {
+      "journeyName": "Journey Name",
+      "trigger": "Trigger Event",
+      "status": "Status",
+      "enrollments": "Enrollments",
+      "lastTriggered": "Last Triggered",
+      "actions": "Actions",
+      "stepsCount": "{count} steps",
+      "frequencyCap": "Cap: {max} / {days}d",
+      "pause": "Pause",
+      "activate": "Activate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this journey?",
+      "noJourneys": "No CRM journeys configured",
+      "noJourneysDesc": "Create your first journey or adjust your active filters.",
+      "loading": "Loading journeys..."
+    },
+    "builder": {
+      "newJourneyTitle": "New CRM Journey",
+      "editJourneyTitle": "Edit CRM Journey",
+      "newJourneyBtn": "New Journey",
+      "journeyName": "Journey Name",
+      "journeyNamePlaceholder": "e.g. Post-op follow-up sequence",
+      "journeyKey": "Unique Key",
+      "journeyKeyPlaceholder": "e.g. post_op_care",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe purpose and cadence of this automated journey...",
+      "triggerEvent": "Clinical Trigger Event",
+      "frequencyCapWindow": "Cap Window (days)",
+      "frequencyCapMax": "Max Messages in Window",
+      "stepsTitle": "Step Sequence",
+      "addStep": "Add Step",
+      "removeStep": "Remove Step",
+      "stepNumber": "Step {num}",
+      "stepLabel": "Step Label",
+      "stepLabelPlaceholder": "e.g. SMS check-in 24h post discharge",
+      "channel": "Channel",
+      "delayHours": "Delay (hours)",
+      "immediate": "Immediate (0 hrs)",
+      "legalBasis": "Legal Basis (GDPR)",
+      "saveJourney": "Save Journey",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "journeyCreated": "CRM Journey created successfully",
+      "journeyUpdated": "CRM Journey updated successfully"
+    },
+    "suppression": {
+      "title": "Suppression Log & Sympathy Gate",
+      "subtitle": "Ethical communication protection under Veterinary Act 39/2007 Z. z. and GDPR Art. 9.",
+      "readOnlyNotice": "Suppression logs are strictly read-only for statutory auditing and deceased patient protection.",
+      "colPatient": "Patient & Client",
+      "colReason": "Suppression Reason",
+      "colSuppressedAt": "Suppressed At",
+      "colAction": "Blocked Action / Channel",
+      "colStatus": "Status",
+      "colDetail": "Audit Detail",
+      "activeHold": "Active Hold",
+      "cleared": "Cleared",
+      "reasons": {
+        "deceased_patient": "Sympathy Gate (Deceased Pet)",
+        "quiet_hours": "Quiet Hours (8 PM - 8 AM)",
+        "frequency_cap": "Frequency Cap Exceeded",
+        "no_consent": "Missing Marketing Consent",
+        "opt_out": "Client Opted Out",
+        "recovery_hold": "Post-op Recovery Hold",
+        "manual_block": "Manual Staff Hold",
+        "sms_rate_limit": "SMS Rate Limit Exceeded",
+        "cooldown": "Cooldown Period",
+        "sensitivity_period": "Sensitivity Period",
+        "unknown_contact": "Unknown Contact"
+      },
+      "emptyTitle": "No suppression records",
+      "emptyDescription": "No suppressed communications or sympathy gate holds recorded for this filter.",
+      "loading": "Loading audit logs..."
+    },
+    "triggers": {
+      "visit_completed": "Visit Completed",
+      "vaccine_due": "Vaccine Due",
+      "appointment_booked": "Appointment Booked",
+      "appointment_reminder": "Appointment Reminder",
+      "appointment_no_show": "Appointment No-show",
+      "surgery_completed": "Surgery Completed",
+      "wellness_enrolled": "Wellness Enrolled",
+      "inactive_recall": "Inactive Recall",
+      "dental_detected": "Dental Care Indicated",
+      "patient_deceased": "Patient Deceased (Sympathy Gate)"
+    },
+    "legal": {
+      "contract": "Performance of Contract (Care)",
+      "consent": "Explicit Consent (GDPR)",
+      "legitimate_interest": "Legitimate Interest"
+    },
+    "channels": {
+      "sms": "SMS",
+      "email": "Email",
+      "task": "Staff Task",
+      "content_brief": "Content Brief"
+    },
+    "empty": {
+      "title": "No CRM journeys found",
+      "description": "Create your first customer journey to automate patient follow-ups and reminders.",
+      "action": "New Journey"
     }
   },
   "auth": {
