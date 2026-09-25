@@ -24,6 +24,8 @@ import {
   CreditCard,
   Building2,
   Ban,
+  Banknote,
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,16 @@ import { ThermalReceiptDrawer } from "@/components/ekasa/thermal-receipt-drawer"
 import { IntegrationModeBanner } from "@/components/common/integration-mode-banner";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  KpiCard,
+  KpiGrid,
+  PageToolbar,
+  filterControlClass,
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -307,7 +319,7 @@ function EkasaReceiptsContent() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         title={
           <span className="flex items-center gap-3">
@@ -329,16 +341,16 @@ function EkasaReceiptsContent() {
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as ActiveTab)}
           >
-            <TabsList>
-              <TabsTrigger value="receipts" className="gap-1.5">
+            <TabsList className={underlineTabsListClass}>
+              <TabsTrigger value="receipts" className={underlineTabsTriggerClass}>
                 <ReceiptEuro className="h-4 w-4" />
                 {t("ekasa.page.tabs.receipts", "Doklady")}
               </TabsTrigger>
-              <TabsTrigger value="closures" className="gap-1.5">
+              <TabsTrigger value="closures" className={underlineTabsTriggerClass}>
                 <Lock className="h-4 w-4" />
                 {t("ekasa.page.tabs.closures", "Uzávierky")}
               </TabsTrigger>
-              <TabsTrigger value="accountant" className="gap-1.5">
+              <TabsTrigger value="accountant" className={underlineTabsTriggerClass}>
                 <FileSpreadsheet className="h-4 w-4" />
                 {t("ekasa.page.tabs.accountant", "Pre účtovníka")}
               </TabsTrigger>
@@ -406,7 +418,7 @@ function EkasaReceiptsContent() {
           />
 
           {/* Verifikácia dokladov */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <PageToolbar className="sm:justify-between">
             <div className="flex flex-wrap gap-1.5">
               <Button
                 variant={!statusFilter ? "default" : "outline"}
@@ -449,10 +461,10 @@ function EkasaReceiptsContent() {
               <RefreshCw className="h-3.5 w-3.5" />
               {t("ekasa.page.receipts.refresh", "Obnoviť")}
             </Button>
-          </div>
+          </PageToolbar>
 
           {/* Table */}
-          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
+          <DataTableFrame>
             {isLoadingReceipts ? (
               <div className="p-4">
                 <EkasaReceiptsSkeleton />
@@ -683,7 +695,7 @@ function EkasaReceiptsContent() {
                 </div>
               </div>
             )}
-          </div>
+          </DataTableFrame>
         </div>
       )}
 
@@ -750,61 +762,60 @@ function EkasaReceiptsContent() {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : dailySummaryData?.summary ? (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.closures.totalToday", "Celková tržba dňa")}
-                  </span>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(dailySummaryData.summary.totalAmount)}
-                  </p>
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.closures.receiptCount", "{count} dokladov", {
-                      count: dailySummaryData.summary.receiptsCount,
-                    })}
-                  </span>
-                </div>
-
-                <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.closures.cash", "V hotovosti")}
-                  </span>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(dailySummaryData.summary.cashAmount)}
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.closures.card", "Platobnou kartou")}
-                  </span>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(dailySummaryData.summary.cardAmount)}
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.closures.vat23", "DPH 23 % (základ / daň)")}
-                  </span>
-                  <p className="mt-1 font-mono text-sm font-semibold tabular-nums text-foreground">
-                    {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.base)} /{" "}
-                    <span className="text-muted-foreground">
-                      {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.vat)}
+              <KpiGrid className="mt-4">
+                <KpiCard
+                  label={t("ekasa.page.closures.totalToday", "Celková tržba dňa")}
+                  icon={<Coins className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(dailySummaryData.summary.totalAmount)}
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        {t("ekasa.page.closures.receiptCount", "{count} dokladov", {
+                          count: dailySummaryData.summary.receiptsCount,
+                        })}
+                      </span>
                     </span>
-                  </p>
-                </div>
-              </div>
+                  }
+                />
+                <KpiCard
+                  label={t("ekasa.page.closures.cash", "V hotovosti")}
+                  icon={<Banknote className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(dailySummaryData.summary.cashAmount)}
+                    </span>
+                  }
+                />
+                <KpiCard
+                  label={t("ekasa.page.closures.card", "Platobnou kartou")}
+                  icon={<CreditCard className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(dailySummaryData.summary.cardAmount)}
+                    </span>
+                  }
+                />
+                <KpiCard
+                  label={t("ekasa.page.closures.vat23", "DPH 23 % (základ / daň)")}
+                  icon={<Percent className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono text-sm">
+                      {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.base)} /{" "}
+                      <span className="text-muted-foreground">
+                        {formatAmount(dailySummaryData.summary.vatBreakdown.vat23.vat)}
+                      </span>
+                    </span>
+                  }
+                />
+              </KpiGrid>
             ) : null}
           </div>
 
-          {/* Past Closures Table */}
-          <div className="rounded-xl border bg-card shadow-xs overflow-hidden">
-            <div className="border-b border-border/60 px-4 py-3">
-              <PageSectionHeader
-                title={t("ekasa.page.closures.history", "História denných uzávierok")}
-              />
-            </div>
+          {/* Past Closures: section header → DataTableFrame */}
+          <PageSectionHeader
+            title={t("ekasa.page.closures.history", "História denných uzávierok")}
+          />
+          <DataTableFrame>
 
             {isLoadingClosures ? (
               <div className="flex justify-center py-12">
@@ -865,7 +876,7 @@ function EkasaReceiptsContent() {
                 </TableBody>
               </Table>
             )}
-          </div>
+          </DataTableFrame>
         </div>
       )}
 
@@ -875,14 +886,14 @@ function EkasaReceiptsContent() {
       {activeTab === "accountant" && (
         <div className="space-y-6">
           {/* Controls: Month picker & Download buttons */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border bg-card p-4 shadow-xs">
+          <PageToolbar className="sm:justify-between">
             <div className="flex items-center gap-3">
               <CalendarDays className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               <div className="flex items-center gap-2">
                 <select
                   value={exportMonth}
                   onChange={(e) => setExportMonth(Number(e.target.value))}
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  className={filterControlClass}
                   aria-label={t("ekasa.page.accountant.month", "Mesiac")}
                 >
                   {MONTH_KEYS.map((key, idx) => (
@@ -895,7 +906,7 @@ function EkasaReceiptsContent() {
                 <select
                   value={exportYear}
                   onChange={(e) => setExportYear(Number(e.target.value))}
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  className={filterControlClass}
                   aria-label={t("ekasa.page.accountant.year", "Rok")}
                 >
                   {[2025, 2026, 2027].map((y) => (
@@ -915,7 +926,7 @@ function EkasaReceiptsContent() {
               <Download className="h-4 w-4" />
               {t("ekasa.page.accountant.download", "Stiahnuť CSV pre účtovníčku")}
             </Button>
-          </div>
+          </PageToolbar>
 
           {/* Monthly Totals Cards */}
           {isLoadingAccountant ? (
@@ -941,49 +952,50 @@ function EkasaReceiptsContent() {
             />
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.accountant.totalMonth", "Celkové tržby za mesiac")}
-                  </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(accountantData.totals.totalAmount)}
-                  </p>
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.accountant.closureMix", "{closures} uzávierok / {receipts} bločkov", {
-                      closures: accountantData.closuresCount,
-                      receipts: accountantData.receiptsCount,
-                    })}
-                  </span>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.accountant.totalCash", "Tržby v hotovosti")}
-                  </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(accountantData.totals.cashAmount)}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.accountant.totalCard", "Tržby platobnou kartou")}
-                  </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(accountantData.totals.cardAmount)}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
-                  <span className="text-xs text-muted-foreground">
-                    {t("ekasa.page.accountant.totalTransfer", "Bankové prevody")}
-                  </span>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">
-                    {formatAmount(accountantData.totals.transferAmount)}
-                  </p>
-                </div>
-              </div>
+              <KpiGrid>
+                <KpiCard
+                  label={t("ekasa.page.accountant.totalMonth", "Celkové tržby za mesiac")}
+                  icon={<Coins className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(accountantData.totals.totalAmount)}
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        {t("ekasa.page.accountant.closureMix", "{closures} uzávierok / {receipts} bločkov", {
+                          closures: accountantData.closuresCount,
+                          receipts: accountantData.receiptsCount,
+                        })}
+                      </span>
+                    </span>
+                  }
+                />
+                <KpiCard
+                  label={t("ekasa.page.accountant.totalCash", "Tržby v hotovosti")}
+                  icon={<Banknote className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(accountantData.totals.cashAmount)}
+                    </span>
+                  }
+                />
+                <KpiCard
+                  label={t("ekasa.page.accountant.totalCard", "Tržby platobnou kartou")}
+                  icon={<CreditCard className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(accountantData.totals.cardAmount)}
+                    </span>
+                  }
+                />
+                <KpiCard
+                  label={t("ekasa.page.accountant.totalTransfer", "Bankové prevody")}
+                  icon={<Building2 className="h-3.5 w-3.5" />}
+                  value={
+                    <span className="font-mono">
+                      {formatAmount(accountantData.totals.transferAmount)}
+                    </span>
+                  }
+                />
+              </KpiGrid>
 
               {/* VAT Breakdown Card */}
               <div className="space-y-3 rounded-xl border border-border bg-card p-5 shadow-xs">
