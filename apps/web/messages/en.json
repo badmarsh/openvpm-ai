@@ -419,7 +419,8 @@
         "fleet": "Agent Fleet & Teams",
         "sessions": "Sessions & Tasks",
         "agentUi": "Live Agent UI Console",
-        "guardrails": "Architecture & Guardrails"
+        "guardrails": "Architecture & Guardrails",
+        "approvals": "Approvals & HITL"
       },
       "agentUiView": {
         "title": "Live Agent UI Console (:3007)",
@@ -478,6 +479,27 @@
         "noAgents": "No matching agents found.",
         "noSessions": "No sessions found matching your filter.",
         "clearFilters": "Clear filters"
+      },
+      "approvals": {
+        "title": "Pending Human-in-the-Loop Approvals",
+        "subtitle": "Operations requiring explicit administrator authorization before production execution.",
+        "emptyTitle": "No Pending Approvals",
+        "emptyDesc": "All autonomous operations are within safe guardrails. When an agent requests git push, merge, or deployment, it will appear here.",
+        "tableAction": "Action / Tool",
+        "tableAgent": "Agent & Session",
+        "tableParameters": "Invocation Parameters",
+        "tableTime": "Request Time",
+        "tableActions": "Decision",
+        "approve": "Approve",
+        "reject": "Reject",
+        "approving": "Processing...",
+        "approvedSuccess": "Request successfully approved.",
+        "rejectedSuccess": "Request rejected.",
+        "errorResolving": "Error resolving approval.",
+        "gateGitPush": "Git Push to origin/main",
+        "gatePrMerge": "PR Merge to main",
+        "gateDeploy": "Production Deployment",
+        "gateOpl": "Clinical OPL Audit (Act 139/1998)"
       }
     }
   },

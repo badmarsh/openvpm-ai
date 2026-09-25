@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure } from "../../trpc";
 
 export interface SwarmAgentInfo {
@@ -370,4 +371,72 @@ export const aiSwarmRouter = createRouter({
     const tasks = loadTasks(repoRoot);
     return { sessions, tasks };
   }),
+
+  /**
+   * Fetch active HITL approvals from AgentOS runtime (:7777).
+   */
+  getApprovals: protectedProcedure.query(async () => {
+    const preferredOsUrl = process.env.AGENT_OS_URL;
+    const osHealth = await checkAgentOsHealth(preferredOsUrl);
+    if (!osHealth.online) {
+      return { count: 0, approvals: [] };
+    }
+    try {
+      const res = await fetch(`${osHealth.url}/approvals`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!res.ok) return { count: 0, approvals: [] };
+      const data = await res.json();
+      const approvalsList = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+      return {
+        count: approvalsList.length,
+        approvals: approvalsList,
+      };
+    } catch {
+      return { count: 0, approvals: [] };
+    }
+  }),
+
+  /**
+   * Resolve an approval (approve or reject) in AgentOS (:7777).
+   */
+  resolveApproval: protectedProcedure
+    .input(
+      z.object({
+        approvalId: z.string(),
+        status: z.enum(["approved", "rejected"]),
+        resolvedBy: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const preferredOsUrl = process.env.AGENT_OS_URL;
+      const osHealth = await checkAgentOsHealth(preferredOsUrl);
+      if (!osHealth.online) {
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "AgentOS is offline" });
+      }
+      try {
+        const res = await fetch(`${osHealth.url}/approvals/${input.approvalId}/resolve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: input.status,
+            resolved_by: input.resolvedBy || ctx.session?.user?.email || "marek@openvpm.sk",
+          }),
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `AgentOS approval error: ${errText}`,
+          });
+        }
+        return { success: true };
+      } catch (err: any) {
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to resolve approval: ${err?.message || String(err)}`,
+        });
+      }
+    }),
 });

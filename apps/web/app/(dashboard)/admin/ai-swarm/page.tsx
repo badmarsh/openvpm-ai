@@ -27,7 +27,7 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
 import {
   pageShellClass,
   PageToolbar,
@@ -58,6 +58,16 @@ export default function AiSwarmAdminPage() {
     trpc.extensions.aiSwarm.getStatus.useQuery(undefined, {
       refetchInterval: 15000,
     });
+
+  const approvalsQuery = trpc.extensions.aiSwarm.getApprovals.useQuery(undefined, {
+    refetchInterval: 10000,
+  });
+
+  const resolveApprovalMutation = trpc.extensions.aiSwarm.resolveApproval.useMutation({
+    onSuccess: () => {
+      approvalsQuery.refetch();
+    },
+  });
 
   const isOnline = Boolean(data?.runtime.isOnline);
   const agentUiUrl = data?.runtime.agentUiUrl || "http://localhost:3007";
@@ -309,12 +319,23 @@ export default function AiSwarmAdminPage() {
 
       {/* 4. Tabs & Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={underlineTabsListClass}>
-          <TabsTrigger value="fleet" className={underlineTabsTriggerClass}>
+        <TabsList
+          className={cn(
+            underlineTabsListClass,
+            "overflow-x-auto overflow-y-hidden flex-nowrap scrollbar-none"
+          )}
+        >
+          <TabsTrigger
+            value="fleet"
+            className={cn(underlineTabsTriggerClass, "shrink-0 whitespace-nowrap")}
+          >
             <Users className="mr-1.5 h-4 w-4" />
             {t("admin.aiSwarm.tabs.fleet", "Flotila agentov a tímov")}
           </TabsTrigger>
-          <TabsTrigger value="sessions" className={underlineTabsTriggerClass}>
+          <TabsTrigger
+            value="sessions"
+            className={cn(underlineTabsTriggerClass, "shrink-0 whitespace-nowrap")}
+          >
             <Activity className="mr-1.5 h-4 w-4" />
             {t("admin.aiSwarm.tabs.sessions", "Relácie a úlohy")}
             {Boolean(data?.sessions?.length) && (
@@ -323,11 +344,39 @@ export default function AiSwarmAdminPage() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="agent-ui" className={underlineTabsTriggerClass}>
+          <TabsTrigger
+            value="approvals"
+            className={cn(underlineTabsTriggerClass, "shrink-0 whitespace-nowrap")}
+          >
+            <CheckCircle2 className="mr-1.5 h-4 w-4 text-emerald-500" />
+            {t("admin.aiSwarm.tabs.approvals", "Schvaľovania & HITL")}
+            {(approvalsQuery.data?.count ?? 0) > 0 ? (
+              <Badge
+                variant="destructive"
+                className="ml-1.5 h-4 px-1.5 text-[10px] animate-pulse"
+              >
+                {approvalsQuery.data?.count}
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="ml-1.5 h-4 px-1.5 text-[10px] text-muted-foreground"
+              >
+                0
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="agent-ui"
+            className={cn(underlineTabsTriggerClass, "shrink-0 whitespace-nowrap")}
+          >
             <Sparkles className="mr-1.5 h-4 w-4" />
             {t("admin.aiSwarm.tabs.agentUi", "Živá Agent UI Konzola")}
           </TabsTrigger>
-          <TabsTrigger value="guardrails" className={underlineTabsTriggerClass}>
+          <TabsTrigger
+            value="guardrails"
+            className={cn(underlineTabsTriggerClass, "shrink-0 whitespace-nowrap")}
+          >
             <ShieldCheck className="mr-1.5 h-4 w-4" />
             {t("admin.aiSwarm.tabs.guardrails", "Architektúra a bezpečnosť")}
           </TabsTrigger>
@@ -675,7 +724,183 @@ export default function AiSwarmAdminPage() {
           )}
         </TabsContent>
 
-        {/* Tab 3: Architecture & Safety Guardrails */}
+        {/* Tab 3: HITL Approvals */}
+        <TabsContent value="approvals" className="space-y-4">
+          <PageSectionHeader
+            title={t(
+              "admin.aiSwarm.approvals.title",
+              "Čakajúce zásahy človeka (Human-in-the-Loop)"
+            )}
+            subtitle={t(
+              "admin.aiSwarm.approvals.subtitle",
+              "Operácie vyžadujúce explicitnú autorizáciu administrátora pred spustením do produkcie."
+            )}
+            actions={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => approvalsQuery.refetch()}
+                disabled={approvalsQuery.isRefetching}
+              >
+                <RefreshCw
+                  className={cn(
+                    "mr-1.5 h-3.5 w-3.5",
+                    approvalsQuery.isRefetching && "animate-spin"
+                  )}
+                />
+                {t("admin.aiSwarm.actions.refresh", "Obnoviť stav")}
+              </Button>
+            }
+          />
+
+          {/* Active Policy Gates Notice */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-3 shadow-xs">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-foreground">
+                  {t("admin.aiSwarm.approvals.gateGitPush", "Git Push na origin/main")}
+                </div>
+                <div className="text-[11px] text-muted-foreground">Required (@approval)</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-3 shadow-xs">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-foreground">
+                  {t("admin.aiSwarm.approvals.gatePrMerge", "PR Merge do main")}
+                </div>
+                <div className="text-[11px] text-muted-foreground">Required (@approval)</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-3 shadow-xs">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-foreground">
+                  {t("admin.aiSwarm.approvals.gateDeploy", "Deploy do produkcie")}
+                </div>
+                <div className="text-[11px] text-muted-foreground">Required (@approval)</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-3 shadow-xs">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-foreground">
+                  {t("admin.aiSwarm.approvals.gateOpl", "Klinický audit OPL (Zákon 139/1998)")}
+                </div>
+                <div className="text-[11px] text-muted-foreground">Audit Log (@approval)</div>
+              </div>
+            </div>
+          </div>
+
+          {approvalsQuery.isLoading ? (
+            <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card">
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !approvalsQuery.data?.approvals?.length ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title={t("admin.aiSwarm.approvals.emptyTitle", "Žiadne čakajúce schvaľovania")}
+              description={t(
+                "admin.aiSwarm.approvals.emptyDesc",
+                "Všetky autonómne operácie prebiehajú v rámci bezpečných pravidiel. Keď agent požiada o git push, merge alebo deploy, požiadavka sa zobrazí tu."
+              )}
+            />
+          ) : (
+            <DataTableFrame>
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className={tableHeadClass}>ID</th>
+                    <th className={tableHeadClass}>
+                      {t("admin.aiSwarm.approvals.tableAction", "Akcia / Nástroj")}
+                    </th>
+                    <th className={tableHeadClass}>
+                      {t("admin.aiSwarm.approvals.tableAgent", "Agent & Relácia")}
+                    </th>
+                    <th className={tableHeadClass}>
+                      {t("admin.aiSwarm.approvals.tableParameters", "Parametre")}
+                    </th>
+                    <th className={cn(tableHeadClass, "text-right")}>
+                      {t("admin.aiSwarm.approvals.tableActions", "Rozhodnutie")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approvalsQuery.data.approvals.map((appr: any) => (
+                    <tr key={appr.id || appr.approval_id} className={tableRowClass}>
+                      <td className={cn(tableCellClass, "font-mono font-medium text-foreground")}>
+                        {appr.id || appr.approval_id}
+                      </td>
+                      <td className={tableCellClass}>
+                        <span className="font-semibold text-foreground">
+                          {appr.tool_name || appr.action || "Unknown action"}
+                        </span>
+                      </td>
+                      <td className={tableCellClass}>
+                        <div className="font-medium text-foreground">
+                          {appr.agent_id || appr.sender || "pipeline_team"}
+                        </div>
+                        <div className="font-mono text-[10px] text-muted-foreground">
+                          {appr.session_id || appr.created_at || "—"}
+                        </div>
+                      </td>
+                      <td className={tableCellClass}>
+                        <pre className="max-w-md truncate rounded bg-muted/50 p-1 font-mono text-[10px] text-foreground">
+                          {JSON.stringify(appr.args || appr.parameters || {}, null, 1)}
+                        </pre>
+                      </td>
+                      <td className={cn(tableCellClass, "text-right")}>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 text-xs"
+                            disabled={resolveApprovalMutation.isPending}
+                            onClick={() =>
+                              resolveApprovalMutation.mutate({
+                                approvalId: appr.id || appr.approval_id,
+                                status: "rejected",
+                              })
+                            }
+                          >
+                            {t("admin.aiSwarm.approvals.reject", "Zamietnuť")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+                            disabled={resolveApprovalMutation.isPending}
+                            onClick={() =>
+                              resolveApprovalMutation.mutate({
+                                approvalId: appr.id || appr.approval_id,
+                                status: "approved",
+                              })
+                            }
+                          >
+                            {t("admin.aiSwarm.approvals.approve", "Schváliť")}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </DataTableFrame>
+          )}
+        </TabsContent>
+
+        {/* Tab 4: Architecture & Safety Guardrails */}
         <TabsContent value="guardrails" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-border bg-card p-4 shadow-xs">

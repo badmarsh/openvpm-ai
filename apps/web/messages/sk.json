@@ -419,7 +419,8 @@
         "fleet": "Flotila agentov a tímov",
         "sessions": "Relácie a úlohy",
         "agentUi": "Živá Agent UI Konzola",
-        "guardrails": "Architektúra a bezpečnosť"
+        "guardrails": "Architektúra a bezpečnosť",
+        "approvals": "Schvaľovania & HITL"
       },
       "agentUiView": {
         "title": "Živá Agent UI Konzola (:3007)",
@@ -478,6 +479,27 @@
         "noAgents": "Nenašli sa žiadni agenti zodpovedajúci filtru.",
         "noSessions": "Nenašli sa žiadne relácie zodpovedajúce filtru.",
         "clearFilters": "Zrušiť filtre"
+      },
+      "approvals": {
+        "title": "Čakajúce zásahy človeka (Human-in-the-Loop)",
+        "subtitle": "Operácie vyžadujúce explicitnú autorizáciu administrátora pred spustením do produkcie.",
+        "emptyTitle": "Žiadne čakajúce schvaľovania",
+        "emptyDesc": "Všetky autonómne operácie prebiehajú v rámci bezpečných pravidiel. Keď agent požiada o git push, merge alebo deploy, požiadavka sa zobrazí tu.",
+        "tableAction": "Akcia / Nástroj",
+        "tableAgent": "Agent & Relácia",
+        "tableParameters": "Parametre volania",
+        "tableTime": "Čas žiadosti",
+        "tableActions": "Rozhodnutie",
+        "approve": "Schváliť",
+        "reject": "Zamietnuť",
+        "approving": "Spracúva sa...",
+        "approvedSuccess": "Požiadavka bola úspešne schválená.",
+        "rejectedSuccess": "Požiadavka bola zamietnutá.",
+        "errorResolving": "Chyba pri spracovaní schválenia.",
+        "gateGitPush": "Git Push na origin/main",
+        "gatePrMerge": "PR Merge do main",
+        "gateDeploy": "Deploy do produkcie",
+        "gateOpl": "Klinický audit OPL (Zákon 139/1998)"
       }
     }
   },
