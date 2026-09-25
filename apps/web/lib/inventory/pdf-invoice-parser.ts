@@ -9,6 +9,13 @@ import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 import { IMPORT_ERRORS } from "./import-errors";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
+// Shield dynamic runtime path imports from Webpack's static AST analysis,
+// preventing the "Critical dependency: the request of a dependency is an expression" warning.
+const dynamicImport = new Function("specifier", "return import(specifier)") as (
+  specifier: string,
+) => Promise<any>;
 
 // Polyfill DOMMatrix for pdfjs-dist 5.x in Node.js server environments if not already present.
 if (typeof (globalThis as any).DOMMatrix === "undefined") {
@@ -123,8 +130,7 @@ export async function loadPdfjsLib() {
     ];
     for (const p of candidatePaths) {
       if (existsSync(p)) {
-        const { pathToFileURL } = await import("node:url");
-        return await import(pathToFileURL(p).href);
+        return await dynamicImport(pathToFileURL(p).href);
       }
     }
     throw err;

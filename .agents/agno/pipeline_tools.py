@@ -2840,6 +2840,82 @@ def collect_code_from_arena_browser(
         )
 
 
+def click_create_pr_in_arena(
+    session_id: str = "",
+    task_id: str = "",
+    ports: str = DEFAULT_CDP_PORTS,
+) -> str:
+    """Klikne na tlačidlo 'Create PR' v relácii Arena.ai cez CDP mostík.
+
+    Pred kliknutím automaticky detekuje a zatvorí 'Session feedback popup'
+    ('Was this task successful?' / 'Keep working' / Escape), ktorý inak
+    prekrýva tlačidlo Create PR a bráni jeho stlačeniu.
+    """
+    sid = (session_id or task_id or "").strip()
+    try:
+        with _cdp_browser_session(ports) as connected:
+            if not connected:
+                return "ERROR: Chrome CDP mostík nie je aktívny na portoch: " + ports
+            target = _resolve_collect_target(task_id, session_id, "")
+            page, endpoint, seen = _find_matching_page(
+                connected,
+                session_id=target["session_id"],
+                task_slug=target["task_slug"],
+                extra_ids=target["extra_ids"],
+                arena_url=target["arena_url"],
+            )
+            if page is None:
+                return f"ERROR: Žiadny otvorený tab v Chrome nezodpovedá session_id '{sid}'."
+
+            # 1. Zameraj tab a zatvor prípadný Session Feedback Popup
+            try:
+                page.bring_to_front()
+            except Exception:
+                pass
+
+            # Dismiss feedback popup if present
+            try:
+                kw_btn = page.locator("button:has-text('Keep working')").first
+                if kw_btn.is_visible():
+                    kw_btn.click()
+                    page.wait_for_timeout(400)
+                else:
+                    page.keyboard.press("Escape")
+                    page.wait_for_timeout(300)
+            except Exception:
+                pass
+
+            # 2. Vyhľadaj tlačidlo Create PR
+            pr_btns = page.locator("button:has-text('Create PR')")
+            if pr_btns.count() == 0:
+                body_text = page.locator("body").inner_text()
+                if "Merged" in body_text:
+                    return f"INFO: Relácia {sid} už bola zlúčená (Merged)."
+                if "No Changes" in body_text:
+                    return f"WARNING: Relácia {sid} nemá žiadne zmeny (No Changes)."
+                return f"ERROR: Tlačidlo 'Create PR' sa nenašlo na stránke {page.url}."
+
+            btn = pr_btns.first
+            if not btn.is_visible():
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(300)
+
+            # 3. Kliknutie na Create PR (s fallbackom na myš cez súradnice)
+            box = btn.bounding_box()
+            try:
+                btn.click(timeout=2000)
+            except Exception:
+                if box:
+                    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+                else:
+                    btn.click(force=True)
+
+            page.wait_for_timeout(1500)
+            return f"SUCCESS: Tlačidlo 'Create PR' bolo úspešne stlačené v relácii {sid} (tab {page.url})."
+    except Exception as exc:
+        return f"ERROR: Zlyhanie pri kliknutí na Create PR: {exc}"
+
+
 # ---------------------------------------------------------------------------
 # Physical dispatch (bug 3)
 # ---------------------------------------------------------------------------
