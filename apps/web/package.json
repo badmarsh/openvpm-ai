@@ -59,6 +59,8 @@
     "@vercel/blob": "2.8.0",
     "@vercel/oidc": "^3.8.4",
     "ai": "^6.0.209",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

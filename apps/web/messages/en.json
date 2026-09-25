@@ -3409,7 +3409,8 @@
     "ekasaClosures": "Daily closures (Z-report)",
     "imaging": "X-ray & imaging AI",
     "medications": "Medications & oversight",
-    "aiSwarm": "AI Swarm & AgentOS"
+    "aiSwarm": "AI Swarm & AgentOS",
+    "schemaValidation": "Schema validation"
   },
   "newSoap": {
     "loadingEditor": "Loading editor...",
@@ -9895,6 +9896,99 @@
     "controlled": {
       "shieldTitle": "Controlled substance",
       "shieldBody": "Ketamine, opioids, and propofol cannot be prefilled by AI. Record them manually with a witness when required."
+    }
+  },
+  "schemaValidation": {
+    "title": "Input schema validation",
+    "subtitle": "JSON Schema layer for VPM input contracts (Ajv, openvpm/schemas registry) with clinical guardrails.",
+    "refresh": "Refresh",
+    "registrySource": "Registry source",
+    "registrySourceValue": "openvpm/schemas@master",
+    "kpi": {
+      "total": "Validations (30 days)",
+      "passRate": "Pass rate",
+      "rejected": "Rejected inputs",
+      "guardrailBlocks": "Clinical guardrail blocks"
+    },
+    "contracts": {
+      "search": "Search contracts…",
+      "count": "{count} contracts",
+      "colContract": "Contract",
+      "colVersion": "Version",
+      "colRisk": "Risk",
+      "colGuardrails": "Guardrails",
+      "colSchemaBytes": "Schema size",
+      "emptyTitle": "No contracts",
+      "emptyDesc": "The registry contains no input contracts for this filter.",
+      "risk": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high"
+      }
+    },
+    "events": {
+      "title": "Validation audit",
+      "filterLabel": "Result filter",
+      "filterAll": "All results",
+      "filterPassed": "Passed",
+      "filterRejected": "Rejected",
+      "guardrailOnly": "Guardrail blocks only",
+      "emptyTitle": "No validations yet",
+      "emptyDesc": "Once the middleware evaluates input contracts, the verdicts will appear here.",
+      "colTime": "Time",
+      "colContract": "Contract",
+      "colResult": "Result",
+      "colGuardrail": "Guardrail",
+      "colIssues": "Issues",
+      "colOrigin": "Origin",
+      "colActor": "User",
+      "resultPassed": "passed",
+      "resultRejected": "rejected",
+      "origin": {
+        "api": "API",
+        "playground": "Playground"
+      }
+    },
+    "playground": {
+      "title": "Validation dry run",
+      "description": "Check any JSON payload against a contract without writing to the database. Useful for integration debugging and training.",
+      "contract": "Contract",
+      "payload": "JSON payload",
+      "run": "Validate",
+      "running": "Validating…",
+      "resultPassed": "Payload passed validation",
+      "resultRejected": "Payload was rejected",
+      "invalidJson": "Invalid JSON — check the payload syntax",
+      "loadError": "Validation could not be executed: {message}",
+      "colField": "Field",
+      "colCode": "Code",
+      "colMessage": "Message"
+    },
+    "guardrails": {
+      "ai-draft-only": "AI draft only",
+      "narcotic-zero-ai-prefill": "No AI for narcotics",
+      "sympathy-gate": "Sympathy gate"
+    },
+    "error": {
+      "required": "Required field {field} is missing",
+      "type": "Field has the wrong type (expected {expected})",
+      "enum": "Value is not allowed (allowed: {allowed})",
+      "format": "Value does not match the {format} format",
+      "pattern": "Value does not match the required pattern",
+      "minLength": "Value is too short (minimum {limit})",
+      "maxLength": "Value is too long (maximum {limit})",
+      "minimum": "Value is below the minimum {limit}",
+      "maximum": "Value is above the maximum {limit}",
+      "exclusiveMinimum": "Value must be greater than {limit}",
+      "exclusiveMaximum": "Value must be less than {limit}",
+      "minItems": "The list must contain at least {limit} items",
+      "maxItems": "The list may contain at most {limit} items",
+      "additionalProperties": "Unknown field {property} is not allowed",
+      "const": "Value must equal the fixed constant",
+      "invalid": "Invalid value",
+      "aiDraftOnly": "AI content must stay in draft state until a veterinarian signs it (Act 39/2007 Coll.)",
+      "narcoticAiPrefill": "AI prefill is forbidden for narcotic substances: {substances} (Act 139/1998 Coll.). Manual entry only.",
+      "sympathyGate": "Sympathy gate: automated reminders are suppressed for a deceased patient"
     }
   }
 }

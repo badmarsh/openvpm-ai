@@ -187,4 +187,13 @@ export const customNavItems: CustomNavItem[] = [
     roles: ["admin", "veterinarian", "front_desk"],
     section: "billing",
   },
+  // Sprint 27 — VPM input contract schema validation (Ajv + openvpm/schemas).
+  {
+    href: "/settings/schema-validation",
+    label: "Validácia schém",
+    i18nKey: "nav.schemaValidation",
+    icon: FileText,
+    roles: ["admin", "veterinarian"],
+    section: "admin",
+  },
 ];

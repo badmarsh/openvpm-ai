@@ -32,6 +32,7 @@ import { fieldVisitsRouter } from "./field-visits";
 import { clinicalRegisterRouter } from "./clinical-register";
 import { medicationOversightRouter } from "./medication-oversight";
 import { aiSwarmRouter } from "./ai-swarm";
+import { schemaValidationRouter } from "./schema-validation";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -71,6 +72,7 @@ export const extensionsRouter = createRouter({
   clinicalRegister: clinicalRegisterRouter,
   medicationOversight: medicationOversightRouter,
   aiSwarm: aiSwarmRouter,
+  schemaValidation: schemaValidationRouter,
 });
 
 export {
@@ -104,4 +106,5 @@ export {
   clinicalRegisterRouter,
   medicationOversightRouter,
   aiSwarmRouter,
+  schemaValidationRouter,
 };

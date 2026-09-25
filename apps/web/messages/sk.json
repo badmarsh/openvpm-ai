@@ -3409,7 +3409,8 @@
     "ekasaClosures": "Denné uzávierky (Z-report)",
     "imaging": "RTG & zobrazovacia AI",
     "medications": "Lieky & dohľad",
-    "aiSwarm": "AI Swarm & AgentOS"
+    "aiSwarm": "AI Swarm & AgentOS",
+    "schemaValidation": "Validácia schém"
   },
   "newSoap": {
     "loadingEditor": "Načítavam editor...",
@@ -9895,6 +9896,99 @@
     "controlled": {
       "shieldTitle": "Omamná látka",
       "shieldBody": "Ketamín, opioidy a propofol nemôže AI predvyplniť. Zapisujte ich ručne a so svedkom, ak to zákon vyžaduje."
+    }
+  },
+  "schemaValidation": {
+    "title": "Validácia vstupných schém",
+    "subtitle": "JSON Schema vrstva pre vstupné kontrakty VPM (Ajv, register openvpm/schemas) s klinickými poistkami.",
+    "refresh": "Obnoviť",
+    "registrySource": "Zdroj registra",
+    "registrySourceValue": "openvpm/schemas@master",
+    "kpi": {
+      "total": "Validácie (30 dní)",
+      "passRate": "Miera úspešnosti",
+      "rejected": "Zamietnuté vstupy",
+      "guardrailBlocks": "Bloky klinických poistiek"
+    },
+    "contracts": {
+      "search": "Hľadať kontrakt…",
+      "count": "{count} kontraktov",
+      "colContract": "Kontrakt",
+      "colVersion": "Verzia",
+      "colRisk": "Riziko",
+      "colGuardrails": "Poistky",
+      "colSchemaBytes": "Veľkosť schémy",
+      "emptyTitle": "Žiadne kontrakty",
+      "emptyDesc": "Register neobsahuje žiadne vstupné kontrakty pre tento filter.",
+      "risk": {
+        "low": "nízke",
+        "medium": "stredné",
+        "high": "vysoké"
+      }
+    },
+    "events": {
+      "title": "Audit validácií",
+      "filterLabel": "Filter výsledkov",
+      "filterAll": "Všetky výsledky",
+      "filterPassed": "Úspešné",
+      "filterRejected": "Zamietnuté",
+      "guardrailOnly": "Len bloky poistiek",
+      "emptyTitle": "Zatiaľ žiadne validácie",
+      "emptyDesc": "Akonáhle middleware vyhodnotí vstupné kontrakty, výsledky sa zobrazia tu.",
+      "colTime": "Čas",
+      "colContract": "Kontrakt",
+      "colResult": "Výsledok",
+      "colGuardrail": "Poistka",
+      "colIssues": "Chyby",
+      "colOrigin": "Pôvod",
+      "colActor": "Používateľ",
+      "resultPassed": "úspešná",
+      "resultRejected": "zamietnutá",
+      "origin": {
+        "api": "API",
+        "playground": "Playground"
+      }
+    },
+    "playground": {
+      "title": "Suchý beh validácie",
+      "description": "Overte ľubovoľný JSON payload voči kontraktu bez zápisu do databázy. Používa sa na ladenie integrácií a školenia.",
+      "contract": "Kontrakt",
+      "payload": "JSON payload",
+      "run": "Validovať",
+      "running": "Validujem…",
+      "resultPassed": "Payload prešiel validáciou",
+      "resultRejected": "Payload bol zamietnutý",
+      "invalidJson": "Neplatný JSON — skontrolujte syntax payloadu",
+      "loadError": "Validáciu sa nepodarilo spustiť: {message}",
+      "colField": "Pole",
+      "colCode": "Kód",
+      "colMessage": "Správa"
+    },
+    "guardrails": {
+      "ai-draft-only": "AI len ako návrh",
+      "narcotic-zero-ai-prefill": "Omamné látky bez AI",
+      "sympathy-gate": "Brána súcitu"
+    },
+    "error": {
+      "required": "Povinné pole {field} chýba",
+      "type": "Pole má nesprávny typ (očakáva sa {expected})",
+      "enum": "Hodnota nie je povolená (povolené: {allowed})",
+      "format": "Hodnota nezodpovedá formátu {format}",
+      "pattern": "Hodnota nezodpovedá požadovanému vzoru",
+      "minLength": "Hodnota je príliš krátka (minimum {limit})",
+      "maxLength": "Hodnota je príliš dlhá (maximum {limit})",
+      "minimum": "Hodnota je pod minimom {limit}",
+      "maximum": "Hodnota je nad maximom {limit}",
+      "exclusiveMinimum": "Hodnota musí byť väčšia ako {limit}",
+      "exclusiveMaximum": "Hodnota musí byť menšia ako {limit}",
+      "minItems": "Zoznam musí obsahovať aspoň {limit} položiek",
+      "maxItems": "Zoznam môže obsahovať najviac {limit} položiek",
+      "additionalProperties": "Neznáme pole {property} nie je povolené",
+      "const": "Hodnota sa musí rovnať pevne stanovenej konštante",
+      "invalid": "Neplatná hodnota",
+      "aiDraftOnly": "AI obsah musí zostať v stave návrhu, kým ho veterinár nepodpíše (zákon 39/2007 Z. z.)",
+      "narcoticAiPrefill": "AI predvyplnenie je zakázané pre omamné látky: {substances} (zákon 139/1998 Z. z.). Povolený je iba manuálny zápis.",
+      "sympathyGate": "Brána súcitu: pri zosnulom pacientovi sú automatické pripomienky potlačené"
     }
   }
 }
