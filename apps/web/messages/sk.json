@@ -2,7 +2,8 @@
   "admin": {
     "header": {
       "title": "Správa platformy",
-      "subtitle": "Prehľad operácií naprieč organizáciami"
+      "subtitle": "Prehľad operácií naprieč organizáciami",
+      "badge": "ADMIN"
     },
     "accessDenied": {
       "title": "Prístup odmietnutý",
@@ -30,6 +31,32 @@
       "practices": "Veterinárne praxe",
       "simulation": "Klinická simulácia & Journey Discovery",
       "aiSwarm": "AI Swarm & AgentOS Centrála"
+    },
+    "systemHealth": {
+      "title": "Zdravie systému AI Swarm",
+      "desc": "Stav len na čítanie: flotila agentov Arena, vyslané sprinty, relácie Arena a posledné nasadenie. Plné ovládanie nájdete v centrále AI Swarm.",
+      "loadError": "Nepodarilo sa načítať zdravie systému AI Swarm.",
+      "loading": "Načítavam zdravie systému AI Swarm…",
+      "openHub": "Otvoriť centrálu AI Swarm",
+      "activeAgents": "Aktívni agenti",
+      "sprintsDispatched": "Vyslané sprinty",
+      "arenaSessions": "Relácie Arena",
+      "lastDeploy": "Posledné nasadenie",
+      "noDeployYet": "Zatiaľ žiadny mergovaný sprint",
+      "sprintsHint": "{merged} mergovaných · {failed} zlyhaných",
+      "sessionsHint": "{pending} čaká · {total} celkom",
+      "sprintLogTitle": "Evidencia sprintov",
+      "sprintLogDesc": "Najnovšie vyslané sprinty Arena a stav ich merge.",
+      "sprintLogEmpty": "Zatiaľ nebol vyslaný žiadny sprint.",
+      "sprint": "Sprint / modul",
+      "status": "Stav",
+      "progress": "Priebeh",
+      "started": "Spustené",
+      "merged": "Mergované",
+      "running": "Beží",
+      "failed": "Zlyhané",
+      "pending": "Čaká",
+      "unknown": "Neznámy"
     },
     "table": {
       "practice": "Prax",
@@ -84,7 +111,12 @@
       "deliveryExceptions": "Výnimky doručenia",
       "providerEvents": "Udalosti poskytovateľa",
       "noExceptions": "Žiadne prevádzkové SMS výnimky nevyžadujú pozornosť.",
-      "bounded": "Výsledky sú ohraničené. Vyriešte najstaršie položky a obnovte zvyšok frontu."
+      "bounded": "Výsledky sú ohraničené. Vyriešte najstaršie položky a obnovte zvyšok frontu.",
+      "priority": "Priorita",
+      "category": "Kategória",
+      "age": "Vek",
+      "reason": "Dôvod",
+      "clinicLocation": "Klinika / lokácia"
     },
     "recovery": {
       "noVerifiedContact": "Žiadny overený kontakt administrátora",
@@ -429,7 +461,8 @@
         "startCommand": "Príkaz na spustenie servera: pnpm agent-ui",
         "portInfo": "Lokálny Next.js port: 3007 → AgentOS REST: http://localhost:7777",
         "offlineTitle": "Agent UI server nebeží na porte 3007",
-        "offlineDesc": "Pre spustenie Agent UI rozhrania otvorte terminál a zadajte: pnpm agent-ui (alebo pnpm --dir .agents/agno/agent-ui dev)."
+        "offlineDesc": "Pre spustenie Agent UI rozhrania otvorte terminál a zadajte: pnpm agent-ui (alebo pnpm --dir .agents/agno/agent-ui dev).",
+        "iframeTitle": "Agent UI"
       },
       "toolbar": {
         "searchPlaceholder": "Filtrovať agentov, relácie alebo úlohy...",
@@ -452,7 +485,11 @@
         "tools": "Kľúčové nástroje",
         "status": "Stav",
         "actions": "Akcie",
-        "chatInAgentUi": "Otvoriť v Agent UI"
+        "chatInAgentUi": "Otvoriť v Agent UI",
+        "health": "Zdravie",
+        "status_ready": "Pripravený",
+        "status_busy": "Zaneprázdnený",
+        "status_standby": "Pohotovosť"
       },
       "sessionsTable": {
         "sessionId": "ID relácie / úlohy",
@@ -499,7 +536,10 @@
         "gateGitPush": "Git Push na origin/main",
         "gatePrMerge": "PR Merge do main",
         "gateDeploy": "Deploy do produkcie",
-        "gateOpl": "Klinický audit OPL (Zákon 139/1998)"
+        "gateOpl": "Klinický audit OPL (Zákon 139/1998)",
+        "required": "Povinné (@approval)",
+        "auditLog": "Audit denník (@approval)",
+        "tableId": "ID"
       }
     }
   },
@@ -2697,7 +2737,115 @@
       "averageRating": "Priemerné hodnotenie",
       "totalReviews": "Celkovo recenzií",
       "unansweredCount": "Čaká na odpoveď",
-      "filterSearch": "Hľadať v recenziách..."
+      "filterSearch": "Hľadať v recenziách...",
+      "platformInternal": "Interné",
+      "retry": "Skúsiť znova",
+      "sentiment": {
+        "positive": "Pozitívna",
+        "neutral": "Neutrálna",
+        "negative": "Negatívna"
+      },
+      "severity": {
+        "critical": "Kritická závažnosť",
+        "high": "Vysoká závažnosť",
+        "medium": "Stredná závažnosť"
+      },
+      "sla": {
+        "repliedInHours": "Zodpovedané za {hours} h",
+        "replied": "Zodpovedané",
+        "overdue": "Po termíne ({hours} h)",
+        "pending": "{hours} h do termínu"
+      },
+      "toolbar": {
+        "searchLabel": "Hľadať v recenziách",
+        "platformLabel": "Filtrovať podľa platformy",
+        "dateFromLabel": "Dátum od",
+        "dateToLabel": "Dátum do",
+        "ratingLabel": "Filtrovať podľa hodnotenia",
+        "ratingAll": "Všetky hodnotenia",
+        "ratingValue": "{value} ★",
+        "statusLabel": "Filtrovať podľa stavu odpovede",
+        "statusAll": "Všetky stavy",
+        "statusUnanswered": "Čaká na odpoveď",
+        "statusReplied": "Zodpovedané",
+        "sentimentLabel": "Filtrovať podľa sentimentu",
+        "escalationLabel": "Filtrovať eskalované recenzie",
+        "escalationAll": "Bez eskalácie",
+        "sympathyOnly": "Iba Sympathy Gate",
+        "sympathyOnlyHint": "Zobraziť iba recenzie klientov, ktorým sú po úmrtí pacienta blokované výzvy na recenziu.",
+        "clearFilters": "Zrušiť filtre",
+        "countOne": "{count} recenzia",
+        "countFew": "{count} recenzie",
+        "countOther": "{count} recenzií"
+      },
+      "kpi": {
+        "sympathyBlocked": "Blokované výzvy (Sympathy Gate)"
+      },
+      "queue": {
+        "heading": "Fronta recenzií",
+        "loading": "Načítavam recenzie...",
+        "loadError": "Recenzie sa nepodarilo načítať.",
+        "emptyDesc": "Zatiaľ nemáte žiadnu zaznamenanú recenziu z Google, Facebooku ani z interného formulára kliniky.",
+        "emptyFilteredTitle": "Filtrom nevyhovuje žiadna recenzia",
+        "emptyFilteredDesc": "Upravte vyhľadávanie, platformu alebo časový rozsah.",
+        "colReviewer": "Recenzent",
+        "colSentiment": "Sentiment",
+        "colSla": "Odpoveď (SLA)",
+        "colSympathy": "Sympathy Gate",
+        "colActions": "Akcie",
+        "anonymous": "Anonym",
+        "defaultReviewer": "Klient",
+        "noText": "Recenzia bez textu.",
+        "escalated": "Eskalované",
+        "escalationReason": "Dôvod: {reason}",
+        "sympathyTitle": "Klientovi po úmrtí zvieratka neodchádzajú marketingové výzvy na recenziu.",
+        "sympathyNote": "Žiadosť o recenziu bola blokovaná Sympathy Gate — klientovi po úmrtí pacienta neposielame žiadne marketingové výzvy.",
+        "editReply": "Upraviť odpoveď",
+        "expand": "Otvoriť recenziu",
+        "collapse": "Zbaliť recenziu",
+        "escalate": "Eskalovať",
+        "escalateTitle": "Eskalovať recenziu na personál (vytvoriť úlohu)"
+      },
+      "toast": {
+        "replySaved": "Odpoveď na recenziu bola uložená.",
+        "replyError": "Nepodarilo sa uložiť odpoveď.",
+        "approveError": "Nepodarilo sa schváliť odpoveď.",
+        "escalateError": "Nepodarilo sa eskalovať recenziu.",
+        "aiGenerated": "AI navrhla odpoveď na recenziu.",
+        "aiError": "Nepodarilo sa vygenerovať AI odpoveď.",
+        "createSuccess": "Nová recenzia bola pridaná.",
+        "createError": "Nepodarilo sa pridať recenziu.",
+        "deleteSuccess": "Recenzia bola zmazaná.",
+        "deleteError": "Nepodarilo sa zmazať recenziu.",
+        "copySuccess": "Odpoveď bola skopírovaná.",
+        "copyError": "Nepodarilo sa skopírovať odpoveď."
+      },
+      "dialog": {
+        "addTitle": "Pridať novú recenziu",
+        "reviewerPlaceholder": "Meno klienta z recenzie",
+        "ratingLabel": "Hodnotenie (1 až 5 hviezdičiek)",
+        "reviewTextPlaceholder": "Vložte text hodnotenia alebo odporúčania od klienta...",
+        "replyOptional": "Odpoveď kliniky (nepovinné)",
+        "replyPlaceholder": "Ak už klinika na recenziu odpovedala, zadajte odpoveď tu...",
+        "save": "Uložiť recenziu",
+        "escalateTitle": "Eskalovať recenziu na personál",
+        "escalateDescription": "Eskaláciou sa vytvorí interná úloha pre personál na bezodkladné kontaktovanie klienta a vyriešenie situácie.",
+        "escalateReasonLabel": "Dôvod eskalácie (povinné)",
+        "escalateReasonPlaceholder": "Napr.: Klient vyjadruje nespokojnosť s čakacou dobou a žiada spätné volanie...",
+        "escalateSubmit": "Potvrdiť eskaláciu"
+      },
+      "canned": {
+        "generalLabel": "Vďaka & dôvera (všeobecná)",
+        "generalText": "Ďakujeme za milé slová a dôveru v náš tím pri starostlivosti o vášho miláčika! Veľmi si to vážime. S úctou, tím veterinárnej kliniky.",
+        "recoveryLabel": "Pooperačná rekonvalescencia",
+        "recoveryText": "Veľmi si vážime vašu spätnú väzbu. Sme nesmierne radi, že ošetrenie i rekonvalescencia prebehli bez komplikácií a pacientovi sa darí výborne!",
+        "emergencyLabel": "Pohotovosť & akútny stav",
+        "emergencyText": "Ďakujeme za pochopenie pri náročnom ošetrení. Rýchla reakcia a záchrana života zvieracieho pacienta sú pre nás prioritou. Prajeme veľa zdravia celej rodine!",
+        "complaintLabel": "Konštruktívne riešenie nespokojnosti",
+        "complaintText": "Ďakujeme za hodnotenie. Veľmi nás mrzí vaša nespokojnosť – záleží nám na každom pacientovi. Prosím kontaktujte vedenie kliniky, radi situáciu osobne preveríme a vyriešime.",
+        "recommendationLabel": "Facebook odporúčanie",
+        "recommendationText": "Ďakujeme za milé odporúčanie na Facebooku! Spokojnosť chovateľov a zdravie vašich štvornohých parťákov je pre náš kolektív najväčšou odmenou."
+      }
     },
     "media": {
       "editPrefix": "úprava",
@@ -2834,7 +2982,8 @@
         "handouts": "Edukačné letáky",
         "handoutsDesc": "Verejne dostupných medicínskych návodov",
         "reviews": "Overené recenzie",
-        "reviewsDesc": "5★ hodnotení Google a Facebook"
+        "reviewsDesc": "5★ hodnotení Google a Facebook",
+        "sections": "Sekcie stránky"
       },
       "inquiries": {
         "title": "Dopyty a správy z webu",
@@ -2862,7 +3011,19 @@
         "statusNew": "Nový",
         "statusInProgress": "V riešení",
         "statusResolved": "Vybavený",
-        "statusArchived": "Archivovaný"
+        "statusArchived": "Archivovaný",
+        "searchLabel": "Hľadať v dopytoch z webu",
+        "searchPlaceholder": "Hľadať meno, e-mail alebo správu…",
+        "statusLabel": "Filtrovať podľa stavu dopytu",
+        "loading": "Načítavam dopyty...",
+        "loadError": "Dopyty z webu sa nepodarilo načítať.",
+        "emptyFilteredTitle": "Filtrom nevyhovuje žiadny dopyt",
+        "emptyFilteredDesc": "Upravte vyhľadávanie alebo filter stavu.",
+        "anonymous": "Anonymný návštevník",
+        "tableAria": "Dopyty a správy z webu",
+        "countOne": "{count} dopyt",
+        "countFew": "{count} dopyty",
+        "countOther": "{count} dopytov"
       },
       "liveStats": {
         "source": "Zdroj údajov",
@@ -2903,7 +3064,85 @@
       "duplicateSectionTooltip": "Duplikovať sekciu",
       "hideSection": "Skryť sekciu",
       "showSection": "Zobraziť sekciu",
-      "deleteSectionTooltip": "Odstrániť sekciu"
+      "deleteSectionTooltip": "Odstrániť sekciu",
+      "retry": "Skúsiť znova",
+      "tabsAria": "Sekcie správy webstránky",
+      "tabSections": "Sekcie stránky",
+      "saveDraftTooltip": "Uložiť aktuálny koncept stránky",
+      "publishChangesTooltip": "Publikovať zmeny na live web",
+      "publishWebsiteTooltip": "Publikovať webstránku online",
+      "hideWebsiteTooltip": "Skryť webstránku pred verejnosťou",
+      "editor": {
+        "heading": "Editor webstránky kliniky",
+        "viewportLabel": "Náhľad zariadenia",
+        "loading": "Načítavam editor stránky...",
+        "loadError": "Editor stránky sa nepodarilo načítať."
+      },
+      "sections": {
+        "searchLabel": "Hľadať v sekciách stránky",
+        "searchPlaceholder": "Hľadať sekciu podľa názvu alebo nadpisu…",
+        "visibilityLabel": "Filtrovať podľa viditeľnosti",
+        "visibilityAll": "Všetky sekcie",
+        "visibilityVisible": "Zobrazené na webe",
+        "visibilityHidden": "Skryté",
+        "loading": "Načítavam sekcie stránky...",
+        "loadError": "Sekcie sa nepodarilo načítať.",
+        "emptyTitle": "Stránka zatiaľ nemá sekcie",
+        "emptyDesc": "Pridajte prvú sekciu v editore stránky — napríklad hero banner alebo prehľad služieb.",
+        "emptyFilteredTitle": "Filtrom nevyhovuje žiadna sekcia",
+        "emptyFilteredDesc": "Upravte vyhľadávanie alebo filter viditeľnosti.",
+        "tableAria": "Sekcie webstránky kliniky",
+        "colOrder": "Poradie",
+        "colSection": "Sekcia",
+        "colPreview": "Náhľad obsahu",
+        "colVisibility": "Viditeľnosť",
+        "colActions": "Akcie",
+        "visible": "Zobrazená",
+        "hidden": "Skrytá",
+        "itemCount": "{count} položiek",
+        "previewChipTitle": "Náhľad obsahu sekcie: {preview}",
+        "openInEditor": "Otvoriť v editore",
+        "edit": "Upraviť sekciu",
+        "duplicate": "Duplikovať sekciu",
+        "delete": "Odstrániť sekciu",
+        "countOne": "{count} sekcia",
+        "countFew": "{count} sekcie",
+        "countOther": "{count} sekcií",
+        "typeUnknown": "Neznáma sekcia",
+        "types": {
+          "hero": "Hero banner",
+          "about": "O klinike & príbeh",
+          "services": "Prehľad služieb",
+          "team": "Tím kliniky",
+          "reviews": "Recenzie",
+          "faq": "Časté otázky",
+          "hours_location": "Ordinačné hodiny & miesto",
+          "booking_cta": "Objednávacia výzva",
+          "gallery": "Galéria",
+          "handouts": "Edukačné letáky",
+          "trust_badges": "Certifikáty & garancie",
+          "stats": "Štatistiky v číslach",
+          "emergency_banner": "Pohotovostný banner",
+          "contact_form": "Kontaktný formulár",
+          "video_embed": "Video",
+          "social_proof": "Sociálne siete",
+          "custom_rich_text": "Vlastný text",
+          "wellness": "Wellness programy"
+        }
+      },
+      "toast": {
+        "sectionAdded": "Sekcia bola pridaná na koniec stránky.",
+        "sectionUpdated": "Zmeny v sekcii boli použité.",
+        "sectionDuplicated": "Sekcia bola duplikovaná.",
+        "sectionRemoved": "Sekcia bola odstránená z konceptu.",
+        "sectionKeptAtLeastOne": "Stránka musí obsahovať aspoň jednu sekciu.",
+        "saveError": "Nepodarilo sa uložiť zmeny sekcií.",
+        "publishError": "Nepodarilo sa publikovať webstránku.",
+        "toggleError": "Nepodarilo sa zmeniť stav publikovania webstránky.",
+        "inquiryError": "Nepodarilo sa aktualizovať stav dopytu.",
+        "copyLinkSuccess": "Odkaz na verejnú webstránku bol skopírovaný do schránky!",
+        "copyLinkError": "Nepodarilo sa skopírovať odkaz."
+      }
     },
     "suppression": {
       "title": "Centrum potlačení & GDPR Audit",

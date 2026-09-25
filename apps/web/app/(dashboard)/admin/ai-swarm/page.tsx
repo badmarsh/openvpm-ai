@@ -122,6 +122,36 @@ export default function AiSwarmAdminPage() {
     });
   }, [data?.sessions, searchQuery, statusFilter]);
 
+  // Agent fleet health indicator (ready / busy / standby from AgentOS).
+  const renderAgentHealth = (status: string) => {
+    const chip =
+      status === "ready"
+        ? "bg-success-muted text-success-muted-foreground"
+        : status === "busy"
+          ? "bg-warning-muted text-warning-muted-foreground"
+          : "bg-muted text-muted-foreground";
+    const dot =
+      status === "ready"
+        ? "bg-emerald-500"
+        : status === "busy"
+          ? "animate-pulse bg-amber-500"
+          : "bg-muted-foreground/40";
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
+          chip,
+        )}
+      >
+        <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+        {t(
+          `admin.aiSwarm.table.status_${status}`,
+          status === "ready" ? "Ready" : status === "busy" ? "Busy" : "Standby",
+        )}
+      </span>
+    );
+  };
+
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case "COMPLETED":
@@ -166,7 +196,17 @@ export default function AiSwarmAdminPage() {
       {/* 1. PageHeader */}
       <PageHeader
         icon={Bot}
-        title={t("admin.aiSwarm.title", "AI Swarm & AgentOS Centrála")}
+        title={
+          <span className="inline-flex flex-wrap items-center gap-3">
+            {t("admin.aiSwarm.title", "AI Swarm & AgentOS Centrála")}
+            <Badge
+              variant="outline"
+              className="border-primary/30 bg-primary/10 font-semibold text-primary"
+            >
+              {t("admin.aiSwarm.badge", "SWARM")}
+            </Badge>
+          </span>
+        }
         subtitle={t(
           "admin.aiSwarm.subtitle",
           "Správa a telemetria multi-agentného vývojového roja, lokálneho AgentOS runtime (:7777) a priame prepojenie na Agent UI."
@@ -530,6 +570,9 @@ export default function AiSwarmAdminPage() {
                     <th className={tableHeadClass}>
                       {t("admin.aiSwarm.table.tools", "Kľúčové nástroje")}
                     </th>
+                    <th className={tableHeadClass}>
+                      {t("admin.aiSwarm.table.health", "Health")}
+                    </th>
                     <th className={cn(tableHeadClass, "text-right")}>
                       {t("admin.aiSwarm.table.actions", "Akcie")}
                     </th>
@@ -578,6 +621,9 @@ export default function AiSwarmAdminPage() {
                             </span>
                           ))}
                         </div>
+                      </td>
+                      <td className={tableCellClass}>
+                        {renderAgentHealth(ag.status)}
                       </td>
                       <td className={cn(tableCellClass, "text-right")}>
                         <Button
@@ -763,7 +809,9 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gateGitPush", "Git Push na origin/main")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">Required (@approval)</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {t("admin.aiSwarm.approvals.required", "Required (@approval)")}
+                </div>
               </div>
             </div>
 
@@ -775,7 +823,9 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gatePrMerge", "PR Merge do main")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">Required (@approval)</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {t("admin.aiSwarm.approvals.required", "Required (@approval)")}
+                </div>
               </div>
             </div>
 
@@ -787,7 +837,9 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gateDeploy", "Deploy do produkcie")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">Required (@approval)</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {t("admin.aiSwarm.approvals.required", "Required (@approval)")}
+                </div>
               </div>
             </div>
 
@@ -799,7 +851,9 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gateOpl", "Klinický audit OPL (Zákon 139/1998)")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">Audit Log (@approval)</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {t("admin.aiSwarm.approvals.auditLog", "Audit Log (@approval)")}
+                </div>
               </div>
             </div>
           </div>
@@ -822,7 +876,9 @@ export default function AiSwarmAdminPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <th className={tableHeadClass}>ID</th>
+                    <th className={tableHeadClass}>
+                      {t("admin.aiSwarm.approvals.tableId", "ID")}
+                    </th>
                     <th className={tableHeadClass}>
                       {t("admin.aiSwarm.approvals.tableAction", "Akcia / Nástroj")}
                     </th>
@@ -1041,7 +1097,7 @@ export default function AiSwarmAdminPage() {
             <iframe
               src={agentUiUrl}
               className="h-[750px] w-full border-0"
-              title="Agent UI"
+              title={t("admin.aiSwarm.agentUiView.iframeTitle", "Agent UI")}
               allow="clipboard-read; clipboard-write"
             />
           </div>

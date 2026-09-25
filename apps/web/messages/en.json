@@ -2,7 +2,8 @@
   "admin": {
     "header": {
       "title": "Platform Admin",
-      "subtitle": "Cross-tenant operations overview"
+      "subtitle": "Cross-tenant operations overview",
+      "badge": "ADMIN"
     },
     "accessDenied": {
       "title": "Access Denied",
@@ -30,6 +31,32 @@
       "practices": "Practices",
       "simulation": "Clinical Simulation & Journey Discovery",
       "aiSwarm": "AI Swarm & AgentOS Central"
+    },
+    "systemHealth": {
+      "title": "AI swarm system health",
+      "desc": "Read-only status of the Arena agent fleet, dispatched sprints, arena sessions, and the last deployment. Full controls live in the AI Swarm hub.",
+      "loadError": "Could not load AI swarm system health.",
+      "loading": "Loading AI swarm system health…",
+      "openHub": "Open AI Swarm hub",
+      "activeAgents": "Active agents",
+      "sprintsDispatched": "Sprints dispatched",
+      "arenaSessions": "Arena sessions",
+      "lastDeploy": "Last deploy",
+      "noDeployYet": "No merged sprints yet",
+      "sprintsHint": "{merged} merged · {failed} failed",
+      "sessionsHint": "{pending} pending · {total} total",
+      "sprintLogTitle": "Sprint log",
+      "sprintLogDesc": "Most recently dispatched Arena sprints and their merge state.",
+      "sprintLogEmpty": "No sprints dispatched yet.",
+      "sprint": "Sprint / module",
+      "status": "Status",
+      "progress": "Progress",
+      "started": "Started",
+      "merged": "Merged",
+      "running": "Running",
+      "failed": "Failed",
+      "pending": "Pending",
+      "unknown": "Unknown"
     },
     "table": {
       "practice": "Practice",
@@ -84,7 +111,12 @@
       "deliveryExceptions": "Delivery exceptions",
       "providerEvents": "Provider events",
       "noExceptions": "No SMS operational exceptions need attention.",
-      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue."
+      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue.",
+      "priority": "Priority",
+      "category": "Category",
+      "age": "Age",
+      "reason": "Reason",
+      "clinicLocation": "Clinic / location"
     },
     "recovery": {
       "noVerifiedContact": "No verified admin contact",
@@ -429,7 +461,8 @@
         "startCommand": "Command to start dev server: pnpm agent-ui",
         "portInfo": "Local Next.js port: 3007 → AgentOS REST: http://localhost:7777",
         "offlineTitle": "Agent UI server is not running on port 3007",
-        "offlineDesc": "To launch the Agent UI interface, open a terminal and run: pnpm agent-ui (or pnpm --dir .agents/agno/agent-ui dev)."
+        "offlineDesc": "To launch the Agent UI interface, open a terminal and run: pnpm agent-ui (or pnpm --dir .agents/agno/agent-ui dev).",
+        "iframeTitle": "Agent UI"
       },
       "toolbar": {
         "searchPlaceholder": "Filter agents, sessions or tasks...",
@@ -452,7 +485,11 @@
         "tools": "Key Tools",
         "status": "Status",
         "actions": "Actions",
-        "chatInAgentUi": "Open in Agent UI"
+        "chatInAgentUi": "Open in Agent UI",
+        "health": "Health",
+        "status_ready": "Ready",
+        "status_busy": "Busy",
+        "status_standby": "Standby"
       },
       "sessionsTable": {
         "sessionId": "Session / Task ID",
@@ -499,7 +536,10 @@
         "gateGitPush": "Git Push to origin/main",
         "gatePrMerge": "PR Merge to main",
         "gateDeploy": "Production Deployment",
-        "gateOpl": "Clinical OPL Audit (Act 139/1998)"
+        "gateOpl": "Clinical OPL Audit (Act 139/1998)",
+        "required": "Required (@approval)",
+        "auditLog": "Audit Log (@approval)",
+        "tableId": "ID"
       }
     }
   },
@@ -2697,7 +2737,115 @@
       "averageRating": "Average rating",
       "totalReviews": "Total reviews",
       "unansweredCount": "Awaiting response",
-      "filterSearch": "Search reviews..."
+      "filterSearch": "Search reviews...",
+      "platformInternal": "Internal",
+      "retry": "Try again",
+      "sentiment": {
+        "positive": "Positive",
+        "neutral": "Neutral",
+        "negative": "Negative"
+      },
+      "severity": {
+        "critical": "Critical severity",
+        "high": "High severity",
+        "medium": "Medium severity"
+      },
+      "sla": {
+        "repliedInHours": "Answered in {hours} h",
+        "replied": "Answered",
+        "overdue": "Past due ({hours} h)",
+        "pending": "{hours} h left to answer"
+      },
+      "toolbar": {
+        "searchLabel": "Search reviews",
+        "platformLabel": "Filter by platform",
+        "dateFromLabel": "Date from",
+        "dateToLabel": "Date to",
+        "ratingLabel": "Filter by rating",
+        "ratingAll": "All ratings",
+        "ratingValue": "{value} ★",
+        "statusLabel": "Filter by response status",
+        "statusAll": "All statuses",
+        "statusUnanswered": "Awaiting response",
+        "statusReplied": "Answered",
+        "sentimentLabel": "Filter by sentiment",
+        "escalationLabel": "Filter escalated reviews",
+        "escalationAll": "No escalation filter",
+        "sympathyOnly": "Sympathy Gate only",
+        "sympathyOnlyHint": "Show only reviews of clients whose review requests are suppressed after a patient has passed.",
+        "clearFilters": "Clear filters",
+        "countOne": "{count} review",
+        "countFew": "{count} reviews",
+        "countOther": "{count} reviews"
+      },
+      "kpi": {
+        "sympathyBlocked": "Suppressed requests (Sympathy Gate)"
+      },
+      "queue": {
+        "heading": "Review queue",
+        "loading": "Loading reviews...",
+        "loadError": "Reviews could not be loaded.",
+        "emptyDesc": "No review has been recorded yet from Google, Facebook or the clinic's internal form.",
+        "emptyFilteredTitle": "No review matches the filters",
+        "emptyFilteredDesc": "Adjust the search, platform or date range.",
+        "colReviewer": "Reviewer",
+        "colSentiment": "Sentiment",
+        "colSla": "Response (SLA)",
+        "colSympathy": "Sympathy Gate",
+        "colActions": "Actions",
+        "anonymous": "Anonymous",
+        "defaultReviewer": "Client",
+        "noText": "Review without text.",
+        "escalated": "Escalated",
+        "escalationReason": "Reason: {reason}",
+        "sympathyTitle": "No marketing review requests are sent to this client after their pet has passed.",
+        "sympathyNote": "The review request was suppressed by the Sympathy Gate — no marketing outreach is sent to this client after the patient passed.",
+        "editReply": "Edit reply",
+        "expand": "Open review",
+        "collapse": "Collapse review",
+        "escalate": "Escalate",
+        "escalateTitle": "Escalate review to staff (create a task)"
+      },
+      "toast": {
+        "replySaved": "Reply to the review was saved.",
+        "replyError": "Could not save the reply.",
+        "approveError": "Could not approve the reply.",
+        "escalateError": "Could not escalate the review.",
+        "aiGenerated": "AI suggested a reply to the review.",
+        "aiError": "Could not generate an AI reply.",
+        "createSuccess": "New review was added.",
+        "createError": "Could not add the review.",
+        "deleteSuccess": "Review was deleted.",
+        "deleteError": "Could not delete the review.",
+        "copySuccess": "Reply was copied.",
+        "copyError": "Could not copy the reply."
+      },
+      "dialog": {
+        "addTitle": "Add a new review",
+        "reviewerPlaceholder": "Client name from the review",
+        "ratingLabel": "Rating (1 to 5 stars)",
+        "reviewTextPlaceholder": "Paste the client's review or recommendation…",
+        "replyOptional": "Clinic reply (optional)",
+        "replyPlaceholder": "If the clinic already replied, enter the reply here…",
+        "save": "Save review",
+        "escalateTitle": "Escalate review to staff",
+        "escalateDescription": "Escalating creates an internal task for staff to contact the client without delay and resolve the situation.",
+        "escalateReasonLabel": "Escalation reason (required)",
+        "escalateReasonPlaceholder": "e.g. The client is unhappy with the waiting time and asks for a call back…",
+        "escalateSubmit": "Confirm escalation"
+      },
+      "canned": {
+        "generalLabel": "Thanks & trust (general)",
+        "generalText": "Thank you for your kind words and for trusting our team with the care of your pet! We truly appreciate it. Kind regards, the veterinary clinic team.",
+        "recoveryLabel": "Post-operative recovery",
+        "recoveryText": "Thank you for your feedback. We are delighted that the treatment and the recovery went without complications and that the patient is doing great!",
+        "emergencyLabel": "Emergency & acute case",
+        "emergencyText": "Thank you for your understanding during a demanding treatment. A quick response and saving the animal patient's life are our priority. We wish the whole family good health!",
+        "complaintLabel": "Constructive resolution of a complaint",
+        "complaintText": "Thank you for your review. We are very sorry about your dissatisfaction — every patient matters to us. Please contact the clinic management and we will personally review and resolve the situation.",
+        "recommendationLabel": "Facebook recommendation",
+        "recommendationText": "Thank you for the lovely recommendation on Facebook! The satisfaction of our clients and the health of your four-legged friends are the greatest reward for our team."
+      }
     },
     "media": {
       "editPrefix": "edit",
@@ -2834,7 +2982,8 @@
         "handouts": "Educational Handouts",
         "handoutsDesc": "Publicly available medical handouts",
         "reviews": "Verified Reviews",
-        "reviewsDesc": "5★ ratings on Google & Facebook"
+        "reviewsDesc": "5★ ratings on Google & Facebook",
+        "sections": "Page sections"
       },
       "inquiries": {
         "title": "Website Inquiries & Messages",
@@ -2862,7 +3011,19 @@
         "statusNew": "New",
         "statusInProgress": "In Progress",
         "statusResolved": "Resolved",
-        "statusArchived": "Archived"
+        "statusArchived": "Archived",
+        "searchLabel": "Search website inquiries",
+        "searchPlaceholder": "Search a name, e-mail or message…",
+        "statusLabel": "Filter by inquiry status",
+        "loading": "Loading inquiries...",
+        "loadError": "Website inquiries could not be loaded.",
+        "emptyFilteredTitle": "No inquiry matches the filters",
+        "emptyFilteredDesc": "Adjust the search or the status filter.",
+        "anonymous": "Anonymous visitor",
+        "tableAria": "Website inquiries and messages",
+        "countOne": "{count} inquiry",
+        "countFew": "{count} inquiries",
+        "countOther": "{count} inquiries"
       },
       "liveStats": {
         "source": "Data Source",
@@ -2903,7 +3064,85 @@
       "duplicateSectionTooltip": "Duplicate section",
       "hideSection": "Hide section",
       "showSection": "Show section",
-      "deleteSectionTooltip": "Delete section"
+      "deleteSectionTooltip": "Delete section",
+      "retry": "Try again",
+      "tabsAria": "Website management sections",
+      "tabSections": "Page sections",
+      "saveDraftTooltip": "Save the current draft of the page",
+      "publishChangesTooltip": "Publish the changes to the live site",
+      "publishWebsiteTooltip": "Publish the website online",
+      "hideWebsiteTooltip": "Hide the website from the public",
+      "editor": {
+        "heading": "Clinic website editor",
+        "viewportLabel": "Preview device",
+        "loading": "Loading the page editor...",
+        "loadError": "The page editor could not be loaded."
+      },
+      "sections": {
+        "searchLabel": "Search page sections",
+        "searchPlaceholder": "Search a section by name or heading…",
+        "visibilityLabel": "Filter by visibility",
+        "visibilityAll": "All sections",
+        "visibilityVisible": "Shown on the site",
+        "visibilityHidden": "Hidden",
+        "loading": "Loading page sections...",
+        "loadError": "Sections could not be loaded.",
+        "emptyTitle": "The page has no sections yet",
+        "emptyDesc": "Add the first section in the page editor — for example a hero banner or the services overview.",
+        "emptyFilteredTitle": "No section matches the filters",
+        "emptyFilteredDesc": "Adjust the search or the visibility filter.",
+        "tableAria": "Clinic website sections",
+        "colOrder": "Order",
+        "colSection": "Section",
+        "colPreview": "Content preview",
+        "colVisibility": "Visibility",
+        "colActions": "Actions",
+        "visible": "Visible",
+        "hidden": "Hidden",
+        "itemCount": "{count} items",
+        "previewChipTitle": "Section content preview: {preview}",
+        "openInEditor": "Open in editor",
+        "edit": "Edit section",
+        "duplicate": "Duplicate section",
+        "delete": "Delete section",
+        "countOne": "{count} section",
+        "countFew": "{count} sections",
+        "countOther": "{count} sections",
+        "typeUnknown": "Unknown section",
+        "types": {
+          "hero": "Hero banner",
+          "about": "About the clinic & story",
+          "services": "Services overview",
+          "team": "Clinic team",
+          "reviews": "Reviews",
+          "faq": "Frequently asked questions",
+          "hours_location": "Opening hours & location",
+          "booking_cta": "Booking call to action",
+          "gallery": "Gallery",
+          "handouts": "Educational handouts",
+          "trust_badges": "Certificates & guarantees",
+          "stats": "Statistics in numbers",
+          "emergency_banner": "Emergency banner",
+          "contact_form": "Contact form",
+          "video_embed": "Video",
+          "social_proof": "Social media",
+          "custom_rich_text": "Custom text",
+          "wellness": "Wellness programmes"
+        }
+      },
+      "toast": {
+        "sectionAdded": "Section was added to the end of the page.",
+        "sectionUpdated": "Changes to the section were applied.",
+        "sectionDuplicated": "Section was duplicated.",
+        "sectionRemoved": "Section was removed from the draft.",
+        "sectionKeptAtLeastOne": "The page must contain at least one section.",
+        "saveError": "Could not save the section changes.",
+        "publishError": "Could not publish the website.",
+        "toggleError": "Could not change the publishing state of the website.",
+        "inquiryError": "Could not update the inquiry status.",
+        "copyLinkSuccess": "The public website link was copied to the clipboard!",
+        "copyLinkError": "Could not copy the link."
+      }
     },
     "suppression": {
       "title": "Suppression Center & GDPR Audit",
