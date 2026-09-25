@@ -66,16 +66,21 @@ describe("mobile clinic-day UI", () => {
     const source = readDashboardPage("records");
 
     // Mobile reachability contract: the tab bar keeps its top spacing
-    // (mt-6 on the Tabs root after the patient-card section split), the
-    // scrolling container keeps overflow-x-auto, and the tab list keeps
-    // min-w-max so tabs scroll horizontally instead of wrapping off-screen.
-    expect(source).toContain('className="mt-6"');
-    expect(source).toContain(
-      'className="max-w-full overflow-x-auto border-b border-border"'
+    // (mt-6 on the Tabs root after the patient-card section split, or the
+    // page-kit pageShellClass rhythm after Sprint 22), the scrolling
+    // container keeps overflow-x-auto, tabs never shrink/wrap off-screen,
+    // and triggers keep a 44px (min-h-11) touch target on phones.
+    expect(source).toMatch(
+      /(?:className="mt-6"|<div className=\{pageShellClass\}>)/
     );
-    expect(source).toContain("w-auto min-w-max gap-0");
-    expect(source).toContain(
-      '"relative flex min-h-11 shrink-0 items-center gap-2'
+    expect(source).toMatch(
+      /(?:className="max-w-full overflow-x-auto border-b border-border"|<div className="max-w-full overflow-x-auto">\s*<TabsList[\s\S]{0,160}?className=\{underlineTabsListClass\})/
+    );
+    expect(source).toMatch(
+      /(?:w-auto min-w-max gap-0|cn\(underlineTabsTriggerClass, "min-h-11 shrink-0)/
+    );
+    expect(source).toMatch(
+      /(?:"relative flex min-h-11 shrink-0 items-center gap-2|"min-h-11 shrink-0 sm:min-h-0")/
     );
     expect(source).toContain(
       'className="grid grid-cols-1 gap-4 sm:grid-cols-2"'

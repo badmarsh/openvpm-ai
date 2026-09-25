@@ -4271,7 +4271,7 @@
       "qrAlt": "QR code for the consent signing link",
       "waitingForSignature": "Waiting for a signature…"
     },
-    "title": "Clinical Record",
+    "title": "Clinical records",
     "subtitle": "Clinical documentation. Identity and owner stay on the patient card.",
     "new_record": "New Record",
     "search_placeholder": "Search records...",
@@ -4660,6 +4660,37 @@
       "openCard": "Card",
       "newSoap": "New SOAP",
       "backToRegister": "Card list"
+    },
+    "hub": {
+      "sectionsAria": "Clinical record sections",
+      "recordTypesAria": "Clinical record types",
+      "patientCount": "{count} patients",
+      "speciesFilterAria": "Filter by species",
+      "selectedPatientAria": "Selected patient"
+    },
+    "sections": {
+      "soap": "SOAP",
+      "records": "Records",
+      "history": "History",
+      "attachments": "Attachments"
+    },
+    "kpi": {
+      "totalVisits": "Total visits",
+      "avgDuration": "Avg. visit duration",
+      "avgDurationValue": "{minutes} min",
+      "openDiagnoses": "Open diagnoses"
+    },
+    "history": {
+      "colDate": "Date",
+      "colType": "Type",
+      "colRecord": "Record",
+      "colAuthor": "Author",
+      "colStatus": "Status",
+      "open": "Open record",
+      "emptyTitle": "No clinical history yet",
+      "emptyDescription": "SOAP notes, vaccinations, prescriptions, problems, lab results and procedures will appear here in chronological order.",
+      "loadError": "Some clinical records could not be loaded. The history may be incomplete.",
+      "current": "Current"
     }
   },
   "reports": {
@@ -7508,6 +7539,13 @@
       "conflict": "SOAP changed in another session. Refresh before saving again.",
       "alreadyFinalized": "SOAP was already finalized in another session.",
       "finalized": "SOAP note finalized"
+    },
+    "vitals": {
+      "temperature": "Temp",
+      "heartRate": "Heart Rate",
+      "respiratoryRate": "Resp. Rate",
+      "weight": "Weight",
+      "bodyCondition": "BCS Score"
     }
   },
   "copilot": {

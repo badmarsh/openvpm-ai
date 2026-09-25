@@ -4271,7 +4271,7 @@
       "qrAlt": "QR kód pre odkaz na podpis súhlasu",
       "waitingForSignature": "Čaká sa na podpis klienta…"
     },
-    "title": "Klinická karta",
+    "title": "Klinické záznamy",
     "subtitle": "Klinická dokumentácia. Identita a majiteľ ostávajú na karte pacienta.",
     "new_record": "Nový záznam",
     "search_placeholder": "Hľadať v záznamoch...",
@@ -4660,6 +4660,37 @@
       "openCard": "Karta",
       "newSoap": "Nový SOAP",
       "backToRegister": "Zoznam kariet"
+    },
+    "hub": {
+      "sectionsAria": "Sekcie klinických záznamov",
+      "recordTypesAria": "Typy klinických záznamov",
+      "patientCount": "{count} pacientov",
+      "speciesFilterAria": "Filtrovať podľa druhu",
+      "selectedPatientAria": "Vybraný pacient"
+    },
+    "sections": {
+      "soap": "SOAP",
+      "records": "Záznamy",
+      "history": "História",
+      "attachments": "Prílohy"
+    },
+    "kpi": {
+      "totalVisits": "Vyšetrenia celkom",
+      "avgDuration": "Priemerná dĺžka vyšetrenia",
+      "avgDurationValue": "{minutes} min",
+      "openDiagnoses": "Otvorené diagnózy"
+    },
+    "history": {
+      "colDate": "Dátum",
+      "colType": "Typ",
+      "colRecord": "Záznam",
+      "colAuthor": "Autor",
+      "colStatus": "Stav",
+      "open": "Otvoriť záznam",
+      "emptyTitle": "Zatiaľ žiadna klinická história",
+      "emptyDescription": "SOAP záznamy, vakcinácie, predpisy, diagnózy, laboratórne výsledky a zákroky sa tu zobrazia chronologicky.",
+      "loadError": "Niektoré klinické záznamy sa nepodarilo načítať. História môže byť neúplná.",
+      "current": "Platný"
     }
   },
   "reports": {
@@ -7508,6 +7539,13 @@
       "conflict": "SOAP bol zmenený v inej relácii. Pred opätovným uložením obnovte stránku.",
       "alreadyFinalized": "SOAP bol už autorizovaný v inej relácii.",
       "finalized": "SOAP záznam bol úspešne autorizovaný"
+    },
+    "vitals": {
+      "temperature": "Teplota",
+      "heartRate": "Tep",
+      "respiratoryRate": "Dych. frekvencia",
+      "weight": "Hmotnosť",
+      "bodyCondition": "BCS skóre"
     }
   },
   "copilot": {
