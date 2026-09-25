@@ -238,6 +238,26 @@ function loadTasks(repoRoot: string): SwarmTask[] {
   }
 }
 
+/**
+ * Loopback probes answer in single-digit milliseconds, so a short timeout keeps the
+ * admin page snappy. A tunnel URL has to complete DNS + TLS + a Cloudflare round trip
+ * before the origin even responds; at 800 ms a cold tunnel reports "offline" while it
+ * is perfectly healthy. Budget per candidate, not globally.
+ */
+const LOOPBACK_PROBE_TIMEOUT_MS = 800;
+const REMOTE_PROBE_TIMEOUT_MS = 2_500;
+
+function probeTimeoutMs(url: string): number {
+  try {
+    const { hostname } = new URL(url);
+    const isLoopback =
+      hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
+    return isLoopback ? LOOPBACK_PROBE_TIMEOUT_MS : REMOTE_PROBE_TIMEOUT_MS;
+  } catch {
+    return REMOTE_PROBE_TIMEOUT_MS;
+  }
+}
+
 async function checkAgentOsHealth(preferredUrl?: string): Promise<{
   url: string;
   online: boolean;
@@ -273,7 +293,7 @@ async function checkAgentOsHealth(preferredUrl?: string): Promise<{
     try {
       const res = await fetch(`${url}/health`, {
         method: "GET",
-        signal: AbortSignal.timeout(800),
+        signal: AbortSignal.timeout(probeTimeoutMs(url)),
       });
       if (res.ok) {
         return {

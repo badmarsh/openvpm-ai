@@ -55,8 +55,78 @@ logger = logging.getLogger("agno.pipeline")
 # =============================================================================
 
 AGNO_DIR = Path(__file__).resolve().parent
-wsl_repo = Path("/mnt/c/Users/marek/Documents/Vet/openvpm-ai")
-REPO_ROOT = wsl_repo if wsl_repo.exists() else Path(os.getenv("OPENVPM_REPO_ROOT", Path.cwd())).resolve()
+
+
+def _looks_like_repo_root(path: Path) -> bool:
+    """Heuristika: je to koreň repozitára OpenVPM AI?"""
+    try:
+        if not path.is_dir():
+            return False
+    except OSError:
+        return False
+    has_project = (path / "package.json").is_file() and (path / "apps" / "web").is_dir()
+    has_index = (path / "tasks" / "SPRINT-INDEX.md").is_file()
+    return has_project or has_index
+
+
+def _candidate_repo_roots() -> List[Path]:
+    """Kandidáti na koreň repozitára, zoradení podľa dôveryhodnosti.
+
+    Runtime beží vo WSL z /home/ubuntu/agno — čo je KÓPIA, nie repozitár — a launcher
+    pred spustením robí `cd /home/ubuntu/agno`. Preto sa koreň NESMIE odvodzovať od
+    Path.cwd(): odvodil by kópiu bez tasks/, SPRINT-INDEX.md by sa nenašiel a líder
+    by ticho stratil prehľad o stavoch sprintov (presne to sa stalo pred opravou —
+    fallback je bezpečný, ale stav sprintov sa nedá overiť).
+    """
+    out: List[Path] = []
+
+    def _add(candidate: object) -> None:
+        if not candidate:
+            return
+        try:
+            path = Path(str(candidate)).expanduser()
+        except (OSError, RuntimeError, ValueError):
+            return
+        if path not in out:
+            out.append(path)
+
+    # 1) Explicitné cesty z prostredia
+    _add(os.getenv("OPENVPM_REPO_ROOT"))
+    _add(os.getenv("OPENVPM_REPO_PATH"))
+    # 2) Historické defaulty (WSL / Windows)
+    _add("/mnt/c/Users/marek/Documents/Vet/openvpm-ai")
+    _add(r"C:\Users\marek\Documents\Vet\openvpm-ai")
+    _add("/home/ubuntu/openvpm")
+    # 3) Modul môže ležať priamo v <repo>/.agents/agno (beh z repozitára)
+    for parent in [AGNO_DIR, *AGNO_DIR.parents]:
+        _add(parent)
+    # 4) cwd a jeho rodičia — posledná záchrana
+    try:
+        cwd = Path.cwd()
+        for parent in [cwd, *cwd.parents]:
+            _add(parent)
+    except OSError:
+        pass
+    return out
+
+
+def _resolve_repo_root() -> Path:
+    candidates = _candidate_repo_roots()
+    for candidate in candidates:
+        if _looks_like_repo_root(candidate):
+            return candidate.resolve()
+    logger.warning(
+        "Nepodarilo sa nájsť koreň repozitára OpenVPM AI v žiadnom z kandidátov: %s. "
+        "Nastav OPENVPM_REPO_ROOT. tasks/SPRINT-INDEX.md nebude dostupný.",
+        ", ".join(str(c) for c in candidates[:6]),
+    )
+    return candidates[0] if candidates else AGNO_DIR
+
+
+REPO_ROOT = _resolve_repo_root()
+# pipeline_tools._get_repo_path() číta OPENVPM_REPO_PATH ako prvý kandidát — zjednoťme
+# koreň, aby obe vrstvy (team_os aj tools) čítali ten istý tasks/ adresár.
+os.environ.setdefault("OPENVPM_REPO_PATH", str(REPO_ROOT))
 
 # Linux ext4 disk v WSL pre nulové locking problémy SQLite a LanceDB
 WSL_AGNO_TMP = Path("/home/ubuntu/agno/tmp")
@@ -94,9 +164,48 @@ AGENTOS_INTERNAL_URL = os.getenv("OPENVPM_AGENTOS_INTERNAL_URL", "http://127.0.0
 INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "")
 if not INTERNAL_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN == "openvpm-service-secret":
     import secrets
-    # Fail-safe: Nikdy nebežať s hardcoded default secretom (Claude audit remediation)
-    INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK") or secrets.token_urlsafe(32)
-    logger.warning("OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený alebo používal nebezpečný default! Bol vygenerovaný jednorazový bezpečný token.")
+
+    # Fail-safe: nikdy nebežať s hardcoded default secretom (Claude audit remediation).
+    # Zároveň token PERZISTUJEME: vygenerovať nový pri každom boote je bezpečné, ale
+    # invaliduje všetky rozbehnuté podpísané callbacky (scheduler triggery, HITL
+    # approvals). Reštart počas behu sprintu by tak ticho zrušil schvaľovacie brány.
+    _token_file = TMP_DIR / "internal_service_token"
+    _fallback = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK", "").strip()
+
+    if _fallback:
+        INTERNAL_SERVICE_TOKEN = _fallback
+    else:
+        _persisted = ""
+        try:
+            if _token_file.is_file():
+                _persisted = _token_file.read_text(encoding="utf-8").strip()
+        except OSError as _exc:
+            logger.debug("Perzistentný token sa nepodarilo prečítať: %s", _exc)
+
+        if _persisted:
+            INTERNAL_SERVICE_TOKEN = _persisted
+            logger.info("Používam perzistentný interný service token z %s", _token_file)
+        else:
+            INTERNAL_SERVICE_TOKEN = secrets.token_urlsafe(32)
+            try:
+                _token_file.parent.mkdir(parents=True, exist_ok=True)
+                _token_file.write_text(INTERNAL_SERVICE_TOKEN, encoding="utf-8")
+                try:
+                    os.chmod(_token_file, 0o600)
+                except OSError:
+                    pass
+                logger.warning(
+                    "OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený — vygenerovaný token "
+                    "je uložený v %s, takže reštart nezruší rozbehnuté callbacky. "
+                    "Pri viac-inštančnom nasadení nastav token explicitne!",
+                    _token_file,
+                )
+            except OSError as _exc:
+                logger.warning(
+                    "OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený a token sa nepodarilo "
+                    "perzistovať (%s) — platí len do reštartu procesu.",
+                    _exc,
+                )
 SCHEDULE_TIMEZONE = os.getenv("OPENVPM_SCHEDULE_TZ", "Europe/Bratislava")
 SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("OPENVPM_SQLITE_BUSY_TIMEOUT_MS", "30000"))
 
@@ -813,33 +922,42 @@ def _parse_sprint_index() -> List[Dict[str, str]]:
     """Načíta tasks/SPRINT-INDEX.md a vráti riadky tabuľky ako slovníky.
 
     Index je jediný písomný záznam o stave sprintov (obnovený z commitu e9627504).
-    Nikdy nezhadzuje chybu smerom nahor — pri probléme vráti prázdny zoznam a
-    volajúci použije fallback.
+    Hľadá sa vo VŠETKÝCH kandidátoch na koreň repozitára, nie len v REPO_ROOT —
+    runtime beží z kópie vo WSL a jedna zlá cesta by inak ticho vypla stav sprintov.
+    Nikdy nezhadzuje chybu smerom nahor — pri probléme vráti prázdny zoznam.
     """
-    index_path = REPO_ROOT / "tasks" / "SPRINT-INDEX.md"
-    try:
-        raw = index_path.read_text(encoding="utf-8")
-    except Exception as exc:  # chýbajúci / nečitateľný index
-        logger.debug("SPRINT-INDEX.md nedostupný (%s) — používam fallback.", exc)
-        return []
+    for root in _candidate_repo_roots():
+        index_path = root / "tasks" / "SPRINT-INDEX.md"
+        try:
+            if not index_path.is_file():
+                continue
+            raw = index_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            logger.debug("SPRINT-INDEX.md nečitateľný v %s (%s)", root, exc)
+            continue
 
-    rows: List[Dict[str, str]] = []
-    for line in raw.splitlines():
-        line = line.strip()
-        if not line.startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if len(cells) < 4 or not cells[0].isdigit():
-            continue
-        rows.append(
-            {
-                "number": cells[0],
-                "file": cells[1],
-                "title": cells[2],
-                "status": cells[3],
-            }
-        )
-    return rows
+        rows: List[Dict[str, str]] = []
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line.startswith("|"):
+                continue
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) < 4 or not cells[0].isdigit():
+                continue
+            rows.append(
+                {
+                    "number": cells[0],
+                    "file": cells[1],
+                    "title": cells[2],
+                    "status": cells[3],
+                }
+            )
+        if rows:
+            logger.info("SPRINT-INDEX.md: %d riadkov z %s", len(rows), index_path)
+            return rows
+
+    logger.debug("SPRINT-INDEX.md sa nenašiel v žiadnom kandidátovi na koreň repozitára.")
+    return []
 
 
 def _merged_sprints_from_index() -> List[Dict[str, str]]:
