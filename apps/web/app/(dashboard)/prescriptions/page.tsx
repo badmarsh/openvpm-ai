@@ -139,7 +139,12 @@ export default function PrescriptionsPage() {
 
   const summary = summaryQuery.data as OversightSummary | undefined
   const rawList = listQuery.data as any
-  const rawItems: any[] = rawList === undefined ? [] : Array.isArray(rawList) ? rawList : (rawList.items ?? [])
+  // Stable reference: keeps the derived `items` memo below from recomputing
+  // on every render (react-hooks/exhaustive-deps).
+  const rawItems: any[] = React.useMemo(
+    () => (rawList === undefined ? [] : Array.isArray(rawList) ? rawList : (rawList.items ?? [])),
+    [rawList],
+  )
   const total: number = rawList !== undefined && !Array.isArray(rawList) ? (rawList.total ?? rawItems.length) : rawItems.length
   const isLoading = listQuery.isLoading
   const hasSearch = search.trim().length > 0

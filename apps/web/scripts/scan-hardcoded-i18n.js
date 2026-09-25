@@ -132,7 +132,10 @@ function scanFile(filePath) {
     }
 
     // Check 3: String literal attributes: placeholder="...", aria-label="..."
-    for (const prop of PROPS_TO_CHECK) {
+    // Skip pure comment lines (`// ...`, `/* ... */`, `{/* ... */}`): an
+    // attribute quoted inside a comment is never rendered.
+    const isCommentLine = /^\s*(\/\/|\/\*|\*|\{\s*\/\*)/.test(line);
+    for (const prop of isCommentLine ? [] : PROPS_TO_CHECK) {
       const regex = new RegExp(`${prop}="([^"{}\\n]+)"`, "g");
       const propMatches = line.matchAll(regex);
       for (const match of propMatches) {

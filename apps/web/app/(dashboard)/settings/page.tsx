@@ -47,7 +47,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
-import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageHeader,
+  pageShellClass,
+  tableCellClass,
+  tableHeadClass,
+  tableRowClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccentColorPicker } from "@/components/brand/accent-color-picker";
 import { MigrationHelpRequest } from "@/components/onboarding/migration-help-request";
 const MessagingTab = dynamic(() => import("@/components/settings/messaging-tab").then(m => ({ default: m.MessagingTab })), { loading: () => <Loader2 className="h-5 w-5 animate-spin" /> });
@@ -340,6 +350,30 @@ function getRoomTypeLabel(
   }
 }
 
+function getTemplateCategoryLabel(
+  t: (key: string, fallback?: string, params?: Record<string, string | number>) => string,
+  category: string | null | undefined,
+): string {
+  switch (category) {
+    case "surgery":
+      return t("settings.templates.categories.surgery", "Surgery");
+    case "wellness":
+      return t("settings.templates.categories.wellness", "Wellness");
+    case "dental":
+      return t("settings.templates.categories.dental", "Dental");
+    case "preventive":
+      return t("settings.templates.categories.preventive", "Preventive care");
+    case "emergency":
+      return t("settings.templates.categories.emergency", "Emergency");
+    case "other":
+      return t("settings.templates.categories.other", "Other");
+    default:
+      return category
+        ? category.charAt(0).toUpperCase() + category.slice(1)
+        : "-";
+  }
+}
+
 type PracticeInfoForm = {
   name: string;
   address: string;
@@ -437,6 +471,38 @@ function SettingsLoadError({
   );
 }
 
+/**
+ * Section header for a settings list panel: title, one-line description and
+ * the panel's primary action. Keeps every tab on the same card rhythm
+ * (docs/UIKIT.md — sections are `rounded-lg border border-border bg-card`).
+ */
+function SettingsPanelHeader({
+  title,
+  description,
+  badge,
+  action,
+}: {
+  title: string;
+  description: string;
+  badge?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {badge}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </div>
+      {action ? (
+        <div className="flex shrink-0 items-center gap-2">{action}</div>
+      ) : null}
+    </div>
+  );
+}
+
 // ── Main Page ───────────────────────────────────────────────
 export default function SettingsPage() {
   return (
@@ -509,13 +575,13 @@ function SettingsPageInner() {
   }
 
   return (
-    <div className="min-w-0 w-full max-w-full space-y-6 overflow-hidden">
+    <div className={pageShellClass}>
       <PageHeader
         icon={Settings}
         title={
           isAdmin
-            ? t("settings.header.title", "Settings")
-            : t("settings.tabs.security", "Security & Password")
+            ? t("settings.header.title", "Nastavenia")
+            : t("settings.tabs.security", "Zabezpečenie & Heslo")
         }
         subtitle={
           isAdmin
@@ -543,38 +609,41 @@ function SettingsPageInner() {
         }
       />
 
-      <div className="flex min-w-0 w-full max-w-full flex-col gap-6 lg:flex-row lg:gap-8">
-        {/* Section nav: only show when there are multiple tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as Tab)}
+        className="space-y-6"
+      >
+        {/* Section tabs: only show when there are multiple tabs */}
         {visibleTabs.length > 1 && (
-          <nav
-            className="min-w-0 max-w-full overflow-hidden lg:w-56 lg:shrink-0"
+          <TabsList
             aria-label={t("settings.header.sectionsAria", "Sekcie nastavení")}
+            className={cn(
+              underlineTabsListClass,
+              "custom-scrollbar max-w-full flex-nowrap overflow-x-auto",
+            )}
           >
-            <div className="custom-scrollbar -mb-px flex w-full max-w-full gap-1 overflow-x-auto pb-1 lg:mb-0 lg:flex-col lg:overflow-visible lg:pb-0">
-              {visibleTabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      activeTab === tab.id
-                        ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {t(tab.labelKey, tab.label)}
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
+            {visibleTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className={underlineTabsTriggerClass}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  {t(tab.labelKey, tab.label)}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
         )}
 
         {/* Tab content */}
-        <div className="min-w-0 w-full max-w-full flex-1">
+        <TabsContent
+          value={activeTab}
+          className="mt-0 min-w-0 w-full max-w-full"
+        >
           {activeTab === "practice" && <PracticeInfoTab />}
           {activeTab === "brandKit" && <BrandKitTab />}
           {activeTab === "locations" && <LocationsTab />}
@@ -591,8 +660,8 @@ function SettingsPageInner() {
           {activeTab === "ai" && <AiSettingsTab />}
           {activeTab === "simulation" && <SimulationTab />}
           {activeTab === "security" && <SecurityTab />}
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -694,7 +763,7 @@ function PracticeInfoTab() {
           kind: "response",
           status: res.status,
         });
-        throw new Error(json.error ?? "Upload failed");
+        throw new Error(json.error ?? t("settings.branding.uploadFailed", "Upload failed"));
       }
       logoUploadAttemptRef.current = settleManagedUploadAttempt(attempt, {
         kind: "success",
@@ -752,11 +821,7 @@ function PracticeInfoTab() {
     return (
       <EmptyState
         icon={Settings}
-        /* title="Practice settings unavailable" */
-        title={t(
-          "settings.practice.unavailableTitle",
-          "Practice settings unavailable",
-        )}
+        title={t("settings.practice.unavailableTitle", "Practice settings unavailable")}
         description={t(
           "settings.practice.unavailableDescription",
           "The practice profile could not be found for this account.",
@@ -1005,7 +1070,7 @@ function PracticeInfoTab() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={practice.logoUrl}
-                    alt="Practice logo"
+                    alt={t("settings.branding.logoAlt", "Practice logo")}
                     decoding="async"
                     className="h-14 w-14 rounded-lg border border-border object-cover"
                   />
@@ -1037,7 +1102,6 @@ function PracticeInfoTab() {
                     ) : (
                       <Upload className="mr-2 h-4 w-4" />
                     )}
-                    {/* {practice.logoUrl ? "Replace logo" : "Upload logo"} */}
                     {practice.logoUrl
                       ? t("settings.branding.replaceLogo", "Replace logo")
                       : t("settings.branding.uploadLogo", "Upload logo")}
@@ -1289,7 +1353,7 @@ function LocationsTab() {
     onSuccess: () => {
       invalidateLocationState();
       setConfirmDelete(null);
-      toast.success("Location retired");
+      toast.success(t("settings.locations.retired", "Location retired"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -1370,26 +1434,26 @@ function LocationsTab() {
 
   return (
     <div className="max-w-4xl space-y-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-sm font-semibold">{t("settings.locations.title", "Practice Locations")}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("settings.locations.description", "Pobočky riadia nastavenie SMS, priraďovanie miestností, pripomienky a množstvo v hostovanej fakturácii.")}
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setShowAdd(!showAdd);
-            setEditingId(null);
-            setConfirmDelete(null);
-          }}
-          size="sm"
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          {t("settings.locations.add", "Pridať pobočku")}
-        </Button>
-      </div>
+      <SettingsPanelHeader
+        title={t("settings.locations.title", "Practice Locations")}
+        description={t(
+          "settings.locations.description",
+          "Pobočky riadia nastavenie SMS, priraďovanie miestností, pripomienky a množstvo v hostovanej fakturácii.",
+        )}
+        action={
+          <Button
+            onClick={() => {
+              setShowAdd(!showAdd);
+              setEditingId(null);
+              setConfirmDelete(null);
+            }}
+            size="sm"
+          >
+            <Plus className="h-4 w-4" />
+            {t("settings.locations.add", "Pridať pobočku")}
+          </Button>
+        }
+      />
 
       {showAdd ? (
         <div className="rounded-lg border border-border bg-card p-4">
@@ -1451,13 +1515,13 @@ function LocationsTab() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full min-w-[560px] text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">{t("settings.locations.colLocation", "Location")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.locations.colContact", "Contact")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.locations.colActions", "Actions")}</th>
+              <th className={tableHeadClass}>{t("settings.locations.colLocation", "Location")}</th>
+              <th className={tableHeadClass}>{t("settings.locations.colContact", "Contact")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.locations.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1468,9 +1532,9 @@ function LocationsTab() {
               return (
                 <tr
                   key={location.id}
-                  className="border-b border-border last:border-0"
+                  className={tableRowClass}
                 >
-                  <td className="px-4 py-3 align-top">
+                  <td className={cn(tableCellClass, "align-top")}>
                     {isEditing ? (
                       <div className="space-y-2">
                         <Input
@@ -1499,7 +1563,7 @@ function LocationsTab() {
                           {location.isPrimary ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                               <Star className="h-3 w-3" />
-                              Primary
+                              {t("settings.locations.primaryBadge", "Primary")}
                             </span>
                           ) : null}
                         </div>
@@ -1509,7 +1573,7 @@ function LocationsTab() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top text-muted-foreground">
+                  <td className={cn(tableCellClass, "align-top text-muted-foreground")}>
                     {isEditing ? (
                       <Input
                         value={editForm.phone}
@@ -1520,10 +1584,10 @@ function LocationsTab() {
                         }
                       />
                     ) : (
-                      location.phone || "No phone"
+                      location.phone || t("settings.locations.noPhone", "No phone")
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className={cn(tableCellClass, "align-top")}>
                     <div className="flex justify-end gap-1">
                       {isEditing ? (
                         <>
@@ -1612,7 +1676,7 @@ function LocationsTab() {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
       {activeLocationCount <= 1 ? (
         <p className="text-xs text-muted-foreground">
           {t("settings.locations.keepOneActive", "Prax musí mať aspoň jednu aktívnu pobočku.")}
@@ -1623,15 +1687,6 @@ function LocationsTab() {
 }
 
 // ── Plan & Billing ──────────────────────────────────────────
-const FEATURE_LABELS: Record<string, string> = {
-  agent: "OpenVPM Agent (AI)",
-  sms: "SMS sending",
-  advancedReporting: "Advanced reporting",
-  apiAccess: "API access + webhooks",
-  multiLocation: "Multi-location",
-  integrations: "Supported integrations",
-};
-
 function redirectToHostedBillingUrl(url: unknown, unavailableMessage: string) {
   if (!isSafeCheckoutRedirectUrl(url)) {
     toast.error(unavailableMessage);
@@ -1790,7 +1845,10 @@ function BillingTab() {
         <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm">
           <p className="font-medium">{t("settings.billing.checkoutCanceled", "Checkout was canceled")}</p>
           <p className="mt-1 text-muted-foreground">
-            Nothing changed. Choose a schedule whenever you are ready.
+            {t(
+              "settings.billing.checkoutCanceledDetail",
+              "Nothing changed. Choose a schedule whenever you are ready.",
+            )}
           </p>
         </div>
       ) : null}
@@ -1822,7 +1880,8 @@ function BillingTab() {
                           "1 trial day left",
                           { count: daysLeft }
                         )
-                      : daysLeft >= 2 && daysLeft <= 4
+                      : daysLeft >= 2 &&
+                          daysLeft <= 4
                       ? t(
                           "settings.billing.trialDaysLeft_few",
                           "{count} trial days left",
@@ -1864,9 +1923,10 @@ function BillingTab() {
             <div className="mb-5 flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Stripe is retrying this payment. Your clinic remains writable
-                during the retry window; review billing to avoid an unpaid,
-                read-only account.
+                {t(
+                  "settings.billing.pastDueNotice",
+                  "Stripe is retrying this payment. Your clinic remains writable during the retry window; review billing to avoid an unpaid, read-only account.",
+                )}
               </p>
             </div>
           ) : null}
@@ -1912,7 +1972,7 @@ function BillingTab() {
                   ) : (
                     <CreditCard className="size-4" />
                   )}
-                  Continue to secure checkout
+                  {t("settings.billing.continueToCheckout", "Continue to secure checkout")}
                 </Button>
               </div>
             </>
@@ -2344,7 +2404,7 @@ function PlanGrid({
                 p.features.map((f) => (
                   <li key={f} className="flex items-center gap-1">
                     <Check className="h-3 w-3 text-green-600" />
-                    {FEATURE_I18N[f] ?? FEATURE_LABELS[f] ?? f}
+                    {FEATURE_I18N[f] ?? f}
                   </li>
                 ))
               ) : (
@@ -2392,7 +2452,7 @@ function StaffTab() {
       utils.settings.listUsers.invalidate();
       setShowAdd(false);
       resetAddForm();
-      toast.success("Staff member added");
+      toast.success(t("settings.staff.memberAdded", "Staff member added"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2411,7 +2471,9 @@ function StaffTab() {
   const deactivateMutation = trpc.settings.deactivateUser.useMutation({
     onSuccess: () => {
       utils.settings.listUsers.invalidate();
-      toast.success("Staff member deactivated");
+      toast.success(
+        t("settings.staff.memberDeactivated", "Staff member deactivated"),
+      );
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2422,7 +2484,7 @@ function StaffTab() {
       utils.settings.listUsers.invalidate();
       setInviteForm({ email: "", name: "", role: "front_desk" });
       setInviteUrl(res.inviteUrl ?? null);
-      toast.success("Invite sent");
+      toast.success(t("settings.staff.inviteSent", "Invite sent"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -2484,8 +2546,10 @@ function StaffTab() {
       phone: "",
       licenseNumber: "",
     });
-  const isStaffNameValid = (name: string) =>
-    name.trim().length > 0 && name.trim().length <= STAFF_NAME_MAX_LENGTH;
+  const isStaffNameValid = (name: string) => {
+    if (name.trim().length === 0) return false;
+    return name.trim().length <= STAFF_NAME_MAX_LENGTH;
+  };
   const isOptionalStaffNameValid = (name: string) =>
     name.trim().length <= STAFF_NAME_MAX_LENGTH;
   const isSettingsEmailInputValid = (email: string) =>
@@ -2534,38 +2598,49 @@ function StaffTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
-        <Button
-          onClick={() => {
-            setShowInvite(!showInvite);
-            setShowAdd(false);
-            setInviteUrl(null);
-          }}
-          size="sm"
-          variant="outline"
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          {t("settings.staff.inviteByEmail", "Pozvať e-mailom")}
-        </Button>
-        <Button
-          onClick={() => {
-            setShowAdd(!showAdd);
-            setShowInvite(false);
-            resetAddForm();
-          }}
-          size="sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          {t("settings.staff.add", "Pridať člena tímu")}
-        </Button>
-      </div>
+      <SettingsPanelHeader
+        title={t("settings.staff.title", "Staff & working hours")}
+        description={t(
+          "settings.staff.description",
+          "Pozvite kolegov, nastavte im roly a spravujte pracovné okná lekárov.",
+        )}
+        action={
+          <>
+            <Button
+              onClick={() => {
+                setShowInvite(!showInvite);
+                setShowAdd(false);
+                setInviteUrl(null);
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              {t("settings.staff.inviteByEmail", "Pozvať e-mailom")}
+            </Button>
+            <Button
+              onClick={() => {
+                setShowAdd(!showAdd);
+                setShowInvite(false);
+                resetAddForm();
+              }}
+              size="sm"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t("settings.staff.add", "Pridať člena tímu")}
+            </Button>
+          </>
+        }
+      />
 
       {showInvite && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">{t("settings.staff.inviteTitle", "Invite a teammate")}</h3>
           <p className="text-xs text-muted-foreground">
-            They&apos;ll get an email to set their own password and activate
-            their account.
+            {t(
+              "settings.staff.inviteDescription",
+              "They'll get an email to set their own password and activate their account.",
+            )}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Input
@@ -2632,7 +2707,10 @@ function StaffTab() {
           {inviteUrl && (
             <div className="space-y-1.5 rounded-md border border-border bg-muted/30 p-3">
               <p className="text-xs font-medium text-muted-foreground">
-                Invite link (shown in dev/preview so you can test the flow):
+                {t(
+                  "settings.staff.inviteLinkHint",
+                  "Invite link (shown in dev/preview so you can test the flow):",
+                )}
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate rounded bg-background px-2 py-1 text-xs">
@@ -2660,7 +2738,7 @@ function StaffTab() {
       )}
 
       {showAdd && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">{t("settings.staff.newMember", "New Staff Member")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
@@ -2770,28 +2848,28 @@ function StaffTab() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full min-w-[880px] text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colName", "Name")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colEmail", "Email")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colRole", "Role")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colProvider", "Provider")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colPhone", "Phone")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.staff.colLicense", "License #")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.staff.colActions", "Actions")}</th>
+              <th className={tableHeadClass}>{t("settings.staff.colName", "Name")}</th>
+              <th className={tableHeadClass}>{t("settings.staff.colEmail", "Email")}</th>
+              <th className={tableHeadClass}>{t("settings.staff.colRole", "Role")}</th>
+              <th className={tableHeadClass}>{t("settings.staff.colProvider", "Provider")}</th>
+              <th className={tableHeadClass}>{t("settings.staff.colPhone", "Phone")}</th>
+              <th className={tableHeadClass}>{t("settings.staff.colLicense", "License #")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.staff.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {staffList?.map((user) => (
               <tr
                 key={user.id}
-                className="border-b border-border last:border-0"
+                className={tableRowClass}
               >
                 {editingId === user.id ? (
                   <>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <Input
                         className="h-8"
                         maxLength={STAFF_NAME_MAX_LENGTH}
@@ -2801,10 +2879,10 @@ function StaffTab() {
                         }
                       />
                     </td>
-                    <td className="px-4 py-2 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {user.email}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <select
                         className="h-8 rounded-md border border-input bg-background px-2 text-sm"
                         value={editForm.role}
@@ -2825,7 +2903,7 @@ function StaffTab() {
                         <option value="admin">{t("settings.staff.roleAdmin", "Administrátor")}</option>
                       </select>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <label className="flex items-center gap-2 text-xs">
                         <input
                           type="checkbox"
@@ -2839,10 +2917,10 @@ function StaffTab() {
                             })
                           }
                         />
-                        Veterinarian
+                        {t("settings.staff.providerLabel", "Veterinarian")}
                       </label>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <Input
                         className="h-8"
                         maxLength={SETTINGS_PHONE_MAX_LENGTH}
@@ -2852,7 +2930,7 @@ function StaffTab() {
                         }
                       />
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <Input
                         className="h-8"
                         maxLength={STAFF_LICENSE_NUMBER_MAX_LENGTH}
@@ -2865,7 +2943,7 @@ function StaffTab() {
                         }
                       />
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className={cn(tableCellClass, "text-right")}>
                       <div className="flex justify-end gap-1">
                         <Button
                           size="sm"
@@ -2900,11 +2978,11 @@ function StaffTab() {
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-3 font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "font-medium")}>{user.name}</td>
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {user.email}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={tableCellClass}>
                       <span
                         className={cn(
                           "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -2914,16 +2992,16 @@ function StaffTab() {
                         {formatUserRole(user.role, t)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {user.isVeterinarian ? t("roles.veterinarian", "Veterinarian") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {user.phone ?? "-"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {user.licenseNumber ?? "-"}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className={cn(tableCellClass, "text-right")}>
                       {confirmDeactivate === user.id ? (
                         <div className="flex items-center justify-end gap-1">
                           <span className="mr-2 text-xs text-destructive">
@@ -2994,7 +3072,7 @@ function StaffTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
       <ProviderHours />
     </div>
   );
@@ -3092,21 +3170,28 @@ function AppointmentTypesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button
-          onClick={() => {
-            setShowAdd(!showAdd);
-            resetAddForm();
-          }}
-          size="sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          {t("settings.appointmentTypes.add", "Pridať typ")}
-        </Button>
-      </div>
+      <SettingsPanelHeader
+        title={t("settings.appointmentTypes.title", "Appointment types")}
+        description={t(
+          "settings.appointmentTypes.description",
+          "Predvolené trvanie, farby a typy miestností pre plánovanie termínov.",
+        )}
+        action={
+          <Button
+            onClick={() => {
+              setShowAdd(!showAdd);
+              resetAddForm();
+            }}
+            size="sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t("settings.appointmentTypes.add", "Pridať typ")}
+          </Button>
+        }
+      />
 
       {showAdd && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">{t("settings.appointmentTypes.newType", "New Appointment Type")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
@@ -3186,26 +3271,26 @@ function AppointmentTypesTab() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full min-w-[640px] text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colName", "Name")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colDuration", "Duration")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colColor", "Color")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.appointmentTypes.colRoomType", "Room Type")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.appointmentTypes.colActions", "Actions")}</th>
+              <th className={tableHeadClass}>{t("settings.appointmentTypes.colName", "Name")}</th>
+              <th className={tableHeadClass}>{t("settings.appointmentTypes.colDuration", "Duration")}</th>
+              <th className={tableHeadClass}>{t("settings.appointmentTypes.colColor", "Color")}</th>
+              <th className={tableHeadClass}>{t("settings.appointmentTypes.colRoomType", "Room Type")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.appointmentTypes.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {types?.map((type) => (
               <tr
                 key={type.id}
-                className="border-b border-border last:border-0"
+                className={tableRowClass}
               >
                 {editingId === type.id ? (
                   <>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <Input
                         className="h-8"
                         maxLength={APPOINTMENT_TYPE_NAME_MAX_LENGTH}
@@ -3215,7 +3300,7 @@ function AppointmentTypesTab() {
                         }
                       />
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <Input
                         className="h-8 w-20"
                         type="number"
@@ -3230,7 +3315,7 @@ function AppointmentTypesTab() {
                         }
                       />
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <div className="flex gap-1">
                         {PRESET_COLORS.map((c) => (
                           <button
@@ -3249,7 +3334,7 @@ function AppointmentTypesTab() {
                         ))}
                       </div>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className={tableCellClass}>
                       <select
                         className="h-8 rounded-md border border-input bg-background px-2 text-sm"
                         value={editForm.defaultRoomType}
@@ -3268,7 +3353,7 @@ function AppointmentTypesTab() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className={cn(tableCellClass, "text-right")}>
                       <div className="flex justify-end gap-1">
                         <Button
                           size="sm"
@@ -3299,20 +3384,20 @@ function AppointmentTypesTab() {
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-3 font-medium">{type.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "font-medium")}>{type.name}</td>
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {type.durationMinutes} min
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={tableCellClass}>
                       <span
                         className="inline-block h-4 w-4 rounded-full"
                         style={{ backgroundColor: type.color ?? "#6b7280" }}
                       />
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {getRoomTypeLabel(t, type.defaultRoomType)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className={cn(tableCellClass, "text-right")}>
                       <div className="flex justify-end gap-1">
                         <Button
                           size="sm"
@@ -3357,7 +3442,7 @@ function AppointmentTypesTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
     </div>
   );
 }
@@ -3501,9 +3586,11 @@ function DataTab() {
         if (data.missingSections.length > 0) {
           toast.error(t("settings.data.backupMissingSections", "V zálohe chýbajú povinné sekcie"));
         } else if (data.restoreErrors.length > 0) {
-          toast.error("Backup has invalid restore data");
+          toast.error(
+            t("settings.data.backupInvalidRestoreData", "Backup has invalid restore data"),
+          );
         } else {
-          toast.success("Backup verified");
+          toast.success(t("settings.data.backupVerified", "Backup verified"));
         }
         return;
       }
@@ -3513,7 +3600,11 @@ function DataTab() {
         totalRows: data.totalRows,
       });
       setConfirmFreshPractice(false);
-      toast.success(`Restored ${data.totalRows} rows`);
+      toast.success(
+        t("settings.data.restoredRows", "Restored {count} rows", {
+          count: data.totalRows,
+        }),
+      );
     },
     onError: (err) => {
       toast.error(err.message);
@@ -3647,7 +3738,9 @@ function DataTab() {
         });
         setImportRecoveryMessage("");
         setImportResult(null);
-        toast.success("Vaccination CSV checked");
+        toast.success(
+          t("settings.data.vaccinationCsvChecked", "Vaccination CSV checked"),
+        );
         return;
       }
 
@@ -3700,7 +3793,9 @@ function DataTab() {
         utils.settings.getAccountDeletionRequest.invalidate();
         setConfirmExportDownloaded(false);
         setConfirmManualReview(false);
-        toast.success("Account deletion request sent");
+        toast.success(
+          t("settings.data.deletionRequestSent", "Account deletion request sent"),
+        );
       },
       onError: (err) => toast.error(err.message),
     });
@@ -3718,14 +3813,14 @@ function DataTab() {
   const clearDemo = trpc.settings.clearDemoData.useMutation({
     onSuccess: () => {
       utils.settings.onboardingStatus.invalidate();
-      toast.success("Sample data removed");
+      toast.success(t("settings.data.sampleDataRemoved", "Sample data removed"));
     },
     onError: (err) => toast.error(err.message),
   });
   const reseedDemo = trpc.settings.reseedDemoData.useMutation({
     onSuccess: () => {
       utils.settings.onboardingStatus.invalidate();
-      toast.success("Sample data added");
+      toast.success(t("settings.data.sampleDataAdded", "Sample data added"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -4491,7 +4586,10 @@ function DataTab() {
                   value={deletionContactEmail}
                   maxLength={SETTINGS_EMAIL_MAX_LENGTH}
                   onChange={(e) => setDeletionContactEmail(e.target.value)}
-                  placeholder="owner@example.com"
+                  placeholder={t(
+                    "settings.data.deletionContactEmailPlaceholder",
+                    "owner@example.com",
+                  )}
                 />
               </div>
               <div>
@@ -4654,7 +4752,7 @@ function DataTab() {
           <div className="max-w-2xl space-y-4">
             {/* Expected columns hint */}
             <p className="text-xs text-muted-foreground">
-              Expected columns:{" "}
+              {t("settings.data.expectedColumns", "Expected columns:")}{" "}
               {
                 MIGRATION_STEPS.find((step) => step.mode === importMode)!
                   .columnHint
@@ -4703,7 +4801,7 @@ function DataTab() {
             {/* Server dry-run preview */}
             {csvFileName && (
               <p className="text-xs text-muted-foreground">
-                Selected file:{" "}
+                {t("settings.data.selectedFile", "Selected file:")}{" "}
                 <span className="font-medium">{csvFileName}</span>
               </p>
             )}
@@ -4722,7 +4820,7 @@ function DataTab() {
                   {isImportPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  Check again
+                  {t("settings.data.checkAgain", "Check again")}
                 </Button>
               </div>
             ) : null}
@@ -4845,7 +4943,7 @@ function DataTab() {
 
             {/* Import result */}
             {importResult && (
-              <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+              <div className="space-y-2 rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
                   <Check className="h-4 w-4" />
                   {t("settings.data.recordsImported", "{count} záznamov úspešne importovaných", { count: importResult.imported })}
@@ -4928,7 +5026,7 @@ function RoomsTab() {
   const deleteMutation = trpc.settings.deleteRoom.useMutation({
     onSuccess: () => {
       utils.settings.listRooms.invalidate();
-      toast.success("Room deleted");
+      toast.success(t("settings.rooms.deleted", "Room deleted"));
     },
     onError: (err) => {
       toast.error(err.message);
@@ -4941,8 +5039,10 @@ function RoomsTab() {
     type: "exam" as "exam" | "surgery" | "treatment" | "boarding",
     locationId: "",
   });
-  const isRoomNameValid = (name: string) =>
-    name.trim().length > 0 && name.trim().length <= ROOM_NAME_MAX_LENGTH;
+  const isRoomNameValid = (name: string) => {
+    if (name.trim().length === 0) return false;
+    return name.trim().length <= ROOM_NAME_MAX_LENGTH;
+  };
   const roomsMissing = !isLoading && !roomsError && !roomList;
   const roomLocations = useMemo(
     () => locationsQuery.data ?? [],
@@ -4982,15 +5082,22 @@ function RoomsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setShowAdd(!showAdd)} size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          {t("settings.rooms.add", "Pridať miestnosť")}
-        </Button>
-      </div>
+      <SettingsPanelHeader
+        title={t("settings.rooms.title", "Rooms")}
+        description={t(
+          "settings.rooms.description",
+          "Vyšetrovne, sály a hospitalizačné priestory, ktoré si termíny môžu rezervovať.",
+        )}
+        action={
+          <Button onClick={() => setShowAdd(!showAdd)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            {t("settings.rooms.add", "Pridať miestnosť")}
+          </Button>
+        }
+      />
 
       {showAdd && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">{t("settings.rooms.newRoom", "New Room")}</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Input
@@ -5054,32 +5161,32 @@ function RoomsTab() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full min-w-[560px] text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">{t("settings.rooms.colName", "Name")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.rooms.colType", "Type")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.rooms.colLocation", "Location")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.rooms.colActions", "Actions")}</th>
+              <th className={tableHeadClass}>{t("settings.rooms.colName", "Name")}</th>
+              <th className={tableHeadClass}>{t("settings.rooms.colType", "Type")}</th>
+              <th className={tableHeadClass}>{t("settings.rooms.colLocation", "Location")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.rooms.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {roomList?.map((room) => (
               <tr
                 key={room.id}
-                className="border-b border-border last:border-0"
+                className={tableRowClass}
               >
-                <td className="px-4 py-3 font-medium">{room.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className={cn(tableCellClass, "font-medium")}>{room.name}</td>
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   {getRoomTypeLabel(t, room.type)}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>
                   {roomLocations.find(
                     (location) => location.id === room.locationId,
-                  )?.name ?? "Unassigned"}
+                  )?.name ?? t("settings.rooms.unassigned", "Unassigned")}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className={cn(tableCellClass, "text-right")}>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -5104,7 +5211,7 @@ function RoomsTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
     </div>
   );
 }
@@ -5142,8 +5249,8 @@ function WellnessPlansTab() {
       utils.wellness.listDue.invalidate();
       toast.success(
         variables.active
-          ? "Wellness plan reactivated"
-          : "Wellness plan deactivated",
+          ? t("settings.wellness.reactivated", "Wellness plan reactivated")
+          : t("settings.wellness.deactivated", "Wellness plan deactivated"),
       );
     },
     onError: (err) => {
@@ -5194,24 +5301,24 @@ function WellnessPlansTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold">{t("settings.wellness.scheduledBilling", "Scheduled invoice billing")}</h3>
-            <Badge variant="secondary">{t("settings.wellness.noAutoCharge", "No auto-charge")}</Badge>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t(
-              "settings.wellness.noAutoChargeDescription",
-              "Wellness plans generate due invoices by cadence; Stripe checkout is collected on each invoice."
-            )}
-          </p>
-        </div>
-        <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("settings.wellness.addPlan", "Add Plan")}
-        </Button>
-      </div>
+      <SettingsPanelHeader
+        title={t("settings.wellness.scheduledBilling", "Scheduled invoice billing")}
+        description={t(
+          "settings.wellness.noAutoChargeDescription",
+          "Wellness plans generate due invoices by cadence; Stripe checkout is collected on each invoice."
+        )}
+        badge={
+          <Badge variant="secondary">
+            {t("settings.wellness.noAutoCharge", "No auto-charge")}
+          </Badge>
+        }
+        action={
+          <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("settings.wellness.addPlan", "Add Plan")}
+          </Button>
+        }
+      />
 
       {showAdd && (
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
@@ -5282,24 +5389,24 @@ function WellnessPlansTab() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full min-w-[720px] text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">{t("settings.wellness.colName", "Name")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.wellness.colInterval", "Interval")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.wellness.colPrice", "Price")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.wellness.colStatus", "Status")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.wellness.colActions", "Actions")}</th>
+              <th className={tableHeadClass}>{t("settings.wellness.colName", "Name")}</th>
+              <th className={tableHeadClass}>{t("settings.wellness.colInterval", "Interval")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.wellness.colPrice", "Price")}</th>
+              <th className={tableHeadClass}>{t("settings.wellness.colStatus", "Status")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.wellness.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {plans?.map((plan) => (
               <tr
                 key={plan.id}
-                className="border-b border-border last:border-0"
+                className={tableRowClass}
               >
-                <td className="px-4 py-3">
+                <td className={tableCellClass}>
                   <div className="font-medium">{plan.name}</div>
                   {plan.description && (
                     <div className="text-sm text-muted-foreground">
@@ -5307,7 +5414,7 @@ function WellnessPlansTab() {
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className={tableCellClass}>
                   <div className="text-muted-foreground">
                     {plan.billingInterval === "monthly"
                       ? t("settings.wellness.monthly", "Monthly")
@@ -5323,15 +5430,15 @@ function WellnessPlansTab() {
                     {t("settings.wellness.invoiceSchedule", "Plán fakturácie")}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className={cn(tableCellClass, "text-right tabular-nums")}>
                   {formatCurrency(plan.price)}
                 </td>
-                <td className="px-4 py-3">
+                <td className={tableCellClass}>
                   <Badge variant={plan.active ? "default" : "secondary"}>
                     {plan.active ? t("settings.wellness.active", "Aktívny") : t("settings.wellness.inactive", "Neaktívny")}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className={cn(tableCellClass, "text-right")}>
                   <Button
                     size="sm"
                     variant="outline"
@@ -5364,7 +5471,7 @@ function WellnessPlansTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
     </div>
   );
 }
@@ -5666,14 +5773,14 @@ function TemplatesTab() {
           </p>
         )}
 
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+        <DataTableFrame>
+          <table className="w-full min-w-[560px] text-xs">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colDescription", "Popis")}</th>
-                <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colType", "Typ")}</th>
-                <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colQuantity", "Množstvo")}</th>
-                <th className="px-4 py-3 text-right font-medium">{t("settings.templates.colUnitPrice", "Jednotková cena")}</th>
+                <th className={tableHeadClass}>{t("settings.templates.colDescription", "Popis")}</th>
+                <th className={tableHeadClass}>{t("settings.templates.colType", "Typ")}</th>
+                <th className={tableHeadClass}>{t("settings.templates.colQuantity", "Množstvo")}</th>
+                <th className={cn(tableHeadClass, "text-right")}>{t("settings.templates.colUnitPrice", "Jednotková cena")}</th>
               </tr>
             </thead>
             <tbody>
@@ -5689,7 +5796,7 @@ function TemplatesTab() {
                 <tr>
                   <td
                     colSpan={4}
-                    className="px-4 py-8 text-center text-muted-foreground"
+                    className={cn(tableCellClass, "py-8 text-center text-muted-foreground")}
                   >
                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                     {t("settings.templates.loadingItems", "Načítavam položky šablóny...")}
@@ -5706,12 +5813,12 @@ function TemplatesTab() {
                   </td>
                 </tr>
               ) : selectedTemplateDetail?.items?.length ? (
-                selectedTemplateDetail.items.map((item: any, i: number) => (
-                  <tr key={i} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 font-medium">
+                selectedTemplateDetail.items.map((item, i) => (
+                  <tr key={i} className={tableRowClass}>
+                    <td className={cn(tableCellClass, "font-medium")}>
                       {item.description}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       <span className="capitalize">{item.itemType}</span>
                       {item.itemType === "product" &&
                       item.hasActiveProductLink !== true ? (
@@ -5720,10 +5827,10 @@ function TemplatesTab() {
                         </p>
                       ) : null}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-muted-foreground")}>
                       {item.defaultQuantity}
                     </td>
-                    <td className="px-4 py-3 text-right text-muted-foreground">
+                    <td className={cn(tableCellClass, "text-right text-muted-foreground")}>
                       {formatCurrency(item.defaultUnitPrice)}
                     </td>
                   </tr>
@@ -5742,28 +5849,35 @@ function TemplatesTab() {
               )}
             </tbody>
           </table>
-        </div>
+        </DataTableFrame>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button
-          onClick={() => {
-            setShowAdd(!showAdd);
-            resetAddForm();
-          }}
-          size="sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          {t("settings.templates.add", "Pridať šablónu")}
-        </Button>
-      </div>
+      <SettingsPanelHeader
+        title={t("settings.templates.title", "Treatment templates")}
+        description={t(
+          "settings.templates.description",
+          "Opakovane použiteľné balíky služieb a produktov pre bežné výkony.",
+        )}
+        action={
+          <Button
+            onClick={() => {
+              setShowAdd(!showAdd);
+              resetAddForm();
+            }}
+            size="sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t("settings.templates.add", "Pridať šablónu")}
+          </Button>
+        }
+      />
 
       {showAdd && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">{t("settings.templates.newTemplate", "New Treatment Template")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
@@ -5784,7 +5898,7 @@ function TemplatesTab() {
             >
               {TEMPLATE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                  {getTemplateCategoryLabel(t, c)}
                 </option>
               ))}
             </select>
@@ -5841,7 +5955,7 @@ function TemplatesTab() {
                 </select>
                 <Input
                   type="number"
-                  placeholder="Qty"
+                  placeholder={t("settings.templates.itemQuantityPlaceholder", "Qty")}
                   min={TREATMENT_TEMPLATE_ITEM_QUANTITY_MIN}
                   max={TREATMENT_TEMPLATE_ITEM_QUANTITY_MAX}
                   step={1}
@@ -5924,26 +6038,26 @@ function TemplatesTab() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <DataTableFrame>
+        <table className="w-full min-w-[680px] text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colName", "Name")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colCategory", "Category")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colItems", "Items")}</th>
-              <th className="px-4 py-3 text-left font-medium">{t("settings.templates.colStatus", "Status")}</th>
-              <th className="px-4 py-3 text-right font-medium">{t("settings.templates.colActions", "Actions")}</th>
+              <th className={tableHeadClass}>{t("settings.templates.colName", "Name")}</th>
+              <th className={tableHeadClass}>{t("settings.templates.colCategory", "Category")}</th>
+              <th className={tableHeadClass}>{t("settings.templates.colItems", "Items")}</th>
+              <th className={tableHeadClass}>{t("settings.templates.colStatus", "Status")}</th>
+              <th className={cn(tableHeadClass, "text-right")}>{t("settings.templates.colActions", "Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {templateList?.map((template) => (
               <tr
                 key={template.id}
-                className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/30"
+                className={cn(tableRowClass, "cursor-pointer")}
                 onClick={() => setSelectedTemplateId(template.id)}
               >
-                <td className="px-4 py-3 font-medium">{template.name}</td>
-                <td className="px-4 py-3">
+                <td className={cn(tableCellClass, "font-medium")}>{template.name}</td>
+                <td className={tableCellClass}>
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
@@ -5951,11 +6065,11 @@ function TemplatesTab() {
                         CATEGORY_BADGE.other,
                     )}
                   >
-                    {template.category}
+                    {getTemplateCategoryLabel(t, template.category)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">—</td>
-                <td className="px-4 py-3">
+                <td className={cn(tableCellClass, "text-muted-foreground")}>—</td>
+                <td className={tableCellClass}>
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -5967,7 +6081,7 @@ function TemplatesTab() {
                     {template.isActive !== false ? t("settings.templates.active", "Aktívna") : t("settings.templates.inactive", "Neaktívna")}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className={cn(tableCellClass, "text-right")}>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -6002,7 +6116,7 @@ function TemplatesTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableFrame>
     </div>
   );
 }

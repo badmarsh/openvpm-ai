@@ -94,7 +94,9 @@ describe("settings UI states", () => {
   });
 
   it("uses shared empty states for first-run settings panels", () => {
-    expect(source).toContain('title="Practice settings unavailable"');
+    expect(source).toContain(
+      't("settings.practice.unavailableTitle", "Practice settings unavailable")',
+    );
     expect(source).toContain('title={t("settings.locations.emptyTitle"');
     expect(source).toContain('title={t("settings.staff.emptyTitle"');
     expect(source).toContain('title={t("settings.appointmentTypes.emptyTitle"');
@@ -110,7 +112,9 @@ describe("settings UI states", () => {
       source.indexOf("// ── Locations"),
     );
 
-    expect(practiceTab).toContain('title="Practice settings unavailable"');
+    expect(practiceTab).toContain(
+      't("settings.practice.unavailableTitle", "Practice settings unavailable")',
+    );
     expect(practiceTab.indexOf("if (!practice)")).toBeLessThan(
       practiceTab.indexOf("const currentBrandColor"),
     );
@@ -126,7 +130,10 @@ describe("settings UI states", () => {
     );
     expect(practiceTab).toContain("{practice.logoUrl ? (");
     expect(practiceTab).toContain(
-      '{practice.logoUrl ? "Replace logo" : "Upload logo"}',
+      't("settings.branding.replaceLogo", "Replace logo")',
+    );
+    expect(practiceTab).toContain(
+      't("settings.branding.uploadLogo", "Upload logo")',
     );
     expect(practiceTab).not.toContain("practice?.");
   });
