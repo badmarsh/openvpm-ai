@@ -75,7 +75,6 @@ export function ContentCalendarTab() {
 
   // State
   const [selectedPillarFilter, setSelectedPillarFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [newBriefModalOpen, setNewBriefModalOpen] = useState(false);
   const [modalScheduledDate, setModalScheduledDate] = useState<string>("");
@@ -135,21 +134,13 @@ export function ContentCalendarTab() {
   // Navigation handlers
   const handlePrev = () => {
     const d = new Date(currentDate);
-    if (viewMode === "week") {
-      d.setDate(d.getDate() - 7);
-    } else {
-      d.setMonth(d.getMonth() - 1);
-    }
+    d.setDate(d.getDate() - 7);
     setCurrentDate(d);
   };
 
   const handleNext = () => {
     const d = new Date(currentDate);
-    if (viewMode === "week") {
-      d.setDate(d.getDate() + 7);
-    } else {
-      d.setMonth(d.getMonth() + 1);
-    }
+    d.setDate(d.getDate() + 7);
     setCurrentDate(d);
   };
 

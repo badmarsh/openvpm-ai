@@ -700,7 +700,7 @@ export function MarketingStudioContent() {
                     className="h-7 text-[11px] gap-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 border-sky-200 dark:border-sky-900/50"
                     onClick={handleSendToTv}
                     disabled={createTvSlideMutation.isPending}
-                    title="Pridať túto kampaň ako slajd na TV do čakárne"
+                    title={t("marketing.studio.tvSlideTitle", "Pridať túto kampaň ako slajd na TV do čakárne")}
                   >
                     {createTvSlideMutation.isPending ? (
                       <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
@@ -720,7 +720,7 @@ export function MarketingStudioContent() {
                         setGeneratedImageUrl(null);
                         setGeneratedVideoUrl(null);
                       }}
-                      title="Resetovať vizuál"
+                      title={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}
                     >
                       <RefreshCw className="h-3 w-3" />
                     </Button>
@@ -779,7 +779,7 @@ export function MarketingStudioContent() {
                       rel="noreferrer"
                       download="wan_video.mp4"
                       className="h-7 w-7 rounded-lg bg-black/70 hover:bg-black/90 text-white backdrop-blur-sm flex items-center justify-center transition-colors shadow-sm"
-                      title="Stiahnuť video súbor"
+                      title={t("marketing.studio.downloadVideoTitle", "Stiahnuť video súbor")}
                     >
                       <Download className="h-3.5 w-3.5" />
                     </a>
@@ -804,7 +804,7 @@ export function MarketingStudioContent() {
                       rel="noreferrer"
                       download="wanx_image.png"
                       className="h-7 w-7 rounded-lg bg-black/70 hover:bg-black/90 text-white backdrop-blur-sm flex items-center justify-center transition-colors shadow-sm"
-                      title="Stiahnuť obrázok"
+                      title={t("marketing.studio.downloadImageTitle", "Stiahnuť obrázok")}
                     >
                       <Download className="h-3.5 w-3.5" />
                     </a>
@@ -875,7 +875,7 @@ export function MarketingStudioContent() {
                   <span className="font-semibold text-xs text-foreground block">
                     {clinicName}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">Práve teraz • 🌍 Verejné</span>
+                  <span className="text-[10px] text-muted-foreground">{t("marketing.studio.fbJustNow", "Práve teraz • 🌍 Verejné")}</span>
                 </div>
               </div>
 
@@ -964,7 +964,11 @@ export function MarketingStudioContent() {
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Info className="h-4 w-4 text-blue-500 shrink-0" />
                 <span>
-                  SMS správu môžete odoslať v sekcii <strong>Pripomienky & Notifikácie</strong> vybraným klientom.
+                  {t("marketing.studio.smsHint", "SMS správu odošlete vybraným klientom v sekcii")}{" "}
+                  <Link href="/care-reminders" className="font-semibold text-primary hover:underline">
+                    {t("marketing.studio.smsHintSection", "Zdravotné pripomienky")}
+                  </Link>
+                  .
                 </span>
               </div>
             </div>
