@@ -3164,6 +3164,64 @@ def _parse_token(message: str, name: str) -> str:
     return match.group(1) if match else ""
 
 
+
+# Chrome user-data-dir pre persistent context (arena.ai ostane prihlasena).
+# Windows default profile — prepisatelne cez env ARENA_CHROME_USER_DATA_DIR.
+_CHROME_DEFAULT_USER_DATA = os.path.expandvars(
+    r"%LOCALAPPDATA%\Google\Chrome\User Data"
+)
+_CHROME_EXECUTABLE = os.getenv(
+    "ARENA_CHROME_EXECUTABLE",
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+)
+
+
+@contextmanager
+def _playwright_launch_session(
+    headless: bool = False,
+) -> "Iterator[list[tuple[Any, str]]]":
+    """Fallback: spusti Chrome s existujucim profilom cez launch_persistent_context.
+
+    Pouziva sa automaticky ked ziadny CDP port nie je aktivny.
+    Browser sa po dispatchi zatvori. Arena zostane prihlasena pretoze
+    sdilame realny Chrome User Data Directory (persistent context).
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise RuntimeError("playwright_unavailable") from exc
+
+    user_data = os.getenv("ARENA_CHROME_USER_DATA_DIR", _CHROME_DEFAULT_USER_DATA)
+    executable = os.getenv("ARENA_CHROME_EXECUTABLE", _CHROME_EXECUTABLE)
+
+    with sync_playwright() as pw:
+        ctx = pw.chromium.launch_persistent_context(
+            user_data_dir=user_data,
+            executable_path=executable if os.path.isfile(executable) else None,
+            headless=headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-first-run",
+                "--no-default-browser-check",
+            ],
+            ignore_default_args=["--enable-automation"],
+        )
+        # launch_persistent_context vracia Context, nie Browser.
+        # Obalime ho do duck-typed objektu kompatibilneho s _dispatch_on_browser.
+        class _ContextAsBrowser:
+            def __init__(self, context: Any) -> None:
+                self._ctx = context
+
+            def contexts(self) -> list:
+                return [self._ctx]
+
+            def new_context(self) -> Any:
+                return self._ctx
+
+        browser_proxy = _ContextAsBrowser(ctx)
+        yield [(browser_proxy, "launch_persistent_context")]
+        ctx.close()
+
 def send_prompt_to_arena_browser(
     prompt_text: str,
     ports: str = DEFAULT_CDP_PORTS,
@@ -3180,32 +3238,46 @@ def send_prompt_to_arena_browser(
     """
     if not (prompt_text or "").strip():
         return "DISPATCH_FAILED reason=empty_prompt"
-    try:
-        with _cdp_browser_session(ports) as connected:
-            if not connected:
-                return (
-                    "DISPATCH_FAILED reason=cdp_unavailable "
-                    "detail=Chrome CDP port nie je aktívny. Cudzí tab nebol použitý."
+
+    def _run_dispatch(session_iter: "Any") -> "str | None":
+        """Pokusi sa o dispatch cez dodany session iterator. Vracia result alebo None."""
+        last: str = ""
+        for browser, endpoint in session_iter:
+            try:
+                r = _dispatch_on_browser(
+                    browser,
+                    prompt_text,
+                    session_id=session_id,
+                    task_slug=task_slug,
+                    arena_url=arena_url,
+                    auto_submit=auto_submit,
                 )
-            last_failure = "DISPATCH_FAILED reason=cdp_unavailable"
-            for browser, endpoint in connected:
-                try:
-                    result = _dispatch_on_browser(
-                        browser,
-                        prompt_text,
-                        session_id=session_id,
-                        task_slug=task_slug,
-                        arena_url=arena_url,
-                        auto_submit=auto_submit,
-                    )
-                except Exception as exc:
-                    last_failure = f"DISPATCH_FAILED reason=exception detail={exc}"
-                    continue
-                result.endpoint = endpoint
-                if result.ok:
-                    return _format_dispatch_ok(result, endpoint)
-                last_failure = result.message or last_failure
-            return last_failure
+            except Exception as exc:
+                last = f"DISPATCH_FAILED reason=exception detail={exc}"
+                continue
+            r.endpoint = endpoint
+            if r.ok:
+                return _format_dispatch_ok(r, endpoint)
+            last = r.message or last
+        return last or None
+
+    try:
+        # ── Pokus 1: CDP (Chrome uz bezi s --remote-debugging-port) ──
+        with _cdp_browser_session(ports) as connected:
+            if connected:
+                result = _run_dispatch(connected)
+                if result:
+                    return result
+            # CDP nie je aktivny — fallback na launch_persistent_context
+
+        # ── Pokus 2: launch_persistent_context (bez CDP portu) ──
+        headless = os.getenv("ARENA_HEADLESS", "0").strip() in ("1", "true", "yes")
+        with _playwright_launch_session(headless=headless) as launched:
+            result = _run_dispatch(launched)
+            if result:
+                return result
+
+        return "DISPATCH_FAILED reason=all_backends_failed"
     except RuntimeError as exc:
         return f"DISPATCH_FAILED reason=playwright_unavailable detail={exc}"
     except Exception as exc:
