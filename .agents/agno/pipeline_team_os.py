@@ -86,7 +86,12 @@ ARENA_API_BASE = os.getenv("ARENA_API_BASE", "")
 ARENA_API_TOKEN = os.getenv("ARENA_API_TOKEN", "")
 DEPLOY_COMMAND = os.getenv("OPENVPM_DEPLOY_COMMAND", "")
 AGENTOS_BASE_URL = os.getenv("OPENVPM_AGENTOS_BASE_URL", "http://127.0.0.1:7777")
-INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "openvpm-service-secret")
+INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "")
+if not INTERNAL_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN == "openvpm-service-secret":
+    import secrets
+    # Fail-safe: Nikdy nebežať s hardcoded default secretom (Claude audit remediation)
+    INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK") or secrets.token_urlsafe(32)
+    logger.warning("OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený alebo používal nebezpečný default! Bol vygenerovaný jednorazový bezpečný token.")
 SCHEDULE_TIMEZONE = os.getenv("OPENVPM_SCHEDULE_TZ", "Europe/Bratislava")
 SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("OPENVPM_SQLITE_BUSY_TIMEOUT_MS", "30000"))
 
@@ -959,6 +964,16 @@ def gh_pr_merge(pr_number: int, repo: str = "", squash: bool = True) -> str:
 @tool(requires_confirmation=True, stop_after_tool_call=True)
 def deploy_to_production(service: str, version: str) -> str:
     """Nasadenie na produkciu — BLOKUJÚCE schvaľovanie + auditný záznam."""
+    import re
+    import shlex
+    import shutil
+
+    # 1. Prísna validácia vstupov proti shell injection
+    if not re.match(r"^[a-zA-Z0-9_-]{1,32}$", service):
+        return f"❌ Bezpečnostné zamietnutie: Neplatný názov služby '{service}'."
+    if not re.match(r"^[a-zA-Z0-9._-]{1,64}$", version):
+        return f"❌ Bezpečnostné zamietnutie: Neplatný formát verzie '{version}'."
+
     if not DEPLOY_COMMAND:
         record_compliance_decision(
             decision=f"Deploy {service}@{version} ZAMIETNUTÝ bezpečnostným režimom",
@@ -968,9 +983,13 @@ def deploy_to_production(service: str, version: str) -> str:
             team_id=TEAM_ID,
         )
         return "BLOCKED: OPENVPM_DEPLOY_COMMAND nie je nastavený."
+
+    formatted_cmd = DEPLOY_COMMAND.replace("{service}", service).replace("{version}", version)
+    cmd_parts = shlex.split(formatted_cmd, posix=(sys.platform != "win32"))
+    executable = shutil.which(cmd_parts[0]) or cmd_parts[0]
     proc = subprocess.run(
-        DEPLOY_COMMAND.replace("{service}", service).replace("{version}", version),
-        shell=True,
+        [executable] + cmd_parts[1:],
+        shell=False,
         capture_output=True,
         text=True,
         timeout=1800,
@@ -1032,11 +1051,13 @@ try:
         create_and_dispatch_arena_task,
         send_prompt_to_arena_browser,
         collect_code_from_arena_browser,
+        DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS,
         apply_arena_patch,
         evaluate_verification_and_repair,
     )
 except ImportError as _e:
     logger.warning("Could not import full pipeline_tools: %s. Defining fallback stubs.", _e)
+    DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS = 900
 
 @tool()
 def recall_learnings_tool(query: str) -> str:
@@ -1165,6 +1186,7 @@ arena_watcher = Agent(
     instructions=[
         "Sleduješ Arena relácie, zbieraš patche a vykonávaš health checky.",
         "Kolízie patchov detekuj včas a loguj decision_type='collision'.",
+        f"Watcher nesmie vyhlásiť hotovo, kým collect_code_from_arena_browser nevráti status=COMPLETED. Predvolený timeout je {DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS}s. Tab sa vyberá podľa /agent/<session_id>, nie podľa prvého tabu s 'arena' v URL. Non-diff text sa do .patch nezapisuje.",
     ],
     add_history_to_context=True,
     markdown=True,
@@ -1271,6 +1293,8 @@ openvpm_dev_team = Team(
         "Pravidlo autority: SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy. "
         "Sprinty 1, 2, 3, 4 a 7 sú už dokončené a zlúčené v main. NIKDY ich nepovažuj za nezačaté.",
         "Pred retrospektívou sprintu (PASSED/FAILED) zavolaj record_sprint_learnings.",
+        "Architektonický audit: Vanilla routery ako records.ts a whiteboard.ts sú upstream baseline a nesmú byť považované za porušenia ak existujú v upstreame. Každé compliance rozhodnutie sa ukladá ako JSON záznam.",
+        "Synchronizácia a izolácia Studio komponentov pri bootovaní rešpektuje lock súbor studio_seed.lock.",
         "Compliance: Zákon 39/2007 Z. z. a Zákon 139/1998 Z. z. (OPL — manuálny podpis) sú "
         "neprekročiteľné; rizikové akcie idú vždy cez Approvals.",
         "Reporty pre Mareka: slovenčina, executive_summary štýl.",
