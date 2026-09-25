@@ -199,6 +199,40 @@ and display the resolved AgentOS URL.
 not running. If it hangs → check step 2; AgentOS is probably bound to loopback only
 inside WSL instead of `0.0.0.0`.
 
+### Splitting tunnel health from origin health
+
+`cloudflared tunnel info <name>` tells you whether the **tunnel** is fine, which
+separates "the tunnel is broken" from "the origin is broken". Look for the connector
+list:
+
+```
+NAME:     agentos-tunnel
+ID:       324dd653-7f1d-41d7-ae9a-7d3e3ae54c1d
+CONNECTOR ID                         CREATED              ARCHITECTURE  VERSION
+0ecbf145-923e-42ba-adab-0037b86900a2 2026-09-25T14:44:54Z windows_amd64 2026.9.1
+```
+
+- **A connector is listed with a recent `CREATED` timestamp** → the tunnel process is
+  running and connected to Cloudflare's edge. The tunnel itself is healthy; any
+  failure is **downstream** — the `service:` dial target, or AgentOS not listening.
+  Go straight to step 2 (`ss -lntp | grep 7777`) and the ingress rule check.
+- **`CONNECTORS: 0` / no connector row** → cloudflared is not running. Start it, or
+  install it as a service.
+- A version warning (`Your version … is outdated`) is **not** a cause of 502s — it is
+  hygiene only.
+
+Verify the two halves independently:
+
+```powershell
+# Origin up? (bypasses the tunnel entirely)
+curl.exe -s -o NUL -w "loopback  HTTP %{http_code}\n" http://127.0.0.1:7777/health
+# Tunnel up? (exercises the ingress rule and the dial target)
+curl.exe -s -o NUL -w "tunnel    HTTP %{http_code}\n" https://agentos-tunnel.significa.sk/health
+```
+
+`loopback 200` + `tunnel 502` is the signature of a wrong dial target — that is the
+`0.0.0.0` bug, and the fix is the ingress `service:`, never `serve(host=...)`.
+
 ---
 
 ## Notes
