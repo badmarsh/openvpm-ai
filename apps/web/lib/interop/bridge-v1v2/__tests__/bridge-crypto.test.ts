@@ -155,28 +155,46 @@ describe("HMAC envelope signatures", () => {
   const payloadHash = bridgePayloadHash({ ok: true });
 
   it("verifies an untampered signature in constant time", () => {
-    const signature = signBridgeEnvelope(header(), payloadHash, key);
-    expect(verifyBridgeEnvelopeSignature(header(), payloadHash, signature, key)).toBe(true);
+    // sentAt is part of the signed AAD, and header() stamps it with the current
+    // clock. Sign and verify the same header instance, or the second call can
+    // land in the next millisecond and the untampered signature fails to verify.
+    const envelopeHeader = header();
+    const signature = signBridgeEnvelope(envelopeHeader, payloadHash, key);
+    expect(
+      verifyBridgeEnvelopeSignature(envelopeHeader, payloadHash, signature, key),
+    ).toBe(true);
     expect(safeBridgeEquals(signature, signature)).toBe(true);
     expect(safeBridgeEquals(signature, `${signature}x`)).toBe(false);
   });
 
   it("refuses a signature for a different payload, header or key", () => {
-    const signature = signBridgeEnvelope(header(), payloadHash, key);
+    // Hold sentAt constant so each assertion fails for the reason under test
+    // rather than because the header was re-stamped with a new timestamp.
+    const envelopeHeader = header();
+    const signature = signBridgeEnvelope(envelopeHeader, payloadHash, key);
     expect(
-      verifyBridgeEnvelopeSignature(header(), bridgePayloadHash({ tampered: 1 }), signature, key),
+      verifyBridgeEnvelopeSignature(
+        envelopeHeader,
+        bridgePayloadHash({ tampered: 1 }),
+        signature,
+        key,
+      ),
     ).toBe(false);
     expect(
       verifyBridgeEnvelopeSignature(
-        header({ direction: "v2_to_v1" }),
+        header({ direction: "v2_to_v1", sentAt: envelopeHeader.sentAt }),
         payloadHash,
         signature,
         key,
       ),
     ).toBe(false);
     const foreign = deriveBridgeKey("another-secret-value-123456", SALT, bridgeKeyInfo("v1", KEY_ID));
-    expect(verifyBridgeEnvelopeSignature(header(), payloadHash, signature, foreign)).toBe(false);
-    expect(verifyBridgeEnvelopeSignature(header(), payloadHash, "", key)).toBe(false);
+    expect(
+      verifyBridgeEnvelopeSignature(envelopeHeader, payloadHash, signature, foreign),
+    ).toBe(false);
+    expect(
+      verifyBridgeEnvelopeSignature(envelopeHeader, payloadHash, "", key),
+    ).toBe(false);
   });
 });
 
