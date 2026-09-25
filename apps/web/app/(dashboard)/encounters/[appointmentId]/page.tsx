@@ -15,7 +15,7 @@ import {
 } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
@@ -24,10 +24,12 @@ import {
   ArrowLeft,
   CalendarClock,
   Check,
+  CheckCircle2,
   ClipboardCheck,
   ClipboardList,
   Copy,
   Download,
+  FileCheck,
   FileText,
   FlaskConical,
   Image as ImageIcon,
@@ -36,6 +38,8 @@ import {
   Pill,
   Plus,
   ReceiptEuro,
+  ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Stethoscope,
   Save,
@@ -48,6 +52,15 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import {
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+import { ClinicalDiffConfirmModal } from "@/components/copilot/clinical-diff-confirm-modal";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/locale/format";
 import { formatSpecies } from "@/lib/patients/species";
 import { formatUserRole } from "@/lib/users/role";
@@ -447,10 +460,50 @@ function EncounterLoading() {
 export default function EncounterWorkspacePage() {
   const { t, locale } = useI18n();
   const params = useParams<{ appointmentId: string }>();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<string>(
+    initialTab && ["soap", "vitals", "medications", "attachments", "discharge"].includes(initialTab)
+      ? initialTab
+      : "soap"
+  );
   const { data: session, status: sessionStatus } = useSession();
   const appointmentId = params.appointmentId;
   const utils = trpc.useUtils();
   const [ambulatorySoapPlan, setAmbulatorySoapPlan] = useState("");
+  const [aiDraft, setAiDraft] = useState<{
+    subjective: string;
+    objective: string;
+    assessment: string;
+    plan: string;
+  } | null>(null);
+  const [aiDraftStatus, setAiDraftStatus] = useState<"idle" | "draft" | "confirmed">("idle");
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#visit-closeout") {
+      setActiveTab("discharge");
+    }
+  }, []);
+
+  const draftWithAi = trpc.ai.draftSoapNote.useMutation({
+    onSuccess: (draft) => {
+      setAiDraft(draft);
+      setAiDraftStatus("draft");
+      toast.success(
+        t(
+          "encounters.aiDraft.draftSuccess",
+          "AI SOAP draft generated. Review and authorize diff."
+        )
+      );
+    },
+    onError: (err) => {
+      toast.error(
+        err.message ||
+          t("encounters.aiDraft.draftError", "Failed to generate AI SOAP draft.")
+      );
+    },
+  });
 
   const appointmentQuery = trpc.appointments.getById.useQuery(
     { id: appointmentId },
@@ -536,7 +589,7 @@ export default function EncounterWorkspacePage() {
   const visitInvoices = invoicesQuery.data?.items ?? [];
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <div className={cn(pageShellClass, "mx-auto max-w-6xl")}>
       <div>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/schedule">
@@ -686,9 +739,12 @@ export default function EncounterWorkspacePage() {
           ) : appointment.status === "in_exam" && canManageVisit(role) ? (
             <Button
               onClick={() => {
-                const closeout = document.getElementById("visit-closeout");
-                closeout?.scrollIntoView({ behavior: "smooth", block: "start" });
-                closeout?.focus({ preventScroll: true });
+                setActiveTab("discharge");
+                setTimeout(() => {
+                  const closeout = document.getElementById("visit-closeout");
+                  closeout?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  closeout?.focus({ preventScroll: true });
+                }, 50);
               }}
             >
               <ClipboardCheck className="mr-2 h-4 w-4" />
@@ -697,6 +753,85 @@ export default function EncounterWorkspacePage() {
           ) : null}
         </div>
       </header>
+
+      {/* Patient Banner: name species breed owner last visit chip */}
+      <section
+        className="rounded-xl border border-border bg-card p-4 shadow-xs"
+        aria-label={t("encounters.banner.title", "Patient Information")}
+        data-testid="encounter-patient-banner"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Stethoscope className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="font-heading text-lg font-bold text-foreground"
+                  data-testid="patient-banner-name"
+                >
+                  {patient?.name ?? appointment.patientName ?? t("encounters.banner.unassigned", "Unassigned patient")}
+                </span>
+                <Badge variant="outline" data-testid="patient-banner-species">
+                  {patient?.species
+                    ? formatSpecies(patient.species, t)
+                    : t("records.common.unknownSpecies", "Unknown species")}
+                </Badge>
+                {patient?.breed ? (
+                  <Badge variant="secondary" data-testid="patient-banner-breed">
+                    {patient.breed}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span data-testid="patient-banner-owner" className="inline-flex items-center gap-1">
+                  <UserRound className="h-3.5 w-3.5" />
+                  <span className="font-medium text-foreground">
+                    {t("records.common.owner", "Owner")}:
+                  </span>{" "}
+                  {clientName || t("encounters.workspace.noClient", "No client")}
+                </span>
+                <span data-testid="patient-banner-last-visit" className="inline-flex items-center gap-1">
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  <span className="font-medium text-foreground">
+                    {t("encounters.banner.lastVisit", "Last visit")}:
+                  </span>{" "}
+                  {formatAppointmentTime(
+                    appointment.startTime,
+                    taxConfigQuery.data?.timezone,
+                    locale,
+                  )}
+                </span>
+                {patient?.microchipNumber ? (
+                  <span
+                    data-testid="patient-banner-chip"
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px]"
+                  >
+                    <span>{t("encounters.banner.chipLabel", "Chip:")}</span>
+                    <span className="font-semibold">{patient.microchipNumber}</span>
+                  </span>
+                ) : (
+                  <span
+                    data-testid="patient-banner-chip"
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground italic"
+                  >
+                    {t("encounters.banner.noChip", "No microchip")}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          {patient?.allergies?.length ? (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="destructive" className="gap-1 text-xs">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                {patient.allergies.length} {t("records.allergies.title", "Allergies")}
+              </Badge>
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       <VisitCompletionGuide
         appointmentId={appointmentId}
@@ -723,125 +858,547 @@ export default function EncounterWorkspacePage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.8fr)]">
         <div className="flex flex-col gap-6">
-          <Card id="clinical-work" className="scroll-mt-4">
-            <CardHeader>
-              <CardTitle>{t("encounters.workspace.clinicalWorkTitle", "Clinical work")}</CardTitle>
-              <CardDescription>
-                {t("encounters.workspace.clinicalWorkDesc", "Document and capture visit work without losing the appointment.")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!appointment.patientId ? (
-                canManageVisit(role) ? (
-                  <PatientAssignmentPanel
-                    appointmentId={appointmentId}
-                    clientName={clientName}
-                  />
-                ) : (
-                  <EmptyState
-                    icon={UserRound}
-                    title={t("encounters.workspace.patientAssignmentRequiredTitle", "Patient assignment required")}
-                    description={t("encounters.workspace.patientAssignmentRequiredDesc", "A teammate with visit access must attach the active patient and matching client before clinical care begins.")}
-                    className="p-8"
-                  />
-                )
-              ) : patientQuery.error ||
-                (!patientQuery.isLoading && !patient) ? (
-                <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-                  {t("encounters.workspace.loadChartError", "Unable to load the patient chart. Refresh before documenting.")}
-                </div>
-              ) : patientQuery.isLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("encounters.workspace.loadingPatientContext", "Loading patient context...")}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-md border border-border bg-muted/20 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{patient?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {[patient?.species ? formatSpecies(patient.species, t) : null, patient?.breed]
-                            .filter(Boolean)
-                            .join(" · ") || t("encounters.patientPanel.detailsUnavailable", "Patient details unavailable")}
-                        </p>
-                      </div>
-                      {!patient?.allergies.length ? (
-                        <Badge variant="secondary">{t("encounters.workspace.noRecordedAllergies", "No recorded allergies")}</Badge>
-                      ) : null}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+            <TabsList className={underlineTabsListClass} data-testid="encounter-tabs-list">
+              <TabsTrigger value="soap" className={underlineTabsTriggerClass} data-testid="tab-trigger-soap">
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                {t("encounters.tabs.soap", "SOAP")}
+              </TabsTrigger>
+              <TabsTrigger value="vitals" className={underlineTabsTriggerClass} data-testid="tab-trigger-vitals">
+                <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
+                {t("encounters.tabs.vitals", "Vitals")}
+              </TabsTrigger>
+              <TabsTrigger value="medications" className={underlineTabsTriggerClass} data-testid="tab-trigger-medications">
+                <Pill className="h-3.5 w-3.5 mr-1.5" />
+                {t("encounters.tabs.medications", "Medications")}
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className={underlineTabsTriggerClass} data-testid="tab-trigger-attachments">
+                <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+                {t("encounters.tabs.attachments", "Attachments")}
+              </TabsTrigger>
+              <TabsTrigger value="discharge" className={underlineTabsTriggerClass} data-testid="tab-trigger-discharge">
+                <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />
+                {t("encounters.tabs.discharge", "Discharge")}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* TAB 1: SOAP */}
+            <TabsContent value="soap" className="space-y-6 mt-0">
+              <Card id="clinical-work" className="scroll-mt-4">
+                <CardHeader>
+                  <CardTitle>{t("encounters.workspace.clinicalWorkTitle", "Clinical work")}</CardTitle>
+                  <CardDescription>
+                    {t("encounters.workspace.clinicalWorkDesc", "Document and capture visit work without losing the appointment.")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!appointment.patientId ? (
+                    canManageVisit(role) ? (
+                      <PatientAssignmentPanel
+                        appointmentId={appointmentId}
+                        clientName={clientName}
+                      />
+                    ) : (
+                      <EmptyState
+                        icon={UserRound}
+                        title={t("encounters.workspace.patientAssignmentRequiredTitle", "Patient assignment required")}
+                        description={t("encounters.workspace.patientAssignmentRequiredDesc", "A teammate with visit access must attach the active patient and matching client before clinical care begins.")}
+                        className="p-8"
+                      />
+                    )
+                  ) : patientQuery.error ||
+                    (!patientQuery.isLoading && !patient) ? (
+                    <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+                      {t("encounters.workspace.loadChartError", "Unable to load the patient chart. Refresh before documenting.")}
                     </div>
-                    {patient?.allergies.length ? (
-                      <div
-                        className="mt-3 grid gap-2"
-                        role="alert"
-                        aria-label={t("encounters.workspace.allergyWarningsAria", "Current allergy warnings")}
-                      >
-                        {patient.allergies.map((allergy) => (
-                          <div
-                            key={allergy.id}
-                            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="font-semibold text-destructive">
-                                {allergy.allergen}
-                              </span>
-                              <span className="text-xs font-semibold uppercase tracking-wide text-destructive">
-                                {allergy.severity}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs text-foreground">
-                              {t("encounters.workspace.reactionLabel", "Reaction: {reaction}", { reaction: allergy.reaction || t("records.common.notDocumented", "Not documented") })}
+                  ) : patientQuery.isLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t("encounters.workspace.loadingPatientContext", "Loading patient context...")}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <div className="rounded-md border border-border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium">{patient?.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {[patient?.species ? formatSpecies(patient.species, t) : null, patient?.breed]
+                                .filter(Boolean)
+                                .join(" · ") || t("encounters.patientPanel.detailsUnavailable", "Patient details unavailable")}
                             </p>
                           </div>
-                        ))}
+                          {!patient?.allergies.length ? (
+                            <Badge variant="secondary">{t("encounters.workspace.noRecordedAllergies", "No recorded allergies")}</Badge>
+                          ) : null}
+                        </div>
+                        {patient?.allergies.length ? (
+                          <div
+                            className="mt-3 grid gap-2"
+                            role="alert"
+                            aria-label={t("encounters.workspace.allergyWarningsAria", "Current allergy warnings")}
+                          >
+                            {patient.allergies.map((allergy) => (
+                              <div
+                                key={allergy.id}
+                                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="font-semibold text-destructive">
+                                    {allergy.allergen}
+                                  </span>
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-destructive">
+                                    {allergy.severity}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs text-foreground">
+                                  {t("encounters.workspace.reactionLabel", "Reaction: {reaction}", { reaction: allergy.reaction || t("records.common.notDocumented", "Not documented") })}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {canCreateSoap(role) &&
+                        !isAmbulatoryWorkspace &&
+                        closeoutQuery.data?.linkedSoapCount === 0 &&
+                        !closeoutQuery.data?.soapDraft &&
+                        closeoutQuery.data?.missingSoapReplacement ? (
+                          <Button size="sm" asChild>
+                            <Link
+                              href={`/records/replace-soap/${appointment.patientId}?sourceNoteId=${closeoutQuery.data.missingSoapReplacement.sourceNoteId}&return=patient`}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              {t("encounters.workspace.createMissingSoapReplacement", "Create missing SOAP replacement")}
+                            </Link>
+                          </Button>
+                        ) : null}
+                        {canCreateSoap(role) &&
+                        !isAmbulatoryWorkspace &&
+                        appointment.status === "in_exam" &&
+                        closeoutQuery.data?.linkedSoapCount === 0 &&
+                        !closeoutQuery.data?.missingSoapReplacement &&
+                        closeoutQuery.data?.closeout?.status !==
+                          "clinical_finalized" &&
+                        closeoutQuery.data?.closeout?.status !== "completed" ? (
+                          <Button size="sm" asChild>
+                            <a
+                              href={`/records/new-soap/${appointment.patientId}?appointmentId=${appointmentId}`}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              {closeoutQuery.data?.soapDraft
+                                ? t("encounters.workspace.resumeSoapDraft", "Resume SOAP draft")
+                                : t("encounters.workspace.writeSoapNote", "Write SOAP note")}
+                            </a>
+                          </Button>
+                        ) : null}
+                        {canCreateSoap(role) &&
+                        !isAmbulatoryWorkspace &&
+                        visitOpenForClinicalEntry ? (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link
+                              href={`/records?patientId=${appointment.patientId}&appointmentId=${appointmentId}&tab=prescriptions&new=1`}
+                            >
+                              <Pill className="mr-2 h-4 w-4" />
+                              {t("encounters.workspace.prescribe", "Prescribe")}
+                            </Link>
+                          </Button>
+                        ) : null}
+                        {canRecordVisitWork(role) && visitOpenForClinicalEntry ? (
+                          <>
+                            {!isAmbulatoryWorkspace ? (
+                              <Button size="sm" variant="outline" asChild>
+                                <Link
+                                  href={`/records?patientId=${appointment.patientId}&appointmentId=${appointmentId}&tab=vaccinations&new=1`}
+                                >
+                                  <Syringe className="mr-2 h-4 w-4" />
+                                  {t("encounters.workspace.vaccination", "Vaccination")}
+                                </Link>
+                              </Button>
+                            ) : null}
+                            <Button size="sm" variant="outline" asChild>
+                              <Link
+                                href={`/records?patientId=${appointment.patientId}&appointmentId=${appointmentId}&tab=labResults&new=1`}
+                              >
+                                <FlaskConical className="mr-2 h-4 w-4" />
+                                {t("encounters.workspace.labResult", "Lab result")}
+                              </Link>
+                            </Button>
+                          </>
+                        ) : null}
+                        {canRecordProcedure(role) && visitOpenForClinicalEntry ? (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link
+                              href={`/records?patientId=${appointment.patientId}&appointmentId=${appointmentId}&tab=procedures&new=1`}
+                            >
+                              <Scissors className="mr-2 h-4 w-4" />
+                              {t("encounters.workspace.procedure", "Procedure")}
+                            </Link>
+                          </Button>
+                        ) : null}
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/patients/${appointment.patientId}`}>
+                            <ClipboardList className="mr-2 h-4 w-4" />
+                            {t("encounters.workspace.openPatientChart", "Open patient chart")}
+                          </Link>
+                        </Button>
+                        {canManageVisit(role) ? (
+                          <>
+                            <CapturePhotos
+                              patientId={appointment.patientId}
+                              appointmentId={appointmentId}
+                            />
+                            <ConsentSign
+                              patientId={appointment.patientId}
+                              appointmentId={appointmentId}
+                            />
+                          </>
+                        ) : null}
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        {t("encounters.workspace.linkedActionsNotice", "Use these visit actions so SOAP notes, prescriptions, vaccinations, lab results, procedures, photos, and signatures stay linked to this appointment and its charge reconciliation.")}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* AI Draft Panel */}
+              {appointment.patientId && canCreateSoap(role) ? (
+                <Card className="border-border">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-base">
+                          {t("encounters.aiDraft.title", "AI Clinical Assistant (SOAP Draft)")}
+                        </CardTitle>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1.5 text-xs font-normal"
+                        data-testid="encounter-ai-advisory-badge"
+                      >
+                        <ShieldAlert className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        {t("encounters.aiDraft.advisoryBadge", "Advisory only — Act 39/2007 Coll.")}
+                      </Badge>
+                    </div>
+                    <CardDescription className="text-xs leading-relaxed">
+                      {t("encounters.aiDraft.statutoryNote", "AI clinical outputs are strictly advisory. Every entry requires review and authorization by the attending veterinarian via ClinicalDiffConfirmModal.")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={draftWithAi.isPending || !visitOpenForClinicalEntry}
+                        onClick={() =>
+                          draftWithAi.mutate({
+                            patientId: appointment.patientId!,
+                            visitContext: appointment.notes ?? undefined,
+                          })
+                        }
+                        data-testid="encounter-ai-draft-btn"
+                      >
+                        {draftWithAi.isPending ? (
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-1.5 h-4 w-4 text-primary" />
+                        )}
+                        {draftWithAi.isPending
+                          ? t("encounters.aiDraft.generating", "Drafting with AI...")
+                          : t("encounters.aiDraft.generateButton", "Draft SOAP with AI")}
+                      </Button>
+
+                      {aiDraftStatus === "draft" ? (
+                        <Badge variant="secondary" data-testid="encounter-ai-draft-badge">
+                          {t("encounters.aiDraft.draftBadge", "AI Draft")}
+                        </Badge>
+                      ) : null}
+
+                      {aiDraftStatus === "confirmed" ? (
+                        <Badge
+                          className="bg-emerald-600 text-white gap-1 text-xs"
+                          data-testid="encounter-ai-confirmed-badge"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {t(
+                            "encounters.aiDraft.confirmedBadge",
+                            "Confirmed & signed by clinician (Act 39/2007 Coll.)"
+                          )}
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    {aiDraft ? (
+                      <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4 text-xs">
+                        {isControlledSubstanceName(aiDraft.plan) ? (
+                          <div
+                            className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 p-2.5 text-xs text-red-800 dark:text-red-300"
+                            data-testid="encounter-ai-controlled-warning"
+                          >
+                            <ShieldAlert className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-semibold">
+                                {t(
+                                  "encounters.medicationPlan.controlledWarningTitle",
+                                  "WARNING: Controlled Substances (Act 139/1998 Coll.)"
+                                )}
+                              </p>
+                              <p className="mt-0.5 leading-relaxed">
+                                {t(
+                                  "encounters.aiDraft.controlledWarning",
+                                  "WARNING: Controlled substance detected in plan (Act 139/1998 Coll.). Zero AI prefill enforced for dosing; manual clinician entry required."
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="grid gap-2">
+                          <div>
+                            <span className="font-semibold text-foreground">S ({t("records.soap.subjective", "Subjective")}):</span>{" "}
+                            <span className="text-muted-foreground">{aiDraft.subjective}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-foreground">O ({t("records.soap.objective", "Objective")}):</span>{" "}
+                            <span className="text-muted-foreground">{aiDraft.objective}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-foreground">A ({t("records.soap.assessment", "Assessment")}):</span>{" "}
+                            <span className="text-muted-foreground">{aiDraft.assessment}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-foreground">P ({t("records.soap.plan", "Plan")}):</span>{" "}
+                            <span className="text-muted-foreground">{aiDraft.plan}</span>
+                          </div>
+                        </div>
+
+                        {aiDraftStatus === "draft" ? (
+                          <div className="pt-2">
+                            <Button
+                              size="sm"
+                              onClick={() => setIsDiffModalOpen(true)}
+                              data-testid="encounter-ai-review-diff-btn"
+                            >
+                              <FileCheck className="mr-1.5 h-4 w-4" />
+                              {t("encounters.aiDraft.reviewDiffButton", "Review & Authorize (Diff)")}
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
-                  </div>
+                  </CardContent>
+                </Card>
+              ) : null}
 
+              {isDiffModalOpen && aiDraft ? (
+                <ClinicalDiffConfirmModal
+                  isOpen={isDiffModalOpen}
+                  onClose={() => setIsDiffModalOpen(false)}
+                  onConfirm={(confirmedValues) => {
+                    setAiDraftStatus("confirmed");
+                    setIsDiffModalOpen(false);
+                    const planKey = t("records.soap.plan", "Plan");
+                    const confirmedPlan =
+                      confirmedValues[planKey] ||
+                      confirmedValues["Plan"] ||
+                      confirmedValues["Plán"];
+                    if (confirmedPlan) {
+                      setAmbulatorySoapPlan(confirmedPlan);
+                    }
+                    toast.success(
+                      t(
+                        "encounters.aiDraft.confirmedSuccessToast",
+                        "AI clinical draft confirmed and signed by veterinarian (Act 39/2007 Coll.)"
+                      )
+                    );
+                  }}
+                  patientName={patient?.name ?? appointment.patientName ?? ""}
+                  species={patient?.species ? formatSpecies(patient.species, t) : undefined}
+                  sourceTitle={t(
+                    "encounters.aiDraft.sourceTitle",
+                    "Encounter Clinical Assistant (AI SOAP)"
+                  )}
+                  fields={[
+                    {
+                      label: t("records.soap.subjective", "Subjective"),
+                      originalValue: null,
+                      proposedValue: aiDraft.subjective,
+                    },
+                    {
+                      label: t("records.soap.objective", "Objective"),
+                      originalValue: null,
+                      proposedValue: aiDraft.objective,
+                    },
+                    {
+                      label: t("records.soap.assessment", "Assessment"),
+                      originalValue: null,
+                      proposedValue: aiDraft.assessment,
+                    },
+                    {
+                      label: t("records.soap.plan", "Plan"),
+                      originalValue: ambulatorySoapPlan || null,
+                      proposedValue: aiDraft.plan,
+                      isControlledSubstance: isControlledSubstanceName(aiDraft.plan),
+                    },
+                  ]}
+                  modelName="OpenVPM Clinical AI"
+                  overallConfidence={0.92}
+                />
+              ) : null}
+
+              {isAmbulatoryWorkspace && appointment.patientId ? (
+                <AmbulatorySoapCard
+                  patientId={appointment.patientId}
+                  appointmentId={appointmentId}
+                  canWrite={canCreateSoap(role)}
+                  visitOpen={visitOpenForClinicalEntry}
+                  linkedSoapCount={closeoutQuery.data?.linkedSoapCount ?? 0}
+                  onPlanChange={setAmbulatorySoapPlan}
+                />
+              ) : null}
+            </TabsContent>
+
+            {/* TAB 2: VITALS */}
+            <TabsContent value="vitals" className="space-y-6 mt-0">
+              {appointment.patientId ? (
+                <EncounterVitalsCard
+                  patientId={appointment.patientId}
+                  appointmentId={appointment.id}
+                  canRecord={visitOpenForClinicalEntry && canRecordVitals(role)}
+                  canCorrect={canCreateSoap(role)}
+                  visitStateReady={visitClinicalStateReady}
+                  visitOpen={visitOpenForClinicalEntry}
+                  timeZone={taxConfigQuery.data?.timezone}
+                  measurementSystem={
+                    isAmbulatoryWorkspace
+                      ? ambulatoryProfile?.measurementSystem
+                      : "metric"
+                  }
+                  bodyConditionScale={
+                    isAmbulatoryWorkspace
+                      ? ambulatoryProfile?.bodyConditionScale
+                      : 9
+                  }
+                />
+              ) : null}
+            </TabsContent>
+
+            {/* TAB 3: MEDICATIONS */}
+            <TabsContent value="medications" className="space-y-6 mt-0">
+              {/* Controlled substance zero-prefill warning */}
+              <div
+                className="rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+                data-testid="encounter-controlled-substance-warning"
+              >
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="mt-0.5 h-5 w-5 text-destructive shrink-0" />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-sm text-destructive">
+                      {t(
+                        "encounters.medicationPlan.controlledWarningTitle",
+                        "WARNING: Controlled Substances (Act 139/1998 Coll.)"
+                      )}
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {t(
+                        "encounters.medicationPlan.controlledWarningDescription",
+                        "For controlled narcotic and psychotropic substances (opiates, sedatives, ketamine, etc.), automatic AI prefilling of dosages is strictly prohibited. The attending veterinarian must manually specify dosage, route, and administration."
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {canCreateSoap(role) && visitOpenForClinicalEntry ? (
+                  <Button size="sm" variant="outline" asChild>
+                    <Link
+                      href={`/records?patientId=${appointment.patientId}&appointmentId=${appointmentId}&tab=prescriptions&new=1`}
+                    >
+                      <Pill className="mr-2 h-4 w-4" />
+                      {t("encounters.medicationPlan.prescribeButton", "Prescribe medication")}
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+
+              {!isAmbulatoryWorkspace &&
+              canRecordVitals(role) &&
+              appointment.patientId &&
+              appointment.clientId ? (
+                <TreatmentPlanComposer
+                  appointmentId={appointment.id}
+                  clientId={appointment.clientId}
+                  patientId={appointment.patientId}
+                  patientName={appointment.patientName ?? t("records.common.patient", "Patient")}
+                />
+              ) : null}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t("encounters.medicationPlan.title", "Medication Plan & Prescriptions")}</CardTitle>
+                  <CardDescription>{t("encounters.medicationPlan.description", "List of medications and prescriptions bound to this encounter.")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {closeoutQuery.data?.medications?.length ? (
+                    <div className="space-y-2">
+                      {closeoutQuery.data.medications.map((med, index) => {
+                        const isControlled = isControlledSubstanceName(med.medicationName);
+                        return (
+                          <div
+                            key={index}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3 text-xs"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-foreground">{med.medicationName}</span>
+                                {isControlled ? (
+                                  <Badge variant="destructive" data-testid="controlled-substance-badge">
+                                    {t("encounters.medicationPlan.controlledBadge", "Controlled substance (139/1998)")}
+                                  </Badge>
+                                ) : null}
+                              </div>
+                              <p className="text-muted-foreground mt-0.5">
+                                {med.dosage ? `${t("encounters.medicationPlan.dosage", "Dosage")}: ${med.dosage}` : ""}
+                                {med.frequency ? ` · ${t("encounters.medicationPlan.frequency", "Frequency")}: ${med.frequency}` : ""}
+                              </p>
+                            </div>
+                            <Badge variant="outline">{med.effectiveStatus}</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">
+                      {t("encounters.medicationPlan.noMedications", "No medications recorded for this visit.")}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* TAB 4: ATTACHMENTS */}
+            <TabsContent value="attachments" className="space-y-6 mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t("encounters.tabs.attachments", "Attachments")}</CardTitle>
+                  <CardDescription>
+                    {t("encounters.workspace.linkedActionsNotice", "Use these visit actions so SOAP notes, prescriptions, vaccinations, lab results, procedures, photos, and signatures stay linked to this appointment and its charge reconciliation.")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex flex-wrap gap-2">
-                    {canCreateSoap(role) &&
-                    !isAmbulatoryWorkspace &&
-                    closeoutQuery.data?.linkedSoapCount === 0 &&
-                    !closeoutQuery.data?.soapDraft &&
-                    closeoutQuery.data?.missingSoapReplacement ? (
-                      <Button size="sm" asChild>
-                        <Link
-                          href={`/records/replace-soap/${appointment.patientId}?sourceNoteId=${closeoutQuery.data.missingSoapReplacement.sourceNoteId}&return=patient`}
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          {t("encounters.workspace.createMissingSoapReplacement", "Create missing SOAP replacement")}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {canCreateSoap(role) &&
-                    !isAmbulatoryWorkspace &&
-                    appointment.status === "in_exam" &&
-                    closeoutQuery.data?.linkedSoapCount === 0 &&
-                    !closeoutQuery.data?.missingSoapReplacement &&
-                    closeoutQuery.data?.closeout?.status !==
-                      "clinical_finalized" &&
-                    closeoutQuery.data?.closeout?.status !== "completed" ? (
-                      <Button size="sm" asChild>
-                        <a
-                          href={`/records/new-soap/${appointment.patientId}?appointmentId=${appointmentId}`}
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          {closeoutQuery.data?.soapDraft
-                            ? t("encounters.workspace.resumeSoapDraft", "Resume SOAP draft")
-                            : t("encounters.workspace.writeSoapNote", "Write SOAP note")}
-                        </a>
-                      </Button>
-                    ) : null}
-                    {canCreateSoap(role) &&
-                    !isAmbulatoryWorkspace &&
-                    visitOpenForClinicalEntry ? (
-                      <Button size="sm" variant="outline" asChild>
-                        <Link
-                          href={`/records?patientId=${appointment.patientId}&appointmentId=${appointmentId}&tab=prescriptions&new=1`}
-                        >
-                          <Pill className="mr-2 h-4 w-4" />
-                          {t("encounters.workspace.prescribe", "Prescribe")}
+                    {appointment.patientId ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/agent/imaging?patientId=${appointment.patientId}`}>
+                          <ImageIcon className="mr-1.5 h-4 w-4 text-primary" />
+                          {t("encounters.workspace.imagingAi", "Snímky & AI analýza")}
                         </Link>
                       </Button>
                     ) : null}
@@ -877,13 +1434,7 @@ export default function EncounterWorkspacePage() {
                         </Link>
                       </Button>
                     ) : null}
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/patients/${appointment.patientId}`}>
-                        <ClipboardList className="mr-2 h-4 w-4" />
-                        {t("encounters.workspace.openPatientChart", "Open patient chart")}
-                      </Link>
-                    </Button>
-                    {canManageVisit(role) ? (
+                    {canManageVisit(role) && appointment.patientId ? (
                       <>
                         <CapturePhotos
                           patientId={appointment.patientId}
@@ -896,91 +1447,69 @@ export default function EncounterWorkspacePage() {
                       </>
                     ) : null}
                   </div>
+                </CardContent>
+              </Card>
 
+              {isAmbulatoryWorkspace && appointment.patientId ? (
+                <AmbulatoryVisitRecordsCard
+                  patientId={appointment.patientId}
+                  appointmentId={appointmentId}
+                  role={role}
+                  visitOpen={visitOpenForClinicalEntry}
+                  timeZone={taxConfigQuery.data?.timezone}
+                />
+              ) : null}
+            </TabsContent>
+
+            {/* TAB 5: DISCHARGE */}
+            <TabsContent value="discharge" className="space-y-6 mt-0">
+              {/* Link to /agent/discharge for discharge summary */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    {t("encounters.discharge.title", "Visit Closeout & Discharge")}
+                  </h4>
                   <p className="text-xs text-muted-foreground">
-                    {t("encounters.workspace.linkedActionsNotice", "Use these visit actions so SOAP notes, prescriptions, vaccinations, lab results, procedures, photos, and signatures stay linked to this appointment and its charge reconciliation.")}
+                    {t(
+                      "encounters.discharge.agentDesc",
+                      "Generate client-friendly discharge summary, home care instructions, and follow-up guidance in AI Agent."
+                    )}
                   </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <Button asChild size="sm" className="gap-2 shrink-0" data-testid="encounter-discharge-agent-link">
+                  <Link
+                    href={`/agent/discharge?patientId=${appointment.patientId}&appointmentId=${appointmentId}`}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {t("encounters.workspace.openDischargeAgent", "Open discharge summary (AI Agent)")}
+                  </Link>
+                </Button>
+              </div>
 
-          {isAmbulatoryWorkspace && appointment.patientId ? (
-            <AmbulatorySoapCard
-              patientId={appointment.patientId}
-              appointmentId={appointmentId}
-              canWrite={canCreateSoap(role)}
-              visitOpen={visitOpenForClinicalEntry}
-              linkedSoapCount={closeoutQuery.data?.linkedSoapCount ?? 0}
-              onPlanChange={setAmbulatorySoapPlan}
-            />
-          ) : null}
+              {isAmbulatoryWorkspace && appointment.patientId ? (
+                <VisitCloseout
+                  appointment={appointment}
+                  appointmentId={appointmentId}
+                  role={role}
+                  closeoutQuery={closeoutQuery}
+                  invoicesQuery={invoicesQuery}
+                  compact={ambulatoryProfile?.compactCloseout === true}
+                  soapPlan={ambulatorySoapPlan}
+                />
+              ) : null}
 
-          {appointment.patientId ? (
-            <EncounterVitalsCard
-              patientId={appointment.patientId}
-              appointmentId={appointment.id}
-              canRecord={visitOpenForClinicalEntry && canRecordVitals(role)}
-              canCorrect={canCreateSoap(role)}
-              visitStateReady={visitClinicalStateReady}
-              visitOpen={visitOpenForClinicalEntry}
-              timeZone={taxConfigQuery.data?.timezone}
-              measurementSystem={
-                isAmbulatoryWorkspace
-                  ? ambulatoryProfile?.measurementSystem
-                  : "metric"
-              }
-              bodyConditionScale={
-                isAmbulatoryWorkspace
-                  ? ambulatoryProfile?.bodyConditionScale
-                  : 9
-              }
-            />
-          ) : null}
-
-          {isAmbulatoryWorkspace && appointment.patientId ? (
-            <AmbulatoryVisitRecordsCard
-              patientId={appointment.patientId}
-              appointmentId={appointmentId}
-              role={role}
-              visitOpen={visitOpenForClinicalEntry}
-              timeZone={taxConfigQuery.data?.timezone}
-            />
-          ) : null}
-
-          {isAmbulatoryWorkspace && appointment.patientId ? (
-            <VisitCloseout
-              appointment={appointment}
-              appointmentId={appointmentId}
-              role={role}
-              closeoutQuery={closeoutQuery}
-              invoicesQuery={invoicesQuery}
-              compact={ambulatoryProfile?.compactCloseout === true}
-              soapPlan={ambulatorySoapPlan}
-            />
-          ) : null}
-
-          {!isAmbulatoryWorkspace &&
-          canRecordVitals(role) &&
-          appointment.patientId &&
-          appointment.clientId ? (
-            <TreatmentPlanComposer
-              appointmentId={appointment.id}
-              clientId={appointment.clientId}
-              patientId={appointment.patientId}
-              patientName={appointment.patientName ?? t("records.common.patient", "Patient")}
-            />
-          ) : null}
-
-          {!isAmbulatoryWorkspace ? (
-            <VisitCloseout
-              appointment={appointment}
-              appointmentId={appointmentId}
-              role={role}
-              closeoutQuery={closeoutQuery}
-              invoicesQuery={invoicesQuery}
-            />
-          ) : null}
+              {!isAmbulatoryWorkspace ? (
+                <VisitCloseout
+                  appointment={appointment}
+                  appointmentId={appointmentId}
+                  role={role}
+                  closeoutQuery={closeoutQuery}
+                  invoicesQuery={invoicesQuery}
+                />
+              ) : null}
+            </TabsContent>
+          </Tabs>
 
           <EncounterInvoices
             appointmentId={appointmentId}
