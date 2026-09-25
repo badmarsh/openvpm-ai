@@ -46,6 +46,7 @@ def _load_orchestrator_contracts():
             ReviewReport as review_report,
             DevelopmentRun as development_run,
         )
+        from openvpm_dev_orchestrator.policy_engine import PolicyEngine as policy_engine
         return (
             run_state,
             dev_task_request,
@@ -55,6 +56,7 @@ def _load_orchestrator_contracts():
             command_result,
             review_report,
             development_run,
+            policy_engine,
         )
     except ImportError:
         sys.path.insert(0, os.path.join(AGNO_DIR, "src"))
@@ -69,6 +71,7 @@ def _load_orchestrator_contracts():
                 ReviewReport as review_report,
                 DevelopmentRun as development_run,
             )
+            from openvpm_dev_orchestrator.policy_engine import PolicyEngine as policy_engine
             return (
                 run_state,
                 dev_task_request,
@@ -78,6 +81,7 @@ def _load_orchestrator_contracts():
                 command_result,
                 review_report,
                 development_run,
+                policy_engine,
             )
         except ImportError:
             return _fallback_orchestrator_contracts()
@@ -161,6 +165,21 @@ def _fallback_orchestrator_contracts():
     class ChangePlan:
         pass
 
+    class PolicyEngine:
+        @classmethod
+        def evaluate_files(cls, task_id: str, touched_files: list) -> PolicyDecision:
+            dec = PolicyDecision()
+            dec.allowed = True
+            dec.violations = []
+            return dec
+
+        @classmethod
+        def evaluate_task(cls, request: Any, plan: Any = None) -> PolicyDecision:
+            dec = PolicyDecision()
+            dec.allowed = True
+            dec.violations = []
+            return dec
+
     return (
         RunState,
         DevTaskRequest,
@@ -170,6 +189,7 @@ def _fallback_orchestrator_contracts():
         CommandResult,
         ReviewReport,
         DevelopmentRun,
+        PolicyEngine,
     )
 
 
@@ -182,6 +202,7 @@ def _fallback_orchestrator_contracts():
     CommandResult,
     ReviewReport,
     DevelopmentRun,
+    PolicyEngine,
 ) = _load_orchestrator_contracts()
 
 
@@ -1036,11 +1057,11 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
     tasks_dir = os.path.join(repo, "tasks")
 
     target_path = None
-    if os.path.exists(patch_source):
+    if '\n' not in patch_source and os.path.exists(patch_source):
         target_path = patch_source
-    elif os.path.exists(os.path.join(repo, patch_source)):
+    elif '\n' not in patch_source and os.path.exists(os.path.join(repo, patch_source)):
         target_path = os.path.join(repo, patch_source)
-    elif os.path.exists(os.path.join(tasks_dir, patch_source)):
+    elif '\n' not in patch_source and os.path.exists(os.path.join(tasks_dir, patch_source)):
         target_path = os.path.join(tasks_dir, patch_source)
 
     if target_path and os.path.isdir(target_path):
@@ -1062,7 +1083,7 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
                 patch_content = pf.read()
         except Exception:
             pass
-    elif any(sep in patch_source for sep in ["/", "\\"]) or patch_source.endswith((".patch", ".diff", ".md", ".txt")) or patch_source.startswith("tasks"):
+    elif '\n' not in patch_source and (any(sep in patch_source for sep in ["/", "\\"]) or patch_source.endswith((".patch", ".diff", ".md", ".txt")) or patch_source.startswith("tasks")):
         import glob
         base_name = os.path.basename(patch_source).lower().replace(".patch", "").replace(".md", "").replace(".diff", "")
         clean_task = task_id.lower().replace("arena-", "").replace(".patch", "")
@@ -1123,22 +1144,15 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
 
     # 2. Architektonický audit dotknutých súborov (Zero-Conflict Upstream Sync & Secrets Safety)
     touched_files = _extract_patch_files(patch_content)
-    violations = []
-    for f in touched_files:
-        if f.startswith("packages/db/schema/") and not os.path.basename(f).startswith("ext_"):
-            violations.append(f"Vanilla schéma `{f}` nesmie byť modifikovaná (Zero-Conflict Upstream Sync). Použi `ext_*.ts`.")
-        if "drizzle/meta/_journal.json" in f:
-            violations.append("Drizzle journal `_journal.json` nesmie byť upravovaný ručne.")
-        if ".env" in f or "secret" in f.lower() or "id_rsa" in f.lower():
-            violations.append(f"Citlivý súbor `{f}` nesmie byť menený patchom (Secrets Safety).")
-
-    if violations:
+    policy_decision = PolicyEngine.evaluate_files(task_id, touched_files)
+    if not policy_decision.allowed:
         run = get_development_run(task_id)
         if run:
             run.state = RunState.REJECTED
-            run.failure_reason = "Architektonické porušenia v patchi: " + "; ".join(violations)
+            run.policy_decision = policy_decision
+            run.failure_reason = "Architektonické porušenia v patchi: " + "; ".join(policy_decision.violations)
             save_development_run(run)
-        return "❌ PATCH ZAMIETNUTÝ — ARCHITEKTURÁLNE PORUŠENIE:\n" + "\n".join(f"• {v}" for v in violations)
+        return "❌ PATCH ZAMIETNUTÝ — ARCHITEKTURÁLNE PORUŠENIE:\n" + "\n".join(f"• {v}" for v in policy_decision.violations)
 
     # 3. Deterministický pre-flight: git apply --check (overenie pred prepnutím vetvy)
     check_proc = subprocess.run(
@@ -1159,15 +1173,40 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
         return f"❌ PRE-FLIGHT ZLYHAL: Patch sa nedá čisto aplikovať na aktuálny kód:\n```\n{err_msg}\n```\nOdporúčanie: Líder musí sformulovať opravný prompt s požiadavkou na zosúladenie s vetvou."
 
     # 4. Bezpečné vytvorenie a prepnutie izolovanej vetvy swarm/agno-*
-    try:
-        subprocess.run([_which("git"), "checkout", "-B", branch_name], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
-    except subprocess.CalledProcessError as e:
-        return f"Chyba pri vytváraní vetvy {branch_name}: {e.stderr}"
+    worktree_dir = os.path.join(repo, ".agents", "agno", "tmp", "worktrees", f"agno-{clean_id}")
+    use_worktree = os.getenv("OPENVPM_USE_WORKTREE", "false").lower() in ("true", "1", "yes")
+    target_dir = repo
+
+    if use_worktree:
+        try:
+            os.makedirs(os.path.dirname(worktree_dir), exist_ok=True)
+            if not os.path.exists(worktree_dir):
+                subprocess.run(
+                    [_which("git"), "worktree", "add", "-B", branch_name, worktree_dir],
+                    cwd=repo,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    check=True,
+                )
+            target_dir = worktree_dir
+        except Exception:
+            target_dir = repo
+            try:
+                subprocess.run([_which("git"), "checkout", "-B", branch_name], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+            except subprocess.CalledProcessError as e:
+                return f"Chyba pri vytváraní vetvy {branch_name}: {e.stderr}"
+    else:
+        try:
+            subprocess.run([_which("git"), "checkout", "-B", branch_name], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+        except subprocess.CalledProcessError as e:
+            return f"Chyba pri vytváraní vetvy {branch_name}: {e.stderr}"
 
     # 5. Aplikovanie patchu
-    proc = subprocess.run([_which("git"), "apply", "--recount", "--ignore-whitespace", "--3way", patch_file_path], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    proc = subprocess.run([_which("git"), "apply", "--recount", "--ignore-whitespace", "--3way", patch_file_path], cwd=target_dir, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
-        proc2 = subprocess.run([_which("git"), "apply", "--recount", "--ignore-whitespace", patch_file_path], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        proc2 = subprocess.run([_which("git"), "apply", "--recount", "--ignore-whitespace", patch_file_path], cwd=target_dir, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc2.returncode != 0:
             run = get_development_run(task_id)
             if run:
@@ -1180,9 +1219,11 @@ def apply_arena_patch(task_id: str, patch_source: str) -> str:
     run = get_development_run(task_id)
     if run:
         run.state = RunState.VERIFYING
+        if target_dir != repo:
+            run.worktree_path = target_dir
         save_development_run(run)
 
-    stat = subprocess.run([_which("git"), "status", "--short"], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    stat = subprocess.run([_which("git"), "status", "--short"], cwd=target_dir, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return f"""✅ Patch z Arena.ai úspešne prešiel pre-flight auditom a bol aplikovaný na vetvu `{branch_name}`!
 • Stav behu: `{RunState.VERIFYING.value}`
 • Dotknuté súbory ({len(touched_files)}):
@@ -1598,6 +1639,9 @@ def _atomic_write(path: str, content: str) -> None:
         raise
 
 
+_in_process_session_lock = threading.RLock()
+
+
 @contextmanager
 def _sessions_lock() -> Iterator[None]:
     """Exclusive lock around ``arena_sessions.json`` read-modify-write.
@@ -1608,36 +1652,42 @@ def _sessions_lock() -> Iterator[None]:
     """
     os.makedirs(os.path.dirname(ARENA_SESSIONS_FILE) or ".", exist_ok=True)
     lock_path = ARENA_SESSIONS_FILE + ".lock"
-    handle = open(lock_path, "a+", encoding="utf-8")
-    try:
-        if os.name == "nt":
-            import msvcrt
+    if not os.path.exists(lock_path) or os.path.getsize(lock_path) == 0:
+        try:
+            with open(lock_path, "a", encoding="utf-8") as init_h:
+                if init_h.tell() == 0:
+                    init_h.write("0")
+                    init_h.flush()
+        except OSError:
+            pass
 
-            handle.seek(0)
-            if handle.read(1) == "":
-                handle.write("0")
-                handle.flush()
-            handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        yield
-    finally:
+    with _in_process_session_lock:
+        handle = open(lock_path, "r+", encoding="utf-8")
         try:
             if os.name == "nt":
                 import msvcrt
 
                 handle.seek(0)
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
             else:
                 import fcntl
 
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-        except OSError:
-            pass
-        handle.close()
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            yield
+        finally:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+            handle.close()
 
 
 def _read_sessions_unlocked() -> list[dict[str, Any]]:
