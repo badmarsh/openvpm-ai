@@ -1,7 +1,7 @@
 # Arena Sprint Index
 
-Status legend: `merged` (target files changed in git) · `written` (assignment exists, not implemented) · `unverified`.
-Update this table whenever a sprint is written or merged. Planner prompt: `prompts/arena-sprint-writer-prompt.md`.
+Status legend:  (target files changed in git) ·  (assignment exists, not implemented) · .
+Update this table whenever a sprint is written or merged. Planner prompt: .
 
 | # | Sprint file | Title / target files | Status (2026-09-25) |
 |---|-------------|----------------------|---------------------|
@@ -17,13 +17,13 @@ Update this table whenever a sprint is written or merged. Planner prompt: `promp
 | 10 | arena-sprint-10-billing-ekasa-pagekit.md | /billing/ekasa | merged (#47) |
 | 11 | arena-sprint-11-reports-wellness.md | /reports, /wellness | merged (#50) |
 | 12 | arena-sprint-12-statutory-kvepis.md | /statutory, /statutory/kvepis | merged (#49) |
-| 13 | arena-sprint-13-patient-client-intake-duplicates.md | /patients/new, /clients/new, /patients/duplicates | PR open (#54) |
+| 13 | arena-sprint-13-patient-client-intake-duplicates.md | /patients/new, /clients/new, /patients/duplicates | merged (#54) |
 | 14 | arena-sprint-14-field-visits-cehz.md | /field-visits (ambulatory livestock, CEHZ, withdrawal) | merged (#51) |
 | 15 | arena-sprint-15-clinical-ai-imaging-dicom.md | /agent/imaging (DICOM viewer, modality tags) | dispatched — Arena session 01a0d6ba, no PR yet |
-| 16 | arena-sprint-16-clinical-ai-voice-ambient.md | /agent/voice (ambient scribe, GDPR, controlled substances) | PR open (#53) |
+| 16 | arena-sprint-16-clinical-ai-voice-ambient.md | /agent/voice (ambient scribe, GDPR, controlled substances) | merged (#53) |
 | 17 | arena-sprint-17-clinical-ai-discharge-sympathy.md | /agent/discharge (post-op discharge, sympathy gate) | merged (#52) |
-| 18 | arena-sprint-18-client-dossier-billing-hub.md | /clients/[id], /clients/[id]/edit (client 360deg, comms log) | written |
-| 19 | arena-sprint-19-migration-archive-portability.md | /migration-archive, /settings/import-v2 (PIMS archive, HMAC) | written |
-| 20 | arena-sprint-20-settings-ekasa-diagnostic-hardware.md | /settings/ekasa, /settings/ai, /settings/simulation | written |
+| 18 | arena-sprint-18-client-dossier-billing-hub.md | /clients/[id], /clients/[id]/edit (client 360, comms log) | dispatched — running in Arena |
+| 19 | arena-sprint-19-migration-archive-portability.md | /migration-archive, /settings/import-v2 (PIMS archive, HMAC) | dispatched — running in Arena |
+| 20 | arena-sprint-20-settings-ekasa-diagnostic-hardware.md | /settings/ekasa, /settings/ai, /settings/simulation | dispatched — running in Arena |
 
 Legacy (not numbered): arena-consolidation-sprint.md, arena-next-sprint.md, ui-consolidation-prompt.md, ui-phase2-headings.md.
