@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { TrialBadge } from "@/components/layout/trial-badge";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
+import { FontScaleSwitcher } from "@/components/layout/font-scale-switcher";
 import { HelpButton } from "@/components/help/HelpButton";
 import { useI18n } from "@/lib/i18n";
 
@@ -58,6 +59,7 @@ const routeLabels: Record<string, { label: string; i18nKey: string }> = {
   "/marketing/competitors": { label: "Konkurencia", i18nKey: "nav.marketingCompetitors" },
   "/marketing/wellness": { label: "Preventívne plány", i18nKey: "nav.marketingWellness" },
   "/vet-intel": { label: "Vet Intelligence", i18nKey: "nav.vetIntel" },
+  "/automations": { label: "Automatizácie", i18nKey: "nav.automations" },
   "/waiting-room": { label: "Waiting Room TV", i18nKey: "nav.waitingRoomTv" },
 };
 
@@ -223,6 +225,7 @@ export function TopBar({
 
         <div className="flex items-center gap-[6.8px]">
           <ThemeSwitcher />
+          <FontScaleSwitcher />
           <HelpButton />
           <LanguageSwitcher />
         </div>

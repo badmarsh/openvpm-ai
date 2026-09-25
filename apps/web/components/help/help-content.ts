@@ -1174,50 +1174,49 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
   },
 
   "/vet-intel": {
-    title: "Veterinárny trhový radar & úradný vestník",
+    title: "Vet Intelligence — reputácia, obsah a úradné zdroje",
     intro:
-      "Strategický informačný a analytický modul pre majiteľov veterinárnych kliník. V rámci konsolidácie rozhrania bol tento modul plne integrovaný do Marketingového štúdia ako záložka „Konkurencia & Intel\" (/marketing?tab=competitors). Pôvodná trasa /vet-intel slúži ako automatické presmerovanie. Monitoruje úradné vestníky ŠVPS SR a KVL SR, legislatívne zmeny a regionálny cenový benchmark.",
+      "Centrálny prehľad pre manažment kliniky: reputácia z vlastných recenzií (Google, Facebook, interné), prevádzka obsahu a priame odkazy na štátne a stavovské portály. Modul pracuje výhradne s dátami vašej kliniky — žiadne demo kliniky ani fiktívne benchmarky.",
     steps: [
       {
+        icon: "⭐",
+        title: "Prehľad reputácie",
+        description:
+          "KPI karty ukážu priemerné hodnotenie, počet recenzií a nezodpovedané kusy; tabuľka vypíše posledných 10 recenzií so sentimentom a stavom odpovede.",
+      },
+      {
+        icon: "📣",
+        title: "Reputácia bez odpovede",
+        description:
+          "Záložka Reputácia zoskupí recenzie bez odpovede a rozdelenie sentimentu podľa platforiem. Odpoveď napíšete v module Recenzie (/marketing/reviews).",
+      },
+      {
         icon: "🏛️",
-        title: "Úradné vestníky ŠVPS SR & KVL SR",
+        title: "Úradné zdroje a registre",
         description:
-          "Sledujte aktuálne platné mimoriadne veterinárne nariadenia, karanténne pásma a legislatívne výnosy pre váš okres.",
+          "Priame odkazy na ŠVPS SR, KVL SR a Slov-Lex plus skratky do interných registrov (Zákonné registre, KVEPIS podania). Automatické sledovanie vestníkov sa pripravuje.",
       },
       {
-        icon: "📍",
-        title: "Regionálny trhový cenový radar",
+        icon: "🧭",
+        title: "Prevádzka obsahu",
         description:
-          "Zadajte PSČ ambulancie a porovnajte priemerné cenové hladiny bežných úkonov v regióne (vakcinácia, kastrácia, čistenie zubov ultrazvukom).",
-      },
-      {
-        icon: "💡",
-        title: "Manažérske trendy a stratégie",
-        description:
-          "Inšpirujte sa overenými manažérskymi postupmi pre retenciu klientov, cenotvorbu a zavádzanie moderného vybavenia kliniky.",
-      },
-      {
-        icon: "🔄",
-        title: "Priamy prístup cez Kampane & SMS",
-        description:
-          "Kedykoľvek otvorte /marketing a kliknite na 4. záložku „Konkurencia & Intel\" pre plnohodnotný prehľad.",
+          "Počítadlá návrhov čakajúcich na lekára, pripojených kanálov a aktívnych ciest s hlbokými odkazmi do schvaľovania, kanálov a automatizácií.",
       },
     ],
     tips: [
-      "Trasa /vet-intel je plne spätne kompatibilná a automaticky vás presmeruje na /marketing?tab=competitors.",
-      "Všetky trhové porovnania rešpektujú Etický kódex KVL SR a slúžia výhradne pre interné rozhodovanie manažmentu kliniky.",
-      "Upozornenia na výskyt nebezpečných nákaz v okrese kliniky sa automaticky zobrazujú s vysokou prioritou.",
+      "Všetky čísla pochádzajú z vašej kliniky; verejné porovnávanie konkurencie by porušilo Etický kódex KVL SR.",
+      "Žiadosti o recenzie automaticky rešpektujú Sympathy Gate — zosnulí pacienti sú vylúčení.",
+      "Staršia adresa /marketing/competitors presmeruje sem; záložka Konkurencia & Intel v Marketing Štúdiu ukazuje rovnaký súhrn.",
     ],
     practicalExample: {
-      title: "Preverenie povinností pri vyhlásení ohniska vtáčej chrípky (HPAI)",
-      badge: "Veterinárny vestník",
+      title: "Pondelková kontrola reputácie",
+      badge: "Vet Intelligence",
       scenario:
-        "V susednej obci bol potvrdený výskyt vtáčej chrípky u drobnochovateľa. Veterinár potrebuje vedieť reštrikcie pre presun hydiny a odber vzoriek.",
+        "Manažérka kliniky v pondelok ráno otvorí /vet-intel a vidí 2 nové nezodpovedané recenzie, z toho jednu negatívnu z Google.",
       solution:
-        "V /vet-intel v záložke 'Úradné vestníky' okamžite nájde nariadenie ŠVPS SR, mapu 3 km ochranného pásma a 10 km pásma dohľadu s presnými povinnosťami súkromného veterinárneho lekára.",
+        "V záložke Reputácia skontroluje texty, prejde do /marketing/reviews, kde negatívnu recenziu eskaluje lekárovi a na pozitívnu odošle poďakovanie. Priemerné hodnotenie aj fronta bez odpovede sa na dashboardi aktualizujú okamžite.",
     },
   },
-
   "/admin": {
     title: "Správa kliniky, prístupy a audit logy",
     intro:

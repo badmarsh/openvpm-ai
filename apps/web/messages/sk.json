@@ -915,7 +915,7 @@
       "pause": "Pozastaviť",
       "activate": "Aktivovať",
       "edit": "Upraviť",
-      "delete": "Vymazať",
+      "delete": "Odstrániť",
       "confirmDelete": "Naozaj chcete odstrániť túto zákaznícku cestu?",
       "noJourneys": "Žiadne nakonfigurované cesty",
       "noJourneysDesc": "Vytvorte svoju prvú zákaznícku cestu alebo upravte filtre.",
@@ -1006,6 +1006,13 @@
       "title": "Žiadne zákaznícke cesty",
       "description": "Vytvorte svoju prvú zákaznícku cestu pre automatizáciu pripomienok a starostlivosti o pacientov.",
       "action": "Nová cesta"
+    },
+    "delete": {
+      "title": "Odstrániť cestu?",
+      "description": "Cesta „{name}“ bude odstránená. Noví klienti sa už nezaradia; prebiehajúce behy dobehnú podľa pripnutej verzie.",
+      "confirm": "Odstrániť",
+      "success": "Cesta „{name}“ bola odstránená.",
+      "error": "Nepodarilo sa odstrániť cestu."
     }
   },
   "auth": {
@@ -1622,7 +1629,14 @@
     "newPatient": "Nový pacient",
     "newAppointment": "Nové vyšetrenie",
     "newInvoice": "Nová faktúra",
-    "openSearch": "Otvoriť vyhľadávanie"
+    "openSearch": "Otvoriť vyhľadávanie",
+    "fontScale": {
+      "label": "Veľkosť písma",
+      "standard": "Štandardná",
+      "large": "Väčšia",
+      "xl": "Najväčšia",
+      "buttonAria": "Zmeniť veľkosť písma"
+    }
   },
   "clients": {
     "title": "Klienti",
@@ -2798,7 +2812,15 @@
       "copyInstagram": "Kopírovať pre Instagram",
       "copyGoogle": "Kopírovať pre Google Profil",
       "copiedToast": "Text príspevku bol skopírovaný do schránky.",
-      "sympathyGateActive": "Protokol súcitu (Sympathy Gate) aktívny — marketing je izolovaný od zosnulých pacientov."
+      "sympathyGateActive": "Protokol súcitu (Sympathy Gate) aktívny — marketing je izolovaný od zosnulých pacientov.",
+      "copyGoogleCta": "Rezervácie a informácie na našej klinike.",
+      "sympathyGateShort": "Sympathy Gate aktívny",
+      "providerGoogle": "Google Firemný Profil",
+      "providerFacebook": "Facebook Stránka",
+      "providerInstagram": "Instagram Feed",
+      "noChannelsDesc": "Zatiaľ nie je pripojený žiadny publikačný kanál. Pripojte Facebook, Instagram alebo Google profil, aby ste mohli publikovať schválený obsah.",
+      "manageChannels": "Pripojiť kanály",
+      "manageChannelsShort": "Spravovať"
     },
     "briefModal": {
       "title": "Nový návrh obsahu",
@@ -3526,7 +3548,9 @@
       "simPatientLabel": "Priradiť pacienta (voliteľné)",
       "simPayloadJson": "Payload udalosti (JSON)",
       "simProcessImmediately": "Okamžite spustiť worker a vyhodnotiť pravidlá",
-      "btnRunSimulation": "Spustiť simuláciu"
+      "btnRunSimulation": "Spustiť simuláciu",
+      "invalidJsonPayload": "Neplatný formát JSON payloadu",
+      "queuePending": "{count} čaká"
     },
     "competitors": {
       "title": "Konkurencia a trhová inteligencia",
@@ -3546,7 +3570,9 @@
       "description": "Sledovanie konkurenčných veterinárnych pracovísk, benchmarking služieb, ratingov a trhových trendov.",
       "analyzeAction": "Analyzovať trh",
       "emptyTitle": "Monitorovanie konkurencie nie je pripojené",
-      "emptyDescription": "Žiadne demo kliniky. Pripojte zdroj trhu, keď bude k dispozícii."
+      "emptyDescription": "Žiadne demo kliniky. Pripojte zdroj trhu, keď bude k dispozícii.",
+      "openIntel": "Otvoriť Vet Intelligence",
+      "summaryDesc": "Reputácia kliniky z vlastných dát a prehľad úradných zdrojov."
     },
     "tabCalendar": "Kalendár obsahu",
     "tabQueue": "Schvaľovací proces",
@@ -3765,7 +3791,14 @@
       "emailSubject": "Predmet:",
       "emailFrom": "Odosielateľ:",
       "emailReady": "Pripravené pre hromadný emailový newsletter",
-      "copyEmail": "Skopírovať email"
+      "copyEmail": "Skopírovať email",
+      "smsHint": "SMS správu odošlete vybraným klientom v sekcii",
+      "smsHintSection": "Zdravotné pripomienky",
+      "tvSlideTitle": "Pridať túto kampaň ako slajd na TV do čakárne",
+      "resetVisualTitle": "Resetovať vizuál",
+      "downloadVideoTitle": "Stiahnuť video súbor",
+      "downloadImageTitle": "Stiahnuť obrázok",
+      "fbJustNow": "Práve teraz • Verejné"
     }
   },
   "nav": {
@@ -7957,6 +7990,71 @@
         "title": "Geriatrický protokol SAVLMZ — polročná kontrola",
         "desc": "Edukácia o preventívnej geriatrickej starostlivosti pre psov a mačky nad 7 rokov"
       }
+    },
+    "pageTitle": "Vet Intelligence",
+    "tabs": {
+      "overview": "Prehľad",
+      "reputation": "Reputácia",
+      "official": "Úradné zdroje"
+    },
+    "kpi": {
+      "avgRating": "Priemerné hodnotenie",
+      "totalReviews": "Recenzie celkom",
+      "unanswered": "Nezodpovedané",
+      "pendingBriefs": "Čaká na schválenie"
+    },
+    "table": {
+      "reviewer": "Autor",
+      "platform": "Platforma",
+      "rating": "Hodnotenie",
+      "sentiment": "Sentiment",
+      "received": "Prijatá",
+      "reply": "Odpoveď",
+      "platformInternal": "Interná",
+      "anonymous": "Anonym"
+    },
+    "sentiment": {
+      "positive": "Pozitívne",
+      "neutral": "Neutrálne",
+      "negative": "Negatívne",
+      "mixed": "Zmiešané",
+      "unknown": "Nezatriedené"
+    },
+    "overview": {
+      "openReviews": "Otvoriť recenzie",
+      "replyDone": "Zodpovedané",
+      "replyMissing": "Bez odpovede",
+      "emptyTitle": "Zatiaľ žiadne recenzie",
+      "emptyDesc": "Recenzie z Google a Facebooku sa tu zobrazia po prvom importe alebo synchronizácii."
+    },
+    "ops": {
+      "briefs": "Návrhy čakajúce na lekára",
+      "openQueue": "Otvoriť schvaľovanie",
+      "channels": "Pripojené kanály",
+      "manageChannels": "Spravovať kanály",
+      "journeys": "Aktívne cesty",
+      "openAutomations": "Otvoriť automatizácie"
+    },
+    "reputation": {
+      "title": "Sentiment podľa platforiem",
+      "desc": "Rozdelenie posledných 100 recenzií podľa sentimentu a zdroja.",
+      "empty": "Všetky recenzie majú odpoveď."
+    },
+    "official": {
+      "title": "Úradné zdroje a registre",
+      "desc": "Priame odkazy na štátne a stavovské portály. Automatické sledovanie vestníkov sa pripravuje — zatiaľ otvárajte zdroje ručne.",
+      "svpsName": "ŠVPS SR",
+      "svpsDesc": "Štátna veterinárna a potravinová správa — vestníky, nákazová situácia, registrácie.",
+      "kvlName": "KVL SR",
+      "kvlDesc": "Komora veterinárnych lekárov SR — stavovské predpisy, register SVL, CRSZ.",
+      "slovlexName": "Slov-Lex",
+      "slovlexDesc": "Zbierka zákonov SR — úplné znenia právnych predpisov.",
+      "internalTitle": "Interné registre",
+      "statutory": "Zákonné registre",
+      "statutoryDesc": "Besnota, ošetrenia, ochranné lehoty, omamné látky a protokoly.",
+      "kvepis": "KVEPIS podania",
+      "kvepisDesc": "Hlásenia a podania na ŠVPS cez KVEPIS.",
+      "openInternal": "Otvoriť"
     }
   },
   "migrationArchive": {

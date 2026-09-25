@@ -41,6 +41,7 @@ import { importErrorKey } from "@/lib/inventory/import-errors";
 import { WholesalerImportDialog } from "@/components/inventory/wholesaler-import-dialog";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { useAiAgentEnabled } from "@/lib/ai-agent-modules";
 import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,6 +210,7 @@ function MessageContentBubble({
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const { t } = useI18n();
+  const invoiceImportEnabled = useAiAgentEnabled("parse-attachment-invoice");
   const [importingAttId, setImportingAttId] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -276,7 +278,9 @@ function MessageContentBubble({
                   )}
                   <Download className="h-3.5 w-3.5 ml-auto text-muted-foreground shrink-0" />
                 </a>
-                {communicationId && att.filename?.toLowerCase().endsWith(".pdf") ? (
+                {communicationId &&
+                invoiceImportEnabled &&
+                att.filename?.toLowerCase().endsWith(".pdf") ? (
                   <button
                     type="button"
                     title={t("inbox.importInvoiceTitle", "Import invoice to stock")}
@@ -682,6 +686,7 @@ export function InboxView() {
     },
   });
 
+  const aiSuggestEnabled = useAiAgentEnabled("suggest-client-action");
   const { data: aiActionData } =
     trpc.communications.suggestClientAction.useQuery(
       {
@@ -689,7 +694,10 @@ export function InboxView() {
         content: selectedUnmatched?.content,
         subject: selectedUnmatched?.subject,
       },
-      { enabled: Boolean(selectedUnmatched && canMutateInbox) },
+      {
+        enabled:
+          Boolean(selectedUnmatched && canMutateInbox) && aiSuggestEnabled,
+      },
     );
 
   const createAndLinkMutation =
@@ -1458,7 +1466,12 @@ export function InboxView() {
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {/* AI suggestion — yellow dismissible banner */}
                 {(() => {
-                  if (!aiActionData || dismissedAiSuggestion) return null;
+                  if (
+                    !aiActionData ||
+                    dismissedAiSuggestion ||
+                    !aiSuggestEnabled
+                  )
+                    return null;
                   const suggested = aiActionData.suggestedNewClient;
                   const candidates = aiActionData.matchedCandidates ?? [];
                   const hasMatch = candidates.length > 0;

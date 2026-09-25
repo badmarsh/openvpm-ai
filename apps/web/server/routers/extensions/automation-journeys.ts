@@ -5,7 +5,8 @@
  */
 
 import { z } from "zod";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, isNull } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { createRouter, protectedProcedure } from "../../trpc";
 import { extAutomationJourneys } from "@openpims/db";
 import type { AutomationJourneyStep } from "@openpims/db";
@@ -28,7 +29,12 @@ export const automationJourneysRouter = createRouter({
     const journeys = await ctx.db
       .select()
       .from(extAutomationJourneys)
-      .where(eq(extAutomationJourneys.practiceId, ctx.practiceId))
+      .where(
+        and(
+          eq(extAutomationJourneys.practiceId, ctx.practiceId),
+          isNull(extAutomationJourneys.deletedAt)
+        )
+      )
       .orderBy(desc(extAutomationJourneys.createdAt));
 
     return journeys.map((j) => ({
@@ -133,7 +139,8 @@ export const automationJourneysRouter = createRouter({
         .where(
           and(
             eq(extAutomationJourneys.id, id),
-            eq(extAutomationJourneys.practiceId, ctx.practiceId)
+            eq(extAutomationJourneys.practiceId, ctx.practiceId),
+            isNull(extAutomationJourneys.deletedAt)
           )
         )
         .returning();
@@ -146,5 +153,39 @@ export const automationJourneysRouter = createRouter({
         ...updatedJourney,
         enabled: updatedJourney.isActive,
       };
+    }),
+
+  /**
+   * Soft-delete a journey. Deactivates it so the rules engine (which only
+   * enrolls isActive journeys) stops new enrollments; in-flight enrollments
+   * drain naturally against their pinned journey version.
+   */
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [deleted] = await ctx.db
+        .update(extAutomationJourneys)
+        .set({ deletedAt: new Date(), isActive: false })
+        .where(
+          and(
+            eq(extAutomationJourneys.id, input.id),
+            eq(extAutomationJourneys.practiceId, ctx.practiceId),
+            isNull(extAutomationJourneys.deletedAt)
+          )
+        )
+        .returning({ id: extAutomationJourneys.id });
+
+      if (!deleted) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Journey not found",
+        });
+      }
+
+      return { id: deleted.id };
     }),
 });

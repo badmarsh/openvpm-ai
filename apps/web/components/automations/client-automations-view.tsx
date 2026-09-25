@@ -38,6 +38,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  pageShellClass,
+  PageHeader,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -54,7 +60,14 @@ function MarketingAutomationsContent() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") || "rules";
+  const tabParam = searchParams.get("tab");
+  const initialTab =
+    tabParam === "rules" ||
+    tabParam === "segments" ||
+    tabParam === "channels" ||
+    tabParam === "events"
+      ? tabParam
+      : "rules";
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // 1. Rules Query & Mutation
@@ -73,23 +86,7 @@ function MarketingAutomationsContent() {
     },
   });
 
-  // 2. Journeys Query & Mutation
-  const journeysQuery = trpc.extensions.automationJourneys.list.useQuery();
-  const updateJourneyMutation = trpc.extensions.automationJourneys.update.useMutation({
-    onSuccess: (data) => {
-      toast.success(
-        data.enabled
-          ? t("marketing.automations.journeyEnabled", `Cesta "${data.name}" bola aktivovaná.`, { name: data.name })
-          : t("marketing.automations.journeyPaused", `Cesta "${data.name}" bola pozastavená.`, { name: data.name })
-      );
-      utils.extensions.automationJourneys.list.invalidate();
-    },
-    onError: (err) => {
-      toast.error(err.message || t("marketing.automations.journeyUpdateError", "Nepodarilo sa zmeniť stav zákazníckej cesty."));
-    },
-  });
-
-  // 3. CRM Segments Query & Mutation
+  // 2. CRM Segments Query & Mutation
   const segmentsQuery = trpc.extensions.crmSegments.list.useQuery();
   const recomputeSegmentMutation = trpc.extensions.crmSegments.recompute.useMutation({
     onSuccess: (data) => {
@@ -142,7 +139,7 @@ function MarketingAutomationsContent() {
     setMembersPage(0);
   };
 
-  // 4. Channel Accounts Query & Mutation
+  // 3. Channel Accounts Query & Mutation
   const channelsQuery = trpc.extensions.automationChannels.list.useQuery();
   const testChannelMutation = trpc.extensions.automationChannels.testConnection.useMutation({
     onSuccess: (data) => {
@@ -202,7 +199,7 @@ function MarketingAutomationsContent() {
   const [connectDisplayName, setConnectDisplayName] = useState("");
   const [connectAccountId, setConnectAccountId] = useState("");
 
-  // 5. Live Events & Queue Metrics Queries & Mutations
+  // 4. Live Events & Queue Metrics Queries & Mutations
   const eventsQuery = trpc.extensions.automationEvents.list.useQuery({ limit: 50 });
   const queueMetricsQuery = trpc.extensions.automationEvents.getQueueMetrics.useQuery(undefined, {
     refetchInterval: 10_000,
@@ -287,32 +284,22 @@ function MarketingAutomationsContent() {
   // Payload Drawer/Dialog State
   const [selectedEventForPayload, setSelectedEventForPayload] = useState<any | null>(null);
 
-  // 6. Suppression Metrics Query
-  const suppressionMetricsQuery = trpc.extensions.automationSuppression.getMetrics.useQuery();
-  const suppressionLogsQuery = trpc.extensions.automationSuppression.listLogs.useQuery({ limit: 20 });
-
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Zap className="w-7 h-7 text-primary" />
-            {t("marketing.automations.title", "Marketing Autopilot & CRM")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            {t(
-              "marketing.automations.subtitle",
-              "Deterministické pravidlá, viacstupňové zákaznícke cesty, 12 CRM segmentov a durable event bus bez rizika halucinácií."
-            )}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={Zap}
+        title={t("marketing.automations.title", "Marketing Autopilot & CRM")}
+        subtitle={t(
+          "marketing.automations.subtitle",
+          "Deterministické pravidlá, CRM segmenty, publikačné kanály a durable event bus bez rizika halucinácií."
+        )}
+      />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-3 md:grid-cols-6 h-auto p-1 gap-1">
-          <TabsTrigger value="rules" className="flex items-center gap-1.5 py-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="rules" className={underlineTabsTriggerClass}>
             <Zap className="w-4 h-4" />
             <span>{t("marketing.automations.tabRules", "Pravidlá")}</span>
             {rulesQuery.data && (
@@ -321,16 +308,7 @@ function MarketingAutomationsContent() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="journeys" className="flex items-center gap-1.5 py-2">
-            <GitBranch className="w-4 h-4" />
-            <span>{t("marketing.automations.tabJourneys", "Cesty")}</span>
-            {journeysQuery.data && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
-                {journeysQuery.data.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="segments" className="flex items-center gap-1.5 py-2">
+          <TabsTrigger value="segments" className={underlineTabsTriggerClass}>
             <Users className="w-4 h-4" />
             <span>{t("marketing.automations.tabSegments", "Segmenty")}</span>
             {segmentsQuery.data && (
@@ -339,7 +317,7 @@ function MarketingAutomationsContent() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="channels" className="flex items-center gap-1.5 py-2">
+          <TabsTrigger value="channels" className={underlineTabsTriggerClass}>
             <Share2 className="w-4 h-4" />
             <span>{t("marketing.automations.tabChannels", "Kanály")}</span>
             {channelsQuery.data && (
@@ -348,12 +326,16 @@ function MarketingAutomationsContent() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="events" className="flex items-center gap-1.5 py-2">
+          <TabsTrigger value="events" className={underlineTabsTriggerClass}>
             <Activity className="w-4 h-4" />
             <span>{t("marketing.automations.tabEvents", "Udalosti & Zbernica")}</span>
             {queueMetricsQuery.data ? (
               <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
-                {queueMetricsQuery.data.pending > 0 ? `${queueMetricsQuery.data.pending} čaka` : queueMetricsQuery.data.total}
+                {queueMetricsQuery.data.pending > 0
+                ? t("marketing.automations.queuePending", `${queueMetricsQuery.data.pending} čaká`, {
+                    count: queueMetricsQuery.data.pending,
+                  })
+                : queueMetricsQuery.data.total}
               </Badge>
             ) : eventsQuery.data ? (
               <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
@@ -361,19 +343,10 @@ function MarketingAutomationsContent() {
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="suppression" className="flex items-center gap-1.5 py-2">
-            <ShieldAlert className="w-4 h-4" />
-            <span>{t("marketing.automations.tabSuppression", "Potlačenia")}</span>
-            {suppressionMetricsQuery.data && (
-              <Badge variant="outline" className="ml-1 text-xs px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
-                {suppressionMetricsQuery.data.total}
-              </Badge>
-            )}
-          </TabsTrigger>
         </TabsList>
 
         {/* 1. RULES TAB */}
-        <TabsContent value="rules" className="space-y-4">
+        <TabsContent value="rules" className="mt-0 space-y-6">
           {rulesQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
@@ -454,115 +427,8 @@ function MarketingAutomationsContent() {
           )}
         </TabsContent>
 
-        {/* 2. JOURNEYS TAB */}
-        <TabsContent value="journeys" className="space-y-4">
-          {journeysQuery.isLoading ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              {t("marketing.automations.loadingJourneys", "Načítavam zákaznícke cesty...")}
-            </div>
-          ) : !journeysQuery.data || journeysQuery.data.length === 0 ? (
-            <div className="p-12 text-center space-y-2 border rounded-xl bg-card">
-              <AlertCircle className="w-10 h-10 text-muted-foreground/50 mx-auto" />
-              <p className="text-sm font-medium text-foreground">
-                {t("marketing.automations.noJourneys", "Žiadne zákaznícke cesty nie sú nakonfigurované")}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {journeysQuery.data.map((journey) => {
-                const isUpdating =
-                  updateJourneyMutation.isPending && updateJourneyMutation.variables?.id === journey.id;
-                const steps = (journey.steps as any[]) || [];
-
-                return (
-                  <div
-                    key={journey.id}
-                    className="rounded-2xl border bg-card border-border p-5 shadow-sm space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h2 className="font-bold text-base text-foreground flex items-center gap-2">
-                            <GitBranch className="w-4 h-4 text-primary" />
-                            {journey.name}
-                          </h2>
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {journey.triggerEventType}
-                          </Badge>
-                          <Badge variant={journey.isActive ? "default" : "secondary"} className="text-xs">
-                            {journey.isActive ? t("common.active", "Aktívna") : t("common.paused", "Pozastavená")}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{journey.description}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">
-                          {t("marketing.automations.frequencyCap", "Cap: {max} správy / {days}d", {
-                            max: journey.frequencyCapMaxSteps,
-                            days: journey.frequencyCapWindowDays,
-                          })}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant={journey.isActive ? "outline" : "default"}
-                          disabled={isUpdating}
-                          onClick={() =>
-                            updateJourneyMutation.mutate({
-                              id: journey.id,
-                              isActive: !journey.isActive,
-                            })
-                          }
-                        >
-                          {journey.isActive ? t("common.pause", "Pozastaviť") : t("common.activate", "Aktivovať")}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Step Pipeline Visualization */}
-                    <div className="space-y-2">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {t("marketing.automations.stepPipeline", "Kroky sekvencie ({count})", { count: steps.length })}:
-                      </span>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {steps.map((step, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 rounded-xl border bg-muted/20 flex flex-col justify-between space-y-2 text-xs"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-primary">
-                                {t("marketing.automations.stepNumber", "Krok {num}", { num: idx + 1 })}
-                              </span>
-                              <Badge variant="secondary" className="text-[10px] uppercase">
-                                {step.channel || step.kind}
-                              </Badge>
-                            </div>
-                            <p className="text-foreground font-medium">{step.label}</p>
-                            <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-1 border-t border-border/40">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-primary" />
-                                {step.delayHours === 0
-                                  ? t("marketing.automations.immediate", "Ihneď")
-                                  : t("marketing.automations.hoursDelay", "+{hours} hod.", { hours: step.delayHours })}
-                              </span>
-                              {step.legalBasis && (
-                                <span className="font-mono text-[10px]">{step.legalBasis}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* 3. CRM SEGMENTS TAB */}
-        <TabsContent value="segments" className="space-y-4">
+        {/* 2. CRM SEGMENTS TAB */}
+        <TabsContent value="segments" className="mt-0 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {t(
@@ -704,8 +570,8 @@ function MarketingAutomationsContent() {
           </p>
         </TabsContent>
 
-        {/* 4. CHANNELS TAB */}
-        <TabsContent value="channels" className="space-y-4">
+        {/* 3. CHANNELS TAB */}
+        <TabsContent value="channels" className="mt-0 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {t(
@@ -843,8 +709,8 @@ function MarketingAutomationsContent() {
           )}
         </TabsContent>
 
-        {/* 5. LIVE EVENT BUS & WORKER CONTROL TAB */}
-        <TabsContent value="events" className="space-y-4">
+        {/* 4. LIVE EVENT BUS & WORKER CONTROL TAB */}
+        <TabsContent value="events" className="mt-0 space-y-6">
           {/* Real-time Status Metric Chips */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
@@ -1114,121 +980,6 @@ function MarketingAutomationsContent() {
             </div>
           )}
         </TabsContent>
-
-        {/* 6. SUPPRESSION TAB */}
-        <TabsContent value="suppression" className="space-y-4">
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Heart className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  Sympathy Gate
-                </span>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[10px]">Kritické</Badge>
-              </div>
-              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.sympathyBlocks ?? 0}</div>
-              <p className="text-[11px] text-muted-foreground">Zablokovaných pre zosnulých pacientov</p>
-            </div>
-            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Moon className="w-4 h-4 text-blue-600" />
-                  Nočný kľud
-                </span>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">20:00 - 08:00</Badge>
-              </div>
-              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.quietHours ?? 0}</div>
-              <p className="text-[11px] text-muted-foreground">Odložených na povolený čas</p>
-            </div>
-            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Gauge className="w-4 h-4 text-amber-600" />
-                  SMS Limit
-                </span>
-                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[10px]">&lt; 3 / 24h</Badge>
-              </div>
-              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.rateLimits ?? 0}</div>
-              <p className="text-[11px] text-muted-foreground">Potlačených pre prekročenie limitu</p>
-            </div>
-            <div className="rounded-xl border bg-card p-4 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <UserX className="w-4 h-4 text-rose-600" />
-                  Chýba súhlas
-                </span>
-                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">GDPR Čl. 9</Badge>
-              </div>
-              <div className="text-2xl font-bold text-foreground">{suppressionMetricsQuery.data?.noConsent ?? 0}</div>
-              <p className="text-[11px] text-muted-foreground">Potlačených z dôvodu chýbajúceho súhlasu</p>
-            </div>
-          </div>
-
-          {/* Suppression Logs Table */}
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-muted/40 border-b text-muted-foreground font-semibold">
-                  <tr>
-                    <th className="py-3 px-4">Čas</th>
-                    <th className="py-3 px-4">Dôvod</th>
-                    <th className="py-3 px-4">Akcia / Kanál</th>
-                    <th className="py-3 px-4">Klient / Pacient</th>
-                    <th className="py-3 px-4">Stav</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {suppressionLogsQuery.isLoading ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                        Načítavam auditné záznamy...
-                      </td>
-                    </tr>
-                  ) : suppressionLogsQuery.data?.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-muted-foreground">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                        Žiadne potlačené správy.
-                      </td>
-                    </tr>
-                  ) : (
-                    suppressionLogsQuery.data?.map((log: any) => (
-                      <tr key={log.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono">
-                          {new Date(log.blockedAt).toLocaleString("sk-SK")}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <Badge variant="secondary" className="text-xs">{log.suppressionReason}</Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-foreground">{log.blockedAction}</div>
-                          {log.channelAttempted && (
-                            <span className="text-[10px] text-muted-foreground uppercase">Kanál: {log.channelAttempted}</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-foreground">{log.clientFirstName} {log.clientLastName}</div>
-                          {log.patientName && (
-                            <div className="text-[10px] text-muted-foreground">Pacient: {log.patientName}</div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          {log.clearedAt ? (
-                            <span className="text-emerald-600 font-medium">Odblokované</span>
-                          ) : (
-                            <span className="text-muted-foreground">Aktívne potlačené</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* Compliance Information Card */}
@@ -1323,10 +1074,11 @@ function MarketingAutomationsContent() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsConnectModalOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setIsConnectModalOpen(false)}>
               {t("common.cancel", "Zrušiť")}
             </Button>
             <Button
+              size="sm"
               disabled={!connectDisplayName.trim() || !connectAccountId.trim() || connectChannelMutation.isPending}
               onClick={() => {
                 connectChannelMutation.mutate({
@@ -1704,17 +1456,23 @@ function MarketingAutomationsContent() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsSimulateModalOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setIsSimulateModalOpen(false)}>
               {t("common.close", "Zavrieť")}
             </Button>
             <Button
+              size="sm"
               disabled={simulateEventMutation.isPending}
               onClick={() => {
                 let parsedPayload = {};
                 try {
                   parsedPayload = JSON.parse(simPayloadText);
                 } catch {
-                  toast.error("Neplatný formát JSON payloadu");
+                  toast.error(
+                    t(
+                      "marketing.automations.invalidJsonPayload",
+                      "Neplatný formát JSON payloadu"
+                    )
+                  );
                   return;
                 }
                 simulateEventMutation.mutate({

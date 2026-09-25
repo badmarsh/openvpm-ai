@@ -9,11 +9,15 @@ import {
   Globe,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { PageSectionHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/common/empty-state";
+import {
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarketingStudioContent } from "./_marketing-studio";
+import { CompetitorsSummary } from "@/components/marketing/competitors-summary";
 import { ContentCalendarTab } from "@/components/marketing/content-calendar-tab";
 import { SocialApprovalQueueTab } from "@/components/marketing/social-approval-queue-tab";
 
@@ -30,26 +34,6 @@ function TabLoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-    </div>
-  );
-}
-
-function CompetitorsTab() {
-  const { t } = useI18n();
-  return (
-    <div className="space-y-6">
-      <PageSectionHeader
-        title={t("marketing.competitors.title", "Konkurencia & Intel")}
-        subtitle={t("marketing.competitors.subtitle", "Monitorovanie konkurenčných aktivít a trhový výskum")}
-      />
-      <EmptyState
-        icon={Globe}
-        title={t("marketing.competitors.emptyTitle", "Monitorovanie konkurencie nie je pripojené")}
-        description={t(
-          "marketing.competitors.emptyDescription",
-          "Žiadne demo kliniky. Pripojte zdroj trhu, keď bude k dispozícii.",
-        )}
-      />
     </div>
   );
 }
@@ -71,26 +55,25 @@ function MarketingStudioInner() {
   }, [activeTab, router]);
 
   return (
-    <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-1 border-b pb-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors",
-              activeTab === tab.id
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-          >
-            <tab.icon className="h-3.5 w-3.5" />
-            {t(tab.labelKey, tab.labelFallback)}
-          </button>
-        ))}
-      </div>
+    <div className={pageShellClass}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as TabId)}
+        className="w-full"
+      >
+        <TabsList className={underlineTabsListClass}>
+          {TABS.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className={underlineTabsTriggerClass}
+            >
+              <tab.icon className="h-4 w-4" />
+              <span>{t(tab.labelKey, tab.labelFallback)}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Tab Content */}
       {activeTab === "overview" && (
@@ -108,7 +91,7 @@ function MarketingStudioInner() {
           <SocialApprovalQueueTab />
         </Suspense>
       )}
-      {activeTab === "competitors" && <CompetitorsTab />}
+      {activeTab === "competitors" && <CompetitorsSummary />}
     </div>
   );
 }

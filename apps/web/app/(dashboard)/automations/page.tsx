@@ -59,6 +59,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { toast } from "sonner";
 import { formatDateTimeToDisplay } from "@/lib/date-display";
 import { ClinicalAutomationsView } from "@/components/automations/clinical-automations-view";
@@ -137,6 +138,8 @@ function AutomationsContent() {
     trpc.extensions.automationJourneys.create.useMutation();
   const updateJourneyMutation =
     trpc.extensions.automationJourneys.update.useMutation();
+  const deleteJourneyMutation =
+    trpc.extensions.automationJourneys.delete.useMutation();
 
   // Rule Builder modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -148,6 +151,10 @@ function AutomationsContent() {
   const [formCapDays, setFormCapDays] = useState(14);
   const [formCapMax, setFormCapMax] = useState(3);
   const [formSteps, setFormSteps] = useState<AutomationJourneyStep[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Computed KPI Metrics
   const activeJourneysCount = useMemo(() => {
@@ -279,6 +286,33 @@ function AutomationsContent() {
         },
         onError: (err) => {
           toast.error(err.message);
+        },
+      },
+    );
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    deleteJourneyMutation.mutate(
+      { id: target.id },
+      {
+        onSuccess: () => {
+          setDeleteTarget(null);
+          utils.extensions.automationJourneys.list.invalidate();
+          toast.success(
+            t(
+              "automations.delete.success",
+              `Cesta „${target.name}“ bola odstránená.`,
+              { name: target.name },
+            ),
+          );
+        },
+        onError: (err) => {
+          toast.error(
+            err.message ||
+              t("automations.delete.error", "Nepodarilo sa odstrániť cestu."),
+          );
         },
       },
     );
@@ -661,6 +695,21 @@ function AutomationsContent() {
                               title={t("automations.table.edit", "Upraviť")}
                             >
                               <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  id: journey.id,
+                                  name: journey.name,
+                                })
+                              }
+                              title={t("automations.table.delete", "Odstrániť")}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>
@@ -1233,6 +1282,26 @@ function AutomationsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete journey confirmation */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        options={{
+          title: t("automations.delete.title", "Odstrániť cestu?"),
+          description: deleteTarget
+            ? t(
+                "automations.delete.description",
+                `Cesta „${deleteTarget.name}“ bude odstránená. Noví klienti sa už nezaradia; prebiehajúce behy dobehnú podľa pripnutej verzie.`,
+                { name: deleteTarget.name },
+              )
+            : "",
+          confirmLabel: t("automations.delete.confirm", "Odstrániť"),
+          cancelLabel: t("automations.builder.cancel", "Zrušiť"),
+          confirmVariant: "destructive",
+        }}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

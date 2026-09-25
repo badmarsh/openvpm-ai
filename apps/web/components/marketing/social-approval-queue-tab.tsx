@@ -20,6 +20,7 @@ import {
   Loader2,
   HeartHandshake,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +38,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import {
+  formatDateToDisplay,
+  formatDateTimeToDisplay,
+} from "@/lib/date-display";
 import {
   VeterinarianReviewModal,
   type ReviewBriefData,
@@ -65,6 +70,9 @@ export function SocialApprovalQueueTab() {
   });
 
   const channelsQuery = trpc.extensions.automationChannels.list.useQuery();
+  const brandKitQuery = trpc.settings.getBrandKit.useQuery();
+  const clinicName = brandKitQuery.data?.clinicName || "";
+  const hashtagLine = (brandKitQuery.data?.defaultHashtags ?? []).join(" ");
 
   const briefs = (briefsQuery.data || []) as ReviewBriefData[];
   const allBriefs = (allBriefsQuery.data || []) as ReviewBriefData[];
@@ -86,11 +94,18 @@ export function SocialApprovalQueueTab() {
     let formattedText = brief.briefText;
 
     if (channel === "instagram") {
-      formattedText = `${brief.briefText}\n\n.\n.\n🐾 #veterinarnaklinika #vetsykora #zdraviezvierat #starostlivostopsa #veterinar #bratislava #prevencia`;
+      formattedText = hashtagLine
+        ? `${brief.briefText}\n\n.\n.\n🐾 ${hashtagLine}`
+        : brief.briefText;
     } else if (channel === "facebook") {
-      formattedText = `${brief.briefText}\n\n📍 Veterinárna klinika MVDr. Martin Sýkora | Objednávky: 0903 949 401`;
+      formattedText = clinicName
+        ? `${brief.briefText}\n\n📍 ${clinicName}`
+        : brief.briefText;
     } else if (channel === "google_business") {
-      formattedText = `${brief.briefText}\n\n📞 Rezervácie a informácie na našej klinike.`;
+      formattedText = `${brief.briefText}\n\n📞 ${t(
+        "marketing.queue.copyGoogleCta",
+        "Rezervácie a informácie na našej klinike."
+      )}`;
     }
 
     navigator.clipboard.writeText(formattedText);
@@ -156,7 +171,7 @@ export function SocialApprovalQueueTab() {
               "Protokol súcitu (Sympathy Gate) aktívny — marketing je izolovaný od zosnulých pacientov."
             )}
           </span>
-          <span className="sm:hidden">Sympathy Gate aktívny</span>
+          <span className="sm:hidden">{t("marketing.queue.sympathyGateShort", "Sympathy Gate aktívny")}</span>
         </div>
       </div>
 
@@ -170,25 +185,49 @@ export function SocialApprovalQueueTab() {
               "Pripojené publikačné kanály"
             )}
           </span>
-          <span className="text-[11px] text-muted-foreground">
-            {t(
-              "marketing.queue.connectedChannelsDesc",
-              "Aktívne OAuth prepojenia na sociálne siete kliniky"
-            )}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-muted-foreground hidden md:inline">
+              {t(
+                "marketing.queue.connectedChannelsDesc",
+                "Aktívne OAuth prepojenia na sociálne siete kliniky"
+              )}
+            </span>
+            <Link href="/marketing/automations?tab=channels">
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
+                <ExternalLink className="h-3 w-3" />
+                {t("marketing.queue.manageChannelsShort", "Spravovať")}
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          {channels.map((channel) => {
+        {channels.length === 0 ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-dashed p-3">
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "marketing.queue.noChannelsDesc",
+                "Zatiaľ nie je pripojený žiadny publikačný kanál. Pripojte Facebook, Instagram alebo Google profil, aby ste mohli publikovať schválený obsah."
+              )}
+            </p>
+            <Link href="/marketing/automations?tab=channels" className="shrink-0">
+              <Button size="sm" variant="outline" className="text-xs gap-1.5">
+                <Share2 className="h-3.5 w-3.5" />
+                {t("marketing.queue.manageChannels", "Pripojiť kanály")}
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            {channels.map((channel) => {
             const isConnected = channel.status === "connected";
             const providerName =
               channel.provider === "google_business"
-                ? "Google Firemný Profil"
+                ? t("marketing.queue.providerGoogle", "Google Firemný Profil")
                 : channel.provider === "facebook"
-                ? "Facebook Stránka"
-                : channel.provider === "instagram"
-                ? "Instagram Feed"
-                : channel.provider;
+                  ? t("marketing.queue.providerFacebook", "Facebook Stránka")
+                  : channel.provider === "instagram"
+                    ? t("marketing.queue.providerInstagram", "Instagram Feed")
+                    : channel.provider;
 
             return (
               <div
@@ -216,8 +255,9 @@ export function SocialApprovalQueueTab() {
                 </Badge>
               </div>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </div>
 
       {/* Status Filter Tabs */}
@@ -465,8 +505,8 @@ export function SocialApprovalQueueTab() {
                           </strong>
                         </span>
                         {brief.reviewedAt && (
-                          <span>
-                            {new Date(brief.reviewedAt).toLocaleString("sk-SK")}
+                          <span className="tabular-nums">
+                            {formatDateTimeToDisplay(brief.reviewedAt)}
                           </span>
                         )}
                       </div>
@@ -480,9 +520,8 @@ export function SocialApprovalQueueTab() {
 
                   {/* Action Buttons Footer */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t">
-                    <span className="text-[11px] text-muted-foreground">
-                      {brief.createdAt &&
-                        new Date(brief.createdAt).toLocaleDateString("sk-SK")}
+                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                      {formatDateToDisplay(brief.createdAt)}
                     </span>
 
                     <div className="flex items-center gap-2">

@@ -80,11 +80,12 @@ function visibleHrefs(role: Role): string[] {
 }
 
 describe("IA-PHASE4-NAV-COUNT: canonical sidebar entries", () => {
-  // Sprint 27 adds the schema-validation console, Sprint 30 the interop bridge.
-  it("exposes exactly 38 canonical entries to an admin", () => {
+  // Sprint 27 adds the schema-validation console, Sprint 30 the interop bridge,
+  // and the marketing/automation wiring pass adds the Vet Intelligence hub.
+  it("exposes exactly 39 canonical entries to an admin", () => {
     const hrefs = visibleHrefs("admin");
-    expect(hrefs).toHaveLength(38);
-    expect(new Set(hrefs).size).toBe(38);
+    expect(hrefs).toHaveLength(39);
+    expect(new Set(hrefs).size).toBe(39);
   });
 
   it("never renders the same href twice for any role", () => {
@@ -97,6 +98,10 @@ describe("IA-PHASE4-NAV-COUNT: canonical sidebar entries", () => {
   });
 
   it("keeps clinical tools away from non-clinical roles", () => {
+    expect(visibleHrefs("admin")).toContain("/vet-intel");
+    expect(visibleHrefs("veterinarian")).toContain("/vet-intel");
+    expect(visibleHrefs("front_desk")).not.toContain("/vet-intel");
+    expect(visibleHrefs("viewer")).not.toContain("/vet-intel");
     expect(visibleHrefs("admin")).toContain("/controlled-substances");
     expect(visibleHrefs("front_desk")).not.toContain("/controlled-substances");
     expect(visibleHrefs("viewer")).not.toContain("/agent");
