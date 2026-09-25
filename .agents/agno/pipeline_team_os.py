@@ -124,9 +124,21 @@ def _resolve_repo_root() -> Path:
 
 
 REPO_ROOT = _resolve_repo_root()
-# pipeline_tools._get_repo_path() číta OPENVPM_REPO_PATH ako prvý kandidát — zjednoťme
-# koreň, aby obe vrstvy (team_os aj tools) čítali ten istý tasks/ adresár.
-os.environ.setdefault("OPENVPM_REPO_PATH", str(REPO_ROOT))
+
+
+def export_repo_root_for_tools() -> None:
+    """Zjednoť koreň repozitára pre obe vrstvy (team_os aj tools).
+
+    `pipeline_tools._get_repo_path()` číta `OPENVPM_REPO_PATH` ako prvého
+    kandidáta, takže jeho nastavením zaručíme, že obe vrstvy čítajú ten istý
+    `tasks/` adresár.
+
+    Zámerne sa NEVOLÁ pri importe modulu: zápis do `os.environ` je procesne
+    globálny a prebil by `REPO_DIR`, ktorý si testy monkeypatchujú na
+    dočasný adresár (`test_pipeline_tools.py`), takže by ich zápisy padali do
+    skutočného repozitára. Volá sa preto až z runtime vstupného bodu.
+    """
+    os.environ.setdefault("OPENVPM_REPO_PATH", str(REPO_ROOT))
 
 # Linux ext4 disk v WSL pre nulové locking problémy SQLite a LanceDB
 WSL_AGNO_TMP = Path("/home/ubuntu/agno/tmp")
@@ -1722,6 +1734,8 @@ agent_os: AgentOS = AgentOS(
 app = agent_os.get_app()
 
 if __name__ == "__main__":
+    # Runtime vstupný bod: až tu zverejníme koreň repozitára pre pipeline_tools.
+    export_repo_root_for_tools()
     agent_os.serve(
         app="pipeline_team_os:app",
         host=os.getenv("OPENVPM_AGENTOS_HOST", "0.0.0.0"),
