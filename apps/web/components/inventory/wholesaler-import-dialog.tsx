@@ -115,6 +115,15 @@ export function WholesalerImportDialog({
 
   const [wholesaler, setWholesaler] = useState<WholesalerChoice>("AUTO");
   const [fileName, setFileName] = useState<string>("");
+  /**
+   * Sprint 27 — PDF invoice import resilience. A failed parse keeps the file
+   * name and the translated reason on screen (toasts disappear) and offers a
+   * one-click retry of exactly the same file.
+   */
+  const [importError, setImportError] = useState<
+    { fileName: string; messageKey: string } | null
+  >(null);
+  const lastFileRef = useRef<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [parsedData, setParsedData] = useState<any | null>(null);
   const [itemStates, setItemStates] = useState<Record<number, ItemReviewState>>({});
@@ -144,8 +153,15 @@ export function WholesalerImportDialog({
     }])));
   };
   const pdfMutation = trpc.extensions.wholesalerImport.parsePdf.useMutation({
-    onSuccess: acceptParsed,
-    onError: err => toast.error(t(importErrorKey(err.message))),
+    onSuccess: (data) => {
+      setImportError(null);
+      acceptParsed(data);
+    },
+    onError: (err) => {
+      const messageKey = importErrorKey(err.message);
+      setImportError({ fileName: lastFileRef.current?.name ?? fileName, messageKey });
+      toast.error(t(messageKey));
+    },
   });
   const parseMutation = trpc.extensions.wholesalerImport.parse.useMutation({
     onSuccess: (data) => {
@@ -159,6 +175,7 @@ export function WholesalerImportDialog({
         };
       });
       setItemStates(initial);
+      setImportError(null);
       toast.success(
         t(
           "inventory.wholesalerImport.parseSuccess",
@@ -168,9 +185,9 @@ export function WholesalerImportDialog({
       );
     },
     onError: (err) => {
-      toast.error(
-        t(importErrorKey(err.message))
-      );
+      const messageKey = importErrorKey(err.message);
+      setImportError({ fileName: lastFileRef.current?.name ?? fileName, messageKey });
+      toast.error(t(messageKey));
     },
   });
 
@@ -201,6 +218,8 @@ export function WholesalerImportDialog({
 
   const handleReset = () => {
     setFileName("");
+    setImportError(null);
+    lastFileRef.current = null;
     setDragActive(false);
     setParsedData(null);
     setItemStates({});
@@ -212,9 +231,17 @@ export function WholesalerImportDialog({
 
   const readFile = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
+      lastFileRef.current = file;
+      setFileName(file.name);
+      setImportError({
+        fileName: file.name,
+        messageKey: "inventory.wholesalerImport.errors.tooLarge",
+      });
       toast.error(t("inventory.wholesalerImport.errors.tooLarge")); return;
     }
     if (parseMutation.isPending || pdfMutation.isPending) return;
+    lastFileRef.current = file;
+    setImportError(null);
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -228,7 +255,13 @@ export function WholesalerImportDialog({
         wholesaler: wholesaler === "AUTO" ? undefined : wholesaler,
       });
     };
-    reader.onerror = () => toast.error(t("inventory.wholesalerImport.parseError"));
+    reader.onerror = () => {
+      setImportError({
+        fileName: file.name,
+        messageKey: "inventory.wholesalerImport.parseError",
+      });
+      toast.error(t("inventory.wholesalerImport.parseError"));
+    };
     if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") reader.readAsDataURL(file);
     else reader.readAsText(file);
   };
@@ -236,6 +269,14 @@ export function WholesalerImportDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) readFile(file);
+  };
+
+  /** Re-parse the last selected file without asking the user to pick it again. */
+  const retryImport = () => {
+    const file = lastFileRef.current;
+    if (!file || parseMutation.isPending || pdfMutation.isPending) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    readFile(file);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -445,6 +486,43 @@ export function WholesalerImportDialog({
                   </div>
                 )}
               </div>
+
+              {importError && (
+                <div
+                  role="alert"
+                  className="flex flex-col gap-2 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <div>
+                      <p className="font-medium">
+                        {t(
+                          "inventory.wholesalerImport.importFailedTitle",
+                          "Import zlyhal"
+                        )}
+                      </p>
+                      <p className="font-mono text-xs break-all">
+                        {importError.fileName}
+                      </p>
+                      <p className="text-xs">{t(importError.messageKey)}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={retryImport}
+                    disabled={
+                      !lastFileRef.current ||
+                      parseMutation.isPending ||
+                      pdfMutation.isPending
+                    }
+                  >
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                    {t("inventory.wholesalerImport.retryImport", "Skúsiť znova")}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

@@ -676,6 +676,45 @@
       "today": "In clinic today",
       "unfinishedRecords": "Unfinished records",
       "vaccinesExpiring": "Vaccinations due or expiring"
+    },
+    "kpi": {
+      "activeSessions": "Active sessions",
+      "completedToday": "Completed today",
+      "avgResponseTime": "Avg response time",
+      "soapDraftsPending": "SOAP drafts pending"
+    },
+    "subagents": {
+      "title": "AI Sub-Agents",
+      "voiceTitle": "Voice Scribe",
+      "voiceDesc": "Real-time clinical audio dictation and ambient exam transcription into structured SOAP records.",
+      "imagingTitle": "Diagnostic Imaging",
+      "imagingDesc": "Radiology, ultrasound, CT, and MRI multi-modal analysis with automated VHS calculation.",
+      "dischargeTitle": "Discharge Companion",
+      "dischargeDesc": "Automated discharge letters, home care medication schedules, and client communication.",
+      "statusLive": "Live",
+      "statusStandby": "Standby",
+      "openAgent": "Open Agent"
+    },
+    "advisory": {
+      "banner": "All AI agent outputs are advisory and require clinical review and confirmation by a licensed veterinarian before clinical use (Act No. 39/2007 Coll.)."
+    },
+    "recentSessions": {
+      "title": "Recent AI Sessions",
+      "colId": "Session ID",
+      "colType": "Type",
+      "colDuration": "Duration",
+      "colStatus": "Status",
+      "colTimestamp": "Created",
+      "colAction": "Action",
+      "statusDraft": "Draft",
+      "statusConfirmed": "Confirmed",
+      "statusExpired": "Expired",
+      "emptyTitle": "No recent AI sessions",
+      "emptyDescription": "AI agent sessions will appear here as dictations, imaging analyses, and consultations occur.",
+      "typeVoice": "Voice Scribe",
+      "typeImaging": "Imaging AI",
+      "typeDischarge": "Discharge",
+      "typeChat": "Copilot Chat"
     }
   },
   "ai": {
@@ -2180,7 +2219,8 @@
     },
     "tabs": {
       "products": "Products",
-      "suppliers": "Suppliers"
+      "suppliers": "Suppliers",
+      "controlled": "Controlled audit trail"
     },
     "table": {
       "colName": "Name",
@@ -2322,7 +2362,9 @@
       "linkManualEntry": "Confirm manual receipt and close review",
       "reviewLinkError": "The entry must be your manual receipt for the same drug. Check the entry ID and drug name.",
       "reviewLoadError": "Could not load pending reviews. Retry before recording receipts.",
-      "activeSubstance": "Active substance (optional)"
+      "activeSubstance": "Active substance (optional)",
+      "importFailedTitle": "Import failed",
+      "retryImport": "Retry import"
     },
     "markup": {
       "label": "Markup on cost (%)",
@@ -2332,6 +2374,34 @@
     },
     "actions": {
       "saveProduct": "Save product"
+    },
+    "kpi": {
+      "totalSkus": "Total SKUs",
+      "lowStock": "Low stock",
+      "expiringSoon": "Expiring soon",
+      "expiredHint": "{count} expired",
+      "controlled": "Controlled substances",
+      "controlledHint": "Ledger is manual only"
+    },
+    "expiry": {
+      "expiredDays": "Expired {days} d ago",
+      "expiresInDays": "Expires in {days} d"
+    },
+    "controlled": {
+      "badge": "Controlled",
+      "badgeTitle": "Controlled substance — manual ledger only",
+      "searchPlaceholder": "Search drug, lot or patient...",
+      "readOnlyNotice": "Read-only view. Record movements on the controlled substances page.",
+      "loadError": "Unable to load the controlled substance audit trail. Please retry.",
+      "loading": "Loading...",
+      "colPerformedAt": "Date",
+      "colDrug": "Substance",
+      "colAction": "Movement",
+      "colQuantity": "Quantity",
+      "colPerformer": "Performed by",
+      "colWitness": "Witness",
+      "emptyTitle": "No controlled substance movements",
+      "emptyDesc": "Receipts, administrations, wastage and returns of narcotics appear here once they are logged with a witness."
     }
   },
   "labResults": {

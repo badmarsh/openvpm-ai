@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -20,10 +22,35 @@ import {
   Wrench,
   HelpCircle,
   ArrowUp,
+  Activity,
+  CheckCircle2,
+  Clock,
+  FileCheck2,
+  Mic,
+  ScanLine,
+  Send,
+  ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
-import { PageHeader } from "@/components/layout/page-header";
+import { cn } from "@/lib/utils";
+import {
+  PageHeader,
+  pageShellClass,
+  PageToolbar,
+  SearchField,
+  DataTableFrame,
+  KpiGrid,
+  KpiCard,
+  filterControlClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+  tableHeadClass,
+  tableCellClass,
+  tableRowClass,
+  EmptyState,
+} from "@/components/layout/page-kit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,8 +60,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmptyState } from "@/components/common/empty-state";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  StatusPulseBadge,
+  type StatusPulseVariant,
+} from "@/components/ui/status-pulse-badge";
 import {
   emitGuideSignal,
   GUIDE_SIGNALS,
@@ -76,6 +106,16 @@ const SUGGESTIONS = [
     fallback: "Pull a clinical summary for the next patient checked in.",
   },
 ] as const;
+
+type MockSessionItem = {
+  id: string;
+  type: "voice" | "imaging" | "discharge" | "chat";
+  title: string;
+  duration: string;
+  status: "draft" | "confirmed" | "expired";
+  createdAt: string;
+  href: string;
+};
 
 export default function AgentPage() {
   const router = useRouter();
@@ -129,6 +169,9 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
   const [deepThinking, setDeepThinking] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [dateLabel, setDateLabel] = useState("");
+  const [sessionSearch, setSessionSearch] = useState("");
+  const [sessionStatusFilter, setSessionStatusFilter] = useState<string>("all");
+  const [sessionTypeFilter, setSessionTypeFilter] = useState<string>("all");
   const idRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -408,39 +451,261 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
     </div>
   ) : null;
 
+  // Recent AI sessions dataset (Voice, Imaging, Discharge, Chat)
+  const recentSessions: MockSessionItem[] = useMemo(() => [
+    {
+      id: "ses-vce-8912",
+      type: "voice",
+      title: "Bella (Labrador Retriever) — Anamnéza & SOAP",
+      duration: "1m 42s",
+      status: "confirmed",
+      createdAt: "Dnes, 09:15",
+      href: "/agent/voice",
+    },
+    {
+      id: "ses-img-4321",
+      type: "imaging",
+      title: "Luna (Európska krátkosrstá) — RTG Thorax VHS",
+      duration: "4.2s",
+      status: "confirmed",
+      createdAt: "Dnes, 08:50",
+      href: "/agent/imaging",
+    },
+    {
+      id: "ses-dis-1098",
+      type: "discharge",
+      title: "Max (Nemecký ovčiak) — Prepúšťacia správa po operácii",
+      duration: "2.1s",
+      status: "draft",
+      createdAt: "Dnes, 08:20",
+      href: "/agent/discharge",
+    },
+    {
+      id: "ses-vce-8905",
+      type: "voice",
+      title: "Rocky (Bordeauxská doga) — Kontrola po ortopédii",
+      duration: "3m 15s",
+      status: "draft",
+      createdAt: "Dnes, 07:45",
+      href: "/agent/voice",
+    },
+    {
+      id: "ses-cht-7741",
+      type: "chat",
+      title: "Konzílium — Výpočet dávky karprofénu & NSAID interakcie",
+      duration: "1.8s",
+      status: "confirmed",
+      createdAt: "Včera, 16:30",
+      href: "/agent",
+    },
+    {
+      id: "ses-img-4319",
+      type: "imaging",
+      title: "Milo (Bígl) — Abdominálny ultrazvuk (AFAST)",
+      duration: "6.5s",
+      status: "expired",
+      createdAt: "Včera, 14:10",
+      href: "/agent/imaging",
+    },
+  ], []);
+
+  const filteredRecentSessions = useMemo(() => {
+    return recentSessions.filter((s) => {
+      const matchesSearch =
+        !sessionSearch ||
+        s.title.toLowerCase().includes(sessionSearch.toLowerCase()) ||
+        s.id.toLowerCase().includes(sessionSearch.toLowerCase());
+
+      const matchesStatus =
+        sessionStatusFilter === "all" || s.status === sessionStatusFilter;
+
+      const matchesType =
+        sessionTypeFilter === "all" || s.type === sessionTypeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [recentSessions, sessionSearch, sessionStatusFilter, sessionTypeFilter]);
+
+  const subAgents = [
+    {
+      id: "voice",
+      href: "/agent/voice",
+      title: t("agent.subagents.voiceTitle", "Hlasový prepis"),
+      desc: t(
+        "agent.subagents.voiceDesc",
+        "Hlasové diktovanie v reálnom čase a ambientný prepis vyšetrenia do štruktúrovaných SOAP záznamov.",
+      ),
+      icon: Mic,
+      statusVariant: "online" as StatusPulseVariant,
+      statusLabel: t("agent.subagents.statusLive", "Aktívny"),
+      badge: "Gemini 2.5 STT",
+    },
+    {
+      id: "imaging",
+      href: "/agent/imaging",
+      title: t("agent.subagents.imagingTitle", "Diagnostické zobrazovanie"),
+      desc: t(
+        "agent.subagents.imagingDesc",
+        "Multimodálna analýza RTG, sono, CT a MRI snímok s automatickým výpočtom VHS.",
+      ),
+      icon: ScanLine,
+      statusVariant: "online" as StatusPulseVariant,
+      statusLabel: t("agent.subagents.statusLive", "Aktívny"),
+      badge: "Vision VL",
+    },
+    {
+      id: "discharge",
+      href: "/agent/discharge",
+      title: t("agent.subagents.dischargeTitle", "Prepúšťací asistent"),
+      desc: t(
+        "agent.subagents.dischargeDesc",
+        "Generovanie prepúšťacích správ, rozpisu domácej medikácie a komunikácie pre majiteľov.",
+      ),
+      icon: Send,
+      statusVariant: "online" as StatusPulseVariant,
+      statusLabel: t("agent.subagents.statusLive", "Aktívny"),
+      badge: "Sympathy Gate",
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="border-b border-border pb-4">
-        <PageHeader
-          title={
-            <span className="flex items-center gap-2">
-              {t("agent.title", "AI Asistent")}
-              <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
-                <Sparkles className="h-3 w-3" />
-                {t("agent.badge", "Klinický AI Copilot")}
-              </Badge>
-            </span>
-          }
-          subtitle={t(
-            "agent.subtitle",
-            "Ask about your clinic. It can look things up and, with your okay, do the work.",
+    <div className={pageShellClass}>
+      {/* 1. PageHeader with icon=Bot and AI BETA badge */}
+      <PageHeader
+        icon={Bot}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            {t("agent.title", "AI Asistent")}
+            <Badge
+              variant="secondary"
+              className="gap-1 bg-primary/10 text-primary border-primary/20 font-semibold"
+            >
+              <Sparkles className="h-3 w-3" />
+              AI BETA
+            </Badge>
+          </span>
+        }
+        subtitle={t(
+          "agent.subtitle",
+          "Ask about your clinic. It can look things up and, with your okay, do the work.",
+        )}
+        actions={
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "chat" | "capabilities")}
+          >
+            <TabsList className={underlineTabsListClass}>
+              <TabsTrigger value="chat" className={cn(underlineTabsTriggerClass, "gap-1.5")}>
+                <Bot className="h-4 w-4" />
+                {t("agent.tabs.chat", "Asistent")}
+              </TabsTrigger>
+              <TabsTrigger value="capabilities" className={cn(underlineTabsTriggerClass, "gap-1.5")}>
+                <Sparkles className="h-4 w-4" />
+                {t("agent.tabs.capabilities", "Schopnosti")}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
+      />
+
+      {/* 2. Advisory banner: all AI outputs require vet confirmation before clinical use */}
+      <div
+        role="alert"
+        className="flex items-center gap-3 rounded-lg border border-amber-200/80 bg-amber-50/70 p-3.5 text-xs text-amber-900 shadow-xs dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200"
+      >
+        <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        <span className="leading-relaxed">
+          {t(
+            "agent.advisory.banner",
+            "Všetky výstupy AI agentov majú odporúčací charakter a vyžadujú kontrolu a schválenie licencovaným veterinárnym lekárom pred klinickým použitím (Zákon č. 39/2007 Z. z.).",
           )}
-          actions={
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "chat" | "capabilities")}>
-              <TabsList className="grid grid-cols-2 w-[280px]">
-                <TabsTrigger value="chat" className="gap-1.5">
-                  <Bot className="h-4 w-4" />
-                  {t("agent.tabs.chat", "Asistent")}
-                </TabsTrigger>
-                <TabsTrigger value="capabilities" className="gap-1.5">
-                  <Sparkles className="h-4 w-4" />
-                  {t("agent.tabs.capabilities", "Schopnosti")}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          }
+        </span>
+      </div>
+
+      {/* 3. KpiGrid: active sessions, completed today, avg response time, SOAP drafts pending */}
+      <KpiGrid>
+        <KpiCard
+          icon={Activity}
+          label={t("agent.kpi.activeSessions", "Aktívne relácie")}
+          value="4"
+          tone="primary"
         />
+        <KpiCard
+          icon={CheckCircle2}
+          label={t("agent.kpi.completedToday", "Dnes dokončené")}
+          value="18"
+          tone="primary"
+        />
+        <KpiCard
+          icon={Clock}
+          label={t("agent.kpi.avgResponseTime", "Priemerná odozva")}
+          value="1.8s"
+        />
+        <KpiCard
+          icon={FileCheck2}
+          label={t("agent.kpi.soapDraftsPending", "Čakajúce SOAP koncepty")}
+          value="2"
+          tone="warning"
+        />
+      </KpiGrid>
+
+      {/* 4. Navigation cards to Voice / Imaging / Discharge with live status indicators */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">
+          {t("agent.subagents.title", "Špecializovaní AI agenti")}
+        </h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {subAgents.map((ag) => {
+            const Icon = ag.icon;
+            return (
+              <Card
+                key={ag.id}
+                className="group relative flex flex-col justify-between border-border transition-all hover:border-primary/40 hover:shadow-xs"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold text-foreground">
+                          {ag.title}
+                        </CardTitle>
+                        <Badge
+                          variant="outline"
+                          className="mt-0.5 text-[10px] font-mono"
+                        >
+                          {ag.badge}
+                        </Badge>
+                      </div>
+                    </div>
+                    <StatusPulseBadge
+                      variant={ag.statusVariant}
+                      label={ag.statusLabel}
+                      size="sm"
+                    />
+                  </div>
+                  <CardDescription className="pt-2 text-xs leading-relaxed text-muted-foreground">
+                    {ag.desc}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 flex justify-end">
+                  <Link href={ag.href} className="w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-1.5 text-xs group-hover:border-primary/40 group-hover:text-primary"
+                    >
+                      <span>{t("agent.subagents.openAgent", "Otvoriť agenta")}</span>
+                      <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {activeTab === "capabilities" ? (
@@ -803,6 +1068,171 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </div>
       )}
+
+      {/* 6. DataTableFrame: recent AI sessions (type badge, duration, status draft/confirmed/expired) */}
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              {t("agent.recentSessions.title", "Nedávne AI relácie")}
+            </h2>
+          </div>
+
+          <PageToolbar>
+            <SearchField
+              value={sessionSearch}
+              onChange={setSessionSearch}
+              placeholder={t("agent.recentSessions.title", "Hľadať v reláciách...")}
+              className="max-w-xs"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={sessionTypeFilter}
+                onChange={(e) => setSessionTypeFilter(e.target.value)}
+                className={filterControlClass}
+                aria-label={t("agent.recentSessions.colType", "Typ")}
+              >
+                <option value="all">{t("common.all", "Všetky typy")}</option>
+                <option value="voice">{t("agent.recentSessions.typeVoice", "Hlasový prepis")}</option>
+                <option value="imaging">{t("agent.recentSessions.typeImaging", "Rádiológia AI")}</option>
+                <option value="discharge">{t("agent.recentSessions.typeDischarge", "Prepúšťacia správa")}</option>
+                <option value="chat">{t("agent.recentSessions.typeChat", "Kopilot asistent")}</option>
+              </select>
+
+              <select
+                value={sessionStatusFilter}
+                onChange={(e) => setSessionStatusFilter(e.target.value)}
+                className={filterControlClass}
+                aria-label={t("agent.recentSessions.colStatus", "Stav")}
+              >
+                <option value="all">{t("common.all", "Všetky stavy")}</option>
+                <option value="confirmed">{t("agent.recentSessions.statusConfirmed", "Potvrdené")}</option>
+                <option value="draft">{t("agent.recentSessions.statusDraft", "Koncept")}</option>
+                <option value="expired">{t("agent.recentSessions.statusExpired", "Expirované")}</option>
+              </select>
+            </div>
+          </PageToolbar>
+        </div>
+
+        {filteredRecentSessions.length === 0 ? (
+          <EmptyState
+            icon={Bot}
+            title={t("agent.recentSessions.emptyTitle", "Žiadne nedávne AI relácie")}
+            description={t(
+              "agent.recentSessions.emptyDescription",
+              "Relácie AI agentov sa zobrazia tu po uskutočnení diktátov, analýz snímok alebo konzultácií.",
+            )}
+          />
+        ) : (
+          <DataTableFrame>
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className={tableHeadClass}>
+                    {t("agent.recentSessions.colId", "ID relácie")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("agent.recentSessions.colType", "Typ")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    Popis & Nález
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("agent.recentSessions.colDuration", "Trvanie")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("agent.recentSessions.colStatus", "Stav")}
+                  </th>
+                  <th className={tableHeadClass}>
+                    {t("agent.recentSessions.colTimestamp", "Vytvorené")}
+                  </th>
+                  <th className={cn(tableHeadClass, "text-right")}>
+                    {t("agent.recentSessions.colAction", "Akcia")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecentSessions.map((item) => {
+                  const typeLabel =
+                    item.type === "voice"
+                      ? t("agent.recentSessions.typeVoice", "Hlasový prepis")
+                      : item.type === "imaging"
+                        ? t("agent.recentSessions.typeImaging", "Rádiológia AI")
+                        : item.type === "discharge"
+                          ? t("agent.recentSessions.typeDischarge", "Prepúšťacia správa")
+                          : t("agent.recentSessions.typeChat", "Kopilot asistent");
+
+                  const statusPulseVariant: StatusPulseVariant =
+                    item.status === "confirmed"
+                      ? "confirmed"
+                      : item.status === "draft"
+                        ? "pending"
+                        : "failed";
+
+                  const statusLabel =
+                    item.status === "confirmed"
+                      ? t("agent.recentSessions.statusConfirmed", "Potvrdené")
+                      : item.status === "draft"
+                        ? t("agent.recentSessions.statusDraft", "Koncept")
+                        : t("agent.recentSessions.statusExpired", "Expirované");
+
+                  return (
+                    <tr
+                      key={item.id}
+                      onClick={() => router.push(item.href)}
+                      className={cn(tableRowClass, "cursor-pointer")}
+                    >
+                      <td className={cn(tableCellClass, "font-mono font-medium text-foreground")}>
+                        {item.id}
+                      </td>
+                      <td className={tableCellClass}>
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-[10px] font-medium",
+                            item.type === "voice" && "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
+                            item.type === "imaging" && "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+                            item.type === "discharge" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+                            item.type === "chat" && "bg-primary/10 text-primary border-primary/20",
+                          )}
+                        >
+                          {typeLabel}
+                        </Badge>
+                      </td>
+                      <td className={cn(tableCellClass, "font-medium text-foreground max-w-xs truncate")}>
+                        {item.title}
+                      </td>
+                      <td className={cn(tableCellClass, "font-mono tabular-nums text-muted-foreground")}>
+                        {item.duration}
+                      </td>
+                      <td className={tableCellClass}>
+                        <StatusPulseBadge
+                          variant={statusPulseVariant}
+                          label={statusLabel}
+                          size="sm"
+                        />
+                      </td>
+                      <td className={cn(tableCellClass, "text-muted-foreground")}>
+                        {item.createdAt}
+                      </td>
+                      <td className={cn(tableCellClass, "text-right")}>
+                        <Link
+                          href={item.href}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </DataTableFrame>
+        )}
+      </div>
     </div>
   );
 }
