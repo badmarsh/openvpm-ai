@@ -214,7 +214,9 @@ describe("dashboard list empty/error states", () => {
     const component = source("components/common/empty-state.tsx");
 
     expect(component).toContain("icon?: LucideIcon");
-    expect(component).toContain("const ActionIcon = action?.icon");
+    // `action` may also be a custom ReactNode, so the icon is read off the
+    // narrowed action object rather than the union.
+    expect(component).toContain("const ActionIcon = actionObj?.icon");
     expect(component).toContain("<ActionIcon");
   });
 });

@@ -154,7 +154,11 @@ function stubHostedRequiredEnvs() {
   vi.stubEnv("EMAIL_PREFERENCE_BASE_URL", "https://app.openvpm.com");
   vi.stubEnv("EMAIL_SUPPORT_ADDRESS", "support@openvpm.com");
   vi.stubEnv("EMAIL_COMPANY_ADDRESS", "123 Cloud Lane, Boston, MA");
-  vi.stubEnv("AI_MODEL", "gemini-3.5-flash");
+  // The default model is qwen-max, which is served only by the inference proxy,
+  // so hosted AI readiness is satisfied by AT_PROXY_URL rather than by a
+  // Vertex/Anthropic env boundary. The Gemini/Claude env names are still stubbed
+  // because the response must never leak them.
+  vi.stubEnv("AT_PROXY_URL", "https://ai-proxy.example/v1");
   vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
   vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
   vi.stubEnv("GCP_PROJECT_NUMBER", "123456789012");
@@ -459,7 +463,7 @@ describe("health route", () => {
       detail: "Hosted subscription tax is not enabled",
     });
     expect(json.checks.hostedAi.detail).toMatch(
-      /^(?:\d+ required hosted configuration values? (?:are missing|is missing)|Hosted (?:Vertex AI|Anthropic) envs present)$/,
+      /^(?:\d+ required hosted configuration values? (?:are missing|is missing)|Hosted (?:Vertex AI|Anthropic) envs present|Hosted AI via AT inference proxy \(AT_PROXY_URL set\)|Hosted AI model "[a-z0-9.-]+" requires the inference proxy \(AT_PROXY_URL or AI_BASE_URL\))$/,
     );
     expect(json.checks.hostedEmail.detail).toMatch(
       /^(?:\d+ required hosted configuration values? (?:are missing|is missing)|Hosted email envs present|Hosted email identity configuration does not match)$/,
@@ -974,9 +978,12 @@ describe("health route", () => {
     expect(body).not.toContain("123 Cloud Lane");
   });
 
-  it("ignores blank AI_MODEL values before selecting the hosted Vertex provider", async () => {
+  it("ignores AI_MODEL and AGENT_MODEL when reporting hosted AI readiness", async () => {
     mocks.billingEnforced.mockReturnValue(true);
     stubHostedRequiredEnvs();
+    // Env vars no longer select the model. A blank, the legacy name, or even a
+    // Gemini-shaped value must all leave the proxy-backed default in place
+    // rather than switching the readiness check to the Vertex boundary.
     vi.stubEnv("AI_MODEL", "   ");
     vi.stubEnv("AGENT_MODEL", " google/gemini-3.5-flash ");
     vi.stubEnv("ANTHROPIC_API_KEY", "");
@@ -987,17 +994,21 @@ describe("health route", () => {
     expect(response.status).toBe(200);
     expect(json.checks.hostedAi).toEqual({
       ok: true,
-      detail: "Hosted Vertex AI envs present",
+      detail: "Hosted AI via AT inference proxy (AT_PROXY_URL set)",
     });
     expect(JSON.stringify(json)).not.toContain("ANTHROPIC_API_KEY");
   });
 
-  it("fails closed when any required Vertex workload identity value is blank", async () => {
+  it("fails closed when the default model has no inference proxy", async () => {
     mocks.billingEnforced.mockReturnValue(true);
     stubHostedRequiredEnvs();
-    vi.stubEnv("AI_MODEL", "google/gemini-3.5-flash");
+    // qwen-max is neither Gemini nor Claude: without the proxy no Google or
+    // Anthropic credential can serve it, so readiness must fail closed and name
+    // the actionable cause instead of demanding an unrelated API key.
+    vi.stubEnv("AT_PROXY_URL", "");
+    vi.stubEnv("AI_BASE_URL", "");
     vi.stubEnv("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", "   ");
-    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-configured-but-useless");
 
     const response = await GET();
     const json = await response.json();
@@ -1005,7 +1016,8 @@ describe("health route", () => {
     expect(response.status).toBe(503);
     expect(json.checks.hostedAi).toEqual({
       ok: false,
-      detail: "1 required hosted configuration value is missing",
+      detail:
+        'Hosted AI model "qwen-max" requires the inference proxy (AT_PROXY_URL or AI_BASE_URL)',
     });
     const body = JSON.stringify(json);
     expect(body).not.toContain("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID");

@@ -12,6 +12,8 @@ afterEach(() => {
 });
 
 describe("isAgentConfigured (provider-agnostic)", () => {
+  const GEMINI_MODEL = "google/gemini-3.5-flash";
+
   function stubVertexOidcConfiguration() {
     vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
     vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
@@ -35,36 +37,35 @@ describe("isAgentConfigured (provider-agnostic)", () => {
   }
 
   it("a Gemini model accepts the complete Vertex AI OIDC boundary", () => {
-    vi.stubEnv("AI_MODEL", " gemini-3.5-flash ");
+    vi.stubEnv("AT_PROXY_URL", "");
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test"); // wrong provider's key
-    expect(isAgentConfigured()).toBe(false);
+    // Env no longer selects the model, so the model under test is passed in.
+    expect(isAgentConfigured(GEMINI_MODEL)).toBe(false);
 
     stubVertexOidcConfiguration();
-    expect(isAgentConfigured()).toBe(true);
+    expect(isAgentConfigured(GEMINI_MODEL)).toBe(true);
   });
 
   it("keeps a complete service account boundary for non-Vercel self-hosting", () => {
-    vi.stubEnv("AI_MODEL", "gemini-3.5-flash");
+    vi.stubEnv("AT_PROXY_URL", "");
     stubVertexServiceAccountConfiguration();
-    expect(isAgentConfigured()).toBe(true);
+    expect(isAgentConfigured(GEMINI_MODEL)).toBe(true);
   });
 
-  it("names Vertex AI in the not-configured error", () => {
-    expect(new AgentNotConfiguredError().message).toContain(
-      "Google Vertex AI for Gemini",
-    );
+  it("names every provider boundary in the not-configured error", () => {
+    const message = new AgentNotConfiguredError().message;
+    expect(message).toContain("AT_PROXY_URL");
+    expect(message).toContain("Google Vertex AI");
+    expect(message).toContain("ANTHROPIC_API_KEY");
   });
 
-  it("the default Gemini model requires a complete Vertex boundary even when an Anthropic key is present", () => {
-    // Since the AT-proxy migration the env no longer selects the model:
-    // activeModelId() resolves the default Gemini model (or a DB-driven
-    // override), so the env-based configuration check validates the Vertex
-    // boundary for the default model. An Anthropic key alone cannot satisfy it.
+  it("a Gemini model requires a complete Vertex boundary even when an Anthropic key is present", () => {
+    vi.stubEnv("AT_PROXY_URL", "");
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    expect(isAgentConfigured()).toBe(false);
+    expect(isAgentConfigured(GEMINI_MODEL)).toBe(false);
 
     stubVertexOidcConfiguration();
-    expect(isAgentConfigured()).toBe(true);
+    expect(isAgentConfigured(GEMINI_MODEL)).toBe(true);
   });
 
   it("a blank Anthropic key alone is never a complete boundary", () => {
@@ -72,21 +73,33 @@ describe("isAgentConfigured (provider-agnostic)", () => {
     expect(isAgentConfigured()).toBe(false);
   });
 
-  it("defaults to Gemini on Vertex when AI_MODEL/AGENT_MODEL are blank", () => {
-    vi.stubEnv("AI_MODEL", " ");
-    vi.stubEnv("AGENT_MODEL", "   ");
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    expect(isAgentConfigured()).toBe(false);
+  it("ignores AI_MODEL/AGENT_MODEL and resolves the proxy-served default", () => {
+    // Env vars no longer select the model: the default qwen-max is served only
+    // by the inference proxy, so a Vertex or Anthropic boundary must not make it
+    // look configured.
+    vi.stubEnv("AI_MODEL", "google/gemini-3.5-flash");
+    vi.stubEnv("AGENT_MODEL", " google/gemini-3.5-flash ");
     stubVertexOidcConfiguration();
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    vi.stubEnv("AT_PROXY_URL", "");
+    expect(isAgentConfigured()).toBe(false);
+
+    vi.stubEnv("AT_PROXY_URL", "https://ai-proxy.example/v1");
     expect(isAgentConfigured()).toBe(true);
   });
 
-  it("trims the legacy AGENT_MODEL fallback before choosing the provider", () => {
-    vi.stubEnv("AI_MODEL", "");
-    vi.stubEnv("AGENT_MODEL", " google/gemini-3.5-flash ");
-    stubVertexOidcConfiguration();
+  it("never routes a non-Claude model to the Anthropic boundary", () => {
+    // The trap this guards: "not Gemini" used to mean "Anthropic", so qwen-max
+    // was reported configured whenever an Anthropic key happened to be set and
+    // then sent to api.anthropic.com.
+    vi.stubEnv("AT_PROXY_URL", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    expect(isAgentConfigured("qwen-max")).toBe(false);
+
+    // A real Claude id does take the Anthropic boundary.
+    expect(isAgentConfigured("claude-sonnet-4-5")).toBe(true);
     vi.stubEnv("ANTHROPIC_API_KEY", "");
-    expect(isAgentConfigured()).toBe(true);
+    expect(isAgentConfigured("claude-sonnet-4-5")).toBe(false);
   });
 
   it("rethrows stale-practice tool failures instead of returning them to the model", () => {
