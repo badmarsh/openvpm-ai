@@ -9876,5 +9876,25 @@
     "legal": {
       "note": "Omamné a psychotropné látky sa evidujú v Knihe OPL podľa zákona č. 139/1998 Z. z."
     }
+  },
+  "vpmContext": {
+    "title": "VPM klinický kontext",
+    "gates": {
+      "clinicianConfirmationRequired": "Veterinárny lekár musí potvrdiť AI obsah pred zápisom do zdravotného záznamu.",
+      "aiRemainsDraft": "AI návrh ostáva v stave koncept, kým ho nepodpíše veterinárny lekár.",
+      "controlledSubstanceZeroPrefill": "Zistená omamná látka — AI predvyplnenie je zablokované. Zadajte ručne (ShieldAlert).",
+      "sympathyOutreachSuppressed": "Pacient je uhynutý — automatické pripomienky a marketing sú potlačené.",
+      "manualEntryRequired": "Vyžaduje sa ručný zápis",
+      "draftBadge": "AI koncept",
+      "awaitingSignature": "Čaká sa na podpis veterinárneho lekára"
+    },
+    "sympathy": {
+      "bannerTitle": "Sympathy gate aktívny",
+      "bannerBody": "Automatické oslovovanie majiteľa je pozastavené z úcty k situácii."
+    },
+    "controlled": {
+      "shieldTitle": "Omamná látka",
+      "shieldBody": "Ketamín, opioidy a propofol nemôže AI predvyplniť. Zapisujte ich ručne a so svedkom, ak to zákon vyžaduje."
+    }
   }
 }

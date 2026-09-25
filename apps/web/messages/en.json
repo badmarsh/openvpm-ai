@@ -9876,5 +9876,25 @@
     "legal": {
       "note": "Narcotic and psychotropic substances are recorded in the Controlled Substances Ledger under Act No. 139/1998 Coll."
     }
+  },
+  "vpmContext": {
+    "title": "VPM clinical context",
+    "gates": {
+      "clinicianConfirmationRequired": "A veterinarian must confirm AI content before it becomes part of the medical record.",
+      "aiRemainsDraft": "AI suggestion stays in draft until signed by a veterinarian.",
+      "controlledSubstanceZeroPrefill": "Controlled substance detected — AI prefill is blocked. Enter manually (ShieldAlert).",
+      "sympathyOutreachSuppressed": "Patient is deceased — automated reminders and marketing are suppressed.",
+      "manualEntryRequired": "Manual entry required",
+      "draftBadge": "AI draft",
+      "awaitingSignature": "Awaiting veterinarian signature"
+    },
+    "sympathy": {
+      "bannerTitle": "Sympathy gate active",
+      "bannerBody": "Automated outreach is paused for this patient out of respect for the owner."
+    },
+    "controlled": {
+      "shieldTitle": "Controlled substance",
+      "shieldBody": "Ketamine, opioids, and propofol cannot be prefilled by AI. Record them manually with a witness when required."
+    }
   }
 }
