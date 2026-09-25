@@ -49,7 +49,12 @@
  *   pnpm db:seed
  */
 import { config } from "dotenv";
+// Root .env provides defaults for tooling keys that predate the dual-env layout.
 config({ path: "../../.env" });
+// apps/web/.env is authoritative for DATABASE_URL (Next.js loads it from there).
+// `override: true` ensures the file value wins over a stale process-env
+// DATABASE_URL that may point at the wrong port / database name.
+config({ path: "../../apps/web/.env", override: true });
 
 import { spawnSync } from "node:child_process";
 import {
@@ -642,4 +647,12 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => fail((err as Error).message));
+main().catch((err) => {
+  const e = err as { message?: string; code?: string; cause?: Error };
+  const msg =
+    e?.message ||
+    e?.cause?.message ||
+    (typeof err === "string" ? err : JSON.stringify(err)) ||
+    "unknown error";
+  fail(msg);
+});
