@@ -8753,7 +8753,8 @@
       "unassignedVisit": "Unassigned visit",
       "vaccination": "Vaccination",
       "visitNoteLabel": "Visit note:",
-      "writeSoapNote": "Write SOAP note"
+      "writeSoapNote": "Write SOAP note",
+      "openDischargeAgent": "Open discharge summary (AI Agent)"
     },
     "hub": {
       "title": "Encounters",
@@ -8802,6 +8803,53 @@
       "emptyFilteredDesc": "Adjust or clear the filters to see more encounters.",
       "dueToday": "Due today",
       "overdue": "Overdue"
+    },
+    "tabs": {
+      "soap": "SOAP",
+      "vitals": "Vitals",
+      "medications": "Medications",
+      "attachments": "Attachments",
+      "discharge": "Discharge"
+    },
+    "banner": {
+      "lastVisit": "Last visit",
+      "noChip": "No microchip",
+      "chipLabel": "Chip:",
+      "attachPatient": "Attach patient",
+      "unassigned": "Unassigned patient",
+      "title": "Patient Information"
+    },
+    "aiDraft": {
+      "title": "AI Clinical Assistant (SOAP Draft)",
+      "advisoryBadge": "Advisory only — Act 39/2007 Coll.",
+      "statutoryNote": "AI clinical outputs are strictly advisory. Every entry requires review and authorization by the attending veterinarian via ClinicalDiffConfirmModal.",
+      "generateButton": "Draft SOAP with AI",
+      "generating": "Drafting with AI...",
+      "reviewDiffButton": "Review & Authorize (Diff)",
+      "draftBadge": "AI Draft",
+      "confirmedBadge": "Confirmed & signed by clinician (Act 39/2007 Coll.)",
+      "sourceTitle": "Encounter Clinical Assistant (AI SOAP)",
+      "confirmedSuccessToast": "AI clinical draft confirmed and signed by veterinarian (Act 39/2007 Coll.)",
+      "controlledWarning": "WARNING: Controlled substance detected in plan (Act 139/1998 Coll.). Zero AI prefill enforced for dosing; manual clinician entry required.",
+      "draftSuccess": "AI SOAP draft generated. Review and authorize diff.",
+      "draftError": "Failed to generate AI SOAP draft."
+    },
+    "medicationPlan": {
+      "title": "Medication Plan & Prescriptions",
+      "controlledWarningTitle": "WARNING: Controlled Substances (Act 139/1998 Coll.)",
+      "controlledWarningDescription": "For controlled narcotic and psychotropic substances (opiates, sedatives, ketamine, etc.), automatic AI prefilling of dosages is strictly prohibited. The attending veterinarian must manually specify dosage, route, and administration.",
+      "prescribeButton": "Prescribe medication",
+      "noMedications": "No medications recorded for this visit.",
+      "controlledBadge": "Controlled substance (139/1998)",
+      "dosage": "Dosage",
+      "frequency": "Frequency",
+      "status": "Status",
+      "description": "List of medications and prescriptions bound to this encounter."
+    },
+    "discharge": {
+      "title": "Visit Closeout & Discharge",
+      "agentLink": "Open discharge summary (AI Agent)",
+      "agentDesc": "Generate client-friendly discharge summary, home care instructions, and follow-up guidance in AI Agent."
     }
   },
   "records.labResults.actorUnavailableLegacy": "actor unavailable (legacy)",

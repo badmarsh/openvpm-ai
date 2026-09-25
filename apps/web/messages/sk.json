@@ -8753,7 +8753,8 @@
       "unassignedVisit": "Nepriradená návšteva",
       "vaccination": "Vakcinácia",
       "visitNoteLabel": "Poznámka k návšteve:",
-      "writeSoapNote": "Napísať záznam SOAP"
+      "writeSoapNote": "Napísať záznam SOAP",
+      "openDischargeAgent": "Otvoriť prepúšťaciu správu (AI Agent)"
     },
     "hub": {
       "title": "Vyšetrenia",
@@ -8802,6 +8803,53 @@
       "emptyFilteredDesc": "Upravte alebo zrušte filtre a zobrazíte ďalšie vyšetrenia.",
       "dueToday": "Dnes",
       "overdue": "Omeškané"
+    },
+    "tabs": {
+      "soap": "SOAP",
+      "vitals": "Vitálne",
+      "medications": "Lieky",
+      "attachments": "Prílohy",
+      "discharge": "Prepustenie"
+    },
+    "banner": {
+      "lastVisit": "Posledná návšteva",
+      "noChip": "Bez čipu",
+      "chipLabel": "Čip:",
+      "attachPatient": "Priradiť pacienta",
+      "unassigned": "Nepriradený pacient",
+      "title": "Informácie o pacientovi"
+    },
+    "aiDraft": {
+      "title": "AI Asistent vyšetrenia (SOAP návrh)",
+      "advisoryBadge": "Poradný charakter — Zákon 39/2007 Z. z.",
+      "statutoryNote": "Klinické výstupy AI majú výhradne poradný charakter. Každý záznam vyžaduje odbornú kontrolu a autorizáciu veterinárnym lekárom v ClinicalDiffConfirmModal.",
+      "generateButton": "Vygenerovať AI návrh SOAP",
+      "generating": "Generujem návrh...",
+      "reviewDiffButton": "Skontrolovať a autorizovať (Diff)",
+      "draftBadge": "AI návrh",
+      "confirmedBadge": "Overené a podpísané lekárom (Zákon 39/2007 Z. z.)",
+      "sourceTitle": "Klinický asistent vyšetrenia (AI SOAP)",
+      "confirmedSuccessToast": "Klinický návrh AI bol overený a autorizovaný lekárom (Zákon 39/2007 Z. z.)",
+      "controlledWarning": "UPOZORNENIE: V pláne bola zistená kontrolovaná látka (Zákon 139/1998 Z. z.). Nula AI prefill pre dávkovanie — vyžaduje manuálne zadanie lekárom.",
+      "draftSuccess": "AI návrh SOAP bol vygenerovaný. Skontrolujte a autorizujte diff.",
+      "draftError": "Nepodarilo sa vygenerovať AI návrh SOAP."
+    },
+    "medicationPlan": {
+      "title": "Medikačný plán a predpis liekov",
+      "controlledWarningTitle": "UPOZORNENIE: Kontrolované látky (Zákon 139/1998 Z. z.)",
+      "controlledWarningDescription": "Pre kontrolované omamné a psychotropné látky (opiáty, sedatíva, ketamín atď.) je automatické dopĺňanie dávok pomocou AI zo zákona prísne zakázané. Ošetrujúci veterinárny lekár musí dávkovanie, spôsob podania a spotrebu zadať manuálne.",
+      "prescribeButton": "Predpísať liek",
+      "noMedications": "Pre toto vyšetrenie nie sú evidované žiadne lieky.",
+      "controlledBadge": "Kontrolovaná látka (139/1998)",
+      "dosage": "Dávkovanie",
+      "frequency": "Frekvencia",
+      "status": "Stav",
+      "description": "Zoznam liekov a predpisov viazaných na toto vyšetrenie."
+    },
+    "discharge": {
+      "title": "Ukončenie vyšetrenia a prepustenie",
+      "agentLink": "Otvoriť prepúšťaciu správu (AI Agent)",
+      "agentDesc": "Vygenerujte zrozumiteľnú prepúšťaciu správu pre majiteľa, harmonogram starostlivosti a pokyny v AI Agente."
     }
   },
   "records.labResults.actorUnavailableLegacy": "vykonávateľ nedostupný (starší záznam)",
