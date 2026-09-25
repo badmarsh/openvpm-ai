@@ -30,6 +30,14 @@ export interface RecordingButtonProps {
   onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
   onInterimText?: (text: string) => void;
   onCommandDetected?: (actionKey: string, phrase: string) => void;
+  /**
+   * Persistent microphone failure channel: the parent page renders an
+   * informative alert card (browser permission instructions + retry) next to
+   * the recorder, while this component also shows the transient toast.
+   * `null` is emitted once a recording starts successfully so the page can
+   * clear the alert (e.g. after falling back to the simulated microphone).
+   */
+  onMicError?: (message: string | null) => void;
   disabled?: boolean;
   size?: "default" | "large";
   initialSimulated?: boolean;
@@ -45,6 +53,7 @@ export const RecordingButton = forwardRef<
     onRecordingComplete,
     onInterimText,
     onCommandDetected,
+    onMicError,
     disabled = false,
     size = "default",
     initialSimulated = false,
@@ -65,6 +74,7 @@ export const RecordingButton = forwardRef<
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const activeStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -82,7 +92,9 @@ export const RecordingButton = forwardRef<
 
   const isLarge = size === "large";
 
-  // Cleanup on unmount
+  // Cleanup on unmount — always release the microphone/audio pipeline so the
+  // browser tab never keeps the red recording indicator stuck after the page
+  // navigates away.
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -99,14 +111,52 @@ export const RecordingButton = forwardRef<
           speechRecognizerRef.current.stop();
         } catch {}
       }
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach((trk) => trk.stop());
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") {
+        // Detach the handlers BEFORE stop(): the queued onstop/dataavailable
+        // events must not call onRecordingComplete (setState) on an already
+        // unmounted parent, nor assemble a blob that will never be uploaded.
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        recorder.onerror = null;
+        try {
+          recorder.stop();
+        } catch {}
+      }
+      mediaRecorderRef.current = null;
+      if (activeStreamRef.current) {
+        activeStreamRef.current.getTracks().forEach((trk) => trk.stop());
+        activeStreamRef.current = null;
       }
     };
+  }, []);
+
+  // Background-tab resilience: while the tab is hidden the browser may
+  // suspend the AudioContext (the simulated demo stream flatlines, the
+  // analyser freezes) and throttle rAF entirely. MediaRecorder keeps
+  // capturing, so do NOT stop it — instead resume the suspended pieces as
+  // soon as the tab becomes visible again so encoding cannot hang.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      const ctx = audioContextRef.current;
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      const simCtx = simulatedControllerRef.current?.audioContext;
+      if (simCtx && simCtx.state === "suspended") {
+        simCtx.resume().catch(() => {});
+      }
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state === "paused") {
+        try {
+          recorder.resume();
+        } catch {}
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
   const updateVisualizer = useCallback(() => {
@@ -140,7 +190,9 @@ export const RecordingButton = forwardRef<
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state !== "inactive"
     ) {
-      mediaRecorderRef.current.stop();
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
     }
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -153,6 +205,10 @@ export const RecordingButton = forwardRef<
     if (simulatedControllerRef.current) {
       simulatedControllerRef.current.stop();
       simulatedControllerRef.current = null;
+    }
+    if (analyserRef.current) {
+      analyserRef.current = null;
+      setAudioLevels(new Array(16).fill(5));
     }
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       audioContextRef.current.close().catch(() => {});
@@ -173,6 +229,11 @@ export const RecordingButton = forwardRef<
   const startRecording = useCallback(
     async (options?: { simulated?: boolean }) => {
       const isSim = options?.simulated ?? isSimulatedMode;
+      // Track every acquired resource locally so the catch block can roll
+      // back a partially initialized pipeline (MediaRecorder constructor or
+      // recorder.start() failing AFTER getUserMedia succeeded would otherwise
+      // leak the mic stream and leave the red recording indicator stuck).
+      let acquiredStream: MediaStream | null = null;
 
       try {
         let stream: MediaStream;
@@ -201,6 +262,8 @@ export const RecordingButton = forwardRef<
             },
           });
         }
+        acquiredStream = stream;
+        activeStreamRef.current = stream;
 
         // 1. Audio Context for Visualizer
         try {
@@ -302,11 +365,37 @@ export const RecordingButton = forwardRef<
         });
 
         chunksRef.current = [];
+        // An encoder failure mid-recording must not hang the UI in the
+        // "recording" state or hand the parent a corrupt partial blob
+        // (e.g. truncated WebM cluster after the OS revokes the device).
+        let recorderFailed = false;
+
         recorder.ondataavailable = (e: BlobEvent) => {
           if (e.data.size > 0) chunksRef.current.push(e.data);
         };
 
+        recorder.onerror = () => {
+          recorderFailed = true;
+          stopRecordingRef.current();
+        };
+
         recorder.onstop = () => {
+          if (activeStreamRef.current === stream) {
+            activeStreamRef.current = null;
+          }
+          stream.getTracks().forEach((trk) => trk.stop());
+          if (recorderFailed) {
+            // Discard the truncated recording — never surface a corrupt blob
+            // downstream (it would fail STT with a confusing decoding error).
+            chunksRef.current = [];
+            toast.error(
+              t(
+                "voice.recording.recordingFailed",
+                "Nahrávanie zlyhalo počas zápisu. Čiastočný záznam bol zahodený — skúste diktovať znova.",
+              ),
+            );
+            return;
+          }
           const blob = new Blob(chunksRef.current, {
             type: recorder.mimeType,
           });
@@ -314,7 +403,6 @@ export const RecordingButton = forwardRef<
             1,
             Math.round((Date.now() - startTimeRef.current) / 1000),
           );
-          stream.getTracks().forEach((trk) => trk.stop());
           onRecordingComplete(blob, duration);
         };
 
@@ -324,11 +412,35 @@ export const RecordingButton = forwardRef<
         setElapsed(0);
         setIsRecording(true);
         setInterimTranscript("");
+        // Capture pipeline is live — clear any stale permission alert.
+        onMicError?.(null);
 
         timerRef.current = setInterval(() => {
           setElapsed(Math.round((Date.now() - startTimeRef.current) / 1000));
         }, 1000);
       } catch (err) {
+        // Roll back a partially started pipeline: any resource acquired
+        // before the failure keeps the OS/browser capture alive (stuck red
+        // recording dot) unless explicitly released here.
+        if (acquiredStream) {
+          acquiredStream.getTracks().forEach((trk) => trk.stop());
+          if (activeStreamRef.current === acquiredStream) {
+            activeStreamRef.current = null;
+          }
+        }
+        if (simulatedControllerRef.current) {
+          simulatedControllerRef.current.stop();
+          simulatedControllerRef.current = null;
+        }
+        if (audioContextRef.current) {
+          if (audioContextRef.current.state !== "closed") {
+            audioContextRef.current.close().catch(() => {});
+          }
+          audioContextRef.current = null;
+          analyserRef.current = null;
+        }
+        setIsRecording(false);
+        setIsActivelySimulating(false);
         console.error("Microphone access error:", err);
         let msg = t(
           "voice.recording.micGenericError",
@@ -371,7 +483,10 @@ export const RecordingButton = forwardRef<
           }
         }
 
-        // Show toast with quick fallback to simulated mic for easy testing
+        // Show toast with quick fallback to simulated mic for easy testing,
+        // and surface the failure to the parent so it can render a persistent
+        // alert card with browser permission instructions and a retry action.
+        onMicError?.(msg);
         toast.error(msg, {
           action: {
             label: t("voice.demo.fallbackToSim", "Spustiť simuláciu mikrofónu"),
@@ -391,6 +506,7 @@ export const RecordingButton = forwardRef<
       onRecordingComplete,
       onInterimText,
       onCommandDetected,
+      onMicError,
       updateVisualizer,
       onSimulationModeChange,
       t,
@@ -486,8 +602,8 @@ export const RecordingButton = forwardRef<
                 className={cn(
                   "w-1 rounded-full transition-all duration-75 ease-out",
                   isActivelySimulating
-                    ? "bg-gradient-to-t from-violet-500 to-pink-500"
-                    : "bg-gradient-to-t from-red-500 to-pink-500",
+                    ? "bg-gradient-to-t from-violet-500 to-pink-500 dark:from-violet-400 dark:to-pink-400"
+                    : "bg-gradient-to-t from-red-500 to-pink-500 dark:from-red-400 dark:to-pink-400",
                 )}
                 style={{ height: `${height}px` }}
               />
