@@ -1054,6 +1054,7 @@ try:
         DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS,
         apply_arena_patch,
         evaluate_verification_and_repair,
+        verify_arena_repository_lock,
     )
 except ImportError as _e:
     logger.warning("Could not import full pipeline_tools: %s. Defining fallback stubs.", _e)
@@ -1152,17 +1153,21 @@ prompt_manager = Agent(
 arena_dispatcher = Agent(
     id="arena_dispatcher",
     name="Arena Dispatcher",
-    role="Dispatch úloh do Arena.ai cez Chrome CDP",
+    role="Dispatch úloh do Arena.ai cez Chrome CDP — s verifikačným zámkom repozitára",
     model=make_orchestrator_model(),
     db=db,
     tools=[
+        verify_arena_repository_lock,
         dispatch_to_arena_session,
         send_prompt_to_arena_browser,
         create_and_dispatch_arena_task,
     ],
     instructions=[
         "Dispečuješ úlohy do Arena.ai relácií (Chrome CDP).",
-        "Pri Marekovi: dispatch OKAMŽITE (dispatch_mode=immediate).",
+        "ABSOLUTNY INVARIANT: Pred každým dispatchom MUSÍŠ zavolať verify_arena_repository_lock().",
+        "Ak verify_arena_repository_lock() vráti LOCK_FAILED — OKAMŽITE zastaviš dispatch.",
+        "Nikdy nevkladaj prompt do Composera bez LOCK_OK potvrdeného stavu repozitára.",
+        "Pri Marekovi: dispatch OKAMŽITE (dispatch_mode=immediate), ale VŽDY po LOCK_OK.",
         "Každý dispatch zaloguj ako rozhodnutie (decision log cez tím).",
     ],
     add_history_to_context=True,

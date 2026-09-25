@@ -3033,6 +3033,56 @@ def _ensure_arena_repository_selected(page: Any, target_repo: str = "badmarsh/op
     return False
 
 
+
+
+def verify_arena_repository_lock(
+    ports: str = DEFAULT_CDP_PORTS,
+    target_repo: str = "",
+    max_attempts: int = 2,
+) -> str:
+    """Overí a zamkne GitHub repozitár v Arena.ai UI pred každým dispatchom.
+
+    Volá _ensure_arena_repository_selected() cez aktívny Chrome CDP tab.
+    Vráti LOCK_OK ak repozitár bol úspešne vybraný, alebo LOCK_FAILED ak zámok
+    po max_attempts pokusoch zlyhal. V tom prípade NESMI nasledovať žiadny dispatch.
+
+    Parametre:
+        ports:        CDP porty (predvolené DEFAULT_CDP_PORTS).
+        target_repo:  Cieľový repozitár (predvolené ARENA_DEFAULT_GITHUB_REPO).
+        max_attempts: Počet pokusov verifikačného zámku (predvolene 2).
+    """
+    repo = target_repo.strip() or os.getenv("ARENA_DEFAULT_GITHUB_REPO", "badmarsh/openvpm-ai")
+    try:
+        with _cdp_browser_session(ports) as connected:
+            if not connected:
+                return (
+                    "LOCK_FAILED reason=cdp_unavailable "
+                    "detail=Chrome CDP port nie je aktivny. Repozitar nebol overeny."
+                )
+            for browser, endpoint in connected:
+                pages = _list_pages(browser)
+                if not pages:
+                    continue
+                page = next(
+                    (p for p in pages if "/agent" in str(getattr(p, "url", ""))),
+                    pages[0],
+                )
+                locked = _ensure_arena_repository_selected(
+                    page, target_repo=repo, max_attempts=max_attempts
+                )
+                if locked:
+                    return f"LOCK_OK repo={repo} endpoint={endpoint}"
+                return (
+                    f"LOCK_FAILED reason=repo_not_selected repo={repo} "
+                    f"detail=Ani po {max_attempts} pokusoch tlacidlo nehlasi spravny repozitar. "
+                    f"DISPATCH_ABORTED - neodosielaj prompt."
+                )
+            return "LOCK_FAILED reason=no_pages detail=Ziadny tab nebol najdeny v Chrome CDP."
+    except RuntimeError as exc:
+        return f"LOCK_FAILED reason=playwright_unavailable detail={exc}"
+    except Exception as exc:
+        return f"LOCK_FAILED reason=exception detail={exc}"
+
 def _dispatch_on_browser(
     browser: Any,
     prompt_text: str,
