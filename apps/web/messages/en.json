@@ -9315,7 +9315,16 @@
       "blockedMilk": "Milk supply for human consumption is banned.",
       "blockedMeat": "Slaughter and meat supply for human consumption are banned.",
       "blockedUntil": "Safe only after {date}.",
-      "allowed": "No active withdrawal period — the action may proceed."
+      "allowed": "No active withdrawal period — the action may proceed.",
+      "colAnimal": "Animal (ear tag)",
+      "colFarm": "Farm",
+      "colAdministered": "Administered",
+      "colMilk": "Milk",
+      "colMeat": "Meat",
+      "colStatus": "Period status",
+      "activeChip": "Active until {date}",
+      "expiredChip": "Period expired",
+      "expiredNote": "Withdrawal period has expired — the animal is safe again for milk supply and slaughter."
     },
     "tabs": {
       "farms": "Farms & Invoicing",
@@ -9337,6 +9346,8 @@
       "colStatus": "Status",
       "inWithdrawal": "Under withdrawal",
       "statusActive": "Active",
+      "colActions": "Actions",
+      "rowNewVisit": "Visit",
       "openInvoice": "Open cumulative invoice ({period})",
       "invoiceTotal": "{amount} € incl. VAT",
       "invoiceBreakdown": "Subtotal: {subtotal} € • VAT 23%: {tax} €",
@@ -9350,9 +9361,15 @@
       "title": "Field treatment book for livestock",
       "description": "Records of procedures, administered medicines, milk and meat withdrawal periods and KVEPIS submission status.",
       "empty": "No field treatments in the book yet.",
+      "emptyTitle": "Treatment book is empty",
       "cowBadge": "{name} — {tag}",
       "kvepisReceipt": "KVEPIS receipt",
-      "billedRetainer": "Billed to retainer"
+      "billedRetainer": "Billed to retainer",
+      "colDate": "Date",
+      "colFarm": "Farm (CEHZ)",
+      "colAnimal": "Animal",
+      "colNotes": "Notes",
+      "colEvidence": "Compliance"
     },
     "stock": {
       "title": "Emergency field medicine stock for livestock",
@@ -9363,7 +9380,9 @@
       "colLot": "Batch (Lot)",
       "colExpiry": "Expiry",
       "colStock": "Stock",
-      "colPrice": "Price excl. VAT"
+      "colPrice": "Price excl. VAT",
+      "emptyTitle": "Medicine stock is empty",
+      "emptyDesc": "Add emergency livestock medicines to the inventory to use them on field visits."
     },
     "voice": {
       "title": "Dictate your visit by voice",
@@ -9399,6 +9418,7 @@
       "servicePlaceholder": "-- Select a procedure --",
       "product": "Administered / dispensed medicine",
       "productPlaceholder": "-- No medicine / own supply --",
+      "controlledBanner": "Controlled substance '{name}' — administration on a field visit is blocked (Act No. 139/1998 Z. z.). Create the record manually in the Controlled substances section.",
       "meatWithdrawal": "Withdrawal period — meat (days)",
       "milkWithdrawal": "Withdrawal period — milk (days)",
       "withdrawalHint": "Recorded under Law 39/2007 — up to {max} days. Until the period ends, milk supply / slaughter for human consumption is banned.",

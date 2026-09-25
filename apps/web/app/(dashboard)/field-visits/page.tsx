@@ -6,7 +6,6 @@ import {
   ReceiptText,
   ShieldCheck,
   Plus,
-  Search,
   Calendar,
   AlertTriangle,
   CheckCircle2,
@@ -36,7 +35,17 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+import { EmptyState } from "@/components/common/empty-state";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import {
   MAX_WITHDRAWAL_DAYS,
   clampWithdrawalDays,
@@ -51,6 +60,20 @@ import {
 
 const BATCH_ACTIONS = ["vaccination", "deworming", "estrus_synch", "other"] as const;
 type BatchAction = (typeof BATCH_ACTIONS)[number];
+
+/**
+ * Paste guard pre CEHZ ušné známky: pri vložení zo schránky automaticky
+ * odstráni nepovolené znaky (lomky, podčiarkníka, interpunkciu, emoji) aj
+ * neplatné medzery (vrátane NBSP) a zborí viacnásobné medzery. Písmená
+ * (vrátane diakritiky), číslice, medzery a pomlčky zostávajú — kanonizáciu
+ * na úradný tvar ďalej robí normalizeCehzEarTag() z policy modulu.
+ */
+function sanitizeEarTagInput(raw: string): string {
+  return raw
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 24);
+}
 
 export default function FieldVisitsPage() {
   const { t, locale } = useI18n();
@@ -67,6 +90,8 @@ export default function FieldVisitsPage() {
   const [formNotes, setFormNotes] = useState<string>("");
   const [formServiceId, setFormServiceId] = useState<string>("");
   const [formProductId, setFormProductId] = useState<string>("");
+  // Kontrolovaná látka zvolená v selecte — drží trvalý inline banner (Zákon 139/1998 Z. z.).
+  const [controlledConflict, setControlledConflict] = useState<string | null>(null);
   const [formProductQty, setFormProductQty] = useState<number>(1);
   const [formMeatDays, setFormMeatDays] = useState<number>(0);
   const [formMilkDays, setFormMilkDays] = useState<number>(0);
@@ -160,6 +185,28 @@ export default function FieldVisitsPage() {
   );
   const selectedCowHasWithdrawal = selectedCowStatuses.some((s) => s.anyActive);
 
+  /**
+   * Withdrawal Watch riadky: JEDEN záznam podania = JEDEN riadok. Skorší kód
+   * počítal statusy pre všetky podania zvieraťa v každom riadku (duplicitné
+   * mliečne/mäsové badgety pri viacerých záznamoch tej istej kravy).
+   * Vypršané záznamy (safeUntil prekročený počas otvorenej stránky na tablete)
+   * sa renderujú neutrálne — nie ako aktívne červené varovanie.
+   */
+  const withdrawalWatchRows = useMemo(
+    () =>
+      (overview?.withdrawals ?? []).map((w) => ({
+        row: w,
+        status: computeFieldWithdrawalStatus({
+          administeredAt: w.administeredAt,
+          meatWithdrawalDays: w.meatWithdrawalDays ?? 0,
+          milkWithdrawalDays: w.milkWithdrawalDays ?? 0,
+          medicationName: w.medicationName,
+        }),
+      })),
+    [overview?.withdrawals]
+  );
+  const hasActiveWithdrawalRows = withdrawalWatchRows.some((r) => r.status.anyActive);
+
   /** Slovak pluralization pre dni: 1 deň / 2–4 dni / 5+ dní. */
   const formatDays = useCallback(
     (days: number): string => {
@@ -230,6 +277,7 @@ export default function FieldVisitsPage() {
       setFormNotes("");
       setFormServiceId("");
       setFormProductId("");
+      setControlledConflict(null);
       setFormMeatDays(0);
       setFormMilkDays(0);
       setFormCowId("");
@@ -345,15 +393,13 @@ export default function FieldVisitsPage() {
     // Kontrolované látky (Zákon č. 139/1998 Z. z.) — žiadny AI/terénny prefill.
     const conflict = findControlledSubstanceConflict([prod?.name]);
     if (conflict) {
-      alert(
-        t(
-          "fieldVisits.alerts.controlledBlocked",
-          "Kontrolovanú látku '{name}' nie je možné podávať cez terénny výjazd (Zákon č. 139/1998 Z. z.). Záznam vytvorte ručne v sekcii Kontrolované látky.",
-          { name: conflict }
-        )
-      );
+      // Trvalý inline banner (nielen preletový alert) — varovanie musí ostať
+      // viditeľné, kým veterinár nevyberie povolený prípravok. Výber zostáva
+      // zablokovaný: product sa do formulára nikdy nedostane.
+      setControlledConflict(conflict);
       return;
     }
+    setControlledConflict(null);
     setFormProductId(productId);
     setFormProductQty(1);
   };
@@ -505,7 +551,7 @@ export default function FieldVisitsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         icon={Tractor}
         title={t("fieldVisits.title", "Terénna prax & Farmy")}
@@ -537,27 +583,22 @@ export default function FieldVisitsPage() {
       />
 
       {/* Rýchle vyhľadávanie ušných známok CEHZ (mobile-first, do rukavíc) */}
-      <Card className="border-emerald-200 dark:border-emerald-950">
-        <CardContent className="pt-4 pb-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Search className="h-4 w-4 text-emerald-600" />
-            {t("fieldVisits.earTagSearch.title", "Rýchle vyhľadávanie ušných známok (CEHZ)")}
-          </div>
-          <Input
-            value={earTagQuery}
-            onChange={(e) => setEarTagQuery(e.target.value)}
-            placeholder={t(
-              "fieldVisits.earTagSearch.placeholder",
-              "SK 000801452101, 000801452101 alebo meno zvieraťa…"
-            )}
-            aria-label={t(
-              "fieldVisits.earTagSearch.placeholder",
-              "SK 000801452101, 000801452101 alebo meno zvieraťa…"
-            )}
-            className="min-h-[44px] font-mono text-sm"
-            autoComplete="off"
-          />
-          {earTagQuery.trim().length >= 2 && (
+      <PageToolbar className="border-emerald-200 bg-emerald-50/40 dark:border-emerald-950 sm:flex-col sm:items-stretch">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Tag className="h-4 w-4 text-emerald-600" />
+          {t("fieldVisits.earTagSearch.title", "Rýchle vyhľadávanie ušných známok (CEHZ)")}
+        </div>
+        <SearchField
+          value={earTagQuery}
+          onChange={(v) => setEarTagQuery(sanitizeEarTagInput(v))}
+          placeholder={t(
+            "fieldVisits.earTagSearch.placeholder",
+            "SK 000801452101, 000801452101 alebo meno zvieraťa…"
+          )}
+          inputClassName="min-h-[44px] font-mono text-sm"
+          maxLength={24}
+        />
+        {earTagQuery.trim().length >= 2 && (
             <div className="space-y-1">
               {earTagMatches.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
@@ -586,8 +627,7 @@ export default function FieldVisitsPage() {
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </PageToolbar>
 
       {/* KPI Karty */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -663,15 +703,17 @@ export default function FieldVisitsPage() {
       {/* WITHDRAWAL WATCH — zvieratá v ochrannej lehote */}
       <Card
         className={
-          overview?.withdrawals && overview.withdrawals.length > 0
-            ? "border-red-300 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20"
-            : "border-border"
+          withdrawalWatchRows.length === 0
+            ? "border-border"
+            : hasActiveWithdrawalRows
+              ? "border-red-300 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20"
+              : "border-border"
         }
         data-testid="withdrawal-watch"
       >
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
-            {overview?.withdrawals && overview.withdrawals.length > 0 ? (
+            {hasActiveWithdrawalRows ? (
               <AlertTriangle className="h-4 w-4 text-red-600" />
             ) : (
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
@@ -686,66 +728,121 @@ export default function FieldVisitsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {(!overview?.withdrawals || overview.withdrawals.length === 0) && (
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">
-                {t("fieldVisits.withdrawalWatch.emptyTitle", "Žiadne aktívne ochranné lehoty")}
-              </p>
-              <p className="text-xs mt-1">
-                {t(
-                  "fieldVisits.withdrawalWatch.emptyDesc",
-                  "Všetky evidované zvieratá sú momentálne vhodné na dodávku a porážku."
-                )}
-              </p>
-            </div>
-          )}
-
-          {overview?.withdrawals?.map((w) => {
-            const statuses = withdrawalStatusesForCow(w.patientId);
-            return (
-              <div
-                key={w.id}
-                className="rounded-lg border border-red-200 bg-background p-3 space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 font-mono tabular-nums">
-                      {formatCehzEarTag(w.earTag) ?? w.earTag ?? "—"}
-                    </Badge>
-                    <span className="font-semibold text-sm">{w.patientName ?? "—"}</span>
-                    <span className="text-xs text-muted-foreground">{w.farmName ?? ""}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {t("fieldVisits.withdrawalWatch.medication", "Liečivo")}:{" "}
-                    <span className="font-medium text-foreground">{w.medicationName}</span>
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {statuses.map((s, idx) => (
-                    <span key={idx} className="contents">
-                      {s.milk.active && (
-                        <Badge className="bg-red-600 text-white border-red-700 hover:bg-red-600 tabular-nums">
-                          {milkBadgeText(s.milk.remainingDays, s.milk.safeUntil)}
-                        </Badge>
-                      )}
-                      {s.meat.active && (
-                        <Badge className="bg-red-700 text-white border-red-800 hover:bg-red-700 tabular-nums">
-                          {meatBadgeText(s.meat.remainingDays)}
-                        </Badge>
-                      )}
-                    </span>
-                  ))}
-                </div>
-                <div className="text-[11px] text-red-700 dark:text-red-400 font-medium">
-                  {t(
-                    "fieldVisits.withdrawalWatch.activeWarning",
-                    "Zákaz dodávky mlieka a porážky na ľudský konzum — lehota ešte plynie (podané {date}).",
-                    { date: formatDate(w.administeredAt) }
-                  )}
-                </div>
+          {withdrawalWatchRows.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title={t("fieldVisits.withdrawalWatch.emptyTitle", "Žiadne aktívne ochranné lehoty")}
+              description={t(
+                "fieldVisits.withdrawalWatch.emptyDesc",
+                "Všetky evidované zvieratá sú momentálne vhodné na dodávku a porážku."
+              )}
+              className="rounded-none border-0"
+            />
+          ) : (
+            <DataTableFrame>
+              {/* Hustý log podaní — horizontálny scroll vo frame na úzkych tabletoch. */}
+              <div className="min-w-[860px]">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted/50 border-b text-muted-foreground uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.colAnimal", "Zviera (CEHZ)")}</th>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.colFarm", "Farma")}</th>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.medication", "Liečivo")}</th>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.colAdministered", "Podané")}</th>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.colMilk", "Mlieko")}</th>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.colMeat", "Mäso")}</th>
+                      <th className="py-2.5 px-3">{t("fieldVisits.withdrawalWatch.colStatus", "Stav lehoty")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {withdrawalWatchRows.map(({ row: w, status }) => {
+                      const expired = !status.anyActive;
+                      return (
+                        <tr
+                          key={w.id}
+                          className={cn("hover:bg-muted/30", expired && "bg-muted/20 text-muted-foreground")}
+                        >
+                          <td className="py-2.5 px-3">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge variant="outline" className="font-mono tabular-nums">
+                                {formatCehzEarTag(w.earTag) ?? w.earTag ?? "—"}
+                              </Badge>
+                              <span className="font-semibold text-foreground">{w.patientName ?? "—"}</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-muted-foreground">{w.farmName ?? "—"}</td>
+                          <td className="py-2.5 px-3 font-medium text-foreground">{w.medicationName}</td>
+                          <td className="py-2.5 px-3 font-mono tabular-nums whitespace-nowrap">
+                            {formatDate(w.administeredAt)}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            {status.milk.active ? (
+                              <Badge className="bg-red-600 text-white border-red-700 hover:bg-red-600 tabular-nums">
+                                {milkBadgeText(status.milk.remainingDays, status.milk.safeUntil)}
+                              </Badge>
+                            ) : status.milk.days > 0 ? (
+                              // Vypršaná mliečna lehota — neutrálna šedá, nie varovná červená.
+                              <span className="text-[11px] text-muted-foreground">
+                                {t("fieldVisits.withdrawalWatch.expiredChip", "Lehota vypršala")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            {status.meat.active ? (
+                              <Badge className="bg-red-700 text-white border-red-800 hover:bg-red-700 tabular-nums">
+                                {meatBadgeText(status.meat.remainingDays)}
+                              </Badge>
+                            ) : status.meat.days > 0 ? (
+                              <span className="text-[11px] text-muted-foreground">
+                                {t("fieldVisits.withdrawalWatch.expiredChip", "Lehota vypršala")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            {status.anyActive ? (
+                              <div className="space-y-1 max-w-[280px]">
+                                <Badge className="bg-red-700 text-white border-red-800 hover:bg-red-700 tabular-nums whitespace-nowrap">
+                                  {t("fieldVisits.withdrawalWatch.activeChip", "Lehota plynie do {date}", {
+                                    date: formatDate(status.overallSafeUntil),
+                                  })}
+                                </Badge>
+                                <p className="text-[11px] text-red-700 dark:text-red-400 font-medium">
+                                  {t(
+                                    "fieldVisits.withdrawalWatch.activeWarning",
+                                    "Zákaz dodávky mlieka a porážky na ľudský konzum — lehota ešte plynie (podané {date}).",
+                                    { date: formatDate(w.administeredAt) }
+                                  )}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-1 max-w-[280px]">
+                                <Badge
+                                  variant="outline"
+                                  className="border-border bg-muted/40 text-muted-foreground whitespace-nowrap"
+                                >
+                                  {t("fieldVisits.withdrawalWatch.expiredChip", "Lehota vypršala")}
+                                </Badge>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {t(
+                                    "fieldVisits.withdrawalWatch.expiredNote",
+                                    "Lehota vypršala — zviera je opäť vhodné na dodávku mlieka a porážku."
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            );
-          })}
+            </DataTableFrame>
+          )}
 
           {/* Červené zvýraznenie pri pokuse o expedíciu / ukončenie liečby */}
           <div className="flex flex-wrap gap-2 pt-1">
@@ -814,31 +911,31 @@ export default function FieldVisitsPage() {
 
       {/* Hlavné záložky */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid h-auto w-full max-w-2xl grid-cols-4 rounded-none border-b bg-transparent p-0">
+        <TabsList className={cn(underlineTabsListClass, "max-w-2xl")}>
           <TabsTrigger
             value="farms"
-            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+            className={cn(underlineTabsTriggerClass, "min-h-[44px]")}
           >
             <Building2 className="h-4 w-4" />
             {t("fieldVisits.tabs.farms", "Farmy & Fakturácia")}
           </TabsTrigger>
           <TabsTrigger
             value="visits"
-            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+            className={cn(underlineTabsTriggerClass, "min-h-[44px]")}
           >
             <Calendar className="h-4 w-4" />
             {t("fieldVisits.tabs.visits", "Kniha ošetrení")}
           </TabsTrigger>
           <TabsTrigger
             value="stock"
-            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+            className={cn(underlineTabsTriggerClass, "min-h-[44px]")}
           >
             <Package className="h-4 w-4" />
             {t("fieldVisits.tabs.stock", "Sklad liečiv")}
           </TabsTrigger>
           <TabsTrigger
             value="new-visit"
-            className="min-h-[44px] gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+            className={cn(underlineTabsTriggerClass, "min-h-[44px]")}
           >
             <Plus className="h-4 w-4" />
             {t("fieldVisits.tabs.newVisit", "Nový výjazd (Mobil)")}
@@ -908,41 +1005,63 @@ export default function FieldVisitsPage() {
                         {t("fieldVisits.farms.addCow", "Pridať kravu")}
                       </Button>
                     </div>
-                    <div className="overflow-x-auto rounded-md border">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-muted/50 border-b text-muted-foreground uppercase tracking-wider">
-                          <tr>
-                            <th className="py-2.5 px-3">{t("fieldVisits.farms.colName", "Meno")}</th>
-                            <th className="py-2.5 px-3">{t("fieldVisits.farms.colEarTag", "Ušná známka")}</th>
-                            <th className="py-2.5 px-3">{t("fieldVisits.farms.colBreed", "Plemeno")}</th>
-                            <th className="py-2.5 px-3 text-right">{t("fieldVisits.farms.colStatus", "Stav")}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {farm.cows.map((cow) => (
-                            <tr key={cow.id} className="hover:bg-muted/30">
-                              <td className="py-2.5 px-3 font-medium text-foreground">{cow.name}</td>
-                              <td className="py-2.5 px-3 font-mono tabular-nums">
-                                {formatCehzEarTag(cow.earTag) ?? cow.earTag}
-                              </td>
-                              <td className="py-2.5 px-3 text-muted-foreground">{cow.breed}</td>
-                              <td className="py-2.5 px-3 text-right">
-                                {cow.activeWithdrawal ? (
-                                  <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 text-[10px]">
-                                    <AlertTriangle className="h-3 w-3 mr-1" />
-                                    {t("fieldVisits.farms.inWithdrawal", "V ochrannej lehote")}
-                                  </Badge>
-                                ) : (
-                                  <span className="tabular-nums text-muted-foreground">
-                                    {t("fieldVisits.farms.statusActive", "Aktívne")}
-                                  </span>
-                                )}
-                              </td>
+                    {/* Evidovaný dobytok — hustá tabuľka vo frame s horizontálnym scrollom
+                        (akciový stĺpec sa na tabletoch 768–1024px nepodťane, len odscroluje). */}
+                    <DataTableFrame>
+                      <div className="min-w-[620px]">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-muted/50 border-b text-muted-foreground uppercase tracking-wider">
+                            <tr>
+                              <th className="py-2.5 px-3">{t("fieldVisits.farms.colName", "Meno")}</th>
+                              <th className="py-2.5 px-3">{t("fieldVisits.farms.colEarTag", "Ušná známka")}</th>
+                              <th className="py-2.5 px-3">{t("fieldVisits.farms.colBreed", "Plemeno")}</th>
+                              <th className="py-2.5 px-3">{t("fieldVisits.farms.colStatus", "Stav")}</th>
+                              <th className="py-2.5 px-3 text-right">{t("fieldVisits.farms.colActions", "Akcie")}</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody className="divide-y">
+                            {farm.cows.map((cow) => (
+                              <tr key={cow.id} className="hover:bg-muted/30">
+                                <td className="py-2.5 px-3 font-medium text-foreground">{cow.name}</td>
+                                <td className="py-2.5 px-3 font-mono tabular-nums whitespace-nowrap">
+                                  {formatCehzEarTag(cow.earTag) ?? cow.earTag}
+                                </td>
+                                <td className="py-2.5 px-3 text-muted-foreground">{cow.breed}</td>
+                                <td className="py-2.5 px-3">
+                                  {cow.activeWithdrawal ? (
+                                    <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 text-[10px]">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      {t("fieldVisits.farms.inWithdrawal", "V ochrannej lehote")}
+                                    </Badge>
+                                  ) : (
+                                    <span className="tabular-nums text-muted-foreground">
+                                      {t("fieldVisits.farms.statusActive", "Aktívne")}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="min-h-[44px] gap-1 px-2 text-xs text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                    onClick={() => {
+                                      setFormFarmId(farm.id);
+                                      setFormCowId(cow.id);
+                                      setBatchCowIds([]);
+                                      setActiveTab("new-visit");
+                                    }}
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    {t("fieldVisits.farms.rowNewVisit", "Výjazd")}
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </DataTableFrame>
                   </div>
 
                   {/* Nezafakturovaná faktúra */}
@@ -1051,52 +1170,79 @@ export default function FieldVisitsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!overview?.recentVisits?.length && (
-                <p className="text-sm text-muted-foreground">
-                  {t("fieldVisits.visits.empty", "Zatiaľ žiadne terénne ošetrenia v knihe.")}
-                </p>
+              {!overview?.recentVisits?.length ? (
+                <EmptyState
+                  icon={Calendar}
+                  title={t("fieldVisits.visits.emptyTitle", "Kniha ošetrení je prázdna")}
+                  description={t("fieldVisits.visits.empty", "Zatiaľ žiadne terénne ošetrenia v knihe.")}
+                  className="rounded-none border-0"
+                />
+              ) : (
+                <DataTableFrame>
+                  {/* Hustý administratívny log výjazdov — scroll vo frame na tabletoch. */}
+                  <div className="min-w-[760px]">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-muted/50 border-b text-muted-foreground uppercase tracking-wider">
+                        <tr>
+                          <th className="py-2.5 px-3">{t("fieldVisits.visits.colDate", "Dátum")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.visits.colFarm", "Farma (CEHZ)")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.visits.colAnimal", "Zviera")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.visits.colNotes", "Poznámka")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.visits.colEvidence", "Evidencia")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {overview.recentVisits.map((visit: any) => {
+                          const farm = overview.farms.find((f) => f.id === visit.clientId);
+                          const cow = farm?.cows.find((c) => c.id === visit.patientId);
+
+                          return (
+                            <tr key={visit.id} className="hover:bg-muted/30">
+                              <td className="py-2.5 px-3 font-mono tabular-nums whitespace-nowrap">
+                                {formatDate(visit.startTime)}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="font-semibold text-foreground">{farm?.name ?? "—"}</span>
+                                  <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
+                                    ({farm?.cehz})
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                {cow ? (
+                                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
+                                    🐄 {t("fieldVisits.visits.cowBadge", "{name} — {tag}", {
+                                      name: cow.name,
+                                      tag: cow.earTag,
+                                    })}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 max-w-[280px] text-muted-foreground">
+                                <span className="truncate block">{visit.notes}</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="flex flex-wrap gap-1.5 whitespace-nowrap">
+                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1 text-[11px]">
+                                    <ShieldCheck className="h-3 w-3" />
+                                    {t("fieldVisits.visits.kvepisReceipt", "KVEPIS doručenka")}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                                    {t("fieldVisits.visits.billedRetainer", "Účtované do paušálu")}
+                                  </Badge>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </DataTableFrame>
               )}
-              <div className="divide-y text-sm">
-                {overview?.recentVisits.map((visit: any) => {
-                  const farm = overview.farms.find((f) => f.id === visit.clientId);
-                  const cow = farm?.cows.find((c) => c.id === visit.patientId);
-
-                  return (
-                    <div key={visit.id} className="py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="bg-muted text-xs font-mono tabular-nums">
-                            {formatDate(visit.startTime)}
-                          </Badge>
-                          <span className="font-bold text-foreground">{farm?.name}</span>
-                          <span className="text-xs text-muted-foreground font-mono tabular-nums">({farm?.cehz})</span>
-                          {cow && (
-                            <Badge className="bg-blue-50 text-blue-700 border-blue-200">
-                              🐄 {t("fieldVisits.visits.cowBadge", "{name} — {tag}", {
-                                name: cow.name,
-                                tag: cow.earTag,
-                              })}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {visit.notes}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 self-start md:self-auto">
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1 text-[11px]">
-                          <ShieldCheck className="h-3 w-3" />
-                          {t("fieldVisits.visits.kvepisReceipt", "KVEPIS doručenka")}
-                        </Badge>
-                        <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                          {t("fieldVisits.visits.billedRetainer", "Účtované do paušálu")}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1120,42 +1266,57 @@ export default function FieldVisitsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-muted/50 border-b text-muted-foreground uppercase tracking-wider">
-                    <tr>
-                      <th className="py-2.5 px-3">{t("fieldVisits.stock.colSku", "Kód / SKU")}</th>
-                      <th className="py-2.5 px-3">{t("fieldVisits.stock.colProduct", "Prípravok / Liečivo")}</th>
-                      <th className="py-2.5 px-3">{t("fieldVisits.stock.colCategory", "Kategória")}</th>
-                      <th className="py-2.5 px-3">{t("fieldVisits.stock.colLot", "Šarža (Lot)")}</th>
-                      <th className="py-2.5 px-3">{t("fieldVisits.stock.colExpiry", "Expirácia")}</th>
-                      <th className="py-2.5 px-3 text-right">{t("fieldVisits.stock.colStock", "Zásoba")}</th>
-                      <th className="py-2.5 px-3 text-right">{t("fieldVisits.stock.colPrice", "Cena bez DPH")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {stock?.map((item) => (
-                      <tr key={item.id} className="hover:bg-muted/30">
-                        <td className="py-2.5 px-3 font-mono text-muted-foreground tabular-nums">{item.sku}</td>
-                        <td className="py-2.5 px-3 font-semibold text-foreground">{item.name}</td>
-                        <td className="py-2.5 px-3">
-                          <Badge variant="secondary" className="text-[10px]">
-                            {item.category}
-                          </Badge>
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-[11px] tabular-nums">{item.lotNumber || "—"}</td>
-                        <td className="py-2.5 px-3 text-muted-foreground tabular-nums">{item.expirationDate || "—"}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-emerald-700 tabular-nums">
-                          {item.stockQuantity} ks/fl.
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-medium tabular-nums">
-                          {parseFloat(item.unitPrice || "0").toFixed(2)} €
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {!stock?.length ? (
+                <EmptyState
+                  icon={Package}
+                  title={t("fieldVisits.stock.emptyTitle", "Sklad liečiv je prázdny")}
+                  description={t(
+                    "fieldVisits.stock.emptyDesc",
+                    "Pridajte pohotovostné liečivá pre hospodárske zvieratá do inventára."
+                  )}
+                  className="rounded-none border-0"
+                />
+              ) : (
+                <DataTableFrame>
+                  {/* Široký skladový log (7 stĺpcov) — horizontálny scroll vo frame. */}
+                  <div className="min-w-[780px]">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-muted/50 border-b text-muted-foreground uppercase tracking-wider">
+                        <tr>
+                          <th className="py-2.5 px-3">{t("fieldVisits.stock.colSku", "Kód / SKU")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.stock.colProduct", "Prípravok / Liečivo")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.stock.colCategory", "Kategória")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.stock.colLot", "Šarža (Lot)")}</th>
+                          <th className="py-2.5 px-3">{t("fieldVisits.stock.colExpiry", "Expirácia")}</th>
+                          <th className="py-2.5 px-3 text-right">{t("fieldVisits.stock.colStock", "Zásoba")}</th>
+                          <th className="py-2.5 px-3 text-right">{t("fieldVisits.stock.colPrice", "Cena bez DPH")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {stock?.map((item) => (
+                          <tr key={item.id} className="hover:bg-muted/30">
+                            <td className="py-2.5 px-3 font-mono text-muted-foreground tabular-nums whitespace-nowrap">{item.sku}</td>
+                            <td className="py-2.5 px-3 font-semibold text-foreground">{item.name}</td>
+                            <td className="py-2.5 px-3">
+                              <Badge variant="secondary" className="text-[10px]">
+                                {item.category}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] tabular-nums">{item.lotNumber || "—"}</td>
+                            <td className="py-2.5 px-3 text-muted-foreground tabular-nums whitespace-nowrap">{item.expirationDate || "—"}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-emerald-700 tabular-nums whitespace-nowrap">
+                              {item.stockQuantity} ks/fl.
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-medium tabular-nums whitespace-nowrap">
+                              {parseFloat(item.unitPrice || "0").toFixed(2)} €
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </DataTableFrame>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1433,6 +1594,27 @@ export default function FieldVisitsPage() {
                     </select>
                   </div>
                 </div>
+
+                {/* Kontrolované látky (Zákon č. 139/1998 Z. z.) — trvalý inline banner
+                    sa zobrazí okamžite pri pokuse zvoliť zakázaný prípravok. */}
+                {controlledConflict && (
+                  <div
+                    role="alert"
+                    data-testid="controlled-substance-warning"
+                    className="rounded-lg border-2 border-red-600 bg-red-50 dark:bg-red-950/30 p-3 space-y-1"
+                  >
+                    <p className="text-xs font-bold text-red-700 dark:text-red-400 flex items-start gap-1.5">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>
+                        {t(
+                          "fieldVisits.form.controlledBanner",
+                          "Kontrolovaná látka '{name}' — podanie cez terénny výjazd je zablokované (Zákon č. 139/1998 Z. z.). Záznam vytvorte ručne v sekcii Kontrolované látky.",
+                          { name: controlledConflict }
+                        )}
+                      </span>
+                    </p>
+                  </div>
+                )}
 
                 {/* 4b. Ochranné lehoty (povinná evidencia — Zákon 39/2007 Z. z.) */}
                 {formProductId && (
@@ -1729,9 +1911,11 @@ export default function FieldVisitsPage() {
                   placeholder={t("fieldVisits.dialog.earTagPlaceholder", "napr. SK 000801452101")}
                   value={newCowEarTag}
                   onChange={(e) => {
-                    setNewCowEarTag(e.target.value);
+                    // Paste guard: nelegálne znaky a nadbytočné medzery sa automaticky odstránia.
+                    setNewCowEarTag(sanitizeEarTagInput(e.target.value));
                     setNewCowTagError(null);
                   }}
+                  maxLength={24}
                   className="text-sm min-h-[44px] font-mono"
                   aria-invalid={newCowTagError ? true : undefined}
                 />

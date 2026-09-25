@@ -9315,7 +9315,16 @@
       "blockedMilk": "Zákaz dodávky mlieka na ľudský konzum.",
       "blockedMeat": "Zákaz porážky a dodávky mäsa na ľudský konzum.",
       "blockedUntil": "Bezpečné až po {date}.",
-      "allowed": "Žiadna aktívna ochranná lehota — akcia môže prebehnúť."
+      "allowed": "Žiadna aktívna ochranná lehota — akcia môže prebehnúť.",
+      "colAnimal": "Zviera (CEHZ)",
+      "colFarm": "Farma",
+      "colAdministered": "Podané",
+      "colMilk": "Mlieko",
+      "colMeat": "Mäso",
+      "colStatus": "Stav lehoty",
+      "activeChip": "Lehota plynie do {date}",
+      "expiredChip": "Lehota vypršala",
+      "expiredNote": "Lehota vypršala — zviera je opäť vhodné na dodávku mlieka a porážku."
     },
     "tabs": {
       "farms": "Farmy & Fakturácia",
@@ -9337,6 +9346,8 @@
       "colStatus": "Stav",
       "inWithdrawal": "V ochrannej lehote",
       "statusActive": "Aktívne",
+      "colActions": "Akcie",
+      "rowNewVisit": "Výjazd",
       "openInvoice": "Otvorená kumulatívna faktúra ({period})",
       "invoiceTotal": "{amount} € s DPH",
       "invoiceBreakdown": "Základ: {subtotal} € • DPH 23%: {tax} €",
@@ -9350,9 +9361,15 @@
       "title": "Ambulantná kniha terénnych ošetrení hospodárskych zvierat",
       "description": "Evidencia úkonov, podaných liekov, ochranných lehôt na mlieko a mäso a stavu hlásení do KVEPIS.",
       "empty": "Zatiaľ žiadne terénne ošetrenia v knihe.",
+      "emptyTitle": "Kniha ošetrení je prázdna",
       "cowBadge": "{name} — {tag}",
       "kvepisReceipt": "KVEPIS doručenka",
-      "billedRetainer": "Účtované do paušálu"
+      "billedRetainer": "Účtované do paušálu",
+      "colDate": "Dátum",
+      "colFarm": "Farma (CEHZ)",
+      "colAnimal": "Zviera",
+      "colNotes": "Poznámka",
+      "colEvidence": "Evidencia"
     },
     "stock": {
       "title": "Pohotovostný terénny sklad liečiv pre hospodárske zvieratá",
@@ -9363,7 +9380,9 @@
       "colLot": "Šarža (Lot)",
       "colExpiry": "Expirácia",
       "colStock": "Zásoba",
-      "colPrice": "Cena bez DPH"
+      "colPrice": "Cena bez DPH",
+      "emptyTitle": "Sklad liečiv je prázdny",
+      "emptyDesc": "Pridajte pohotovostné liečivá pre hospodárske zvieratá do inventára."
     },
     "voice": {
       "title": "Nadiktujte výjazd hlasom",
@@ -9399,6 +9418,7 @@
       "servicePlaceholder": "-- Vyberte úkon --",
       "product": "Aplikovaný / odovzdaný liek",
       "productPlaceholder": "-- Bez lieku / vlastné liečivo --",
+      "controlledBanner": "Kontrolovaná látka '{name}' — podanie cez terénny výjazd je zablokované (Zákon č. 139/1998 Z. z.). Záznam vytvorte ručne v sekcii Kontrolované látky.",
       "meatWithdrawal": "Ochranná lehota — mäso (dní)",
       "milkWithdrawal": "Ochranná lehota — mlieko (dní)",
       "withdrawalHint": "Evidencia podľa Zákona č. 39/2007 Z. z. — maximálne {max} dní. Do konca lehoty je zákaz dodávky mlieka / porážky na ľudský konzum.",
