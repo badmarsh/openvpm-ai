@@ -5208,6 +5208,12 @@
         "visitId": "Visit ID",
         "date": "Date",
         "doctor": "Doctor"
+      },
+      "csv": {
+        "title": "CSV Import — Encoding Safe (UTF-8 / Windows-1250)",
+        "description": "Upload a legacy CSV export. The parser detects Windows-1250 vs UTF-8 and never crashes on invalid bytes — it falls back safely.",
+        "chooseFile": "Choose CSV file",
+        "searchPlaceholder": "Search preview records"
       }
     },
     "locations": {
@@ -7204,7 +7210,9 @@
       "viewDetails": "View details",
       "showing": "Showing {from}–{to} of {total}",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "emptyGuidance": "This means no legacy data of that type was found in the imported archive. If you expected records here, verify your migration source or contact support.",
+      "invalidDocumentUrl": "Invalid document URL blocked for safety"
     },
     "sections": {
       "contacts": "Co-owners",

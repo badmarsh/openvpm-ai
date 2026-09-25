@@ -15,7 +15,6 @@ import {
   Loader2,
   Pill,
   ReceiptEuro,
-  Search,
   Users,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -25,10 +24,18 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/common/empty-state";
 import type { AppRouter } from "@/server/routers/_app";
 import { MigrationReviewChecklist } from "@/components/migration/migration-review-checklist";
+import {
+  pageShellClass,
+  PageToolbar,
+  SearchField,
+  DataTableFrame,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+  PageHeader,
+  EmptyState,
+} from "@/components/layout/page-kit";
 
 const PAGE_SIZE = 50;
 
@@ -63,17 +70,38 @@ function titleCase(value: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    if (!url) return false;
+    if (url.startsWith("/")) return true;
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function MigrationArchivePage() {
   const { t } = useI18n();
   const formatCurrency = useCurrencyFormatter();
   const [section, setSection] = useState<ArchiveSection>("contacts");
-  const [query, setQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Prevent search input debounce lag: keep input responsive, debounce only the query sent to server
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchInput);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const summary = trpc.migrationArchive.summary.useQuery();
   const list = trpc.migrationArchive.list.useQuery({
     section,
-    query,
+    query: debouncedQuery,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   });
@@ -83,10 +111,11 @@ export default function MigrationArchivePage() {
     { enabled: canExpand && !!selectedId },
   );
 
+  // Pagination: page index resets when searching or filtering by section, but not unexpectedly on data reload
   useEffect(() => {
     setPage(0);
     setSelectedId(null);
-  }, [section, query]);
+  }, [section, debouncedQuery]);
 
   const activeSection = sections.find((item) => item.id === section)!;
   const totalPages = Math.max(
@@ -132,7 +161,7 @@ export default function MigrationArchivePage() {
   }, [formatCurrency, summary.data, t]);
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <div className="flex items-center gap-2">
         <Link
           href="/settings?tab=data"
@@ -142,23 +171,14 @@ export default function MigrationArchivePage() {
           <span>{t("nav.settings", "Nastavenia")} &rarr; {t("settings.tabs.data", "Data")}</span>
         </Link>
       </div>
-      <header className="space-y-2">
-        <div className="flex items-center gap-2 text-primary">
-          <Archive className="h-5 w-5" aria-hidden="true" />
-          <span className="text-sm font-semibold uppercase tracking-wide">
-            {t("migrationArchive.header.badge", "Imported history")}
-          </span>
-        </div>
-        <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          {t("migrationArchive.header.title", "Clinic archive")}
-        </h2>
-        <p className="max-w-4xl text-sm leading-6 text-muted-foreground">
-          {t(
-            "migrationArchive.header.description",
-            "Source-attributed history from a prior system. These records support clinical and business context, but they do not silently create live appointments, dispense inventory, change accounts receivable, or authorize client communication.",
-          )}
-        </p>
-      </header>
+      <PageHeader
+        icon={Archive}
+        title={t("migrationArchive.header.title", "Clinic archive")}
+        subtitle={t(
+          "migrationArchive.header.description",
+          "Source-attributed history from a prior system. These records support clinical and business context, but they do not silently create live appointments, dispense inventory, change accounts receivable, or authorize client communication.",
+        )}
+      />
 
       <MigrationReviewChecklist />
 
@@ -243,7 +263,7 @@ export default function MigrationArchivePage() {
           <div
             role="tablist"
             aria-label={t("migrationArchive.sectionsAria", "Sekcie importovanej histórie")}
-            className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1"
+            className={cn(underlineTabsListClass, "flex max-w-full gap-1 overflow-x-auto")}
           >
             {sections.map((item) => (
               <button
@@ -253,9 +273,10 @@ export default function MigrationArchivePage() {
                 aria-selected={section === item.id}
                 aria-controls="archive-records"
                 className={cn(
-                  "inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  underlineTabsTriggerClass,
+                  "inline-flex min-h-9 shrink-0 items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   section === item.id
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "border-primary text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => setSection(item.id)}
@@ -265,19 +286,16 @@ export default function MigrationArchivePage() {
               </button>
             ))}
           </div>
-          <div className="relative max-w-xl">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              aria-label={t("migrationArchive.searchAria", "Hľadať: {section}", { section: activeSection.label.toLowerCase() })}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+          <PageToolbar>
+            <SearchField
+              value={searchInput}
+              onChange={setSearchInput}
               placeholder={t("migrationArchive.browser.searchPlaceholder", `Search ${activeSection.label.toLowerCase()}`, { section: t(activeSection.labelKey, activeSection.label) })}
-              className="pl-9"
             />
-          </div>
+            <span className="text-xs text-muted-foreground">
+              {list.data ? `${metric(list.data.total)} records` : null}
+            </span>
+          </PageToolbar>
         </CardHeader>
         <CardContent>
           <div
@@ -309,118 +327,126 @@ export default function MigrationArchivePage() {
               ) : list.data?.items.length === 0 ? (
                 <EmptyState
                   icon={activeSection.icon}
-                  title={query ? t("migrationArchive.browser.noMatching", "No matching records") : t("migrationArchive.browser.nothingImported", "Nothing imported yet")}
+                  title={searchInput ? t("migrationArchive.browser.noMatching", "No matching records") : t("migrationArchive.browser.nothingImported", "Nothing imported yet")}
                   description={
-                    query
+                    searchInput
                       ? t("migrationArchive.browser.tryBroader", "Try a broader search term.")
-                      : t("migrationArchive.browser.noSectionAdded", `No ${activeSection.label.toLowerCase()} have been added to this archive.`, { section: t(activeSection.labelKey, activeSection.label) })
+                      : t("migrationArchive.browser.noSectionAdded", `No ${activeSection.label.toLowerCase()} have been added to this archive.`, { section: t(activeSection.labelKey, activeSection.label) }) + " " + t("migrationArchive.browser.emptyGuidance", "This means no legacy data of that type was found in the imported archive. If you expected records here, verify your migration source or contact support.")
                   }
                 />
               ) : (
-                <ul className="divide-y divide-border rounded-lg border border-border">
-                  {list.data?.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className={cn(
-                        "p-4 transition-colors",
-                        selectedId === item.id ? "bg-primary/5" : "bg-card",
-                      )}
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium">{item.title}</p>
-                            <Badge
-                              variant={
-                                item.needsReview ? "destructive" : "secondary"
-                              }
-                            >
-                              {item.needsReview
-                                ? t("migrationArchive.browser.needsReview", "Needs review")
-                                : titleCase(item.status)}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {item.subtitle}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            <span>{formatDate(item.date)}</span>
-                            {item.meta.map((part, index) => (
-                              <span
-                                key={`${item.id}:meta:${index}`}
-                                className="truncate"
+                <DataTableFrame>
+                  <ul className="divide-y divide-border">
+                    {list.data?.items.map((item) => (
+                      <li
+                        key={item.id}
+                        className={cn(
+                          "px-3 py-2 transition-colors",
+                          selectedId === item.id ? "bg-primary/5" : "bg-card",
+                        )}
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium">{item.title}</p>
+                              <Badge
+                                variant={
+                                  item.needsReview ? "destructive" : "secondary"
+                                }
                               >
-                                {part}
-                              </span>
-                            ))}
+                                {item.needsReview
+                                  ? t("migrationArchive.browser.needsReview", "Needs review")
+                                  : titleCase(item.status)}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {item.subtitle}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              <span>{formatDate(item.date)}</span>
+                              {item.meta.map((part, index) => (
+                                <span
+                                  key={`${item.id}:meta:${index}`}
+                                  className="truncate"
+                                >
+                                  {part}
+                                </span>
+                              ))}
+                            </div>
+                            {item.patientId || item.clientId ? (
+                              <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                                {item.patientId ? (
+                                  <Link
+                                    href={`/patients/${item.patientId}`}
+                                    className="font-medium text-primary underline-offset-4 hover:underline"
+                                  >
+                                    {t("migrationArchive.browser.openPatient", "Open patient")}
+                                  </Link>
+                                ) : null}
+                                {item.clientId ? (
+                                  <Link
+                                    href={`/clients/${item.clientId}`}
+                                    className="font-medium text-primary underline-offset-4 hover:underline"
+                                  >
+                                    {t("migrationArchive.browser.openClient", "Open client")}
+                                  </Link>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {item.fileUrl ? (
+                              <div className="mt-3">
+                                {isSafeExternalUrl(item.fileUrl) ? (
+                                  <Link
+                                    href={item.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex min-h-9 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                  >
+                                    {t("migrationArchive.browser.openDocument", "Open document")}
+                                  </Link>
+                                ) : (
+                                  <span className="text-xs text-destructive">
+                                    {t("migrationArchive.browser.invalidDocumentUrl", "Invalid document URL blocked for safety")}
+                                  </span>
+                                )}
+                              </div>
+                            ) : null}
                           </div>
-                          {item.patientId || item.clientId ? (
-                            <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                              {item.patientId ? (
-                                <Link
-                                  href={`/patients/${item.patientId}`}
-                                  className="font-medium text-primary underline-offset-4 hover:underline"
-                                >
-                                  {t("migrationArchive.browser.openPatient", "Open patient")}
-                                </Link>
-                              ) : null}
-                              {item.clientId ? (
-                                <Link
-                                  href={`/clients/${item.clientId}`}
-                                  className="font-medium text-primary underline-offset-4 hover:underline"
-                                >
-                                  {t("migrationArchive.browser.openClient", "Open client")}
-                                </Link>
-                              ) : null}
-                            </div>
-                          ) : null}
-                          {item.fileUrl ? (
-                            <div className="mt-3">
-                              <Link
-                                href={item.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex min-h-9 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
+                            {item.amount != null ? (
+                              <div className="text-right text-sm tabular-nums">
+                                <p className="font-semibold">
+                                  {formatCurrency(item.amount)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t("migrationArchive.browser.balance", `${formatCurrency(item.balance)} balance`, { amount: formatCurrency(item.balance) })}
+                                </p>
+                              </div>
+                            ) : null}
+                            {canExpand ? (
+                              <Button
+                                size="sm"
+                                variant={
+                                  selectedId === item.id ? "secondary" : "outline"
+                                }
+                                aria-expanded={selectedId === item.id}
+                                onClick={() =>
+                                  setSelectedId((current) =>
+                                    current === item.id ? null : item.id,
+                                  )
+                                }
                               >
-                                {t("migrationArchive.browser.openDocument", "Open document")}
-                              </Link>
-                            </div>
-                          ) : null}
+                                {selectedId === item.id
+                                  ? t("migrationArchive.browser.closeDetails", "Close details")
+                                  : t("migrationArchive.browser.viewDetails", "View details")}
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
-                          {item.amount != null ? (
-                            <div className="text-right text-sm tabular-nums">
-                              <p className="font-semibold">
-                                {formatCurrency(item.amount)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {t("migrationArchive.browser.balance", `${formatCurrency(item.balance)} balance`, { amount: formatCurrency(item.balance) })}
-                              </p>
-                            </div>
-                          ) : null}
-                          {canExpand ? (
-                            <Button
-                              size="sm"
-                              variant={
-                                selectedId === item.id ? "secondary" : "outline"
-                              }
-                              aria-expanded={selectedId === item.id}
-                              onClick={() =>
-                                setSelectedId((current) =>
-                                  current === item.id ? null : item.id,
-                                )
-                              }
-                            >
-                              {selectedId === item.id
-                                ? t("migrationArchive.browser.closeDetails", "Close details")
-                                : t("migrationArchive.browser.viewDetails", "View details")}
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                </DataTableFrame>
               )}
 
               {list.data && list.data.total > 0 ? (
@@ -584,13 +610,13 @@ function ArchiveDetail({
             <dt className="text-xs text-muted-foreground">
               {t("migrationArchive.detail.quantity", "Quantity")}
             </dt>
-            <dd>{data.record.quantity ?? "—"}</dd>
+            <dd className="px-3 py-2">{data.record.quantity ?? "—"}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">
               {t("migrationArchive.detail.refillsWritten", "Refills written")}
             </dt>
-            <dd>{data.record.refillCount ?? "—"}</dd>
+            <dd className="px-3 py-2">{data.record.refillCount ?? "—"}</dd>
           </div>
         </dl>
         <div>
@@ -598,23 +624,25 @@ function ArchiveDetail({
             {t("migrationArchive.detail.fillHistory", "Fill history")}
           </p>
           {data.entries.length ? (
-            <ul className="mt-2 divide-y divide-border rounded-md border border-border">
-              {data.entries.map((entry) => (
-                <li key={entry.id} className="p-3">
-                  <p>
-                    {entry.occurredAt
-                      ? formatDate(entry.occurredAt.toISOString())
-                      : t("migrationArchive.detail.dateUnavailable", "Date unavailable")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {entry.quantity
-                      ? `${t("migrationArchive.detail.quantity", "Quantity")} ${entry.quantity}`
-                      : t("migrationArchive.detail.quantityUnavailable", "Quantity unavailable")}
-                    {entry.status ? ` · ${entry.status}` : ""}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <DataTableFrame className="mt-2">
+              <ul className="divide-y divide-border">
+                {data.entries.map((entry) => (
+                  <li key={entry.id} className="px-3 py-2">
+                    <p>
+                      {entry.occurredAt
+                        ? formatDate(entry.occurredAt.toISOString())
+                        : t("migrationArchive.detail.dateUnavailable", "Date unavailable")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {entry.quantity
+                        ? `${t("migrationArchive.detail.quantity", "Quantity")} ${entry.quantity}`
+                        : t("migrationArchive.detail.quantityUnavailable", "Quantity unavailable")}
+                      {entry.status ? ` · ${entry.status}` : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </DataTableFrame>
           ) : (
             <p className="mt-1 text-muted-foreground">
               {t("migrationArchive.detail.noFills", "No fills in the source export.")}
@@ -639,16 +667,18 @@ function ArchiveDetail({
           <p className="leading-6">{data.record.summary}</p>
         ) : null}
         {data.entries.length ? (
-          <ul className="divide-y divide-border rounded-md border border-border">
-            {data.entries.map((entry) => (
-              <li key={entry.id} className="flex justify-between gap-3 p-3">
-                <span>{entry.name}</span>
-                <span className="text-right font-medium">
-                  {[entry.value, entry.unit].filter(Boolean).join(" ") || "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <DataTableFrame>
+            <ul className="divide-y divide-border">
+              {data.entries.map((entry) => (
+                <li key={entry.id} className="flex justify-between gap-3 px-3 py-2">
+                  <span>{entry.name}</span>
+                  <span className="text-right font-medium tabular-nums">
+                    {[entry.value, entry.unit].filter(Boolean).join(" ") || "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </DataTableFrame>
         ) : (
           <p className="rounded-md border border-dashed border-border p-3 text-muted-foreground">
             {t(
@@ -673,34 +703,36 @@ function ArchiveDetail({
           <dt className="text-xs text-muted-foreground">
             {t("migrationArchive.detail.total", "Total")}
           </dt>
-          <dd className="font-medium">{formatCurrency(data.record.total)}</dd>
+          <dd className="px-3 py-2 font-medium tabular-nums text-right">{formatCurrency(data.record.total)}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">
             {t("migrationArchive.detail.historicalBalance", "Historical balance")}
           </dt>
-          <dd className="font-medium">{formatCurrency(data.record.balance)}</dd>
+          <dd className="px-3 py-2 font-medium tabular-nums text-right">{formatCurrency(data.record.balance)}</dd>
         </div>
       </dl>
       <div>
         <p className="font-medium">
           {t("migrationArchive.detail.lineItems", "Line items")}
         </p>
-        <ul className="mt-2 divide-y divide-border rounded-md border border-border">
-          {data.entries.map((entry) => (
-            <li key={entry.id} className="flex justify-between gap-3 p-3">
-              <div className="min-w-0">
-                <p className="break-words">{entry.description}</p>
-                <p className="text-xs text-muted-foreground">
-                  {entry.quantity} × {formatCurrency(entry.unitPrice)}
-                </p>
-              </div>
-              <span className="shrink-0 font-medium">
-                {formatCurrency(entry.total)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <DataTableFrame className="mt-2">
+          <ul className="divide-y divide-border">
+            {data.entries.map((entry) => (
+              <li key={entry.id} className="flex justify-between gap-3 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="break-words">{entry.description}</p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {entry.quantity} × {formatCurrency(entry.unitPrice)}
+                  </p>
+                </div>
+                <span className="shrink-0 font-medium tabular-nums text-right">
+                  {formatCurrency(entry.total)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </DataTableFrame>
       </div>
       {data.allocations.length ? (
         <div>
@@ -709,7 +741,7 @@ function ArchiveDetail({
           </p>
           <ul className="mt-2 space-y-2 text-muted-foreground">
             {data.allocations.map((allocation) => (
-              <li key={allocation.id}>
+              <li key={allocation.id} className="px-3 py-2 tabular-nums">
                 {formatCurrency(allocation.amount)} ·{" "}
                 {formatDate(
                   (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
 import {
@@ -18,13 +18,89 @@ import {
   ArrowRight,
   RefreshCw,
   Sparkles,
-  Info,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/layout/page-header";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import {
+  pageShellClass,
+  PageToolbar,
+  SearchField,
+  DataTableFrame,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
+
+// CSV parsing helpers that handle Windows-1250 / UTF-8 encoding differences without crashing
+function decodeBufferSafely(buffer: ArrayBuffer): string {
+  try {
+    // Try strict UTF-8 first
+    const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
+    return utf8Decoder.decode(buffer);
+  } catch {
+    try {
+      // Fallback to Windows-1250 for legacy Vetis/WinVet exports
+      const winDecoder = new TextDecoder("windows-1250");
+      return winDecoder.decode(buffer);
+    } catch {
+      // Last resort: lenient UTF-8 to never crash
+      try {
+        const fallback = new TextDecoder("utf-8", { fatal: false });
+        return fallback.decode(buffer);
+      } catch {
+        // If even TextDecoder fails, return empty safely
+        return "";
+      }
+    }
+  }
+}
+
+function parseCsvSafely(text: string): { headers: string[]; rows: string[][]; error?: string } {
+  try {
+    if (!text.trim()) {
+      return { headers: [], rows: [], error: "Empty file" };
+    }
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length === 0) {
+      return { headers: [], rows: [], error: "No data rows" };
+    }
+    // Simple CSV split handling quotes
+    const parseLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseLine(lines[0]);
+    const rows = lines.slice(1).map(parseLine);
+    return { headers, rows };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "CSV parsing failed";
+    return { headers: [], rows: [], error: message };
+  }
+}
 
 export default function V2ImportPage() {
   const { t } = useI18n();
@@ -54,6 +130,22 @@ export default function V2ImportPage() {
 
   const [migrationReport, setMigrationReport] = useState<any | null>(null);
 
+  const [previewSearchInput, setPreviewSearchInput] = useState("");
+  const [debouncedPreviewSearch, setDebouncedPreviewSearch] = useState("");
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvRows, setCsvRows] = useState<string[][]>([]);
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvFileName, setCsvFileName] = useState<string>("");
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // Prevent search input debounce lag: keep input responsive, debounce filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPreviewSearch(previewSearchInput);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [previewSearchInput]);
+
   const runMutation = trpc.extensions.v2Import.runMigration.useMutation({
     onSuccess: (data) => {
       setMigrationReport(data);
@@ -65,8 +157,53 @@ export default function V2ImportPage() {
     runMutation.mutate(options);
   };
 
+  const handleCsvFile = (file: File) => {
+    setCsvFileName(file.name);
+    setCsvError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const buffer = reader.result as ArrayBuffer;
+        const decoded = decodeBufferSafely(buffer);
+        const parsed = parseCsvSafely(decoded);
+        if (parsed.error) {
+          setCsvError(parsed.error);
+          setCsvHeaders([]);
+          setCsvRows([]);
+        } else {
+          setCsvHeaders(parsed.headers);
+          setCsvRows(parsed.rows.slice(0, 50));
+          setCsvError(null);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to read CSV";
+        setCsvError(msg);
+        setCsvHeaders([]);
+        setCsvRows([]);
+      }
+    };
+    reader.onerror = () => {
+      setCsvError("Failed to read file");
+      setCsvHeaders([]);
+      setCsvRows([]);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const filteredPreview = useMemo(() => {
+    if (!preview) return null;
+    const q = debouncedPreviewSearch.toLowerCase().trim();
+    if (!q) return preview;
+    return {
+      clients: preview.clients.filter((c) => `${c.name} ${c.address} ${c.phone} ${c.email}`.toLowerCase().includes(q)),
+      patients: preview.patients.filter((p) => `${p.name} ${p.species} ${p.breed} ${p.microchip}`.toLowerCase().includes(q)),
+      vaccinations: preview.vaccinations.filter((v) => `${v.vaccine} ${v.patientId}`.toLowerCase().includes(q)),
+      visits: preview.visits.filter((vis) => `${vis.doctor} ${vis.patientId}`.toLowerCase().includes(q)),
+    };
+  }, [preview, debouncedPreviewSearch]);
+
   return (
-    <div className="container mx-auto max-w-5xl py-8 px-4 space-y-8">
+    <div className={cn(pageShellClass, "mx-auto max-w-5xl")}>
       <PageHeader
         title={
           <span className="flex items-center gap-3">
@@ -247,7 +384,7 @@ export default function V2ImportPage() {
 
       {/* Živý náhľad vzorky dát (Preview) */}
       <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-semibold text-foreground">
               {t("settings.importV2.preview.title")}
@@ -256,81 +393,100 @@ export default function V2ImportPage() {
               {t("settings.importV2.preview.subtitle")}
             </p>
           </div>
-
-          <div className="flex gap-1 bg-muted p-1 rounded-lg text-xs font-medium">
-            <button
-              onClick={() => setActivePreviewTab("patients")}
-              className={`px-3 py-1 rounded-md transition-all ${
-                activePreviewTab === "patients"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t("settings.importV2.preview.tabPatients")}
-            </button>
-            <button
-              onClick={() => setActivePreviewTab("clients")}
-              className={`px-3 py-1 rounded-md transition-all ${
-                activePreviewTab === "clients"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t("settings.importV2.preview.tabClients")}
-            </button>
-            <button
-              onClick={() => setActivePreviewTab("vaccinations")}
-              className={`px-3 py-1 rounded-md transition-all ${
-                activePreviewTab === "vaccinations"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t("settings.importV2.preview.tabVaccinations")}
-            </button>
-            <button
-              onClick={() => setActivePreviewTab("visits")}
-              className={`px-3 py-1 rounded-md transition-all ${
-                activePreviewTab === "visits"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t("settings.importV2.preview.tabVisits")}
-            </button>
-          </div>
         </div>
+
+        <div
+          role="tablist"
+          aria-label="Preview sections"
+          className={cn(underlineTabsListClass, "w-full")}
+        >
+          <button
+            role="tab"
+            aria-selected={activePreviewTab === "patients"}
+            onClick={() => setActivePreviewTab("patients")}
+            className={cn(
+              underlineTabsTriggerClass,
+              activePreviewTab === "patients" ? "border-primary text-primary" : "text-muted-foreground"
+            )}
+          >
+            {t("settings.importV2.preview.tabPatients")}
+          </button>
+          <button
+            role="tab"
+            aria-selected={activePreviewTab === "clients"}
+            onClick={() => setActivePreviewTab("clients")}
+            className={cn(
+              underlineTabsTriggerClass,
+              activePreviewTab === "clients" ? "border-primary text-primary" : "text-muted-foreground"
+            )}
+          >
+            {t("settings.importV2.preview.tabClients")}
+          </button>
+          <button
+            role="tab"
+            aria-selected={activePreviewTab === "vaccinations"}
+            onClick={() => setActivePreviewTab("vaccinations")}
+            className={cn(
+              underlineTabsTriggerClass,
+              activePreviewTab === "vaccinations" ? "border-primary text-primary" : "text-muted-foreground"
+            )}
+          >
+            {t("settings.importV2.preview.tabVaccinations")}
+          </button>
+          <button
+            role="tab"
+            aria-selected={activePreviewTab === "visits"}
+            onClick={() => setActivePreviewTab("visits")}
+            className={cn(
+              underlineTabsTriggerClass,
+              activePreviewTab === "visits" ? "border-primary text-primary" : "text-muted-foreground"
+            )}
+          >
+            {t("settings.importV2.preview.tabVisits")}
+          </button>
+        </div>
+
+        <PageToolbar>
+          <SearchField
+            value={previewSearchInput}
+            onChange={setPreviewSearchInput}
+            placeholder={t("settings.importV2.csv.searchPlaceholder", "Search preview records")}
+          />
+          <span className="text-xs text-muted-foreground">
+            {filteredPreview ? `${filteredPreview[activePreviewTab].length} shown` : ""}
+          </span>
+        </PageToolbar>
 
         {isPreviewLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="border rounded-lg overflow-hidden text-xs">
-            {activePreviewTab === "patients" && (
-              <div className="overflow-x-auto">
+          <DataTableFrame>
+            <div className="text-xs">
+              {activePreviewTab === "patients" && (
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">{t("settings.importV2.preview.id")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.name")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.species")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.breed")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.sex")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.chip")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.status")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.id")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.name")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.species")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.breed")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.sex")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.chip")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.status")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {preview?.patients.map((p) => (
+                    {filteredPreview?.patients.map((p) => (
                       <tr key={p.id} className="hover:bg-muted/50">
-                        <td className="p-2.5 font-mono text-muted-foreground">#{p.id}</td>
-                        <td className="p-2.5 font-medium">{p.name}</td>
-                        <td className="p-2.5 capitalize">{p.species}</td>
-                        <td className="p-2.5">{p.breed}</td>
-                        <td className="p-2.5 capitalize">{p.sex}</td>
-                        <td className="p-2.5 font-mono">{p.microchip}</td>
-                        <td className="p-2.5">
+                        <td className="px-3 py-2 font-mono text-muted-foreground">#{p.id}</td>
+                        <td className="px-3 py-2 font-medium">{p.name}</td>
+                        <td className="px-3 py-2 capitalize">{p.species}</td>
+                        <td className="px-3 py-2">{p.breed}</td>
+                        <td className="px-3 py-2 capitalize">{p.sex}</td>
+                        <td className="px-3 py-2 font-mono">{p.microchip}</td>
+                        <td className="px-3 py-2">
                           {p.status === "deceased" ? (
                             <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
                               {t("settings.importV2.preview.statusDeceased")}
@@ -345,88 +501,143 @@ export default function V2ImportPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
 
-            {activePreviewTab === "clients" && (
-              <div className="overflow-x-auto">
+              {activePreviewTab === "clients" && (
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">{t("settings.importV2.preview.id")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.clientName")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.address")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.phone")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.email")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.id")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.clientName")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.address")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.phone")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.email")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {preview?.clients.map((c) => (
+                    {filteredPreview?.clients.map((c) => (
                       <tr key={c.id} className="hover:bg-muted/50">
-                        <td className="p-2.5 font-mono text-muted-foreground">#{c.id}</td>
-                        <td className="p-2.5 font-medium">{c.name}</td>
-                        <td className="p-2.5">{c.address}</td>
-                        <td className="p-2.5">{c.phone}</td>
-                        <td className="p-2.5">{c.email}</td>
+                        <td className="px-3 py-2 font-mono text-muted-foreground">#{c.id}</td>
+                        <td className="px-3 py-2 font-medium">{c.name}</td>
+                        <td className="px-3 py-2">{c.address}</td>
+                        <td className="px-3 py-2">{c.phone}</td>
+                        <td className="px-3 py-2">{c.email}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
 
-            {activePreviewTab === "vaccinations" && (
-              <div className="overflow-x-auto">
+              {activePreviewTab === "vaccinations" && (
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">{t("settings.importV2.preview.id")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.patientId")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.vaccine")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.administeredDate")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.revaccinationDue")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.id")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.patientId")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.vaccine")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.administeredDate")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.revaccinationDue")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {preview?.vaccinations.map((v) => (
+                    {filteredPreview?.vaccinations.map((v) => (
                       <tr key={v.id} className="hover:bg-muted/50">
-                        <td className="p-2.5 font-mono text-muted-foreground">#{v.id}</td>
-                        <td className="p-2.5 font-mono">#{v.patientId}</td>
-                        <td className="p-2.5 font-medium">{v.vaccine}</td>
-                        <td className="p-2.5">{new Date(v.administeredAt).toLocaleDateString("sk-SK")}</td>
-                        <td className="p-2.5">{v.nextDue !== "–" ? new Date(v.nextDue).toLocaleDateString("sk-SK") : "–"}</td>
+                        <td className="px-3 py-2 font-mono text-muted-foreground">#{v.id}</td>
+                        <td className="px-3 py-2 font-mono">#{v.patientId}</td>
+                        <td className="px-3 py-2 font-medium">{v.vaccine}</td>
+                        <td className="px-3 py-2">{new Date(v.administeredAt).toLocaleDateString("sk-SK")}</td>
+                        <td className="px-3 py-2">{v.nextDue !== "–" ? new Date(v.nextDue).toLocaleDateString("sk-SK") : "–"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
 
-            {activePreviewTab === "visits" && (
-              <div className="overflow-x-auto">
+              {activePreviewTab === "visits" && (
                 <table className="w-full text-left">
                   <thead className="bg-muted text-muted-foreground font-medium border-b">
                     <tr>
-                      <th className="p-2.5">{t("settings.importV2.preview.visitId")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.patientId")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.date")}</th>
-                      <th className="p-2.5">{t("settings.importV2.preview.doctor")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.visitId")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.patientId")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.date")}</th>
+                      <th className="px-3 py-2">{t("settings.importV2.preview.doctor")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {preview?.visits.map((vis) => (
+                    {filteredPreview?.visits.map((vis) => (
                       <tr key={vis.id} className="hover:bg-muted/50">
-                        <td className="p-2.5 font-mono text-muted-foreground">#{vis.id}</td>
-                        <td className="p-2.5 font-mono">#{vis.patientId}</td>
-                        <td className="p-2.5">{new Date(vis.date).toLocaleDateString("sk-SK")}</td>
-                        <td className="p-2.5 font-medium">{vis.doctor}</td>
+                        <td className="px-3 py-2 font-mono text-muted-foreground">#{vis.id}</td>
+                        <td className="px-3 py-2 font-mono">#{vis.patientId}</td>
+                        <td className="px-3 py-2">{new Date(vis.date).toLocaleDateString("sk-SK")}</td>
+                        <td className="px-3 py-2 font-medium">{vis.doctor}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </DataTableFrame>
+        )}
+      </div>
+
+      {/* CSV import with Windows-1250 / UTF-8 handling */}
+      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+          <Upload className="h-4 w-4" />
+          {t("settings.importV2.csv.title", "CSV Import — Encoding Safe (UTF-8 / Windows-1250)")}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {t("settings.importV2.csv.description", "Upload a legacy CSV export. The parser detects Windows-1250 vs UTF-8 and never crashes on invalid bytes — it falls back safely.")}
+        </p>
+        <PageToolbar>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleCsvFile(file);
+              e.currentTarget.value = "";
+            }}
+          />
+          <Button size="sm" variant="outline" onClick={() => csvInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t("settings.importV2.csv.chooseFile", "Choose CSV file")}
+          </Button>
+          {csvFileName && <span className="text-xs text-muted-foreground">{csvFileName}</span>}
+          {csvError && (
+            <span className="flex items-center gap-1 text-xs text-destructive">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {csvError}
+            </span>
+          )}
+        </PageToolbar>
+        {csvHeaders.length > 0 && (
+          <DataTableFrame>
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted text-muted-foreground font-medium border-b">
+                <tr>
+                  {csvHeaders.map((h, i) => (
+                    <th key={`${h}-${i}`} className="px-3 py-2">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {csvRows.map((row, ri) => (
+                  <tr key={ri} className="hover:bg-muted/50">
+                    {row.map((cell, ci) => (
+                      <td key={ci} className="px-3 py-2">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DataTableFrame>
         )}
       </div>
 
