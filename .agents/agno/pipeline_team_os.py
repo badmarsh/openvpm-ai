@@ -770,6 +770,12 @@ class I18nLeafSymmetryEval(BaseEval):
     def post_check(self, run_output: Any) -> None:
         return None
 
+    async def async_pre_check(self, run_input: Any) -> None:
+        return None
+
+    async def async_post_check(self, run_output: Any) -> None:
+        return None
+
 class VanillaSchemaGuardEval(BaseEval):
     def __init__(self, name: str = "vanilla-schema-guard", globs: Sequence[str] = VANILLA_SCHEMA_GLOBS):
         self.name = name
@@ -804,6 +810,12 @@ class VanillaSchemaGuardEval(BaseEval):
         return None
 
     def post_check(self, run_output: Any) -> None:
+        return None
+
+    async def async_pre_check(self, run_input: Any) -> None:
+        return None
+
+    async def async_post_check(self, run_output: Any) -> None:
         return None
 
 def make_uikit_adherence_judge() -> AgentAsJudgeEval:
