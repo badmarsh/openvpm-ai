@@ -1250,7 +1250,13 @@
     "status_estimates": "Cenové ponuky",
     "status_estimate": "Cenová ponuka",
     "status_partial": "Čiastočne uhradená",
-    "status_settled": "Vyrovnaná"
+    "status_settled": "Vyrovnaná",
+    "servicePicker": {
+      "placeholder": "Vyhľadať službu alebo produkt...",
+      "typeServiceName": "Zadajte názov služby alebo produktu...",
+      "searchServicesAria": "Hľadať služby a produkty",
+      "noMatch": "Žiadne položky nezodpovedajú výrazu „{query}“."
+    }
   },
   "canvas": {
     "pageTitle": "AI Canvas a SOP",
@@ -5492,9 +5498,10 @@
       "requirementsDue_few": "{count} nevyriešené položky",
       "requirementsDue_other": "{count} nevyriešených položiek",
       "servicePicker": {
-        "typeServiceName": "Zadajte názov služby...",
-        "searchServicesAria": "Hľadať služby",
-        "noMatch": "Žiadne služby nezodpovedajú výrazu „{query}“."
+        "placeholder": "Vyhľadať službu alebo produkt...",
+        "typeServiceName": "Zadajte názov služby alebo produktu...",
+        "searchServicesAria": "Hľadať služby a produkty",
+        "noMatch": "Žiadne položky nezodpovedajú výrazu „{query}“."
       },
       "checkoutCanceled": "Platba bola zrušená",
       "detailsReceived": "Vaše fakturačné údaje boli prijaté",

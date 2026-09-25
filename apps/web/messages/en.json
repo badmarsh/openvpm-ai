@@ -1250,7 +1250,13 @@
     "status_estimates": "Estimates",
     "status_estimate": "Estimate",
     "status_partial": "Partial",
-    "status_settled": "Settled"
+    "status_settled": "Settled",
+    "servicePicker": {
+      "placeholder": "Search services or products...",
+      "typeServiceName": "Type a service or product name...",
+      "searchServicesAria": "Search services and products",
+      "noMatch": "No services match \"{query}\"."
+    }
   },
   "canvas": {
     "pageTitle": "AI Canvas & SOPs",
@@ -5492,8 +5498,9 @@
       "requirementsDue_few": "{count} items due",
       "requirementsDue_other": "{count} items due",
       "servicePicker": {
-        "typeServiceName": "Type a service name...",
-        "searchServicesAria": "Search services",
+        "placeholder": "Search services or products...",
+        "typeServiceName": "Type a service or product name...",
+        "searchServicesAria": "Search services and products",
         "noMatch": "No services match \"{query}\"."
       },
       "checkoutCanceled": "Checkout was canceled",

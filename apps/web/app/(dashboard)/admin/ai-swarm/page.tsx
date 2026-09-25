@@ -858,7 +858,7 @@ export default function AiSwarmAdminPage() {
                       </td>
                       <td className={tableCellClass}>
                         <pre className="max-w-md truncate rounded bg-muted/50 p-1 font-mono text-[10px] text-foreground">
-                          {JSON.stringify(appr.args || appr.parameters || {}, null, 1)}
+                          {JSON.stringify(appr.args || appr.parameters || appr.tool_args || {}, null, 1)}
                         </pre>
                       </td>
                       <td className={cn(tableCellClass, "text-right")}>

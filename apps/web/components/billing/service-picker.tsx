@@ -138,13 +138,18 @@ export function ServicePicker({
         )}
       >
         <span className="truncate">
-          {selected ? selected.name : t("settings.templates.searchServices", "Search services...")}
+          {selected
+            ? selected.name
+            : t(
+                "billing.servicePicker.placeholder",
+                "Search services or products...",
+              )}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
 
       {open && (
-        <div className="absolute z-30 mt-1 w-full min-w-[320px] rounded-md border border-border bg-popover shadow-lg">
+        <div className="absolute left-0 z-30 mt-1 w-full min-w-[300px] sm:min-w-[380px] max-w-[calc(100vw-2rem)] rounded-md border border-border bg-popover shadow-lg">
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
@@ -152,15 +157,29 @@ export function ServicePicker({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder={t("billing.servicePicker.typeServiceName", "Type a service name...")}
-              aria-label={t("billing.servicePicker.searchServicesAria", "Search services")}
+              placeholder={t(
+                "billing.servicePicker.typeServiceName",
+                "Type a service or product name...",
+              )}
+              aria-label={t(
+                "billing.servicePicker.searchServicesAria",
+                "Search services and products",
+              )}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <div ref={listRef} role="listbox" className="max-h-64 overflow-y-auto p-1">
+          <div
+            ref={listRef}
+            role="listbox"
+            className="max-h-64 overflow-y-auto overflow-x-hidden p-1"
+          >
             {results.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                {t("billing.servicePicker.noMatch", "No services match \"{query}\".", { query })}
+                {t(
+                  "billing.servicePicker.noMatch",
+                  "No services match \"{query}\".",
+                  { query },
+                )}
               </p>
             ) : (
               results.map((service, index) => (
@@ -173,36 +192,47 @@ export function ServicePicker({
                   onMouseEnter={() => setHighlight(index)}
                   onClick={() => choose(service)}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm",
-                    index === highlight && "bg-accent"
+                    "flex w-full items-start gap-2.5 rounded-sm p-2 text-left text-sm transition-colors",
+                    index === highlight && "bg-accent text-accent-foreground",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex h-4 w-4 shrink-0 items-center justify-center",
-                      service.id === value ? "text-primary" : "text-transparent"
+                      "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center",
+                      service.id === value ? "text-primary" : "text-transparent",
                     )}
                   >
                     <Check className="h-4 w-4" />
                   </span>
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {service.name}
-                  </span>
-                  {service.code ? (
-                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-                      {service.code}
-                    </span>
-                  ) : null}
-                  {service.category ? (
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                      {service.category}
-                    </span>
-                  ) : null}
-                  <span className="shrink-0 tabular-nums text-muted-foreground">
-                    {formatPrice
-                      ? formatPrice(service.defaultPrice)
-                      : `$${service.defaultPrice}`}
-                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span
+                        className="font-medium text-foreground line-clamp-2"
+                        title={service.name}
+                      >
+                        {service.name}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                        {formatPrice
+                          ? formatPrice(service.defaultPrice)
+                          : `$${service.defaultPrice}`}
+                      </span>
+                    </div>
+                    {service.code || service.category ? (
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        {service.code ? (
+                          <span className="shrink-0 font-mono text-[11px] rounded bg-muted px-1.5 py-0.5 font-medium text-muted-foreground">
+                            {service.code}
+                          </span>
+                        ) : null}
+                        {service.category ? (
+                          <span className="text-[11px] text-muted-foreground">
+                            {service.category}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </button>
               ))
             )}
