@@ -188,7 +188,8 @@ BOOT_LEARNINGS: List[Dict[str, Any]] = [
         "decision": "SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy o stave sprintov",
         "reasoning": (
             "Súbory v tasks/ obsahujú historické špecifikácie. To, že súbor existuje, "
-            "neznamená, že sprint nebol vykonaný. Sprinty 1, 2, 3, 4 a 7 sú už zlúčené v main."
+            "neznamená, že sprint nebol vykonaný. Aktuálny stav zlúčených sprintov sa "
+            "odvodzuje z tasks/SPRINT-INDEX.md pri bootovaní (viď merged_sprint_clause)."
         ),
         "decision_type": "lesson_learned",
         "tags": ["lesson", "sprint-index", "architecture"],
@@ -574,7 +575,7 @@ learning_machine: LearningMachine = LearningMachine(
         additional_instructions=(
             "Preferencie a pracovné návyky: jazyk reportov (sk), štýl "
             "(executive_summary), režim dispatchu (immediate), overené pravidlá "
-            "(Sprinty 1, 2, 3, 4 a 7 sú už zlúčené do main; spúšťaj iba cielené testy)."
+            "(stav zlúčených sprintov sa číta z tasks/SPRINT-INDEX.md; spúšťaj iba cielené testy)."
         ),
     ),
     # 3/5 Session Context Store
@@ -808,17 +809,99 @@ def seed_architect_profile() -> None:
         ),
     )
 
+def _parse_sprint_index() -> List[Dict[str, str]]:
+    """Načíta tasks/SPRINT-INDEX.md a vráti riadky tabuľky ako slovníky.
+
+    Index je jediný písomný záznam o stave sprintov (obnovený z commitu e9627504).
+    Nikdy nezhadzuje chybu smerom nahor — pri probléme vráti prázdny zoznam a
+    volajúci použije fallback.
+    """
+    index_path = REPO_ROOT / "tasks" / "SPRINT-INDEX.md"
+    try:
+        raw = index_path.read_text(encoding="utf-8")
+    except Exception as exc:  # chýbajúci / nečitateľný index
+        logger.debug("SPRINT-INDEX.md nedostupný (%s) — používam fallback.", exc)
+        return []
+
+    rows: List[Dict[str, str]] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 4 or not cells[0].isdigit():
+            continue
+        rows.append(
+            {
+                "number": cells[0],
+                "file": cells[1],
+                "title": cells[2],
+                "status": cells[3],
+            }
+        )
+    return rows
+
+
+def _merged_sprints_from_index() -> List[Dict[str, str]]:
+    """Sprinty, ktoré index označuje ako zlúčené v main."""
+    return [r for r in _parse_sprint_index() if "merged" in r["status"].lower()]
+
+
+def merged_sprint_clause() -> str:
+    """Veta pre inštrukcie tímu, odvodená z indexu — nie z hardkódovaného zoznamu.
+
+    Predtým bolo 'Sprinty 1, 2, 3, 4 a 7' napísané natvrdo na štyroch miestach,
+    kým main obsahoval 30 sprintov; líder preto považoval hotovú prácu za nezačatú.
+    """
+    merged = _merged_sprints_from_index()
+    if not merged:
+        return (
+            "Stav sprintov NIE JE v tomto behu overený (SPRINT-INDEX.md nedostupný). "
+            "Pred akýmkoľvek dispatchom si stav odvoď z `git log --oneline -200` a "
+            "`gh pr list --state all`; sprint je MERGED len ak sa jeho cieľové súbory "
+            "zmenili v commite dosiahnuteľnom z main."
+        )
+    numbers = sorted((int(r["number"]) for r in merged))
+    listed = ", ".join(f"#{n}" for n in numbers)
+    # Súvislý rozsah zbaľ do "1–14" kvôli úspore tokenov.
+    if numbers == list(range(numbers[0], numbers[-1] + 1)):
+        span = f"{numbers[0]}–{numbers[-1]}"
+    else:
+        span = listed
+    return (
+        f"Sprinty {span} sú podľa tasks/SPRINT-INDEX.md zlúčené v main ({len(numbers)} celkovo). "
+        "NIKDY ich nepovažuj za nezačaté a nedispatchuj ich znova. "
+        "Index je písomný záznam, nie dôkaz: sprint je MERGED len ak sa jeho cieľové "
+        "súbory zmenili v commite dosiahnuteľnom z main — over to cez `git log`."
+    )
+
+
 def seed_sprint_entities() -> int:
     """Zaznamená do EntityMemoryStore dokončené sprinty, aby ich líder nepovažoval za nezačaté."""
-    merged_sprints = [
-        ("sprint-1", "command-palette", "PR #42 — Command Palette Smart Ranking & Contextual Actions (MERGED)."),
-        ("sprint-2", "ui-kit-harmonization", "Dashboard UI Kit Harmonization across Recalls, Vaccinations & Controlled Substances (MERGED)."),
-        ("sprint-3", "field-practice-cehz", "PR #39, #40 — Ambulatory Field Practice & CEHZ / KVEPIS Sync Resilience (MERGED)."),
-        ("sprint-4", "laboratory-results", "Laboratory Results & Diagnostic Reference Range Flags (MERGED)."),
-        ("sprint-7", "encounters-hub", "Encounters Hub & Care Reminders — Daily Clinical Workflow Harmonization (MERGED)."),
-    ]
+    merged_sprints = _merged_sprints_from_index()
+    if merged_sprints:
+        # Odvodené z indexu — udržiava sa samo, na rozdiel od pôvodného tuple.
+        seeds = [
+            (
+                f"sprint-{r['number']}",
+                r["title"],
+                f"{r['file']} — stav podľa SPRINT-INDEX.md: {r['status']}",
+            )
+            for r in merged_sprints
+        ]
+    else:
+        # Fallback, keď index nie je k dispozícii (napr. odstránený v dab4d05).
+        logger.warning("SPRINT-INDEX.md nedostupný — seedujem len známy historický základ.")
+        seeds = [
+            ("sprint-1", "command-palette", "Command Palette Smart Ranking (merged)."),
+            ("sprint-2", "ui-kit-harmonization", "Dashboard UI Kit Harmonization (merged)."),
+            ("sprint-3", "field-practice-cehz", "Ambulatory Field Practice & CEHZ (merged)."),
+            ("sprint-4", "laboratory-results", "Laboratory Results & Reference Ranges (merged)."),
+            ("sprint-7", "encounters-hub", "Encounters Hub & Care Reminders (merged)."),
+        ]
+
     inserted = 0
-    for s_id, s_mod, s_note in merged_sprints:
+    for s_id, s_mod, s_note in seeds:
         try:
             entity_memory_store.remember_about(
                 entity=s_id,
@@ -1234,7 +1317,7 @@ prompt_manager = Agent(
         "Pred tvorbou promptu vždy vytiahni learnings (recall_learnings) a "
         "knowledge (UIKIT.md, zákony).",
         "Pravidlá 'sandbox: žiadny celý monorepo type-check' a 'OPL vyžaduje manuálny podpis' sú záväzné.",
-        "Sprinty 1, 2, 3, 4 a 7 sú už dokončené a zlúčené do main — nespúšťaj ich znova.",
+        merged_sprint_clause(),
         "Reporty píš po slovensky, štýl executive_summary.",
     ],
     add_history_to_context=True,
@@ -1398,8 +1481,9 @@ openvpm_dev_team = Team(
         "qwen_implementer → kód.",
         "POZOR NA HISTORIU: Ak nová správa obsahuje explicitný zoznam úloh (napr. 'dispatchi sprint X, Y, Z'), "
         "vykonaj PRESNE tieto úlohy — neopakuj úlohy z predchádzajúcich runov v histórii.",
-        "Pravidlo autority: SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy. "
-        "Sprinty 1, 2, 3, 4 a 7 sú už dokončené a zlúčené v main. NIKDY ich nepovažuj za nezačaté.",
+        "Pravidlo autority: git log je najvyššia autorita, potom tasks/SPRINT-INDEX.md, "
+        "a až potom seedovaná entity memory.",
+        merged_sprint_clause(),
         "Pred retrospektívou sprintu (PASSED/FAILED) zavolaj record_sprint_learnings.",
         "Architektonický audit: Vanilla routery ako records.ts a whiteboard.ts sú upstream baseline a nesmú byť považované za porušenia ak existujú v upstreame. Každé compliance rozhodnutie sa ukladá ako JSON záznam.",
         "Synchronizácia a izolácia Studio komponentov pri bootovaní rešpektuje lock súbor studio_seed.lock.",
@@ -1504,6 +1588,10 @@ agent_os: AgentOS = AgentOS(
         "http://192.168.0.100:3008",
         "http://192.168.0.100:7777",
         "https://os.agno.com",
+        # Vlastná origin služby cez Cloudflare tunnel. Potrebné len ak AgentOS UI
+        # otvoríš na tejto doméne a prehliadač z nej volá API (server-side fetch
+        # z apps/web CORS nepodlieha). Pridané spolu s opravou bind-vs-dial.
+        "https://agentos-tunnel.significa.sk",
     ],
     scheduler=True,
     scheduler_poll_interval=15,
