@@ -1265,12 +1265,16 @@ github_manager = Agent(
         get_pull_request_diff,
         check_pull_request_ci,
         run_sprint_eval_suite_tool,
+        run_shell_command,
+        read_project_file,
     ],
     instructions=[
         "Riadiš Git/GitHub workflow tímu.",
         "Pred gh_pr_merge MUSÍ prejsť run_sprint_eval_suite (PASSED).",
         "git_push_origin_main / gh_pr_merge / deploy_to_production sú "
         "schvaľovacie brány (ApprovalType.required) — bez ľudského súhlasu ich nikdy neobídeš.",
+        "Pre git/gh CLI príkazy použi run_shell_command (napr. git pull, git checkout, git log).",
+        "Pre čítanie súborov použi read_project_file (napr. SPRINT-INDEX.md, tasks/*.md).",
         "Akcie s dopadom na veterinárnu legislatívu loguj ako compliance rozhodnutia.",
     ],
     add_history_to_context=True,
