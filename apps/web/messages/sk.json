@@ -963,6 +963,7 @@
       "showingPagination": "Zobrazuje sa {from}–{to} z {total}",
       "previous": "Predchádzajúca",
       "next": "Ďalšia",
+      "pageSizeLabel": "Riadkov na stránku",
       "emptyEstimatesTitle": "Zatiaľ žiadne cenové ponuky",
       "emptyEstimatesDesc": "Vytvorte cenovú ponuku, ak klient potrebuje schválenie pred vykonaním služieb.",
       "emptyStatusTitle": "Žiadne faktúry s týmto stavom",

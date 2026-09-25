@@ -963,6 +963,7 @@
       "showingPagination": "Showing {from}--{to} of {total}",
       "previous": "Previous",
       "next": "Next",
+      "pageSizeLabel": "Rows per page",
       "emptyEstimatesTitle": "No estimates yet",
       "emptyEstimatesDesc": "Create an estimate when a client needs approval before services are performed.",
       "emptyStatusTitle": "No invoices with this status",
