@@ -5390,6 +5390,12 @@
         "visitId": "ID Návštevy",
         "date": "Dátum",
         "doctor": "Lekár"
+      },
+      "csv": {
+        "title": "CSV Import — Bezpečné kódovanie (UTF-8 / Windows-1250)",
+        "description": "Nahrajte starší CSV export. Parser rozpozná Windows-1250 vs UTF-8 a nikdy nespadne na neplatných bajtoch — bezpečne použije náhradu.",
+        "chooseFile": "Vybrať CSV súbor",
+        "searchPlaceholder": "Hľadať v náhľade"
       }
     },
     "locations": {
@@ -7478,7 +7484,9 @@
       "viewDetails": "Zobraziť detail",
       "showing": "Zobrazuje sa {from}–{to} z {total}",
       "previous": "Predchádzajúca",
-      "next": "Ďalšia"
+      "next": "Ďalšia",
+      "emptyGuidance": "To znamená, že v importovanom archíve sa nenašli žiadne staršie dáta tohto typu. Ak ste tu očakávali záznamy, overte zdroj migrácie alebo kontaktujte podporu.",
+      "invalidDocumentUrl": "Neplatná URL dokumentu zablokovaná pre bezpečnosť"
     },
     "sections": {
       "contacts": "Spolumajitelia",
