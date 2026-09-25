@@ -6878,7 +6878,11 @@
     "marketingSuccess": "Príspevok bol úspešne vytvorený a zaradený do marketingového plánu!",
     "page": {
       "loading": "Načítavam prepúšťaciu správu..."
-    }
+    },
+    "sympathySuppressionNote": "Automatické pripomienky, marketing a kontroly sú potlačené (ext_automation_suppression_log).",
+    "approvalRequiredNote": "AI výstup musí skontrolovať ošetrujúci veterinár pred tlačou alebo odoslaním majiteľovi.",
+    "signatureBlock": "Podpis ošetrujúceho lekára / pečiatka",
+    "footerNote": "V prípade otázok kontaktujte kliniku. Dokument bol skontrolovaný lekárom."
   },
   "vetIntel": {
     "badge": "AI Trh & Legislatíva",
