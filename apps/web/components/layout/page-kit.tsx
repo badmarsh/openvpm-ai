@@ -30,29 +30,38 @@ export function PageToolbar({
 }
 
 export function SearchField({
+  id,
+  inputRef,
   value,
   onChange,
   placeholder,
   maxLength,
   className,
   inputClassName,
+  autoFocus,
 }: {
+  id?: string;
+  inputRef?: React.Ref<HTMLInputElement>;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   maxLength?: number;
   className?: string;
   inputClassName?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <div className={cn("relative w-full min-w-48 flex-1 sm:max-w-sm", className)}>
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
+        id={id}
+        ref={inputRef}
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={cn("h-9 pl-9 text-xs", inputClassName)}
+        autoFocus={autoFocus}
       />
     </div>
   );
