@@ -94,3 +94,45 @@ export function inventoryAlert(
         expirationStatus === "expiring_soon"),
   };
 }
+
+/**
+ * Sprint 27 — expiry-date warning badges.
+ *
+ * The product register flags a lot as amber once it is inside the
+ * `INVENTORY_EXPIRY_WARNING_DAYS` window and red once the date has passed.
+ * Pure date maths so both the table badge and the tests share one contract.
+ */
+export const INVENTORY_EXPIRY_WARNING_DAYS = 30;
+
+export type ExpiryBadgeTone = "expired" | "warning";
+
+/** Whole days from `today` until `expirationDate`; negative once expired. */
+export function daysUntilExpiry(
+  expirationDate: string | Date | null | undefined,
+  today: Date | string = new Date()
+): number | null {
+  const exp = normalizeDate(expirationDate);
+  if (!exp) return null;
+  const todayYmd = normalizeDateKey(today) ?? ymdFromDate(new Date());
+  const expDate = ymdToDate(exp);
+  const todayDate = ymdToDate(todayYmd);
+  if (!expDate || !todayDate) return null;
+  return Math.round(
+    (expDate.getTime() - todayDate.getTime()) / (24 * 60 * 60 * 1000)
+  );
+}
+
+/**
+ * Badge tone for a lot expiry: `expired` (destructive token) when the date has
+ * passed, `warning` (amber token) inside the warning window, otherwise null.
+ */
+export function expiryBadgeTone(
+  expirationDate: string | Date | null | undefined,
+  today: Date | string = new Date(),
+  warningDays: number = INVENTORY_EXPIRY_WARNING_DAYS
+): ExpiryBadgeTone | null {
+  const days = daysUntilExpiry(expirationDate, today);
+  if (days === null) return null;
+  if (days < 0) return "expired";
+  return days <= warningDays ? "warning" : null;
+}

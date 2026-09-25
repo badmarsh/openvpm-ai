@@ -252,7 +252,8 @@ describe("inventory mutation safety", () => {
       reorderPoint: null,
       expirationDate: null,
     }));
-    const countRows = Array.from({ length: 5 }, () => [{ count: 60 }]);
+    // countResult + attention + lowStock + expired + expiringSoon + controlled + total SKUs
+    const countRows = Array.from({ length: 7 }, () => [{ count: 60 }]);
     const { db, orderBy } = createDb({
       selectResults: [
         [{ timezone: "UTC" }],

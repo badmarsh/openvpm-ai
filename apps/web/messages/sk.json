@@ -2140,7 +2140,8 @@
     },
     "tabs": {
       "products": "Produkty",
-      "suppliers": "Dodávatelia"
+      "suppliers": "Dodávatelia",
+      "controlled": "Audit omamných látok"
     },
     "table": {
       "colName": "Názov",
@@ -2282,7 +2283,9 @@
       "linkManualEntry": "Potvrdiť ručný príjem a uzavrieť kontrolu",
       "reviewLinkError": "Záznam musí byť váš ručný príjem rovnakého lieku. Overte ID záznamu a názov lieku.",
       "reviewLoadError": "Čakajúce kontroly sa nepodarilo načítať. Pred zápisom príjmu skúste načítanie zopakovať.",
-      "activeSubstance": "Účinná látka (voliteľné)"
+      "activeSubstance": "Účinná látka (voliteľné)",
+      "importFailedTitle": "Import zlyhal",
+      "retryImport": "Skúsiť znova"
     },
     "markup": {
       "label": "Prirážka k nákupnej cene (%)",
@@ -2292,6 +2295,34 @@
     },
     "actions": {
       "saveProduct": "Uložiť produkt"
+    },
+    "kpi": {
+      "totalSkus": "Počet SKU",
+      "lowStock": "Nízky stav",
+      "expiringSoon": "Blíži sa expirácia",
+      "expiredHint": "{count} expirovaných",
+      "controlled": "Omamné látky",
+      "controlledHint": "Evidencia len manuálne"
+    },
+    "expiry": {
+      "expiredDays": "Expirované pred {days} d",
+      "expiresInDays": "Expiruje o {days} d"
+    },
+    "controlled": {
+      "badge": "Omamná látka",
+      "badgeTitle": "Omamná látka — evidencia len manuálne",
+      "searchPlaceholder": "Hľadať liek, šaržu alebo pacienta...",
+      "readOnlyNotice": "Len na čítanie. Pohyby zaznamenávajte na stránke omamných látok.",
+      "loadError": "Nepodarilo sa načítať audit omamných látok. Skúste to znova.",
+      "loading": "Načítava sa...",
+      "colPerformedAt": "Dátum",
+      "colDrug": "Látka",
+      "colAction": "Pohyb",
+      "colQuantity": "Množstvo",
+      "colPerformer": "Vykonal",
+      "colWitness": "Svedok",
+      "emptyTitle": "Žiadne pohyby omamných látok",
+      "emptyDesc": "Príjmy, aplikácie, likvidácie a vrátenia omamných látok sa tu zobrazia po zaevidovaní so svedkom."
     }
   },
   "labResults": {

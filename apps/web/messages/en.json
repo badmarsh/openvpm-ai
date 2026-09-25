@@ -2140,7 +2140,8 @@
     },
     "tabs": {
       "products": "Products",
-      "suppliers": "Suppliers"
+      "suppliers": "Suppliers",
+      "controlled": "Controlled audit trail"
     },
     "table": {
       "colName": "Name",
@@ -2282,7 +2283,9 @@
       "linkManualEntry": "Confirm manual receipt and close review",
       "reviewLinkError": "The entry must be your manual receipt for the same drug. Check the entry ID and drug name.",
       "reviewLoadError": "Could not load pending reviews. Retry before recording receipts.",
-      "activeSubstance": "Active substance (optional)"
+      "activeSubstance": "Active substance (optional)",
+      "importFailedTitle": "Import failed",
+      "retryImport": "Retry import"
     },
     "markup": {
       "label": "Markup on cost (%)",
@@ -2292,6 +2295,34 @@
     },
     "actions": {
       "saveProduct": "Save product"
+    },
+    "kpi": {
+      "totalSkus": "Total SKUs",
+      "lowStock": "Low stock",
+      "expiringSoon": "Expiring soon",
+      "expiredHint": "{count} expired",
+      "controlled": "Controlled substances",
+      "controlledHint": "Ledger is manual only"
+    },
+    "expiry": {
+      "expiredDays": "Expired {days} d ago",
+      "expiresInDays": "Expires in {days} d"
+    },
+    "controlled": {
+      "badge": "Controlled",
+      "badgeTitle": "Controlled substance — manual ledger only",
+      "searchPlaceholder": "Search drug, lot or patient...",
+      "readOnlyNotice": "Read-only view. Record movements on the controlled substances page.",
+      "loadError": "Unable to load the controlled substance audit trail. Please retry.",
+      "loading": "Loading...",
+      "colPerformedAt": "Date",
+      "colDrug": "Substance",
+      "colAction": "Movement",
+      "colQuantity": "Quantity",
+      "colPerformer": "Performed by",
+      "colWitness": "Witness",
+      "emptyTitle": "No controlled substance movements",
+      "emptyDesc": "Receipts, administrations, wastage and returns of narcotics appear here once they are logged with a witness."
     }
   },
   "labResults": {

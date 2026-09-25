@@ -17,6 +17,10 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  CalendarClock,
+  Layers,
+  ShieldAlert,
+  TrendingDown,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -43,6 +47,11 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
+import {
+  INVENTORY_EXPIRY_WARNING_DAYS,
+  daysUntilExpiry,
+  expiryBadgeTone,
+} from "@/lib/inventory/alerts";
 import { WholesalerImportDialog } from "@/components/inventory/wholesaler-import-dialog";
 import {
   INVENTORY_ADJUSTMENT_QUANTITY_MIN,
@@ -91,6 +100,11 @@ const ALERT_FILTERS = [
 
 type AlertFilter = (typeof ALERT_FILTERS)[number]["value"];
 
+/** Product register, supplier directory and the read-only narcotics ledger. */
+type InventoryTab = "products" | "suppliers" | "controlled";
+
+const CONTROLLED_AUDIT_PAGE_SIZE = 20;
+
 function stockBadge(
   status: string,
   t: (key: string, fallback?: string) => string
@@ -98,24 +112,24 @@ function stockBadge(
   if (status === "not_tracked") {
     return {
       label: t("inventory.stock.notTracked", "Stock not tracked"),
-      className: "bg-slate-100 text-slate-700",
+      className: "bg-muted text-muted-foreground",
     };
   }
   if (status === "out") {
     return {
       label: t("inventory.stock.out", "Out"),
-      className: "bg-red-100 text-red-700",
+      className: "bg-destructive/10 text-destructive",
     };
   }
   if (status === "low") {
     return {
       label: t("inventory.stock.lowStock", "Low Stock"),
-      className: "bg-amber-100 text-amber-700",
+      className: "bg-warning-muted text-warning-muted-foreground",
     };
   }
   return {
     label: t("inventory.stock.inStock", "In Stock"),
-    className: "bg-green-100 text-green-700",
+    className: "bg-success-muted text-success-muted-foreground",
   };
 }
 
@@ -126,16 +140,48 @@ function expirationBadge(
   if (status === "expired") {
     return {
       label: t("inventory.expiration.expired", "Expired"),
-      className: "bg-red-100 text-red-700",
+      className: "bg-destructive/10 text-destructive",
     };
   }
   if (status === "expiring_soon") {
     return {
       label: t("inventory.expiration.expiringSoon", "Expiring Soon"),
-      className: "bg-orange-100 text-orange-700",
+      className: "bg-warning-muted text-warning-muted-foreground",
     };
   }
   return null;
+}
+
+/**
+ * Sprint 27 — expiry-date warning badge.
+ *
+ * Red (`destructive` token) once the lot date has passed, amber (`warning`
+ * token) inside the {@link INVENTORY_EXPIRY_WARNING_DAYS} window. Never a raw
+ * Tailwind palette colour so dark mode and print keep the same contract.
+ */
+function expiryWarningBadge(
+  expirationDate: string | null | undefined,
+  t: (
+    key: string,
+    fallback?: string,
+    params?: Record<string, string | number>
+  ) => string
+) {
+  const tone = expiryBadgeTone(expirationDate);
+  if (!tone) return null;
+  const days = daysUntilExpiry(expirationDate) ?? 0;
+  if (tone === "expired") {
+    return {
+      label: t("inventory.expiry.expiredDays", "Expired {days} d ago", {
+        days: Math.abs(days),
+      }),
+      className: "bg-destructive/10 text-destructive",
+    };
+  }
+  return {
+    label: t("inventory.expiry.expiresInDays", "Expires in {days} d", { days }),
+    className: "bg-warning-muted text-warning-muted-foreground",
+  };
 }
 
 function formatProductCategory(
@@ -1102,6 +1148,144 @@ function EditSupplierRow({
   );
 }
 
+// --- Controlled substance audit trail (read-only) ---
+
+/**
+ * Sprint 27 — controlled-substance audit trail.
+ *
+ * Read-only mirror of the statutory narcotics ledger (Zákon č. 139/1998 Z. z.)
+ * next to the stock register. It never writes: every movement is still entered
+ * by hand on /controlled-substances with the mandatory witness, and no audit
+ * write path is touched from here.
+ */
+function ControlledAuditTrail() {
+  const { t } = useI18n();
+  const [search, setSearch] = useState("");
+  const query = trpc.controlledSubstances.list.useQuery({
+    drugName: search.trim() || undefined,
+    limit: CONTROLLED_AUDIT_PAGE_SIZE,
+    offset: 0,
+  });
+  const entries = query.data?.items ?? [];
+  const ledgerMissing =
+    !query.isLoading && !query.error && !query.data;
+
+  return (
+    <>
+      <PageToolbar>
+        <SearchField
+          value={search}
+          placeholder={t(
+            "inventory.controlled.searchPlaceholder",
+            "Search drug, lot or patient..."
+          )}
+          onChange={setSearch}
+        />
+        <p className="text-xs text-muted-foreground sm:ml-auto">
+          {t(
+            "inventory.controlled.readOnlyNotice",
+            "Read-only view. Record movements on the controlled substances page."
+          )}
+        </p>
+      </PageToolbar>
+
+      {query.error || ledgerMissing ? (
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+          {query.error?.message ??
+            t(
+              "inventory.controlled.loadError",
+              "Unable to load the controlled substance audit trail. Please retry."
+            )}
+        </div>
+      ) : query.isLoading ? (
+        <div role="status" aria-label={t("inventory.controlled.loading", "Loading...")}>
+          <TableSkeleton columns={6} />
+        </div>
+      ) : entries.length > 0 ? (
+        <DataTableFrame>
+          <table className="w-full text-xs tabular-nums">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className={tableHeadClass}>
+                  {t("inventory.controlled.colPerformedAt", "Date")}
+                </th>
+                <th className={tableHeadClass}>
+                  {t("inventory.controlled.colDrug", "Substance")}
+                </th>
+                <th className={tableHeadClass}>
+                  {t("inventory.controlled.colAction", "Movement")}
+                </th>
+                <th className={cn(tableHeadClass, "text-right")}>
+                  {t("inventory.controlled.colQuantity", "Quantity")}
+                </th>
+                <th className={tableHeadClass}>
+                  {t("inventory.controlled.colPerformer", "Performed by")}
+                </th>
+                <th className={tableHeadClass}>
+                  {t("inventory.controlled.colWitness", "Witness")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr key={entry.id} className={tableRowClass}>
+                  <td className={cn(tableCellClass, "font-mono")}>
+                    {formatClinicalDate(
+                      new Date(entry.performedAt).toISOString().slice(0, 10),
+                      "UTC",
+                      ""
+                    )}
+                  </td>
+                  <td className={cn(tableCellClass, "font-medium")}>
+                    <span className="flex items-center gap-1.5">
+                      <ShieldAlert
+                        className="h-3.5 w-3.5 text-destructive"
+                        aria-hidden="true"
+                      />
+                      {entry.drugName}
+                    </span>
+                    {entry.lotNumber && (
+                      <span className="block text-[11px] text-muted-foreground">
+                        {t("inventory.table.lotPrefix", "Lot {number}", {
+                          number: entry.lotNumber,
+                        })}
+                      </span>
+                    )}
+                  </td>
+                  <td className={cn(tableCellClass, "text-muted-foreground")}>
+                    {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
+                  </td>
+                  <td className={cn(tableCellClass, "text-right")}>
+                    {entry.quantity} {entry.unit}
+                  </td>
+                  <td className={cn(tableCellClass, "text-muted-foreground")}>
+                    {entry.performerName || "\u2014"}
+                  </td>
+                  <td className={cn(tableCellClass, "text-muted-foreground")}>
+                    {entry.witnessName || "\u2014"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </DataTableFrame>
+      ) : (
+        <EmptyState
+          icon={ShieldAlert}
+          title={t(
+            "inventory.controlled.emptyTitle",
+            "No controlled substance movements"
+          )}
+          description={t(
+            "inventory.controlled.emptyDesc",
+            "Receipts, administrations, wastage and returns of narcotics appear here once they are logged with a witness."
+          )}
+        />
+      )}
+    </>
+  );
+}
+
 // --- Main Page ---
 
 /**
@@ -1133,7 +1317,7 @@ export default function InventoryPage() {
   const { t } = useI18n();
   const { data: session } = useSession();
   const formatCurrency = useCurrencyFormatter();
-  const [tab, setTab] = useState<"products" | "suppliers">("products");
+  const [tab, setTab] = useState<InventoryTab>("products");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [supplierName, setSupplierName] = useState("");
@@ -1229,7 +1413,7 @@ export default function InventoryPage() {
 
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v as "products" | "suppliers")}
+        onValueChange={(v) => setTab(v as InventoryTab)}
       >
         <TabsList className={underlineTabsListClass}>
           <TabsTrigger value="products" className={underlineTabsTriggerClass}>
@@ -1239,6 +1423,10 @@ export default function InventoryPage() {
           <TabsTrigger value="suppliers" className={underlineTabsTriggerClass}>
             <Truck className="h-3.5 w-3.5" />
             {t("inventory.tabs.suppliers", "Suppliers")}
+          </TabsTrigger>
+          <TabsTrigger value="controlled" className={underlineTabsTriggerClass}>
+            <ShieldAlert className="h-3.5 w-3.5" />
+            {t("inventory.tabs.controlled", "Controlled audit trail")}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -1326,29 +1514,43 @@ export default function InventoryPage() {
           {productsQuery.data && (
             <KpiGrid>
               <KpiCard
-                active={alertFilter === "attention"}
-                onClick={() => setAlertFilter("attention")}
-                icon={<AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
-                label={t("inventory.page.alertAttention", "Needs attention")}
-                value={productsQuery.data.alertCounts.attention}
+                active={alertFilter === "all"}
+                onClick={() => setAlertFilter("all")}
+                icon={Layers}
+                tone="primary"
+                label={t("inventory.kpi.totalSkus", "Total SKUs")}
+                value={productsQuery.data.alertCounts.totalSkus}
               />
               <KpiCard
                 active={alertFilter === "low_stock"}
                 onClick={() => setAlertFilter("low_stock")}
-                label={t("inventory.page.alertLowStock", "Low stock")}
+                icon={TrendingDown}
+                tone="warning"
+                label={t("inventory.kpi.lowStock", "Low stock")}
                 value={productsQuery.data.alertCounts.lowStock}
-              />
-              <KpiCard
-                active={alertFilter === "expired"}
-                onClick={() => setAlertFilter("expired")}
-                label={t("inventory.page.alertExpired", "Expired")}
-                value={productsQuery.data.alertCounts.expired}
               />
               <KpiCard
                 active={alertFilter === "expiring_soon"}
                 onClick={() => setAlertFilter("expiring_soon")}
-                label={t("inventory.page.alertExpiringSoon", "Expiring soon")}
+                icon={CalendarClock}
+                tone="warning"
+                label={t("inventory.kpi.expiringSoon", "Expiring soon")}
                 value={productsQuery.data.alertCounts.expiringSoon}
+                hint={
+                  productsQuery.data.alertCounts.expired > 0
+                    ? t("inventory.kpi.expiredHint", "{count} expired", {
+                        count: productsQuery.data.alertCounts.expired,
+                      })
+                    : undefined
+                }
+              />
+              <KpiCard
+                onClick={() => setTab("controlled")}
+                icon={ShieldAlert}
+                tone="destructive"
+                label={t("inventory.kpi.controlled", "Controlled substances")}
+                value={productsQuery.data.alertCounts.controlled}
+                hint={t("inventory.kpi.controlledHint", "Ledger is manual only")}
               />
             </KpiGrid>
           )}
@@ -1420,6 +1622,10 @@ export default function InventoryPage() {
                       product.expirationStatus,
                       t
                     );
+                    const expiryWarning = expiryWarningBadge(
+                      product.expirationDate,
+                      t
+                    );
 
                     return (
                       <tr
@@ -1465,6 +1671,17 @@ export default function InventoryPage() {
                               {t("inventory.table.expPrefix", `Exp ${formatDateOnly(product.expirationDate)}`, { date: formatDateOnly(product.expirationDate) })}
                             </span>
                           )}
+                          {expiryWarning && (
+                            <span
+                              className={cn(
+                                "mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                expiryWarning.className
+                              )}
+                            >
+                              <CalendarClock className="h-3 w-3" aria-hidden="true" />
+                              {expiryWarning.label}
+                            </span>
+                          )}
                         </td>
                         <td className={tableCellClass}>
                           <div className="flex flex-wrap gap-1">
@@ -1484,6 +1701,18 @@ export default function InventoryPage() {
                                 )}
                               >
                                 {expiration.label}
+                              </span>
+                            )}
+                            {product.isControlledSubstance && (
+                              <span
+                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
+                                title={t(
+                                  "inventory.controlled.badgeTitle",
+                                  "Controlled substance — manual ledger only"
+                                )}
+                              >
+                                <ShieldAlert className="h-3 w-3" aria-hidden="true" />
+                                {t("inventory.controlled.badge", "Controlled")}
                               </span>
                             )}
                           </div>
@@ -1645,6 +1874,9 @@ export default function InventoryPage() {
           )}
         </>
       )}
+
+      {/* Controlled substance audit trail */}
+      {tab === "controlled" && <ControlledAuditTrail />}
 
       {/* Suppliers Tab */}
       {tab === "suppliers" && (

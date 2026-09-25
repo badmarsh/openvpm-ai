@@ -10,6 +10,10 @@ import {
   inventoryAlert,
 } from "@/lib/inventory/alerts";
 import {
+  CONTROLLED_SUBSTANCES_PATTERN_SOURCE,
+  isControlledSubstanceName,
+} from "@/lib/controlled-substances/policy";
+import {
   INVENTORY_ADJUSTMENT_REASON_MAX_LENGTH,
   INVENTORY_PRODUCT_CATEGORY_MAX_LENGTH,
   INVENTORY_PRODUCT_LOT_NUMBER_MAX_LENGTH,
@@ -220,6 +224,7 @@ export const inventoryRouter = createRouter({
       const lowStockCondition = sql`${products.inventoryTracked} and ${products.stockQuantity} <= coalesce(${products.reorderPoint}, 10)`;
       const expiredCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} < ${todayYmd}`;
       const expiringSoonCondition = sql`${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} >= ${todayYmd} and ${products.expirationDate} <= ${soonYmd}`;
+      const controlledCondition = sql`${products.name} ~* ${CONTROLLED_SUBSTANCES_PATTERN_SOURCE}`;
       const attentionCondition = sql`(${lowStockCondition} or (${products.inventoryTracked} and ${products.expirationDate} is not null and ${products.expirationDate} <= ${soonYmd}))`;
 
       const alertCondition =
@@ -280,6 +285,8 @@ export const inventoryRouter = createRouter({
           lowStockCount,
           expiredCount,
           expiringSoonCount,
+          controlledCount,
+          skuCount,
         ] = await Promise.all([
           ctx.db
             .select({
@@ -298,12 +305,17 @@ export const inventoryRouter = createRouter({
           countWhere(lowStockCondition),
           countWhere(expiredCondition),
           countWhere(expiringSoonCondition),
+          countWhere(controlledCondition),
+          countWhere(),
         ]);
 
         return {
           items: items.map((p) => ({
             ...p,
             ...inventoryAlert(p, todayYmd, input.expiryWindowDays),
+            // Read-only flag: the register badges narcotics, it never prefills
+            // or writes controlled-substance ledger rows (Zákon 139/1998 Z. z.).
+            isControlledSubstance: isControlledSubstanceName(p.name),
           })),
           total: Number(countResult[0]?.count ?? 0),
           alertCounts: {
@@ -311,6 +323,8 @@ export const inventoryRouter = createRouter({
             lowStock: Number(lowStockCount[0]?.count ?? 0),
             expired: Number(expiredCount[0]?.count ?? 0),
             expiringSoon: Number(expiringSoonCount[0]?.count ?? 0),
+            controlled: Number(controlledCount[0]?.count ?? 0),
+            totalSkus: Number(skuCount[0]?.count ?? 0),
           },
         };
       };
