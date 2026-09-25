@@ -1496,7 +1496,38 @@
       "cityPlaceholder": "Mesto alebo obec",
       "statePlaceholder": "Okres / Kraj",
       "zipPlaceholder": "PSČ",
-      "phonePlaceholder": "+421 900 123 456"
+      "phonePlaceholder": "+421 900 123 456",
+      "createClient": "Vytvoriť klienta",
+      "emailPlaceholder": "meno@example.com",
+      "sections": {
+        "contact": {
+          "title": "Majiteľ a kontakt",
+          "subtitle": "Meno, e-mail a telefón pre pripomienky a faktúry."
+        },
+        "reminders": {
+          "title": "Pripomienky a súhlas so SMS",
+          "subtitle": "Ako klinika kontaktuje tohto klienta. SMS správy vyžadujú zaznamenaný súhlas."
+        },
+        "address": {
+          "title": "Adresa",
+          "subtitle": "Nepovinná poštová adresa."
+        }
+      },
+      "phoneHint": {
+        "format": "Národné čísla ako 0905 123 456 sa pre SMS prevedú na +421 905 123 456.",
+        "smsTarget": "SMS pripomienky sa budú posielať na číslo {number}.",
+        "smsUnavailable": "Toto číslo nemožno použiť pre SMS. Zadajte mobilné číslo, napríklad 0905 123 456 alebo +421 905 123 456."
+      },
+      "validation": {
+        "firstNameRequired": "Zadajte meno klienta.",
+        "lastNameRequired": "Zadajte priezvisko klienta.",
+        "emailInvalid": "Zadajte platnú e-mailovú adresu, napríklad meno@example.com.",
+        "checkRequiredFields": "Skontrolujte povinné polia a dĺžku údajov.",
+        "smsPhoneInvalid": "Pred zaznamenaním súhlasu so SMS zadajte platné mobilné číslo.",
+        "smsConsentRequired": "Pred použitím SMS pripomienok potvrďte súhlas klienta so SMS.",
+        "smsConsentField": "Súhlas so SMS",
+        "missingFields": "Na vytvorenie klienta doplňte: {fields}."
+      }
     },
     "detail": {
       "contactInfo": "Kontaktné údaje",
@@ -3520,7 +3551,36 @@
       "firstClinicDayStep2": "Prvý deň kliniky, krok 2 z 3: pridajte zviera tohto majiteľa. Nasleduje rezervácia.",
       "choosePatient": "Pred úpravou vyberte pacienta zo zoznamu pacientov.",
       "name": "Meno",
-      "microchipNumber": "Číslo mikročipu"
+      "microchipNumber": "Číslo mikročipu",
+      "createPatient": "Vytvoriť pacienta",
+      "loadingForm": "Načítavam formulár pacienta...",
+      "changeOwner": "Zmeniť majiteľa",
+      "clientSearchError": "Klientov sa nepodarilo vyhľadať. Skúste to znova.",
+      "sections": {
+        "owner": {
+          "title": "Majiteľ",
+          "subtitle": "Každá karta pacienta patrí jednému klientovi."
+        },
+        "signalment": {
+          "title": "Pacient",
+          "subtitle": "Meno, druh a nacionále."
+        },
+        "identification": {
+          "title": "Identifikácia",
+          "subtitle": "Číslo mikročipu pomáha predchádzať duplicitným kartám."
+        }
+      },
+      "microchipHint": {
+        "help": "Načítajte alebo zadajte číslo čipu. Z 15-miestnych čísel ISO sa medzery a pomlčky odstránia.",
+        "iso": "Formát ISO 11784/11785 · 15 číslic",
+        "length": "Čipy ISO 11784/11785 majú 15 číslic; toto číslo má {count}. Skontrolujte načítanie alebo ho ponechajte pri staršom čipe mimo ISO."
+      },
+      "validation": {
+        "ownerRequired": "Vyhľadajte majiteľa a vyberte ho zo zoznamu výsledkov.",
+        "nameRequired": "Zadajte meno pacienta.",
+        "checkRequiredFields": "Skontrolujte povinné polia a dĺžku údajov.",
+        "missingFields": "Na vytvorenie pacienta doplňte: {fields}."
+      }
     },
     "profile": {
       "age": "Vek",
@@ -3810,7 +3870,7 @@
       "title": "Zlúčenie duplicitných pacientov",
       "subtitle": "Porovnajte a zlúčte duplicitné karty rovnakého majiteľa.",
       "badge": "Možný duplikát",
-      "sameOwnerReview": "{count} kariet rovnakého majiteľa na kontrolu",
+      "sameOwnerReview": "Karty rovnakého majiteľa na kontrolu: {count}",
       "keepChart": "Ponechať túto kartu (kanonická)",
       "retireDuplicate": "Vyradiť tento duplikát",
       "reviewMerge": "Skontrolovať zlúčenie",
@@ -3834,7 +3894,78 @@
       "mergeAllowed": "Zanikajúca karta nemá žiadnu zachovanú históriu. Všetka výslovne uvedená budúca práca sa presunie atomicky; nemenná udalosť identity zachová, kto zlúčenie vykonal, kedy a prečo.",
       "canonicalChartOpened": "Otvorená hlavná karta zlúčenej identity pacienta",
       "mergedIntoNotice": "{name} bol/a zlúčený/á do tejto karty používateľom {performedBy} dňa {date}.",
-      "reasonPrefix": "Dôvod: {reason}"
+      "reasonPrefix": "Dôvod: {reason}",
+      "adminOnlyTitle": "Kontrola duplicít je len pre administrátorov",
+      "adminOnlyDesc": "Duplicitné identity pacientov môžu kontrolovať a zlučovať iba administrátori praxe.",
+      "adminOnlyBadge": "Len pre administrátorov",
+      "scopeNote": "OpenVPM navrhuje iba zhody u rovnakého majiteľa. Zlúčenie je povolené len vtedy, keď vyraďovaná karta nemá žiadnu klinickú, liekovú, finančnú ani inú zachovanú históriu vrátane záznamov o kontrolovaných látkach.",
+      "loadError": "Kandidátov na duplicitu sa nepodarilo načítať.",
+      "previewError": "Náhľad zlúčenia sa nepodarilo pripraviť.",
+      "previewLoading": "Kontrolujem obe karty a ich zachovanú históriu...",
+      "prospectiveWork": "Budúca práca",
+      "keepAsCanonical": "Ponechať ako kanonickú",
+      "retireAsDuplicate": "Vyradiť ako duplikát",
+      "roleKeep": "Ponechať",
+      "roleRetire": "Vyradiť",
+      "historyCount": "Karty so zachovanou históriou: {count}",
+      "summary": "Majitelia: {groups} · Karty na kontrolu: {charts}",
+      "searchLabel": "Filtrovať kandidátov na duplicitu",
+      "searchPlaceholder": "Filtrovať podľa majiteľa, pacienta alebo mikročipu...",
+      "noMatchesTitle": "Filtru nezodpovedá žiadna skupina duplicít",
+      "noMatchesDesc": "Vymažte filter a zobrazia sa všetci kandidáti rovnakého majiteľa.",
+      "checksAllClear": "Všetkých {count} kontrol zachovanej histórie je bez nálezu.",
+      "checksClearToggle": "Zobraziť kontroly bez nálezu ({count})",
+      "reasonMinimum": "Aspoň {min} znakov",
+      "reasonRemaining": "Chýbajúce znaky: {count}",
+      "confirmationMismatch": "Napíšte presne MERGE veľkými písmenami.",
+      "redirectNotice": "Karta {mergeName} sa natrvalo presmeruje na kanonickú kartu {keepName}.",
+      "merging": "Zlučujem karty...",
+      "closeLocked": "Zlúčenie prebieha. Okno sa zatvorí po jeho dokončení.",
+      "table": {
+        "caption": "Kandidátske karty majiteľa {owner}",
+        "patient": "Pacient",
+        "signalment": "Druh · Plemeno",
+        "created": "Vytvorená"
+      },
+      "mismatch": {
+        "title": "Tieto karty sa líšia v: {fields}",
+        "desc": "Pred zlúčením overte, že obe karty patria tomu istému zvieraťu."
+      },
+      "counts": {
+        "differentClient": "Iný majiteľ",
+        "sourceHasIncomingAliases": "Karty už zlúčené do vyraďovanej karty",
+        "sourceWasPreviouslyMerged": "Vyraďovaná karta už bola zlúčená",
+        "targetWasPreviouslyMerged": "Kanonická karta je sama aliasom",
+        "appointmentHistory": "Minulé alebo nepresunuteľné termíny",
+        "appointmentCollisions": "Kolidujúce budúce termíny",
+        "waitlistHistory": "Vybavené alebo zmazané záznamy čakacej listiny",
+        "waitlistCollisions": "Duplicitné položky čakacej listiny",
+        "weights": "Hmotnosti",
+        "allergies": "Alergie",
+        "soapNotes": "SOAP záznamy",
+        "vaccinations": "Vakcinácie",
+        "labResults": "Laboratórne výsledky",
+        "procedures": "Výkony",
+        "clinicalNotes": "Klinické poznámky",
+        "problemList": "Položky zoznamu problémov",
+        "vitalSigns": "Vitálne funkcie",
+        "cases": "Prípady",
+        "treatmentPlans": "Liečebné plány",
+        "prescriptions": "Recepty",
+        "prescriptionEvents": "Udalosti receptov",
+        "controlledSubstanceEntries": "Záznamy o kontrolovaných látkach",
+        "clinicalCorrections": "Opravy klinických záznamov",
+        "dispenseCharges": "Poplatky za výdaj",
+        "consentRequests": "Žiadosti o súhlas",
+        "captureSessions": "Záznamové relácie",
+        "patientFiles": "Súbory pacienta",
+        "invoices": "Faktúry",
+        "insurancePolicies": "Poistné zmluvy",
+        "wellnessEnrollments": "Registrácie do preventívnych plánov",
+        "futureAppointments": "Budúce termíny",
+        "waitingListEntries": "Položky čakacej listiny"
+      },
+      "clearFilter": "Vymazať filter"
     },
     "historySearch": {
       "findTitle": "Hľadať v anamnéze pacienta",
