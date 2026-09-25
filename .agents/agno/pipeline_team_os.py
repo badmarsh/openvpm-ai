@@ -353,6 +353,21 @@ else:
     )
     kb_table = "openvpm_knowledge_qwen_1024"
 
+# Lokálny GPU Cross-Encoder Reranker na RTX 3090 (24 GB VRAM)
+kb_reranker = None
+try:
+    from agno.knowledge.reranker.sentence_transformer import SentenceTransformerReranker
+    import torch
+    reranker_device = "cuda" if torch.cuda.is_available() else "cpu"
+    kb_reranker = SentenceTransformerReranker(
+        model="BAAI/bge-reranker-v2-m3",
+        device=reranker_device,
+        top_n=5,
+    )
+    logger.info("Local CUDA reranker initialized on %s (BAAI/bge-reranker-v2-m3)", reranker_device)
+except Exception as e:
+    logger.warning("Local reranker initialization notice: %s", e)
+
 knowledge_base: Knowledge = Knowledge(
     name="OpenVPM Enterprise Knowledge",
     description=(
@@ -366,6 +381,7 @@ knowledge_base: Knowledge = Knowledge(
         embedder=kb_embedder,
     ),
     contents_db=db,
+    reranker=kb_reranker,
 )
 
 def reindex_repo_knowledge(force: bool = False) -> Dict[str, str]:

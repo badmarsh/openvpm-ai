@@ -954,8 +954,23 @@ OpenVPM AI je enterprise veterinárny nemocničný informačný systém. Modul "
 - [x] Architektonické hranice a povolené cesty sú presne určené
 - [x] Všetky klinické poistky sú zapracované do zadania
 
+## 7. Delivery & Git Remote Protocol (PRÍSNE VYŽADOVANÉ)
+Po úspešnom dokončení a overení (type-check, lint, testy):
+1. Vytvor novú vetvu priamo z aktuálnej hlavy repozitára:
+   `git checkout -b arena/{slug}`
+2. Pridaj iba zmenené súbory v povolenom rozsahu ciest:
+   `git add <zmenené_súbory>`
+3. Vytvor štruktúrovaný commit v angličtine:
+   `git commit -m "feat({slug}): {title} - implementácia podľa Golden Ticketu"`
+4. Pushni vetvu do remote (alebo klikni 'Create PR' v rozhraní Arena):
+   `git push origin arena/{slug}`
+5. Vypíš do chatu finálny marker potvrdzujúci dokončenie:
+   `ARENA_TASK_COMPLETE branch=arena/{slug}`
+
 <vystupny_format>
-Vráť kompletný kód pre dotknuté súbory alebo ucelený git diff/patch pripravený na aplikáciu cez git apply.
+Vráť informáciu o pushnutej vetve `arena/{slug}` s finálnym markerom:
+ARENA_TASK_COMPLETE branch=arena/{slug}
+Ak git remote push v tvojom cloudovom sandboxe nie je povolený, klikni na tlačidlo 'Create PR', prípadne ako záložný variant vráť kompletný ucelený git diff/patch.
 </vystupny_format>
 </system_prompt>
 """
