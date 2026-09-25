@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowLeft,
-  Search,
   ShoppingCart,
   Plus,
   Minus,
@@ -17,23 +16,34 @@ import {
   Package,
   CheckCircle2,
   User,
-  Barcode,
-  Printer,
   Percent,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { computePosTotals } from "@/lib/billing/pos-calculations";
 import { useBarcodeScanner } from "@/lib/billing/use-barcode-scanner";
+import { formatCurrency } from "@/lib/locale/format";
+import {
+  isBillingCurrencyAmountInputValid,
+  BILLING_INVOICE_LINE_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/billing/policy";
+import { CLIENT_SEARCH_MAX_LENGTH } from "@/lib/clients/policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
+import { pageShellClass, SearchField, filterControlClass } from "@/components/layout/page-kit";
+import { EmptyState } from "@/components/common/empty-state";
+import { ActionConfirmationDialog } from "@/components/common/action-confirmation-dialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   EkasaReceiptDialog,
   type EkasaReceiptModalData,
 } from "@/components/ekasa/ekasa-receipt-dialog";
+
+type VatRate = "STANDARD_23" | "REDUCED_19" | "REDUCED_5" | "ZERO";
 
 interface CartItem {
   id: string;
@@ -41,36 +51,122 @@ interface CartItem {
   description: string;
   quantity: number;
   unitPrice: string;
-  vatRate: "STANDARD_23" | "REDUCED_19" | "REDUCED_5" | "ZERO";
-  /** Line discount in percent (0–100). */
+  vatRate: VatRate;
   discountPercent: number;
 }
 
-const VAT_RATE_OPTIONS = [
-  { value: "STANDARD_23" as const, label: "23 % (Štandard)" },
-  { value: "REDUCED_19" as const, label: "19 % (Krmivá/potraviny)" },
-  { value: "REDUCED_5" as const, label: "5 % (Lieky)" },
-  { value: "ZERO" as const, label: "0 % (Oslobodené)" },
-];
+interface PosProduct {
+  id: string;
+  name: string;
+  unitPrice: string | number;
+  category?: string | null;
+  stockQuantity?: number | null;
+  sku?: string | null;
+}
+
+function canAccessPosRole(role?: string | null): boolean {
+  return role === "admin" || role === "veterinarian" || role === "front_desk";
+}
 
 export default function PosCheckoutPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return (
+      <div className={pageShellClass}>
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>{t("billing.pos.checkingAccess", "Overovanie prístupových práv...")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canAccessPosRole(session?.user?.role)) {
+    return (
+      <div className={pageShellClass}>
+        <div className="flex items-center justify-between">
+          <Link href="/billing">
+            <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              <span>{t("billing.pos.backToBilling", "Späť na fakturáciu")}</span>
+            </Button>
+          </Link>
+        </div>
+        <EmptyState
+          icon={ShoppingCart}
+          title={t("billing.pos.readOnlyTitle", "Pultový predaj je obmedzený")}
+          description={t(
+            "billing.pos.readOnlyDesc",
+            "K pultovému predaju majú prístup iba administrátori, veterinári a recepcia."
+          )}
+          action={{
+            label: t("billing.pos.backToBilling", "Späť na fakturáciu"),
+            onClick: () => router.push("/billing"),
+          }}
+        />
+      </div>
+    );
+  }
+
+  return <PosCheckoutForm />;
+}
+
+function PosCheckoutForm() {
+  const { t } = useI18n();
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("80mm");
   const [clientSearch, setClientSearch] = useState("");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{
     id: string;
     name: string;
   } | null>(null);
 
-  // Completed receipt dialog state
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [completedReceipt, setCompletedReceipt] = useState<EkasaReceiptModalData | null>(null);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const clientPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close client dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        clientPickerRef.current &&
+        !clientPickerRef.current.contains(event.target as Node)
+      ) {
+        setClientDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const vatRateOptions: Array<{ value: VatRate; label: string }> = [
+    {
+      value: "STANDARD_23",
+      label: t("billing.pos.vatRate_STANDARD_23", "23 % (Štandard)"),
+    },
+    {
+      value: "REDUCED_19",
+      label: t("billing.pos.vatRate_REDUCED_19", "19 % (Krmivá/potraviny)"),
+    },
+    {
+      value: "REDUCED_5",
+      label: t("billing.pos.vatRate_REDUCED_5", "5 % (Lieky)"),
+    },
+    {
+      value: "ZERO",
+      label: t("billing.pos.vatRate_ZERO", "0 % (Oslobodené)"),
+    },
+  ];
 
   // Queries
   const { data: productsData, isLoading: isLoadingProducts } =
@@ -79,14 +175,20 @@ export default function PosCheckoutPage() {
       limit: 100,
     });
 
-  const { data: clientsData } = trpc.clients.list.useQuery(
+  const {
+    data: clientsData,
+    isLoading: isLoadingClients,
+    error: clientsError,
+  } = trpc.clients.list.useQuery(
     { search: clientSearch },
     { enabled: clientSearch.length >= 2 }
   );
 
   const createPosSale = trpc.extensions.ekasa.createPosSale.useMutation({
     onSuccess: (data) => {
-      toast.success("Doklad úspešne vystavený a zaevidovaný v e-Kase");
+      toast.success(
+        t("billing.pos.toastSuccess", "Doklad úspešne vystavený a zaevidovaný v e-Kase")
+      );
       setCompletedReceipt({
         receiptId: data.receiptId,
         receiptNumber: data.receiptNumber,
@@ -103,33 +205,31 @@ export default function PosCheckoutPage() {
       setClientSearch("");
     },
     onError: (err) => {
-      toast.error(err.message || "Nepodarilo sa zaevidovať doklad v e-Kase");
+      toast.error(
+        err.message ||
+          t("billing.pos.toastErrorFallback", "Nepodarilo sa zaevidovať doklad v e-Kase")
+      );
     },
   });
 
   // Filtered products
-  const products = useMemo(() => {
+  const products: PosProduct[] = useMemo(() => {
     if (!productsData?.items) return [];
     if (selectedCategory === "all") return productsData.items;
-    return productsData.items.filter((p: { category?: string | null }) => p.category === selectedCategory);
+    return productsData.items.filter((p) => p.category === selectedCategory);
   }, [productsData, selectedCategory]);
 
   const categories = useMemo<string[]>(() => {
     if (!productsData?.items) return ["all"];
     const cats = new Set<string>();
-    for (const p of productsData.items) {
+    productsData.items.forEach((p) => {
       if (p.category) cats.add(p.category);
-    }
+    });
     return ["all", ...Array.from(cats)];
   }, [productsData]);
 
   // Cart actions
-  const addToCart = (product: {
-    id: string;
-    name: string;
-    unitPrice: string | number;
-    category?: string | null;
-  }) => {
+  const addToCart = (product: PosProduct) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
@@ -140,13 +240,11 @@ export default function PosCheckoutPage() {
         );
       }
 
-      // Default VAT rate based on category / type
-      let defaultVat: "STANDARD_23" | "REDUCED_19" | "REDUCED_5" | "ZERO" =
-        "STANDARD_23";
+      let defaultVat: VatRate = "STANDARD_23";
       const cat = (product.category || "").toLowerCase();
       if (cat.includes("diet") || cat.includes("krmiv") || cat.includes("food")) {
         defaultVat = "REDUCED_19";
-      } else if (cat.includes("med") || cat.includes("liek")) {
+      } else if (cat.includes("liek") || cat.includes("med") || cat.includes("pharma")) {
         defaultVat = "REDUCED_5";
       }
 
@@ -157,7 +255,7 @@ export default function PosCheckoutPage() {
           productId: product.id,
           description: product.name,
           quantity: 1,
-          unitPrice: Number(product.unitPrice).toFixed(2),
+          unitPrice: String(product.unitPrice ?? "0"),
           vatRate: defaultVat,
           discountPercent: 0,
         },
@@ -175,7 +273,7 @@ export default function PosCheckoutPage() {
           }
           return item;
         })
-        .filter(Boolean) as CartItem[]
+        .filter((item): item is CartItem => item !== null)
     );
   };
 
@@ -183,17 +281,14 @@ export default function PosCheckoutPage() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const updateVatRate = (
-    id: string,
-    vatRate: "STANDARD_23" | "REDUCED_19" | "REDUCED_5" | "ZERO"
-  ) => {
+  const updateVatRate = (id: string, vatRate: VatRate) => {
     setCart((prev) =>
       prev.map((item) => (item.id === id ? { ...item, vatRate } : item))
     );
   };
 
-  const updateDiscount = (id: string, discountPercent: number) => {
-    const clamped = Math.min(100, Math.max(0, discountPercent || 0));
+  const updateDiscount = (id: string, percent: number) => {
+    const clamped = Math.max(0, Math.min(100, percent));
     setCart((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, discountPercent: clamped } : item
@@ -201,13 +296,15 @@ export default function PosCheckoutPage() {
     );
   };
 
-  // Add custom manual item
   const addCustomItem = () => {
     setCart((prev) => [
       ...prev,
       {
         id: Math.random().toString(36).substring(2, 9),
-        description: "Pultová položka / Služba",
+        description: t(
+          "billing.pos.defaultItemDescription",
+          "Pultová položka / Služba"
+        ),
         quantity: 1,
         unitPrice: "5.00",
         vatRate: "STANDARD_23",
@@ -229,16 +326,24 @@ export default function PosCheckoutPage() {
     [cart]
   );
 
-  // USB barcode scanner: scan a code -> resolve SKU -> add to cart.
+  const isCartValid =
+    cart.length > 0 &&
+    cart.every(
+      (item) =>
+        item.description.trim().length > 0 &&
+        isBillingCurrencyAmountInputValid(item.unitPrice)
+    );
+
+  // USB barcode scanner
   useBarcodeScanner({
     enabled: true,
     minLength: 3,
-    onScan: (code) => {
-      const exact = productsData?.items?.find(
+    onScan: (barcode) => {
+      if (!productsData?.items) return;
+      const exact = productsData.items.find(
         (p) =>
-          p.sku !== null &&
-          p.sku !== undefined &&
-          p.sku.trim().toLowerCase() === code.toLowerCase()
+          p.sku?.toLowerCase() === barcode.toLowerCase() ||
+          p.name.toLowerCase().includes(barcode.toLowerCase())
       );
       if (exact) {
         addToCart({
@@ -246,34 +351,40 @@ export default function PosCheckoutPage() {
           name: exact.name,
           unitPrice: exact.unitPrice,
           category: exact.category,
+          stockQuantity: exact.stockQuantity,
+          sku: exact.sku,
         });
         toast.success(
           t("billing.pos.scannerAdded", "{name} pridaný do košíka", {
             name: exact.name,
           })
         );
-        return;
+      } else {
+        toast.error(
+          t("billing.pos.scannerNotFound", "Produkt pre kód {code} nenájdený", {
+            code: barcode,
+          })
+        );
       }
-      toast.error(
-        t("billing.pos.scannerNotFound", "Produkt pre kód {code} nenájdený", {
-          code,
-        })
-      );
     },
   });
 
   const handleCheckout = (paymentMethod: "CASH" | "CARD") => {
-    if (cart.length === 0) {
-      toast.error("Košík je prázdny");
+    if (!isCartValid || cart.length === 0) {
+      toast.error(
+        cart.length === 0
+          ? t("billing.pos.toastEmptyCart", "Košík je prázdny")
+          : t("billing.pos.toastInvalidCart", "Košík obsahuje neplatné položky")
+      );
       return;
     }
 
     createPosSale.mutate({
       items: cart.map((item) => ({
         productId: item.productId,
-        description: item.description,
+        description: item.description.trim(),
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        unitPrice: item.unitPrice.trim(),
         vatRate: item.vatRate,
         discountPercent: item.discountPercent,
       })),
@@ -284,55 +395,62 @@ export default function PosCheckoutPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="mb-1">
-        <Link href="/billing">
-          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground -ml-2 mb-1">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Späť na fakturáciu</span>
-          </Button>
-        </Link>
-      </div>
+    <div className={pageShellClass}>
       <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            <span>Pultový predaj (Rýchla pokladňa)</span>
-            <Badge variant="outline" className="text-xs bg-brand/15 text-brand border-brand/30">
-              e-Kasa Zero-Touch
-            </Badge>
-          </span>
-        }
-        subtitle="Okamžitý predaj antiparazitík, krmív a liečiv s automatickým bločkom a odpisom zo skladu"
+        icon={ShoppingCart}
+        title={t("billing.pos.title", "Pultový predaj (Rýchla pokladňa)")}
+        subtitle={t(
+          "billing.pos.subtitle",
+          "Okamžitý predaj antiparazitík, krmív a liečiv s automatickým bločkom a odpisom zo skladu"
+        )}
         actions={
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Tlačiareň:</span>
-            <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={() => setPaperWidth("80mm")}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  paperWidth === "80mm"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge
+              variant="outline"
+              className="border-brand/30 bg-brand/15 text-xs text-brand"
+            >
+              {t("billing.pos.badgeEkasa", "e-Kasa Zero-Touch")}
+            </Badge>
+
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>{t("billing.pos.printerLabel", "Tlačiareň:")}</span>
+              <Tabs
+                value={paperWidth}
+                onValueChange={(val) =>
+                  setPaperWidth(val as "58mm" | "80mm")
+                }
               >
-                80 mm
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaperWidth("58mm")}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  paperWidth === "58mm"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                58 mm
-              </button>
+                <TabsList
+                  className="h-8 p-0.5"
+                  aria-label={t(
+                    "billing.pos.printerWidthAria",
+                    "Šírka pásky tlačiarne"
+                  )}
+                >
+                  <TabsTrigger value="80mm" className="h-7 px-2.5 text-xs">
+                    80 mm
+                  </TabsTrigger>
+                  <TabsTrigger value="58mm" className="h-7 px-2.5 text-xs">
+                    58 mm
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
+
+            <Link href="/billing">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-muted-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>
+                  {t("billing.pos.backToBilling", "Späť na fakturáciu")}
+                </span>
+              </Button>
+            </Link>
           </div>
         }
-        className="border-b border-border pb-4"
       />
 
       {/* Main Grid: Catalog on left, Cart & Payment on right */}
@@ -340,92 +458,150 @@ export default function PosCheckoutPage() {
         {/* Left Column: Product Catalog (7 cols) */}
         <div className="space-y-4 lg:col-span-7">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Hľadať tovar (názov, SKU, Bravecto, granule...)"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            <SearchField
+              id="pos-catalog-search"
+              inputRef={searchInputRef}
+              value={search}
+              onChange={setSearch}
+              placeholder={t(
+                "billing.pos.searchPlaceholder",
+                "Hľadať tovar (názov, SKU, Bravecto, granule...)"
+              )}
+            />
             <Button
               variant="outline"
               size="sm"
               onClick={addCustomItem}
-              className="gap-1.5 whitespace-nowrap text-xs"
+              className="h-9 gap-1.5 whitespace-nowrap text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Voľná položka</span>
+              <span>{t("billing.pos.customItemButton", "Voľná položka")}</span>
             </Button>
           </div>
 
           {/* Categories pills */}
           {categories.length > 1 && (
             <div className="flex flex-wrap gap-1.5">
-              {categories.map((cat: string) => (
+              {categories.map((cat) => (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                     selectedCategory === cat
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
+                  )}
                 >
-                  {cat === "all" ? "Všetok tovar" : cat}
+                  {cat === "all"
+                    ? t("billing.pos.categoryAll", "Všetok tovar")
+                    : cat}
                 </button>
               ))}
             </div>
           )}
 
           {/* Products List / Grid */}
-          <div className="rounded-lg border border-border bg-card p-2">
+          <div className="rounded-lg border border-border bg-card p-2 shadow-xs">
             {isLoadingProducts ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="grid gap-2 p-1 sm:grid-cols-2">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="flex h-24 animate-pulse flex-col justify-between rounded-lg border border-border/80 bg-background/50 p-3"
+                  >
+                    <div className="space-y-2">
+                      <div className="h-3 w-3/4 rounded bg-muted" />
+                      <div className="h-2.5 w-1/2 rounded bg-muted" />
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border/40 pt-2">
+                      <div className="h-4 w-12 rounded bg-muted" />
+                      <div className="h-3 w-16 rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : products.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
-                Nenašli sa žiadne produkty podľa zadaných kritérií.
-              </div>
+              <EmptyState
+                icon={Package}
+                title={
+                  search.trim() || selectedCategory !== "all"
+                    ? t(
+                        "billing.pos.catalogNoResults",
+                        "Nenašli sa žiadne produkty podľa zadaných kritérií"
+                      )
+                    : t(
+                        "billing.pos.catalogEmpty",
+                        "V sklade sa nenachádzajú žiadne produkty"
+                      )
+                }
+                description={t(
+                  "billing.pos.catalogEmptyDesc",
+                  "Pridajte tovar v správe skladu alebo použite voľnú položku."
+                )}
+                className="py-12"
+              />
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 max-h-[520px] overflow-y-auto p-1">
-                {products.map((p: any) => {
-                  const stock = (p as any).stockQuantity;
-                  const price = Number(p.unitPrice || 0).toFixed(2);
-                  const isLowStock = stock !== null && stock !== undefined && stock <= 2;
+              <div className="grid max-h-[calc(100vh-280px)] min-h-[320px] gap-2 overflow-y-auto p-1 sm:grid-cols-2">
+                {products.map((p) => {
+                  const stock = p.stockQuantity;
+                  const isSoldOut =
+                    stock !== null && stock !== undefined && stock <= 0;
+                  const isLowStock =
+                    !isSoldOut &&
+                    stock !== null &&
+                    stock !== undefined &&
+                    stock <= 2;
 
                   return (
                     <button
                       key={p.id}
+                      type="button"
                       onClick={() => addToCart(p)}
-                      className="flex flex-col justify-between p-3 rounded-lg border border-border/80 bg-background text-left hover:border-primary/50 hover:bg-muted/30 transition-all group"
+                      className="group flex flex-col justify-between rounded-lg border border-border/80 bg-background p-3 text-left transition-all hover:border-primary/50 hover:bg-muted/30"
                     >
                       <div>
-                        <div className="font-semibold text-xs line-clamp-1 group-hover:text-primary">
+                        <div className="line-clamp-1 text-xs font-semibold group-hover:text-primary">
                           {p.name}
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
-                          {(p as any).category || "Skladová položka"} {p.sku ? `• ${p.sku}` : ""}
+                        <div className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
+                          {p.category ||
+                            t(
+                              "billing.pos.defaultCategory",
+                              "Skladová položka"
+                            )}{" "}
+                          {p.sku ? `• ${p.sku}` : ""}
                         </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2 text-xs">
-                        <span className="font-bold text-sm text-foreground">
-                          {price} €
+                        <span className="font-bold tabular-nums text-foreground">
+                          {formatCurrency(p.unitPrice)}
                         </span>
-                        <span
-                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                            isLowStock
-                              ? "bg-warning-muted text-warning-muted-foreground"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {stock !== null && stock !== undefined
-                            ? `Sklad: ${stock} ks`
-                            : "Na sklade"}
-                        </span>
+                        {isSoldOut ? (
+                          <span className="rounded border border-destructive/30 bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+                            {t("billing.pos.soldOut", "Vypredané ({count} ks)", {
+                              count: stock ?? 0,
+                            })}
+                          </span>
+                        ) : isLowStock ? (
+                          <span className="rounded border border-warning/30 bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-warning">
+                            {t(
+                              "billing.pos.lowStockCount",
+                              "Nízky stav: {count} ks",
+                              { count: stock ?? 0 }
+                            )}
+                          </span>
+                        ) : (
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {stock !== null && stock !== undefined
+                              ? t("billing.pos.stockCount", "Sklad: {count} ks", {
+                                  count: stock,
+                                })
+                              : t("billing.pos.inStock", "Na sklade")}
+                          </span>
+                        )}
                       </div>
                     </button>
                   );
@@ -436,55 +612,137 @@ export default function PosCheckoutPage() {
         </div>
 
         {/* Right Column: Cart & Checkout (5 cols) */}
-        <div className="space-y-4 lg:col-span-5">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:col-span-5 lg:self-start">
           {/* Client picker (optional) */}
-          <div className="rounded-lg border border-border bg-card p-3 text-xs space-y-2">
+          <div
+            ref={clientPickerRef}
+            className="space-y-2 rounded-lg border border-border bg-card p-3 text-xs shadow-xs"
+          >
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="font-medium flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5 font-medium">
                 <User className="h-3.5 w-3.5" />
-                Zákazník:
+                <span>
+                  {t("billing.pos.clientSectionLabel", "Zákazník:")}
+                </span>
               </span>
               {selectedClient ? (
                 <button
+                  type="button"
                   onClick={() => setSelectedClient(null)}
-                  className="text-primary hover:underline text-[11px]"
+                  className="text-[11px] text-primary hover:underline"
                 >
-                  Zmeniť na anonymný
+                  {t(
+                    "billing.pos.clientChangeToAnonymous",
+                    "Zmeniť na anonymný"
+                  )}
                 </button>
               ) : null}
             </div>
 
             {selectedClient ? (
-              <div className="flex items-center justify-between p-2 rounded bg-muted/40 font-medium text-foreground">
+              <div
+                className="flex items-center justify-between rounded-md border border-primary/20 bg-primary/10 p-2 font-medium text-primary"
+                aria-label={t(
+                  "billing.pos.clientSelectedAria",
+                  "Vybraný klient: {name}",
+                  { name: selectedClient.name }
+                )}
+              >
                 <span>{selectedClient.name}</span>
-                <CheckCircle2 className="h-4 w-4 text-success" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
             ) : (
               <div className="relative">
                 <Input
-                  placeholder="Pultový zákazník (alebo píšte meno pre priradenie)..."
+                  placeholder={t(
+                    "billing.pos.clientSearchPlaceholder",
+                    "Pultový zákazník (alebo píšte meno pre priradenie)..."
+                  )}
                   value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  className="h-8 text-xs"
+                  maxLength={CLIENT_SEARCH_MAX_LENGTH}
+                  onChange={(e) => {
+                    setClientSearch(e.target.value);
+                    setClientDropdownOpen(true);
+                  }}
+                  onFocus={() => {
+                    if (clientSearch.length >= 2) setClientDropdownOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setClientDropdownOpen(false);
+                  }}
+                  aria-label={t(
+                    "billing.pos.clientSearchLabel",
+                    "Hľadať zákazníka"
+                  )}
+                  className="h-9 text-xs"
                 />
-                {clientsData && clientsData.items && clientsData.items.length > 0 && (
-                  <div className="absolute top-9 left-0 right-0 z-20 rounded-md border border-border bg-card shadow-lg max-h-36 overflow-y-auto">
-                    {clientsData.items.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedClient({
-                            id: c.id,
-                            name: `${c.firstName || ""} ${c.lastName}`.trim(),
-                          });
-                          setClientSearch("");
-                        }}
-                        className="w-full text-left px-3 py-1.5 hover:bg-muted text-xs border-b border-border/40 last:border-0"
-                      >
-                        {c.firstName} {c.lastName} {c.phone ? `(${c.phone})` : ""}
-                      </button>
-                    ))}
+
+                {clientDropdownOpen && clientSearch.length >= 2 && (
+                  <div
+                    role="listbox"
+                    aria-label={t(
+                      "billing.pos.clientResultsListAria",
+                      "Zoznam nájdených klientov"
+                    )}
+                    className="absolute left-0 right-0 top-10 z-20 max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-lg"
+                  >
+                    {isLoadingClients ? (
+                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>
+                          {t(
+                            "billing.pos.clientSearchLoading",
+                            "Vyhľadávanie klientov..."
+                          )}
+                        </span>
+                      </div>
+                    ) : clientsError ? (
+                      <div className="px-3 py-2 text-xs text-destructive">
+                        {clientsError.message ||
+                          t(
+                            "billing.pos.clientSearchError",
+                            "Chyba pri hľadaní klientov"
+                          )}
+                      </div>
+                    ) : !clientsData?.items ||
+                      clientsData.items.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        {t(
+                          "billing.pos.clientSearchNoResults",
+                          "Nenašli sa žiadni klienti"
+                        )}
+                      </div>
+                    ) : (
+                      clientsData.items.map((c) => {
+                        const fullName = `${c.firstName || ""} ${c.lastName}`.trim();
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            role="option"
+                            aria-selected={false}
+                            onClick={() => {
+                              setSelectedClient({
+                                id: c.id,
+                                name: fullName,
+                              });
+                              setClientSearch("");
+                              setClientDropdownOpen(false);
+                            }}
+                            className="w-full border-b border-border/40 px-3 py-2 text-left text-xs transition-colors last:border-0 hover:bg-muted"
+                          >
+                            <span className="font-medium text-foreground">
+                              {fullName}
+                            </span>
+                            {c.phone && (
+                              <span className="ml-2 text-muted-foreground">
+                                ({c.phone})
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>
@@ -492,164 +750,249 @@ export default function PosCheckoutPage() {
           </div>
 
           {/* Cart items list */}
-          <div className="rounded-lg border border-border bg-card p-4 space-y-4 shadow-xs">
+          <div className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-xs">
             <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="font-semibold text-sm flex items-center gap-2">
+              <span className="flex items-center gap-2 text-sm font-semibold">
                 <ShoppingCart className="h-4 w-4" />
-                Košík ({cart.length})
+                <span>
+                  {t("billing.pos.cartTitle", "Košík ({count})", {
+                    count: cart.length,
+                  })}
+                </span>
               </span>
               {cart.length > 0 && (
-                <button
-                  onClick={() => setCart([])}
-                  className="text-[11px] text-muted-foreground hover:text-destructive"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setClearDialogOpen(true)}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
                 >
-                  Vyprázdniť
-                </button>
+                  {t("billing.pos.clearCart", "Vyprázdniť")}
+                </Button>
               )}
             </div>
 
             {cart.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-xs">
-                Košík je prázdny. Vyberte položky zo skladu kliknutím vľavo.
-              </div>
+              <EmptyState
+                icon={ShoppingCart}
+                title={t("billing.pos.emptyCartTitle", "Košík je prázdny")}
+                description={t(
+                  "billing.pos.emptyCartDesc",
+                  "Vyberte položky zo skladu kliknutím vľavo alebo použite čítačku čiarových kódov."
+                )}
+                className="py-8"
+              />
             ) : (
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                {cart.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-2.5 rounded-lg border border-border/70 bg-muted/20 space-y-2 text-xs"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) =>
-                          setCart((prev) =>
-                            prev.map((it) =>
-                              it.id === item.id
-                                ? { ...it, description: e.target.value }
-                                : it
-                            )
-                          )
-                        }
-                        className="font-medium text-foreground bg-transparent border-0 p-0 focus:ring-0 w-full"
-                      />
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-muted-foreground hover:text-destructive p-0.5"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+              <div className="max-h-[calc(100vh-420px)] min-h-[160px] space-y-3 overflow-y-auto pr-1">
+                {cart.map((item) => {
+                  const isPriceValid = isBillingCurrencyAmountInputValid(
+                    item.unitPrice
+                  );
+                  const isDescValid = item.description.trim().length > 0;
+                  const lineTotal = computePosTotals([
+                    {
+                      quantity: item.quantity,
+                      unitPrice: Number(item.unitPrice) || 0,
+                      discountPercent: item.discountPercent,
+                    },
+                  ]).total;
 
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Quantity controls */}
-                      <div className="flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-0.5">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, -1)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="font-semibold px-1 min-w-[20px] text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, 1)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </div>
-
-                      {/* VAT selector */}
-                      <select
-                        value={item.vatRate}
-                        onChange={(e) =>
-                          updateVatRate(item.id, e.target.value as any)
-                        }
-                        className="rounded border border-border bg-card px-1.5 py-1 text-[11px] text-muted-foreground"
-                      >
-                        {VAT_RATE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      {/* Price input */}
-                      <div className="flex items-center gap-1 font-bold text-foreground">
-                        <input
-                          type="text"
-                          value={item.unitPrice}
+                  return (
+                    <div
+                      key={item.id}
+                      className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-2.5 text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <Input
+                          value={item.description}
+                          maxLength={BILLING_INVOICE_LINE_DESCRIPTION_MAX_LENGTH}
                           onChange={(e) =>
                             setCart((prev) =>
                               prev.map((it) =>
                                 it.id === item.id
-                                  ? { ...it, unitPrice: e.target.value }
+                                  ? { ...it, description: e.target.value }
                                   : it
                               )
                             )
                           }
-                          className="w-16 text-right rounded border border-border bg-card px-1.5 py-0.5 font-bold"
+                          aria-label={t(
+                            "billing.pos.itemDescription",
+                            "Názov položky"
+                          )}
+                          className={cn(
+                            "h-8 text-xs font-medium",
+                            !isDescValid &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
                         />
-                        <span>€</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFromCart(item.id)}
+                          className="h-10 w-10 shrink-0 text-muted-foreground hover:text-destructive"
+                          aria-label={t(
+                            "billing.pos.removeItem",
+                            "Odstrániť {name} z košíka",
+                            { name: item.description }
+                          )}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </div>
 
-                    {/* Line discount */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                        <Percent className="h-3 w-3" />
-                        {t("billing.pos.discount", "Zľava")}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={item.discountPercent}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {/* Quantity controls: h-10 w-10 touch targets */}
+                        <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="h-10 w-10 shrink-0"
+                            aria-label={t(
+                              "billing.pos.decreaseQuantity",
+                              "Znížiť množstvo položky {name}",
+                              { name: item.description }
+                            )}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="min-w-[28px] px-1 text-center font-semibold tabular-nums text-foreground">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="h-10 w-10 shrink-0"
+                            aria-label={t(
+                              "billing.pos.increaseQuantity",
+                              "Zvýšiť množstvo položky {name}",
+                              { name: item.description }
+                            )}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {/* VAT selector */}
+                        <select
+                          value={item.vatRate}
                           onChange={(e) =>
-                            updateDiscount(
-                              item.id,
-                              Number(e.target.value)
-                            )
+                            updateVatRate(item.id, e.target.value as VatRate)
                           }
-                          className="w-14 text-right rounded border border-border bg-card px-1.5 py-0.5 text-[11px]"
-                          aria-label={t("billing.pos.discount", "Zľava")}
-                        />
-                        <span className="text-[11px] text-muted-foreground">%</span>
+                          aria-label={t(
+                            "billing.pos.vatRateLabel",
+                            "Sadzba DPH"
+                          )}
+                          className={cn(filterControlClass, "h-9 text-xs")}
+                        >
+                          {vatRateOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Price input */}
+                        <div className="flex items-center gap-1 font-bold text-foreground">
+                          <Input
+                            inputMode="decimal"
+                            value={item.unitPrice}
+                            onChange={(e) =>
+                              setCart((prev) =>
+                                prev.map((it) =>
+                                  it.id === item.id
+                                    ? { ...it, unitPrice: e.target.value }
+                                    : it
+                                )
+                              )
+                            }
+                            aria-invalid={!isPriceValid}
+                            aria-label={t(
+                              "billing.pos.unitPriceLabel",
+                              "Jednotková cena"
+                            )}
+                            className={cn(
+                              "h-9 w-20 text-right text-xs font-bold tabular-nums",
+                              !isPriceValid &&
+                                "border-destructive text-destructive focus-visible:ring-destructive"
+                            )}
+                          />
+                        </div>
+
+                        {/* Line total */}
+                        <div className="min-w-16 text-right font-semibold tabular-nums text-foreground">
+                          {formatCurrency(lineTotal)}
+                        </div>
+                      </div>
+
+                      {/* Line discount */}
+                      <div className="flex items-center justify-between border-t border-border/40 pt-1.5 text-xs">
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Percent className="h-3 w-3" />
+                          <span>{t("billing.pos.discount", "Zľava")}</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={item.discountPercent}
+                            onChange={(e) =>
+                              updateDiscount(
+                                item.id,
+                                Number(e.target.value)
+                              )
+                            }
+                            className="h-8 w-16 text-right text-xs tabular-nums"
+                            aria-label={t("billing.pos.discount", "Zľava")}
+                          />
+                          <span className="text-[11px] text-muted-foreground">
+                            %
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {/* Totals Breakdown */}
-            <div className="border-t border-border pt-3 space-y-1.5 text-xs">
+            <div className="space-y-1.5 border-t border-border pt-3 text-xs">
               <div className="flex justify-between text-muted-foreground">
                 <span>{t("billing.pos.subtotal", "Medzisúčet")}</span>
-                <span>{subtotal.toFixed(2)} €</span>
+                <span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-muted-foreground">
                   <span>{t("billing.pos.discount", "Zľava")}</span>
-                  <span className="text-destructive">
-                    -{discount.toFixed(2)} €
+                  <span className="text-destructive tabular-nums">
+                    -{formatCurrency(discount)}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-base text-foreground pt-1 border-t border-dashed border-border">
+              <div className="flex justify-between border-t border-dashed border-border pt-1 text-base font-bold text-foreground">
                 <span>{t("billing.pos.totalDue", "Spolu k úhrade")}:</span>
-                <span className="text-foreground">
-                  {cartTotal.toFixed(2)} €
+                <span className="tabular-nums text-foreground">
+                  {formatCurrency(cartTotal)}
                 </span>
               </div>
             </div>
+
+            {!isCartValid && cart.length > 0 && (
+              <p className="text-center text-xs text-destructive">
+                {t(
+                  "billing.pos.invalidCartHint",
+                  "Skontrolujte, či všetky položky majú platný názov a správnu jednotkovú cenu."
+                )}
+              </p>
+            )}
 
             {/* Action Payment Buttons */}
             <div className="grid grid-cols-2 gap-2 pt-2">
@@ -657,41 +1000,74 @@ export default function PosCheckoutPage() {
                 variant="default"
                 size="lg"
                 onClick={() => handleCheckout("CASH")}
-                disabled={cart.length === 0 || createPosSale.isPending}
-                className="gap-2 h-12 text-sm font-semibold"
+                disabled={!isCartValid || createPosSale.isPending}
+                aria-busy={createPosSale.isPending}
+                className="h-12 gap-2 text-sm font-semibold"
               >
                 {createPosSale.isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <Coins className="h-5 w-5" />
                 )}
-                <span>Hotovosť</span>
+                <span>
+                  {t("billing.pos.payCash", "Hotovosť ({amount})", {
+                    amount: formatCurrency(cartTotal),
+                  })}
+                </span>
               </Button>
 
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => handleCheckout("CARD")}
-                disabled={cart.length === 0 || createPosSale.isPending}
-                className="gap-2 h-12 text-sm font-semibold"
+                disabled={!isCartValid || createPosSale.isPending}
+                aria-busy={createPosSale.isPending}
+                className="h-12 gap-2 text-sm font-semibold"
               >
                 {createPosSale.isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <CreditCard className="h-5 w-5" />
                 )}
-                <span>Platobná karta</span>
+                <span>
+                  {t("billing.pos.payCard", "Platobná karta ({amount})", {
+                    amount: formatCurrency(cartTotal),
+                  })}
+                </span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Ekasa Receipt Modal Dialog */}
       <EkasaReceiptDialog
         open={receiptDialogOpen}
         receipt={completedReceipt}
-        onClose={() => setReceiptDialogOpen(false)}
+        onClose={() => {
+          setReceiptDialogOpen(false);
+          searchInputRef.current?.focus();
+        }}
+      />
+
+      {/* Clear Cart Confirmation Dialog */}
+      <ActionConfirmationDialog
+        open={clearDialogOpen}
+        title={t(
+          "billing.pos.clearCartDialogTitle",
+          "Vyprázdniť nákupný košík?"
+        )}
+        description={t(
+          "billing.pos.clearCartDialogDesc",
+          "Všetky položky budú odstránené z košíka. Túto akciu nie je možné vrátiť späť."
+        )}
+        confirmLabel={t("billing.pos.clearCartConfirm", "Vyprázdniť")}
+        cancelLabel={t("billing.pos.clearCartCancel", "Zrušiť")}
+        confirmVariant="destructive"
+        onCancel={() => setClearDialogOpen(false)}
+        onConfirm={() => {
+          setCart([]);
+          setClearDialogOpen(false);
+        }}
       />
     </div>
   );
