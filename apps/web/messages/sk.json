@@ -4271,7 +4271,7 @@
       "qrAlt": "QR kód pre odkaz na podpis súhlasu",
       "waitingForSignature": "Čaká sa na podpis klienta…"
     },
-    "title": "Klinická karta",
+    "title": "Klinické záznamy",
     "subtitle": "Klinická dokumentácia. Identita a majiteľ ostávajú na karte pacienta.",
     "new_record": "Nový záznam",
     "search_placeholder": "Hľadať v záznamoch...",
@@ -4446,7 +4446,10 @@
       "problems": "Zdravotné problémy",
       "procedures": "Zákroky a operácie",
       "soap": "SOAP (Epikrýza)",
-      "vaccinations": "Vakcinácie"
+      "vaccinations": "Vakcinácie",
+      "zaznamy": "Záznamy",
+      "historia": "História",
+      "prilohy": "Prílohy"
     },
     "newSoap": {
       "modeFlash": "Flash",
@@ -4660,7 +4663,18 @@
       "openCard": "Karta",
       "newSoap": "Nový SOAP",
       "backToRegister": "Zoznam kariet"
-    }
+    },
+    "kpi": {
+      "totalVisits": "Celkom návštev",
+      "avgDuration": "Priem. trvanie",
+      "openDiagnoses": "Otvorené diagnózy",
+      "totalPatients": "Celkom pacientov"
+    },
+    "speciesFilter": {
+      "label": "Druh",
+      "all": "Všetky druhy"
+    },
+    "selectedPatient": "Vybraný: {name}"
   },
   "reports": {
     "header": {
@@ -7508,6 +7522,18 @@
       "conflict": "SOAP bol zmenený v inej relácii. Pred opätovným uložením obnovte stránku.",
       "alreadyFinalized": "SOAP bol už autorizovaný v inej relácii.",
       "finalized": "SOAP záznam bol úspešne autorizovaný"
+    },
+    "tabs": {
+      "soap": "SOAP",
+      "zaznamy": "Záznamy",
+      "historia": "História",
+      "prilohy": "Prílohy"
+    },
+    "kpi": {
+      "totalVisits": "Celkom návštev",
+      "avgDuration": "Priem. trvanie",
+      "openDiagnoses": "Otvorené diagnózy",
+      "totalPatients": "Celkom pacientov"
     }
   },
   "copilot": {

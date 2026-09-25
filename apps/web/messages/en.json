@@ -4271,7 +4271,7 @@
       "qrAlt": "QR code for the consent signing link",
       "waitingForSignature": "Waiting for a signature…"
     },
-    "title": "Clinical Record",
+    "title": "Clinical Records",
     "subtitle": "Clinical documentation. Identity and owner stay on the patient card.",
     "new_record": "New Record",
     "search_placeholder": "Search records...",
@@ -4446,7 +4446,10 @@
       "problems": "Problems",
       "procedures": "Procedures",
       "soap": "SOAP Notes",
-      "vaccinations": "Vaccinations"
+      "vaccinations": "Vaccinations",
+      "zaznamy": "Zaznamy",
+      "historia": "Historia",
+      "prilohy": "Prilohy"
     },
     "newSoap": {
       "modeFlash": "Flash",
@@ -4660,7 +4663,18 @@
       "openCard": "Card",
       "newSoap": "New SOAP",
       "backToRegister": "Card list"
-    }
+    },
+    "kpi": {
+      "totalVisits": "Total visits",
+      "avgDuration": "Avg duration",
+      "openDiagnoses": "Open diagnoses",
+      "totalPatients": "Total patients"
+    },
+    "speciesFilter": {
+      "label": "Species",
+      "all": "All species"
+    },
+    "selectedPatient": "Selected: {name}"
   },
   "reports": {
     "header": {
@@ -7508,6 +7522,18 @@
       "conflict": "SOAP changed in another session. Refresh before saving again.",
       "alreadyFinalized": "SOAP was already finalized in another session.",
       "finalized": "SOAP note finalized"
+    },
+    "tabs": {
+      "soap": "SOAP",
+      "zaznamy": "Zaznamy",
+      "historia": "Historia",
+      "prilohy": "Prilohy"
+    },
+    "kpi": {
+      "totalVisits": "Total visits",
+      "avgDuration": "Avg duration",
+      "openDiagnoses": "Open diagnoses",
+      "totalPatients": "Total patients"
     }
   },
   "copilot": {
