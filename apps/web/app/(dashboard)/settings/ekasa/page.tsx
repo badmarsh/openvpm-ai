@@ -1,323 +1,565 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/layout/page-header";
+import { pageShellClass } from "@/components/layout/page-kit";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
-  Settings2,
-  CheckCircle2,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertCircle,
-  Loader2,
-  ShieldCheck,
+  ArrowLeft,
+  CheckCircle2,
+  CreditCard,
   ExternalLink,
   Info,
+  Loader2,
+  Settings2,
+  ShieldCheck,
   WifiOff,
-  CreditCard,
 } from "lucide-react";
 
-const COMPLIANCE_ITEMS = [
-  {
-    key: "dic",
-    label: "DIČ nakonfigurované",
-    description: "Daňové identifikačné číslo podnikateľa (povinné)",
-    required: true,
-  },
-  {
-    key: "pokladnicaId",
-    label: "ID pokladnice nastavené",
-    description: "Identifikátor pridelený FR SR pri registrácii e-Kasa",
-    required: true,
-  },
-  {
-    key: "apiUrl",
-    label: "API URL nastavené",
-    description: "Endpoint FR SR pre odosielanie dokladov",
-    required: true,
-  },
-  {
-    key: "certUploaded",
-    label: "Klientský certifikát nahratý",
-    description: "PKCS#12 certifikát z FR SR pre PKP podpis (voliteľné pre CLOUD typ)",
-    required: false,
-  },
-  {
-    key: "dphConfig",
-    label: "IČ DPH (ak platiteľ DPH)",
-    description: "Identifikačné číslo pre DPH — vyplniť len ak ste platiteľom DPH",
-    required: false,
-  },
-];
+type EkasaRegisterType = "ORP" | "VRP" | "CLOUD";
+
+type EkasaForm = {
+  dic: string;
+  icDph: string;
+  pokladnicaId: string;
+  pokladnicaType: EkasaRegisterType;
+  ekasaApiUrl: string;
+  offlineModeEnabled: boolean;
+  cashlessEnabled: boolean;
+};
+
+type ComplianceKey = "dic" | "pokladnicaId" | "apiUrl" | "certUploaded" | "dphConfig";
+
+const DEFAULT_EKASA_API_URL = "https://ekasa.financnasprava.sk/oto/api";
+
+const DEFAULT_FORM: EkasaForm = {
+  dic: "",
+  icDph: "",
+  pokladnicaId: "",
+  pokladnicaType: "CLOUD",
+  ekasaApiUrl: DEFAULT_EKASA_API_URL,
+  offlineModeEnabled: false,
+  cashlessEnabled: false,
+};
 
 export default function EkasaSettingsPage() {
-  const { data: config, isLoading, refetch } = trpc.extensions.ekasa.getConfig.useQuery();
-  const updateConfig = trpc.extensions.ekasa.updateConfig.useMutation({ onSuccess: () => refetch() });
+  const { t } = useI18n();
+  const {
+    data: config,
+    error: configError,
+    isLoading,
+    refetch,
+  } = trpc.extensions.ekasa.getConfig.useQuery();
+  const updateConfig = trpc.extensions.ekasa.updateConfig.useMutation();
 
-  const [form, setForm] = useState({
-    dic: "",
-    icDph: "",
-    pokladnicaId: "",
-    pokladnicaType: "CLOUD" as "ORP" | "VRP" | "CLOUD",
-    ekasaApiUrl: "https://ekasa.financnasprava.sk/oto/api",
-    offlineModeEnabled: false,
-    cashlessEnabled: false,
-  });
+  const [form, setForm] = useState<EkasaForm>(DEFAULT_FORM);
   const [initialized, setInitialized] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  if (config && !initialized) {
+  useEffect(() => {
+    if (!config || initialized) return;
+
     setForm({
-      dic: (config.dic as string) ?? "",
-      icDph: (config.icDph as string) ?? "",
-      pokladnicaId: (config.pokladnicaId as string) ?? "",
-      pokladnicaType: (config.pokladnicaType as "ORP" | "VRP" | "CLOUD") ?? "CLOUD",
-      ekasaApiUrl: (config.ekasaApiUrl as string) ?? "https://ekasa.financnasprava.sk/oto/api",
-      offlineModeEnabled: (config.offlineModeEnabled as boolean) ?? false,
-      cashlessEnabled: (config.cashlessEnabled as boolean) ?? false,
+      dic: config.dic ?? "",
+      icDph: config.icDph ?? "",
+      pokladnicaId: config.pokladnicaId ?? "",
+      pokladnicaType: (config.pokladnicaType as EkasaRegisterType | null) ?? "CLOUD",
+      ekasaApiUrl: config.ekasaApiUrl ?? DEFAULT_EKASA_API_URL,
+      offlineModeEnabled: config.offlineModeEnabled ?? false,
+      cashlessEnabled: config.cashlessEnabled ?? false,
     });
     setInitialized(true);
-  }
+  }, [config, initialized]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await updateConfig.mutateAsync({
-      ...form,
-      icDph: form.icDph || undefined,
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const COMPLIANCE_ITEMS: Array<{
+    key: ComplianceKey;
+    label: string;
+    description: string;
+    required: boolean;
+  }> = [
+    {
+      key: "dic",
+      label: t("settings.ekasa.compliance.items.dic.label", "DIČ nakonfigurované"),
+      description: t(
+        "settings.ekasa.compliance.items.dic.description",
+        "Daňové identifikačné číslo podnikateľa (povinné)",
+      ),
+      required: true,
+    },
+    {
+      key: "pokladnicaId",
+      label: t("settings.ekasa.compliance.items.pokladnicaId.label", "ID pokladnice nastavené"),
+      description: t(
+        "settings.ekasa.compliance.items.pokladnicaId.description",
+        "Identifikátor pridelený FR SR pri registrácii e-Kasa",
+      ),
+      required: true,
+    },
+    {
+      key: "apiUrl",
+      label: t("settings.ekasa.compliance.items.apiUrl.label", "API URL nastavené"),
+      description: t(
+        "settings.ekasa.compliance.items.apiUrl.description",
+        "Endpoint FR SR pre odosielanie dokladov",
+      ),
+      required: true,
+    },
+    {
+      key: "certUploaded",
+      label: t(
+        "settings.ekasa.compliance.items.certUploaded.label",
+        "Klientský certifikát nahratý",
+      ),
+      description: t(
+        "settings.ekasa.compliance.items.certUploaded.description",
+        "PKCS#12 certifikát z FR SR pre PKP podpis (voliteľné pre CLOUD typ)",
+      ),
+      required: false,
+    },
+    {
+      key: "dphConfig",
+      label: t("settings.ekasa.compliance.items.dphConfig.label", "IČ DPH (ak platiteľ DPH)"),
+      description: t(
+        "settings.ekasa.compliance.items.dphConfig.description",
+        "Identifikačné číslo pre DPH — vyplniť len ak ste platiteľom DPH",
+      ),
+      required: false,
+    },
+  ];
+
+  const registerTypeTooltips: Record<EkasaRegisterType, string> = {
+    CLOUD: t(
+      "settings.ekasa.registerTypes.cloud.tooltip",
+      "API integrácia e-Kasa; certifikát PKCS#12 môže byť potrebný podľa nastavenia služby.",
+    ),
+    ORP: t(
+      "settings.ekasa.registerTypes.orp.tooltip",
+      "Online registračná pokladnica zaregistrovaná vo Finančnej správe SR.",
+    ),
+    VRP: t(
+      "settings.ekasa.registerTypes.vrp.tooltip",
+      "Virtuálna registračná pokladnica používaná prostredníctvom služby Finančnej správy SR.",
+    ),
   };
 
-  const checks = {
-    dic: !!form.dic,
-    pokladnicaId: !!form.pokladnicaId,
-    apiUrl: !!form.ekasaApiUrl,
-    certUploaded: !!(config?.certBase64),
-    dphConfig: true,
+  const checks: Record<ComplianceKey, boolean> = {
+    dic: Boolean(form.dic.trim()),
+    pokladnicaId: Boolean(form.pokladnicaId.trim()),
+    apiUrl: Boolean(form.ekasaApiUrl.trim()),
+    // Only the presence of the certificate is used in the UI; its contents and password are never rendered.
+    certUploaded: Boolean(config?.certBase64),
+    dphConfig: Boolean(form.icDph.trim()),
   };
-  const requiredPassed = COMPLIANCE_ITEMS.filter((i) => i.required).every(
-    (i) => checks[i.key as keyof typeof checks]
+  const requiredPassed = COMPLIANCE_ITEMS.filter((item) => item.required).every(
+    (item) => checks[item.key],
   );
+  const savePending = isSaving || updateConfig.isPending;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+
+    try {
+      await updateConfig.mutateAsync({
+        ...form,
+        icDph: form.icDph.trim() || undefined,
+      });
+      void refetch();
+      toast.success(t("settings.ekasa.save.success", "Nastavenia e-Kasa boli uložené."));
+    } catch {
+      toast.error(t("settings.ekasa.save.error", "Nastavenia e-Kasa sa nepodarilo uložiť."));
+    } finally {
+      // Mutations that reject (including network timeouts) must always release the form.
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
-        title={
-          <span className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/40 shrink-0">
-              <Settings2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </span>
-            <span>e-Kasa Nastavenia</span>
-          </span>
+        icon={Settings2}
+        title={t("settings.ekasa.title", "Nastavenia e-Kasa")}
+        subtitle={t(
+          "settings.ekasa.subtitle",
+          "Konfigurácia elektronickej registračnej pokladnice (Zákon č. 289/2008 Z. z.)",
+        )}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/settings">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {t("settings.ekasa.back", "Späť do nastavení")}
+            </Link>
+          </Button>
         }
-        subtitle="Konfigurácia elektronickej registračnej pokladnice (Zákon č. 289/2008 Z. z.)"
       />
 
-      {/* Compliance Checklist */}
-      <div className={`rounded-xl border p-5 shadow-sm ${requiredPassed ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50"}`}>
-        <div className="mb-3 flex items-center gap-2">
-          <ShieldCheck className={`h-5 w-5 ${requiredPassed ? "text-emerald-600" : "text-amber-600"}`} />
-          <span className="font-semibold text-sm">
-            {requiredPassed ? "Splnené legislatívne požiadavky ✓" : "Nevyplnené povinné polia"}
-          </span>
-        </div>
-        <div className="space-y-2">
-          {COMPLIANCE_ITEMS.map((item) => {
-            const passed = checks[item.key as keyof typeof checks];
-            return (
-              <div key={item.key} className="flex items-start gap-2">
-                {passed ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                ) : item.required ? (
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                ) : (
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                )}
-                <div>
-                  <span className={`text-xs font-medium ${!passed && item.required ? "text-amber-700" : ""}`}>
-                    {item.label}
-                    {!item.required && <span className="ml-1 text-muted-foreground">(voliteľné)</span>}
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">{item.description}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Configuration Form */}
-      <form onSubmit={handleSubmit} className="rounded-xl border bg-card p-5 shadow-sm space-y-5">
-        <h2 className="text-sm font-semibold">Identifikačné údaje</h2>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* DIC */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">
-              DIČ <span className="text-destructive">*</span>
-            </label>
-            <input
-              value={form.dic}
-              onChange={(e) => setForm({ ...form, dic: e.target.value })}
-              placeholder="1234567890"
-              required
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          {/* IC DPH */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">IČ DPH</label>
-            <input
-              value={form.icDph}
-              onChange={(e) => setForm({ ...form, icDph: e.target.value })}
-              placeholder="SK1234567890 (len ak platiteľ DPH)"
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          {/* Pokladnica ID */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">
-              ID pokladnice <span className="text-destructive">*</span>
-            </label>
-            <input
-              value={form.pokladnicaId}
-              onChange={(e) => setForm({ ...form, pokladnicaId: e.target.value })}
-              placeholder="napr. 88812345678"
-              required
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          {/* Pokladnica Type */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Typ pokladnice</label>
-            <select
-              value={form.pokladnicaType}
-              onChange={(e) => setForm({ ...form, pokladnicaType: e.target.value as "ORP" | "VRP" | "CLOUD" })}
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              <option value="CLOUD">CLOUD (API)</option>
-              <option value="ORP">ORP — Online registračná pokladnica</option>
-              <option value="VRP">VRP — Virtuálna registračná pokladnica</option>
-            </select>
-          </div>
-        </div>
-
-        {/* API URL */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            e-Kasa API URL
-            <a
-              href="https://ekasa.financnasprava.sk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-2 inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
-            >
-              <ExternalLink className="h-3 w-3" />FR SR portál
-            </a>
-          </label>
-          <input
-            value={form.ekasaApiUrl}
-            onChange={(e) => setForm({ ...form, ekasaApiUrl: e.target.value })}
-            type="url"
-            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
-          />
-        </div>
-
-        {/* Switches */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold">Možnosti</h2>
-
-          {[
-            {
-              key: "offlineModeEnabled" as const,
-              icon: WifiOff,
-              label: "Offline mód",
-              description: "Doklady sa ukladajú lokálne a odošlú po obnovení pripojenia",
-            },
-            {
-              key: "cashlessEnabled" as const,
-              icon: CreditCard,
-              label: "Povolené bezhotovostné platby",
-              description: "Karta, bankový prevod — vyžaduje nastavenie terminálu",
-            },
-          ].map((opt) => (
-            <label key={opt.key} className="flex items-start gap-3 cursor-pointer">
-              <div className="relative mt-0.5">
-                <input
-                  type="checkbox"
-                  checked={form[opt.key]}
-                  onChange={(e) => setForm({ ...form, [opt.key]: e.target.checked })}
-                  className="sr-only"
-                />
-                <div
-                  className={`h-5 w-9 rounded-full transition-colors ${form[opt.key] ? "bg-primary" : "bg-muted"}`}
-                />
-                <div
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${form[opt.key] ? "translate-x-4" : "translate-x-0.5"}`}
-                />
-              </div>
+      {isLoading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            {t("settings.ekasa.loading", "Načítavam nastavenia e-Kasa...")}
+          </CardContent>
+        </Card>
+      ) : configError ? (
+        <Card>
+          <CardContent className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <div>
-                <div className="flex items-center gap-1.5">
-                  <opt.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{opt.label}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">{opt.description}</p>
+                <p className="font-medium">
+                  {t("settings.ekasa.loadError.title", "Nastavenia e-Kasa sa nepodarilo načítať")}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {t(
+                    "settings.ekasa.loadError.description",
+                    "Pred vykonaním zmien skúste znova načítať uloženú konfiguráciu pokladnice.",
+                  )}
+                </p>
               </div>
-            </label>
-          ))}
-        </div>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+              {t("settings.ekasa.loadError.retry", "Skúsiť znova")}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card>
+            <CardHeader className="flex-row items-start justify-between gap-4 border-b border-border p-5">
+              <div className="flex items-start gap-3">
+                <ShieldCheck
+                  className={`mt-0.5 h-5 w-5 shrink-0 ${requiredPassed ? "text-success" : "text-warning"}`}
+                  aria-hidden="true"
+                />
+                <div>
+                  <CardTitle className="text-base">
+                    {t("settings.ekasa.compliance.title", "Kontrola fiškálnej konfigurácie")}
+                  </CardTitle>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {requiredPassed
+                      ? t(
+                          "settings.ekasa.compliance.complete",
+                          "Všetky povinné legislatívne údaje sú vyplnené.",
+                        )
+                      : t(
+                          "settings.ekasa.compliance.incomplete",
+                          "Pred spustením evidencie doplňte povinné fiškálne údaje.",
+                        )}
+                  </p>
+                </div>
+              </div>
+              <Badge variant={requiredPassed ? "success" : "warning"} className="shrink-0">
+                {requiredPassed
+                  ? t("settings.ekasa.compliance.completeBadge", "Pripravené")
+                  : t("settings.ekasa.compliance.incompleteBadge", "Vyžaduje doplnenie")}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3 p-5">
+              {COMPLIANCE_ITEMS.map((item) => {
+                const passed = checks[item.key];
+                const status = passed
+                  ? t("settings.ekasa.compliance.status.configured", "Nakonfigurované")
+                  : item.required
+                    ? t("settings.ekasa.compliance.status.required", "Povinné")
+                    : t("settings.ekasa.compliance.status.optional", "Voliteľné");
 
-        {/* Cert info */}
-        <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">
-          <strong>Certifikát (PKP podpis):</strong> Pre produkčné prostredie nahrajte PKCS#12 certifikát
-          vydaný FR SR cez Drizzle Studio alebo priamy DB prístup. Kontaktujte správcu systému.
-        </div>
+                return (
+                  <div key={item.key} className="flex items-start gap-3">
+                    {passed ? (
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+                    ) : item.required ? (
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                    ) : (
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-foreground">{item.label}</span>
+                        <Badge variant={passed ? "success" : item.required ? "warning" : "secondary"}>
+                          {status}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
 
-        {/* Submit */}
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={updateConfig.isPending}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60 hover:bg-primary/90 transition-colors"
-          >
-            {updateConfig.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : saved ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <Settings2 className="h-4 w-4" />
-            )}
-            {updateConfig.isPending ? "Ukladám…" : saved ? "Uložené!" : "Uložiť nastavenia"}
-          </button>
+          <form onSubmit={handleSubmit}>
+            <Card>
+              <CardHeader className="border-b border-border p-5">
+                <CardTitle className="text-base">
+                  {t("settings.ekasa.form.title", "Konfigurácia pokladnice")}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    "settings.ekasa.form.description",
+                    "Doplňte identifikačné údaje praxe a možnosti prenosu dokladov.",
+                  )}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6 p-5">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ekasa-dic">
+                      {t("settings.ekasa.fields.dic.label", "DIČ")} <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="ekasa-dic"
+                      value={form.dic}
+                      onChange={(event) => setForm((current) => ({ ...current, dic: event.target.value }))}
+                      placeholder={t("settings.ekasa.fields.dic.placeholder", "1234567890")}
+                      required
+                    />
+                  </div>
 
-          {updateConfig.isError && (
-            <p className="text-sm text-destructive">
-              {updateConfig.error?.message ?? "Chyba pri ukladaní"}
-            </p>
-          )}
-        </div>
-      </form>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ekasa-ic-dph">
+                      {t("settings.ekasa.fields.icDph.label", "IČ DPH")}
+                    </Label>
+                    <Input
+                      id="ekasa-ic-dph"
+                      value={form.icDph}
+                      onChange={(event) => setForm((current) => ({ ...current, icDph: event.target.value }))}
+                      placeholder={t(
+                        "settings.ekasa.fields.icDph.placeholder",
+                        "SK1234567890 (len ak platiteľ DPH)",
+                      )}
+                    />
+                  </div>
 
-      {/* Legal note */}
-      <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
-        <p className="font-medium mb-1">📋 Právna poznámka</p>
-        <p>
-          Systém e-Kasa je regulovaný <strong>Zákonom č. 289/2008 Z. z.</strong> o používaní
-          elektronickej registračnej pokladnice a <strong>Zákonom č. 384/2025 Z. z.</strong>
-          Každý doklad musí obsahovať OKP a PKP kód. Systém generuje OKP (SHA-1) a PKP (RSA-SHA256)
-          automaticky po konfigurácii certifikátu.
-        </p>
-      </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ekasa-register-id">
+                      {t("settings.ekasa.fields.pokladnicaId.label", "ID pokladnice")} {" "}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="ekasa-register-id"
+                      value={form.pokladnicaId}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, pokladnicaId: event.target.value }))
+                      }
+                      placeholder={t("settings.ekasa.fields.pokladnicaId.placeholder", "napr. 88812345678")}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor="ekasa-register-type">
+                        {t("settings.ekasa.fields.pokladnicaType.label", "Typ pokladnice")}
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground"
+                              aria-label={t(
+                                "settings.ekasa.fields.pokladnicaType.tooltipLabel",
+                                "Pomoc k typu pokladnice",
+                              )}
+                            >
+                              <Info className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{registerTypeTooltips[form.pokladnicaType]}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <select
+                      id="ekasa-register-type"
+                      value={form.pokladnicaType}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          pokladnicaType: event.target.value as EkasaRegisterType,
+                        }))
+                      }
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      aria-describedby="ekasa-register-type-help"
+                    >
+                      <option value="CLOUD">
+                        {t("settings.ekasa.registerTypes.cloud.label", "CLOUD (API)")}
+                      </option>
+                      <option value="ORP">
+                        {t("settings.ekasa.registerTypes.orp.label", "ORP — Online registračná pokladnica")}
+                      </option>
+                      <option value="VRP">
+                        {t("settings.ekasa.registerTypes.vrp.label", "VRP — Virtuálna registračná pokladnica")}
+                      </option>
+                    </select>
+                    <p id="ekasa-register-type-help" className="text-xs text-muted-foreground">
+                      {registerTypeTooltips[form.pokladnicaType]}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Label htmlFor="ekasa-api-url">
+                      {t("settings.ekasa.fields.apiUrl.label", "e-Kasa API URL")}
+                    </Label>
+                    <a
+                      href="https://ekasa.financnasprava.sk"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                      {t("settings.ekasa.fields.apiUrl.portal", "Portál Finančnej správy SR")}
+                    </a>
+                  </div>
+                  <Input
+                    id="ekasa-api-url"
+                    value={form.ekasaApiUrl}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, ekasaApiUrl: event.target.value }))
+                    }
+                    type="url"
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {t("settings.ekasa.options.title", "Možnosti")}
+                  </h2>
+
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/20 p-3">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <div>
+                          <Label htmlFor="ekasa-offline-mode" className="cursor-pointer text-sm">
+                            {t("settings.ekasa.options.offline.label", "Offline režim")}
+                          </Label>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {t(
+                              "settings.ekasa.options.offline.description",
+                              "Doklady sa lokálne uložia a odošlú po obnovení pripojenia.",
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="ekasa-offline-mode"
+                        checked={form.offlineModeEnabled}
+                        onCheckedChange={(checked) =>
+                          setForm((current) => ({ ...current, offlineModeEnabled: checked }))
+                        }
+                        aria-label={t("settings.ekasa.options.offline.label", "Offline režim")}
+                      />
+                    </div>
+
+                    <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/20 p-3">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <div>
+                          <Label htmlFor="ekasa-cashless" className="cursor-pointer text-sm">
+                            {t(
+                              "settings.ekasa.options.cashless.label",
+                              "Povoliť bezhotovostné platby",
+                            )}
+                          </Label>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {t(
+                              "settings.ekasa.options.cashless.description",
+                              "Karta a bankový prevod vyžadujú nastavenie platobného terminálu.",
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="ekasa-cashless"
+                        checked={form.cashlessEnabled}
+                        onCheckedChange={(checked) =>
+                          setForm((current) => ({ ...current, cashlessEnabled: checked }))
+                        }
+                        aria-label={t(
+                          "settings.ekasa.options.cashless.label",
+                          "Povoliť bezhotovostné platby",
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-info/30 bg-info-muted/40 p-3 text-xs text-info-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">
+                      {t("settings.ekasa.certificate.title", "Certifikát pre PKP podpis")}
+                    </span>
+                    <Badge variant={checks.certUploaded ? "success" : "secondary"}>
+                      {checks.certUploaded
+                        ? t("settings.ekasa.certificate.configured", "Nakonfigurovaný")
+                        : t("settings.ekasa.certificate.notConfigured", "Nenakonfigurovaný")}
+                    </Badge>
+                  </div>
+                  <p className="mt-1">
+                    {t(
+                      "settings.ekasa.certificate.description",
+                      "Pre produkčné prostredie poskytnite certifikát PKCS#12 vydaný FR SR prostredníctvom schváleného administrátorského postupu. Tento formulár zobrazuje iba stav certifikátu.",
+                    )}
+                  </p>
+                </div>
+              </CardContent>
+              <div className="flex flex-wrap items-center gap-3 border-t border-border p-5">
+                <Button type="submit" disabled={savePending}>
+                  {savePending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Settings2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                  )}
+                  {savePending
+                    ? t("settings.ekasa.save.saving", "Ukladám nastavenia...")
+                    : t("settings.ekasa.save.action", "Uložiť nastavenia e-Kasa")}
+                </Button>
+                {updateConfig.isError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {t("settings.ekasa.save.error", "Nastavenia e-Kasa sa nepodarilo uložiť.")}
+                  </p>
+                ) : null}
+              </div>
+            </Card>
+          </form>
+
+          <Card className="bg-muted/30">
+            <CardContent className="p-4 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t("settings.ekasa.legal.title", "Právna poznámka")}
+              </p>
+              <p className="mt-1">
+                {t(
+                  "settings.ekasa.legal.description",
+                  "Systém e-Kasa je regulovaný Zákonom č. 289/2008 Z. z. o používaní elektronickej registračnej pokladnice a Zákonom č. 384/2025 Z. z. Každý doklad musí obsahovať OKP a PKP kód. Systém generuje OKP (SHA-1) a PKP (RSA-SHA256) po konfigurácii certifikátu.",
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

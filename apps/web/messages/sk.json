@@ -5144,6 +5144,118 @@
         "reset": "Obnoviť predvolené"
       }
     },
+    "ekasa": {
+      "title": "Nastavenia e-Kasa",
+      "subtitle": "Konfigurácia elektronickej registračnej pokladnice (Zákon č. 289/2008 Z. z.).",
+      "back": "Späť do nastavení",
+      "loading": "Načítavam nastavenia e-Kasa...",
+      "loadError": {
+        "title": "Nastavenia e-Kasa sa nepodarilo načítať",
+        "description": "Pred vykonaním zmien skúste znova načítať uloženú konfiguráciu pokladnice.",
+        "retry": "Skúsiť znova"
+      },
+      "compliance": {
+        "title": "Kontrola fiškálnej konfigurácie",
+        "complete": "Všetky povinné legislatívne údaje sú vyplnené.",
+        "incomplete": "Pred spustením evidencie doplňte povinné fiškálne údaje.",
+        "completeBadge": "Pripravené",
+        "incompleteBadge": "Vyžaduje doplnenie",
+        "status": {
+          "configured": "Nakonfigurované",
+          "required": "Povinné",
+          "optional": "Voliteľné"
+        },
+        "items": {
+          "dic": {
+            "label": "DIČ nakonfigurované",
+            "description": "Daňové identifikačné číslo podnikateľa (povinné)"
+          },
+          "pokladnicaId": {
+            "label": "ID pokladnice nastavené",
+            "description": "Identifikátor pridelený FR SR pri registrácii e-Kasa (povinné)"
+          },
+          "apiUrl": {
+            "label": "API URL nastavené",
+            "description": "Endpoint Finančnej správy SR pre odosielanie dokladov (povinné)"
+          },
+          "certUploaded": {
+            "label": "Klientský certifikát nakonfigurovaný",
+            "description": "PKCS#12 certifikát pre PKP podpis (voliteľné pre typ CLOUD)"
+          },
+          "dphConfig": {
+            "label": "IČ DPH (ak platiteľ DPH)",
+            "description": "IČ DPH vyplňte len v prípade, že je prax platiteľom DPH"
+          }
+        }
+      },
+      "form": {
+        "title": "Konfigurácia pokladnice",
+        "description": "Doplňte identifikačné údaje praxe a možnosti prenosu dokladov."
+      },
+      "fields": {
+        "dic": {
+          "label": "DIČ",
+          "placeholder": "1234567890"
+        },
+        "icDph": {
+          "label": "IČ DPH",
+          "placeholder": "SK1234567890 (len ak platiteľ DPH)"
+        },
+        "pokladnicaId": {
+          "label": "ID pokladnice",
+          "placeholder": "napr. 88812345678"
+        },
+        "pokladnicaType": {
+          "label": "Typ pokladnice",
+          "tooltipLabel": "Pomoc k typu pokladnice"
+        },
+        "apiUrl": {
+          "label": "e-Kasa API URL",
+          "portal": "Portál Finančnej správy SR"
+        }
+      },
+      "registerTypes": {
+        "cloud": {
+          "label": "CLOUD (API)",
+          "tooltip": "API integrácia e-Kasa; certifikát PKCS#12 môže byť potrebný podľa nastavenia služby."
+        },
+        "orp": {
+          "label": "ORP — Online registračná pokladnica",
+          "tooltip": "Online registračná pokladnica zaregistrovaná vo Finančnej správe SR."
+        },
+        "vrp": {
+          "label": "VRP — Virtuálna registračná pokladnica",
+          "tooltip": "Virtuálna registračná pokladnica používaná prostredníctvom služby Finančnej správy SR."
+        }
+      },
+      "options": {
+        "title": "Možnosti",
+        "offline": {
+          "label": "Offline režim",
+          "description": "Doklady sa lokálne uložia a odošlú po obnovení pripojenia."
+        },
+        "cashless": {
+          "label": "Povoliť bezhotovostné platby",
+          "description": "Karta a bankový prevod vyžadujú nastavenie platobného terminálu."
+        }
+      },
+      "certificate": {
+        "title": "Certifikát pre PKP podpis",
+        "configured": "Nakonfigurovaný",
+        "notConfigured": "Nenakonfigurovaný",
+        "description": "Pre produkčné prostredie poskytnite certifikát PKCS#12 vydaný FR SR prostredníctvom schváleného administrátorského postupu. Tento formulár zobrazuje iba stav certifikátu."
+      },
+      "save": {
+        "action": "Uložiť nastavenia e-Kasa",
+        "saving": "Ukladám nastavenia...",
+        "success": "Nastavenia e-Kasa boli uložené.",
+        "error": "Nastavenia e-Kasa sa nepodarilo uložiť."
+      },
+      "legal": {
+        "title": "Právna poznámka",
+        "description": "Systém e-Kasa je regulovaný Zákonom č. 289/2008 Z. z. o používaní elektronickej registračnej pokladnice a Zákonom č. 384/2025 Z. z. Každý doklad musí obsahovať OKP a PKP kód. Systém generuje OKP (SHA-1) a PKP (RSA-SHA256) po konfigurácii certifikátu."
+      }
+    },
     "booking": {
       "title": "Online žiadosti o termín",
       "subtitle": "Noví aj existujúci klienti si môžu jednoducho vyžiadať preferovaný termín. Každá žiadosť sa dostane do vášho rozvrhu, kde ju váš tím skontroluje, priradí a potvrdí. Zdieľajte odkaz, vytlačte QR kód alebo pridajte tlačidlo na svoju webovú stránku.",
