@@ -1496,7 +1496,38 @@
       "cityPlaceholder": "City",
       "statePlaceholder": "State / Province",
       "zipPlaceholder": "Zip code",
-      "phonePlaceholder": "(555) 123-4567"
+      "phonePlaceholder": "(555) 123-4567",
+      "createClient": "Create Client",
+      "emailPlaceholder": "email@example.com",
+      "sections": {
+        "contact": {
+          "title": "Owner & contact",
+          "subtitle": "Name, email, and phone used for reminders and invoices."
+        },
+        "reminders": {
+          "title": "Reminders & SMS consent",
+          "subtitle": "How the practice reaches this client. Text messages need recorded consent."
+        },
+        "address": {
+          "title": "Address",
+          "subtitle": "Optional postal address."
+        }
+      },
+      "phoneHint": {
+        "format": "National numbers such as 0905 123 456 are texted as +421 905 123 456.",
+        "smsTarget": "SMS reminders will be sent to {number}.",
+        "smsUnavailable": "This number can't be used for SMS. Enter a mobile number such as 0905 123 456 or +421 905 123 456."
+      },
+      "validation": {
+        "firstNameRequired": "Enter the client's first name.",
+        "lastNameRequired": "Enter the client's last name.",
+        "emailInvalid": "Enter a valid email address, for example name@example.com.",
+        "checkRequiredFields": "Check required fields and field lengths.",
+        "smsPhoneInvalid": "Enter a valid mobile phone number before recording SMS consent.",
+        "smsConsentRequired": "Confirm the client's SMS consent before using text messages for reminders.",
+        "smsConsentField": "SMS consent",
+        "missingFields": "To create the client, complete: {fields}."
+      }
     },
     "detail": {
       "contactInfo": "Contact Information",
@@ -3596,7 +3627,36 @@
       "firstClinicDayStep2": "First clinic day, step 2 of 3: add this owner's pet. Booking is next.",
       "choosePatient": "Choose a patient from the Patients list before editing.",
       "name": "Name",
-      "microchipNumber": "Microchip Number"
+      "microchipNumber": "Microchip Number",
+      "createPatient": "Create Patient",
+      "loadingForm": "Loading patient form...",
+      "changeOwner": "Change owner",
+      "clientSearchError": "Unable to search clients. Please retry.",
+      "sections": {
+        "owner": {
+          "title": "Owner",
+          "subtitle": "Every patient chart belongs to one client."
+        },
+        "signalment": {
+          "title": "Patient",
+          "subtitle": "Name, species, and signalment."
+        },
+        "identification": {
+          "title": "Identification",
+          "subtitle": "A microchip number helps prevent duplicate charts."
+        }
+      },
+      "microchipHint": {
+        "help": "Scan or type the chip number. Spaces and dashes are removed from 15-digit ISO numbers.",
+        "iso": "ISO 11784/11785 format · 15 digits",
+        "length": "ISO 11784/11785 chips have 15 digits; this number has {count}. Check the scan, or keep it for an older non-ISO chip."
+      },
+      "validation": {
+        "ownerRequired": "Search for the owner and select them from the results.",
+        "nameRequired": "Enter the patient's name.",
+        "checkRequiredFields": "Check required fields and field lengths.",
+        "missingFields": "To create the patient, complete: {fields}."
+      }
     },
     "profile": {
       "age": "Age",
@@ -3910,7 +3970,78 @@
       "mergeAllowed": "The retiring chart has no retained history. Any explicitly listed prospective work will move atomically; an immutable identity event will preserve who merged it, when, and why.",
       "canonicalChartOpened": "Opened the canonical chart for a merged patient identity",
       "mergedIntoNotice": "{name} was merged into this chart by {performedBy} on {date}.",
-      "reasonPrefix": "Reason: {reason}"
+      "reasonPrefix": "Reason: {reason}",
+      "adminOnlyTitle": "Duplicate review is admin-only",
+      "adminOnlyDesc": "Only practice administrators can review or merge duplicate patient identities.",
+      "adminOnlyBadge": "Admin-only",
+      "scopeNote": "OpenVPM only suggests same-owner matches. A merge is permitted only when the retiring chart has no clinical, medication, controlled-substance, financial, or other retained history.",
+      "loadError": "Unable to load duplicate candidates.",
+      "previewError": "Unable to preview this merge.",
+      "previewLoading": "Checking both charts and their retained history...",
+      "prospectiveWork": "Prospective work",
+      "keepAsCanonical": "Keep as canonical",
+      "retireAsDuplicate": "Retire as duplicate",
+      "roleKeep": "Keep",
+      "roleRetire": "Retire",
+      "historyCount": "Charts with retained history: {count}",
+      "summary": "Owners: {groups} · Charts to review: {charts}",
+      "searchLabel": "Filter duplicate candidates",
+      "searchPlaceholder": "Filter by owner, patient, or microchip...",
+      "noMatchesTitle": "No duplicate groups match this filter",
+      "noMatchesDesc": "Clear the filter to see every same-owner candidate.",
+      "checksAllClear": "All {count} retained-history checks are clear.",
+      "checksClearToggle": "Show clear checks ({count})",
+      "reasonMinimum": "At least {min} characters",
+      "reasonRemaining": "Characters still needed: {count}",
+      "confirmationMismatch": "Type MERGE exactly, in capital letters.",
+      "redirectNotice": "{mergeName} will redirect permanently to the canonical {keepName} chart.",
+      "merging": "Merging charts...",
+      "closeLocked": "The merge is running. This window closes when it finishes.",
+      "table": {
+        "caption": "Candidate charts for {owner}",
+        "patient": "Patient",
+        "signalment": "Species · Breed",
+        "created": "Created"
+      },
+      "mismatch": {
+        "title": "These charts differ in: {fields}",
+        "desc": "Confirm both charts describe the same animal before merging."
+      },
+      "counts": {
+        "differentClient": "Different owner",
+        "sourceHasIncomingAliases": "Charts already merged into the retiring chart",
+        "sourceWasPreviouslyMerged": "Retiring chart was already merged",
+        "targetWasPreviouslyMerged": "Canonical chart is itself an alias",
+        "appointmentHistory": "Past or non-movable appointments",
+        "appointmentCollisions": "Colliding future appointments",
+        "waitlistHistory": "Resolved or deleted waitlist records",
+        "waitlistCollisions": "Duplicate waiting-list entries",
+        "weights": "Weights",
+        "allergies": "Allergies",
+        "soapNotes": "SOAP notes",
+        "vaccinations": "Vaccinations",
+        "labResults": "Lab results",
+        "procedures": "Procedures",
+        "clinicalNotes": "Clinical notes",
+        "problemList": "Problem list entries",
+        "vitalSigns": "Vital signs",
+        "cases": "Cases",
+        "treatmentPlans": "Treatment plans",
+        "prescriptions": "Prescriptions",
+        "prescriptionEvents": "Prescription events",
+        "controlledSubstanceEntries": "Controlled-substance log entries",
+        "clinicalCorrections": "Clinical record corrections",
+        "dispenseCharges": "Dispense charges",
+        "consentRequests": "Consent requests",
+        "captureSessions": "Capture sessions",
+        "patientFiles": "Patient files",
+        "invoices": "Invoices",
+        "insurancePolicies": "Insurance policies",
+        "wellnessEnrollments": "Wellness plan enrollments",
+        "futureAppointments": "Future appointments",
+        "waitingListEntries": "Waiting-list entries"
+      },
+      "clearFilter": "Clear filter"
     },
     "historySearch": {
       "findTitle": "Find in patient history",
