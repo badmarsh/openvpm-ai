@@ -241,14 +241,21 @@ def _get_repo_path(subpath: str = "") -> str:
     if env_repo and os.path.exists(env_repo):
         return os.path.join(env_repo, subpath) if subpath else env_repo
 
+    # Ak REPO_DIR existuje a obsahuje tasks alebo package.json (napr. v pytest fixture alebo priamom behu)
+    if REPO_DIR and os.path.exists(REPO_DIR) and (
+        os.path.exists(os.path.join(REPO_DIR, "package.json"))
+        or os.path.exists(os.path.join(REPO_DIR, "tasks"))
+    ):
+        return os.path.join(REPO_DIR, subpath) if subpath else REPO_DIR
+
     candidates = [
-        REPO_DIR,
         "/mnt/c/Users/marek/Documents/Vet/openvpm-ai",
         r"C:\Users\marek\Documents\Vet\openvpm-ai",
         "/home/ubuntu/openvpm",
+        REPO_DIR,
     ]
     for cand in candidates:
-        if os.path.exists(os.path.join(cand, "package.json")) and os.path.exists(os.path.join(cand, "apps", "web")):
+        if cand and os.path.exists(os.path.join(cand, "package.json")) and os.path.exists(os.path.join(cand, "apps", "web")):
             return os.path.join(cand, subpath) if subpath else cand
 
     return os.path.join(REPO_DIR, subpath) if subpath else REPO_DIR
@@ -2943,6 +2950,89 @@ def _target_agent_url(arena_url: str) -> str:
     return arena_agent_home_url()
 
 
+def _ensure_arena_repository_selected(page: Any, target_repo: str = "badmarsh/openvpm-ai", max_attempts: int = 2) -> bool:
+    """Zabezpečí, že v rozhraní Arena.ai je vybraný správny GitHub repozitár.
+    Vykoná až max_attempts pokusov s overením, aby výber v rozhraní skutočne zotrval na vybranej položke.
+    """
+    repo_btn_selectors = [
+        "button:has-text('Select a repository')",
+        f"button:has-text('{target_repo}')",
+        "button:has-text('badmarsh/')",
+    ]
+
+    for attempt in range(1, max_attempts + 1):
+        btn = None
+        for sel in repo_btn_selectors:
+            try:
+                loc = page.locator(sel).first
+                if loc.is_visible():
+                    btn = loc
+                    break
+            except Exception:
+                continue
+
+        if not btn:
+            # Tlačidlo výberu repozitára nie je na stránke (napr. už bežiaca session)
+            return True
+
+        try:
+            btn_text = (btn.inner_text() or "").strip()
+        except Exception:
+            btn_text = ""
+
+        # Ak už je vybraný cieľový repozitár, netreba klikať
+        if target_repo in btn_text:
+            return True
+
+        # 1. Otvorenie dropdownu
+        try:
+            btn.click()
+            page.wait_for_timeout(400)
+        except Exception:
+            pass
+
+        # 2. Overenie otvorenia dialógu
+        try:
+            dialog = page.locator("[role='dialog']").first
+            if not dialog.is_visible():
+                btn.click()
+                page.wait_for_timeout(400)
+        except Exception:
+            pass
+
+        # 3. Vyhľadanie a kliknutie na repozitár
+        try:
+            option = page.locator(f"[role='dialog'] [role='option']:has-text('{target_repo}')").first
+            if option.is_visible():
+                option.click()
+                page.wait_for_timeout(500)
+            else:
+                all_opts = page.locator("[role='dialog'] [role='option']").all()
+                for opt in all_opts:
+                    if target_repo in (opt.inner_text() or ""):
+                        opt.scroll_into_view_if_needed()
+                        opt.click()
+                        break
+                page.wait_for_timeout(500)
+        except Exception:
+            pass
+
+        # 4. Overenie úspechu výberu
+        for sel in repo_btn_selectors:
+            try:
+                loc = page.locator(sel).first
+                if loc.is_visible():
+                    new_text = (loc.inner_text() or "").strip()
+                    if target_repo in new_text:
+                        return True
+            except Exception:
+                continue
+
+        page.wait_for_timeout(400)
+
+    return False
+
+
 def _dispatch_on_browser(
     browser: Any,
     prompt_text: str,
@@ -2965,6 +3055,13 @@ def _dispatch_on_browser(
         target = _target_agent_url(arena_url)
         page = _open_fresh_agent_page(browser, target)
         opened_new = True
+
+    # Ak začíname novú reláciu, uistíme sa, že je vybraný správny GitHub repozitár (s 2 pokusmi a overením)
+    page_url = str(getattr(page, "url", "") or "")
+    if opened_new or (not extract_agent_session_id(page_url) and "arena.ai" in page_url):
+        target_repo = os.getenv("ARENA_DEFAULT_GITHUB_REPO", "badmarsh/openvpm-ai")
+        _ensure_arena_repository_selected(page, target_repo=target_repo, max_attempts=2)
+
     filled, submitted, detail = _fill_and_submit(page, prompt_text, auto_submit)
     if not filled or (auto_submit and not submitted):
         return BrowserDispatchResult(
