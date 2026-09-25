@@ -9,6 +9,7 @@ import tempfile
 import threading
 import urllib.parse
 import subprocess
+import shlex
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, fields, is_dataclass
 from enum import Enum
@@ -667,29 +668,81 @@ def git_checkout_branch(branch_name: str) -> str:
 
 
 ALLOWED_SHELL_COMMANDS = {
-    "git", "pnpm", "gh", "node", "python", "python3", "pytest", "cat", "ls", "dir", "echo"
+    "git", "pnpm", "gh", "node", "python", "python3", "pytest", "cat", "ls", "dir", "echo",
+    "grep", "findstr", "head", "tail", "wc", "sort", "uniq"
 }
-FORBIDDEN_OPERATORS = ["|", "`", "$(", ">", "<"]
+FORBIDDEN_OPERATORS = ["`", "$(", ">", "<"]
 FORBIDDEN_PATH_SUBSTRINGS = [".env", "id_rsa", "id_ed25519", "credentials", "secret"]
+
+
+def _split_outside_quotes(text: str, delimiter: str) -> list[str]:
+    """Rozdelí text podľa oddeľovača s ignorovaním výskytov vo vnútri jednoduchých alebo dvojitých úvodzoviek."""
+    parts = []
+    current = []
+    in_single = False
+    in_double = False
+    i = 0
+    dlen = len(delimiter)
+    while i < len(text):
+        ch = text[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            current.append(ch)
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+            current.append(ch)
+        elif not in_single and not in_double and text[i:i+dlen] == delimiter:
+            parts.append("".join(current).strip())
+            current = []
+            i += dlen - 1
+        else:
+            current.append(ch)
+        i += 1
+    if current:
+        parts.append("".join(current).strip())
+    return [p for p in parts if p]
+
+
+def _check_forbidden_operators(cmd: str) -> str | None:
+    """Overí zákaz nebezpečných operátorov shellu (subshell, redirecty do súborov) mimo úvodzoviek."""
+    in_single = False
+    in_double = False
+    for i, ch in enumerate(cmd):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif not in_single and not in_double:
+            for op in FORBIDDEN_OPERATORS:
+                if cmd[i:i+len(op)] == op:
+                    return op
+    return None
 
 
 def run_shell_command(command: str) -> str:
     """Spustí bezpečný príkaz v termináli v priečinku repozitára s prísnym whitelistom nástrojov a ochranou pred command injection.
-    Podporuje jednotlivé príkazy aj sekvenčné zreťazenie cez ';' alebo '&&'.
+    Podporuje jednotlivé príkazy, sekvenčné zreťazenie (';', '&&') aj bezpečný pipeline ('|') medzi povolenými nástrojmi.
     """
     if not command or not command.strip():
         return "Chyba: Príkaz je prázdny."
 
     command = command.strip().rstrip(";\n\r ").strip()
 
-    # 1. Zákaz nebezpečných operátorov shell injection (pipe, subshell, redirects)
-    for op in FORBIDDEN_OPERATORS:
-        if op in command:
-            return f"❌ Bezpečnostné zamietnutie: Operátor '{op}' nie je z bezpečnostných dôvodov povolený."
+    # 1. Zákaz nebezpečných operátorov shell injection (subshell, redirects) mimo úvodzoviek
+    forbidden_op = _check_forbidden_operators(command)
+    if forbidden_op:
+        return (
+            f"❌ Bezpečnostné zamietnutie: Operátor '{forbidden_op}' nie je povolený.\n"
+            f"Pre zápis do súborov použi nástroj 'write_project_file'. Pre čítanie súborov použi 'read_project_file'."
+        )
 
-    import re
-    import shlex
-    sub_commands = [c.strip() for c in re.split(r";|&&", command) if c.strip()]
+    # Rozdelenie sekvencií ';' alebo '&&' s rešpektovaním úvodzoviek
+    sub_commands = []
+    for semi_split in _split_outside_quotes(command, ";"):
+        for and_split in _split_outside_quotes(semi_split, "&&"):
+            if and_split.strip():
+                sub_commands.append(and_split.strip())
+
     if not sub_commands:
         return "Chyba: Príkaz neobsahuje žiadne inštrukcie."
 
@@ -698,55 +751,114 @@ def run_shell_command(command: str) -> str:
     is_win = sys.platform == "win32"
 
     for sub_cmd in sub_commands:
-        # 2. Ochrana citlivých súborov (secrets & credentials)
-        lower_cmd = sub_cmd.lower()
-        for forbidden in FORBIDDEN_PATH_SUBSTRINGS:
-            if forbidden in lower_cmd:
-                return f"❌ Bezpečnostné zamietnutie: Prístup k súborom obsahujúcim '{forbidden}' je blokovaný."
-
-        try:
-            parts = shlex.split(sub_cmd, posix=not is_win)
-        except Exception as e:
-            return f"Chyba pri syntaktickej analýze príkazu '{sub_cmd}': {e}"
-
-        if not parts:
+        # Podpora pipeline cez '|' (napr. git log ... | head -n 5)
+        pipe_commands = _split_outside_quotes(sub_cmd, "|")
+        if not pipe_commands:
             continue
 
-        cmd_base = os.path.basename(parts[0]).lower().replace(".exe", "").replace(".cmd", "").replace(".bat", "")
-        if cmd_base not in ALLOWED_SHELL_COMMANDS:
-            return (
-                f"❌ Bezpečnostné zamietnutie: Nástroj '{parts[0]}' nie je na zozname povolených príkazov.\n"
-                f"Povolené nástroje sú výhradne: {', '.join(sorted(ALLOWED_SHELL_COMMANDS))}."
-            )
-
-        executable = parts[0]
-        if is_win:
-            which_exe = shutil.which(parts[0])
-            if which_exe:
-                executable = which_exe
-
-        try:
-            proc = subprocess.run(
-                [executable] + parts[1:],
-                cwd=repo,
-                shell=False,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=60,
-            )
-            out = ((proc.stdout or "") + (proc.stderr or "")).strip()
-            header = f"$ {sub_cmd}" if len(sub_commands) > 1 else ""
-            body = out if out else "(exit code 0)"
-            results.append(f"{header}\n{body}".strip())
-            if proc.returncode != 0:
-                # Pri chybe prerušíme sekvenciu
+        pipe_steps = []
+        validation_error = None
+        for p_cmd in pipe_commands:
+            lower_cmd = p_cmd.lower()
+            for forbidden in FORBIDDEN_PATH_SUBSTRINGS:
+                if forbidden in lower_cmd:
+                    validation_error = f"❌ Bezpečnostné zamietnutie: Prístup k súborom obsahujúcim '{forbidden}' je blokovaný."
+                    break
+            if validation_error:
                 break
-        except subprocess.TimeoutExpired:
-            return f"❌ Timeout: Príkaz '{sub_cmd}' prekročil maximálny limit 60 sekúnd."
-        except Exception as e:
-            return f"Chyba pri spúšťaní príkazu '{sub_cmd}': {str(e)}"
+
+            try:
+                parts = shlex.split(p_cmd, posix=not is_win)
+            except Exception as e:
+                validation_error = f"Chyba pri syntaktickej analýze príkazu '{p_cmd}': {e}"
+                break
+
+            if not parts:
+                continue
+
+            cmd_base = os.path.basename(parts[0]).lower().replace(".exe", "").replace(".cmd", "").replace(".bat", "")
+            if cmd_base not in ALLOWED_SHELL_COMMANDS:
+                validation_error = (
+                    f"❌ Bezpečnostné zamietnutie: Nástroj '{parts[0]}' nie je na zozname povolených príkazov.\n"
+                    f"Povolené nástroje sú výhradne: {', '.join(sorted(ALLOWED_SHELL_COMMANDS))}."
+                )
+                break
+
+            executable = parts[0]
+            if is_win:
+                which_exe = shutil.which(parts[0])
+                if which_exe:
+                    executable = which_exe
+
+            pipe_steps.append((executable, parts))
+
+        if validation_error:
+            return validation_error
+
+        if not pipe_steps:
+            continue
+
+        if len(pipe_steps) == 1:
+            executable, parts = pipe_steps[0]
+            try:
+                proc = subprocess.run(
+                    [executable] + parts[1:],
+                    cwd=repo,
+                    shell=False,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=60,
+                )
+                out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+                header = f"$ {sub_cmd}" if len(sub_commands) > 1 else ""
+                body = out if out else "(exit code 0)"
+                results.append(f"{header}\n{body}".strip())
+                if proc.returncode != 0:
+                    break
+            except subprocess.TimeoutExpired:
+                return f"❌ Timeout: Príkaz '{sub_cmd}' prekročil maximálny limit 60 sekúnd."
+            except Exception as e:
+                return f"Chyba pri spúšťaní príkazu '{sub_cmd}': {str(e)}"
+        else:
+            try:
+                procs = []
+                prev_stdout = None
+                for i, (executable, parts) in enumerate(pipe_steps):
+                    is_last = (i == len(pipe_steps) - 1)
+                    p = subprocess.Popen(
+                        [executable] + parts[1:],
+                        stdin=prev_stdout,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        cwd=repo,
+                        shell=False,
+                    )
+                    if prev_stdout:
+                        try:
+                            prev_stdout.close()
+                        except Exception:
+                            pass
+                    prev_stdout = p.stdout
+                    procs.append(p)
+
+                out_bytes, err_bytes = procs[-1].communicate(timeout=60)
+                for p in procs[:-1]:
+                    p.wait()
+
+                out_text = (out_bytes.decode("utf-8", errors="replace") if out_bytes else "").strip()
+                err_text = (err_bytes.decode("utf-8", errors="replace") if err_bytes else "").strip()
+                combined = (out_text + "\n" + err_text).strip()
+                header = f"$ {sub_cmd}" if len(sub_commands) > 1 else ""
+                body = combined if combined else "(exit code 0)"
+                results.append(f"{header}\n{body}".strip())
+                if procs[-1].returncode != 0:
+                    break
+            except subprocess.TimeoutExpired:
+                return f"❌ Timeout: Pipeline '{sub_cmd}' prekročil maximálny limit 60 sekúnd."
+            except Exception as e:
+                return f"Chyba pri spúšťaní pipeline '{sub_cmd}': {str(e)}"
 
     output = "\n\n".join(results)
     return output[:3000] if output else "Príkaz prebehol úspešne bez výstupu (exit code 0)."

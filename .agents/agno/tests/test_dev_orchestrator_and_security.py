@@ -91,3 +91,36 @@ def test_internal_service_token_is_secure() -> None:
     # Must never be the default insecure secret
     assert team_os.INTERNAL_SERVICE_TOKEN != "openvpm-service-secret"
     assert len(team_os.INTERNAL_SERVICE_TOKEN) >= 16
+
+
+def test_run_shell_command_safe_pipeline_and_security() -> None:
+    from pipeline_tools import run_shell_command
+
+    # 1. Pipe outside quotes between allowed commands must work
+    res_pipe = run_shell_command("git log -n 2 --oneline | head -n 1")
+    assert not res_pipe.startswith("❌ Bezpečnostné zamietnutie")
+    assert len(res_pipe.strip().splitlines()) == 1
+
+    # 2. Pipe character inside quotes must not trigger operator rejection
+    res_quote = run_shell_command('git log -n 1 --grep="tasks | test"')
+    assert "nie je z bezpečnostných dôvodov povolený" not in res_quote
+
+    # 3. Subshells must be rejected
+    res_subshell = run_shell_command("echo $(whoami)")
+    assert "Bezpečnostné zamietnutie" in res_subshell
+    assert "$(" in res_subshell
+
+    # 4. Redirects to file must be rejected
+    res_redirect = run_shell_command("echo test > bad.txt")
+    assert "Bezpečnostné zamietnutie" in res_redirect
+    assert ">" in res_redirect
+
+    # 5. Secret files must be rejected
+    res_secret = run_shell_command("cat .env")
+    assert "Bezpečnostné zamietnutie" in res_secret
+    assert ".env" in res_secret
+
+    # 6. Unwhitelisted commands must be rejected
+    res_unwhite = run_shell_command("rm -rf /")
+    assert "Bezpečnostné zamietnutie" in res_unwhite
+
