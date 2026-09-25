@@ -7946,7 +7946,17 @@
       "validationOk": "Podanie je validné a pripravené na podpis.",
       "validationFailed": "Podanie obsahuje chyby, ktoré bránia odoslaniu:",
       "receiptInvalidJson": "Doručenka musí byť platný JSON súbor z ÚPVS.",
-      "xmlUnavailable": "XML formulár nie je k dispozícii."
+      "xmlUnavailable": "XML formulár nie je k dispozícii.",
+      "listCount": "{count} podaní",
+      "chipLength": "Transpondér musí mať presne 15 číslic (ISO 11784).",
+      "chipLuhn": "Kontrolný súčet (Luhn) nezodpovedá – skontrolujte číslo transpondéra.",
+      "chipOk": "Platný 15-cifrový transpondér podľa ISO 11784.",
+      "chipSlovakPrefix": "Slovenská národná predvoška 703.",
+      "errorTitle": "Odoslanie na ŠVPS SR zlyhalo",
+      "failureCode": "Chybový kód: {code}",
+      "retryHint": "Opravte označené položky, podanie znovu overte, podpíšte a odložte na ÚPVS znova.",
+      "icoLabel": "IČO {ico}",
+      "expandDetail": "Detail"
     },
     "title": "Zákonné knihy a registre",
     "subtitle": "Evidencia v zmysle zákona č. 39/2007 Z. z. o veterinárnej starostlivosti a zákona č. 139/1998 Z. z.",
@@ -7996,7 +8006,9 @@
       "noRecords": "Žiadne záznamy v registri eutanázií.",
       "printInspection": "Tlačiť úradný výkaz",
       "emptyDesc": "Register eutanázií a asanácií sa napĺňa z ukončených prípadov pacientov.",
-      "emptyCta": "Prejsť na pacientov"
+      "emptyCta": "Prejsť na pacientov",
+      "subRegister": "Register eutanázií zvierat (§ 22 ods. 5)",
+      "subCarcass": "Evidencia kadáverov & Kafiléria (§ 29)"
     },
     "narcotics": {
       "title": "Kontrolované látky",
@@ -8036,7 +8048,8 @@
       "printProtocol": "Tlačiť čistý protokol",
       "noForms": "Žiadne formuláre nie sú k dispozícii.",
       "templateId": "Identifikátor šablóny: {slug}",
-      "emptyDesc": "Zákonné formuláre sa načítajú po sprístupnení modulu protokolov pre vašu ambulanciu."
+      "emptyDesc": "Zákonné formuláre sa načítajú po sprístupnení modulu protokolov pre vašu ambulanciu.",
+      "slugLabel": "Slug"
     },
     "dateRangeTo": "do"
   },

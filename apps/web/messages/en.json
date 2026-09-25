@@ -7946,7 +7946,17 @@
       "validationOk": "The submission is valid and ready for signature.",
       "validationFailed": "The submission contains errors that prevent submission:",
       "receiptInvalidJson": "The receipt must be a valid JSON file from ÚPVS.",
-      "xmlUnavailable": "The XML form is not available."
+      "xmlUnavailable": "The XML form is not available.",
+      "listCount": "{count} submissions",
+      "chipLength": "The transponder must be exactly 15 digits (ISO 11784).",
+      "chipLuhn": "Luhn checksum does not match – verify the transponder number.",
+      "chipOk": "Valid 15-digit ISO 11784 transponder.",
+      "chipSlovakPrefix": "Slovak national code prefix 703.",
+      "errorTitle": "Transmission failed",
+      "failureCode": "Failure code: {code}",
+      "retryHint": "Correct the flagged items, re-validate, sign the submission and submit it to ÚPVS again.",
+      "icoLabel": "IČO {ico}",
+      "expandDetail": "Details"
     },
     "title": "Statutory Registers",
     "subtitle": "Veterinary compliance records in accordance with Law 39/2007 Z. z. and Law 139/1998 Z. z.",
@@ -7996,7 +8006,9 @@
       "noRecords": "No records in the euthanasia register.",
       "printInspection": "Print official report",
       "emptyDesc": "The euthanasia and carcass disposal register is filled from closed patient cases.",
-      "emptyCta": "Go to patients"
+      "emptyCta": "Go to patients",
+      "subRegister": "Animal euthanasia register (§ 22(5))",
+      "subCarcass": "Carcass register & rendering plant (§ 29)"
     },
     "narcotics": {
       "title": "Controlled substances",
@@ -8036,7 +8048,8 @@
       "printProtocol": "Print blank protocol",
       "noForms": "No forms available.",
       "templateId": "Template ID: {slug}",
-      "emptyDesc": "Statutory forms load once the protocols module is enabled for your clinic."
+      "emptyDesc": "Statutory forms load once the protocols module is enabled for your clinic.",
+      "slugLabel": "Slug"
     },
     "dateRangeTo": "to"
   },

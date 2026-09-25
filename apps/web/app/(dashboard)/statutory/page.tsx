@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   Download,
   Printer,
-  Search,
   Loader2,
   FileSignature,
   Calendar,
@@ -28,11 +27,22 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/empty-state";
-import { PageHeader } from "@/components/layout/page-header";
+import {
+  PageHeader,
+  PageSectionHeader,
+} from "@/components/layout/page-header";
+import {
+  DataTableFrame,
+  PageToolbar,
+  SearchField,
+  filterControlClass,
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+} from "@/components/layout/page-kit";
 import {
   Table,
   TableBody,
@@ -76,6 +86,27 @@ function downloadStatutoryCsv(
 }
 
 
+
+/**
+ * Guard for register search date parameters. The DatePicker emits
+ * `YYYY-MM-DD` strings, but a hand-edited display value (or a stale URL
+ * state) must never reach the tRPC query as an invalid date — invalid
+ * parameters are dropped so the register falls back to the unfiltered set.
+ */
+const DATE_PARAM_RE = /^\d{4}-\d{2}-\d{2}$/;
+function safeDateParam(value: string): string | undefined {
+  if (!value || !DATE_PARAM_RE.test(value)) return undefined;
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (
+    date.getUTCFullYear() !== y ||
+    date.getUTCMonth() !== m - 1 ||
+    date.getUTCDate() !== d
+  ) {
+    return undefined;
+  }
+  return value;
+}
 
 function getRabiesComplianceStatus(
   administeredAt: Date | string | null | undefined,
@@ -411,7 +442,7 @@ export default function StatutoryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={pageShellClass}>
       <PageHeader
         title={
           <span className="flex items-center gap-2">
@@ -433,36 +464,36 @@ export default function StatutoryPage() {
         onValueChange={(v) => setActiveTab(v as StatutoryTab)}
         className="w-full"
       >
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="rabies" className="gap-2">
+        <TabsList className={underlineTabsListClass}>
+          <TabsTrigger value="rabies" className={underlineTabsTriggerClass}>
             <Syringe className="h-4 w-4" />
             <span>{t("statutory.tabs.rabies", "Kniha besnoty")}</span>
           </TabsTrigger>
-          <TabsTrigger value="treatment" className="gap-2">
+          <TabsTrigger value="treatment" className={underlineTabsTriggerClass}>
             <BookOpen className="h-4 w-4" />
             <span>{t("statutory.tabs.treatment", "Kniha ošetrení")}</span>
           </TabsTrigger>
-          <TabsTrigger value="withdrawals" className="gap-2">
+          <TabsTrigger value="withdrawals" className={underlineTabsTriggerClass}>
             <Clock className="h-4 w-4" />
             <span>{t("statutory.tabs.withdrawals", "Ochranné lehoty")}</span>
           </TabsTrigger>
-          <TabsTrigger value="euthanasia" className="gap-2">
+          <TabsTrigger value="euthanasia" className={underlineTabsTriggerClass}>
             <Skull className="h-4 w-4" />
             <span>{t("statutory.tabs.euthanasia", "Register eutanázií")}</span>
           </TabsTrigger>
-          <TabsTrigger value="narcotics" className="gap-2">
+          <TabsTrigger value="narcotics" className={underlineTabsTriggerClass}>
             <ShieldAlert className="h-4 w-4" />
             <span>{t("statutory.tabs.narcotics", "Kontrolované látky")}</span>
           </TabsTrigger>
-          <TabsTrigger value="protocols" className="gap-2">
+          <TabsTrigger value="protocols" className={underlineTabsTriggerClass}>
             <FileSignature className="h-4 w-4" />
             <span>{t("statutory.tabs.protocols", "Zákonné protokoly & formuláre")}</span>
           </TabsTrigger>
-          <TabsTrigger value="crsz" className="gap-2">
+          <TabsTrigger value="crsz" className={underlineTabsTriggerClass}>
             <ShieldCheck className="h-4 w-4" />
             <span>{t("statutory.tabs.crsz", "CRSZ & Mikročipy / PetPass")}</span>
           </TabsTrigger>
-          <TabsTrigger value="kvepis" className="gap-2">
+          <TabsTrigger value="kvepis" className={underlineTabsTriggerClass}>
             <Globe className="h-4 w-4" />
             <span>{t("statutory.tabs.kvepis", "KVEPIS & ÚPVS (ŠVPS)")}</span>
           </TabsTrigger>
@@ -542,8 +573,8 @@ function RabiesRegisterTab() {
 
   const { data, isLoading } = trpc.reports.rabiesRegister.useQuery({
     search: search || undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+    startDate: safeDateParam(startDate),
+    endDate: safeDateParam(endDate),
     limit: 200,
   });
 
@@ -663,91 +694,85 @@ function RabiesRegisterTab() {
       ) : (
         <>
           {/* Controls */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t("statutory.rabies.searchPlaceholder", "Hľadať pacienta, čip alebo majiteľa...")}
+          <PageToolbar className="sm:justify-between">
+            <SearchField
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              onChange={setSearch}
+              placeholder={t("statutory.rabies.searchPlaceholder", "Hľadať pacienta, čip alebo majiteľa...")}
             />
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <DatePicker
-              value={startDate}
-              onChange={(val) => setStartDate(val)}
-              className="h-9 w-36 text-xs"
-            />
-            <span>{t("statutory.dateRangeTo")}</span>
-            <DatePicker
-              value={endDate}
-              onChange={(val) => setEndDate(val)}
-              className="h-9 w-36 text-xs"
-            />
-          </div>
-        </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <DatePicker
+                value={startDate}
+                onChange={(val) => setStartDate(val)}
+                className={cn(filterControlClass, "w-36")}
+              />
+              <span>{t("statutory.dateRangeTo")}</span>
+              <DatePicker
+                value={endDate}
+                onChange={(val) => setEndDate(val)}
+                className={cn(filterControlClass, "w-36")}
+              />
+            </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={!filteredItems.length}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            <span>{t("statutory.exportCsv", "Export pre RVPS (CSV)")}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrintInspection}
-            disabled={!filteredItems.length}
-            className="gap-2"
-          >
-            <Printer className="h-4 w-4" />
-            <span>{t("statutory.rabies.printInspection")}</span>
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() =>
-              printRabiesBiteInspectionReport(
-                filteredItems[0]
-                  ? {
-                      language: locale,
-                      patientName: filteredItems[0].patientName,
-                      species: filteredItems[0].species,
-                      breed: filteredItems[0].breed ?? undefined,
-                      microchipNumber: filteredItems[0].microchipNumber ?? undefined,
-                      clientName: `${filteredItems[0].clientFirstName || ""} ${filteredItems[0].clientLastName}`.trim(),
-                      clientAddress: `${filteredItems[0].clientAddress || ""}, ${filteredItems[0].clientCity || ""}`.trim(),
-                      clientPhone: filteredItems[0].clientPhone ?? undefined,
-                      vaccineName: filteredItems[0].vaccineName,
-                      lotNumber: filteredItems[0].lotNumber ?? undefined,
-                      administeredAt: filteredItems[0].administeredAt,
-                    }
-                  : undefined,
-              )
-            }
-            className="gap-2 bg-rose-600 hover:bg-rose-700 text-white"
-          >
-            <ShieldAlert className="h-4 w-4" />
-            <span>{t("statutory.rabies.biteReport")}</span>
-          </Button>
-        </div>
-      </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={!filteredItems.length}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>{t("statutory.exportCsv", "Export pre RVPS (CSV)")}</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintInspection}
+                disabled={!filteredItems.length}
+                className="gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                <span>{t("statutory.rabies.printInspection")}</span>
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() =>
+                  printRabiesBiteInspectionReport(
+                    filteredItems[0]
+                      ? {
+                          language: locale,
+                          patientName: filteredItems[0].patientName,
+                          species: filteredItems[0].species,
+                          breed: filteredItems[0].breed ?? undefined,
+                          microchipNumber: filteredItems[0].microchipNumber ?? undefined,
+                          clientName: `${filteredItems[0].clientFirstName || ""} ${filteredItems[0].clientLastName}`.trim(),
+                          clientAddress: `${filteredItems[0].clientAddress || ""}, ${filteredItems[0].clientCity || ""}`.trim(),
+                          clientPhone: filteredItems[0].clientPhone ?? undefined,
+                          vaccineName: filteredItems[0].vaccineName,
+                          lotNumber: filteredItems[0].lotNumber ?? undefined,
+                          administeredAt: filteredItems[0].administeredAt,
+                        }
+                      : undefined,
+                  )
+                }
+                className="gap-2 bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                <ShieldAlert className="h-4 w-4" />
+                <span>{t("statutory.rabies.biteReport")}</span>
+              </Button>
+            </div>
+          </PageToolbar>
 
       {/* Compliance Filter Tabs & Info notice */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
             variant={complianceFilter === "all" ? "default" : "outline"}
             size="sm"
-            className="h-7 text-xs px-2.5 rounded-lg"
+            className="h-7 gap-1.5 rounded-full px-3 text-xs"
             onClick={() => setComplianceFilter("all")}
           >
             {t("statutory.rabies.allFilter", "All", { count: data?.items?.length ?? 0 })}
@@ -755,7 +780,7 @@ function RabiesRegisterTab() {
           <Button
             variant={complianceFilter === "compliant" ? "default" : "outline"}
             size="sm"
-            className="h-7 text-xs px-2.5 rounded-lg"
+            className="h-7 gap-1.5 rounded-full px-3 text-xs"
             onClick={() => setComplianceFilter("compliant")}
           >
             {t("statutory.rabies.compliantFilter")}
@@ -763,7 +788,7 @@ function RabiesRegisterTab() {
           <Button
             variant={complianceFilter === "overdue" ? "default" : "outline"}
             size="sm"
-            className="h-7 text-xs px-2.5 rounded-lg"
+            className="h-7 gap-1.5 rounded-full px-3 text-xs"
             onClick={() => setComplianceFilter("overdue")}
           >
             {t("statutory.rabies.overdueFilter")}
@@ -779,7 +804,7 @@ function RabiesRegisterTab() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <DataTableFrame>
         {isLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -891,7 +916,7 @@ function RabiesRegisterTab() {
                             administeredAt: r.administeredAt,
                           })
                         }
-                        className="h-7 gap-1 px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                        className="h-7 shrink-0 gap-1 whitespace-nowrap px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                       >
                         <Printer className="h-3 w-3" />
                         <span>RVPS</span>
@@ -903,7 +928,7 @@ function RabiesRegisterTab() {
             </TableBody>
           </Table>
         )}
-      </div>
+      </DataTableFrame>
       <div className="text-right text-xs text-muted-foreground">
         {t("statutory.rabies.totalRecords", "Total records: {count}", { count: filteredItems.length })}
       </div>
@@ -925,8 +950,8 @@ function TreatmentDiaryTab() {
 
   const { data, isLoading } = trpc.reports.treatmentDiary.useQuery({
     search: search || undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+    startDate: safeDateParam(startDate),
+    endDate: safeDateParam(endDate),
     limit: 150,
   });
 
@@ -996,34 +1021,28 @@ function TreatmentDiaryTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t("statutory.treatment.searchPlaceholder", "Hľadať diagnózu, lieky, pacienta alebo lekára...")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <DatePicker
-              value={startDate}
-              onChange={(val) => setStartDate(val)}
-              className="h-9 w-36 text-xs"
-            />
-            <span>{t("statutory.dateRangeTo")}</span>
-            <DatePicker
-              value={endDate}
-              onChange={(val) => setEndDate(val)}
-              className="h-9 w-36 text-xs"
-            />
-          </div>
+      <PageToolbar className="sm:justify-between">
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          placeholder={t("statutory.treatment.searchPlaceholder", "Hľadať diagnózu, lieky, pacienta alebo lekára...")}
+        />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          <DatePicker
+            value={startDate}
+            onChange={(val) => setStartDate(val)}
+            className={cn(filterControlClass, "w-36")}
+          />
+          <span>{t("statutory.dateRangeTo")}</span>
+          <DatePicker
+            value={endDate}
+            onChange={(val) => setEndDate(val)}
+            className={cn(filterControlClass, "w-36")}
+          />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -1045,9 +1064,9 @@ function TreatmentDiaryTab() {
             <span>{t("statutory.treatment.printInspection")}</span>
           </Button>
         </div>
-      </div>
+      </PageToolbar>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <DataTableFrame>
         {isLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1104,7 +1123,7 @@ function TreatmentDiaryTab() {
             </TableBody>
           </Table>
         )}
-      </div>
+      </DataTableFrame>
       <div className="text-right text-xs text-muted-foreground">
         {t("statutory.treatment.totalTreatments", "Total treatments: {count}", { count: data?.totalCount ?? 0 })}
       </div>
@@ -1189,63 +1208,57 @@ function EuthanasiaRegisterTab() {
   return (
     <div className="space-y-4">
       {/* Sub-view switcher */}
-      <div className="flex items-center gap-2 border-b border-border pb-3">
-        <Button
-          variant={subView === "register" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSubView("register")}
-          className="gap-2 text-xs"
-        >
-          <Skull className="h-3.5 w-3.5" />
-          <span>Register eutanázií zvierat (§ 22 ods. 5)</span>
-        </Button>
-        <Button
-          variant={subView === "carcass" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSubView("carcass")}
-          className="gap-2 text-xs"
-        >
-          <Building2 className="h-3.5 w-3.5" />
-          <span>Evidencia kadáverov & Kafiléria (§ 29)</span>
-        </Button>
-      </div>
+      <Tabs
+        value={subView}
+        onValueChange={(v) => setSubView(v as "register" | "carcass")}
+        className="w-full"
+      >
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-muted/50 p-1 sm:w-auto">
+          <TabsTrigger value="register" className="gap-1.5">
+            <Skull className="h-4 w-4" />
+            <span>{t("statutory.euthanasia.subRegister", "Register eutanázií zvierat (§ 22 ods. 5)")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="carcass" className="gap-1.5">
+            <Building2 className="h-4 w-4" />
+            <span>{t("statutory.euthanasia.subCarcass", "Evidencia kadáverov & Kafiléria (§ 29)")}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {subView === "carcass" ? (
         <CarcassDisposalPanel />
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-border bg-card p-4 gap-3">
-        <div>
-          <h3 className="font-semibold text-sm">{t("statutory.euthanasia.title")}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("statutory.euthanasia.subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={!data?.items?.length}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrintInspection}
-            disabled={!data?.items?.length}
-            className="gap-2"
-          >
-            <Printer className="h-4 w-4" />
-            <span>{t("statutory.euthanasia.printInspection")}</span>
-          </Button>
-        </div>
-      </div>
+          <PageSectionHeader
+            title={t("statutory.euthanasia.title")}
+            subtitle={t("statutory.euthanasia.subtitle")}
+            actions={
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportCsv}
+                  disabled={!data?.items?.length}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>{t("statutory.exportCsv", "Exportovať CSV")}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrintInspection}
+                  disabled={!data?.items?.length}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>{t("statutory.euthanasia.printInspection")}</span>
+                </Button>
+              </>
+            }
+          />
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <DataTableFrame>
         {isLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1306,7 +1319,7 @@ function EuthanasiaRegisterTab() {
             </TableBody>
           </Table>
         )}
-      </div>
+      </DataTableFrame>
         </>
       )}
     </div>
@@ -1332,13 +1345,13 @@ function NarcoticsTab() {
   const { data, isLoading } = trpc.controlledSubstances.list.useQuery({
     limit: 100,
     offset: 0,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+    startDate: safeDateParam(startDate),
+    endDate: safeDateParam(endDate),
   });
 
   const { data: summary } = trpc.controlledSubstances.summary.useQuery({
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+    startDate: safeDateParam(startDate),
+    endDate: safeDateParam(endDate),
   });
 
   const handlePrintOPK = () => {
@@ -1464,11 +1477,19 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
           </div>
         </div>
         {/* Date range filter */}
-        <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          <DatePicker value={startDate} onChange={(val) => setStartDate(val)} className="h-8 w-36 text-xs" />
-          <span>do</span>
-          <DatePicker value={endDate} onChange={(val) => setEndDate(val)} className="h-8 w-36 text-xs" />
+          <DatePicker
+            value={startDate}
+            onChange={(val) => setStartDate(val)}
+            className={cn(filterControlClass, "w-36")}
+          />
+          <span>{t("statutory.dateRangeTo", "do")}</span>
+          <DatePicker
+            value={endDate}
+            onChange={(val) => setEndDate(val)}
+            className={cn(filterControlClass, "w-36")}
+          />
         </div>
       </div>
 
@@ -1506,7 +1527,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
       )}
 
       {/* Ledger table */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <DataTableFrame>
         {isLoading ? (
           <div className="flex h-48 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1569,7 +1590,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
   </TableBody>
 </Table>
         )}
-      </div>
+      </DataTableFrame>
 
       {/* Legal footer cards */}
       <div className="grid gap-4 sm:grid-cols-3 text-xs">
@@ -1638,20 +1659,18 @@ function ProtocolsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-        <div>
-          <h3 className="font-semibold text-sm">{t("statutory.protocols.title")}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("statutory.protocols.subtitle")}
-          </p>
-        </div>
-        {activeForm && (
-          <Button size="sm" onClick={handlePrintProtocol} className="gap-2">
-            <Printer className="h-4 w-4" />
-            <span>{t("statutory.protocols.printProtocol")}</span>
-          </Button>
-        )}
-      </div>
+      <PageSectionHeader
+        title={t("statutory.protocols.title")}
+        subtitle={t("statutory.protocols.subtitle")}
+        actions={
+          activeForm ? (
+            <Button size="sm" onClick={handlePrintProtocol} className="gap-2">
+              <Printer className="h-4 w-4" />
+              <span>{t("statutory.protocols.printProtocol")}</span>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isLoading ? (
         <div className="flex h-48 items-center justify-center">
@@ -1685,7 +1704,7 @@ function ProtocolsTab() {
                 >
                   <div className="font-semibold text-sm line-clamp-1">{f.title}</div>
                   <div className="text-[11px] text-muted-foreground mt-1 font-mono">
-                    slug: {f.slug}
+                    {t("statutory.protocols.slugLabel", "Slug")}: {f.slug}
                   </div>
                 </button>
               );
