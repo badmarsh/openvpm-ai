@@ -6967,7 +6967,11 @@
     "marketingSuccess": "Post successfully drafted and added to content plan!",
     "page": {
       "loading": "Loading discharge summary..."
-    }
+    },
+    "sympathySuppressionNote": "Automated reminders, marketing and check-ins are suppressed (ext_automation_suppression_log).",
+    "approvalRequiredNote": "AI output must be reviewed by the attending veterinarian before printing or sending to the owner.",
+    "signatureBlock": "Attending veterinarian signature / stamp",
+    "footerNote": "If you have any questions, contact the clinic. Document reviewed by clinician."
   },
   "vetIntel": {
     "badge": "AI Market & Legislation",
