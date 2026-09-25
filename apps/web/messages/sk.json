@@ -636,6 +636,45 @@
       "today": "Dnes v ordinácii",
       "unfinishedRecords": "Nedokončené záznamy",
       "vaccinesExpiring": "Expirujúce vakcíny"
+    },
+    "kpi": {
+      "activeSessions": "Aktívne relácie",
+      "completedToday": "Dnes dokončené",
+      "avgResponseTime": "Priemerná odozva",
+      "soapDraftsPending": "Čakajúce SOAP koncepty"
+    },
+    "subagents": {
+      "title": "Špecializovaní AI agenti",
+      "voiceTitle": "Hlasový prepis",
+      "voiceDesc": "Hlasové diktovanie v reálnom čase a ambientný prepis vyšetrenia do štruktúrovaných SOAP záznamov.",
+      "imagingTitle": "Diagnostické zobrazovanie",
+      "imagingDesc": "Multimodálna analýza RTG, sono, CT a MRI snímok s automatickým výpočtom VHS.",
+      "dischargeTitle": "Prepúšťací asistent",
+      "dischargeDesc": "Generovanie prepúšťacích správ, rozpisu domácej medikácie a komunikácie pre majiteľov.",
+      "statusLive": "Aktívny",
+      "statusStandby": "Pripravený",
+      "openAgent": "Otvoriť agenta"
+    },
+    "advisory": {
+      "banner": "Všetky výstupy AI agentov majú odporúčací charakter a vyžadujú kontrolu a schválenie licencovaným veterinárnym lekárom pred klinickým použitím (Zákon č. 39/2007 Z. z.)."
+    },
+    "recentSessions": {
+      "title": "Nedávne AI relácie",
+      "colId": "ID relácie",
+      "colType": "Typ",
+      "colDuration": "Trvanie",
+      "colStatus": "Stav",
+      "colTimestamp": "Vytvorené",
+      "colAction": "Akcia",
+      "statusDraft": "Koncept",
+      "statusConfirmed": "Potvrdené",
+      "statusExpired": "Expirované",
+      "emptyTitle": "Žiadne nedávne AI relácie",
+      "emptyDescription": "Relácie AI agentov sa zobrazia tu po uskutočnení diktátov, analýz snímok alebo konzultácií.",
+      "typeVoice": "Hlasový prepis",
+      "typeImaging": "Rádiológia AI",
+      "typeDischarge": "Prepúšťacia správa",
+      "typeChat": "Kopilot asistent"
     }
   },
   "ai": {

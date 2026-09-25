@@ -636,6 +636,45 @@
       "today": "In clinic today",
       "unfinishedRecords": "Unfinished records",
       "vaccinesExpiring": "Vaccinations due or expiring"
+    },
+    "kpi": {
+      "activeSessions": "Active sessions",
+      "completedToday": "Completed today",
+      "avgResponseTime": "Avg response time",
+      "soapDraftsPending": "SOAP drafts pending"
+    },
+    "subagents": {
+      "title": "AI Sub-Agents",
+      "voiceTitle": "Voice Scribe",
+      "voiceDesc": "Real-time clinical audio dictation and ambient exam transcription into structured SOAP records.",
+      "imagingTitle": "Diagnostic Imaging",
+      "imagingDesc": "Radiology, ultrasound, CT, and MRI multi-modal analysis with automated VHS calculation.",
+      "dischargeTitle": "Discharge Companion",
+      "dischargeDesc": "Automated discharge letters, home care medication schedules, and client communication.",
+      "statusLive": "Live",
+      "statusStandby": "Standby",
+      "openAgent": "Open Agent"
+    },
+    "advisory": {
+      "banner": "All AI agent outputs are advisory and require clinical review and confirmation by a licensed veterinarian before clinical use (Act No. 39/2007 Coll.)."
+    },
+    "recentSessions": {
+      "title": "Recent AI Sessions",
+      "colId": "Session ID",
+      "colType": "Type",
+      "colDuration": "Duration",
+      "colStatus": "Status",
+      "colTimestamp": "Created",
+      "colAction": "Action",
+      "statusDraft": "Draft",
+      "statusConfirmed": "Confirmed",
+      "statusExpired": "Expired",
+      "emptyTitle": "No recent AI sessions",
+      "emptyDescription": "AI agent sessions will appear here as dictations, imaging analyses, and consultations occur.",
+      "typeVoice": "Voice Scribe",
+      "typeImaging": "Imaging AI",
+      "typeDischarge": "Discharge",
+      "typeChat": "Copilot Chat"
     }
   },
   "ai": {
