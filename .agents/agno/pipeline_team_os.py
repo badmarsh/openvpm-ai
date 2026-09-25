@@ -55,8 +55,90 @@ logger = logging.getLogger("agno.pipeline")
 # =============================================================================
 
 AGNO_DIR = Path(__file__).resolve().parent
-wsl_repo = Path("/mnt/c/Users/marek/Documents/Vet/openvpm-ai")
-REPO_ROOT = wsl_repo if wsl_repo.exists() else Path(os.getenv("OPENVPM_REPO_ROOT", Path.cwd())).resolve()
+
+
+def _looks_like_repo_root(path: Path) -> bool:
+    """Heuristika: je to koreň repozitára OpenVPM AI?"""
+    try:
+        if not path.is_dir():
+            return False
+    except OSError:
+        return False
+    has_project = (path / "package.json").is_file() and (path / "apps" / "web").is_dir()
+    has_index = (path / "tasks" / "SPRINT-INDEX.md").is_file()
+    return has_project or has_index
+
+
+def _candidate_repo_roots() -> List[Path]:
+    """Kandidáti na koreň repozitára, zoradení podľa dôveryhodnosti.
+
+    Runtime beží vo WSL z /home/ubuntu/agno — čo je KÓPIA, nie repozitár — a launcher
+    pred spustením robí `cd /home/ubuntu/agno`. Preto sa koreň NESMIE odvodzovať od
+    Path.cwd(): odvodil by kópiu bez tasks/, SPRINT-INDEX.md by sa nenašiel a líder
+    by ticho stratil prehľad o stavoch sprintov (presne to sa stalo pred opravou —
+    fallback je bezpečný, ale stav sprintov sa nedá overiť).
+    """
+    out: List[Path] = []
+
+    def _add(candidate: object) -> None:
+        if not candidate:
+            return
+        try:
+            path = Path(str(candidate)).expanduser()
+        except (OSError, RuntimeError, ValueError):
+            return
+        if path not in out:
+            out.append(path)
+
+    # 1) Explicitné cesty z prostredia
+    _add(os.getenv("OPENVPM_REPO_ROOT"))
+    _add(os.getenv("OPENVPM_REPO_PATH"))
+    # 2) Historické defaulty (WSL / Windows)
+    _add("/mnt/c/Users/marek/Documents/Vet/openvpm-ai")
+    _add(r"C:\Users\marek\Documents\Vet\openvpm-ai")
+    _add("/home/ubuntu/openvpm")
+    # 3) Modul môže ležať priamo v <repo>/.agents/agno (beh z repozitára)
+    for parent in [AGNO_DIR, *AGNO_DIR.parents]:
+        _add(parent)
+    # 4) cwd a jeho rodičia — posledná záchrana
+    try:
+        cwd = Path.cwd()
+        for parent in [cwd, *cwd.parents]:
+            _add(parent)
+    except OSError:
+        pass
+    return out
+
+
+def _resolve_repo_root() -> Path:
+    candidates = _candidate_repo_roots()
+    for candidate in candidates:
+        if _looks_like_repo_root(candidate):
+            return candidate.resolve()
+    logger.warning(
+        "Nepodarilo sa nájsť koreň repozitára OpenVPM AI v žiadnom z kandidátov: %s. "
+        "Nastav OPENVPM_REPO_ROOT. tasks/SPRINT-INDEX.md nebude dostupný.",
+        ", ".join(str(c) for c in candidates[:6]),
+    )
+    return candidates[0] if candidates else AGNO_DIR
+
+
+REPO_ROOT = _resolve_repo_root()
+
+
+def export_repo_root_for_tools() -> None:
+    """Zjednoť koreň repozitára pre obe vrstvy (team_os aj tools).
+
+    `pipeline_tools._get_repo_path()` číta `OPENVPM_REPO_PATH` ako prvého
+    kandidáta, takže jeho nastavením zaručíme, že obe vrstvy čítajú ten istý
+    `tasks/` adresár.
+
+    Zámerne sa NEVOLÁ pri importe modulu: zápis do `os.environ` je procesne
+    globálny a prebil by `REPO_DIR`, ktorý si testy monkeypatchujú na
+    dočasný adresár (`test_pipeline_tools.py`), takže by ich zápisy padali do
+    skutočného repozitára. Volá sa preto až z runtime vstupného bodu.
+    """
+    os.environ.setdefault("OPENVPM_REPO_PATH", str(REPO_ROOT))
 
 # Linux ext4 disk v WSL pre nulové locking problémy SQLite a LanceDB
 WSL_AGNO_TMP = Path("/home/ubuntu/agno/tmp")
@@ -86,12 +168,56 @@ ARENA_API_BASE = os.getenv("ARENA_API_BASE", "")
 ARENA_API_TOKEN = os.getenv("ARENA_API_TOKEN", "")
 DEPLOY_COMMAND = os.getenv("OPENVPM_DEPLOY_COMMAND", "")
 AGENTOS_BASE_URL = os.getenv("OPENVPM_AGENTOS_BASE_URL", "http://127.0.0.1:7777")
+# The scheduler calls back into THIS process (cron triggers, HITL approvals). Those
+# self-calls must stay on loopback: if they are pointed at the public tunnel URL they
+# travel out to Cloudflare and back, so a tunnel or DNS hiccup silently kills the
+# scheduler. Deliberately independent of AGENTOS_BASE_URL — see CLOUDFLARE_TUNNEL.md.
+AGENTOS_INTERNAL_URL = os.getenv("OPENVPM_AGENTOS_INTERNAL_URL", "http://127.0.0.1:7777")
 INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "")
 if not INTERNAL_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN == "openvpm-service-secret":
     import secrets
-    # Fail-safe: Nikdy nebežať s hardcoded default secretom (Claude audit remediation)
-    INTERNAL_SERVICE_TOKEN = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK") or secrets.token_urlsafe(32)
-    logger.warning("OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený alebo používal nebezpečný default! Bol vygenerovaný jednorazový bezpečný token.")
+
+    # Fail-safe: nikdy nebežať s hardcoded default secretom (Claude audit remediation).
+    # Zároveň token PERZISTUJEME: vygenerovať nový pri každom boote je bezpečné, ale
+    # invaliduje všetky rozbehnuté podpísané callbacky (scheduler triggery, HITL
+    # approvals). Reštart počas behu sprintu by tak ticho zrušil schvaľovacie brány.
+    _token_file = TMP_DIR / "internal_service_token"
+    _fallback = os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN_FALLBACK", "").strip()
+
+    if _fallback:
+        INTERNAL_SERVICE_TOKEN = _fallback
+    else:
+        _persisted = ""
+        try:
+            if _token_file.is_file():
+                _persisted = _token_file.read_text(encoding="utf-8").strip()
+        except OSError as _exc:
+            logger.debug("Perzistentný token sa nepodarilo prečítať: %s", _exc)
+
+        if _persisted:
+            INTERNAL_SERVICE_TOKEN = _persisted
+            logger.info("Používam perzistentný interný service token z %s", _token_file)
+        else:
+            INTERNAL_SERVICE_TOKEN = secrets.token_urlsafe(32)
+            try:
+                _token_file.parent.mkdir(parents=True, exist_ok=True)
+                _token_file.write_text(INTERNAL_SERVICE_TOKEN, encoding="utf-8")
+                try:
+                    os.chmod(_token_file, 0o600)
+                except OSError:
+                    pass
+                logger.warning(
+                    "OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený — vygenerovaný token "
+                    "je uložený v %s, takže reštart nezruší rozbehnuté callbacky. "
+                    "Pri viac-inštančnom nasadení nastav token explicitne!",
+                    _token_file,
+                )
+            except OSError as _exc:
+                logger.warning(
+                    "OPENVPM_INTERNAL_SERVICE_TOKEN nebol nastavený a token sa nepodarilo "
+                    "perzistovať (%s) — platí len do reštartu procesu.",
+                    _exc,
+                )
 SCHEDULE_TIMEZONE = os.getenv("OPENVPM_SCHEDULE_TZ", "Europe/Bratislava")
 SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("OPENVPM_SQLITE_BUSY_TIMEOUT_MS", "30000"))
 
@@ -183,7 +309,8 @@ BOOT_LEARNINGS: List[Dict[str, Any]] = [
         "decision": "SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy o stave sprintov",
         "reasoning": (
             "Súbory v tasks/ obsahujú historické špecifikácie. To, že súbor existuje, "
-            "neznamená, že sprint nebol vykonaný. Sprinty 1, 2, 3, 4 a 7 sú už zlúčené v main."
+            "neznamená, že sprint nebol vykonaný. Aktuálny stav zlúčených sprintov sa "
+            "odvodzuje z tasks/SPRINT-INDEX.md pri bootovaní (viď merged_sprint_clause)."
         ),
         "decision_type": "lesson_learned",
         "tags": ["lesson", "sprint-index", "architecture"],
@@ -569,7 +696,7 @@ learning_machine: LearningMachine = LearningMachine(
         additional_instructions=(
             "Preferencie a pracovné návyky: jazyk reportov (sk), štýl "
             "(executive_summary), režim dispatchu (immediate), overené pravidlá "
-            "(Sprinty 1, 2, 3, 4 a 7 sú už zlúčené do main; spúšťaj iba cielené testy)."
+            "(stav zlúčených sprintov sa číta z tasks/SPRINT-INDEX.md; spúšťaj iba cielené testy)."
         ),
     ),
     # 3/5 Session Context Store
@@ -803,17 +930,108 @@ def seed_architect_profile() -> None:
         ),
     )
 
+def _parse_sprint_index() -> List[Dict[str, str]]:
+    """Načíta tasks/SPRINT-INDEX.md a vráti riadky tabuľky ako slovníky.
+
+    Index je jediný písomný záznam o stave sprintov (obnovený z commitu e9627504).
+    Hľadá sa vo VŠETKÝCH kandidátoch na koreň repozitára, nie len v REPO_ROOT —
+    runtime beží z kópie vo WSL a jedna zlá cesta by inak ticho vypla stav sprintov.
+    Nikdy nezhadzuje chybu smerom nahor — pri probléme vráti prázdny zoznam.
+    """
+    for root in _candidate_repo_roots():
+        index_path = root / "tasks" / "SPRINT-INDEX.md"
+        try:
+            if not index_path.is_file():
+                continue
+            raw = index_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            logger.debug("SPRINT-INDEX.md nečitateľný v %s (%s)", root, exc)
+            continue
+
+        rows: List[Dict[str, str]] = []
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line.startswith("|"):
+                continue
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) < 4 or not cells[0].isdigit():
+                continue
+            rows.append(
+                {
+                    "number": cells[0],
+                    "file": cells[1],
+                    "title": cells[2],
+                    "status": cells[3],
+                }
+            )
+        if rows:
+            logger.info("SPRINT-INDEX.md: %d riadkov z %s", len(rows), index_path)
+            return rows
+
+    logger.debug("SPRINT-INDEX.md sa nenašiel v žiadnom kandidátovi na koreň repozitára.")
+    return []
+
+
+def _merged_sprints_from_index() -> List[Dict[str, str]]:
+    """Sprinty, ktoré index označuje ako zlúčené v main."""
+    return [r for r in _parse_sprint_index() if "merged" in r["status"].lower()]
+
+
+def merged_sprint_clause() -> str:
+    """Veta pre inštrukcie tímu, odvodená z indexu — nie z hardkódovaného zoznamu.
+
+    Predtým bolo 'Sprinty 1, 2, 3, 4 a 7' napísané natvrdo na štyroch miestach,
+    kým main obsahoval 30 sprintov; líder preto považoval hotovú prácu za nezačatú.
+    """
+    merged = _merged_sprints_from_index()
+    if not merged:
+        return (
+            "Stav sprintov NIE JE v tomto behu overený (SPRINT-INDEX.md nedostupný). "
+            "Pred akýmkoľvek dispatchom si stav odvoď z `git log --oneline -200` a "
+            "`gh pr list --state all`; sprint je MERGED len ak sa jeho cieľové súbory "
+            "zmenili v commite dosiahnuteľnom z main."
+        )
+    numbers = sorted((int(r["number"]) for r in merged))
+    listed = ", ".join(f"#{n}" for n in numbers)
+    # Súvislý rozsah zbaľ do "1–14" kvôli úspore tokenov.
+    if numbers == list(range(numbers[0], numbers[-1] + 1)):
+        span = f"{numbers[0]}–{numbers[-1]}"
+    else:
+        span = listed
+    return (
+        f"Sprinty {span} sú podľa tasks/SPRINT-INDEX.md zlúčené v main ({len(numbers)} celkovo). "
+        "NIKDY ich nepovažuj za nezačaté a nedispatchuj ich znova. "
+        "Index je písomný záznam, nie dôkaz: sprint je MERGED len ak sa jeho cieľové "
+        "súbory zmenili v commite dosiahnuteľnom z main — over to cez `git log`."
+    )
+
+
 def seed_sprint_entities() -> int:
     """Zaznamená do EntityMemoryStore dokončené sprinty, aby ich líder nepovažoval za nezačaté."""
-    merged_sprints = [
-        ("sprint-1", "command-palette", "PR #42 — Command Palette Smart Ranking & Contextual Actions (MERGED)."),
-        ("sprint-2", "ui-kit-harmonization", "Dashboard UI Kit Harmonization across Recalls, Vaccinations & Controlled Substances (MERGED)."),
-        ("sprint-3", "field-practice-cehz", "PR #39, #40 — Ambulatory Field Practice & CEHZ / KVEPIS Sync Resilience (MERGED)."),
-        ("sprint-4", "laboratory-results", "Laboratory Results & Diagnostic Reference Range Flags (MERGED)."),
-        ("sprint-7", "encounters-hub", "Encounters Hub & Care Reminders — Daily Clinical Workflow Harmonization (MERGED)."),
-    ]
+    merged_sprints = _merged_sprints_from_index()
+    if merged_sprints:
+        # Odvodené z indexu — udržiava sa samo, na rozdiel od pôvodného tuple.
+        seeds = [
+            (
+                f"sprint-{r['number']}",
+                r["title"],
+                f"{r['file']} — stav podľa SPRINT-INDEX.md: {r['status']}",
+            )
+            for r in merged_sprints
+        ]
+    else:
+        # Fallback, keď index nie je k dispozícii (napr. odstránený v dab4d05).
+        logger.warning("SPRINT-INDEX.md nedostupný — seedujem len známy historický základ.")
+        seeds = [
+            ("sprint-1", "command-palette", "Command Palette Smart Ranking (merged)."),
+            ("sprint-2", "ui-kit-harmonization", "Dashboard UI Kit Harmonization (merged)."),
+            ("sprint-3", "field-practice-cehz", "Ambulatory Field Practice & CEHZ (merged)."),
+            ("sprint-4", "laboratory-results", "Laboratory Results & Reference Ranges (merged)."),
+            ("sprint-7", "encounters-hub", "Encounters Hub & Care Reminders (merged)."),
+        ]
+
     inserted = 0
-    for s_id, s_mod, s_note in merged_sprints:
+    for s_id, s_mod, s_note in seeds:
         try:
             entity_memory_store.remember_about(
                 entity=s_id,
@@ -1229,7 +1447,7 @@ prompt_manager = Agent(
         "Pred tvorbou promptu vždy vytiahni learnings (recall_learnings) a "
         "knowledge (UIKIT.md, zákony).",
         "Pravidlá 'sandbox: žiadny celý monorepo type-check' a 'OPL vyžaduje manuálny podpis' sú záväzné.",
-        "Sprinty 1, 2, 3, 4 a 7 sú už dokončené a zlúčené do main — nespúšťaj ich znova.",
+        merged_sprint_clause(),
         "Reporty píš po slovensky, štýl executive_summary.",
     ],
     add_history_to_context=True,
@@ -1393,8 +1611,9 @@ openvpm_dev_team = Team(
         "qwen_implementer → kód.",
         "POZOR NA HISTORIU: Ak nová správa obsahuje explicitný zoznam úloh (napr. 'dispatchi sprint X, Y, Z'), "
         "vykonaj PRESNE tieto úlohy — neopakuj úlohy z predchádzajúcich runov v histórii.",
-        "Pravidlo autority: SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy. "
-        "Sprinty 1, 2, 3, 4 a 7 sú už dokončené a zlúčené v main. NIKDY ich nepovažuj za nezačaté.",
+        "Pravidlo autority: git log je najvyššia autorita, potom tasks/SPRINT-INDEX.md, "
+        "a až potom seedovaná entity memory.",
+        merged_sprint_clause(),
         "Pred retrospektívou sprintu (PASSED/FAILED) zavolaj record_sprint_learnings.",
         "Architektonický audit: Vanilla routery ako records.ts a whiteboard.ts sú upstream baseline a nesmú byť považované za porušenia ak existujú v upstreame. Každé compliance rozhodnutie sa ukladá ako JSON záznam.",
         "Synchronizácia a izolácia Studio komponentov pri bootovaní rešpektuje lock súbor studio_seed.lock.",
@@ -1499,10 +1718,14 @@ agent_os: AgentOS = AgentOS(
         "http://192.168.0.100:3008",
         "http://192.168.0.100:7777",
         "https://os.agno.com",
+        # Vlastná origin služby cez Cloudflare tunnel. Potrebné len ak AgentOS UI
+        # otvoríš na tejto doméne a prehliadač z nej volá API (server-side fetch
+        # z apps/web CORS nepodlieha). Pridané spolu s opravou bind-vs-dial.
+        "https://agentos-tunnel.significa.sk",
     ],
     scheduler=True,
     scheduler_poll_interval=15,
-    scheduler_base_url=AGENTOS_BASE_URL,
+    scheduler_base_url=AGENTOS_INTERNAL_URL,
     internal_service_token=INTERNAL_SERVICE_TOKEN,
     lifespan=lifespan,
     tracing=True,
@@ -1511,6 +1734,8 @@ agent_os: AgentOS = AgentOS(
 app = agent_os.get_app()
 
 if __name__ == "__main__":
+    # Runtime vstupný bod: až tu zverejníme koreň repozitára pre pipeline_tools.
+    export_repo_root_for_tools()
     agent_os.serve(
         app="pipeline_team_os:app",
         host=os.getenv("OPENVPM_AGENTOS_HOST", "0.0.0.0"),

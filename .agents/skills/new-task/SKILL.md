@@ -99,3 +99,15 @@ Keď používateľ zadanie akceptuje:
 - Ulož schválený task do priečinka `tasks/<slug-nazov-tasku>.md` (alebo `artifacts/tasks/<slug-nazov-tasku>.md`).
 - Nastav stav na `[STATUS: READY_FOR_IMPLEMENTATION]`.
 - Následne môže agent začať čistú implementáciu podľa schválených acceptance criteria bez odbiehania od témy.
+
+> **Kontrakt priečinka `tasks/` (dodržuj!).** `tasks/` je verzovaný zdroj pravdy —
+> zadania, Golden Tickety (`tasks/proposed/gt-*.md`) a `tasks/SPRINT-INDEX.md` patria
+> do gitu. **Runtime výstupy swarmu sa necommitujú** — sú v `.gitignore`
+> (`tasks/run-*.json`, `tasks/**/*.patch`, `tasks/**/*.diff`, `tasks/repair-*.md`,
+> `arena_sessions.json`). Dôvod: raz sa sem omylom commitlo 300 súborov vrátane
+> duplicitnej kópie celej aplikácie (`tasks/sprint10/`), čo viedlo k ich hromadnému
+> zmazaniu v commite `dab4d05` a k rozbitiu nástroja `list_arena_sprints()`.
+> Nikdy necommituj pracovný priečinok sprintu ani patch, ktorý si sám vygeneroval.
+>
+> Stav sprintu zapisuj do `tasks/SPRINT-INDEX.md` (stĺpec `Status`), aby ho Agno
+> runtime vedel prečítať pri bootovaní. Bez toho líder tímu nevie, čo je hotové.

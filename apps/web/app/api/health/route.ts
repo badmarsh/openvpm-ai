@@ -39,7 +39,11 @@ import {
 } from "@/lib/email-preferences";
 import { platformEmailIdentityConfigurationReady } from "@/lib/platform-email-preferences";
 import { hostedSmsCredentialIssueCount } from "@/lib/messaging/hosted-sms-readiness";
-import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+import {
+  DEFAULT_AI_MODEL,
+  isAnthropicModel,
+  isGeminiModel,
+} from "@/lib/ai-models";
 import { hasInferenceProxyConfiguration } from "@/lib/agent/inference-proxy";
 
 export const dynamic = "force-dynamic";
@@ -134,10 +138,6 @@ function activeAiModel(): string {
   return DEFAULT_AI_MODEL;
 }
 
-function isGeminiModel(model: string): boolean {
-  return /^(google\/|models\/)?gemini/i.test(model);
-}
-
 function hostedAiCheck(): { ok: boolean; detail: string } {
   // The Cloudflare AT inference proxy is a first-class AI backend: when
   // AT_PROXY_URL is configured, model calls go through the proxy and the
@@ -160,10 +160,22 @@ function hostedAiCheck(): { ok: boolean; detail: string } {
     );
   }
 
-  return hostedEnvCheck(
-    HOSTED_ANTHROPIC_AI_ENV_NAMES,
-    "Hosted AI envs present",
-  );
+  if (isAnthropicModel(model)) {
+    return hostedEnvCheck(
+      HOSTED_ANTHROPIC_AI_ENV_NAMES,
+      "Hosted AI envs present",
+    );
+  }
+
+  // A model that is neither Gemini nor Claude (the qwen-* default) has no
+  // env-var boundary of its own: it is only reachable through the inference
+  // proxy, and without one no combination of Google or Anthropic credentials
+  // makes the agent work. Fail closed with the actionable cause instead of
+  // demanding an ANTHROPIC_API_KEY that would never serve this model.
+  return {
+    ok: false,
+    detail: `Hosted AI model "${model}" requires the inference proxy (AT_PROXY_URL or AI_BASE_URL)`,
+  };
 }
 
 // Required ops config: cron auth + at least one platform-admin operator.

@@ -9,7 +9,6 @@ import {
   AgentRecoveryHoldError,
   runAgent,
 } from "../runner";
-import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
 
 const mocks = vi.hoisted(() => {
   const anthropicModel = vi.fn((modelId: string) => ({
@@ -97,9 +96,15 @@ function deferred<T = void>() {
 }
 
 beforeEach(() => {
-  // Since the AT-proxy migration the env no longer selects the model:
-  // runAgent() resolves the default Gemini model, so the provider
-  // configuration check validates the complete Vertex AI OIDC boundary.
+  // Since the AT-proxy migration the env no longer selects the model: runAgent()
+  // resolves DEFAULT_AI_MODEL (qwen-max), which is neither Gemini nor Claude and
+  // is therefore served only by the inference proxy. Stub the proxy so the
+  // provider boundary is satisfied and these cases exercise rate limiting
+  // rather than provider configuration. Tests that need a specific provider
+  // boundary clear the proxy and pass an explicit model override.
+  vi.stubEnv("AT_PROXY_URL", "https://ai-proxy.example/v1");
+  // A complete Vertex OIDC boundary is also staged, so the Gemini case below can
+  // drop the proxy and still resolve a provider.
   vi.stubEnv("GOOGLE_VERTEX_PROJECT", "openvpm-ai");
   vi.stubEnv("GOOGLE_VERTEX_LOCATION", "global");
   vi.stubEnv("GCP_PROJECT_NUMBER", "123456789012");
@@ -136,10 +141,17 @@ afterEach(() => {
 
 describe("runAgent rate limiting", () => {
   it("builds Gemini through Vercel OIDC workload identity federation", async () => {
-    // Vertex env comes from beforeEach; the model is the DB/env default.
+    // The default model is qwen-max (proxy-served), so a Gemini model has to be
+    // requested explicitly — and the proxy cleared — to exercise the Vertex
+    // boundary. Vertex env comes from beforeEach.
+    vi.stubEnv("AT_PROXY_URL", "");
     vi.stubEnv("ANTHROPIC_API_KEY", "");
 
-    await runAgent({ instruction: "Summarize today", context });
+    await runAgent({
+      instruction: "Summarize today",
+      context,
+      model: "google/gemini-3.5-flash",
+    });
 
     expect(mocks.createVertex).toHaveBeenCalledWith({
       project: "openvpm-ai",
@@ -170,7 +182,7 @@ describe("runAgent rate limiting", () => {
       authConfig.subject_token_supplier.getSubjectToken(),
     ).resolves.toBe("signed-vercel-token");
     expect(mocks.vertexModel).toHaveBeenCalledWith(
-      DEFAULT_AI_MODEL.replace(/^(google\/|models\/)/, ""),
+      "gemini-3.5-flash",
     );
     expect(mocks.createAnthropic).not.toHaveBeenCalled();
   });

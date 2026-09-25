@@ -29,13 +29,18 @@ import {
 } from "@/lib/recovery-hold";
 
 /**
- * Provider-agnostic agent runner (Vercel AI SDK). The active model is chosen by
- * `AI_MODEL` (falling back to the legacy `AGENT_MODEL`); the provider is inferred
- * from the model id, so the same code runs on Gemini or Claude with only an env
- * change. Each tool already carries a Zod schema, which the AI SDK consumes
- * directly, and the SDK runs the tool-use loop for us up to MAX_ITERATIONS.
+ * Provider-agnostic agent runner (Vercel AI SDK). The active model id comes from
+ * the caller (tRPC input or ext_ai_settings) and falls back to
+ * DEFAULT_AI_MODEL; env vars no longer select it. The provider is inferred from
+ * the model id, so the same code serves a Gemini, Claude or proxy-hosted model.
+ * Each tool already carries a Zod schema, which the AI SDK consumes directly,
+ * and the SDK runs the tool-use loop for us up to MAX_ITERATIONS.
  */
-import { DEFAULT_AI_MODEL } from "@/lib/ai-models";
+import {
+  DEFAULT_AI_MODEL,
+  isAnthropicModel,
+  isGeminiModel,
+} from "@/lib/ai-models";
 import { wrapUntrustedRecord } from "@/lib/ai/untrusted-data";
 
 const DEFAULT_MODEL = DEFAULT_AI_MODEL;
@@ -129,7 +134,7 @@ export interface AgentRunResult {
 export class AgentNotConfiguredError extends Error {
   constructor() {
     super(
-      "OpenVPM Agent is not configured. Configure Google Vertex AI for Gemini, or set ANTHROPIC_API_KEY for an explicit Claude model.",
+      "OpenVPM Agent is not configured. Point AT_PROXY_URL (or AI_BASE_URL) at the inference proxy, configure Google Vertex AI for a Gemini model, or set ANTHROPIC_API_KEY for a Claude model.",
     );
     this.name = "AgentNotConfiguredError";
   }
@@ -165,15 +170,10 @@ function nonBlank(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-/** Resolve the model id from request override → AI_MODEL → legacy AGENT_MODEL → default. */
+/** Resolve the model id from request override → default. */
 function activeModelId(override?: string): string {
   // Model override comes from tRPC caller or ext_ai_settings; never from env vars.
   return nonBlank(override) ?? DEFAULT_MODEL;
-}
-
-/** Google (Gemini) vs Anthropic (Claude) inferred from the model id. */
-function isGoogleModel(modelId: string): boolean {
-  return /^(google\/|models\/)?gemini/i.test(modelId);
 }
 
 function vertexProject(): string | undefined {
@@ -240,16 +240,25 @@ function hasProviderConfiguration(modelId: string): boolean {
   // An explicit AI_BASE_URL proxy holds its own upstream credentials, so no
   // Google or Anthropic boundary is required for any model id.
   if (hasInferenceProxyConfiguration()) return true;
-  return isGoogleModel(modelId)
-    ? hasVertexConfiguration()
-    : Boolean(anthropicApiKey());
+  if (isGeminiModel(modelId)) return hasVertexConfiguration();
+  if (isAnthropicModel(modelId)) return Boolean(anthropicApiKey());
+  // A model that is neither Gemini nor Claude — the qwen-* default, for
+  // example — is only reachable through the inference proxy. Reporting it as
+  // configured because an ANTHROPIC_API_KEY happens to be set would send a
+  // non-Claude id to api.anthropic.com and fail at request time instead of
+  // failing closed here.
+  return false;
 }
 
-/** Whether the configured provider has a complete authentication boundary. */
-export function isAgentConfigured(): boolean {
-  return hasProviderConfiguration(activeModelId());
+/**
+ * Whether the provider serving `override` (or the default model) has a complete
+ * authentication boundary. Callers that already know which model they will run
+ * can pass it, so the check reflects that model's provider rather than the
+ * default.
+ */
+export function isAgentConfigured(override?: string): boolean {
+  return hasProviderConfiguration(activeModelId(override));
 }
-
 /**
  * Resolve the configured AI SDK model instance for one-shot generations
  * (e.g. SOAP drafts) that share the agent's provider/model configuration.
@@ -264,7 +273,7 @@ export function configuredModel(): LanguageModel {
 /** Build an AI SDK model instance for the given model id. */
 function resolveModel(modelId: string) {
   if (hasInferenceProxyConfiguration()) return inferenceProxyModel(modelId);
-  if (isGoogleModel(modelId)) {
+  if (isGeminiModel(modelId)) {
     const googleAuthOptions = hasVertexOidcConfiguration()
       ? vertexOidcAuthOptions()
       : {
@@ -280,6 +289,10 @@ function resolveModel(modelId: string) {
     });
     return vertex(modelId.replace(/^(google\/|models\/)/, ""));
   }
+  // Never hand a non-Claude id to the Anthropic client: hasProviderConfiguration
+  // already rejected that combination, so reaching here means the caller skipped
+  // the check.
+  if (!isAnthropicModel(modelId)) throw new AgentNotConfiguredError();
   const anthropic = createAnthropic({ apiKey: anthropicApiKey() });
   return anthropic(modelId.replace(/^anthropic\//, ""));
 }

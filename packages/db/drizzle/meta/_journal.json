@@ -785,6 +785,13 @@
       "when": 1790161612080,
       "tag": "0111_cool_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1790351646186,
+      "tag": "0112_odd_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

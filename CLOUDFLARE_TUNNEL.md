@@ -1,48 +1,244 @@
 # Cloudflare Tunnel Setup for AgentOS
 
 ## Overview
-This document describes the Cloudflare tunnel setup that enables HTTPS access to the local AgentOS instance running on port 7777.
 
-## Tunnel Details
-- **Tunnel Name**: agentos-tunnel
-- **Tunnel ID**: 324dd653-7f1d-41d7-ae9a-7d3e3ae54c1d
-- **Tunnel URL**: https://agentos-tunnel.significa.sk
-- **Local AgentOS**: http://0.0.0.0:7777
+This document describes the Cloudflare tunnel setup that exposes the local AgentOS
+instance (Agno `pipeline_team_os.py`, FastAPI on port 7777) at an HTTPS hostname.
 
-## Environment Variables
-The following environment variables have been set in the local .env file:
+- **Tunnel Name**: `agentos-tunnel`
+- **Tunnel ID**: `324dd653-7f1d-41d7-ae9a-7d3e3ae54c1d`
+- **Public URL**: https://agentos-tunnel.significa.sk
+- **Local AgentOS bind address**: `0.0.0.0:7777`
+- **Local AgentOS dial address (for clients/tunnel)**: `http://127.0.0.1:7777`
 
+---
+
+## ⚠️ Read this before editing the tunnel config
+
+**`0.0.0.0` is a bind address, not a dial address.** Mixing the two is the single
+most common way this tunnel breaks, and it fails in a confusing way: the tunnel comes
+up, DNS resolves, and every request returns `502`.
+
+| Context | Correct value | Why |
+|---|---|---|
+| `AgentOS.serve(host=...)` | `0.0.0.0` | The server must accept connections on every interface, so Windows/cloudflared can reach into WSL. |
+| `cloudflared` ingress `service:` | `http://127.0.0.1:7777` | The tunnel is a **client** — it must dial a routable address. `0.0.0.0` is not routable as a destination and the connection fails. |
+
+The bind value lives in `.agents/agno/pipeline_team_os.py` and defaults correctly:
+
+```python
+agent_os.serve(
+    app="pipeline_team_os:app",
+    host=os.getenv("OPENVPM_AGENTOS_HOST", "0.0.0.0"),   # bind — correct as-is
+    port=int(os.getenv("OPENVPM_AGENTOS_PORT", "7777")),
+)
 ```
-AGENT_OS_URL=https://agentos-tunnel.significa.sk
+
+So **do not change the code to "fix" the tunnel.** Change the tunnel config.
+
+---
+
+## Cloudflare tunnel config
+
+File: `C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml`
+
+```yaml
+tunnel: 324dd653-7f1d-41d7-ae9a-7d3e3ae54c1d
+credentials-file: C:\Users\marek\.cloudflared\324dd653-7f1d-41d7-ae9a-7d3e3ae54c1d.json
+
+ingress:
+  # DIAL address — must be 127.0.0.1 (or localhost). NEVER 0.0.0.0 here.
+  - hostname: agentos-tunnel.significa.sk
+    service: http://127.0.0.1:7777
+  # Required catch-all
+  - service: http_status:404
+```
+
+Validate the file before restarting the tunnel:
+
+```powershell
+# --config is REQUIRED: this file is not in a default discovery location, so a bare
+# `cloudflared tunnel ingress validate` fails with "No configuration file was found."
+cloudflared tunnel ingress validate --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml
+cloudflared tunnel ingress rule --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml https://agentos-tunnel.significa.sk/health
+```
+
+The second command prints the rule that will match and the `service:` it targets —
+confirm it says `http://127.0.0.1:7777`.
+
+### Where does the ingress config actually live?
+
+`cloudflared` only auto-discovers `%USERPROFILE%\.cloudflared\config.yml`,
+`%USERPROFILE%\.cloudflared\config.yaml`, and `/etc/cloudflared/config.yml`. **Any
+other path requires `--config`**, which is why a bare `ingress validate` reports
+*"No configuration file was found"* even when a valid config exists.
+
+There are two ways a Cloudflare tunnel can be configured, and you must know which
+one you have before hunting for a `0.0.0.0` to fix:
+
+| | **Locally managed** | **Remotely managed (dashboard)** |
+|---|---|---|
+| Ingress rules live in | the YAML file on disk | Cloudflare Zero Trust dashboard |
+| Local YAML required | yes | **no** — often absent entirely |
+| `ingress validate` works | with `--config <path>` | never (nothing local to validate) |
+| Fix the dial target in | the `service:` field in the YAML | **Zero Trust → Networks → Tunnels → `agentos-tunnel` → Public Hostnames → the hostname's `Service` field** |
+| Applied by | restarting `cloudflared` | saving in the dashboard (no restart) |
+
+Determine which you have:
+
+```powershell
+# Does a local config exist at all?
+Test-Path C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml
+Get-ChildItem C:\Users\marek\.cloudflared -Recurse -Include *.yml,*.yaml |
+  Select-Object -ExpandProperty FullName
+
+# Local ("Config" is a path) or remote ("Config" is `config_src: cloudflare`)?
+cloudflared tunnel info agentos-tunnel
+```
+
+If the file does **not** exist, do not go looking for it — the tunnel is
+dashboard-managed, and `http://0.0.0.0:7777` is sitting in the `Service` field of
+the public hostname entry in the Zero Trust dashboard. Change it there.
+
+> **If the ingress is remotely managed, the "local YAML" instructions in this
+> document do not apply to your setup.** They describe the locally-managed layout
+> only. Check the dashboard first; it is the faster path when the file is absent.
+
+---
+
+## Environment variables
+
+Two different concerns must not share one variable. The Agno runtime calls **itself**
+(scheduler callbacks, HITL approvals); those self-calls must stay on loopback and must
+never travel out to Cloudflare and back.
+
+| Variable | Consumer | Value |
+|---|---|---|
+| `OPENVPM_AGENTOS_HOST` | `AgentOS.serve()` bind | `0.0.0.0` |
+| `OPENVPM_AGENTOS_PORT` | `AgentOS.serve()` bind | `7777` |
+| `OPENVPM_AGENTOS_INTERNAL_URL` | scheduler `scheduler_base_url` | `http://127.0.0.1:7777` |
+| `OPENVPM_AGENTOS_BASE_URL` | external/operator use | `https://agentos-tunnel.significa.sk` |
+| `AGENT_OS_URL` | `apps/web` → `/admin/ai-swarm` probe | leave blank locally; set to the tunnel URL only for the hosted deployment |
+
+```ini
+OPENVPM_AGENTOS_HOST=0.0.0.0
+OPENVPM_AGENTOS_PORT=7777
+OPENVPM_AGENTOS_INTERNAL_URL=http://127.0.0.1:7777
+OPENVPM_AGENTOS_PUBLIC_URL=https://agentos-tunnel.significa.sk
 OPENVPM_AGENTOS_BASE_URL=https://agentos-tunnel.significa.sk
+AGENT_OS_URL=
+AGENT_UI_URL=
 ```
 
-## Starting the Tunnel
-To start the tunnel manually:
+> **Regression note (2026-09-25).** Earlier revisions of this document stated
+> *"Local AgentOS: http://0.0.0.0:7777"* and set `OPENVPM_AGENTOS_BASE_URL` to the
+> tunnel URL. Both are wrong for their purpose: the first is a bind address used as a
+> dial target, and the second made the scheduler reach itself over the public internet.
+> `OPENVPM_AGENTOS_INTERNAL_URL` exists to prevent the second mistake recurring.
+
+For Dokploy, set the same variables in the application settings. The hosted app needs
+the **public** URL; the scheduler still uses the internal one.
+
+---
+
+## Starting the tunnel
+
+```powershell
+cloudflared tunnel --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml run agentos-tunnel
+```
+
+The tunnel does not persist across restarts. For production, install it as a Windows
+service so it survives reboots:
+
+```powershell
+cloudflared service install
+```
+
+---
+
+## Verification (in order — stop at the first failure)
+
+**1. AgentOS is running and listening (inside WSL):**
 
 ```bash
-cloudflared tunnel --config C:\\Users\\marek\\.cloudflared\\tunnels\\agentos-tunnel.yml run agentos-tunnel
+wsl -d Ubuntu -e tmux ls                          # session "agno" must be listed
+wsl -d Ubuntu -e ss -lntp | grep 7777             # must show 0.0.0.0:7777 or *:7777
 ```
 
-## Dokploy Deployment
-For production deployment via Dokploy, ensure the same environment variables are set in the Dokploy application settings:
+**2. Reachable from Windows on loopback:**
 
-- AGENT_OS_URL=https://agentos-tunnel.significa.sk
-- OPENVPM_AGENTOS_BASE_URL=https://agentos-tunnel.significa.sk
-
-## Verification
-Test the tunnel is working:
-
-```bash
-curl https://agentos-tunnel.significa.sk/health
+```powershell
+Invoke-RestMethod http://127.0.0.1:7777/health
 ```
 
-Expected response:
+**3. Tunnel process is up and the ingress matches:**
+
+```powershell
+Get-Process cloudflared
+cloudflared tunnel info agentos-tunnel
+cloudflared tunnel ingress rule --config C:\Users\marek\.cloudflared\tunnels\agentos-tunnel.yml https://agentos-tunnel.significa.sk/health
+```
+
+**4. Public HTTPS path:**
+
+```powershell
+curl.exe -s https://agentos-tunnel.significa.sk/health
+```
+
+Expected:
+
 ```json
 {"status":"ok","instantiated_at":"..."}
 ```
 
-## Notes
-- The tunnel must be running for the web application to communicate with AgentOS
-- The tunnel does not persist after system restart - it needs to be started manually or set up as a Windows service for production use
+**5. Web app sees it:** open `/admin/ai-swarm` — telemetry must show `isOnline: true`
+and display the resolved AgentOS URL.
 
+**If step 4 returns `502`** → the tunnel is up but the dial target is wrong. Almost always
+`0.0.0.0` in the ingress `service:`. If it returns `530`/`1033` → the tunnel process is
+not running. If it hangs → check step 2; AgentOS is probably bound to loopback only
+inside WSL instead of `0.0.0.0`.
+
+### Splitting tunnel health from origin health
+
+`cloudflared tunnel info <name>` tells you whether the **tunnel** is fine, which
+separates "the tunnel is broken" from "the origin is broken". Look for the connector
+list:
+
+```
+NAME:     agentos-tunnel
+ID:       324dd653-7f1d-41d7-ae9a-7d3e3ae54c1d
+CONNECTOR ID                         CREATED              ARCHITECTURE  VERSION
+0ecbf145-923e-42ba-adab-0037b86900a2 2026-09-25T14:44:54Z windows_amd64 2026.9.1
+```
+
+- **A connector is listed with a recent `CREATED` timestamp** → the tunnel process is
+  running and connected to Cloudflare's edge. The tunnel itself is healthy; any
+  failure is **downstream** — the `service:` dial target, or AgentOS not listening.
+  Go straight to step 2 (`ss -lntp | grep 7777`) and the ingress rule check.
+- **`CONNECTORS: 0` / no connector row** → cloudflared is not running. Start it, or
+  install it as a service.
+- A version warning (`Your version … is outdated`) is **not** a cause of 502s — it is
+  hygiene only.
+
+Verify the two halves independently:
+
+```powershell
+# Origin up? (bypasses the tunnel entirely)
+curl.exe -s -o NUL -w "loopback  HTTP %{http_code}\n" http://127.0.0.1:7777/health
+# Tunnel up? (exercises the ingress rule and the dial target)
+curl.exe -s -o NUL -w "tunnel    HTTP %{http_code}\n" https://agentos-tunnel.significa.sk/health
+```
+
+`loopback 200` + `tunnel 502` is the signature of a wrong dial target — that is the
+`0.0.0.0` bug, and the fix is the ingress `service:`, never `serve(host=...)`.
+
+---
+
+## Notes
+
+- The tunnel must be running for the hosted web app to reach AgentOS.
+- The FQDN health path used by the web app is `/health` (see
+  `checkAgentOsHealth()` in `apps/web/server/routers/extensions/ai-swarm.ts`).
+  That probe tries loopback first and falls back, with an 800 ms timeout — a cold
+  tunnel round-trip can exceed that, so a single "offline" reading is not proof.

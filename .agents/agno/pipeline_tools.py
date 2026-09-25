@@ -312,13 +312,26 @@ def list_arena_sprints() -> str:
     """Vráti zoznam všetkých Arena sprintov zo súboru tasks/SPRINT-INDEX.md vrátane ich stavu (merged, written, unverified)."""
     index_file = os.path.join(_get_repo_path(), "tasks", "SPRINT-INDEX.md")
     if not os.path.exists(index_file):
-        return "Chyba: Súbor tasks/SPRINT-INDEX.md nebol nájdený."
+        # Fail LOUD. A prose error string is indistinguishable from data to a model
+        # caller, which is how sprint state previously got confabulated instead of
+        # reported as unknown (tasks/ was deleted from main in commit dab4d05).
+        return (
+            f"GROUND_TRUTH_MISSING: {index_file} does not exist.\n"
+            "NEPREDPOKLADAJ stav sprintov! Re-derive it from the repository instead:\n"
+            "  git log --oneline -200\n"
+            "  gh pr list --state all --limit 60\n"
+            "A sprint counts as MERGED only if its target files changed in a commit "
+            "reachable from main. A sprint .md existing is NOT evidence."
+        )
     try:
         with open(index_file, "r", encoding="utf-8") as f:
             content = f.read()
         return f"### Arena Sprint Index\n\n{content}"
     except Exception as e:
-        return f"Chyba pri čítaní tasks/SPRINT-INDEX.md: {str(e)}"
+        return (
+            f"GROUND_TRUTH_UNREADABLE: tasks/SPRINT-INDEX.md exists but could not be read: {e}\n"
+            "Do NOT infer sprint status from memory. Use `git log --oneline -200`."
+        )
 
 
 def read_sprint_assignment(sprint_number: int) -> str:
@@ -327,21 +340,71 @@ def read_sprint_assignment(sprint_number: int) -> str:
     pattern = os.path.join(tasks_dir, f"arena-sprint-{sprint_number}-*.md")
     matches = glob.glob(pattern)
     if not matches:
-        return f"Sprint {sprint_number} nebol nájdený v tasks/. Skontroluj zoznam cez list_arena_sprints()."
-    
+        available = sorted(
+            os.path.basename(p)
+            for p in glob.glob(os.path.join(tasks_dir, "arena-sprint-*.md"))
+        )
+        hint = (
+            "Dostupné zadania: " + ", ".join(available) if available
+            else "V tasks/ nie je žiadne zadanie typu arena-sprint-*.md."
+        )
+        return (
+            f"ASSIGNMENT_NOT_FOUND: sprint {sprint_number} nemá zadanie "
+            f"(hľadané: {os.path.basename(pattern)}). {hint}"
+        )
+
     file_path = matches[0]
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         return f"### Zadanie Sprintu {sprint_number} ({os.path.basename(file_path)})\n\n{content[:4000]}"
     except Exception as e:
-        return f"Chyba pri čítaní súboru {file_path}: {str(e)}"
+        return f"ASSIGNMENT_UNREADABLE: {file_path} sa nepodarilo prečítať: {e}"
+
+
+_GOLDEN_TICKET_H1_RE = re.compile(r"^\s*#\s*GOLDEN TICKET.*$", re.IGNORECASE | re.MULTILINE)
+_SYSTEM_PROMPT_TAG_RE = re.compile(r"^\s*</?system_prompt>\s*$", re.IGNORECASE | re.MULTILINE)
+_ATX_HEADING_RE = re.compile(r"^(#{1,5})(\s)", re.MULTILINE)
+
+
+def sanitize_golden_ticket_prompt(text: str) -> str:
+    """Zabráni vnoreniu Golden Ticketu do Golden Ticketu (prompt bloat).
+
+    Ak ``requirements``/``assignment`` už je Golden Ticket (napr. obsah súboru
+    ``tasks/arena-sprint-X.md`` preposlaný cez ``create_and_dispatch_arena_task``),
+    jeho vloženie do nového tiketu vyrobí dvojitú hlavičku ``# GOLDEN TICKET``,
+    dvojitý ``## 1. Context / Why`` a dvojité ``Scope/DoD`` — model tak dostane dva
+    protichodné rámce a časť zadania sa stratí v šume.
+
+    Sanitizácia NIKDY nezahadzuje obsah — len:
+      1. odstráni ``<system_prompt>`` obal (vlastný generujeme sami),
+      2. odstráni vnorenú hlavičku ``# GOLDEN TICKET``,
+      3. posunie všetky zostávajúce ATX nadpisy o dve úrovne nižšie, takže
+         žiadny nadpis nemôže kolidovať s naším ``## N.`` rámcom.
+
+    Vstup bez markerov Golden Ticketu sa vracia nezmenený.
+    """
+    if not text:
+        return text
+    if "# GOLDEN TICKET" not in text.upper() and "<system_prompt>" not in text.lower():
+        return text
+
+    cleaned = _SYSTEM_PROMPT_TAG_RE.sub("", text)
+    cleaned = _GOLDEN_TICKET_H1_RE.sub("", cleaned)
+    cleaned = _ATX_HEADING_RE.sub(lambda m: "#" * (len(m.group(1)) + 2) + m.group(2), cleaned)
+
+    # Zbal prázdne riadky, ktoré po odstránení obalu zostali.
+    cleaned = re.sub(r"\n{4,}", "\n\n\n", cleaned).strip()
+    return cleaned
 
 
 def format_arena_sprint_prompt(sprint_number: int, target_model: str = "arena") -> str:
     """Sformátuje zadanie sprintu do hotového promptu pre Arena.ai ako striktný GOLDEN TICKET."""
     assignment = read_sprint_assignment(sprint_number)
-    if "nebol nájdený" in assignment or "Chyba" in assignment:
+    # Error results are prefixed with an ALL-CAPS sentinel so they can never be
+    # mistaken for a real assignment body. Keep this in sync with
+    # read_sprint_assignment().
+    if assignment.startswith(("ASSIGNMENT_NOT_FOUND", "ASSIGNMENT_UNREADABLE", "GROUND_TRUTH_")):
         return assignment
 
     prompt = f"""<system_prompt>
@@ -362,13 +425,19 @@ OpenVPM AI je enterprise veterinárny nemocničný informačný systém. Impleme
 6. UI Kit: Používaj PageHeader, PageToolbar, DataTableFrame, KpiGrid z apps/web/components/layout/page-kit.tsx.
 
 ## 3. Task Assignment & Acceptance Criteria
-{assignment}
+{sanitize_golden_ticket_prompt(assignment)}
 
 ## 4. Definition of Done
 - [ ] 0 chýb v TypeScript type-check (pnpm --filter @openpims/web type-check).
 - [ ] 0 warnings v ESLint (pnpm lint).
 - [ ] 100% leaf symetria kľúčov v messages/sk.json a messages/en.json.
 - [ ] Žiadne neoprávnené úpravy vanilkových súborov.
+
+## 5. Sandbox Execution Rules (POVINNÉ)
+- Sandbox má 2–4 GB RAM. Celomonorepový `tsc --noEmit` spotrebuje 2.2–2.8 GB a padá na `Exit status 134 / Aborted (OOM)`.
+- Pred KAŽDÝM type-checkom nastav: `export NODE_OPTIONS="--max-old-space-size=3500"`
+- Overuj prednostne CIEĽENÉ súbory a testy (`pnpm vitest run <súbor>`); plný monorepo type-check je best-effort a behá v CI.
+- Ak je kontrola zabitá kvôli pamäti, napíš to explicitne (OOM ≠ PASS, OOM ≠ FAIL kódu).
 
 Vráť kompletný ucelený kód alebo git diff/patch pripravený na aplikáciu.
 </system_prompt>"""
@@ -1058,6 +1127,9 @@ def create_and_dispatch_arena_task(
     task_id = f"arena-{int(time.time())}-{slug}"
     
     paths_val = allowed_paths or "apps/web/app/, apps/web/components/, apps/web/server/routers/extensions/, packages/db/schema/ext_*.ts, apps/web/messages/"
+    # Ak už `requirements` je Golden Ticket (napr. obsah tasks/arena-sprint-X.md),
+    # vnorenie by vyrobilo dvojitú hlavičku a dvojité sekcie — viď sanitize_golden_ticket_prompt.
+    requirements = sanitize_golden_ticket_prompt(requirements)
     prompt = f"""<system_prompt>
 Si špičkový autonómny full-stack softvérový inžinier pre veterinárny systém OpenVPM AI (Next.js 15 App Router, React 19, TypeScript, tRPC v11, Drizzle ORM, Tailwind UI Kit).
 Tvoja úloha je zadaná ako striktný GOLDEN TICKET („The ticket is the quality ceiling“).
@@ -1099,6 +1171,12 @@ OpenVPM AI je enterprise veterinárny nemocničný informačný systém. Modul "
 - Automatizované testy: `pnpm vitest run ...`
 - Typová kontrola: `pnpm --filter @openpims/web type-check`
 - Linter a i18n kontrola: `pnpm lint && pnpm --filter @openpims/web i18n:scan`
+
+### Sandbox Execution Rules (POVINNÉ)
+- Sandbox má 2–4 GB RAM. Celomonorepový `tsc --noEmit` spotrebuje 2.2–2.8 GB a padá na `Exit status 134 / Aborted (OOM)`.
+- Pred KAŽDÝM type-checkom nastav: `export NODE_OPTIONS="--max-old-space-size=3500"`
+- Overuj prednostne CIEĽENÉ súbory a testy (`pnpm vitest run <súbor>`); plný monorepo type-check je best-effort a behá v CI.
+- Ak je kontrola zabitá kvôli pamäti, napíš to explicitne (OOM ≠ PASS, OOM ≠ FAIL kódu).
 
 ## 6. Definition of Ready
 - [x] Acceptance criteria sú jednoznačné a overiteľné
