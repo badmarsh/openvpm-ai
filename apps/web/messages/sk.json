@@ -3139,7 +3139,83 @@
     },
     "wellness": {
       "title": "Wellness plány & programy",
-      "subtitle": "Preventívne programy kliniky a evidencia čerpania benefitov počas návštevy pacienta."
+      "subtitle": "Preventívne programy kliniky a evidencia čerpania benefitov počas návštevy pacienta.",
+      "retry": "Skúsiť znova",
+      "toast": {
+        "redeemSuccess": "Benefit z balíčka bol úspešne uplatnený.",
+        "deceasedBlocked": "Benefit nie je možné uplatniť – pacient je evidovaný ako zosnulý.",
+        "forbidden": "Na uplatnenie benefitu nemáte oprávnenie.",
+        "redeemError": "Nepodarilo sa uplatniť benefit."
+      },
+      "validation": {
+        "benefitRequired": "Zadajte názov čerpaného benefitu."
+      },
+      "plans": {
+        "heading": "Aktívne preventívne balíčky kliniky",
+        "activeCount": "{active} z {total} aktívnych",
+        "loadError": "Wellness plány sa nepodarilo načítať.",
+        "emptyTitle": "Zatiaľ žiadne wellness plány",
+        "emptyDesc": "Zatiaľ nie sú vytvorené žiadne wellness plány v module nastavení.",
+        "manage": "Spravovať plány",
+        "active": "Aktívny",
+        "inactive": "Neaktívny",
+        "defaultDescription": "Komplexný ročný plán preventívnej starostlivosti.",
+        "monthly": "Mesačne",
+        "annual": "Ročne"
+      },
+      "toolbar": {
+        "searchLabel": "Hľadať vo wellness zápisoch",
+        "searchPlaceholder": "Hľadať pacienta, majiteľa alebo balíček…",
+        "statusLabel": "Filtrovať podľa stavu",
+        "statusAll": "Všetky stavy",
+        "statusActive": "Aktívne",
+        "statusCancelled": "Ukončené",
+        "clearFilters": "Zrušiť filtre",
+        "countOne": "{count} zápis",
+        "countFew": "{count} zápisy",
+        "countOther": "{count} zápisov"
+      },
+      "kpi": {
+        "all": "Všetky zápisy",
+        "active": "Aktívne zápisy",
+        "activeShare": "{percent} všetkých zápisov",
+        "cancelled": "Ukončené zápisy"
+      },
+      "enrollments": {
+        "heading": "Zapísaní pacienti vo wellness programe",
+        "loadError": "Wellness zápisy sa nepodarilo načítať.",
+        "loading": "Načítavam wellness zápisy...",
+        "emptyTitle": "Žiadny pacient zatiaľ nie je zapísaný vo wellness programe.",
+        "emptyFilteredTitle": "Filtrom nevyhovuje žiadny zápis",
+        "emptyFilteredDesc": "Upravte vyhľadávanie alebo filter stavu.",
+        "colPatient": "Pacient",
+        "colPlan": "Balíček",
+        "colStatus": "Stav",
+        "colAction": "Akcia",
+        "noPatient": "Bez priradeného pacienta",
+        "owner": "Majiteľ: {name}",
+        "validFrom": "Platnosť od {date}",
+        "statusActive": "Aktívny zápis",
+        "statusCancelled": "Ukončené",
+        "redeem": "Čerpať benefit",
+        "selected": "Vybrané"
+      },
+      "redemption": {
+        "heading": "Čerpanie benefitu",
+        "benefitLabel": "Názov benefitu *",
+        "benefitPlaceholder": "Napr. Bezplatná preventívna prehliadka, Strihanie pazúrikov, Zľava 10% na čistenie zubov",
+        "notesLabel": "Poznámka lekára / recepcie",
+        "notesPlaceholder": "Napr. vykonané v rámci vyšetrenia",
+        "submit": "Potvrdiť uplatnenie benefitu",
+        "historyHeading": "História čerpania pacienta",
+        "historyLoading": "Načítavam históriu...",
+        "historyLoadError": "Históriu čerpania sa nepodarilo načítať.",
+        "historyEmpty": "Zatiaľ nebol uplatnený žiadny benefit.",
+        "colBenefit": "Benefit",
+        "colRedeemedAt": "Uplatnené",
+        "noPatientSelected": "Nevybrali ste žiadneho pacienta",
+        "selectPatientDesc": "Kliknite na pacienta v zozname zápisov pre zobrazenie histórie a uplatnenie benefitu."
+      }
     },
     "studio": {
       "toastTvCreated": "Kampaň bola pridaná na TV obrazovku v čakárni!",
@@ -4464,7 +4540,8 @@
       "revenue": "Tržby",
       "appointments": "Termíny",
       "services": "Úkony",
-      "inventory": "Zásoby"
+      "inventory": "Zásoby",
+      "label": "Sekcie prehľadov"
     },
     "exportCsv": "Exportovať CSV",
     "exportPdf": "Exportovať PDF",
@@ -4482,7 +4559,17 @@
       "last30": "Posledných 30 dní",
       "monthToDate": "Aktuálny mesiac",
       "lastMonth": "Minulý mesiac",
-      "yearToDate": "Od začiatku roka"
+      "yearToDate": "Od začiatku roka",
+      "presets": "Rýchly výber obdobia",
+      "errors": {
+        "startRequired": "Zadajte dátum začiatku obdobia.",
+        "endRequired": "Zadajte dátum konca obdobia.",
+        "startInvalid": "Dátum začiatku obdobia nie je platný.",
+        "endInvalid": "Dátum konca obdobia nie je platný.",
+        "startAfterEnd": "Dátum začiatku musí byť rovnaký alebo skorší ako dátum konca.",
+        "tooLong": "Obdobie prehľadu môže mať najviac {days} dní.",
+        "invalid": "Neplatné obdobie prehľadu."
+      }
     },
     "invalidDateRange": {
       "title": "Zvoľte platné časové obdobie prehľadu"
@@ -4512,7 +4599,8 @@
       "emptyTitle": "Nie je k dispozícii prehľad podľa lekárov",
       "emptyDesc": "Termíny budú zoskupené podľa priradeného veterinárneho lekára za zvolené obdobie.",
       "pdfTitle": "Prehľad termínov",
-      "pdfEmpty": "Žiadne údaje o termínoch za toto obdobie."
+      "pdfEmpty": "Žiadne údaje o termínoch za toto obdobie.",
+      "unassigned": "Nepriradený veterinár"
     },
     "services": {
       "emptyTitle": "Žiadne údaje o úkonoch",
@@ -4544,7 +4632,8 @@
       "restrictedTitle": "Prístup k prehľadom je obmedzený",
       "restrictedDesc": "Prehľady praxe môžu zobrazovať iba administrátori a veterinárni lekári.",
       "backToDashboard": "Späť na prehľad kliniky"
-    }
+    },
+    "loading": "Načítavam prehľad…"
   },
   "roles": {
     "admin": "Administrátor",
