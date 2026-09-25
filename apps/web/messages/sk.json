@@ -963,6 +963,7 @@
       "showingPagination": "Zobrazuje sa {from}–{to} z {total}",
       "previous": "Predchádzajúca",
       "next": "Ďalšia",
+      "pageSizeLabel": "Riadkov na stránku",
       "emptyEstimatesTitle": "Zatiaľ žiadne cenové ponuky",
       "emptyEstimatesDesc": "Vytvorte cenovú ponuku, ak klient potrebuje schválenie pred vykonaním služieb.",
       "emptyStatusTitle": "Žiadne faktúry s týmto stavom",
@@ -1027,7 +1028,7 @@
       "checkingMemberships": "Kontrolujú sa splatné členstvá...",
       "loadError": "Nepodarilo sa načítať splatné preventívne programy. Skúste to znova.",
       "dueSummary": "{count} naplánovaných faktúr na úhradu, {total} pred zdanením",
-      "dueSummary_one": "1 naplánovaná faktúra na úhradu, {total} pred zdanením",
+      "dueSummary_one": "{count} naplánovaná faktúra na úhradu, {total} pred zdanením",
       "dueSummary_few": "{count} naplánované faktúry na úhradu, {total} pred zdanením",
       "dueSummary_other": "{count} naplánovaných faktúr na úhradu, {total} pred zdanením",
       "hint": "OpenVPM generuje faktúry pre každý fakturačný termín; personál následne zaeviduje úhradu pre každú faktúru.",
@@ -5156,10 +5157,10 @@
       "payoutsEnabled": "Povolené",
       "payoutsPending": "Čaká sa",
       "payoutsNa": "Nedostupné",
-      "trialDaysLeft_one": "Zostáva 1 deň skúšobnej verzie",
+      "trialDaysLeft_one": "Zostáva {count} deň skúšobnej verzie",
       "trialDaysLeft_few": "Zostávajú {count} dni skúšobnej verzie",
       "trialDaysLeft_other": "Zostáva {count} dní skúšobnej verzie",
-      "requirementsDue_one": "1 nevyriešená položka",
+      "requirementsDue_one": "{count} nevyriešená položka",
       "requirementsDue_few": "{count} nevyriešené položky",
       "requirementsDue_other": "{count} nevyriešených položiek",
       "servicePicker": {
@@ -5362,8 +5363,8 @@
       "searchProducts": "Vyhľadať produkty...",
       "searchServicesPlaceholder": "Hľadať podľa názvu, kódu alebo kategórie služby",
       "searchProductsPlaceholder": "Hľadať podľa názvu, kódu alebo kategórie produktu",
-      "clearSelectedService": "Zrušiť vybranú službu",
-      "clearSelectedProduct": "Zrušiť vybraný produkt",
+      "clearSelectedService": "Zrušiť vybranú službu {label}",
+      "clearSelectedProduct": "Zrušiť vybraný produkt {label}",
       "searching": "Vyhľadáva sa...",
       "searchFailed": "Vyhľadávanie v katalógu zlyhalo. Upravte text a skúste to znova.",
       "noActiveServicesMatch": "Žiadne aktívne služby nezodpovedajú výrazu „{query}“.",
@@ -9337,5 +9338,76 @@
     "interactionBadge": "{count}× interakcia",
     "openCard": "Karta",
     "openVisit": "Vyšetrenie"
+  },
+  "prescriptions": {
+    "title": "Dohľad nad liečivami",
+    "subtitle": "Registr preskripcií a klinický dohľad nad podávanými liečivami",
+    "actions": {
+      "new": "Nový predpis",
+      "ledger": "Kniha OPL",
+      "view": "Detail predpisu",
+      "stop": "Zastaviť predpis"
+    },
+    "kpi": {
+      "active": "Aktívne predpisy",
+      "ending": "Končia do {days} dní",
+      "overdue": "Po termíne",
+      "guardian": "Strážca liekov",
+      "guardianCritical": "{count} kritických výstrah"
+    },
+    "tabs": {
+      "ariaLabel": "Rozsah zoznamu predpisov",
+      "active": "Aktívne",
+      "ending": "Končiace",
+      "overdue": "Po termíne",
+      "controlled": "Kontrolované (OPL)",
+      "alerts": "Výstrahy",
+      "all": "Všetky"
+    },
+    "search": {
+      "placeholder": "Hľadať liek, pacienta, majiteľa alebo č. Rx…",
+      "clear": "Vyčistiť filter"
+    },
+    "results": "Výsledky: {count}",
+    "table": {
+      "medication": "Liek",
+      "rx": "Č. Rx",
+      "dosage": "Dávkovanie",
+      "frequency": "Frekvencia",
+      "withdrawal": "Ochranná lehota",
+      "period": "Obdobie",
+      "status": "Stav",
+      "actions": "Akcie"
+    },
+    "status": {
+      "active": "Aktívny",
+      "ending": "Končí",
+      "overdue": "Po termíne",
+      "completed": "Dokončený",
+      "cancelled": "Zrušený"
+    },
+    "opl": {
+      "badge": "OPL",
+      "tooltip": "Kontrolovaná látka podľa zákona č. 139/1998 Z. z. — záznam v Knihe OPL"
+    },
+    "alert": {
+      "critical": "kritická výstraha",
+      "warning": "výstraha"
+    },
+    "withdrawal": {
+      "none": "—",
+      "value": "{days} dní"
+    },
+    "empty": {
+      "title": "Žiadne predpisy",
+      "description": "V tomto rozsahu zatiaľ neexistujú žiadne predpisy.",
+      "search": {
+        "title": "Žiadne výsledky hľadania",
+        "description": "Pre výraz „{query}“ sa nenašiel žiadny predpis."
+      }
+    },
+    "legal": {
+      "note": "Omamné a psychotropné látky sa evidujú v Knihe OPL podľa zákona č. 139/1998 Z. z."
+    }
   }
 }

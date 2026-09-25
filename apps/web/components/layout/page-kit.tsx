@@ -109,30 +109,63 @@ export function KpiGrid({
   );
 }
 
+export { PageHeader } from "@/components/layout/page-header";
+export { EmptyState } from "@/components/common/empty-state";
+export { TableSkeleton } from "@/components/common/loading";
+
 export function KpiCard({
   label,
   value,
-  icon,
+  icon: IconOrNode,
+  tone,
+  hint,
   active,
   onClick,
   className,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | React.ComponentType<{ className?: string }>;
+  tone?: "primary" | "warning" | "destructive" | "muted";
+  hint?: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
   className?: string;
 }) {
+  const iconElement = IconOrNode
+    ? React.isValidElement(IconOrNode)
+      ? IconOrNode
+      : React.createElement(IconOrNode as React.ComponentType<{ className?: string }>, {
+          className: cn(
+            "h-3.5 w-3.5",
+            tone === "primary" && "text-primary",
+            tone === "warning" && "text-warning",
+            tone === "destructive" && "text-destructive",
+          ),
+        })
+    : null;
+
   const body = (
     <>
-      <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {icon}
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {iconElement}
         {label}
       </span>
-      <span className="mt-1 block text-xl font-semibold tabular-nums tracking-tight text-foreground">
+      <span
+        className={cn(
+          "mt-1 block text-xl font-semibold tabular-nums tracking-tight text-foreground",
+          tone === "primary" && "text-primary",
+          tone === "warning" && "text-warning",
+          tone === "destructive" && "text-destructive",
+        )}
+      >
         {value}
       </span>
+      {hint ? (
+        <span className="mt-0.5 block text-[11px] font-medium text-destructive truncate">
+          {hint}
+        </span>
+      ) : null}
     </>
   );
   const classes = cn(
