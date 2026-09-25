@@ -1,2 +1,0 @@
-CREATE INDEX "patient_allergies_patient_idx" ON "patient_allergies" USING btree ("patient_id","deleted_at");--> statement-breakpoint
-CREATE INDEX "patient_weights_patient_recorded_idx" ON "patient_weights" USING btree ("patient_id","deleted_at","recorded_at");

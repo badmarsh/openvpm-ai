@@ -1,1 +1,0 @@
-ALTER TABLE "services" ADD CONSTRAINT "services_default_price_nonnegative" CHECK ("services"."default_price" >= 0);

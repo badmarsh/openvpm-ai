@@ -1,1 +1,0 @@
-CREATE INDEX "sms_suppressions_practice_idx" ON "sms_suppressions" USING btree ("practice_id","deleted_at");

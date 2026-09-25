@@ -1,2 +1,0 @@
-CREATE INDEX "waitlist_client_status_idx" ON "appointment_waitlist" USING btree ("practice_id","client_id","status","deleted_at");--> statement-breakpoint
-CREATE INDEX "waitlist_patient_status_idx" ON "appointment_waitlist" USING btree ("practice_id","patient_id","status","deleted_at");
