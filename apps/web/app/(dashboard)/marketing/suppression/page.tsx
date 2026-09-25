@@ -1,22 +1,11 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-
-export default function SuppressionRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/marketing/automations?tab=suppression");
-  }, [router]);
-
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center space-y-2">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-        <p className="text-sm text-muted-foreground">Presmerovávam na Centrum potlačení…</p>
-      </div>
-    </div>
-  );
+/**
+ * Legacy route redirect: /marketing/suppression -> /automations?tab=suppression
+ * The read-only suppression log (Sympathy Gate audit) lives in the
+ * Automations hub. The tab query param is preserved so deep links land
+ * on the correct panel.
+ */
+export default function SuppressionRedirectPage() {
+  redirect("/automations?tab=suppression");
 }

@@ -1,20 +1,11 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-
+/**
+ * Legacy route redirect: /marketing/competitors -> /vet-intel
+ * Market & competition intelligence lives in the Vet Intelligence hub.
+ * (Previously this bounced through /vet-intel?tab=market, which no longer
+ * exists — the query param was silently dropped.)
+ */
 export default function CompetitorsRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/vet-intel?tab=market");
-  }, [router]);
-
-  return (
-    <div className="p-12 flex flex-col items-center justify-center space-y-3 text-muted-foreground">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      <p className="text-sm">Presmerovávam do sekcie Vet Intelligence...</p>
-    </div>
-  );
+  redirect("/vet-intel");
 }
