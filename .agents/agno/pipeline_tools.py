@@ -3195,16 +3195,32 @@ def _playwright_launch_session(
     executable = os.getenv("ARENA_CHROME_EXECUTABLE", _CHROME_EXECUTABLE)
 
     with sync_playwright() as pw:
+        # Headless=True pri Arena.ai treba stealth args — inak Cloudflare blokuje.
+        # Alternativa: ARENA_OFFSCREEN=1 — okno mimo obrazovky, nie headless.
+        offscreen = os.getenv("ARENA_OFFSCREEN", "0").strip() in ("1", "true", "yes")
+        common_args = [
+            "--disable-blink-features=AutomationControlled",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-infobars",
+            "--disable-popup-blocking",
+        ]
+        if offscreen and not headless:
+            common_args += ["--window-position=-32000,-32000", "--window-size=1920,1080"]
+        if headless:
+            common_args += [
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+            ]
         ctx = pw.chromium.launch_persistent_context(
             user_data_dir=user_data,
             executable_path=executable if os.path.isfile(executable) else None,
             headless=headless,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-first-run",
-                "--no-default-browser-check",
-            ],
+            args=common_args,
             ignore_default_args=["--enable-automation"],
+            viewport={"width": 1920, "height": 1080},
         )
         # launch_persistent_context vracia Context, nie Browser.
         # Obalime ho do duck-typed objektu kompatibilneho s _dispatch_on_browser.
