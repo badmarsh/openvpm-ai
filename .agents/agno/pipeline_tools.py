@@ -237,10 +237,21 @@ def _which(cmd: str) -> str:
     return found if found else cmd
 
 def _get_repo_path(subpath: str = "") -> str:
-    path = os.path.join(REPO_DIR, subpath) if subpath else REPO_DIR
-    if not os.path.exists(path) and os.path.exists("/home/ubuntu/openvpm"):
-        return os.path.join("/home/ubuntu/openvpm", subpath)
-    return path
+    env_repo = os.getenv("OPENVPM_REPO_PATH")
+    if env_repo and os.path.exists(env_repo):
+        return os.path.join(env_repo, subpath) if subpath else env_repo
+
+    candidates = [
+        REPO_DIR,
+        "/mnt/c/Users/marek/Documents/Vet/openvpm-ai",
+        r"C:\Users\marek\Documents\Vet\openvpm-ai",
+        "/home/ubuntu/openvpm",
+    ]
+    for cand in candidates:
+        if os.path.exists(os.path.join(cand, "package.json")) and os.path.exists(os.path.join(cand, "apps", "web")):
+            return os.path.join(cand, subpath) if subpath else cand
+
+    return os.path.join(REPO_DIR, subpath) if subpath else REPO_DIR
 
 def _run_pnpm(args: List[str], cwd: str, timeout: int = 120) -> subprocess.CompletedProcess:
     """Spustí pnpm príkaz s podporou pre Windows (shell=True) a UTF-8 kódovaním."""
