@@ -47,8 +47,11 @@ describe("tenant scoping", () => {
   for (const file of files) {
     it(`${file}: DB queries are scoped by practiceId`, () => {
       const src = readFileSync(`${ROUTERS_DIR}/${file}`, "utf8");
+      // Excludes JS's built-in Array.from(...), which is not a Drizzle table
+      // query and previously produced false positives (e.g. extensions/ai-swarm.ts).
+      const dbFromPattern = /(?<!Array)\.from\(/;
       const touchesDb =
-        src.includes(".from(") ||
+        dbFromPattern.test(src) ||
         src.includes(".insert(") ||
         src.includes(".update(") ||
         src.includes(".delete(");
