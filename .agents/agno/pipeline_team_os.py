@@ -121,17 +121,17 @@ ALIPROXY_KEY = os.getenv("ALIPROXY_API_KEY") or os.getenv("ALIPROXY_KEY") or os.
 
 ANTIGRAVITY_BASE = os.getenv("ANTIGRAVITY_BASE_URL", "http://192.168.0.100:8045/v1")
 ANTIGRAVITY_KEY = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("AGNO_PROXY_API_KEY") or os.getenv("AI_API_KEY", "")
-GEMINI_MODEL_ID = os.getenv("GEMINI_MODEL_ID", "gemini-3.8-flash-high")
+GEMINI_MODEL_ID = os.getenv("GEMINI_MODEL_ID", "google-antigravity/gemini-3.8-flash")
 
-ORCHESTRATOR_MODEL_ID = os.getenv("OPENVPM_ORCHESTRATOR_MODEL", "gpt-5.2")
-LEARNING_MODEL_ID = os.getenv("OPENVPM_LEARNING_MODEL", "gpt-5-mini")
-QWEN_CODER_MODEL_ID = os.getenv("QWEN_CODER_MODEL", "qwen3-coder")
+ORCHESTRATOR_MODEL_ID = os.getenv("OPENVPM_ORCHESTRATOR_MODEL", "google-antigravity/gemini-3.8-flash")
+LEARNING_MODEL_ID = os.getenv("OPENVPM_LEARNING_MODEL", "google-antigravity/gemini-3.8-flash")
+QWEN_CODER_MODEL_ID = os.getenv("QWEN_CODER_MODEL", "aliproxy/qwen-code")
 
 MODEL_PRICING: Dict[str, Dict[str, float]] = {
     "gpt-5.2": {"input": 1.25, "output": 10.0},
     "gpt-5-mini": {"input": 0.25, "output": 2.0},
     "qwen3-coder": {"input": 0.35, "output": 1.4},
-    "gemini-3.8-flash-high": {"input": 0.15, "output": 0.60},
+    "google-antigravity/gemini-3.8-flash": {"input": 0.15, "output": 0.60},
     "qwen-coder-plus": {"input": 0.35, "output": 1.4},
 }
 
@@ -270,15 +270,50 @@ except Exception as _tr_err:
     logger.debug("Tracing disabled or failed: %s", _tr_err)
 
 # =============================================================================
+
+# Helper: prefer Antigravity proxy unless a real direct key is present.
+# Placeholder keys from .env.example should not be treated as real credentials.
+
+def _looks_real(api_key: str) -> bool:
+    if not api_key or len(api_key) < 20:
+        return False
+    lower = api_key.lower()
+    if any(lower.startswith(p) for p in ("sk-example", "your-", "placeholder", "xxx", "test-", "fake-")):
+        return False
+    return True
+
+
+def _resolve_proxy_model(model_id: str) -> str:
+    if not ANTIGRAVITY_KEY or not ANTIGRAVITY_BASE:
+        return model_id
+    try:
+        req = urllib.request.Request(
+            ANTIGRAVITY_BASE.rstrip("/") + "/models",
+            headers={"Authorization": f"Bearer {ANTIGRAVITY_KEY}"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+        available = {m["id"] for m in data.get("data", [])}
+        if model_id in available:
+            return model_id
+        candidates = [GEMINI_MODEL_ID] + [m for m in available if "gemini" in m.lower()] + list(available)
+        for cand in candidates:
+            if cand in available:
+                return cand
+    except Exception as exc:
+        logger.warning("Could not validate model %s against proxy: %s", model_id, exc)
+    return model_id
+
 # 3. Model Factory (Podpora Proxy aj Direct API)
 # =============================================================================
 
 def make_orchestrator_model():
-    if os.getenv("OPENAI_API_KEY"):
+    if _looks_real(os.getenv("OPENAI_API_KEY", "")):
         return OpenAIChat(id=ORCHESTRATOR_MODEL_ID)
+    resolved_id = _resolve_proxy_model(ORCHESTRATOR_MODEL_ID)
     return OpenAILike(
-        id=GEMINI_MODEL_ID,
-        name="Gemini 3.8 Flash",
+        id=resolved_id,
+        name=resolved_id,
         provider="Antigravity Proxy",
         base_url=ANTIGRAVITY_BASE,
         api_key=ANTIGRAVITY_KEY,
@@ -286,11 +321,12 @@ def make_orchestrator_model():
     )
 
 def make_learning_model():
-    if os.getenv("OPENAI_API_KEY"):
+    if _looks_real(os.getenv("OPENAI_API_KEY", "")):
         return OpenAIChat(id=LEARNING_MODEL_ID)
+    resolved_id = _resolve_proxy_model(LEARNING_MODEL_ID)
     return OpenAILike(
-        id=GEMINI_MODEL_ID,
-        name="Gemini 3.8 Flash",
+        id=resolved_id,
+        name=resolved_id,
         provider="Antigravity Proxy",
         base_url=ANTIGRAVITY_BASE,
         api_key=ANTIGRAVITY_KEY,
@@ -298,17 +334,17 @@ def make_learning_model():
     )
 
 def make_qwen_model():
-    if os.getenv("DASHSCOPE_API_KEY") and not os.getenv("ALIPROXY_BASE_URL"):
+    if _looks_real(os.getenv("DASHSCOPE_API_KEY", "")) and not os.getenv("ALIPROXY_BASE_URL"):
         return OpenAIChat(
             id=QWEN_CODER_MODEL_ID,
             base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
             api_key=os.getenv("DASHSCOPE_API_KEY"),
         )
-    # Ak je dostupný Antigravity Proxy a Dashscope nie je nastavený, použijeme proxy namiesto nefunkčného portu 8080
-    if ANTIGRAVITY_KEY and not os.getenv("ALIPROXY_API_KEY"):
+    if _looks_real(ANTIGRAVITY_KEY):
+        resolved_id = _resolve_proxy_model(QWEN_CODER_MODEL_ID)
         return OpenAILike(
-            id=GEMINI_MODEL_ID,
-            name="Gemini 3.8 Flash (Qwen Fallback)",
+            id=resolved_id,
+            name=resolved_id,
             provider="Antigravity Proxy",
             base_url=ANTIGRAVITY_BASE,
             api_key=ANTIGRAVITY_KEY,
