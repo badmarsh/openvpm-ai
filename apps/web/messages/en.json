@@ -4962,6 +4962,118 @@
         "reset": "Reset to Defaults"
       }
     },
+    "ekasa": {
+      "title": "e-Kasa Settings",
+      "subtitle": "Configure the electronic cash register (Act No. 289/2008 Coll.).",
+      "back": "Back to settings",
+      "loading": "Loading e-Kasa settings...",
+      "loadError": {
+        "title": "Could not load e-Kasa settings",
+        "description": "Retry loading the saved cash-register configuration before making changes.",
+        "retry": "Retry"
+      },
+      "compliance": {
+        "title": "Fiscal configuration check",
+        "complete": "All required statutory details are complete.",
+        "incomplete": "Complete the required fiscal details before recording receipts.",
+        "completeBadge": "Ready",
+        "incompleteBadge": "Needs attention",
+        "status": {
+          "configured": "Configured",
+          "required": "Required",
+          "optional": "Optional"
+        },
+        "items": {
+          "dic": {
+            "label": "Tax ID configured",
+            "description": "Business tax identification number (required)"
+          },
+          "pokladnicaId": {
+            "label": "Cash register ID configured",
+            "description": "Identifier assigned by the Financial Administration SR during e-Kasa registration (required)"
+          },
+          "apiUrl": {
+            "label": "API URL configured",
+            "description": "Financial Administration SR endpoint used to submit receipts (required)"
+          },
+          "certUploaded": {
+            "label": "Client certificate configured",
+            "description": "PKCS#12 certificate for PKP signing (optional for CLOUD type)"
+          },
+          "dphConfig": {
+            "label": "VAT ID (where applicable)",
+            "description": "Enter a VAT identification number only when the practice is VAT registered"
+          }
+        }
+      },
+      "form": {
+        "title": "Cash register configuration",
+        "description": "Add the practice fiscal identifiers and receipt-transmission options."
+      },
+      "fields": {
+        "dic": {
+          "label": "Tax ID",
+          "placeholder": "1234567890"
+        },
+        "icDph": {
+          "label": "VAT ID",
+          "placeholder": "SK1234567890 (VAT registered practices only)"
+        },
+        "pokladnicaId": {
+          "label": "Cash register ID",
+          "placeholder": "e.g. 88812345678"
+        },
+        "pokladnicaType": {
+          "label": "Cash register type",
+          "tooltipLabel": "Cash register type help"
+        },
+        "apiUrl": {
+          "label": "e-Kasa API URL",
+          "portal": "Financial Administration SR portal"
+        }
+      },
+      "registerTypes": {
+        "cloud": {
+          "label": "CLOUD (API)",
+          "tooltip": "API-based e-Kasa integration; a PKCS#12 certificate may be required depending on the service setup."
+        },
+        "orp": {
+          "label": "ORP — Online cash register",
+          "tooltip": "Online cash register registered with the Financial Administration SR."
+        },
+        "vrp": {
+          "label": "VRP — Virtual cash register",
+          "tooltip": "Virtual cash register used through the Financial Administration SR service."
+        }
+      },
+      "options": {
+        "title": "Options",
+        "offline": {
+          "label": "Offline mode",
+          "description": "Receipts are stored locally and submitted after the connection is restored."
+        },
+        "cashless": {
+          "label": "Enable cashless payments",
+          "description": "Card and bank-transfer payments require terminal configuration."
+        }
+      },
+      "certificate": {
+        "title": "PKP signing certificate",
+        "configured": "Configured",
+        "notConfigured": "Not configured",
+        "description": "For production, provide the PKCS#12 certificate issued by the Financial Administration SR through the approved administrator workflow. This form displays only the certificate status."
+      },
+      "save": {
+        "action": "Save e-Kasa settings",
+        "saving": "Saving settings...",
+        "success": "e-Kasa settings saved.",
+        "error": "Could not save e-Kasa settings."
+      },
+      "legal": {
+        "title": "Legal notice",
+        "description": "The e-Kasa system is governed by Act No. 289/2008 Coll. on the use of electronic cash registers and Act No. 384/2025 Coll. Every receipt must contain an OKP and PKP code. The system generates OKP (SHA-1) and PKP (RSA-SHA256) after certificate configuration."
+      }
+    },
     "booking": {
       "title": "Online appointment requests",
       "subtitle": "Give new and existing clients a simple way to request a preferred appointment time. Every request lands on your schedule for your team to review, assign, and confirm. Share the link, print the QR code, or add the button to your website.",
