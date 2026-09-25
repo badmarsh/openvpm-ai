@@ -40,6 +40,13 @@ pnpm-debug.log*
 # Testing
 coverage/
 
+# Local databases and runtime data
+data/
+*.db
+*.db-shm
+*.db-wal
+lancedb/
+
 # Internal build/launch docs (not for public repo)
 PIMS-CLAUDE-CODE-PROMPT.md
 LAUNCH-*.md

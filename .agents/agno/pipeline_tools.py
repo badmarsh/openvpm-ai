@@ -2505,7 +2505,7 @@ def _find_matching_page(
 
 
 def collect_code_from_arena_browser(
-    task_id: str,
+    task_id: str = "",
     timeout_seconds: int = DEFAULT_ARENA_COLLECT_TIMEOUT_SECONDS,
     ports: str = DEFAULT_CDP_PORTS,
     session_id: str = "",
