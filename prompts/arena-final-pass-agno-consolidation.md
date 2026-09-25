@@ -99,6 +99,15 @@ These are the traps that silently break a "harmless" cleanup. Copy them into you
 
 Anything you find that is not Workstream C/D infrastructure: record it as a `FOLLOW-UP` line in the relevant artifact. Do not fix it.
 
+### 2.4 Fixed on this branch after the first draft — verify, do not redo
+
+Each of these was reproduced locally, fixed, and verified; each is listed with the evidence that proves it, so you can confirm rather than re-derive.
+
+- **`packages/db/drizzle/0112_odd_goblin_queen.sql` — the missing migration for the sprint 27 + sprint 30 tables.** `ext_schema_validation_events` and the five `ext_bridge_*` tables were declared in `packages/db/schema/` but existed in no migration, no snapshot, no bootstrap script and no doc, while `apps/web/src/middleware/validation/middleware.ts` and the wired-in `bridgeV1V2Router` already queried them. That is why `main`'s CI failed at `Check schema matches committed migrations` on every push. **Verify:** `pnpm --filter @openpims/db db:generate` must print `No schema changes, nothing to migrate`.
+- **`hasProviderConfiguration` / `resolveModel` no longer treat "not Gemini" as "Claude".** With `DEFAULT_AI_MODEL = "qwen-max"` and an `ANTHROPIC_API_KEY` present but no inference proxy, the old code reported the agent as configured and then built `anthropic("qwen-max")`. Provider-family predicates now live in `apps/web/lib/ai-models.ts`. **Verify:** `apps/web/lib/agent/__tests__/runner.test.ts` → *never routes a non-Claude model to the Anthropic boundary*.
+- **The suite went from 18 failures to 0.** Those 18 were stale assertions of the retired "env selects the model" contract, not broken features. Three were rewritten to assert the inverse (env must have *no* effect) rather than deleted. **Verify:** `pnpm test` (turbo → `vitest run` in `apps/web`) → 6021 passed, 41 skipped, 0 failed.
+- **`bridge-crypto.test.ts` flakiness removed.** `header()` stamps `sentAt` with the current clock and `sentAt` is inside the signed AAD, so sign and verify used different headers and the assertion only passed when both calls landed in the same millisecond (measured: 3 passes / 3 failures over 6 runs). The sibling *refuses a signature for a different payload…* case had been passing vacuously for the same reason. **Verify:** 8 consecutive runs of that file, 15 passed each time.
+
 ---
 
 ## 3. Workstream A — Audit the last ~30 sprints
@@ -554,6 +563,7 @@ No long recap of the files — the artifacts carry the detail.
 - A prose error string is a **bug**, not a message: to an LLM caller it is indistinguishable from data. Return an ALL-CAPS sentinel plus the recovery command, so "unknown" can never be read as "fine".
 - `admin-panel-pagekit.test.ts` pins the literal `http://127.0.0.1:7777` in the swarm page — a well-intentioned "fix" to that fallback breaks the suite.
 - `en.json`/`sk.json` leaf symmetry is enforced by `i18n-structure.test.ts`; adding one key to one locale fails the run.
+- **Do not prune `packages/db/drizzle/meta/*_snapshot.json`, however safe it looks.** The 111 historical snapshots are ~57 MB and `drizzle-kit` itself only ever reads the newest one — so "prune them, the drift guard still passes" was verified true *and still wrong*. `packages/db/baseline.ts` exports `selectBaselineSnapshot`, which walks **backwards** from the `--through <tag>` cutoff looking for a snapshot and throws when one is missing, so dropping the chain silently removes the ability to baseline any migration other than the newest. Two guard suites (`lib/__tests__/migration-journal-integrity.test.ts`, `lib/__tests__/db-migrations.test.ts`) exist precisely to protect this lineage. The prune was applied, caught by a full-suite run, and reverted in `2bcde17`. **Re-check from the tool that consumes the artifact, not from the tool you are optimising.**
 - The lint baseline is **not** zero — say "no NEW warnings", never "fix all warnings".
 - `0.0.0.0` means *bind everywhere*; it never means *connect here*. Mixing those two is exactly how this regression happened.
 - The repository is not the runtime: `start-agno.bat` runs `/home/ubuntu/agno/pipeline_team_os.py` in WSL. A patch that is not synced there has **no effect on behaviour** — always state which copy you validated.
